@@ -22,14 +22,14 @@ const HeroSection = () => {
       subheading: "An ISO 9001:2015 Certified Company",
       buttonText: "Explore Products",
       buttonLink: "#products",
-      imageUrl: "/bgimage2.png"
+      imageUrl: "/main.png"
     },
     {
       headline: "Premium Quality Manufacturing Solutions",
       subheading: "25+ Years of Excellence in Industrial Fabrication",
       buttonText: "View Our Work",
       buttonLink: "#portfolio",
-      imageUrl: "/heroimagemk.png"
+      imageUrl: "/bgimage2.png"
     },
     {
       headline: "Trusted Partner for Electrical Infrastructure",
