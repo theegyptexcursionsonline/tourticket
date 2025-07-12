@@ -1,25 +1,32 @@
+"use client";
 import React from 'react';
 import Image from 'next/image';
 
 // --- Client Logo Data ---
-// IMPORTANT: Replace these with your actual logo file names.
-// Place your logo images in the `public/logos/` directory.
-const clients = [
-  { name: 'BHEL', logo: '/logos/bhel.png' },
-  { name: 'Crompton Greaves', logo: '/logos/crompton.png' },
-  { name: 'TBEA Energy', logo: '/logos/tbea.png' },
-  { name: 'Transformers & Rectifiers', logo: '/logos/transformers.png' },
-  { name: 'Tesla Transformers Ltd.', logo: '/logos/tesla.png' },
-  { name: 'Shirdi Sai Electricals', logo: '/logos/shirdi.png' },
-  { name: 'Technical Associates', logo: '/logos/technical.png' },
-  { name: 'Atlanta Electricals', logo: '/logos/atlanta.png' },
-  { name: 'ECE Industries Ltd', logo: '/logos/ece.png' },
-  { name: 'Raychem RPG', logo: '/logos/raychem.png' },
+// IMPORTANT: Make sure all logo images are placed in the `public/logo/` directory
+
+// Top row clients (scrolling left)
+const topRowClients = [
+  { name: 'BHEL', logo: '/logo/bhel.png' },
+  { name: 'Crompton Greaves', logo: '/logo/crompton.png' },
+  { name: 'TBEA Energy', logo: '/logo/image3.png' },
+  { name: 'Transformers & Rectifiers', logo: '/logo/image.png' },
+  { name: 'Tesla Transformers Ltd.', logo: '/logo/image2.png' },
+];
+
+// Bottom row clients (scrolling right)
+const bottomRowClients = [
+  { name: 'Shirdi Sai Electricals', logo: '/logo/image1.png' },
+  { name: 'Technical Associates', logo: '/logo/image4.png' },
+  { name: 'Atlanta Electricals', logo: '/logo/image5.png' },
+  { name: 'ECE Industries Ltd', logo: '/logo/image6.png' },
+  { name: 'Raychem RPG', logo: '/logo/image7.png' },
 ];
 
 const ScrollingClients = () => {
-  // We duplicate the clients array to create a seamless loop
-  const extendedClients = [...clients, ...clients];
+  // Create extended arrays for seamless looping
+  const extendedTopClients = [...topRowClients, ...topRowClients, ...topRowClients];
+  const extendedBottomClients = [...bottomRowClients, ...bottomRowClients, ...bottomRowClients];
 
   return (
     <div className="bg-slate-50 py-24 sm:py-32">
@@ -35,32 +42,73 @@ const ScrollingClients = () => {
       {/* Scrolling Marquee Container */}
       <div className="mt-16 w-full overflow-x-hidden">
         <div className="flex flex-col gap-y-6">
-          
           {/* Top Row: Scrolling Left */}
           <div className="flex animate-[scroll-left_40s_linear_infinite] items-center gap-x-6">
-            {extendedClients.map((client, index) => (
-              <div key={`top-${index}`} className="flex h-24 w-48 flex-none items-center justify-center rounded-lg border border-gray-200/80 bg-white p-6 shadow-sm">
-                {/* IMPORTANT: The Image component expects the logo path.
-                  This is a placeholder. Update the `clients` array above with real paths.
-                */}
-                <div className="h-full w-full text-center font-semibold text-gray-600 flex items-center justify-center">{client.name}</div>
-                {/* <Image src={client.logo} alt={client.name} width={158} height={48} className="h-full w-full object-contain" /> */}
+            {extendedTopClients.map((client, index) => (
+              <div
+                key={`top-${index}`}
+                className="flex h-24 w-48 flex-none items-center justify-center rounded-lg border border-gray-200/80 bg-white p-6 shadow-sm hover:shadow-md transition-shadow duration-300"
+              >
+                <Image
+                  src={client.logo}
+                  alt={`${client.name} logo`}
+                  width={160}
+                  height={60}
+                  className="h-full w-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+                  priority={index < 5} // Prioritize loading first 5 images
+                />
               </div>
             ))}
           </div>
 
           {/* Bottom Row: Scrolling Right */}
           <div className="flex animate-[scroll-right_40s_linear_infinite] items-center gap-x-6">
-            {extendedClients.map((client, index) => (
-              <div key={`bottom-${index}`} className="flex h-24 w-48 flex-none items-center justify-center rounded-lg border border-gray-200/80 bg-white p-6 shadow-sm">
-                <div className="h-full w-full text-center font-semibold text-gray-600 flex items-center justify-center">{client.name}</div>
-                {/* <Image src={client.logo} alt={client.name} width={158} height={48} className="h-full w-full object-contain" /> */}
+            {extendedBottomClients.map((client, index) => (
+              <div
+                key={`bottom-${index}`}
+                className="flex h-24 w-48 flex-none items-center justify-center rounded-lg border border-gray-200/80 bg-white p-6 shadow-sm hover:shadow-md transition-shadow duration-300"
+              >
+                <Image
+                  src={client.logo}
+                  alt={`${client.name} logo`}
+                  width={160}
+                  height={60}
+                  className="h-full w-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+                />
               </div>
             ))}
           </div>
-
         </div>
       </div>
+
+      {/* Custom CSS for animations */}
+      <style jsx>{`
+        @keyframes scroll-left {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        @keyframes scroll-right {
+          0% {
+            transform: translateX(-50%);
+          }
+          100% {
+            transform: translateX(0);
+          }
+        }
+        
+        .animate-scroll-left {
+          animation: scroll-left 40s linear infinite;
+        }
+        
+        .animate-scroll-right {
+          animation: scroll-right 40s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
