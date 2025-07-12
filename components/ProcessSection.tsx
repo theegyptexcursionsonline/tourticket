@@ -139,7 +139,7 @@ const ProcessSection = () => {
                             {/* Static Header */}
                             <div className="mb-8">
                                 <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
-                                    Sigma Heavy
+                                   MK Industries <br />
                                     <br />
                                     <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                                         Engineering
