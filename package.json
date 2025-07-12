@@ -9,12 +9,18 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "firebase": "^11.10.0",
+    "framer-motion": "^12.23.3",
+    "mongodb": "^6.17.0",
+    "mongoose": "^8.16.3",
+    "motion": "^12.23.3",
     "next": "15.2.0",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
