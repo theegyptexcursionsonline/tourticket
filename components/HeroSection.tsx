@@ -1,25 +1,73 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-// This component uses a font from Google Fonts. 
+// This component uses a font from Google Fonts.
 // Make sure to import 'Poppins' in your main layout file.
 
 const HeroSection = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Slide content data with original image URLs
+  const slides = [
+    {
+      headline: "Specialists in Transformer Tank Fabrication",
+      subheading: "An ISO 9001:2015 Certified Company",
+      buttonText: "Explore Products",
+      buttonLink: "#products",
+      imageUrl: "/bgimage2.png"
+    },
+    {
+      headline: "Premium Quality Manufacturing Solutions",
+      subheading: "25+ Years of Excellence in Industrial Fabrication",
+      buttonText: "View Our Work",
+      buttonLink: "#portfolio",
+      imageUrl: "/heroimagemk.png"
+    },
+    {
+      headline: "Trusted Partner for Electrical Infrastructure",
+      subheading: "Advanced Technology & Precision Engineering",
+      buttonText: "Get Quote Now",
+      buttonLink: "#quote",
+      imageUrl: "/bgimage3.png"
+    }
+  ];
+
+  // Auto-slide functionality
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
+
   return (
     <>
-      <header className="relative">
+      <header className="relative z-50">
         {/* Top Bar */}
         <div className="bg-gray-800 text-white">
-          <div className="container mx-auto px-6 py-2 flex justify-between items-center text-sm">
+          <div className="container mx-auto px-4 sm:px-6 py-2 flex justify-between items-center text-xs sm:text-sm">
             <div className="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              {/* Contact number from the business card */}
               <span>M.: 6265507154</span>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <a href="#" className="hover:text-gray-300 transition-colors mr-4">Careers</a>
               <a href="#" className="hover:text-gray-300 transition-colors">Contacts</a>
             </div>
@@ -28,13 +76,12 @@ const HeroSection = () => {
 
         {/* Main Navigation */}
         <nav className="bg-white shadow-md">
-          <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-            {/* Logo updated to M.K. Industries */}
-            <div className="text-2xl font-bold text-gray-800 tracking-wider">
-              M.K. INDUSTRIES
+          <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center">
+              <img src="/logo.jpeg" alt="M.K. Industries Logo" className="h-12 w-auto object-contain" />
             </div>
 
-            {/* Navigation links tailored to the client */}
+            {/* Desktop Navigation links */}
             <div className="hidden md:flex items-center space-x-8 text-gray-600 font-medium">
               <a href="#" className="text-blue-700 border-b-2 border-blue-700 pb-1">Home</a>
               <a href="#" className="hover:text-blue-700 transition-colors">About Us</a>
@@ -42,43 +89,124 @@ const HeroSection = () => {
               <a href="#" className="hover:text-blue-700 transition-colors">Quality</a>
               <a href="#" className="hover:text-blue-700 transition-colors">Contact</a>
             </div>
+            
+            <div className="hidden md:flex items-center space-x-5">
+               <a href="#" className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-6 transition-colors rounded">
+                 Get a Quote
+               </a>
+            </div>
 
-            <div className="flex items-center space-x-5">
-              <button className="text-gray-500 hover:text-blue-700">
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  {isMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  )}
                 </svg>
               </button>
-              <a href="#" className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-6 transition-colors rounded">
-                Get a Quote
-              </a>
             </div>
           </div>
+
+          {/* Mobile Menu */}
+          {isMenuOpen && (
+            <div className="md:hidden bg-white shadow-lg absolute w-full">
+              <a href="#" className="block px-6 py-3 text-blue-700 font-semibold">Home</a>
+              <a href="#" className="block px-6 py-3 hover:bg-gray-100">About Us</a>
+              <a href="#" className="block px-6 py-3 hover:bg-gray-100">Our Products</a>
+              <a href="#" className="block px-6 py-3 hover:bg-gray-100">Quality</a>
+              <a href="#" className="block px-6 py-3 hover:bg-gray-100">Contact</a>
+              <div className="p-4">
+                <a href="#" className="block text-center w-full bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-6 transition-colors rounded">
+                  Get a Quote
+                </a>
+              </div>
+            </div>
+          )}
         </nav>
       </header>
 
-      {/* Hero Section */}
-      <section 
-        className="h-[600px] relative text-white bg-cover bg-center"
-        // Using a professional image of the client's work
-        style={{ backgroundImage: "url('/heroimagemk.png')" }}
-      >
-        <div className="bg-black bg-opacity-40 w-full h-full flex items-center">
-          <div className="container mx-auto px-6">
-            <div className="max-w-2xl">
-              {/* Headline reflects the company's manufacturing specialty */}
-              <h2 className="text-4xl md:text-6xl font-bold leading-tight">
-                Specialists in Transformer Tank Fabrication
-              </h2>
-              {/* Subheading highlights the company's certification */}
-              <p className="text-xl font-light mt-4 ml-1">
-                An ISO 9001:2015 Certified Company
-              </p>
-              <a href="#" className="inline-block bg-white text-gray-800 font-semibold py-3 px-8 mt-8 hover:bg-gray-200 transition-colors rounded">
-                Explore Products
-              </a>
+      {/* Hero Section with Carousel */}
+      <section className="h-screen md:h-[90vh] relative -mt-[120px] text-white">
+        {/* Background Image Slides */}
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ backgroundImage: `url('${slide.imageUrl}')` }}
+          />
+        ))}
+
+        {/* Content Container */}
+        <div className="relative z-20 w-full h-full flex flex-col justify-center items-center text-center">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="max-w-3xl mx-auto">
+              {/* Sliding Text Content */}
+              <div className="relative h-80 overflow-hidden">
+                {slides.map((slide, index) => (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center items-center ${
+                      index === currentSlide ? 'translate-x-0 opacity-100' : index < currentSlide ? '-translate-x-full opacity-0' : 'translate-x-full opacity-0'
+                    }`}
+                  >
+                    <div className="space-y-6">
+                      <h2 className={`text-4xl sm:text-5xl md:text-6xl font-bold leading-tight [text-shadow:_2px_2px_4px_rgb(0_0_0_/_60%)] transform transition-all duration-700 delay-100 ${
+                        index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+                      }`}>
+                        {slide.headline}
+                      </h2>
+                      <p className={`text-lg md:text-xl font-light [text-shadow:_1px_1px_2px_rgb(0_0_0_/_60%)] transform transition-all duration-700 delay-200 ${
+                        index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+                      }`}>
+                        {slide.subheading}
+                      </p>
+                      <a
+                        href={slide.buttonLink}
+                        className={`inline-block bg-white text-gray-800 font-semibold py-3 px-8 hover:bg-gray-200 transition-all duration-300 rounded shadow-lg transform ${
+                          index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-4 opacity-0'
+                        }`}
+                      >
+                        {slide.buttonText}
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Navigation Arrows */}
+        <div className="absolute z-30 w-full top-1/2 -translate-y-1/2 flex justify-between px-3 sm:px-6">
+          <button onClick={prevSlide} className="bg-black bg-opacity-30 hover:bg-opacity-50 text-white p-3 rounded-full transition-all duration-200" aria-label="Previous slide">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button onClick={nextSlide} className="bg-black bg-opacity-30 hover:bg-opacity-50 text-white p-3 rounded-full transition-all duration-200" aria-label="Next slide">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        
+        {/* Slide Indicators */}
+        <div className="absolute z-30 bottom-8 left-1/2 -translate-x-1/2 flex space-x-3">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                currentSlide === index ? 'bg-white' : 'bg-white bg-opacity-60 hover:bg-opacity-80'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </section>
     </>
