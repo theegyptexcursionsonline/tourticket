@@ -20,11 +20,7 @@ const nextConfig = {
         hostname: 'upload.wikimedia.org',
         pathname: '/wikipedia/en/thumb/4/41/Flag_of_India.svg/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com', // For Unsplash
-        pathname: '/**', //  Be more specific if possible!
-      },
+   
       // Add other hosts as needed
     ],
   },
