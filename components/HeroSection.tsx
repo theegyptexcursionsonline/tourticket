@@ -8,8 +8,14 @@ import React, { useState, useEffect } from 'react';
 const HeroSection = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for the modal
 
-  // Slide content data with original image URLs
+  // Function to toggle modal visibility
+  const toggleModal = () => {
+    setIsModalOpen(!isModalOpen);
+  };
+
+  // Slide content data
   const slides = [
     {
       headline: "Specialists in Transformer Tank Fabrication",
@@ -29,7 +35,7 @@ const HeroSection = () => {
       headline: "Trusted Partner for Electrical Infrastructure",
       subheading: "Advanced Technology & Precision Engineering",
       buttonText: "Get Quote Now",
-      buttonLink: "#quote",
+      buttonLink: "#", // Changed to trigger modal
       imageUrl: "/bgimage3.png"
     }
   ];
@@ -78,7 +84,7 @@ const HeroSection = () => {
         <nav className="bg-white shadow-md">
           <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
             <div className="flex items-center">
-              <img src="/mklogo.png" alt="M.K. Industries Logo" className="h-12 w-auto object-contain" />
+              <img src="/mklogo1.png" alt="M.K. Industries Logo" className="h-20 w-auto object-contain" />
             </div>
 
             {/* Desktop Navigation links */}
@@ -89,15 +95,20 @@ const HeroSection = () => {
               <a href="#" className="hover:text-blue-700 transition-colors">Quality</a>
               <a href="#" className="hover:text-blue-700 transition-colors">Contact</a>
             </div>
-            
-            <div className="hidden md:flex items-center space-x-5">
-               <a href="#" className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-6 transition-colors rounded">
-                 Get a Quote
-               </a>
+
+            {/* "Get a Quote" Button for Desktop */}
+            <div className="hidden md:flex items-center">
+               <button onClick={toggleModal} className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-6 transition-colors rounded">
+                Get a Quote
+               </button>
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
+
+            {/* Mobile Menu Controls */}
+            <div className="md:hidden flex items-center space-x-4">
+               <button onClick={toggleModal} className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-4 transition-colors rounded text-sm">
+                Get a Quote
+               </button>
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {isMenuOpen ? (
@@ -118,15 +129,50 @@ const HeroSection = () => {
               <a href="#" className="block px-6 py-3 hover:bg-gray-100">Our Products</a>
               <a href="#" className="block px-6 py-3 hover:bg-gray-100">Quality</a>
               <a href="#" className="block px-6 py-3 hover:bg-gray-100">Contact</a>
-              <div className="p-4">
-                <a href="#" className="block text-center w-full bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-6 transition-colors rounded">
-                  Get a Quote
-                </a>
-              </div>
             </div>
           )}
         </nav>
       </header>
+
+       {/* Get a Quote Modal */}
+       {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex justify-center items-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl p-6 md:p-8 w-full max-w-md relative animate-fade-in-up">
+            <button
+              onClick={toggleModal}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-colors"
+              aria-label="Close modal"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Request a Quote</h2>
+            <form>
+              <div className="mb-4">
+                <label htmlFor="name" className="block text-gray-700 text-sm font-medium mb-2">Full Name</label>
+                <input type="text" id="name" name="name" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="John Doe" />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+                <input type="email" id="email" name="email" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="you@example.com" />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="phone" className="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
+                <input type="tel" id="phone" name="phone" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="+1 (555) 123-4567" />
+              </div>
+              <div className="mb-6">
+                <label htmlFor="details" className="block text-gray-700 text-sm font-medium mb-2">Project Details</label>
+                <textarea id="details" name="details" rows="4" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Briefly describe your requirements..."></textarea>
+              </div>
+              <button type="submit" className="w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-md transition-transform transform hover:scale-105">
+                Submit Request
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       {/* Hero Section with Carousel */}
       <section className="h-screen md:h-[90vh] relative -mt-[120px] text-white">
@@ -165,14 +211,14 @@ const HeroSection = () => {
                       }`}>
                         {slide.subheading}
                       </p>
-                      <a
-                        href={slide.buttonLink}
+                      <button
+                        onClick={slide.buttonLink === '#' ? toggleModal : () => window.location.href = slide.buttonLink}
                         className={`inline-block bg-white text-gray-800 font-semibold py-3 px-8 hover:bg-gray-200 transition-all duration-300 rounded shadow-lg transform ${
                           index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-4 opacity-0'
                         }`}
                       >
                         {slide.buttonText}
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ))}
