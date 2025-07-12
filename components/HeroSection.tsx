@@ -78,7 +78,7 @@ const HeroSection = () => {
         <nav className="bg-white shadow-md">
           <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
             <div className="flex items-center">
-              <img src="/logo.jpeg" alt="M.K. Industries Logo" className="h-12 w-auto object-contain" />
+              <img src="/mklogo.png" alt="M.K. Industries Logo" className="h-12 w-auto object-contain" />
             </div>
 
             {/* Desktop Navigation links */}
