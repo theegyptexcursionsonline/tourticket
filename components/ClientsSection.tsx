@@ -54,7 +54,8 @@ const ScrollingClients = () => {
                   alt={`${client.name} logo`}
                   width={160}
                   height={60}
-                  className="h-full w-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+                  // Removed 'filter grayscale hover:grayscale-0' to show original colors
+                  className="h-full w-full object-contain transition-all duration-300"
                   priority={index < 5} // Prioritize loading first 5 images
                 />
               </div>
@@ -73,7 +74,8 @@ const ScrollingClients = () => {
                   alt={`${client.name} logo`}
                   width={160}
                   height={60}
-                  className="h-full w-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+                  // Removed 'filter grayscale hover:grayscale-0' to show original colors
+                  className="h-full w-full object-contain transition-all duration-300"
                 />
               </div>
             ))}
