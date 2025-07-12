@@ -87,13 +87,13 @@ const HeroSection = () => {
               <img src="/mklogo1.png" alt="M.K. Industries Logo" className="h-20 w-auto object-contain" />
             </div>
 
-            {/* Desktop Navigation links */}
-            <div className="hidden md:flex items-center space-x-8 text-gray-600 font-medium">
-              <a href="#" className="text-blue-700 border-b-2 border-blue-700 pb-1">Home</a>
-              <a href="#" className="hover:text-blue-700 transition-colors">About Us</a>
-              <a href="#" className="hover:text-blue-700 transition-colors">Our Products</a>
-              <a href="#" className="hover:text-blue-700 transition-colors">Quality</a>
-              <a href="#" className="hover:text-blue-700 transition-colors">Contact</a>
+            {/* Desktop Navigation links - UPDATED STYLES */}
+            <div className="hidden md:flex items-center space-x-10 text-gray-700 font-semibold">
+              <a href="#" className="text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-100 after:origin-left">Home</a>
+              <a href="#" className="hover:text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-0 after:transition-transform after:duration-300 after:origin-left hover:after:scale-x-100">About Us</a>
+              <a href="#" className="hover:text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-0 after:transition-transform after:duration-300 after:origin-left hover:after:scale-x-100">Our Products</a>
+              <a href="#" className="hover:text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-0 after:transition-transform after:duration-300 after:origin-left hover:after:scale-x-100">Quality</a>
+              <a href="#" className="hover:text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-0 after:transition-transform after:duration-300 after:origin-left hover:after:scale-x-100">Contact</a>
             </div>
 
             {/* "Get a Quote" Button for Desktop */}
@@ -102,7 +102,6 @@ const HeroSection = () => {
                 Get a Quote
                </button>
             </div>
-
 
             {/* Mobile Menu Controls */}
             <div className="md:hidden flex items-center space-x-4">
@@ -121,14 +120,14 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile Menu - UPDATED STYLES */}
           {isMenuOpen && (
-            <div className="md:hidden bg-white shadow-lg absolute w-full">
-              <a href="#" className="block px-6 py-3 text-blue-700 font-semibold">Home</a>
-              <a href="#" className="block px-6 py-3 hover:bg-gray-100">About Us</a>
-              <a href="#" className="block px-6 py-3 hover:bg-gray-100">Our Products</a>
-              <a href="#" className="block px-6 py-3 hover:bg-gray-100">Quality</a>
-              <a href="#" className="block px-6 py-3 hover:bg-gray-100">Contact</a>
+            <div className="md:hidden bg-white shadow-lg absolute w-full animate-fade-in-down">
+              <a href="#" className="block px-6 py-4 text-white bg-blue-700 font-semibold">Home</a>
+              <a href="#" className="block px-6 py-4 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-colors">About Us</a>
+              <a href="#" className="block px-6 py-4 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-colors">Our Products</a>
+              <a href="#" className="block px-6 py-4 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-colors">Quality</a>
+              <a href="#" className="block px-6 py-4 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-colors">Contact</a>
             </div>
           )}
         </nav>
