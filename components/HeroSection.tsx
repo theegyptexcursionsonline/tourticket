@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 
-// --- SVG Icon Components ---
+// --- SVG Icon Components (No changes needed here) ---
 
 const PhoneIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -38,40 +38,40 @@ const ChevronRightIcon = ({ className }: { className?: string }) => (
 
 // --- Type Definitions ---
 type Slide = {
-  headline: string;
-  subheading: string;
-  buttonText: string;
-  buttonLink: string;
-  imageUrl: string;
+    headline: string;
+    subheading: string;
+    buttonText: string;
+    buttonLink: string;
+    imageUrl: string;
 };
 
 type HeroSectionProps = {
-  onGetQuoteClick: () => void;
+    onGetQuoteClick: () => void;
 };
 
 // --- Data Constants ---
 const SLIDES_DATA: Slide[] = [
-  {
-    headline: "Excellence in Transformer Tank Fabrication",
-    subheading: "An ISO 9001:2015, 14001:2015 & 45001:2018 Certified Company",
-    buttonText: "Our Capabilities",
-    buttonLink: "#capabilities",
-    imageUrl: "/main.png"
-  },
-  {
-    headline: "Delivering Robust & Reliable Steel Solutions",
-    subheading: "Your trusted partner in the energy sector since 2021.",
-    buttonText: "View Our Process",
-    buttonLink: "#process",
-    imageUrl: "/bgimage2.png"
-  },
-  {
-    headline: "Ready to Fabricate Your Next Project?",
-    subheading: "We handle projects from 2.5 MVA to 160 MVA with precision and care.",
-    buttonText: "Request a Quote",
-    buttonLink: "#",
-    imageUrl: "/bgimage3.png"
-  }
+    {
+        headline: "Excellence in Transformer Tank Fabrication",
+        subheading: "An ISO 9001:2015, 14001:2015 & 45001:2018 Certified Company",
+        buttonText: "Our Capabilities",
+        buttonLink: "#capabilities",
+        imageUrl: "/main.png"
+    },
+    {
+        headline: "Delivering Robust & Reliable Steel Solutions",
+        subheading: "Your trusted partner in the energy sector since 2021.",
+        buttonText: "View Our Process",
+        buttonLink: "#process",
+        imageUrl: "/bgimage2.png"
+    },
+    {
+        headline: "Ready to Fabricate Your Next Project?",
+        subheading: "We handle projects from 2.5 MVA to 160 MVA with precision and care.",
+        buttonText: "Request a Quote",
+        buttonLink: "#",
+        imageUrl: "/bgimage3.png"
+    }
 ];
 
 const NAV_LINKS = [
@@ -82,7 +82,7 @@ const NAV_LINKS = [
     { href: '/contact', label: 'Contact' },
 ];
 
-// --- Sub-components ---
+// --- Sub-components (No changes needed here) ---
 
 const TopBar = () => (
     <div className="bg-gray-800 text-white">
@@ -107,7 +107,7 @@ const Navigation = ({ onGetQuoteClick, onMenuToggle, isMenuOpen }: { onGetQuoteC
             </div>
             <div className="hidden md:flex items-center space-x-10 text-gray-700 font-semibold">
                 {NAV_LINKS.map(link => (
-                     <a key={link.href} href={link.href} className="hover:text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-0 after:transition-transform after:duration-300 after:origin-left hover:after:scale-x-100">
+                    <a key={link.href} href={link.href} className="hover:text-blue-700 relative py-2 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-700 after:scale-x-0 after:transition-transform after:duration-300 after:origin-left hover:after:scale-x-100">
                         {link.label}
                     </a>
                 ))}
@@ -129,7 +129,7 @@ const Navigation = ({ onGetQuoteClick, onMenuToggle, isMenuOpen }: { onGetQuoteC
     </nav>
 );
 
-const MobileMenu = ({ isOpen, onMenuToggle }: { isOpen: boolean; onMenuToggle: () => void; }) => {
+const MobileMenu = ({ isOpen }: { isOpen: boolean }) => {
     if (!isOpen) return null;
 
     return (
@@ -147,7 +147,7 @@ const MobileMenu = ({ isOpen, onMenuToggle }: { isOpen: boolean; onMenuToggle: (
 
 const CarouselSlide = ({ slide, isActive, onGetQuoteClick }: { slide: Slide; isActive: boolean; onGetQuoteClick: () => void; }) => (
     <div
-        className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center items-center text-center ${isActive ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'}`}
+        className={`absolute inset-0 transition-all duration-700 ease-in-out flex flex-col justify-center items-center text-center ${isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full'}`}
         aria-hidden={!isActive}
     >
         <div className="space-y-6">
@@ -181,13 +181,8 @@ const HeroSection = ({ onGetQuoteClick }: HeroSectionProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const slides = useMemo(() => SLIDES_DATA, []);
 
-    // Preload images
-    useEffect(() => {
-        slides.forEach(slide => {
-            const img = new window.Image();
-            img.src = slide.imageUrl;
-        });
-    }, [slides]);
+    // REMOVED: The manual image preloading useEffect is no longer needed.
+    // 'next/image' with the 'priority' prop handles this more effectively.
 
     // Automatic slide transition
     useEffect(() => {
@@ -218,16 +213,23 @@ const HeroSection = ({ onGetQuoteClick }: HeroSectionProps) => {
             <header className="relative z-50">
                 <TopBar />
                 <Navigation onGetQuoteClick={onGetQuoteClick} onMenuToggle={handleMenuToggle} isMenuOpen={isMenuOpen} />
-                <MobileMenu isOpen={isMenuOpen} onMenuToggle={handleMenuToggle} />
+                <MobileMenu isOpen={isMenuOpen} />
             </header>
             
             <section className="h-screen md:h-[90vh] relative -mt-[120px] text-white overflow-hidden" aria-roledescription="carousel" aria-label="Highlighted features">
-                {/* Background Images */}
+                
+                {/* Background Images - UPDATED */}
                 {slides.map((slide, index) => (
-                    <div
+                    <Image
                         key={index}
-                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
-                        style={{ backgroundImage: `url('${slide.imageUrl}')` }}
+                        src={slide.imageUrl}
+                        alt={`Background for ${slide.headline}`}
+                        fill
+                        priority={index === 0} // Preload the first image for faster LCP
+                        className={`
+                            object-cover object-center transition-opacity duration-1000 ease-in-out
+                            ${index === currentSlide ? 'opacity-100' : 'opacity-0'}
+                        `}
                         role="group"
                         aria-roledescription="slide"
                         aria-label={`Slide ${index + 1} of ${slides.length}`}
@@ -235,7 +237,7 @@ const HeroSection = ({ onGetQuoteClick }: HeroSectionProps) => {
                     />
                 ))}
                 
-                {/* Slide Content */}
+                {/* Slide Content Overlay */}
                 <div className="relative z-20 w-full h-full flex flex-col justify-center items-center text-center">
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="max-w-3xl mx-auto">
