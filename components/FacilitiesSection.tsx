@@ -1,10 +1,11 @@
 import React from 'react';
+import Image from 'next/image'; // Import the next/image component
 
 const FacilitiesSection = () => {
   return (
-    <div className="bg-white">
+    <div className="bg-[#F2F2F2]">
       <div className="container mx-auto px-6 py-24 sm:py-32">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-x-16 gap-y-16 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-x-16 gap-y-16 lg:grid-cols-2">
           
           {/* Left Column: Text Content and Stats */}
           <div>
@@ -16,7 +17,7 @@ const FacilitiesSection = () => {
               Our state-of-the-art manufacturing facility is the foundation of our success, enabling us to handle projects of significant size and complexity with unmatched efficiency and quality control.
             </p>
             
-            {/* Key Statistics Grid - Now corrected */}
+            {/* Key Statistics Grid */}
             <dl className="mt-10 grid grid-cols-1 gap-8 text-base leading-7 text-gray-600 sm:grid-cols-2">
               <div className="flex flex-col gap-y-2">
                 <dt className="font-semibold text-gray-900">30,000 sq. ft. Facility</dt>
@@ -37,12 +38,15 @@ const FacilitiesSection = () => {
             </dl>
           </div>
 
-          {/* Right Column: Image */}
-          <div className="flex items-center">
-            <img
-              src="/image2.jpeg" // Authentic image of M.K. Industries facility
+          {/* Right Column: Image - Corrected Implementation */}
+          <div className="flex items-center justify-center">
+            {/* The Image component now uses width and height props, which is more stable */}
+            <Image
+              src="/image2.jpeg" // Replace with your authentic facility image
               alt="Wide view of the M.K. Industries manufacturing facility with cranes and equipment."
-              className="w-full max-w-none rounded-xl shadow-xl ring-1 ring-gray-400/10"
+              width={1000} // Set a base width for the image source
+              height={750} // Set a base height for the image source
+              className="h-auto w-full" // Responsive classes to make it scale correctly
             />
           </div>
         </div>

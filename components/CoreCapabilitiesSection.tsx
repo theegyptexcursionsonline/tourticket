@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 // A simple checkmark icon for the list items
 const CheckIcon = () => (
@@ -52,19 +53,23 @@ const CoreCapabilitiesSection = () => {
                         
                         {/* Call to Action Button */}
                         <div className="mt-12">
-                            <a href="#" className="inline-block rounded-md bg-blue-800 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+                            <a href="/contact" className="inline-block rounded-md bg-blue-800 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
                                 Request a Quote
                             </a>
                         </div>
                     </div>
 
-                    {/* Right Column: Image */}
-                    <div className="h-full w-full">
-                        <img 
-                            src="/image5.jpeg" // Authentic image from M.K. Industries workshop
+                    {/* Right Column: Image with Custom Frame */}
+                    <div className="flex items-center justify-center">
+                      <div className="rounded-2xl bg-white p-2.5 shadow-xl ring-1 ring-gray-900/10">
+                        <Image 
+                            src="/mkimage5.jpeg" // Authentic image from M.K. Industries workshop
                             alt="Fabrication of a large transformer tank at M.K. Industries" 
-                            className="w-full rounded-lg bg-gray-100 object-cover shadow-lg"
+                            width={800}
+                            height={600}
+                            className="w-full rounded-lg object-cover"
                         />
+                      </div>
                     </div>
                 </div>
             </div>
