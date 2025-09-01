@@ -1,0 +1,54 @@
+'use client';
+import { ArrowRight } from 'lucide-react';
+
+const allInterests = [
+    { name: 'FUN', products: 212 },
+    { name: 'FAMILY-FRIENDLY', products: 180 },
+    { name: 'SIGHTSEEING', products: 123 },
+    { name: 'HISTORICAL', products: 107 },
+    { name: 'BUS TOURS', products: 59 },
+    { name: 'ON THE WATER', products: 66 },
+    { name: 'ROMANTIC', products: 24 },
+    { name: 'INSTAGRAM MUSEUMS', products: 41 },
+    { name: 'PARTY', products: 19 },
+    { name: 'ART', products: 49 },
+    { name: 'WITH FOOD', products: 23 },
+    { name: 'NIGHTLIFE', products: 26 },
+    { name: 'SELFIE MUSEUM', products: 40 },
+    { name: 'WITH DRINKS', products: 36 },
+    { name: 'PLANTS & FLOWERS', products: 24 },
+    { name: 'CROSSING THE BORDER', products: 2 },
+    { name: 'BIKE TOURS', products: 4 },
+    { name: 'WALKING TOURS', products: 9 },
+    { name: 'ANIMALS', products: 13 },
+];
+
+const InterestButton = ({ interest }: { interest: typeof allInterests[0] }) => (
+    <a href="#" className="block bg-white p-4 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-in-out">
+        <h4 className="font-bold text-slate-800">{interest.name}</h4>
+        <p className="text-sm text-slate-500">{interest.products} products</p>
+    </a>
+);
+
+export default function InterestGrid() {
+    return (
+        <section className="bg-white py-16">
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-10">
+                    <h2 className="text-3xl font-extrabold text-slate-800">
+                        TOURS & TICKETS
+                    </h2>
+                    <button className="mt-4 inline-flex items-center gap-2 text-red-600 font-bold text-lg group">
+                        <span>FIND THE RIGHT INTEREST FOR YOU</span>
+                        <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                    </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {allInterests.map(interest => (
+                        <InterestButton key={interest.name} interest={interest} />
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
