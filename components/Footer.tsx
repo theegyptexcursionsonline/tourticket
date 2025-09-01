@@ -27,7 +27,7 @@ export default function Footer() {
           {/* Logo */}
           <div className="lg:col-span-2 xl:col-span-1 mb-6 md:mb-0">
             <div className="bg-red-500 text-white font-bold text-2xl p-4 inline-block">
-                <span>TOURS</span>
+                <span>TRIP</span>
                 <span className="text-cyan-300">&</span>
                 <span>TICKETS</span>
             </div>

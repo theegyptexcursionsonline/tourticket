@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "GoVenture - Your Best Travel Buddy",
+  title: "TripTicket - Your Best Travel Buddy",
   description: "Discover and book unforgettable activities, tours, and experiences around the world.",
 };
 

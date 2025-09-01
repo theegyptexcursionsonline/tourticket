@@ -503,7 +503,7 @@ export default function Header() {
                 {/* Updated Logo to match Footer style */}
                 <a href="#" className="flex items-center">
                   <div className="bg-red-500 text-white font-bold text-xl md:text-2xl lg:text-3xl px-3 py-2 transition-all duration-300">
-                    <span>TOURS</span>
+                    <span>TRIP</span>
                     <span className="text-cyan-300">&</span>
                     <span>TICKETS</span>
                   </div>
