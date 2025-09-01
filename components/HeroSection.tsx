@@ -58,8 +58,8 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   const removeSearchTerm = (term: string) => {
     const newSearches = recentSearches.filter(s => s.toLowerCase() !== term.toLowerCase());
     setRecentSearches(newSearches);
-     try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); }
-     catch (error) { console.error("Failed to save recent searches", error); }
+      try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); }
+      catch (error) { console.error("Failed to save recent searches", error); }
   };
 
   return { recentSearches, addSearchTerm, removeSearchTerm };
@@ -207,10 +207,22 @@ export default function HeroSection() {
   return (
     <>
       <section className="relative h-[90vh] min-h-[600px] w-full flex items-center justify-start text-white overflow-hidden pt-20 font-sans">
-        <div className="absolute inset-0 z-0">
-          <img src="/bg1.png" alt="Amsterdam canal with bridge and traditional Dutch houses" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"></div>
-        </div>
+        
+     <div className="absolute inset-0 z-0">
+  <video
+    autoPlay
+    loop
+    muted
+    playsInline
+    poster="/bg1.png" 
+    className="w-full h-full object-cover"
+  >
+    <source src="/bgvideo.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+  {/* The dark overlay div has been removed */}
+</div>
+
         <div className="relative z-10 p-4 md:p-8 lg:p-16 xl:p-24 max-w-4xl">
           <h1 className="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
             Your<br />Best<br />Travel<br />Buddy
@@ -246,10 +258,9 @@ export default function HeroSection() {
         .text-shadow-lg { text-shadow: 2px 2px 8px rgb(0 0 0 / 0.6); }
         .font-sans { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
       `}</style>
-       <link rel="preconnect" href="https://fonts.googleapis.com" />
-       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     </>
   );
 }
-
