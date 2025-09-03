@@ -13,7 +13,7 @@ const almarai = Almarai({
 });
 
 export const metadata: Metadata = {
-  title: "Tours & Tickets - Unforgettable Experiences",
+  title: "Egypt Excursions Online - Unforgettable Experiences",
   description: "Discover and book unforgettable activities, tours, and experiences across the globe. Your adventure starts here.",
 };
 
