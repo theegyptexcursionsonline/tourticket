@@ -1,70 +1,122 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Star, ShoppingCart, Clock, Users, X } from 'lucide-react';
+import { ArrowRight, Star, ShoppingCart, Clock, Users } from 'lucide-react';
+import BookingSidebar from '@/components/BookingSidebar';
+import { Tour } from '@/types';
+import { useSettings } from '@/hooks/useSettings';
 
-// --- Type Definitions (as per original structure) ---
-type Tour = {
-  id: number;
-  image: string;
-  title: string;
-  duration: string;
-  rating: number;
-  bookings: number;
-  originalPrice?: number;
-  discountPrice: number;
-  tags: string[];
-};
-
-// --- Mock Data & Hooks (for standalone functionality) ---
+// --- Mock Data with proper Tour interface ---
 const featuredTours: Tour[] = [
-  { id: 1, image: '/images2/1.png', title: '1-Hour Amsterdam Canal Cruise', duration: '60 minutes', rating: 4.5, bookings: 4506416, originalPrice: 20, discountPrice: 15.50, tags: ['Online only deal', 'Staff favourite', '-25%'] },
-  { id: 2, image: '/images2/2.png', title: 'New York Pizza by LOVERS Canal Cruise', duration: '75 minutes', rating: 4.6, bookings: 21080, originalPrice: 43.50, discountPrice: 37.50, tags: ['-15%'] },
-  { id: 3, image: '/images2/3.png', title: 'Amsterdam Evening & Night Boat Tour', duration: '60 minutes', rating: 4.5, bookings: 1256854, originalPrice: 20, discountPrice: 15.50, tags: ['Staff favourite', '-25%'] },
-  { id: 4, image: '/images2/4.png', title: 'Wine & Cheese Cruise in Amsterdam', duration: '90 minutes', rating: 4.9, bookings: 10245, originalPrice: 38.50, discountPrice: 35, tags: ['New', '-10%'] },
-  { id: 5, image: '/images2/5.png', title: 'Exclusive Amsterdam Dinner Cruise', duration: '2 hours', rating: 4.8, bookings: 5008, discountPrice: 89, tags: ['Staff favourite'] },
-  { id: 6, image: '/images2/6.png', title: 'Family-Friendly Pancake Cruise', duration: '75 minutes', rating: 4.8, bookings: 11859, discountPrice: 26, tags: ['Best for Kids'] },
+  { 
+    id: 'amsterdam-canal-cruise',
+    image: '/images2/1.png', 
+    title: '1-Hour Amsterdam Canal Cruise', 
+    duration: '60 minutes', 
+    rating: 4.5, 
+    bookings: 4506416, 
+    originalPrice: 20, 
+    discountPrice: 15.50, 
+    tags: ['Online only deal', 'Staff favourite', '-25%'],
+    description: 'Experience Amsterdam from a unique perspective with our 1-hour canal cruise.',
+    highlights: [
+      'See the famous canal houses and bridges',
+      'Audio guide available in multiple languages',
+      'Perfect for first-time visitors',
+      'Departs from a central location'
+    ]
+  },
+  { 
+    id: 'pizza-lovers-cruise',
+    image: '/images2/2.png', 
+    title: 'New York Pizza by LOVERS Canal Cruise', 
+    duration: '75 minutes', 
+    rating: 4.6, 
+    bookings: 21080, 
+    originalPrice: 43.50, 
+    discountPrice: 37.50, 
+    tags: ['-15%'],
+    description: 'Combine delicious New York-style pizza with a scenic Amsterdam canal cruise.',
+    highlights: [
+      'Fresh New York-style pizza on board',
+      'Scenic canal views',
+      'Perfect lunch or dinner option',
+      'Unique dining experience'
+    ]
+  },
+  { 
+    id: 'evening-night-cruise',
+    image: '/images2/3.png', 
+    title: 'Amsterdam Evening & Night Boat Tour', 
+    duration: '60 minutes', 
+    rating: 4.5, 
+    bookings: 1256854, 
+    originalPrice: 20, 
+    discountPrice: 15.50, 
+    tags: ['Staff favourite', '-25%'],
+    description: 'See Amsterdam illuminated at night on this magical evening canal cruise.',
+    highlights: [
+      'Beautiful city lights reflection on water',
+      'Romantic evening atmosphere',
+      'Historic canal district at night',
+      'Professional commentary'
+    ]
+  },
+  { 
+    id: 'wine-cheese-cruise',
+    image: '/images2/4.png', 
+    title: 'Wine & Cheese Cruise in Amsterdam', 
+    duration: '90 minutes', 
+    rating: 4.9, 
+    bookings: 10245, 
+    originalPrice: 38.50, 
+    discountPrice: 35, 
+    tags: ['New', '-10%'],
+    description: 'Indulge in premium Dutch cheeses and fine wines while cruising Amsterdam\'s canals.',
+    highlights: [
+      'Selection of Dutch cheeses',
+      'Premium wine selection',
+      'Expert sommelier guidance',
+      'Scenic canal views'
+    ]
+  },
+  { 
+    id: 'exclusive-dinner-cruise',
+    image: '/images2/5.png', 
+    title: 'Exclusive Amsterdam Dinner Cruise', 
+    duration: '2 hours', 
+    rating: 4.8, 
+    bookings: 5008, 
+    discountPrice: 89, 
+    tags: ['Staff favourite'],
+    description: 'An exclusive dining experience aboard a luxury canal cruise vessel.',
+    highlights: [
+      'Multi-course gourmet dinner',
+      'Luxury boat with panoramic windows',
+      'Professional service',
+      'Romantic atmosphere'
+    ]
+  },
+  { 
+    id: 'family-pancake-cruise',
+    image: '/images2/6.png', 
+    title: 'Family-Friendly Pancake Cruise', 
+    duration: '75 minutes', 
+    rating: 4.8, 
+    bookings: 11859, 
+    discountPrice: 26, 
+    tags: ['Best for Kids'],
+    description: 'Perfect for families - enjoy traditional Dutch pancakes while cruising the canals.',
+    highlights: [
+      'Traditional Dutch pancakes',
+      'Kid-friendly atmosphere',
+      'Educational canal commentary',
+      'Great for all ages'
+    ]
+  },
 ];
 
-// Mock hook to provide formatting settings
-const useSettings = () => ({
-  formatPrice: (price: number) => `$${price.toFixed(2)}`,
-});
-
-// Mock Sidebar component for a complete experience
-const BookingSidebar = ({ isOpen, onClose, tour }: { isOpen: boolean; onClose: () => void; tour: Tour | null }) => {
-  if (!isOpen || !tour) return null;
-
-  return (
-    <>
-      <div 
-        className="fixed inset-0 bg-black/60 z-40 transition-opacity animate-fade-in"
-        onClick={onClose}
-      />
-      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col animate-slide-in-right">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-800">Your Booking</h2>
-          <button onClick={onClose} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
-            <X size={24} />
-          </button>
-        </div>
-        <div className="flex-grow p-6 overflow-y-auto">
-          <img src={tour.image} alt={tour.title} className="w-full h-48 object-cover rounded-lg mb-4" />
-          <h3 className="text-xl font-bold text-gray-900">{tour.title}</h3>
-          <p className="text-gray-600 mt-2">Added to your cart. Proceed to checkout to complete your booking.</p>
-        </div>
-        <div className="p-6 border-t bg-gray-50">
-          <button className="w-full bg-red-600 text-white font-bold py-4 rounded-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-105">
-            Proceed to Checkout
-          </button>
-        </div>
-      </div>
-    </>
-  );
-};
-
-
-// --- Refined Tour Card Component ---
+// --- Tour Card Component ---
 const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
 
@@ -89,7 +141,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         <img src={tour.image} alt={tour.title} className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
         <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-          {tour.tags.map(tag => (
+          {tour.tags?.map(tag => (
             <span key={tag} className={`px-3 py-1 text-xs font-bold rounded-full shadow-sm ${getTagColor(tag)}`}>
               {tag}
             </span>
@@ -112,13 +164,13 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
           </div>
           <div className="flex items-center gap-1.5">
             <Users size={14} className="text-gray-400"/>
-            <span>{formatBookings(tour.bookings)} booked</span>
+            <span>{formatBookings(tour.bookings || 0)} booked</span>
           </div>
         </div>
         <div className="mt-auto flex items-end justify-between">
           <div className="flex items-center gap-1.5 text-yellow-500">
             <Star size={18} className="fill-current" />
-            <span className="font-bold text-base text-gray-700">{tour.rating.toFixed(1)}</span>
+            <span className="font-bold text-base text-gray-700">{tour.rating?.toFixed(1)}</span>
           </div>
           <div className="text-right">
              <span className="text-2xl font-extrabold text-gray-900">{formatPrice(tour.discountPrice)}</span>
@@ -132,7 +184,6 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   );
 };
 
-
 // --- Main Component ---
 export default function FeaturedTours() {
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
@@ -145,7 +196,7 @@ export default function FeaturedTours() {
   
   const closeSidebar = () => {
     setBookingSidebarOpen(false);
-    setTimeout(() => setSelectedTour(null), 300); // Delay clearing tour to allow for exit animation
+    setTimeout(() => setSelectedTour(null), 300);
   }
   
   // Duplicate tours for seamless animation
@@ -181,6 +232,7 @@ export default function FeaturedTours() {
         </div>
       </section>
       
+      {/* Use the proper BookingSidebar component */}
       <BookingSidebar 
         isOpen={isBookingSidebarOpen} 
         onClose={closeSidebar} 
@@ -202,22 +254,6 @@ export default function FeaturedTours() {
           overflow: hidden;
         }
 
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out forwards;
-        }
-
-        @keyframes slide-in-right {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-
         @keyframes marquee {
           from { transform: translateX(0); }
           to { transform: translateX(-50%); }
@@ -230,4 +266,3 @@ export default function FeaturedTours() {
     </>
   );
 }
-
