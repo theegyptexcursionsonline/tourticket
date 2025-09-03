@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, X, Clock, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Type Definitions ---
 type Tag = {
@@ -199,6 +200,22 @@ export default function HeroSection() {
   const { addSearchTerm } = useRecentSearches();
   const dynamicTags = useDynamicTags(ALL_TAG_NAMES, TAG_POSITIONS);
 
+  const searchPlaceholders = useMemo(() => [
+    'What are you looking for?',
+    'Search for museums in Paris',
+    'Find a canal cruise in Amsterdam',
+    'Explore day trips from Berlin'
+  ], []);
+
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+        setPlaceholderIndex((prevIndex) => (prevIndex + 1) % searchPlaceholders.length);
+    }, 3000); // Change text every 3 seconds
+    return () => clearInterval(interval);
+  }, [searchPlaceholders.length]);
+
   const handleSearch = (term: string) => {
     addSearchTerm(term);
     console.log(`Searching for: ${term}`);
@@ -231,9 +248,25 @@ export default function HeroSection() {
             Your trip starts now. Let's find your next experience.
           </p>
           <div className="mt-8 lg:mt-12">
-            <button onClick={() => setIsSearchModalOpen(true)} className="w-full max-w-md bg-white text-slate-600 rounded-full flex items-center p-3 lg:p-4 text-base lg:text-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform">
-              <Search className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 ml-2 text-red-500" />
-              <span className="font-semibold">Where are you going?</span>
+            <button 
+                onClick={() => setIsSearchModalOpen(true)} 
+                className="w-full max-w-md bg-white text-slate-600 rounded-full flex items-center p-3 lg:p-4 text-base lg:text-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
+            >
+              <Search className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 ml-2 text-red-500 flex-shrink-0" />
+              <div className="relative h-7 flex-1 text-left overflow-hidden">
+                <AnimatePresence mode="wait">
+                    <motion.span
+                        key={placeholderIndex}
+                        initial={{ y: 28, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -28, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="absolute font-semibold whitespace-nowrap"
+                    >
+                        {searchPlaceholders[placeholderIndex]}
+                    </motion.span>
+                </AnimatePresence>
+              </div>
             </button>
           </div>
         </div>

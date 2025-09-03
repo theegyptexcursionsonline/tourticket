@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Almarai } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { CartProvider } from "@/contexts/CartContext";
+import CartSidebar from "@/components/CartSidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -11,8 +13,8 @@ const almarai = Almarai({
 });
 
 export const metadata: Metadata = {
-  title: "Egypt Excursions Online - Unforgettable Tours & Experiences",
-  description: "Discover and book unforgettable activities, tours, and experiences across Egypt. From the pyramids of Giza to the temples of Luxor, your adventure starts here.",
+  title: "Tours & Tickets - Unforgettable Experiences",
+  description: "Discover and book unforgettable activities, tours, and experiences across the globe. Your adventure starts here.",
 };
 
 export default function RootLayout({
@@ -24,7 +26,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
         <SettingsProvider>
-          {children}
+          <CartProvider>
+            {children}
+            <CartSidebar />
+          </CartProvider>
         </SettingsProvider>
       </body>
     </html>

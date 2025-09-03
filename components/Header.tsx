@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, FC, ReactNode } from 'react';
 import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/hooks/useSettings';
+import { useCart } from '@/contexts/CartContext';
 import { Currency, Language } from '@/types';
 import { currencies, languages } from '@/utils/localization';
 
@@ -89,68 +90,80 @@ function useScrollDirection() {
 }
 
 // --- MODALS and SUB-COMPONENTS ---
-
 const SettingsModal: FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { selectedCurrency, setSelectedCurrency, selectedLanguage, setSelectedLanguage } = useSettings();
-  const [activeTab, setActiveTab] = useState<'currency' | 'language'>('currency');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredCurrencies = currencies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.code.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredLanguages = languages.filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()) || l.nativeName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const { selectedCurrency, setSelectedCurrency, selectedLanguage, setSelectedLanguage } = useSettings();
+    const [activeTab, setActiveTab] = useState<'currency' | 'language'>('currency');
+    const [searchTerm, setSearchTerm] = useState('');
   
-  useEffect(() => {
-    if (!isOpen) setSearchTerm('');
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-2xl font-bold text-slate-800">Settings</h2>
-          <button onClick={onClose} className="p-2 rounded-full text-slate-500 hover:bg-slate-100"><X size={24} /></button>
-        </div>
-        <div className="flex border-b">
-          <button onClick={() => setActiveTab('currency')} className={`flex-1 p-4 font-semibold text-center ${activeTab === 'currency' ? 'text-red-600 border-b-2 border-red-600' : 'text-slate-500'}`}>Currency</button>
-          <button onClick={() => setActiveTab('language')} className={`flex-1 p-4 font-semibold text-center ${activeTab === 'language' ? 'text-red-600 border-b-2 border-red-600' : 'text-slate-500'}`}>Language</button>
-        </div>
-        <div className="p-6">
-          <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-lg px-4 py-3 border-2 border-slate-200 bg-slate-50 rounded-lg focus:outline-none focus:border-red-500" />
-        </div>
-        <div className="overflow-y-auto p-6 pt-0">
-          <AnimatePresence mode="wait">
-            <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {activeTab === 'currency' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {filteredCurrencies.map(c => (
-                    <button key={c.code} onClick={() => { setSelectedCurrency(c); onClose(); }} className={`p-4 rounded-lg text-left ${selectedCurrency.code === c.code ? 'bg-red-500 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
-                      <div className="font-bold">{c.code} - {c.symbol}</div>
-                      <div className="text-sm">{c.name}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {activeTab === 'language' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {filteredLanguages.map(l => (
-                    <button key={l.code} onClick={() => { setSelectedLanguage(l); onClose(); }} className={`p-4 rounded-lg text-left ${selectedLanguage.code === l.code ? 'bg-red-500 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
-                      <div className="font-bold">{l.name}</div>
-                      <div className="text-sm">{l.nativeName}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
+    const filteredCurrencies = currencies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.code.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredLanguages = languages.filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()) || l.nativeName.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    useEffect(() => {
+      if (!isOpen) setSearchTerm('');
+    }, [isOpen]);
+  
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={onClose}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center p-6 border-b">
+                <h2 className="text-2xl font-bold text-slate-800">Settings</h2>
+                <button onClick={onClose} className="p-2 rounded-full text-slate-500 hover:bg-slate-100"><X size={24} /></button>
+              </div>
+              <div className="flex border-b">
+                <button onClick={() => setActiveTab('currency')} className={`flex-1 p-4 font-semibold text-center ${activeTab === 'currency' ? 'text-red-600 border-b-2 border-red-600' : 'text-slate-500'}`}>Currency</button>
+                <button onClick={() => setActiveTab('language')} className={`flex-1 p-4 font-semibold text-center ${activeTab === 'language' ? 'text-red-600 border-b-2 border-red-600' : 'text-slate-500'}`}>Language</button>
+              </div>
+              <div className="p-6">
+                <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-lg px-4 py-3 border-2 border-slate-200 bg-slate-50 rounded-lg focus:outline-none focus:border-red-500" />
+              </div>
+              <div className="overflow-y-auto p-6 pt-0">
+                <AnimatePresence mode="wait">
+                  <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                    {activeTab === 'currency' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {filteredCurrencies.map(c => (
+                          <button key={c.code} onClick={() => { setSelectedCurrency(c); onClose(); }} className={`p-4 rounded-lg text-left ${selectedCurrency.code === c.code ? 'bg-red-500 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
+                            <div className="font-bold">{c.code} - {c.symbol}</div>
+                            <div className="text-sm">{c.name}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {activeTab === 'language' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {filteredLanguages.map(l => (
+                          <button key={l.code} onClick={() => { setSelectedLanguage(l); onClose(); }} className={`p-4 rounded-lg text-left ${selectedLanguage.code === l.code ? 'bg-red-500 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
+                            <div className="font-bold">{l.name}</div>
+                            <div className="text-sm">{l.nativeName}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Other components like SearchModal, MegaMenu etc. remain the same. For brevity, they are omitted here but are present in the full code below.
-// ... SearchSuggestion, SearchModal, MegaMenu definitions go here ... (They are unchanged from your original file)
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  };
+  
 const SearchSuggestion = ({ term, icon: Icon, onSelect, onRemove }: { term: string, icon: React.ElementType, onSelect: (term: string) => void, onRemove?: (term: string) => void }) => (
     <div className="group relative">
         <button
@@ -291,13 +304,16 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const { selectedCurrency, selectedLanguage } = useSettings();
   const { scrollY } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
+  const { openCart, itemCount } = useCart();
 
   const isScrolled = scrollY > 100;
   
+  const anyModalOpen = isMegaMenuOpen || isSearchModalOpen || isSettingsModalOpen;
+
   useEffect(() => {
-    document.body.style.overflow = isMegaMenuOpen || isSearchModalOpen || isSettingsModalOpen ? 'hidden' : 'auto';
+    document.body.style.overflow = anyModalOpen ? 'hidden' : 'auto';
     return () => { document.body.style.overflow = 'auto'; };
-  }, [isMegaMenuOpen, isSearchModalOpen, isSettingsModalOpen]);
+  }, [anyModalOpen]);
   
   const headerClasses = `fixed top-0 left-0 right-0 z-30 transition-all duration-300 ease-in-out ${
     isScrolled || isMegaMenuOpen || startSolid ? 'bg-white text-gray-800 shadow-lg' : 'bg-transparent text-white'
@@ -318,13 +334,13 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 md:h-20">
               <div className="flex items-center gap-4 lg:gap-8">
-                <a href="#" className="flex items-center h-full">
-  <img 
-    src="/EEO-logo.png" 
-    alt="Trip & Tickets" 
-    className="h-12 md:h-14 lg:h-16 object-contain transition-all duration-300"
-  />
-</a>
+                <a href="/" className="flex items-center h-full">
+                  <img 
+                    src="/EEO-logo.png" 
+                    alt="Trip & Tickets" 
+                    className="h-12 md:h-14 lg:h-16 object-contain transition-all duration-300"
+                  />
+                </a>
 
                 <nav className="hidden md:flex items-center relative">
                   <button onClick={() => setMegaMenuOpen(!isMegaMenuOpen)} className={`${linkClasses} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
@@ -345,10 +361,12 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                   <Globe size={20} className="group-hover:text-red-500" />
                   <span>{selectedLanguage.code.toUpperCase()}</span>
                 </button>
-                <div className="relative cursor-pointer group">
+                <button onClick={openCart} className="relative cursor-pointer group">
                   <ShoppingCart size={24} className={`${linkClasses} group-hover:text-red-500`} />
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">0</span>
-                </div>
+                  {itemCount > 0 && (
+                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{itemCount}</span>
+                  )}
+                </button>
                 <button onClick={() => setSearchModalOpen(true)} className={`${linkClasses} hover:scale-110 transition-all group`} aria-label="Open search">
                     <Search size={22} className="group-hover:text-red-500" />
                 </button>

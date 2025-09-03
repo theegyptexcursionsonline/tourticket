@@ -9,9 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        // Set the --font-poppins variable as the default sans-serif font
-        sans: ["var(--font-poppins)"],
-        mono: ["var(--font-geist-mono)"],
+        sans: ["var(--font-inter)"],
+        mono: ["var(--font-almarai)"],
       },
     },
   },

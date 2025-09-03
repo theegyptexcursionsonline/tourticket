@@ -10,12 +10,14 @@ import InterestGrid from "@/components/InterestGrid";
 import PopularInterest from "@/components/PopularInterest";
 import Reviews from "@/components/Reviews";
 import VisitUs from "@/components/VisitUs";
+import Destinations from "@/components/Destinations";
 
 export default function HomePage() {
   return (
     <main>
       <Header />
       <HeroSection />
+      <Destinations />
       <IcebarPromo />
       <FeaturedTours />
       <InterestGrid />

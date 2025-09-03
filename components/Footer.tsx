@@ -27,9 +27,9 @@ export default function Footer() {
           {/* Logo */}
           <div className="lg:col-span-2 xl:col-span-1 mb-6 md:mb-0 flex flex-col items-start justify-center">
             <a href="#" className="inline-block mb-2">
-              <img 
-                src="/EEO-logo.png" 
-                alt="Trip & Tickets" 
+              <img
+                src="/EEO-logo.png"
+                alt="Egypt Excursions Online"
                 className="h-12 md:h-14 lg:h-16 object-contain transition-all duration-300"
               />
             </a>
