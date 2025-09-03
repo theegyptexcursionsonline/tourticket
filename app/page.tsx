@@ -21,10 +21,12 @@ export default function HomePage() {
       <IcebarPromo />
       <FeaturedTours />
       <InterestGrid />
+            <DayTrips />
+
       <PopularInterest />
+            <AboutUs />
+
       <Reviews />
-      <DayTrips />
-      <AboutUs />
       <FAQ />
       <VisitUs />
       <Footer />
