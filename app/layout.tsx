@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Almarai } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
+const almarai = Almarai({
+  subsets: ["arabic"],
+  weight: ['400', '700', '800'],
+  variable: '--font-almarai'
+});
 
 export const metadata: Metadata = {
-  title: "TripTicket - Your Best Travel Buddy",
-  description: "Discover and book unforgettable activities, tours, and experiences around the world.",
+  title: "Egypt Excursions Online - Unforgettable Tours & Experiences",
+  description: "Discover and book unforgettable activities, tours, and experiences across Egypt. From the pyramids of Giza to the temples of Luxor, your adventure starts here.",
 };
 
 export default function RootLayout({
@@ -17,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${almarai.variable} font-sans`}>
         <SettingsProvider>
           {children}
         </SettingsProvider>
@@ -25,3 +30,4 @@ export default function RootLayout({
     </html>
   );
 }
+

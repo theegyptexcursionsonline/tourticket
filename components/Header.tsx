@@ -318,11 +318,14 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 md:h-20">
               <div className="flex items-center gap-4 lg:gap-8">
-                <a href="/" className="flex items-center">
-                  <div className="bg-red-500 text-white font-bold text-xl md:text-2xl lg:text-3xl px-3 py-2">
-                    <span>TRIP</span><span className="text-cyan-300">&</span><span>TICKETS</span>
-                  </div>
-                </a>
+                <a href="#" className="flex items-center h-full">
+  <img 
+    src="/EEO-logo.png" 
+    alt="Trip & Tickets" 
+    className="h-12 md:h-14 lg:h-16 object-contain transition-all duration-300"
+  />
+</a>
+
                 <nav className="hidden md:flex items-center relative">
                   <button onClick={() => setMegaMenuOpen(!isMegaMenuOpen)} className={`${linkClasses} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
                     <span>EXPLORE</span>
