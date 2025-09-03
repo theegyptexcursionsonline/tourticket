@@ -18,12 +18,12 @@ interface Destination {
 // --- DATA ---
 const megaMenuData = {
   destinations: [
-    { name: 'AMSTERDAM', country: 'Netherlands', imageUrl: 'https://images.unsplash.com/photo-1584116410243-346a1a1d4496?w=400' },
-    { name: 'BERLIN', country: 'Germany', imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=400' },
-    { name: 'COPENHAGEN', country: 'Denmark', imageUrl: 'https://images.unsplash.com/photo-1512470876302-9722238a3a02?w=400' },
-    { name: 'ROTTERDAM', country: 'Netherlands', imageUrl: 'https://images.unsplash.com/photo-1596201732943-ae62bfdfc088?w=400' },
-    { name: 'STOCKHOLM', country: 'Sweden', imageUrl: 'https://images.unsplash.com/photo-1599360889421-8f703c3a4e97?w=400' },
-    { name: 'PARIS', country: 'France', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760c0337?w=400' },
+    { name: 'AMSTERDAM', country: 'Netherlands', imageUrl: '/images/amsterdam.png' },
+    { name: 'BERLIN', country: 'Germany', imageUrl: '/images/berlin.png' },
+    { name: 'COPENHAGEN', country: 'Denmark', imageUrl: '/images/copenhagen.png' },
+    { name: 'ROTTERDAM', country: 'Netherlands', imageUrl: '/images/rotterdam.png' },
+    { name: 'STOCKHOLM', country: 'Sweden', imageUrl: '/images/stockholm.png' },
+    { name: 'PARIS', country: 'France', imageUrl: '/images/paris.png' },
   ],
   activities: [
     { name: 'Attractions', icon: Landmark },
