@@ -1,8 +1,8 @@
 'use client';
 
-import { ArrowRight, Star, Tag as TagIcon } from 'lucide-react';
+import { ArrowRight, Star } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
 
-// --- Data Types ---
 type Tour = {
   id: number;
   image: string;
@@ -15,78 +15,18 @@ type Tour = {
   tags: string[];
 };
 
-// --- Component Data ---
 const featuredTours: Tour[] = [
-  {
-    id: 1,
-    image: '/tour-canal-cruise.jpg',
-    title: '1 hour Amsterdam Canal Cruise',
-    duration: '60 minutes',
-    rating: 4.5,
-    bookings: 4506416,
-    originalPrice: 20,
-    discountPrice: 15.50,
-    tags: ['Online only deal', 'Staff favourite', '-25%'],
-  },
-  {
-    id: 2,
-    image: '/tour-pizza-cruise.jpg',
-    title: 'New York Pizza by LOVERS Canal Cruise',
-    duration: '75 minutes',
-    rating: 4.6,
-    bookings: 21080,
-    originalPrice: 43.50,
-    discountPrice: 37.50,
-    tags: ['-15%'],
-  },
-  {
-    id: 3,
-    image: '/tour-evening-cruise.jpg',
-    title: 'Amsterdam Evening & Night Boat Tour',
-    duration: '60 minutes',
-    rating: 4.5,
-    bookings: 1256854,
-    originalPrice: 20,
-    discountPrice: 15.50,
-    tags: ['Staff favourite', '-25%'],
-  },
-  {
-    id: 4,
-    image: '/tour-wine-cheese.jpg',
-    title: 'Wine & Cheese Cruise in Amsterdam',
-    duration: '90 minutes',
-    rating: 4.9,
-    bookings: 10245,
-    originalPrice: 38.50,
-    discountPrice: 35,
-    tags: ['New', '-10%'],
-  },
-   {
-    id: 5,
-    image: '/tour-dinner-cruise.jpg',
-    title: 'Amsterdam Dinner Cruise',
-    duration: '2 hours',
-    rating: 4.8,
-    bookings: 5008,
-    discountPrice: 89,
-    tags: ['Staff favourite'],
-  },
-  {
-    id: 6,
-    image: '/tour-pancake-cruise.jpg',
-    title: 'Pancake Cruise Amsterdam',
-    duration: '75 minutes',
-    rating: 4.8,
-    bookings: 11859,
-    discountPrice: 26,
-    tags: [],
-  },
+  { id: 1, image: '/tour-canal-cruise.jpg', title: '1 hour Amsterdam Canal Cruise', duration: '60 minutes', rating: 4.5, bookings: 4506416, originalPrice: 20, discountPrice: 15.50, tags: ['Online only deal', 'Staff favourite', '-25%'] },
+  { id: 2, image: '/tour-pizza-cruise.jpg', title: 'New York Pizza by LOVERS Canal Cruise', duration: '75 minutes', rating: 4.6, bookings: 21080, originalPrice: 43.50, discountPrice: 37.50, tags: ['-15%'] },
+  { id: 3, image: '/tour-evening-cruise.jpg', title: 'Amsterdam Evening & Night Boat Tour', duration: '60 minutes', rating: 4.5, bookings: 1256854, originalPrice: 20, discountPrice: 15.50, tags: ['Staff favourite', '-25%'] },
+  { id: 4, image: '/tour-wine-cheese.jpg', title: 'Wine & Cheese Cruise in Amsterdam', duration: '90 minutes', rating: 4.9, bookings: 10245, originalPrice: 38.50, discountPrice: 35, tags: ['New', '-10%'] },
+  { id: 5, image: '/tour-dinner-cruise.jpg', title: 'Amsterdam Dinner Cruise', duration: '2 hours', rating: 4.8, bookings: 5008, discountPrice: 89, tags: ['Staff favourite'] },
+  { id: 6, image: '/tour-pancake-cruise.jpg', title: 'Pancake Cruise Amsterdam', duration: '75 minutes', rating: 4.8, bookings: 11859, discountPrice: 26, tags: [] },
 ];
 
-
-// --- Sub-components ---
-
 const TourCard = ({ tour }: { tour: Tour }) => {
+  const { formatPrice } = useSettings();
+
   const formatBookings = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'm';
     if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
@@ -127,17 +67,14 @@ const TourCard = ({ tour }: { tour: Tour }) => {
         <h3 className="mt-2 text-lg font-bold text-gray-800 h-14">{tour.title}</h3>
         <div className="mt-4 flex items-end justify-end gap-2">
             {tour.originalPrice && (
-                <span className="text-gray-500 line-through">€{tour.originalPrice.toFixed(2)}</span>
+                <span className="text-gray-500 line-through">{formatPrice(tour.originalPrice)}</span>
             )}
-            <span className="text-2xl font-extrabold text-red-600">€{tour.discountPrice.toFixed(2)}</span>
+            <span className="text-2xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
         </div>
       </div>
     </div>
   );
 };
-
-
-// --- Main Component ---
 
 export default function FeaturedTours() {
   return (

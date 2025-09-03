@@ -1,64 +1,19 @@
 'use client';
 import { Star, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import React, { useRef } from 'react';
+import { useSettings } from '@/hooks/useSettings';
 
 const dayTrips = [
-    {
-      title: 'Countryside and windmills tour from Amsterdam',
-      duration: '6 hours',
-      bookings: 20568,
-      rating: 4.4,
-      oldPrice: '€59',
-      newPrice: '€37.50',
-      discount: '-35%',
-      image: 'https://images.unsplash.com/photo-1528111494793-aa16557c1e6a?q=80&w=1974&auto=format&fit=crop',
-      tags: ['Operated by Tours & Tickets', 'Staff favourite'],
-    },
-    {
-      title: 'Zaanse Schans, Marken, Edam and Volendam Day Trip',
-      duration: '7.5 hours',
-      bookings: 8153,
-      rating: 4.7,
-      oldPrice: '€66.50',
-      newPrice: '€45',
-      discount: '-30%',
-      image: 'https://images.unsplash.com/photo-1596305218539-e9328405d4a1?q=80&w=2070&auto=format&fit=crop',
-      tags: ['Operated by Tours & Tickets', 'Best deal'],
-    },
-    {
-      title: 'Giethoorn Tour',
-      duration: '9 hours',
-      bookings: 10831,
-      rating: 4.6,
-      oldPrice: '€89',
-      newPrice: '€79',
-      discount: '-10%',
-      image: 'https://images.unsplash.com/photo-1595166649339-213f2a15f0d3?q=80&w=1964&auto=format&fit=crop',
-      tags: ['Operated by Tours & Tickets', 'Staff favourite'],
-    },
-    {
-      title: 'Rotterdam, Delft & The Hague incl. Madurodam',
-      duration: '9 hours',
-      bookings: 3568,
-      rating: 4.9,
-      oldPrice: '€89',
-      newPrice: '€79',
-      discount: '-10%',
-      image: 'https://images.unsplash.com/photo-1592035314493-6c61f2518e3e?q=80&w=1974&auto=format&fit=crop',
-      tags: ['Operated by Tours & Tickets', 'Staff favourite'],
-    },
-    {
-      title: 'Bruges Tour',
-      duration: '12 hours',
-      bookings: 5179,
-      rating: 4.7,
-      newPrice: '€79',
-      image: 'https://images.unsplash.com/photo-1529680341776-5a4358521e1a?q=80&w=1974&auto=format&fit=crop',
-      tags: ['Operated by Tours & Tickets'],
-    },
+    { title: 'Countryside and windmills tour from Amsterdam', duration: '6 hours', bookings: 20568, rating: 4.4, oldPrice: 59, newPrice: 37.50, discount: '-35%', image: 'https://images.unsplash.com/photo-1528111494793-aa16557c1e6a?q=80&w=1974&auto=format&fit=crop', tags: ['Operated by Tours & Tickets', 'Staff favourite'], },
+    { title: 'Zaanse Schans, Marken, Edam and Volendam Day Trip', duration: '7.5 hours', bookings: 8153, rating: 4.7, oldPrice: 66.50, newPrice: 45, discount: '-30%', image: 'https://images.unsplash.com/photo-1596305218539-e9328405d4a1?q=80&w=2070&auto=format&fit=crop', tags: ['Operated by Tours & Tickets', 'Best deal'], },
+    { title: 'Giethoorn Tour', duration: '9 hours', bookings: 10831, rating: 4.6, oldPrice: 89, newPrice: 79, discount: '-10%', image: 'https://images.unsplash.com/photo-1595166649339-213f2a15f0d3?q=80&w=1964&auto=format&fit=crop', tags: ['Operated by Tours & Tickets', 'Staff favourite'], },
+    { title: 'Rotterdam, Delft & The Hague incl. Madurodam', duration: '9 hours', bookings: 3568, rating: 4.9, oldPrice: 89, newPrice: 79, discount: '-10%', image: 'https://images.unsplash.com/photo-1592035314493-6c61f2518e3e?q=80&w=1974&auto=format&fit=crop', tags: ['Operated by Tours & Tickets', 'Staff favourite'], },
+    { title: 'Bruges Tour', duration: '12 hours', bookings: 5179, rating: 4.7, newPrice: 79, image: 'https://images.unsplash.com/photo-1529680341776-5a4358521e1a?q=80&w=1974&auto=format&fit=crop', tags: ['Operated by Tours & Tickets'], },
 ];
 
-const DayTripCard = ({ trip }: { trip: typeof dayTrips[0] }) => (
+const DayTripCard = ({ trip }: { trip: typeof dayTrips[0] }) => {
+    const { formatPrice } = useSettings();
+    return (
     <div className="flex-shrink-0 w-80 bg-white rounded-lg shadow-lg overflow-hidden snap-start group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
         <div className="relative">
             <img src={trip.image} alt={trip.title} className="w-full h-48 object-cover" />
@@ -85,12 +40,12 @@ const DayTripCard = ({ trip }: { trip: typeof dayTrips[0] }) => (
                 <span className="text-slate-500 ml-2">({trip.bookings.toLocaleString()} bookings)</span>
             </div>
             <div className="flex items-baseline justify-end mt-4">
-                {trip.oldPrice && <span className="text-slate-500 line-through mr-2">{trip.oldPrice}</span>}
-                <span className="font-extrabold text-2xl text-slate-900">{trip.newPrice}</span>
+                {trip.oldPrice && <span className="text-slate-500 line-through mr-2">{formatPrice(trip.oldPrice)}</span>}
+                <span className="font-extrabold text-2xl text-slate-900">{formatPrice(trip.newPrice)}</span>
             </div>
         </div>
     </div>
-);
+)};
 
 
 export default function DayTrips() {

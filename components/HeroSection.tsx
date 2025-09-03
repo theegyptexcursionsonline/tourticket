@@ -217,7 +217,7 @@ export default function HeroSection() {
     poster="/bg1.png" 
     className="w-full h-full object-cover"
   >
-    <source src="/bgvideo.mp4" type="video/mp4" />
+    <source src="/video.mp4" type="video/mp4" />
     Your browser does not support the video tag.
   </video>
   {/* The dark overlay div has been removed */}

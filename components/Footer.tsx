@@ -8,13 +8,13 @@ const socialLinks = [
 ];
 
 const paymentMethods = [
-    { name: 'Flying Blue', src: '/payment-flyingblue.svg' },
-    { name: 'Alipay', src: '/payment-alipay.svg' },
-    { name: 'G Pay', src: '/payment-gpay.svg' },
-    { name: 'Apple Pay', src: '/payment-applepay.svg' },
-    { name: 'Paypal', src: '/payment-paypal.svg' },
-    { name: 'Amex', src: '/payment-amex.svg' },
-    { name: 'Visa', src: '/payment-visa.svg' },
+  { name: 'Flying Blue', src: '/payment-flyingblue.svg' },
+  { name: 'Alipay', src: '/payment-alipay.svg' },
+  { name: 'G Pay', src: '/payment-gpay.svg' },
+  { name: 'Apple Pay', src: '/payment-applepay.svg' },
+  { name: 'Paypal', src: '/payment-paypal.svg' },
+  { name: 'Amex', src: '/payment-amex.svg' },
+  { name: 'Visa', src: '/payment-visa.svg' },
 ];
 
 
@@ -25,13 +25,20 @@ export default function Footer() {
         {/* Top Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-8 mb-12">
           {/* Logo */}
-          <div className="lg:col-span-2 xl:col-span-1 mb-6 md:mb-0">
-            <div className="bg-red-500 text-white font-bold text-2xl p-4 inline-block">
-                <span>TRIP</span>
-                <span className="text-cyan-300">&</span>
-                <span>TICKETS</span>
-            </div>
+          <div className="lg:col-span-2 xl:col-span-1 mb-6 md:mb-0 flex flex-col items-start justify-center">
+            <a href="#" className="inline-block mb-2">
+              <img 
+                src="/EEO-logo.png" 
+                alt="Trip & Tickets" 
+                className="h-12 md:h-14 lg:h-16 object-contain transition-all duration-300"
+              />
+            </a>
+            {/* Description below logo */}
+            <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
+              Book your adventure, skip the lines. Tours, tickets, and activities for a memorable trip.
+            </p>
           </div>
+
 
           {/* Link Sections */}
           <div className="xl:col-start-3">
@@ -58,21 +65,21 @@ export default function Footer() {
           
           {/* Contact and Social */}
           <div className="lg:col-span-2">
-             <h3 className="font-bold text-lg mb-4 text-slate-900">Contact information</h3>
-             <ul className="space-y-3 mb-8">
+              <h3 className="font-bold text-lg mb-4 text-slate-900">Contact information</h3>
+              <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-3"><Phone size={20} className="text-red-500"/> <span>+31 (0)20 420 4000</span></li>
                 <li className="flex items-center gap-3"><Mail size={20} className="text-red-500"/> <span>hello@toursandtickets.nl</span></li>
                 <li className="flex items-center gap-3"><MessageSquare size={20} className="text-red-500"/> <span>Chat with us</span></li>
-             </ul>
-             
-             <h3 className="font-bold text-lg mb-4 text-slate-900">Follow us on social media</h3>
-             <div className="flex gap-4">
+              </ul>
+              
+              <h3 className="font-bold text-lg mb-4 text-slate-900">Follow us on social media</h3>
+              <div className="flex gap-4">
                 {socialLinks.map((link, index) => (
                     <a key={index} href={link.href} className="w-10 h-10 bg-slate-800 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors">
                         <link.icon size={20} />
                     </a>
                 ))}
-             </div>
+              </div>
           </div>
         </div>
 
@@ -95,8 +102,8 @@ export default function Footer() {
                 <div className="flex flex-wrap gap-2 justify-center">
                     {paymentMethods.map(method => (
                         <div key={method.name} className="bg-white border border-slate-200 rounded-md px-3 py-1 flex items-center justify-center h-8">
-                           {/* Using text as placeholder for logos */}
-                           <span className="text-xs font-semibold text-slate-600">{method.name}</span>
+                            {/* Using text as placeholder for logos */}
+                            <span className="text-xs font-semibold text-slate-600">{method.name}</span>
                         </div>
                     ))}
                 </div>
