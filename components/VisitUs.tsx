@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { MapPin, Phone, Clock } from 'lucide-react';
 
+// Data for locations and store details
 const locations = [
     { city: 'ALL', count: 0 },
     { city: 'CAIRO', count: 1 },
@@ -64,8 +65,8 @@ const storeLocations = {
 
 export default function VisitUs() {
     const [activeCity, setActiveCity] = useState('ALL');
-    const [showMap, setShowMap] = useState(false);
-
+    
+    // The list of locations to display is determined by the active city filter
     const currentLocations = storeLocations[activeCity as keyof typeof storeLocations] || storeLocations.ALL;
 
     return (
@@ -75,91 +76,83 @@ export default function VisitUs() {
                     <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-800 mb-3">
                         VISIT US IN PERSON
                     </h2>
-                    <button 
-                        onClick={() => setShowMap(!showMap)}
-                        className="mt-2 text-slate-600 font-semibold hover:text-red-500 transition-colors duration-300"
-                    >
-                        CLICK TO SHOW MAP
-                    </button>
+                    {/* The button to show the map has been removed and replaced with a subtitle */}
+                    <p className="text-slate-600 max-w-2xl mx-auto">
+                        Explore our office locations across Egypt. Use the filters to find an office in a specific city.
+                    </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Map Section - Takes up 2 columns on large screens */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+                    {/* Map Section - Now always visible */}
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-2xl shadow-lg overflow-hidden h-[500px] w-full">
-                            {showMap ? (
-                                <div className="relative w-full h-full bg-gradient-to-b from-blue-50 to-amber-50">
-                                    {/* Egypt Map SVG Representation */}
-                                    <div className="absolute inset-0 p-6">
-                                        <svg viewBox="0 0 500 400" className="w-full h-full">
-                                            {/* Egypt outline (simplified) */}
-                                            <path 
-                                                d="M60 100 L220 75 L250 50 L280 55 L310 45 L340 50 L370 65 L400 85 L430 115 L450 145 L460 180 L465 215 L455 250 L445 275 L425 295 L405 310 L385 320 L365 325 L345 328 L325 330 L305 328 L285 325 L265 320 L245 315 L225 305 L205 290 L185 270 L165 245 L145 220 L125 195 L105 170 L85 145 L70 120 L65 110 Z" 
-                                                fill="#f4f1e8" 
-                                                stroke="#d4af37" 
-                                                strokeWidth="3"
-                                            />
-                                            
-                                            {/* Nile River */}
-                                            <path 
-                                                d="M250 50 Q240 100 230 150 Q225 200 220 250 Q215 300 210 330" 
-                                                stroke="#4f9eff" 
-                                                strokeWidth="4" 
-                                                fill="none"
-                                            />
-                                            
-                                            {/* Location Markers */}
-                                            {/* Cairo */}
+                            {/* The map is now rendered directly without conditional logic */}
+                            <div className="relative w-full h-full bg-gradient-to-b from-blue-50 to-amber-50">
+                                {/* Egypt Map SVG Representation */}
+                                <div className="absolute inset-0 p-6">
+                                    <svg viewBox="0 0 500 400" className="w-full h-full">
+                                        {/* Egypt outline (simplified) */}
+                                        <path 
+                                            d="M60 100 L220 75 L250 50 L280 55 L310 45 L340 50 L370 65 L400 85 L430 115 L450 145 L460 180 L465 215 L455 250 L445 275 L425 295 L405 310 L385 320 L365 325 L345 328 L325 330 L305 328 L285 325 L265 320 L245 315 L225 305 L205 290 L185 270 L165 245 L145 220 L125 195 L105 170 L85 145 L70 120 L65 110 Z" 
+                                            fill="#f4f1e8" 
+                                            stroke="#d4af37" 
+                                            strokeWidth="3"
+                                        />
+                                        
+                                        {/* Nile River */}
+                                        <path 
+                                            d="M250 50 Q240 100 230 150 Q225 200 220 250 Q215 300 210 330" 
+                                            stroke="#4f9eff" 
+                                            strokeWidth="4" 
+                                            fill="none"
+                                        />
+                                        
+                                        {/* Location Markers with animation */}
+                                        <g className="location-marker">
                                             <circle cx="230" cy="150" r="10" fill="#ef4444" stroke="white" strokeWidth="3"/>
                                             <text x="245" y="145" fontSize="12" fill="#1f2937" fontWeight="bold">CAIRO</text>
-                                            
-                                            {/* Giza */}
+                                        </g>
+                                        <g className="location-marker">
                                             <circle cx="225" cy="155" r="8" fill="#f59e0b" stroke="white" strokeWidth="3"/>
                                             <text x="240" y="170" fontSize="12" fill="#1f2937" fontWeight="bold">GIZA</text>
-                                            
-                                            {/* Luxor */}
+                                        </g>
+                                        <g className="location-marker">
                                             <circle cx="220" cy="225" r="10" fill="#10b981" stroke="white" strokeWidth="3"/>
                                             <text x="235" y="220" fontSize="12" fill="#1f2937" fontWeight="bold">LUXOR</text>
-                                            
-                                            {/* Pyramids Symbol at Giza */}
-                                            <polygon points="220,150 228,150 224,142" fill="#d4af37" stroke="#92400e" strokeWidth="1"/>
-                                            <polygon points="224,150 232,150 228,142" fill="#d4af37" stroke="#92400e" strokeWidth="1"/>
-                                            <polygon points="228,150 236,150 232,142" fill="#d4af37" stroke="#92400e" strokeWidth="1"/>
-                                        </svg>
+                                        </g>
                                         
-                                        {/* Map Legend */}
-                                        <div className="absolute bottom-6 left-6 bg-white p-4 rounded-lg shadow-md">
-                                            <h4 className="text-sm font-bold text-slate-800 mb-3">Our Locations</h4>
-                                            <div className="space-y-2 text-xs">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                                                    <span>Main Office</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded-full bg-amber-500"></div>
-                                                    <span>Tour Center</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded-full bg-green-500"></div>
-                                                    <span>Regional Office</span>
-                                                </div>
+                                        {/* Pyramids Symbol at Giza */}
+                                        <g>
+                                          <polygon points="220,150 228,150 224,142" fill="#d4af37" stroke="#92400e" strokeWidth="1"/>
+                                          <polygon points="224,150 232,150 228,142" fill="#d4af37" stroke="#92400e" strokeWidth="1"/>
+                                          <polygon points="228,150 236,150 232,142" fill="#d4af37" stroke="#92400e" strokeWidth="1"/>
+                                        </g>
+                                    </svg>
+                                    
+                                    {/* Map Legend */}
+                                    <div className="absolute bottom-6 left-6 bg-white p-4 rounded-lg shadow-md">
+                                        <h4 className="text-sm font-bold text-slate-800 mb-3">Our Locations</h4>
+                                        <div className="space-y-2 text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                                                <span>Main Office</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-amber-500"></div>
+                                                <span>Tour Center</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                                                <span>Regional Office</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="h-full flex items-center justify-center bg-slate-200">
-                                    <div className="text-center">
-                                        <MapPin className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                                        <p className="text-slate-500 font-semibold text-lg">Map Placeholder</p>
-                                        <p className="text-slate-400 text-sm mt-2">Click above to view our locations</p>
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Locations List - Takes up 1 column on large screens */}
+                    {/* Locations List */}
                     <div className="lg:col-span-1">
                         {/* Filter Buttons */}
                         <div className="flex flex-wrap gap-2 mb-6 border-b border-slate-200 pb-4">
@@ -206,8 +199,8 @@ export default function VisitUs() {
                                                 </div>
                                             </div>
                                             
-                                            <a href="#" className="text-sm text-red-600 font-semibold hover:underline">
-                                                View on map
+                                            <a href={`https://maps.google.com/?q=${encodeURIComponent(location.address)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-red-600 font-semibold hover:underline">
+                                                Get Directions
                                             </a>
                                         </div>
                                     </div>
@@ -223,6 +216,21 @@ export default function VisitUs() {
                     </div>
                 </div>
             </div>
+            <style jsx>{`
+                @keyframes pulse {
+                    0%, 100% {
+                        transform: scale(1);
+                        opacity: 1;
+                    }
+                    50% {
+                        transform: scale(1.1);
+                        opacity: 0.7;
+                    }
+                }
+                .location-marker {
+                    animation: pulse 2s infinite ease-in-out;
+                }
+            `}</style>
         </section>
     );
 }
