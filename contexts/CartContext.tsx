@@ -1,5 +1,4 @@
 'use client';
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, Tour } from '@/types';
 
@@ -22,7 +21,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Load cart from localStorage on initial render
   useEffect(() => {
     try {
       const item = window.localStorage.getItem('shoppingCart');
@@ -34,7 +32,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     try {
       window.localStorage.setItem('shoppingCart', JSON.stringify(cartItems));

@@ -67,8 +67,8 @@ export default function Footer() {
           <div className="lg:col-span-2">
               <h3 className="font-bold text-lg mb-4 text-slate-900">Contact information</h3>
               <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-3"><Phone size={20} className="text-red-500"/> <span>+31 (0)20 420 4000</span></li>
-                <li className="flex items-center gap-3"><Mail size={20} className="text-red-500"/> <span>hello@toursandtickets.nl</span></li>
+                <li className="flex items-center gap-3"><Phone size={20} className="text-red-500"/> <span>+20 11 42222920</span></li>
+                <li className="flex items-center gap-3"><Mail size={20} className="text-red-500"/> <span>hello@EgyptExcursionsOnline.com</span></li>
                 <li className="flex items-center gap-3"><MessageSquare size={20} className="text-red-500"/> <span>Chat with us</span></li>
               </ul>
               
