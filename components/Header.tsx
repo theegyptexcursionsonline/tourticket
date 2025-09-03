@@ -40,6 +40,18 @@ const megaMenuData = {
 
 const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'MOST POPULAR SEARCH QUERY'], []);
 
+// Sliding search suggestions
+const SEARCH_SUGGESTIONS = [
+  'Where are you going?',
+  'Find museums near you',
+  'Discover food tours',
+  'Book canal cruises',
+  'Explore art galleries',
+  'City passes & tickets',
+  'Weekend getaways',
+  'Cultural experiences'
+];
+
 // --- HOOKS ---
 function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
@@ -81,13 +93,46 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
 
 function useScrollDirection() {
   const [scrollY, setScrollY] = useState(0);
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('up');
+  const [isVisible, setIsVisible] = useState(true);
+
   useEffect(() => {
-    const updateScrollY = () => setScrollY(window.pageYOffset);
-    window.addEventListener('scroll', updateScrollY);
-    return () => window.removeEventListener('scroll', updateScrollY);
-  }, []);
-  return { scrollY };
+    let lastScrollY = window.pageYOffset;
+    
+    const updateScrollData = () => {
+      const scrollY = window.pageYOffset;
+      const direction = scrollY > lastScrollY ? 'down' : 'up';
+      
+      if (direction !== scrollDirection && Math.abs(scrollY - lastScrollY) > 10) {
+        setScrollDirection(direction);
+        setIsVisible(direction === 'up' || scrollY < 100);
+      }
+      
+      setScrollY(scrollY);
+      lastScrollY = scrollY > 0 ? scrollY : 0;
+    };
+
+    window.addEventListener('scroll', updateScrollData);
+    return () => window.removeEventListener('scroll', updateScrollData);
+  }, [scrollDirection]);
+
+  return { scrollY, scrollDirection, isVisible };
 }
+
+// Custom hook for sliding text animation
+const useSlidingText = (texts: string[], interval = 3000) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % texts.length);
+    }, interval);
+    
+    return () => clearInterval(timer);
+  }, [texts.length, interval]);
+  
+  return texts[currentIndex];
+};
 
 // --- MODALS and SUB-COMPONENTS ---
 const SettingsModal: FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
@@ -294,6 +339,55 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClos
     );
 };
 
+// Header Search Bar Component
+const HeaderSearchBar = ({ onSearch, onFocus }: { onSearch: (term: string) => void, onFocus: () => void }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      onSearch(searchTerm);
+      setSearchTerm('');
+    }
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    onFocus();
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  return (
+    <div className="hidden lg:block flex-1 max-w-2xl mx-8">
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none z-10" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            className="w-full pl-12 pr-6 py-3 text-sm bg-white border-2 border-slate-200 rounded-full focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all duration-300 shadow-sm"
+          />
+          {/* Sliding placeholder text */}
+          {!isFocused && !searchTerm && (
+            <div className="absolute left-12 top-1/2 -translate-y-1/2 pointer-events-none overflow-hidden h-6">
+              <div className="sliding-text">
+                <span className="text-slate-500 text-sm">{currentSuggestion}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+};
 
 // --- MAIN HEADER COMPONENT ---
 export default function Header({ startSolid = false }: { startSolid?: boolean }) {
@@ -302,7 +396,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   
   const { selectedCurrency, selectedLanguage } = useSettings();
-  const { scrollY } = useScrollDirection();
+  const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
   const { openCart, itemCount } = useCart();
 
@@ -315,7 +409,9 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
     return () => { document.body.style.overflow = 'auto'; };
   }, [anyModalOpen]);
   
-  const headerClasses = `fixed top-0 left-0 right-0 z-30 transition-all duration-300 ease-in-out ${
+  const headerClasses = `fixed top-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out transform ${
+    isVisible ? 'translate-y-0' : '-translate-y-full'
+  } ${
     isScrolled || isMegaMenuOpen || startSolid ? 'bg-white text-gray-800 shadow-lg' : 'bg-transparent text-white'
   }`;
   
@@ -326,6 +422,10 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const handleSearch = (term: string) => {
     addSearchTerm(term);
     console.log(`Searching for: ${term}`);
+  };
+
+  const openSearchModal = () => {
+    setSearchModalOpen(true);
   };
 
   return (
@@ -352,6 +452,9 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                 </nav>
               </div>
 
+              {/* Center Search Bar - Desktop Only */}
+{/* Center Search Bar - Desktop Only */}
+{isScrolled && <HeaderSearchBar onSearch={handleSearch} onFocus={openSearchModal} />}
               <div className="flex items-center gap-3 md:gap-5 font-semibold text-sm">
                 <button onClick={() => setSettingsModalOpen(true)} className={`${linkClasses} hidden sm:inline-flex items-center gap-1.5 cursor-pointer`}>
                   <span className="font-bold">{selectedCurrency.symbol}</span>
@@ -367,7 +470,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{itemCount}</span>
                   )}
                 </button>
-                <button onClick={() => setSearchModalOpen(true)} className={`${linkClasses} hover:scale-110 transition-all group`} aria-label="Open search">
+                {/* Mobile Search Icon */}
+                <button onClick={() => setSearchModalOpen(true)} className={`${linkClasses} lg:hidden hover:scale-110 transition-all group`} aria-label="Open search">
                     <Search size={22} className="group-hover:text-red-500" />
                 </button>
               </div>
@@ -377,6 +481,32 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
       </header>
       <SearchModal isOpen={isSearchModalOpen} onClose={() => setSearchModalOpen(false)} onSearch={handleSearch} />
       <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+      
+      {/* Sliding Text Animation Styles */}
+      <style jsx global>{`
+        .sliding-text {
+          animation: slideUpContinuous 3s ease-in-out infinite;
+        }
+        
+        @keyframes slideUpContinuous {
+          0% {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          10% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          80% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+        }
+      `}</style>
     </>
   );
 }

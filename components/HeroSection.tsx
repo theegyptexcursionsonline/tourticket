@@ -5,7 +5,7 @@ import { Search, X, Clock, Zap } from 'lucide-react';
 
 // --- Type Definitions ---
 type Tag = {
-  id: string; // Unique ID for stable rendering
+  id: string;
   name: string;
   position: React.CSSProperties;
   highlight?: boolean;
@@ -19,6 +19,16 @@ const ALL_TAG_NAMES = [
   'ADVENTURE SPORTS', 'PHOTOGRAPHY SPOTS', 'LOCAL MARKETS', 'THEATRE & SHOWS', 'WELLNESS & SPA'
 ];
 
+// Sliding search suggestions for hero
+const HERO_SEARCH_SUGGESTIONS = [
+  'Where are you going?',
+  'Find your next adventure',
+  'Discover hidden gems',
+  'Book unique experiences',
+  'Explore new destinations',
+  'Create lasting memories'
+];
+
 // Desktop positions
 const TAG_POSITIONS_DESKTOP: React.CSSProperties[] = [
   { top: '25%', left: '60%' }, { top: '20%', right: '15%' }, { top: '45%', left: '55%' },
@@ -27,7 +37,7 @@ const TAG_POSITIONS_DESKTOP: React.CSSProperties[] = [
   { top: '80%', left: '65%' }, { top: '15%', left: '50%' }, { top: '85%', right: '15%' }
 ];
 
-// Mobile positions - more conservative and spread out
+// Mobile positions
 const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
   { top: '15%', right: '10%' }, { top: '25%', right: '20%' }, { top: '35%', right: '15%' },
   { top: '45%', right: '25%' }, { top: '55%', right: '10%' }, { top: '65%', right: '20%' },
@@ -40,10 +50,6 @@ const usePopularSearches = () => useMemo(() => [
 ], []);
 
 // --- Custom Hooks ---
-
-/**
- * Custom hook to manage and persist recent searches in localStorage.
- */
 const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   useEffect(() => {
@@ -72,15 +78,12 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   return { recentSearches, addSearchTerm, removeSearchTerm };
 };
 
-/**
- * Custom hook to detect mobile screen size
- */
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+      setIsMobile(window.innerWidth < 1024);
     };
     
     checkIsMobile();
@@ -91,23 +94,20 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-/**
- * Custom hook to create a continuously changing array of tags for display.
- */
 const useDynamicTags = (allTags: string[], desktopPositions: React.CSSProperties[], mobilePositions: React.CSSProperties[], count = 9, interval = 5000) => {
     const [displayedTags, setDisplayedTags] = useState<Tag[]>([]);
     const isMobile = useIsMobile();
 
     const generateRandomTags = useCallback(() => {
         const positions = isMobile ? mobilePositions : desktopPositions;
-        const tagCount = isMobile ? Math.min(6, count) : count; // Fewer tags on mobile
+        const tagCount = isMobile ? Math.min(6, count) : count;
         
         const shuffledTags = [...allTags].sort(() => 0.5 - Math.random());
         const shuffledPositions = [...positions].sort(() => 0.5 - Math.random());
         const highlightIndex = Math.floor(Math.random() * tagCount);
 
         const newTags = shuffledTags.slice(0, tagCount).map((name, index) => ({
-            id: `${name}-${index}`, // Simple unique ID
+            id: `${name}-${index}`,
             name,
             position: shuffledPositions[index % positions.length],
             highlight: index === highlightIndex,
@@ -117,16 +117,30 @@ const useDynamicTags = (allTags: string[], desktopPositions: React.CSSProperties
     }, [allTags, desktopPositions, mobilePositions, count, isMobile]);
 
     useEffect(() => {
-        generateRandomTags(); // Initial generation
+        generateRandomTags();
         const timer = setInterval(generateRandomTags, interval);
-        return () => clearInterval(timer); // Cleanup on unmount
+        return () => clearInterval(timer);
     }, [generateRandomTags, interval]);
 
     return displayedTags;
 };
 
-// --- Sub-components ---
+// Custom hook for sliding text animation in hero
+const useSlidingText = (texts: string[], interval = 3000) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % texts.length);
+    }, interval);
+    
+    return () => clearInterval(timer);
+  }, [texts.length, interval]);
+  
+  return texts[currentIndex];
+};
 
+// --- Sub-components ---
 const FloatingTag = ({ tag }: { tag: Tag }) => (
   <button
     style={tag.position}
@@ -222,6 +236,27 @@ const SearchModal = ({ isOpen, onClose, onSearch }: { isOpen: boolean, onClose: 
     );
 };
 
+// Hero Search Bar Component with sliding text
+const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
+  const currentSuggestion = useSlidingText(HERO_SEARCH_SUGGESTIONS, 3000);
+
+  return (
+    <div className="mt-6 md:mt-8 lg:mt-12 w-full">
+      <button 
+        onClick={onOpenModal}
+        className="w-full max-w-md bg-white text-slate-600 rounded-full flex items-center p-3 md:p-4 lg:p-4 text-sm md:text-base lg:text-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform relative overflow-hidden"
+      >
+        <Search className="h-4 w-4 md:h-5 md:w-5 lg:h-7 lg:w-7 mr-2 md:mr-3 lg:mr-4 ml-2 text-red-500 flex-shrink-0 z-10" />
+        <div className="relative flex-1 text-left overflow-hidden h-6">
+          <div className="sliding-text-hero absolute inset-0 flex items-center">
+            <span className="font-semibold">{currentSuggestion}</span>
+          </div>
+        </div>
+      </button>
+    </div>
+  );
+};
+
 // --- Main Hero Component ---
 export default function HeroSection() {
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -236,14 +271,13 @@ export default function HeroSection() {
     return (
         <>
             <section className="relative h-[90vh] min-h-[600px] w-full flex items-center justify-start text-white overflow-hidden pt-16 md:pt-20 lg:pt-24 font-sans">              
-                {/* --- Background Image --- */}
+                {/* Background Image */}
                 <div className="absolute inset-0 z-0">
                     <img
                         src="/bg4.png"
                         alt="Scenic travel background with mountains and a lake"
                         className="w-full h-full object-cover"
                     />
-                    {/* Overlay to improve text readability */}
                     <div className="absolute inset-0 bg-black/30"></div>
                 </div>
 
@@ -254,18 +288,12 @@ export default function HeroSection() {
                     <p className="mt-4 lg:mt-6 text-base sm:text-lg md:text-xl lg:text-2xl text-shadow font-light max-w-2xl">
                         Your trip starts now. Let's find your next experience.
                     </p>
-                    <div className="mt-6 md:mt-8 lg:mt-12 w-full">
-                        <button 
-                            onClick={() => setIsSearchModalOpen(true)} 
-                            className="w-full max-w-md bg-white text-slate-600 rounded-full flex items-center p-3 md:p-4 lg:p-4 text-sm md:text-base lg:text-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
-                        >
-                            <Search className="h-4 w-4 md:h-5 md:w-5 lg:h-7 lg:w-7 mr-2 md:mr-3 lg:mr-4 ml-2 text-red-500 flex-shrink-0" />
-                            <span className="font-semibold">Where are you going?</span>
-                        </button>
-                    </div>
+                    
+                    {/* Hero Search Bar with sliding text */}
+                    <HeroSearchBar onOpenModal={() => setIsSearchModalOpen(true)} />
                 </div>
 
-                {/* Floating Tags - Now visible on all screen sizes */}
+                {/* Floating Tags */}
                 <div className="absolute inset-0 z-10 pointer-events-none">
                     {dynamicTags.map(tag => <FloatingTag key={tag.id} tag={tag} />)}
                 </div>
@@ -288,6 +316,29 @@ export default function HeroSection() {
                 .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
                 .animate-float { animation: float 8s ease-in-out infinite; }
                 .animate-tag-fade-in { animation: tag-fade-in 0.7s ease-out forwards; }
+
+                .sliding-text-hero {
+                  animation: slideUpContinuousHero 4s ease-in-out infinite;
+                }
+                
+                @keyframes slideUpContinuousHero {
+                  0% {
+                    opacity: 0;
+                    transform: translateY(30px);
+                  }
+                  15% {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                  85% {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                  100% {
+                    opacity: 0;
+                    transform: translateY(-30px);
+                  }
+                }
 
                 .text-shadow { text-shadow: 1px 1px 4px rgb(0 0 0 / 0.5); }
                 .text-shadow-lg { text-shadow: 2px 2px 8px rgb(0 0 0 / 0.6); }
