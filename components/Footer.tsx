@@ -126,9 +126,9 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Tours & Tickets */}
+          {/* Egypt Excursions Online */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-slate-900">Tours & Tickets</h3>
+            <h3 className="font-bold text-lg mb-4 text-slate-900">Egypt Excursions Online</h3>
             <ul className="space-y-2">
               <li><a href="#" className="hover:text-red-500 transition-colors">Contact</a></li>
               <li><a href="#" className="hover:text-red-500 transition-colors">About us</a></li>

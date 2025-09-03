@@ -36,7 +36,7 @@ export default function InterestGrid() {
             <div className="container mx-auto px-4">
                 <div className="text-center mb-10">
                     <h2 className="text-3xl font-extrabold text-slate-800">
-                        TOURS & TICKETS
+                        Egypt Excursions Online
                     </h2>
                     <button className="mt-4 inline-flex items-center gap-2 text-red-600 font-bold text-lg group">
                         <span>FIND THE RIGHT INTEREST FOR YOU</span>

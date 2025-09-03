@@ -18,11 +18,11 @@ type DayTrip = {
 
 // --- Mock Data with new, high-quality images ---
 const dayTrips: DayTrip[] = [
-    { title: 'Countryside & Windmills Tour from Amsterdam', duration: '6 hours', bookings: 20568, rating: 4.4, oldPrice: 59, newPrice: 37.50, discount: '-35%', image: '/images/6.png', tags: ['Operated by Tours & Tickets', 'Staff favourite'], },
-    { title: 'Zaanse Schans, Marken, Edam & Volendam Day Trip', duration: '7.5 hours', bookings: 8153, rating: 4.7, oldPrice: 66.50, newPrice: 45, discount: '-30%', image: '/images/7.png', tags: ['Operated by Tours & Tickets', 'Best deal'], },
-    { title: 'Fairytale Giethoorn & Zaanse Schans Tour', duration: '9 hours', bookings: 10831, rating: 4.6, oldPrice: 89, newPrice: 79, discount: '-10%', image: '/images/8.png', tags: ['Operated by Tours & Tickets', 'Staff favourite'], },
-    { title: 'Rotterdam, Delft & The Hague incl. Madurodam', duration: '9 hours', bookings: 3568, rating: 4.9, oldPrice: 89, newPrice: 79, discount: '-10%', image: '/images/9.png', tags: ['Operated by Tours & Tickets', 'Staff favourite'], },
-    { title: 'Full Day Trip to the Medieval City of Bruges', duration: '12 hours', bookings: 5179, rating: 4.7, newPrice: 79, image: '/images/10.png', tags: ['Operated by Tours & Tickets'], },
+    { title: 'Countryside & Windmills Tour from Amsterdam', duration: '6 hours', bookings: 20568, rating: 4.4, oldPrice: 59, newPrice: 37.50, discount: '-35%', image: '/images/6.png', tags: ['Operated by Egypt Excursions Online', 'Staff favourite'], },
+    { title: 'Zaanse Schans, Marken, Edam & Volendam Day Trip', duration: '7.5 hours', bookings: 8153, rating: 4.7, oldPrice: 66.50, newPrice: 45, discount: '-30%', image: '/images/7.png', tags: ['Operated by Egypt Excursions Online', 'Best deal'], },
+    { title: 'Fairytale Giethoorn & Zaanse Schans Tour', duration: '9 hours', bookings: 10831, rating: 4.6, oldPrice: 89, newPrice: 79, discount: '-10%', image: '/images/8.png', tags: ['Operated by Egypt Excursions Online', 'Staff favourite'], },
+    { title: 'Rotterdam, Delft & The Hague incl. Madurodam', duration: '9 hours', bookings: 3568, rating: 4.9, oldPrice: 89, newPrice: 79, discount: '-10%', image: '/images/9.png', tags: ['Operated by Egypt Excursions Online', 'Staff favourite'], },
+    { title: 'Full Day Trip to the Medieval City of Bruges', duration: '12 hours', bookings: 5179, rating: 4.7, newPrice: 79, image: '/images/10.png', tags: ['Operated by Egypt Excursions Online'], },
 ];
 
 // Mock hook for price formatting
