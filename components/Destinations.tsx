@@ -5,23 +5,23 @@ import ComingSoonModal from './ComingSoonModal';
 const destinations = [
   {
     name: 'AMSTERDAM',
-    image: 'https://images.unsplash.com/photo-1525875263473-b3a21358b5c1?q=80&w=1974&auto=format&fit=crop',
+    image: '/images/amsterdam.png',
   },
   {
     name: 'BERLIN',
-    image: 'https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?q=80&w=2070&auto=format&fit=crop',
+    image: '/images/berlin.png',
   },
   {
     name: 'COPENHAGEN',
-    image: 'https://images.unsplash.com/photo-1512470876302-9722238a3a02?q=80&w=2072&auto=format&fit=crop',
+    image: '/images/3.png',
   },
   {
     name: 'ROTTERDAM',
-    image: 'https://images.unsplash.com/photo-1596201732943-ae62bfdfc088?q=80&w=1974&auto=format&fit=crop',
+    image: '/images/4.png',
   },
   {
     name: 'STOCKHOLM',
-    image: 'https://images.unsplash.com/photo-1588803120668-5a52a41d5568?q=80&w=2070&auto=format&fit=crop',
+    image: '/images/5.png',
   },
 ];
 

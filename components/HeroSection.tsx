@@ -235,22 +235,20 @@ export default function HeroSection() {
 
     return (
         <>
-<section className="relative h-[90vh] min-h-[600px] w-full flex items-center justify-start text-white overflow-hidden pt-16 md:pt-20 lg:pt-24 font-sans">                
+            <section className="relative h-[90vh] min-h-[600px] w-full flex items-center justify-start text-white overflow-hidden pt-16 md:pt-20 lg:pt-24 font-sans">              
+                {/* --- Background Image --- */}
                 <div className="absolute inset-0 z-0">
-                    <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        poster="/bg1.png"
+                    <img
+                        src="/bg4.png"
+                        alt="Scenic travel background with mountains and a lake"
                         className="w-full h-full object-cover"
-                    >
-                        <source src="/video.mp4" type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
+                    />
+                    {/* Overlay to improve text readability */}
+                    <div className="absolute inset-0 bg-black/30"></div>
                 </div>
 
-<div className="relative z-10 p-4 md:p-8 lg:p-16 xl:p-24 max-w-4xl flex flex-col items-start w-full mt-0 md:mt-2 lg:mt-4">                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
+                <div className="relative z-10 p-4 md:p-8 lg:p-16 xl:p-24 max-w-4xl flex flex-col items-start w-full mt-0 md:mt-2 lg:mt-4">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
                         Your<br />Best<br />Travel<br />Buddy
                     </h1>
                     <p className="mt-4 lg:mt-6 text-base sm:text-lg md:text-xl lg:text-2xl text-shadow font-light max-w-2xl">
@@ -272,6 +270,7 @@ export default function HeroSection() {
                     {dynamicTags.map(tag => <FloatingTag key={tag.id} tag={tag} />)}
                 </div>
             </section>
+            
             <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} onSearch={handleSearch}/>
             
             <style jsx global>{`
@@ -298,6 +297,7 @@ export default function HeroSection() {
                   .animate-float { animation: float 10s ease-in-out infinite; }
                 }
             `}</style>
+            
             <link rel="preconnect" href="https://fonts.googleapis.com" />
             <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
