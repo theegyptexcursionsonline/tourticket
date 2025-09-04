@@ -89,11 +89,11 @@ export default function Footer() {
             <div className="mt-6">
               <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Tours &amp; Tickets</h3>
               <ul className="space-y-2 text-sm">
-                <li><a className="hover:text-red-600 transition-colors" href="#">Contact</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="#">About us</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="#">FAQ</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="#">Blog</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="#">Careers</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="/contact">Contact</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="/about">About us</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="/faqs">FAQ</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="/">Blog</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="/careers">Careers</a></li>
               </ul>
             </div>
           </div>
@@ -170,12 +170,13 @@ export default function Footer() {
             {/* Trusted by clients */}
             <div className="flex-shrink-0">
               <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl font-bold text-slate-900 leading-none">4.2</span>
-                <div className="flex text-xl leading-none text-red-500">
-                  <span>★</span><span>★</span><span>★</span><span>★</span><span className="text-slate-300">★</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-3 mb-2">
+  <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
+  <div className="flex text-xl leading-none text-red-500">
+    <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+  </div>
+</div>
+
               <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
             </div>
 
@@ -205,9 +206,9 @@ export default function Footer() {
         {/* Legal Footer */}
         <div className="border-t border-slate-300 pt-4 text-xs text-slate-500 text-center">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-3">
-            <a className="underline hover:text-slate-700 transition-colors" href="#">Privacy policy</a>
+            <a className="underline hover:text-slate-700 transition-colors" href="/privacy">Privacy policy</a>
             <span className="hidden sm:inline">·</span>
-            <a className="underline hover:text-slate-700 transition-colors" href="#">Terms and conditions</a>
+            <a className="underline hover:text-slate-700 transition-colors" href="/terms">Terms and conditions</a>
           </div>
           <p>© {new Date().getFullYear()} Egypt Excursions Online. All rights reserved.</p>
         </div>
