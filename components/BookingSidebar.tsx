@@ -307,33 +307,46 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     addToCart(relatedTour);
   };
 
-  const proceedToCheckout = async () => {
-    try {
-      setIsNavigating(true);
-      
-      // Add to cart first
-      const success = handleAddToCart();
-      if (!success) {
-        setIsNavigating(false);
-        return;
+ const proceedToCheckout = async () => {
+  try {
+    setIsNavigating(true);
+    
+    // Validate form
+    if (!selectedTime) {
+      const timeButton = document.getElementById('time-picker-button');
+      if (timeButton) {
+        timeButton.focus();
+        timeButton.classList.add('border-red-500', 'animate-pulse');
+        setTimeout(() => timeButton.classList.remove('border-red-500', 'animate-pulse'), 2000);
       }
-
-      // Small delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Navigate to checkout
-      router.push('/checkout');
-      
-      // Close sidebar after successful navigation
-      onClose();
-      
-    } catch (error) {
-      console.error('Navigation failed:', error);
       setIsNavigating(false);
-      // You could show an error message here
-      alert('Something went wrong. Please try again.');
+      return;
     }
-  };
+
+    // Add item to cart
+    const cartItem = {
+      ...tour,
+      quantity: guests,
+      details: `${ticketType}, ${selectedDate.toLocaleDateString()}, ${selectedTime}`
+    };
+    
+    addToCart(cartItem);
+    
+    // Close sidebar
+    onClose();
+    
+    // Small delay for smooth UX
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Navigate to checkout
+    router.push('/checkout');
+    
+  } catch (error) {
+    console.error('Navigation failed:', error);
+    setIsNavigating(false);
+    alert('Something went wrong. Please try again.');
+  }
+};
 
   return (
     <>

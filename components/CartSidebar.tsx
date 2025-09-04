@@ -1,6 +1,7 @@
 'use client';
 
 import { FC } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
@@ -8,6 +9,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { CartItem } from '@/types';
 
 const CartSidebar: FC = () => {
+  const router = useRouter();
   const { isCartOpen, closeCart, cartItems, cartTotal, removeFromCart, updateQuantity } = useCart();
   const { formatPrice } = useSettings();
 
@@ -19,6 +21,11 @@ const CartSidebar: FC = () => {
   const sidebarVariants = {
     hidden: { x: '100%' },
     visible: { x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  };
+
+  const handleProceedToCheckout = () => {
+    closeCart();
+    router.push('/checkout');
   };
 
   return (
@@ -64,7 +71,10 @@ const CartSidebar: FC = () => {
                     <span className="text-lg font-semibold text-slate-600">Subtotal</span>
                     <span className="text-2xl font-bold text-slate-800">{formatPrice(cartTotal)}</span>
                   </div>
-                  <button className="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-full hover:bg-red-700 transition-transform transform hover:scale-105">
+                  <button 
+                    onClick={handleProceedToCheckout}
+                    className="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-full hover:bg-red-700 transition-transform transform hover:scale-105"
+                  >
                     Proceed to Checkout
                   </button>
                 </div>
@@ -88,6 +98,9 @@ const CartItemCard: FC<{ item: CartItem }> = ({ item }) => {
                 <div>
                     <h4 className="font-bold text-slate-800 leading-tight">{item.title}</h4>
                     <p className="text-lg font-semibold text-red-600 mt-1">{formatPrice(item.discountPrice)}</p>
+                    {item.details && (
+                        <p className="text-sm text-slate-500 mt-1">{item.details}</p>
+                    )}
                 </div>
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center border rounded-full">
@@ -107,6 +120,5 @@ const CartItemCard: FC<{ item: CartItem }> = ({ item }) => {
         </div>
     );
 };
-
 
 export default CartSidebar;
