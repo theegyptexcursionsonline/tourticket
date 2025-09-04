@@ -102,7 +102,7 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 };
 
 // =================================================================
-// --- SUB-COMPONENTS ---
+// --- SUB-COMPONENTS (MEMOIZED FOR PERFORMANCE) ---
 // =================================================================
 const SearchSuggestion: FC<{ term: string; icon: React.ElementType; onSelect: (term: string) => void; onRemove?: (term: string) => void; }> = React.memo(({ term, icon: Icon, onSelect, onRemove }) => (
     <div className="group relative">
@@ -118,7 +118,7 @@ const SearchSuggestion: FC<{ term: string; icon: React.ElementType; onSelect: (t
     </div>
 ));
 
-const SearchModal: FC<{ isOpen: boolean; onClose: () => void; onSearch: (term: string) => void; }> = ({ isOpen, onClose, onSearch }) => {
+const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }> = ({ onClose, onSearch }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const popularSearches = usePopularSearches();
     const { recentSearches, removeSearchTerm } = useRecentSearches();
@@ -130,20 +130,18 @@ const SearchModal: FC<{ isOpen: boolean; onClose: () => void; onSearch: (term: s
     }, [searchTerm, onSearch, onClose]);
 
     useEffect(() => {
-        if (isOpen) {
-            const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-            window.addEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'hidden';
-            return () => {
-                window.removeEventListener('keydown', handleKeyDown);
-                document.body.style.overflow = 'auto';
-            };
-        }
-    }, [onClose, isOpen]);
+        const handleKeyDown = (e: KeyboardEvent) => { 
+            if (e.key === 'Escape') onClose(); 
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = 'auto';
+        };
+    }, [onClose]);
 
     useOnClickOutside(modalRef, onClose);
-    
-    if (!isOpen) return null;
 
     return (
         <motion.div
@@ -176,7 +174,7 @@ const SearchModal: FC<{ isOpen: boolean; onClose: () => void; onSearch: (term: s
     );
 };
 
-const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
+const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ isOpen, onClose }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(menuRef, onClose);
     return (
@@ -219,9 +217,9 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClo
             )}
         </AnimatePresence>
     );
-};
+});
 
-const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; }> = ({ isOpen, onClose, onOpenSearch }) => {
+const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; }> = React.memo(({ isOpen, onClose, onOpenSearch }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(menuRef, onClose);
     
@@ -295,7 +293,7 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
             )}
         </AnimatePresence>
     );
-};
+});
 
 const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = React.memo(({ onFocus, isTransparent }) => {
     const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
@@ -398,7 +396,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
       
       <AnimatePresence>
         {isSearchModalOpen && (
-          <SearchModal isOpen={isSearchModalOpen} onClose={handleSearchModalClose} onSearch={handleSearch} />
+          <SearchModal onClose={handleSearchModalClose} onSearch={handleSearch} />
         )}
       </AnimatePresence>
     </>
