@@ -353,7 +353,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
             <div className="flex items-center justify-between h-16 md:h-20">
                 <div className="flex items-center gap-4 lg:gap-8">
                     <a href="/" className="flex items-center h-full">
-                        <img src={isTransparent ? '/EEO-logo-white.png' : '/EEO-logo.png'} alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
+                        <img src={isTransparent ? '/EEO-logo.png' : '/EEO-logo.png'} alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
                     </a>
                     <nav className="hidden md:flex items-center relative">
                         <button onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
