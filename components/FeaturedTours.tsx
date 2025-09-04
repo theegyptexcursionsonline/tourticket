@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Star, ShoppingCart, Clock, Users } from 'lucide-react';
-import BookingSidebar from '@/components/BookingSidebar';
+import { ArrowRight, Star, ShoppingCart, Clock, Users, X } from 'lucide-react';
+import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
+import BookingSidebar from '@/components/BookingSidebar';
 
 // --- Mock Data with proper Tour interface ---
 const featuredTours: Tour[] = [
@@ -116,8 +117,41 @@ const featuredTours: Tour[] = [
   },
 ];
 
-// --- Tour Card Component ---
-const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
+// --- Coming Soon Modal Component ---
+const ComingSoonModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300 ease-in-out">
+      <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors">
+          <X size={24} />
+        </button>
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Coming Soon!</h2>
+          <p className="text-gray-600 mb-6">
+            This feature is currently under development. Stay tuned for new and exciting updates!
+          </p>
+          <button onClick={onClose} className="w-full bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes scale-in {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// --- Tour Card Component (Enhanced & Clickable) ---
+const TourCard = ({ tour, onCardClick, onAddToCartClick }: { tour: Tour; onCardClick: (tour: Tour) => void; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
 
   const formatBookings = (num: number) => {
@@ -127,60 +161,76 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   };
 
   const getTagColor = (tag: string) => {
-    if (tag.includes('%')) return 'bg-red-500 text-white';
-    if (tag === 'Staff favourite') return 'bg-blue-500 text-white';
-    if (tag === 'Online only deal') return 'bg-green-600 text-white';
-    if (tag === 'New') return 'bg-purple-500 text-white';
+    if (tag.includes('%')) return 'bg-red-600 text-white';
+    if (tag === 'Staff favourite') return 'bg-blue-600 text-white';
+    if (tag === 'Online only deal') return 'bg-emerald-600 text-white';
+    if (tag === 'New') return 'bg-purple-600 text-white';
     if (tag === 'Best for Kids') return 'bg-yellow-500 text-black';
     return 'bg-gray-200 text-gray-800';
   };
 
   return (
-    <div className="flex-shrink-0 w-[340px] bg-white rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 group">
+    <a 
+      href="#" 
+      onClick={(e) => {
+        e.preventDefault();
+        onCardClick(tour);
+      }}
+      className="block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+    >
       <div className="relative">
-        <img src={tour.image} alt={tour.title} className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <Image 
+          src={tour.image} 
+          alt={tour.title} 
+          width={340}
+          height={192}
+          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105" 
+        />
         <div className="absolute top-3 left-3 flex flex-wrap gap-2">
           {tour.tags?.map(tag => (
-            <span key={tag} className={`px-3 py-1 text-xs font-bold rounded-full shadow-sm ${getTagColor(tag)}`}>
+            <span key={tag} className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shadow-sm ${getTagColor(tag)}`}>
               {tag}
             </span>
           ))}
         </div>
         <button 
-          onClick={() => onAddToCartClick(tour)}
-          className="absolute bottom-3 right-3 bg-black/50 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 hover:bg-red-600 hover:scale-110 hover:rotate-12"
+          onClick={(e) => {
+            e.preventDefault(); 
+            e.stopPropagation(); // Prevents the parent 'a' tag from being clicked
+            onAddToCartClick(tour);
+          }}
+          className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110"
           aria-label="Add to cart"
         >
-          <ShoppingCart size={20} />
+          <ShoppingCart size={22} />
         </button>
       </div>
       <div className="p-5 flex flex-col h-[180px]">
-        <h3 className="text-lg font-bold text-gray-800 leading-snug flex-grow line-clamp-2">{tour.title}</h3>
+        <h3 className="text-xl font-bold text-gray-900 leading-snug flex-grow line-clamp-2">{tour.title}</h3>
         <div className="flex items-center gap-4 text-sm text-gray-500 my-3">
           <div className="flex items-center gap-1.5">
-            <Clock size={14} className="text-gray-400"/>
-            <span>{tour.duration}</span>
+            <Clock size={16} className="text-gray-400"/>
+            <span className="font-medium">{tour.duration}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Users size={14} className="text-gray-400"/>
-            <span>{formatBookings(tour.bookings || 0)} booked</span>
+            <Users size={16} className="text-gray-400"/>
+            <span className="font-medium">{formatBookings(tour.bookings || 0)} booked</span>
           </div>
         </div>
         <div className="mt-auto flex items-end justify-between">
           <div className="flex items-center gap-1.5 text-yellow-500">
-            <Star size={18} className="fill-current" />
-            <span className="font-bold text-base text-gray-700">{tour.rating?.toFixed(1)}</span>
+            <Star size={20} className="fill-current" />
+            <span className="font-bold text-lg text-gray-800">{tour.rating?.toFixed(1)}</span>
           </div>
           <div className="text-right">
-             <span className="text-2xl font-extrabold text-gray-900">{formatPrice(tour.discountPrice)}</span>
+             <span className="text-3xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
             {tour.originalPrice && (
-              <span className="ml-1.5 text-sm text-gray-500 line-through">{formatPrice(tour.originalPrice)}</span>
+              <span className="ml-2 text-base font-normal text-gray-500 line-through">{formatPrice(tour.originalPrice)}</span>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </a>
   );
 };
 
@@ -188,6 +238,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
 export default function FeaturedTours() {
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleAddToCartClick = (tour: Tour) => {
     setSelectedTour(tour);
@@ -197,34 +248,49 @@ export default function FeaturedTours() {
   const closeSidebar = () => {
     setBookingSidebarOpen(false);
     setTimeout(() => setSelectedTour(null), 300);
-  }
+  };
+
+  const handleCardClick = () => {
+    setIsModalOpen(true);
+  };
   
   // Duplicate tours for seamless animation
   const duplicatedTours = [...featuredTours, ...featuredTours];
 
   return (
     <>
-      <section className="bg-gray-50 py-20 font-sans">
-        <div className="container mx-auto">
-          <div className="flex justify-between items-end mb-10 px-4">
+      <section className="bg-white py-20 font-sans">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12">
             <div>
-              <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight">Canal Cruises Perfect For You</h2>
-              <p className="mt-2 text-lg text-gray-600">Discover top-rated experiences in Amsterdam, handpicked by our travel experts.</p>
+              <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">Canal Cruises Perfect For You</h2>
+              <p className="mt-2 text-lg text-gray-600 max-w-2xl">Discover top-rated experiences in Amsterdam, handpicked by our travel experts.</p>
             </div>
-            <button className="flex-shrink-0 flex items-center gap-2 bg-red-600 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-red-700 transition-all duration-300 transform hover:-translate-y-0.5">
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handleCardClick();
+              }}
+              className="flex-shrink-0 mt-6 sm:mt-0 flex items-center gap-2 bg-red-600 text-white font-semibold px-6 py-3 shadow-md hover:bg-red-700 transition-all duration-300"
+            >
               <span>See all tours</span>
               <ArrowRight size={20} />
-            </button>
+            </a>
           </div>
 
           <div className="relative w-full overflow-hidden group py-8">
-            <div className="absolute top-0 left-0 w-24 h-full bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute top-0 left-0 w-24 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
             
             <div className="flex animate-marquee group-hover:[animation-play-state:paused]">
               {duplicatedTours.map((tour, index) => (
                 <div key={`${tour.id}-${index}`} className="flex-shrink-0 px-4">
-                  <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
+                  <TourCard 
+                    tour={tour} 
+                    onCardClick={handleCardClick} 
+                    onAddToCartClick={handleAddToCartClick}
+                  />
                 </div>
               ))}
             </div>
@@ -232,12 +298,14 @@ export default function FeaturedTours() {
         </div>
       </section>
       
-      {/* Use the proper BookingSidebar component */}
+      {/* Conditionally render the new modal */}
       <BookingSidebar 
         isOpen={isBookingSidebarOpen} 
         onClose={closeSidebar} 
         tour={selectedTour} 
       />
+
+      <ComingSoonModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       
       {/* Global Styles & Fonts */}
       <style jsx global>{`

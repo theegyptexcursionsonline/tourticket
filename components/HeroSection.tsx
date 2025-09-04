@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, X, Clock, Zap } from 'lucide-react';
+import Image from 'next/image';
 
 // --- Type Definitions ---
 type Tag = {
@@ -120,16 +121,16 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex];
 };
 
-// --- Sub-components ---
+// --- Sub-components (Enhanced) ---
 const FloatingTag = ({ tag }: { tag: Tag }) => (
-  <button style={tag.position} className={`absolute px-2 py-1 md:px-4 md:py-2 text-xs md:text-sm font-semibold rounded-full shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in ${tag.highlight ? 'bg-red-500 text-white scale-110 -rotate-6 hover:bg-red-600' : 'bg-white/90 text-slate-800 hover:bg-white backdrop-blur-sm'}`}>
+  <button style={tag.position} className={`absolute px-4 py-2 text-xs md:text-sm font-semibold rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in ${tag.highlight ? 'bg-red-500 text-white scale-110 -rotate-3 hover:bg-red-600' : 'bg-white/90 text-slate-800 hover:bg-white backdrop-blur-sm'}`}>
     {tag.name}
   </button>
 );
 
 const SearchSuggestion = ({ term, icon: Icon, onSelect, onRemove }: { term: string, icon: React.ElementType, onSelect: (term: string) => void, onRemove?: (term: string) => void }) => (
     <div className="group relative">
-        <button onClick={() => onSelect(term)} className="flex w-full items-center gap-3 pl-4 pr-5 py-2.5 bg-slate-100 text-slate-700 rounded-full transition-all duration-300 ease-in-out hover:bg-slate-200 hover:shadow-md hover:text-slate-900 group-hover:pr-10">
+        <button onClick={() => onSelect(term)} className="flex w-full items-center gap-3 pl-4 pr-5 py-3 bg-slate-100 text-slate-700 rounded-3xl transition-all duration-300 ease-in-out hover:bg-slate-200 hover:shadow-md hover:text-slate-900 group-hover:pr-10">
             <Icon className="h-5 w-5 text-slate-500 group-hover:text-red-500 transition-colors" />
             <span className="font-medium text-sm sm:text-base text-left">{term}</span>
         </button>
@@ -166,10 +167,9 @@ const SearchModal = ({ isOpen, onClose, onSearch }: { isOpen: boolean, onClose: 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-fade-in flex flex-col items-center justify-start p-4" onClick={onClose} role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-lg animate-fade-in flex flex-col items-center justify-start p-4" onClick={onClose} role="dialog" aria-modal="true">
             <div 
-                className="relative w-full bg-white shadow-2xl p-6 sm:p-8 animate-slide-from-top
-                           sm:w-full sm:max-w-5xl" 
+                className="relative w-full max-w-6xl mt-16 lg:mt-24 p-6 sm:p-8 animate-slide-from-top" 
                 onClick={(e) => e.stopPropagation()}
             >
                 <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" aria-label="Close search">
@@ -178,29 +178,29 @@ const SearchModal = ({ isOpen, onClose, onSearch }: { isOpen: boolean, onClose: 
                 
                 <form onSubmit={handleSearchSubmit} className="mb-8">
                     <div className="relative">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-400 pointer-events-none" />
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-400 pointer-events-none" />
                         <input 
                             type="text" 
                             value={searchTerm} 
                             onChange={e => setSearchTerm(e.target.value)} 
                             placeholder="What are you looking for?" 
                             autoFocus 
-                            className="w-full text-xl sm:text-2xl pl-16 pr-6 py-5 border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-red-500 transition-colors"
+                            className="w-full text-2xl md:text-3xl pl-16 pr-6 py-6 border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-red-500 transition-colors"
                         />
                     </div>
                 </form>
                 
-                <div className="space-y-8">
+                <div className="space-y-12">
                     <div>
-                        <h3 className="text-slate-500 font-bold text-sm tracking-wider uppercase mb-4">Most popular</h3>
-                        <div className="flex flex-wrap gap-3">
+                        <h3 className="text-slate-500 font-bold text-sm tracking-widest uppercase mb-4">Most popular</h3>
+                        <div className="flex flex-wrap gap-4">
                             {popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={(term) => { onSearch(term); onClose(); }} />)}
                         </div>
                     </div>
                     {recentSearches.length > 0 && (
                         <div>
-                            <h3 className="text-slate-500 font-bold text-sm tracking-wider uppercase mb-4">Your recent searches</h3>
-                            <div className="flex flex-wrap gap-3">
+                            <h3 className="text-slate-500 font-bold text-sm tracking-widest uppercase mb-4">Your recent searches</h3>
+                            <div className="flex flex-wrap gap-4">
                                 {recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={(term) => { onSearch(term); onClose(); }} onRemove={removeSearchTerm}/>)}
                             </div>
                         </div>
@@ -215,10 +215,10 @@ const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
   const currentSuggestion = useSlidingText(HERO_SEARCH_SUGGESTIONS, 3000);
   return (
     <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start">
-      <button onClick={onOpenModal} className="w-full max-w-sm md:max-w-md bg-white text-slate-500 rounded-full flex items-center p-3 text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform">
-        <Search className="h-5 w-5 md:h-6 md:w-6 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
-        <div className="flex-1 text-left h-6 overflow-hidden">
-          <span key={currentSuggestion} className="font-semibold animate-text-slide-in block">{currentSuggestion}</span>
+      <button onClick={onOpenModal} className="w-full max-w-sm md:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-4 text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform">
+        <Search className="h-6 w-6 md:h-7 md:w-7 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
+        <div className="flex-1 text-left h-7 overflow-hidden">
+          <span key={currentSuggestion} className="font-semibold animate-text-slide-in block text-lg">{currentSuggestion}</span>
         </div>
       </button>
     </div>
@@ -241,7 +241,7 @@ export default function HeroSection() {
             <section className="relative h-screen min-h-[650px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
                 <div className="absolute inset-0 z-0">
                     <img src="/bg4.png" alt="Scenic travel background" className="w-full h-full object-cover"/>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
                 </div>
                 <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
                     <div className="max-w-xl">
@@ -264,17 +264,13 @@ export default function HeroSection() {
             
             <style jsx global>{`
                 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-                @keyframes slide-from-bottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
                 @keyframes slide-from-top { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
                 @keyframes tag-fade-in { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
                 @keyframes text-slide-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 
                 .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-                .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
-                .animate-slide-from-bottom { animation: slide-from-bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-                .animate-slide-from-top { animation: slide-from-top 0.4s ease-out forwards; }
+                .animate-slide-from-top { animation: slide-from-top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
                 .animate-float { animation: float 8s ease-in-out infinite; }
                 .animate-tag-fade-in { animation: tag-fade-in 0.7s ease-out forwards; }
                 .animate-text-slide-in { animation: text-slide-in 0.5s ease-out forwards; }
