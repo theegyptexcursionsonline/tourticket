@@ -102,7 +102,7 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 };
 
 // =================================================================
-// --- SUB-COMPONENTS (MEMOIZED FOR PERFORMANCE) ---
+// --- SUB-COMPONENTS ---
 // =================================================================
 const SearchSuggestion: FC<{ term: string; icon: React.ElementType; onSelect: (term: string) => void; onRemove?: (term: string) => void; }> = React.memo(({ term, icon: Icon, onSelect, onRemove }) => (
     <div className="group relative">
@@ -128,6 +128,10 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
         e?.preventDefault();
         if (searchTerm.trim()) { onSearch(searchTerm); setSearchTerm(''); onClose(); }
     }, [searchTerm, onSearch, onClose]);
+    
+    // Memoized handlers for search suggestions to avoid hook rule violations
+    const handlePopularSearch = useCallback((term: string) => { onSearch(term); onClose(); }, [onSearch, onClose]);
+    const handleRecentSearch = useCallback((term: string) => { onSearch(term); onClose(); }, [onSearch, onClose]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => { 
@@ -166,8 +170,8 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
                     <div className="relative"><Search className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-400" /><input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="What are you looking for?" autoFocus className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500" /></div>
                 </form>
                 <div className="space-y-8">
-                    <div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Most popular</h3><div className="flex flex-wrap gap-3">{popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={useCallback((term) => { onSearch(term); onClose(); }, [onSearch, onClose])} />)}</div></div>
-                    {recentSearches.length > 0 && (<div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Your recent searches</h3><div className="flex flex-wrap gap-3">{recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={useCallback((term) => { onSearch(term); onClose(); }, [onSearch, onClose])} onRemove={removeSearchTerm} />)}</div></div>)}
+                    <div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Most popular</h3><div className="flex flex-wrap gap-3">{popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />)}</div></div>
+                    {recentSearches.length > 0 && (<div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Your recent searches</h3><div className="flex flex-wrap gap-3">{recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />)}</div></div>)}
                 </div>
             </motion.div>
         </motion.div>
