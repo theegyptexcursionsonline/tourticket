@@ -11,6 +11,7 @@ import PopularInterest from "@/components/PopularInterest";
 import Reviews from "@/components/Reviews";
 import VisitUs from "@/components/VisitUs";
 import Destinations from "@/components/Destinations";
+import Chatbot from "@/components/Chatbot"; // 1. Import the new Chatbot component
 
 export default function HomePage() {
   return (
@@ -21,14 +22,15 @@ export default function HomePage() {
       <IcebarPromo />
       <FeaturedTours />
       <InterestGrid />
-            <DayTrips />
-
+      <DayTrips />
       <PopularInterest />
-            <AboutUs />
-
+      <AboutUs />
       <Reviews />
       <FAQ />
       <Footer />
+
+      {/* 2. Add the Chatbot component here. It will automatically position itself. */}
+      <Chatbot />
     </main>
   );
 }
