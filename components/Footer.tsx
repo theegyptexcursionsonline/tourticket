@@ -26,6 +26,7 @@ const PaymentIcons = {
   Alipay: () => <svg width="40" height="24" viewBox="0 0 40 24" fill="none"><rect width="40" height="24" rx="4" fill="#00A1E9" /><text x="20" y="16" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">alipay</text></svg>,
   GPay: () => <svg width="40" height="24" viewBox="0 0 40 24" fill="none"><rect width="40" height="24" rx="4" fill="white" stroke="#dadce0" /><path d="M12 8.5h3.5v7H12v-7zm4.5 0h3v7h-3v-7zm4 0H24v7h-3.5v-7z" fill="#4285F4" /><path d="M25 10.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z" fill="#EA4335" /><text x="20" y="20" textAnchor="middle" fill="#5f6368" fontSize="6">Pay</text></svg>,
 };
+
 const paymentMethods = [
   { name: "Visa", component: PaymentIcons.Visa },
   { name: "Mastercard", component: PaymentIcons.Mastercard },
@@ -40,29 +41,43 @@ const paymentMethods = [
 // =================================================================
 export default function Footer() {
   return (
-    <footer className="bg-[#E9ECEE] text-slate-700 pt-16 pb-10">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-14">
+    <footer className="bg-[#E9ECEE] text-slate-700">
+      <div className="container mx-auto px-4 py-8">
+        
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-6 items-start">
           
           {/* Column 1: Brand Info */}
           <div className="space-y-6">
-             <a href="/" className="inline-block">
-               <Image
-                 src="/EEO-logo.png"
-                 alt="Egypt Excursions Online"
-                 width={160}
-                 height={80}
-                 className="h-20 w-auto object-contain"
-               />
-             </a>
-             <p className="text-sm text-slate-600 max-w-xs leading-relaxed">
-               Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt.
-             </p>
+            <a href="/" className="inline-block">
+              <Image
+                src="/EEO-logo.png"
+                alt="Egypt Excursions Online"
+                width={160}
+                height={80}
+                className="h-16 sm:h-20 w-auto object-contain"
+              />
+            </a>
+            <p className="text-sm text-slate-600 leading-relaxed max-w-xs">
+              Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt.
+            </p>
           </div>
 
-          {/* Column 2: Destinations */}
+          {/* Column 2: Things To Do */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-slate-900">Destinations</h3>
+            <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Things to do</h3>
+            <ul className="space-y-2 text-sm">
+              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Amsterdam</a></li>
+              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Berlin</a></li>
+              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Copenhagen</a></li>
+              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Rotterdam</a></li>
+              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Stockholm</a></li>
+            </ul>
+          </div>
+
+          {/* Column 3: Destinations & Company Links */}
+          <div>
+            <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Destinations</h3>
             <ul className="space-y-2 text-sm">
               <li><a className="hover:text-red-600 transition-colors" href="#">Amsterdam</a></li>
               <li><a className="hover:text-red-600 transition-colors" href="#">Berlin</a></li>
@@ -70,58 +85,131 @@ export default function Footer() {
               <li><a className="hover:text-red-600 transition-colors" href="#">Rotterdam</a></li>
               <li><a className="hover:text-red-600 transition-colors" href="#">Stockholm</a></li>
             </ul>
-          </div>
-
-          {/* Column 3: Company Links */}
-          <div>
-            <h3 className="font-bold text-lg mb-4 text-slate-900">Tours &amp; Tickets</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a className="hover:text-red-600 transition-colors" href="#">Contact</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">About us</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">FAQ</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Blog</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Careers</a></li>
-            </ul>
-          </div>
-
-          {/* Column 4: Contact & Social */}
-          <div>
-            <h3 className="font-bold text-lg mb-4 text-slate-900">Contact information</h3>
-            <ul className="space-y-4 text-sm mb-6">
-              <li className="flex gap-3"><Phone size={18} className="text-red-600 mt-0.5" /><div><div className="font-medium">+201142222920</div><div className="text-xs text-slate-500">From 8.30 - 17.00 EET</div></div></li>
-              <li className="flex gap-3"><Mail size={18} className="text-red-600 mt-0.5" /><div><a href="mailto:hello@egyptexcursionsonline.com" className="text-blue-600 hover:underline">hello@egyptexcursionsonline.com</a><div className="text-xs text-slate-500">Replies within 2 working days</div></div></li>
-              <li className="flex gap-3 items-center"><MessageSquare size={18} className="text-red-600" /><a href="#" className="hover:underline">Chat with us</a></li>
-            </ul>
             
+            <div className="mt-6">
+              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Tours &amp; Tickets</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a className="hover:text-red-600 transition-colors" href="#">Contact</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="#">About us</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="#">FAQ</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="#">Blog</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="#">Careers</a></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Column 4: Contact, Newsletter & Social Media */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Contact information</h3>
+              <ul className="space-y-3 text-sm">
+                <li className="flex gap-3">
+                  <Phone size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium">+201142222920</div>
+                    <div className="text-xs text-slate-500">From 8.30 - 17.00 EET</div>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <Mail size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <a href="mailto:hello@egyptexcursionsonline.com" className="text-blue-600 hover:underline break-all">
+                      hello@egyptexcursionsonline.com
+                    </a>
+                    <div className="text-xs text-slate-500">Replies within 2 working days</div>
+                  </div>
+                </li>
+                <li className="flex gap-3 items-center">
+                  <MessageSquare size={18} className="text-red-600 flex-shrink-0" />
+                  <a href="#" className="hover:underline">Chat with us</a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Newsletter */}
+            <div>
+              <h4 className="font-bold text-sm mb-3 text-slate-900">Sign up for our newsletter</h4>
+              <form className="flex flex-col sm:flex-row gap-2">
+                <input 
+                  type="email" 
+                  placeholder="Your email address" 
+                  className="flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
+                />
+                <button 
+                  type="submit" 
+                  className="h-11 px-4 sm:px-5 rounded-md text-white bg-slate-800 hover:bg-red-600 transition-colors text-sm font-semibold whitespace-nowrap"
+                >
+                  SUBSCRIBE
+                </button>
+              </form>
+            </div>
+            
+            {/* Social Media */}
             <div>
               <h4 className="font-bold text-sm mb-3 text-slate-900">Follow us on social media</h4>
-              <div className="flex gap-3">{socialLinks.map(({ icon: Icon, href }, i) => (<a key={i} href={href} className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-red-600 transition-colors" aria-label={`Follow us on ${Icon.displayName || 'social media'}`}><Icon size={18} /></a>))}</div>
+              <div className="flex gap-3">
+                {socialLinks.map(({ icon: Icon, href }, i) => (
+                  <a 
+                    key={i} 
+                    href={href} 
+                    className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors" 
+                    aria-label={`Follow us on ${Icon.displayName || 'social media'}`}
+                  >
+                    <Icon size={18} />
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-slate-300 pt-8">
-          <div className="flex flex-col-reverse items-center gap-10 md:flex-row md:justify-between">
+        {/* Reviews & Payment Methods */}
+        <div className="border-t border-slate-300 pt-6 mb-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
             
-            {/* Currency/Language switcher */}
-            <CurrencyLanguageSwitcher variant="footer" />
+            {/* Trusted by clients */}
+            <div className="flex-shrink-0">
+              <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl font-bold text-slate-900 leading-none">4.2</span>
+                <div className="flex text-xl leading-none text-red-500">
+                  <span>★</span><span>★</span><span>★</span><span>★</span><span className="text-slate-300">★</span>
+                </div>
+              </div>
+              <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
+            </div>
 
             {/* Payment Methods */}
-            <div className="w-full md:w-auto">
-              <h3 className="font-bold text-lg mb-4 text-slate-900 text-center md:text-right">Ways you can pay</h3>
-              <div className="grid grid-cols-6 sm:grid-cols-6 gap-3">{paymentMethods.map((m, idx) => (<div key={idx} title={m.name} className="flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 hover:shadow-sm"><m.component /></div>))}</div>
+            <div className="w-full lg:w-auto lg:max-w-md">
+              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Ways you can pay</h3>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+                {paymentMethods.map((method, idx) => (
+                  <div 
+                    key={idx} 
+                    title={method.name} 
+                    className="flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 hover:shadow-sm transition-shadow aspect-[5/3]"
+                  >
+                    <method.component />
+                  </div>
+                ))}
+              </div>
             </div>
-
           </div>
         </div>
+        
+        {/* Currency/Language Switcher */}
+        <div className="border-t border-slate-300 pt-4 mb-4">
+          <CurrencyLanguageSwitcher variant="footer" />
+        </div>
 
-        <div className="mt-8 pt-6 border-t border-slate-300 text-xs text-slate-500 text-center">
-            <p className="space-x-2 mb-2">
-              <a className="underline hover:text-slate-700" href="#">Privacy policy</a>
-              <span>·</span>
-              <a className="underline hover:text-slate-700" href="#">Terms and conditions</a>
-            </p>
-            <p>© {new Date().getFullYear()} Egypt Excursions Online. All rights reserved.</p>
+        {/* Legal Footer */}
+        <div className="border-t border-slate-300 pt-4 text-xs text-slate-500 text-center">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-3">
+            <a className="underline hover:text-slate-700 transition-colors" href="#">Privacy policy</a>
+            <span className="hidden sm:inline">·</span>
+            <a className="underline hover:text-slate-700 transition-colors" href="#">Terms and conditions</a>
+          </div>
+          <p>© {new Date().getFullYear()} Egypt Excursions Online. All rights reserved.</p>
         </div>
       </div>
     </footer>

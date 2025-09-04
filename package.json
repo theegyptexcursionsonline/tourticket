@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "currency.js": "^2.0.4",
     "firebase": "^11.10.0",
     "framer-motion": "^12.23.3",
     "lucide-react": "^0.542.0",
