@@ -196,20 +196,25 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Middle: rating + payments */}
-        <div className="border-t border-slate-300 pt-8">
-          <div className="flex flex-col lg:flex-row items-start justify-between gap-10">
-            <div>
-              <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl font-bold text-slate-900 leading-none">4.2</span>
-                <div className="flex text-xl leading-none">
-                  {[...Array(4)].map((_, i) => ( <span key={i} className="text-red-600">★</span> ))}
-                  <span className="text-slate-300">★</span>
-                </div>
-              </div>
-              <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
-            </div>
+      {/* Middle: rating + payments */}
+<div className="border-t border-slate-300 pt-8">
+  <div className="flex flex-col lg:flex-row items-start justify-between gap-10">
+    <div>
+      <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
+        <div className="flex text-xl leading-none">
+          {/* Full stars */}
+          {[...Array(4)].map((_, i) => (
+            <span key={i} className="text-red-600">★</span>
+          ))}
+          {/* Half star */}
+          <span className="text-red-600">☆</span>
+        </div>
+      </div>
+      <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
+    </div>
+
 
             <div className="w-full lg:w-auto">
               <h3 className="font-bold text-lg mb-4 text-slate-900">Ways you can pay</h3>
@@ -243,9 +248,7 @@ export default function Footer() {
               <span>·</span>
               <a className="underline hover:text-slate-700" href="#">Terms and conditions</a>
             </p>
-            <p className="space-x-2">
-              <span>Website by <a className="underline hover:text-slate-700" href="#">RDMI Web Services</a></span>
-            </p>
+           
           </div>
         </div>
 
