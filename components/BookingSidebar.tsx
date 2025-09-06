@@ -3,7 +3,7 @@
 import { FC, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, Clock, Calendar as CalendarIcon, ChevronDown, Plus, Minus, Users, Info, Shield, Smartphone, HeadphonesIcon, ShoppingCart, Loader2 } from 'lucide-react';
+import { X, Star, Clock, Calendar as CalendarIcon, ChevronDown, Plus, Minus, Users, Info, Shield, Smartphone, HeadphonesIcon, ShoppingCart, Loader2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '../contexts/CartContext';
@@ -60,6 +60,31 @@ const relatedTours: Tour[] = [
     image: '/images2/3.png',
     tags: ['Staff favourite', '-20%'],
     description: 'Discover masterpieces of Dutch art',
+    highlights: []
+  },
+  {
+    id: 'wine-cheese-cruise',
+    title: 'Wine & Cheese Cruise in Amsterdam',
+    duration: '90 minutes',
+    rating: 4.9,
+    bookings: 10245,
+    originalPrice: 38.50,
+    discountPrice: 35,
+    image: '/images2/4.png',
+    tags: ['New', '-10%'],
+    description: 'Indulge in premium Dutch cheeses and fine wines',
+    highlights: []
+  },
+  {
+    id: 'dinner-cruise',
+    title: 'Amsterdam Dinner Cruise',
+    duration: '2 hours',
+    rating: 4.8,
+    bookings: 5008,
+    discountPrice: 89,
+    image: '/images2/5.png',
+    tags: ['Staff favourite'],
+    description: 'An exclusive dining experience aboard a luxury canal cruise',
     highlights: []
   }
 ];
@@ -191,31 +216,83 @@ const CalendarPopup: FC<{
 
 const RelatedTourCard: FC<{ tour: Tour; onAdd: (tour: Tour) => void }> = ({ tour, onAdd }) => {
   const { formatPrice } = useSettings();
+  const [isAdding, setIsAdding] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  
+  const handleAddClick = async () => {
+    setIsAdding(true);
+    
+    // Simulate a brief loading state
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    onAdd(tour);
+    setIsAdding(false);
+    setShowSuccess(true);
+    
+    // Hide success feedback after 2 seconds
+    setTimeout(() => setShowSuccess(false), 2000);
+  };
   
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="flex-shrink-0 w-64 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
       <div className="relative">
         <img src={tour.image} alt={tour.title} className="w-full h-32 object-cover" />
-        {tour.tags?.find(tag => tag.includes('%')) && (
-          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-            {tour.tags.find(tag => tag.includes('%'))}
-          </div>
-        )}
-        {tour.tags?.includes('Official partner') && (
-          <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">
-            Official partner
-          </div>
-        )}
-        {tour.tags?.includes('Staff favourite') && (
-          <div className="absolute top-8 left-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
-            Staff favourite
-          </div>
-        )}
+        {tour.tags?.map((tag, index) => {
+          let bgColor = 'bg-gray-200 text-gray-800';
+          if (tag.includes('%')) bgColor = 'bg-red-500 text-white';
+          else if (tag === 'Official partner') bgColor = 'bg-blue-600 text-white';
+          else if (tag === 'Staff favourite') bgColor = 'bg-green-600 text-white';
+          else if (tag === 'New') bgColor = 'bg-purple-600 text-white';
+          
+          return (
+            <div key={index} className={`absolute ${index === 0 ? 'top-2' : 'top-8'} left-2 ${bgColor} text-xs font-bold px-2 py-1 rounded`}>
+              {tag}
+            </div>
+          );
+        })}
+        
         <button 
-          onClick={() => onAdd(tour)}
-          className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
+          onClick={handleAddClick}
+          disabled={isAdding || showSuccess}
+          className={`absolute bottom-2 right-2 p-2 rounded-full shadow-lg transition-all duration-300 ${
+            showSuccess 
+              ? 'bg-green-500 text-white scale-110' 
+              : isAdding 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-white text-gray-700 hover:bg-red-500 hover:text-white hover:scale-110'
+          }`}
         >
-          <Plus size={16} className="text-gray-700" />
+          <AnimatePresence mode="wait">
+            {showSuccess ? (
+              <motion.div
+                key="success"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Check size={16} />
+              </motion.div>
+            ) : isAdding ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <Loader2 size={16} className="animate-spin" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="plus"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <Plus size={16} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </button>
       </div>
       
@@ -231,7 +308,7 @@ const RelatedTourCard: FC<{ tour: Tour; onAdd: (tour: Tour) => void }> = ({ tour
           <span>{tour.duration}</span>
         </div>
         
-        <h4 className="font-bold text-sm text-gray-900 mb-2 line-clamp-2">{tour.title}</h4>
+        <h4 className="font-bold text-sm text-gray-900 mb-2 line-clamp-2 leading-tight">{tour.title}</h4>
         
         <div className="flex items-center justify-between">
           <div className="text-right">
@@ -260,6 +337,7 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const router = useRouter();
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const [ticketType, setTicketType] = useState('Central Station');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -268,6 +346,8 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [hasDiscount, setHasDiscount] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
     if (tour) {
@@ -279,6 +359,40 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
       setIsNavigating(false);
     }
   }, [tour]);
+
+  // Check scroll position for arrow visibility
+  const checkScrollPosition = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollPosition);
+      checkScrollPosition(); // Initial check
+      
+      return () => container.removeEventListener('scroll', checkScrollPosition);
+    }
+  }, []);
+
+  const scrollTours = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 280; // Card width (256px) + gap (24px)
+      const currentScroll = scrollContainerRef.current.scrollLeft;
+      const targetScroll = direction === 'left' 
+        ? currentScroll - scrollAmount 
+        : currentScroll + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: targetScroll,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   if (!tour) return null;
 
@@ -307,46 +421,46 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     addToCart(relatedTour);
   };
 
- const proceedToCheckout = async () => {
-  try {
-    setIsNavigating(true);
-    
-    // Validate form
-    if (!selectedTime) {
-      const timeButton = document.getElementById('time-picker-button');
-      if (timeButton) {
-        timeButton.focus();
-        timeButton.classList.add('border-red-500', 'animate-pulse');
-        setTimeout(() => timeButton.classList.remove('border-red-500', 'animate-pulse'), 2000);
+  const proceedToCheckout = async () => {
+    try {
+      setIsNavigating(true);
+      
+      // Validate form
+      if (!selectedTime) {
+        const timeButton = document.getElementById('time-picker-button');
+        if (timeButton) {
+          timeButton.focus();
+          timeButton.classList.add('border-red-500', 'animate-pulse');
+          setTimeout(() => timeButton.classList.remove('border-red-500', 'animate-pulse'), 2000);
+        }
+        setIsNavigating(false);
+        return;
       }
-      setIsNavigating(false);
-      return;
-    }
 
-    // Add item to cart
-    const cartItem = {
-      ...tour,
-      quantity: guests,
-      details: `${ticketType}, ${selectedDate.toLocaleDateString()}, ${selectedTime}`
-    };
-    
-    addToCart(cartItem);
-    
-    // Close sidebar
-    onClose();
-    
-    // Small delay for smooth UX
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Navigate to checkout
-    router.push('/checkout');
-    
-  } catch (error) {
-    console.error('Navigation failed:', error);
-    setIsNavigating(false);
-    alert('Something went wrong. Please try again.');
-  }
-};
+      // Add item to cart
+      const cartItem = {
+        ...tour,
+        quantity: guests,
+        details: `${ticketType}, ${selectedDate.toLocaleDateString()}, ${selectedTime}`
+      };
+      
+      addToCart(cartItem);
+      
+      // Close sidebar
+      onClose();
+      
+      // Small delay for smooth UX
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Navigate to checkout
+      router.push('/checkout');
+      
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      setIsNavigating(false);
+      alert('Something went wrong. Please try again.');
+    }
+  };
 
   return (
     <>
@@ -507,11 +621,42 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
                   </label>
                 </div>
 
-                {/* You May Also Like */}
+                {/* You May Also Like - Horizontal Scrollable */}
                 <div className="px-6 py-4 border-t">
-                  <h3 className="font-bold text-lg text-slate-800 mb-4">YOU MAY ALSO LIKE</h3>
-                  <div className="space-y-4">
-                    {relatedTours.slice(0, 3).map((relatedTour) => (
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-lg text-slate-800">YOU MAY ALSO LIKE</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => scrollTours('left')}
+                        disabled={!canScrollLeft}
+                        className={`p-2 rounded-full border transition-all duration-300 ${
+                          canScrollLeft 
+                            ? 'border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400' 
+                            : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                        }`}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => scrollTours('right')}
+                        disabled={!canScrollRight}
+                        className={`p-2 rounded-full border transition-all duration-300 ${
+                          canScrollRight 
+                            ? 'border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400' 
+                            : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                        }`}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    ref={scrollContainerRef}
+                    className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {relatedTours.map((relatedTour) => (
                       <RelatedTourCard 
                         key={relatedTour.id} 
                         tour={relatedTour} 
@@ -580,6 +725,17 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </>
   );
 };
