@@ -1,3 +1,4 @@
+// app/page.tsx (HomePage)
 import AboutUs from "@/components/AboutUs";
 import DayTrips from "@/components/DayTrips";
 import FAQ from "@/components/FAQ";
@@ -11,7 +12,7 @@ import PopularInterest from "@/components/PopularInterest";
 import Reviews from "@/components/Reviews";
 import VisitUs from "@/components/VisitUs";
 import Destinations from "@/components/Destinations";
-import Chatbot from "@/components/Chatbot"; // 1. Import the new Chatbot component
+// Chatbot removed from here (now global in layout)
 
 export default function HomePage() {
   return (
@@ -28,9 +29,7 @@ export default function HomePage() {
       <Reviews />
       <FAQ />
       <Footer />
-
-      {/* 2. Add the Chatbot component here. It will automatically position itself. */}
-      <Chatbot />
+      {/* Chatbot is now injected globally from layout; no local render here */}
     </main>
   );
 }
