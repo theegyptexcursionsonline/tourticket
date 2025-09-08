@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Calendar, ArrowRight, Search, Clock, User, Tag } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link"; // Import Link from next/link
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getAllBlogPosts, getBlogCategories, searchBlogPosts } from "@/lib/data/blog";
@@ -157,74 +158,72 @@ export default function BlogPage() {
             {paginatedPosts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {paginatedPosts.map((post) => (
-                  <article
-                    key={post.id}
-                    className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 group border border-slate-100"
-                  >
-                    <div className="relative h-48 w-full">
-                      <Image 
-                        src={post.image}
-                        alt={post.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute top-4 left-4">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${getCategoryColor(post.category)}`}>
-                          {post.category}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="p-6">
-                      <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
-                        <div className="flex items-center gap-1">
-                          <Calendar size={14} />
-                          <span>{formatDate(post.publishedAt)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock size={14} />
-                          <span>{post.readTime} min read</span>
+                  <Link href={`/blog/${post.slug}`} key={post.id} passHref>
+                    <article
+                      className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 group border border-slate-100 cursor-pointer"
+                    >
+                      <div className="relative h-48 w-full">
+                        <Image 
+                          src={post.image}
+                          alt={post.title}
+                          layout="fill"
+                          objectFit="cover"
+                          className="group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-4 left-4">
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${getCategoryColor(post.category)}`}>
+                            {post.category}
+                          </span>
                         </div>
                       </div>
                       
-                      <h2 className="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors mb-3 line-clamp-2">
-                        {post.title}
-                      </h2>
-                      
-                      <p className="text-slate-600 text-sm mb-4 line-clamp-3">
-                        {post.excerpt}
-                      </p>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <User size={14} />
-                          <span>{post.author}</span>
+                      <div className="p-6">
+                        <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                          <div className="flex items-center gap-1">
+                            <Calendar size={14} />
+                            <span>{formatDate(post.publishedAt)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock size={14} />
+                            <span>{post.readTime} min read</span>
+                          </div>
                         </div>
                         
-                        <a
-                          href={`/blog/${post.slug}`}
-                          className="inline-flex items-center gap-2 text-red-600 font-semibold hover:text-red-700 transition-colors group"
-                        >
-                          <span>Read more</span>
-                          <ArrowRight size={16} className="transform group-hover:translate-x-1 transition-transform" />
-                        </a>
-                      </div>
+                        <h2 className="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors mb-3 line-clamp-2">
+                          {post.title}
+                        </h2>
+                        
+                        <p className="text-slate-600 text-sm mb-4 line-clamp-3">
+                          {post.excerpt}
+                        </p>
 
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100">
-                        {post.tags.slice(0, 3).map((tag, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded"
-                          >
-                            <Tag size={10} />
-                            {tag}
-                          </span>
-                        ))}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <User size={14} />
+                            <span>{post.author}</span>
+                          </div>
+                          
+                          <div className="inline-flex items-center gap-2 text-red-600 font-semibold hover:text-red-700 transition-colors group">
+                            <span>Read more</span>
+                            <ArrowRight size={16} className="transform group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+
+                        {/* Tags */}
+                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100">
+                          {post.tags.slice(0, 3).map((tag, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded"
+                            >
+                              <Tag size={10} />
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </article>
+                    </article>
+                  </Link>
                 ))}
               </div>
             ) : (
