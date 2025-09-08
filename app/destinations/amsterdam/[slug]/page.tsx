@@ -7,7 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { destinations, getDestinationById } from '@/lib/data/destinations';
 import { tours, getToursByDestination } from '@/lib/data/tours';
-import { categories, getAllCategories } from '@/lib/data/categories';
+import { categories, getAllCategories } from '@/lib/categories';
 import { Destination, Tour, Category } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/contexts/CartContext';
