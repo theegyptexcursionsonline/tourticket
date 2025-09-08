@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
+import Link from "next/link";
 
 export default function IcebarPromo() {
   return (
@@ -24,9 +25,13 @@ export default function IcebarPromo() {
             Step into a world of frost and wonder. Our bar, carved from pure ice, offers a unique arctic experience where you can sip on signature cocktails in a truly chilling atmosphere.
           </p>
           <div className="mt-10">
-            <button style={{ color: '#2147F3', backgroundColor: '#FFED4F' }} className="font-bold py-3 px-8 rounded-full text-lg hover:opacity-90 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg">
-              ABOUT PRODUCT
-            </button>
+          <Link 
+  href="/IcebarPromo" 
+  className="inline-block font-bold py-3 px-8 rounded-full text-lg hover:opacity-90 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg" 
+  style={{ color: '#2147F3', backgroundColor: '#FFED4F' }}
+>
+  ABOUT PRODUCT
+</Link>
           </div>
         </div>
       </div>
