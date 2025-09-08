@@ -54,6 +54,121 @@ const reviewsData = [
   }
 ];
 
+// Skeleton Component for the loading state
+const TourPageSkeleton = () => (
+  <>
+    <Header startSolid={true} />
+    <main className="bg-white pt-20 animate-pulse">
+      {/* Breadcrumb Skeleton */}
+      <div className="bg-slate-50 py-4">
+        <div className="container mx-auto px-4">
+          <div className="h-5 w-1/2 rounded bg-slate-200"></div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Back Button Skeleton */}
+        <div className="h-6 w-36 mb-6 rounded bg-slate-200"></div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content Skeleton */}
+          <div className="lg:col-span-2 space-y-8">
+            <div>
+              {/* Tags Skeleton */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <div className="h-6 w-24 rounded-full bg-slate-200"></div>
+                <div className="h-6 w-32 rounded-full bg-slate-200"></div>
+              </div>
+
+              {/* Main Image Skeleton */}
+              <div className="w-full h-[420px] md:h-[500px] rounded-xl bg-slate-200 mb-6"></div>
+
+              {/* Thumbnails Skeleton */}
+              <div className="flex gap-2 mb-6">
+                <div className="w-20 h-16 rounded-lg bg-slate-200"></div>
+                <div className="w-20 h-16 rounded-lg bg-slate-200"></div>
+                <div className="w-20 h-16 rounded-lg bg-slate-200"></div>
+                <div className="w-20 h-16 rounded-lg bg-slate-200"></div>
+              </div>
+
+              {/* Title and Price Skeleton */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex-1 pr-6 space-y-3">
+                  <div className="h-10 w-3/4 rounded bg-slate-200"></div>
+                  <div className="h-6 w-full rounded bg-slate-200"></div>
+                </div>
+                <div className="text-right flex-shrink-0 space-y-2">
+                  <div className="h-5 w-20 ml-auto rounded bg-slate-200"></div>
+                  <div className="h-10 w-28 rounded bg-slate-200"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Info Cards Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-slate-50 p-5 rounded-lg border border-slate-100">
+                  <div className="h-8 w-8 mx-auto mb-3 rounded-full bg-slate-200"></div>
+                  <div className="h-5 w-3/4 mx-auto mb-2 rounded bg-slate-200"></div>
+                  <div className="h-4 w-full mx-auto rounded bg-slate-200"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Description Skeleton */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+              <div className="h-8 w-1/2 rounded bg-slate-200"></div>
+              <div className="h-4 w-full rounded bg-slate-200"></div>
+              <div className="h-4 w-full rounded bg-slate-200"></div>
+              <div className="h-4 w-5/6 rounded bg-slate-200"></div>
+            </div>
+
+            {/* Reviews Skeleton */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+              <div className="h-8 w-1/3 rounded bg-slate-200"></div>
+              <div className="border-b border-slate-200 pb-4">
+                <div className="h-5 w-1/4 rounded bg-slate-200 mb-2"></div>
+                <div className="h-4 w-1/2 rounded bg-slate-200 mb-2"></div>
+                <div className="h-4 w-full rounded bg-slate-200"></div>
+              </div>
+              <div className="pb-4">
+                <div className="h-5 w-1/4 rounded bg-slate-200 mb-2"></div>
+                <div className="h-4 w-1/2 rounded bg-slate-200 mb-2"></div>
+                <div className="h-4 w-full rounded bg-slate-200"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Sidebar Skeleton */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-6">
+              <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+                <div className="h-10 w-1/2 mx-auto mb-2 rounded bg-slate-200"></div>
+                <div className="h-4 w-1/4 mx-auto mb-6 rounded bg-slate-200"></div>
+                <div className="space-y-3 mb-6">
+                  <div className="h-5 w-3/4 rounded bg-slate-200"></div>
+                  <div className="h-5 w-full rounded bg-slate-200"></div>
+                  <div className="h-5 w-2/3 rounded bg-slate-200"></div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-14 w-full rounded-full bg-slate-200"></div>
+                  <div className="h-12 w-full rounded-full bg-slate-100"></div>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-6 space-y-3">
+                <div className="h-6 w-1/3 rounded bg-slate-200"></div>
+                <div className="h-5 w-3/4 rounded bg-slate-200"></div>
+                <div className="h-5 w-2/3 rounded bg-slate-200"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <Footer />
+  </>
+);
+
 export default function TourPage({ params }: TourPageProps) {
   const [tour, setTour] = useState<Tour | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +188,8 @@ export default function TourPage({ params }: TourPageProps) {
     const fetchTour = async () => {
       setIsLoading(true);
       try {
+        // Simulate network delay to make skeleton more noticeable
+        await new Promise(resolve => setTimeout(resolve, 1500));
         const tourData = getTourById(params.slug);
         if (!tourData) {
           notFound();
@@ -90,18 +207,7 @@ export default function TourPage({ params }: TourPageProps) {
   }, [params.slug]);
 
   if (isLoading) {
-    return (
-      <>
-        <Header startSolid={true} />
-        <main className="bg-slate-50 pt-24 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600 mx-auto"></div>
-            <p className="mt-4 text-slate-600">Loading tour...</p>
-          </div>
-        </main>
-        <Footer />
-      </>
-    );
+    return <TourPageSkeleton />;
   }
 
   if (!tour) {
@@ -456,41 +562,41 @@ export default function TourPage({ params }: TourPageProps) {
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
-<a key={relatedTour.id} href={`/tour/${relatedTour.slug}`} className="group">                        <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                          <div className="relative">
-                            <Image
-                              src={relatedTour.image}
-                              alt={relatedTour.title}
-                              width={300}
-                              height={200}
-                              className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            {relatedTour.tags?.map((tag, index) => (
-                              <span
-                                key={index}
-                                className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                                  tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
-                                }`}
-                              >
-                                {tag}
-                              </span>
-                            ))}
+<a key={relatedTour.id} href={`/tour/${relatedTour.slug}`} className="group">                      <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                        <div className="relative">
+                          <Image
+                            src={relatedTour.image}
+                            alt={relatedTour.title}
+                            width={300}
+                            height={200}
+                            className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          {relatedTour.tags?.map((tag, index) => (
+                            <span
+                              key={index}
+                              className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
+                                tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
+                              }`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="p-3">
+                          <h3 className="font-bold text-sm text-slate-800 mb-1 line-clamp-2">{relatedTour.title}</h3>
+                          <div className="flex items-center gap-1 mb-1 text-xs text-slate-500">
+                            <Clock size={12} />
+                            <span>{relatedTour.duration}</span>
                           </div>
-                          <div className="p-3">
-                            <h3 className="font-bold text-sm text-slate-800 mb-1 line-clamp-2">{relatedTour.title}</h3>
-                            <div className="flex items-center gap-1 mb-1 text-xs text-slate-500">
-                              <Clock size={12} />
-                              <span>{relatedTour.duration}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Star size={12} className="text-yellow-500 fill-current" />
+                              <span className="text-xs font-bold">{relatedTour.rating}</span>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1">
-                                <Star size={12} className="text-yellow-500 fill-current" />
-                                <span className="text-xs font-bold">{relatedTour.rating}</span>
-                              </div>
-                              <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
-                            </div>
+                            <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
                           </div>
                         </div>
+                      </div>
                       </a>
                     ))}
                   </div>
