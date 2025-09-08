@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect } from "react";
-import { Facebook } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -32,8 +32,17 @@ function DarkHero() {
 }
 
 export default function LoginPage() {
-  const { user, isLoading, loginWithRedirect, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, login } = useAuth();
   const router = useRouter();
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
     if (isAuthenticated && user && !isLoading) {
@@ -53,8 +62,72 @@ export default function LoginPage() {
     return null;
   }
 
-  const handleLogin = () => {
-    loginWithRedirect();
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear specific error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    
+    // Clear general login error
+    if (loginError) {
+      setLoginError('');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLoginError('');
+
+    try {
+      // Call the login function from AuthContext
+      await login(formData.email, formData.password);
+      
+      // Redirect will be handled by the useEffect above
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setLoginError(error.message || 'Login failed. Please check your credentials and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSocialLogin = (provider: string) => {
+    // This could be implemented for social login
+    console.log(`Social login with ${provider}`);
   };
 
   return (
@@ -74,38 +147,128 @@ export default function LoginPage() {
             </a>
           </p>
 
-          <div className="space-y-4">
-            <button 
-              onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-2 p-4 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors text-lg"
+          {loginError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
+              <p className="text-red-700 text-sm">{loginError}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:outline-none focus:ring-2 transition-colors ${
+                    errors.email 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  placeholder="Enter your email"
+                  disabled={isSubmitting}
+                />
+              </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-12 py-3 border rounded-md focus:outline-none focus:ring-2 transition-colors ${
+                    errors.password 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  placeholder="Enter your password"
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  disabled={isSubmitting}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  disabled={isSubmitting}
+                />
+                <span className="ml-2 text-sm text-slate-600">Remember me</span>
+              </label>
+              <a href="/forgot" className="text-sm text-blue-600 hover:underline">
+                Forgot password?
+              </a>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-12 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              Continue with Auth0
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Signing in...
+                </>
+              ) : (
+                'Sign in'
+              )}
             </button>
-          </div>
+          </form>
 
           <div className="mt-8 relative flex items-center">
             <div className="flex-grow border-t border-slate-300"></div>
-            <span className="flex-shrink mx-4 text-slate-500 text-sm">Quick & Secure Login</span>
+            <span className="flex-shrink mx-4 text-slate-500 text-sm">Or continue with</span>
             <div className="flex-grow border-t border-slate-300"></div>
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-600 mb-4">
-              One-click login with your preferred social account
-            </p>
+          <div className="mt-6 grid grid-cols-2 gap-3">
             <button 
-              onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-3 p-3 border-2 border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 hover:border-red-300 transition-colors"
+              onClick={() => handleSocialLogin('google')}
+              className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              disabled={isSubmitting}
             >
-              <div className="flex items-center gap-2">
-                <Image src="/icons/google.svg" alt="Google" width={20} height={20} />
-                <span>Google</span>
-              </div>
-              <div className="border-l border-slate-300 h-6 mx-2"></div>
-              <div className="flex items-center gap-2">
-                <Facebook size={20} className="text-blue-600" />
-                <span>Facebook</span>
-              </div>
+              <Image src="/icons/google.svg" alt="Google" width={20} height={20} />
+              <span>Google</span>
+            </button>
+            <button 
+              onClick={() => handleSocialLogin('facebook')}
+              className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              disabled={isSubmitting}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span>Facebook</span>
             </button>
           </div>
 
