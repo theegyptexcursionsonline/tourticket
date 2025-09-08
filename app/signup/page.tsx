@@ -32,14 +32,14 @@ function DarkHero() {
 }
 
 export default function SignUpPage() {
-  const { user, isLoading, loginWithRedirect } = useAuth();
+  const { user, isLoading, loginWithRedirect, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && !isLoading) {
+    if (isAuthenticated && user && !isLoading) {
       router.push('/');
     }
-  }, [user, isLoading, router]);
+  }, [isAuthenticated, user, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -49,9 +49,17 @@ export default function SignUpPage() {
     );
   }
 
-  if (user) {
+  if (isAuthenticated && user) {
     return null;
   }
+
+  const handleSignUp = () => {
+    loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'signup'
+      }
+    });
+  };
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
@@ -72,8 +80,8 @@ export default function SignUpPage() {
 
           <div className="space-y-4">
             <button 
-              onClick={loginWithRedirect}
-              className="w-full flex items-center justify-center gap-2 p-3 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors"
+              onClick={handleSignUp}
+              className="w-full flex items-center justify-center gap-2 p-4 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors text-lg"
             >
               Get Started with Auth0
             </button>
@@ -81,30 +89,48 @@ export default function SignUpPage() {
 
           <div className="mt-8 relative flex items-center">
             <div className="flex-grow border-t border-slate-300"></div>
-            <span className="flex-shrink mx-4 text-slate-500 text-sm">Or continue with</span>
+            <span className="flex-shrink mx-4 text-slate-500 text-sm">Join thousands of travelers</span>
             <div className="flex-grow border-t border-slate-300"></div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 mt-6">
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600 mb-4">
+              Quick registration with your social account
+            </p>
             <button 
-              onClick={loginWithRedirect}
-              className="flex-1 flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              onClick={handleSignUp}
+              className="w-full flex items-center justify-center gap-3 p-3 border-2 border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 hover:border-red-300 transition-colors"
             >
-              <Image src="/icons/google.svg" alt="Google" width={20} height={20} />
-              Google
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-              <Facebook size={20} className="text-blue-600" />
-              Facebook
+              <div className="flex items-center gap-2">
+                <Image src="/icons/google.svg" alt="Google" width={20} height={20} />
+                <span>Google</span>
+              </div>
+              <div className="border-l border-slate-300 h-6 mx-2"></div>
+              <div className="flex items-center gap-2">
+                <Facebook size={20} className="text-blue-600" />
+                <span>Facebook</span>
+              </div>
             </button>
           </div>
 
-          <p className="text-xs text-slate-500 text-center mt-6">
-            By signing up, you agree to our{' '}
-            <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>
-            {' '}and{' '}
-            <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
-          </p>
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-900 mb-2">Why join us?</h3>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Save your favorite tours and destinations</li>
+              <li>• Track your booking history</li>
+              <li>• Get exclusive member discounts</li>
+              <li>• Receive personalized travel recommendations</li>
+            </ul>
+          </div>
+
+          <div className="mt-6 text-center">
+            <p className="text-xs text-slate-500">
+              By signing up, you agree to our{' '}
+              <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>
+              {' '}and{' '}
+              <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
+            </p>
+          </div>
         </div>
       </main>
 

@@ -9,9 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.4.0",
     "currency.js": "^2.0.4",
     "firebase": "^11.10.0",
-    "framer-motion": "^12.23.3",
+    "framer-motion": "^12.23.12",
     "lucide-react": "^0.542.0",
     "mongodb": "^6.19.0",
     "mongoose": "^8.16.3",

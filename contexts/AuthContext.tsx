@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { UserProvider, useUser as useAuth0User } from '@auth0/nextjs-auth0/client';
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -15,7 +15,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function AuthProviderInner({ children }: { children: ReactNode }) {
-  const { user: auth0User, isLoading, error } = useAuth0User();
+  const { 
+    user: auth0User, 
+    isLoading, 
+    isAuthenticated,
+    loginWithRedirect: auth0Login,
+    logout: auth0Logout
+  } = useAuth0();
 
   const user: User | null = auth0User ? {
     id: auth0User.sub || '',
@@ -29,17 +35,25 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   } : null;
 
   const loginWithRedirect = () => {
-    window.location.href = '/api/auth/login';
+    auth0Login({
+      authorizationParams: {
+        redirect_uri: process.env.NEXT_PUBLIC_AUTH0_REDIRECT_URI
+      }
+    });
   };
 
   const logout = () => {
-    window.location.href = '/api/auth/logout';
+    auth0Logout({
+      logoutParams: {
+        returnTo: process.env.NEXT_PUBLIC_AUTH0_REDIRECT_URI
+      }
+    });
   };
 
   const contextValue: AuthContextType = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated,
     loginWithRedirect,
     logout
   };
@@ -53,11 +67,18 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (
-    <UserProvider>
+    <Auth0Provider
+      domain={process.env.NEXT_PUBLIC_AUTH0_DOMAIN!}
+      clientId={process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID!}
+      authorizationParams={{
+        redirect_uri: process.env.NEXT_PUBLIC_AUTH0_REDIRECT_URI,
+        audience: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
+      }}
+    >
       <AuthProviderInner>
         {children}
       </AuthProviderInner>
-    </UserProvider>
+    </Auth0Provider>
   );
 }
 

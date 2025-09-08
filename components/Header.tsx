@@ -284,21 +284,21 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             </div>
             
             <div className="py-2">
-              
+              <a
                 href="/user/profile"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <User size={16} />
                 <span>My Profile</span>
               </a>
-              
+              <a
                 href="/user/bookings"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <Calendar size={16} />
                 <span>My Bookings</span>
               </a>
-              
+              <a
                 href="/user/favorites"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
@@ -379,14 +379,14 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                                   </div>
                                 </div>
                                 <div className="space-y-2">
-                                  
+                                  <a
                                     href="/user/profile"
                                     className="block py-2 text-slate-700 hover:text-red-500"
                                     onClick={onClose}
                                   >
                                     My Profile
                                   </a>
-                                  
+                                  <a
                                     href="/user/bookings"
                                     className="block py-2 text-slate-700 hover:text-red-500"
                                     onClick={onClose}
@@ -404,14 +404,14 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                             ) : (
                               <div className="p-6 border-b">
                                 <div className="space-y-3">
-                                  
+                                  <a
                                     href="/login"
                                     className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
                                     onClick={onClose}
                                   >
                                     Log In
                                   </a>
-                                  
+                                  <a
                                     href="/signup"
                                     className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
                                     onClick={onClose}
