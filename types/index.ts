@@ -1,3 +1,5 @@
+// types/index.ts
+
 export interface Currency {
   code: string;
   name: string;
@@ -25,6 +27,7 @@ export interface Destination {
     lng: number;
   };
   highlights?: string[];
+  thingsToDo?: string[];   // <-- added field
   bestTimeToVisit?: string;
   currency?: string;
   timezone?: string;
@@ -85,17 +88,6 @@ export interface CartItem extends Tour {
   details?: string;
 }
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-  favorites: string[];
-  bookings: Booking[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface Booking {
   id: string;
   tourId: string;
@@ -108,6 +100,17 @@ export interface Booking {
   totalAmount: number;
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   bookingReference: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  favorites: string[];
+  bookings: Booking[];
   createdAt: string;
   updatedAt: string;
 }
