@@ -27,7 +27,7 @@ export interface Destination {
     lng: number;
   };
   highlights?: string[];
-  thingsToDo?: string[];   // <-- added field
+  thingsToDo?: string[];
   bestTimeToVisit?: string;
   currency?: string;
   timezone?: string;
@@ -138,8 +138,9 @@ export interface BlogPost {
   image: string;
   category: string;
   author: string;
-  publishedAt: string;
-  readTime: number;
+  authorAvatar?: string; // optional avatar for blog author
+  publishedAt: string;   // ISO date string recommended
+  readTime: number;      // minutes to read
   tags: string[];
 }
 

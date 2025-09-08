@@ -13,6 +13,9 @@ const CartSidebar: FC = () => {
   const { isCartOpen, closeCart, cartItems, cartTotal, removeFromCart, updateQuantity } = useCart();
   const { formatPrice } = useSettings();
 
+  // consider cartItems === undefined/null as loading
+  const isLoading = cartItems == null;
+
   const backdropVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1 },
@@ -24,6 +27,7 @@ const CartSidebar: FC = () => {
   };
 
   const handleProceedToCheckout = () => {
+    if (isLoading) return;
     closeCart();
     router.push('/checkout');
   };
@@ -48,12 +52,21 @@ const CartSidebar: FC = () => {
           >
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-2xl font-bold text-slate-800">Your Cart</h2>
-              <button onClick={closeCart} className="p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
+              <button
+                onClick={closeCart}
+                className="p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors"
+                aria-label="Close cart"
+              >
                 <X size={24} />
               </button>
             </div>
 
-            {cartItems.length === 0 ? (
+            {/* Loading skeleton */}
+            {isLoading ? (
+              <div className="flex-1 overflow-y-auto p-6" aria-busy="true">
+                <CartSkeleton />
+              </div>
+            ) : cartItems.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
                 <ShoppingCart size={48} className="text-slate-300 mb-4" />
                 <h3 className="text-xl font-semibold text-slate-700">Your cart is empty</h3>
@@ -63,7 +76,13 @@ const CartSidebar: FC = () => {
               <>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {cartItems.map((item) => (
-                    <CartItemCard key={item.id} item={item} />
+                    <CartItemCard
+                      key={String(item.id)}
+                      item={item}
+                      onUpdateQuantity={updateQuantity}
+                      onRemove={removeFromCart}
+                      formatPrice={formatPrice}
+                    />
                   ))}
                 </div>
                 <div className="p-6 border-t bg-slate-50">
@@ -71,9 +90,12 @@ const CartSidebar: FC = () => {
                     <span className="text-lg font-semibold text-slate-600">Subtotal</span>
                     <span className="text-2xl font-bold text-slate-800">{formatPrice(cartTotal)}</span>
                   </div>
-                  <button 
+                  <button
                     onClick={handleProceedToCheckout}
-                    className="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-full hover:bg-red-700 transition-transform transform hover:scale-105"
+                    className={`w-full text-white font-bold py-3 px-6 rounded-full transition-transform transform hover:scale-105 ${
+                      isLoading ? 'bg-slate-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+                    }`}
+                    disabled={isLoading}
                   >
                     Proceed to Checkout
                   </button>
@@ -87,38 +109,101 @@ const CartSidebar: FC = () => {
   );
 };
 
-const CartItemCard: FC<{ item: CartItem }> = ({ item }) => {
-    const { updateQuantity, removeFromCart } = useCart();
-    const { formatPrice } = useSettings();
+/* -------------------------
+   Cart item card component
+   ------------------------- */
+const CartItemCard: FC<{
+  item: CartItem;
+  onUpdateQuantity: (id: string | number, qty: number) => void;
+  onRemove: (id: string | number) => void;
+  formatPrice: (value: number) => string;
+}> = ({ item, onUpdateQuantity, onRemove, formatPrice }) => {
+  const safeUpdate = (id: string | number, qty: number) => {
+    if (qty < 1) return;
+    onUpdateQuantity(id, qty);
+  };
 
-    return (
-        <div className="flex gap-4">
-            <img src={item.image || 'https://placehold.co/100x100/EEE/31343C?text=Tour'} alt={item.title} className="w-24 h-24 object-cover rounded-lg" />
-            <div className="flex-1 flex flex-col justify-between">
-                <div>
-                    <h4 className="font-bold text-slate-800 leading-tight">{item.title}</h4>
-                    <p className="text-lg font-semibold text-red-600 mt-1">{formatPrice(item.discountPrice)}</p>
-                    {item.details && (
-                        <p className="text-sm text-slate-500 mt-1">{item.details}</p>
-                    )}
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center border rounded-full">
-                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 text-slate-500 hover:text-red-600">
-                            <Minus size={16} />
-                        </button>
-                        <span className="px-3 font-semibold">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 text-slate-500 hover:text-red-600">
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                    <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-400 hover:text-red-600">
-                        <Trash2 size={18} />
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="flex gap-4">
+      <img
+        src={item.image || 'https://placehold.co/100x100/EEE/31343C?text=Tour'}
+        alt={item.title}
+        className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+      />
+      <div className="flex-1 flex flex-col justify-between">
+        <div>
+          <h4 className="font-bold text-slate-800 leading-tight">{item.title}</h4>
+          <p className="text-lg font-semibold text-red-600 mt-1">{formatPrice(item.discountPrice)}</p>
+          {item.details && <p className="text-sm text-slate-500 mt-1">{item.details}</p>}
         </div>
-    );
+
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center border rounded-full">
+            <button
+              onClick={() => safeUpdate(item.id, (item.quantity || 1) - 1)}
+              className="p-2 text-slate-500 hover:text-red-600 disabled:opacity-50"
+              aria-label={`Decrease quantity of ${item.title}`}
+            >
+              <Minus size={16} />
+            </button>
+            <span className="px-3 font-semibold">{item.quantity}</span>
+            <button
+              onClick={() => safeUpdate(item.id, (item.quantity || 1) + 1)}
+              className="p-2 text-slate-500 hover:text-red-600"
+              aria-label={`Increase quantity of ${item.title}`}
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+
+          <button
+            onClick={() => onRemove(item.id)}
+            className="p-2 text-slate-400 hover:text-red-600"
+            aria-label={`Remove ${item.title} from cart`}
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* -------------------------
+   Skeleton component
+   ------------------------- */
+const CartSkeleton: FC = () => {
+  const row = (key: number) => (
+    <div key={key} className="flex gap-4 items-start animate-pulse" aria-hidden="true">
+      <div className="w-24 h-24 bg-slate-200 rounded-lg flex-shrink-0" />
+      <div className="flex-1">
+        <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
+        <div className="h-5 bg-slate-200 rounded w-1/3 mb-3" />
+        <div className="flex items-center justify-between">
+          <div className="h-8 bg-slate-200 rounded-full w-28" />
+          <div className="h-8 bg-slate-200 rounded-full w-10" />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="space-y-4">
+        {row(1)}
+        {row(2)}
+        {row(3)}
+      </div>
+
+      <div className="mt-6 border-t pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-5 bg-slate-200 rounded w-1/3 animate-pulse" />
+          <div className="h-6 bg-slate-200 rounded w-1/4 animate-pulse" />
+        </div>
+        <div className="h-12 bg-slate-200 rounded-full w-full animate-pulse" />
+      </div>
+    </>
+  );
 };
 
 export default CartSidebar;
