@@ -4,6 +4,8 @@ import React from "react";
 import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare } from "lucide-react";
 import Image from "next/image";
 
+// Import destinations data for dynamic links
+import { destinations } from '@/lib/data/destinations';
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 
@@ -67,11 +69,16 @@ export default function Footer() {
           <div>
             <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Things to do</h3>
             <ul className="space-y-2 text-sm">
-              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Amsterdam</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Berlin</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Copenhagen</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Rotterdam</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Things to do in Stockholm</a></li>
+              {destinations.slice(0, 5).map((destination) => (
+                <li key={destination.id}>
+                  <a 
+                    className="hover:text-red-600 transition-colors" 
+                    href={`/destinations/${destination.slug}`}
+                  >
+                    Things to do in {destination.name}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -79,11 +86,16 @@ export default function Footer() {
           <div>
             <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Destinations</h3>
             <ul className="space-y-2 text-sm">
-              <li><a className="hover:text-red-600 transition-colors" href="#">Amsterdam</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Berlin</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Copenhagen</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Rotterdam</a></li>
-              <li><a className="hover:text-red-600 transition-colors" href="#">Stockholm</a></li>
+              {destinations.slice(0, 5).map((destination) => (
+                <li key={destination.id}>
+                  <a 
+                    className="hover:text-red-600 transition-colors" 
+                    href={`/destinations/${destination.slug}`}
+                  >
+                    {destination.name}
+                  </a>
+                </li>
+              ))}
             </ul>
             
             <div className="mt-6">
@@ -92,7 +104,7 @@ export default function Footer() {
                 <li><a className="hover:text-red-600 transition-colors" href="/contact">Contact</a></li>
                 <li><a className="hover:text-red-600 transition-colors" href="/about">About us</a></li>
                 <li><a className="hover:text-red-600 transition-colors" href="/faqs">FAQ</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="/">Blog</a></li>
+                <li><a className="hover:text-red-600 transition-colors" href="/blog">Blog</a></li>
                 <li><a className="hover:text-red-600 transition-colors" href="/careers">Careers</a></li>
               </ul>
             </div>

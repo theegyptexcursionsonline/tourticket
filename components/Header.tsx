@@ -5,9 +5,11 @@ import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Cl
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
-// Import the real cart hook and settings
+// Import the real cart hook, settings, and destinations data
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { destinations } from '@/lib/data/destinations';
+import { categories } from '@/lib/categories';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 
 // =================================================================
@@ -36,14 +38,14 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   return { recentSearches, addSearchTerm, removeSearchTerm };
 };
 
+// Convert destinations data for mega menu
 const megaMenuData = {
-  destinations: [
-    { name: 'AMSTERDAM', country: 'Netherlands', imageUrl: '/images/amsterdam.png', slug: 'amsterdam' },
-    { name: 'BERLIN', country: 'Germany', imageUrl: '/images/berlin.png', slug: 'berlin' },
-    { name: 'COPENHAGEN', country: 'Denmark', imageUrl: '/images/3.png', slug: 'copenhagen' },
-    { name: 'ROTTERDAM', country: 'Netherlands', imageUrl: '/images/4.png', slug: 'rotterdam' },
-    { name: 'STOCKHOLM', country: 'Sweden', imageUrl: '/images/5.png', slug: 'stockholm' },
-  ],
+  destinations: destinations.slice(0, 5).map(dest => ({
+    name: dest.name.toUpperCase(),
+    country: dest.country,
+    imageUrl: dest.image,
+    slug: dest.slug
+  })),
   activities: [
     { name: 'Attractions', icon: Landmark, slug: 'attractions' }, 
     { name: 'Museums', icon: Landmark, slug: 'museums' },
@@ -67,12 +69,10 @@ const SEARCH_SUGGESTIONS = [
 function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
-      // Do nothing if clicking ref's element or its descendants
       if (!ref.current || ref.current.contains(event.target as Node)) return;
       handler(event);
     };
 
-    // Listen for click / touchend (these fire after element onClick handlers)
     document.addEventListener('click', listener);
     document.addEventListener('touchend', listener);
 
@@ -82,7 +82,6 @@ function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: M
     };
   }, [ref, handler]);
 }
-
 
 function useScrollDirection() {
   const [isVisible, setIsVisible] = useState(true);
@@ -136,7 +135,6 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
     const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
         e?.preventDefault();
         if (searchTerm.trim()) { 
-          // Navigate to search page with query
           window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
           onSearch(searchTerm); 
           setSearchTerm(''); 
@@ -289,21 +287,21 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             </div>
             
             <div className="py-2">
-              <a
+              
                 href="/user/profile"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <User size={16} />
                 <span>My Profile</span>
               </a>
-              <a
+              
                 href="/user/bookings"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <Calendar size={16} />
                 <span>My Bookings</span>
               </a>
-              <a
+              
                 href="/user/favorites"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
@@ -384,14 +382,14 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                                   </div>
                                 </div>
                                 <div className="space-y-2">
-                                  <a
+                                  
                                     href="/user/profile"
                                     className="block py-2 text-slate-700 hover:text-red-500"
                                     onClick={onClose}
                                   >
                                     My Profile
                                   </a>
-                                  <a
+                                  
                                     href="/user/bookings"
                                     className="block py-2 text-slate-700 hover:text-red-500"
                                     onClick={onClose}
@@ -409,14 +407,14 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                             ) : (
                               <div className="p-6 border-b">
                                 <div className="space-y-3">
-                                  <a
+                                  
                                     href="/login"
                                     className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
                                     onClick={onClose}
                                   >
                                     Log In
                                   </a>
-                                  <a
+                                  
                                     href="/signup"
                                     className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
                                     onClick={onClose}
@@ -505,7 +503,6 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
 const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
   setMegaMenuOpen(prev => !prev);
 }, []);
-
 
   const handleSearchModalOpen = useCallback(() => setSearchModalOpen(true), []);
   const handleSearchModalClose = useCallback(() => setSearchModalOpen(false), []);
