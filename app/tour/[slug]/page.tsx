@@ -1,7 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, Star, Users, ShoppingCart, Calendar, MapPin, Info, CheckCircle, Heart, Share2, MessageCircle, Camera } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  ArrowLeft,
+  Clock,
+  Star,
+  Users,
+  ShoppingCart,
+  Calendar,
+  MapPin,
+  Info,
+  CheckCircle,
+  Heart,
+  Share2,
+  MessageCircle,
+  Camera
+} from 'lucide-react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -13,7 +27,7 @@ import { getTourById, tours } from '@/lib/data/tours';
 import { notFound } from 'next/navigation';
 
 interface TourPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Mock reviews data
@@ -41,6 +55,7 @@ const reviewsData = [
 ];
 
 export default function TourPage({ params }: TourPageProps) {
+  const resolvedParams = React.use(params);
   const [tour, setTour] = useState<Tour | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { formatPrice } = useSettings();
@@ -49,11 +64,17 @@ export default function TourPage({ params }: TourPageProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
+  // UI states for add-to-cart feedback
+  const [isAdding, setIsAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  // a11y message for screen readers
+  const [liveMessage, setLiveMessage] = useState('');
+
   useEffect(() => {
     const fetchTour = async () => {
       setIsLoading(true);
       try {
-        const tourData = getTourById(params.slug);
+        const tourData = getTourById(resolvedParams.slug);
         if (!tourData) {
           notFound();
           return;
@@ -67,7 +88,7 @@ export default function TourPage({ params }: TourPageProps) {
     };
 
     fetchTour();
-  }, [params.slug]);
+  }, [resolvedParams.slug]);
 
   if (isLoading) {
     return (
@@ -89,14 +110,48 @@ export default function TourPage({ params }: TourPageProps) {
   }
 
   const tourImages = tour.images || [tour.image];
-  const relatedTours = tours.filter(t => 
-    t.id !== tour.id && 
-    (t.destinationId === tour.destinationId || 
-     t.categoryIds.some(cat => tour.categoryIds.includes(cat)))
-  ).slice(0, 3);
+  const relatedTours = tours
+    .filter(
+      (t) =>
+        t.id !== tour.id &&
+        (t.destinationId === tour.destinationId ||
+          t.categoryIds.some((cat) => tour.categoryIds.includes(cat)))
+    )
+    .slice(0, 3);
 
-  const handleQuickAdd = () => {
-    addToCart(tour);
+  // Unified handler that supports both sync and async addToCart implementations
+  const handleQuickAdd = async () => {
+    if (isAdding) return;
+    setIsAdding(true);
+    setLiveMessage('Adding tour to cart');
+
+    try {
+      const result = addToCart(tour);
+
+      // If addToCart returned a Promise, await it. If not, proceed.
+      if (result && typeof (result as any).then === 'function') {
+        await result;
+      }
+
+      // Success UI
+      setAdded(true);
+      setLiveMessage('Added to cart');
+
+      // subtle animation duration before reverting to normal state
+      // keep "Added" visible for 2.5s
+      setTimeout(() => {
+        setAdded(false);
+      }, 2500);
+    } catch (err) {
+      console.error('Add to cart failed:', err);
+      setLiveMessage('Failed to add to cart. Please try again.');
+      // optionally show some visible error state — for now, we just reset after a moment
+      setTimeout(() => {
+        setLiveMessage('');
+      }, 2500);
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const openBookingSidebar = () => {
@@ -106,15 +161,19 @@ export default function TourPage({ params }: TourPageProps) {
   return (
     <>
       <Header startSolid={true} />
-      
+
       <main className="bg-white pt-20">
         {/* Breadcrumb */}
         <div className="bg-slate-50 py-4">
           <div className="container mx-auto px-4">
             <nav className="flex items-center gap-2 text-sm">
-              <a href="/" className="text-slate-500 hover:text-red-600">Home</a>
+              <a href="/" className="text-slate-500 hover:text-red-600">
+                Home
+              </a>
               <span className="text-slate-400">/</span>
-              <a href="/tours" className="text-slate-500 hover:text-red-600">Tours</a>
+              <a href="/tours" className="text-slate-500 hover:text-red-600">
+                Tours
+              </a>
               <span className="text-slate-400">/</span>
               <span className="text-slate-800 font-medium">{tour.title}</span>
             </nav>
@@ -123,7 +182,10 @@ export default function TourPage({ params }: TourPageProps) {
 
         <div className="container mx-auto px-4 py-8">
           {/* Back Button */}
-          <a href="/" className="inline-flex items-center gap-2 text-red-600 font-semibold mb-6 hover:underline transition-colors">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-red-600 font-semibold mb-6 hover:underline transition-colors"
+          >
             <ArrowLeft size={20} />
             <span>Back to all tours</span>
           </a>
@@ -136,13 +198,16 @@ export default function TourPage({ params }: TourPageProps) {
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   {tour.tags?.map((tag, index) => (
-                    <span key={index} className={`px-3 py-1 text-xs font-bold uppercase rounded-full ${
-                      tag.includes('%') || tag === 'Online only deal' 
-                        ? 'bg-red-600 text-white' 
-                        : tag === 'Staff favourite' 
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-200 text-slate-800'
-                    }`}>
+                    <span
+                      key={index}
+                      className={`px-3 py-1 text-xs font-semibold uppercase rounded-full tracking-wide leading-none ${
+                        tag.includes('%') || tag === 'Online only deal'
+                          ? 'bg-red-600 text-white'
+                          : tag === 'Staff favourite'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-800'
+                      }`}
+                    >
                       {tag}
                     </span>
                   ))}
@@ -153,22 +218,27 @@ export default function TourPage({ params }: TourPageProps) {
                   <Image
                     src={tourImages[selectedImageIndex]}
                     alt={tour.title}
-                    width={800}
-                    height={500}
-                    className="w-full h-[400px] object-cover"
+                    width={1200}
+                    height={700}
+                    className="w-full h-[420px] md:h-[500px] object-cover"
                   />
                   <div className="absolute top-4 right-4 flex gap-2">
-                    <button 
+                    <button
                       onClick={() => setIsWishlisted(!isWishlisted)}
-                      className={`p-3 rounded-full backdrop-blur-sm transition-colors ${
-                        isWishlisted 
-                          ? 'bg-red-600 text-white' 
-                          : 'bg-white/70 text-slate-600 hover:bg-white hover:text-red-600'
+                      className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${
+                        isWishlisted
+                          ? 'bg-red-600 text-white'
+                          : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
                       }`}
+                      aria-pressed={isWishlisted}
+                      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                     >
                       <Heart size={20} fill={isWishlisted ? 'currentColor' : 'none'} />
                     </button>
-                    <button className="p-3 bg-white/70 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors">
+                    <button
+                      className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
+                      aria-label="Share"
+                    >
                       <Share2 size={20} />
                     </button>
                   </div>
@@ -181,11 +251,12 @@ export default function TourPage({ params }: TourPageProps) {
                       <button
                         key={index}
                         onClick={() => setSelectedImageIndex(index)}
-                        className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                          selectedImageIndex === index 
-                            ? 'border-red-600' 
+                        className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-all transform ${
+                          selectedImageIndex === index
+                            ? 'border-red-600 scale-105 shadow'
                             : 'border-slate-200 hover:border-slate-300'
                         }`}
+                        aria-label={`View image ${index + 1}`}
                       >
                         <Image
                           src={image}
@@ -201,31 +272,36 @@ export default function TourPage({ params }: TourPageProps) {
 
                 {/* Tour Title and Basic Info */}
                 <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1">
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 mb-3">{tour.title}</h1>
+                  <div className="flex-1 pr-6">
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-3">
+                      {tour.title}
+                    </h1>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-4">
-                      <div className="flex items-center gap-1">
-                        <Star size={16} className="text-yellow-500 fill-current" />
-                        <span className="font-bold text-slate-800">{tour.rating}</span>
-                        <span>({tour.bookings?.toLocaleString()} reviews)</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Star size={16} className="text-yellow-500 fill-current" />
+                          <span className="font-semibold text-slate-800">{tour.rating}</span>
+                        </div>
+                        <span className="text-slate-500">({tour.bookings?.toLocaleString()} reviews)</span>
                       </div>
+
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
                         <span>{tour.duration}</span>
                       </div>
+
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
                         <span>{tour.location?.address || 'Amsterdam'}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
+
+                  <div className="text-right flex-shrink-0">
                     {tour.originalPrice && (
-                      <p className="text-slate-500 line-through text-lg">
-                        {formatPrice(tour.originalPrice)}
-                      </p>
+                      <p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>
                     )}
-                    <p className="text-3xl font-extrabold text-red-600">
+                    <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
                       {formatPrice(tour.discountPrice)}
                     </p>
                     <p className="text-sm text-slate-500">per person</p>
@@ -235,34 +311,36 @@ export default function TourPage({ params }: TourPageProps) {
 
               {/* Quick Info Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
                   <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <h3 className="font-bold text-slate-800">Free Cancellation</h3>
+                  <h3 className="font-semibold text-slate-900">Free Cancellation</h3>
                   <p className="text-sm text-slate-600">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-lg text-center">
+
+                <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
                   <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <h3 className="font-bold text-slate-800">Group Friendly</h3>
+                  <h3 className="font-semibold text-slate-900">Group Friendly</h3>
                   <p className="text-sm text-slate-600">Perfect for all group sizes</p>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-lg text-center">
+
+                <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
                   <Camera className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <h3 className="font-bold text-slate-800">Mobile Ticket</h3>
+                  <h3 className="font-semibold text-slate-900">Mobile Ticket</h3>
                   <p className="text-sm text-slate-600">Show on your smartphone</p>
                 </div>
               </div>
 
               {/* Description */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 mb-4">About this experience</h2>
-                <p className="text-slate-600 leading-relaxed mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">About this experience</h2>
+                <p className="text-slate-600 leading-relaxed text-base md:text-lg mb-6">
                   {tour.longDescription || tour.description}
                 </p>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {tour.includes && tour.includes.length > 0 && (
                     <div>
-                      <h3 className="text-lg font-bold text-slate-800 mb-3">What's included</h3>
+                      <h3 className="text-lg font-semibold text-slate-800 mb-3">What's included</h3>
                       <ul className="space-y-2">
                         {tour.includes.map((item, index) => (
                           <li key={index} className="flex items-start gap-2 text-slate-600">
@@ -273,10 +351,10 @@ export default function TourPage({ params }: TourPageProps) {
                       </ul>
                     </div>
                   )}
-                  
+
                   {tour.highlights && tour.highlights.length > 0 && (
                     <div>
-                      <h3 className="text-lg font-bold text-slate-800 mb-3">Highlights</h3>
+                      <h3 className="text-lg font-semibold text-slate-800 mb-3">Highlights</h3>
                       <ul className="space-y-2">
                         {tour.highlights.map((highlight, index) => (
                           <li key={index} className="flex items-start gap-2 text-slate-600">
@@ -299,9 +377,7 @@ export default function TourPage({ params }: TourPageProps) {
                     <div>
                       <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
                       <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
-                      <button className="text-red-600 hover:underline text-sm font-medium mt-2">
-                        View on map
-                      </button>
+                      <button className="text-red-600 hover:underline text-sm font-medium mt-2">View on map</button>
                     </div>
                   </div>
                 </div>
@@ -352,10 +428,10 @@ export default function TourPage({ params }: TourPageProps) {
                           <div className="flex items-center gap-2">
                             <div className="flex">
                               {[...Array(5)].map((_, i) => (
-                                <Star 
-                                  key={i} 
-                                  size={14} 
-                                  className={`${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`} 
+                                <Star
+                                  key={i}
+                                  size={14}
+                                  className={`${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`}
                                 />
                               ))}
                             </div>
@@ -365,9 +441,7 @@ export default function TourPage({ params }: TourPageProps) {
                       </div>
                       <h4 className="font-semibold text-slate-800 mb-1">{review.title}</h4>
                       <p className="text-slate-600 text-sm mb-2">{review.text}</p>
-                      <button className="text-slate-500 hover:text-slate-700 text-xs">
-                        Helpful ({review.helpful})
-                      </button>
+                      <button className="text-slate-500 hover:text-slate-700 text-xs">Helpful ({review.helpful})</button>
                     </div>
                   ))}
                 </div>
@@ -383,7 +457,7 @@ export default function TourPage({ params }: TourPageProps) {
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
-                      <a key={relatedTour.id} href={`/tours/${relatedTour.slug}`} className="group">
+                      <a key={relatedTour.id} href={`/tour/${relatedTour.slug}`} className="group">
                         <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                           <div className="relative">
                             <Image
@@ -394,9 +468,12 @@ export default function TourPage({ params }: TourPageProps) {
                               className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                             {relatedTour.tags?.map((tag, index) => (
-                              <span key={index} className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                                tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
-                              }`}>
+                              <span
+                                key={index}
+                                className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
+                                  tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
+                                }`}
+                              >
                                 {tag}
                               </span>
                             ))}
@@ -454,20 +531,64 @@ export default function TourPage({ params }: TourPageProps) {
                   </div>
 
                   <div className="space-y-3">
-                    <button 
+                    <button
                       onClick={openBookingSidebar}
                       className="w-full bg-red-600 text-white font-bold py-4 px-6 rounded-full hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
                     >
                       <Calendar size={20} />
                       <span>Select Date & Time</span>
                     </button>
-                    
-                    <button 
+
+                    {/* Quick Add Button with loading + success states */}
+                    <button
                       onClick={handleQuickAdd}
-                      className="w-full bg-white text-red-600 font-bold py-3 px-6 rounded-full border-2 border-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                      disabled={isAdding}
+                      className={`w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${
+                        added
+                          ? 'bg-green-600 text-white border-green-600 shadow-lg scale-105'
+                          : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
+                      }`}
+                      aria-live="polite"
+                      aria-disabled={isAdding}
                     >
-                      <ShoppingCart size={20} />
-                      <span>Quick Add to Cart</span>
+                      {/* Loading spinner */}
+                      {isAdding && (
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-5 w-5 text-current"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v8z"
+                          ></path>
+                        </svg>
+                      )}
+
+                      {/* Success check */}
+                      {added ? (
+                        <>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414-1.414L8 11.172 4.707 7.879a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8z" clipRule="evenodd" />
+                          </svg>
+                          <span>Added</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart size={18} />
+                          <span>Quick Add to Cart</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -508,11 +629,12 @@ export default function TourPage({ params }: TourPageProps) {
       <Footer />
 
       {/* Booking Sidebar */}
-      <BookingSidebar 
-        isOpen={isBookingSidebarOpen} 
-        onClose={() => setBookingSidebarOpen(false)} 
-        tour={tour} 
-      />
+      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
+
+      {/* Live region for screen readers */}
+      <div className="sr-only" aria-live="polite">
+        {liveMessage}
+      </div>
     </>
   );
 }
