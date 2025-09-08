@@ -13,6 +13,8 @@ import { Tour, SearchFilters } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/contexts/CartContext';
 
+export const dynamic = 'force-dynamic'; // <-- prevents prerendering; avoids useSearchParams suspense error
+
 const ITEMS_PER_PAGE = 12;
 
 const TourCard = ({ tour }: { tour: Tour }) => {
@@ -120,6 +122,7 @@ export default function SearchPage() {
       setSearchResults(tours);
       setFilteredResults(tours);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const performSearch = useCallback(async (query: string) => {
