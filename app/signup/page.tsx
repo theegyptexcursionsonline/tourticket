@@ -8,28 +8,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
-function DarkHero() {
-  return (
-    <div className="relative h-96 bg-slate-900 flex items-center justify-center text-white text-center px-4 overflow-hidden">
-      <div className="absolute inset-0 z-0 opacity-20">
-        <Image
-          src="/images/dark-hero-bg.jpg"
-          alt="Abstract dark background"
-          layout="fill"
-          objectFit="cover"
-        />
-      </div>
-      <div className="relative z-10">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
-          Your Best Travel Buddy
-        </h1>
-        <p className="mt-4 text-lg sm:text-xl max-w-2xl mx-auto opacity-80">
-          Discover hidden gems and unforgettable experiences with our expert guidance.
-        </p>
-      </div>
-    </div>
-  );
-}
+
 
 export default function SignUpPage() {
   const { user, isLoading, isAuthenticated, signup } = useAuth();
@@ -181,7 +160,6 @@ export default function SignUpPage() {
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <DarkHero />
       <Header />
 
       <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[#E9ECEE]">
