@@ -67,17 +67,22 @@ const SEARCH_SUGGESTIONS = [
 function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
+      // Do nothing if clicking ref's element or its descendants
       if (!ref.current || ref.current.contains(event.target as Node)) return;
       handler(event);
     };
-    document.addEventListener('mousedown', listener);
-    document.addEventListener('touchstart', listener);
+
+    // Listen for click / touchend (these fire after element onClick handlers)
+    document.addEventListener('click', listener);
+    document.addEventListener('touchend', listener);
+
     return () => {
-      document.removeEventListener('mousedown', listener);
-      document.removeEventListener('touchstart', listener);
+      document.removeEventListener('click', listener);
+      document.removeEventListener('touchend', listener);
     };
   }, [ref, handler]);
 }
+
 
 function useScrollDirection() {
   const [isVisible, setIsVisible] = useState(true);
@@ -497,10 +502,10 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const isScrolled = scrollY > 100;
   const isTransparent = !(isScrolled || isMegaMenuOpen || startSolid);
   
-  const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMegaMenuOpen(prev => !prev);
-  }, []);
+const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
+  setMegaMenuOpen(prev => !prev);
+}, []);
+
 
   const handleSearchModalOpen = useCallback(() => setSearchModalOpen(true), []);
   const handleSearchModalClose = useCallback(() => setSearchModalOpen(false), []);
@@ -525,7 +530,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                         <img src={isTransparent ? '/EEO-logo.png' : '/EEO-logo.png'} alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
                     </a>
                     <nav className="hidden md:flex items-center relative">
-                        <button onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
+<button onMouseDown={(e) => e.stopPropagation()} onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
                             <span>EXPLORE</span>
                             <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}><ChevronDown size={20} /></motion.div>
                         </button>
