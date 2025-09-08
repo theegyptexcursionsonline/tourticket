@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 'react';
-import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap, Menu } from 'lucide-react';
+import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap, Menu, User, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 // Import the real cart hook and settings
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 
 // =================================================================
@@ -37,23 +38,26 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
 
 const megaMenuData = {
   destinations: [
-    { name: 'AMSTERDAM', country: 'Netherlands', imageUrl: '/images/amsterdam.png' },
-    { name: 'BERLIN', country: 'Germany', imageUrl: '/images/berlin.png' },
-    { name: 'COPENHAGEN', country: 'Denmark', imageUrl: '/images/copenhagen.png' },
-    { name: 'ROTTERDAM', country: 'Netherlands', imageUrl: '/images/rotterdam.png' },
-    { name: 'STOCKHOLM', country: 'Sweden', imageUrl: '/images/stockholm.png' },
-    { name: 'PARIS', country: 'France', imageUrl: '/images/paris.png' },
+    { name: 'AMSTERDAM', country: 'Netherlands', imageUrl: '/images/amsterdam.png', slug: 'amsterdam' },
+    { name: 'BERLIN', country: 'Germany', imageUrl: '/images/berlin.png', slug: 'berlin' },
+    { name: 'COPENHAGEN', country: 'Denmark', imageUrl: '/images/3.png', slug: 'copenhagen' },
+    { name: 'ROTTERDAM', country: 'Netherlands', imageUrl: '/images/4.png', slug: 'rotterdam' },
+    { name: 'STOCKHOLM', country: 'Sweden', imageUrl: '/images/5.png', slug: 'stockholm' },
   ],
   activities: [
-    { name: 'Attractions', icon: Landmark }, { name: 'Museums', icon: Landmark },
-    { name: 'Canal Cruises', icon: Ticket }, { name: 'City Passes', icon: Ticket },
-    { name: 'Hop-On Hop-Off', icon: Ticket }, { name: 'Bike Tours', icon: Ticket },
-    { name: 'Day Trips', icon: Star }, { name: 'Combi Tickets', icon: Star },
-    { name: 'Light Festivals', icon: Star },
+    { name: 'Attractions', icon: Landmark, slug: 'attractions' }, 
+    { name: 'Museums', icon: Landmark, slug: 'museums' },
+    { name: 'Canal Cruises', icon: Ticket, slug: 'canal-cruises' }, 
+    { name: 'City Passes', icon: Ticket, slug: 'city-passes' },
+    { name: 'Hop-On Hop-Off', icon: Ticket, slug: 'hop-on-hop-off' }, 
+    { name: 'Bike Tours', icon: Ticket, slug: 'bike-tours' },
+    { name: 'Day Trips', icon: Star, slug: 'day-trips' }, 
+    { name: 'Combi Tickets', icon: Star, slug: 'combi-tickets' },
+    { name: 'Food Tours', icon: Star, slug: 'food-tours' },
   ],
 };
 
-const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'MOST POPULAR SEARCH QUERY'], []);
+const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'CANAL CRUISE'], []);
 
 const SEARCH_SUGGESTIONS = [
   'Where are you going?', 'Find museums near you', 'Discover food tours', 'Book canal cruises',
@@ -126,12 +130,26 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
 
     const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
         e?.preventDefault();
-        if (searchTerm.trim()) { onSearch(searchTerm); setSearchTerm(''); onClose(); }
+        if (searchTerm.trim()) { 
+          // Navigate to search page with query
+          window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
+          onSearch(searchTerm); 
+          setSearchTerm(''); 
+          onClose(); 
+        }
     }, [searchTerm, onSearch, onClose]);
     
-    // Memoized handlers for search suggestions to avoid hook rule violations
-    const handlePopularSearch = useCallback((term: string) => { onSearch(term); onClose(); }, [onSearch, onClose]);
-    const handleRecentSearch = useCallback((term: string) => { onSearch(term); onClose(); }, [onSearch, onClose]);
+    const handlePopularSearch = useCallback((term: string) => { 
+      window.location.href = `/search?q=${encodeURIComponent(term)}`;
+      onSearch(term); 
+      onClose(); 
+    }, [onSearch, onClose]);
+    
+    const handleRecentSearch = useCallback((term: string) => { 
+      window.location.href = `/search?q=${encodeURIComponent(term)}`;
+      onSearch(term); 
+      onClose(); 
+    }, [onSearch, onClose]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => { 
@@ -191,8 +209,8 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
                                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Top Destinations</h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                     {megaMenuData.destinations.map(dest => (
-                                        <a href="#" key={dest.name} className="group block">
-                                            <div className="aspect-square w-full rounded-lg overflow-hidden relative bg-slate-200 animate-pulse">
+                                        <a href={`/destinations/${dest.slug}`} key={dest.name} className="group block">
+                                            <div className="aspect-square w-full rounded-lg overflow-hidden relative bg-slate-200">
                                                 <Image src={dest.imageUrl} alt={dest.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                                                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
                                             </div>
@@ -206,14 +224,14 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
                                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Activity Types</h3>
                                 <ul className="space-y-3">
                                     {megaMenuData.activities.map(activity => (
-                                        <li key={activity.name}><a href="#" className="flex items-center gap-3 text-gray-700 hover:text-red-500 group"><activity.icon size={20} className="text-gray-400 group-hover:text-red-500" /> <span className="font-semibold">{activity.name}</span></a></li>
+                                        <li key={activity.name}><a href={`/categories/${activity.slug}`} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group"><activity.icon size={20} className="text-gray-400 group-hover:text-red-500" /> <span className="font-semibold">{activity.name}</span></a></li>
                                     ))}
                                 </ul>
                             </div>
                             <div className="bg-gray-50 rounded-lg p-6 flex flex-col justify-center items-center text-center">
                                 <Star size={32} className="text-yellow-500 mb-2" /><h3 className="font-bold text-lg text-gray-800">Special Offers</h3>
                                 <p className="text-sm text-gray-600 my-2">Save up to 20% on combi deals and city passes!</p>
-                                <button className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">View Deals</button>
+                                <a href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">View Deals</a>
                             </div>
                         </div>
                     </div>
@@ -223,8 +241,91 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
     );
 });
 
+// User Menu Component
+const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  useOnClickOutside(menuRef, () => setIsOpen(false));
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 p-2 rounded-full hover:bg-slate-100 transition-colors"
+      >
+        {user.picture ? (
+          <Image
+            src={user.picture}
+            alt={user.name}
+            width={32}
+            height={32}
+            className="rounded-full"
+          />
+        ) : (
+          <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+            <User size={16} className="text-slate-600" />
+          </div>
+        )}
+        <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border py-2 z-50"
+          >
+            <div className="px-4 py-3 border-b">
+              <p className="font-medium text-slate-900">{user.name}</p>
+              <p className="text-sm text-slate-500">{user.email}</p>
+            </div>
+            
+            <div className="py-2">
+              
+                href="/user/profile"
+                className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <User size={16} />
+                <span>My Profile</span>
+              </a>
+              
+                href="/user/bookings"
+                className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Calendar size={16} />
+                <span>My Bookings</span>
+              </a>
+              
+                href="/user/favorites"
+                className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Star size={16} />
+                <span>Favorites</span>
+              </a>
+            </div>
+            
+            <div className="border-t py-2">
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+              >
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; }> = React.memo(({ isOpen, onClose, onOpenSearch }) => {
     const menuRef = useRef<HTMLDivElement>(null);
+    const { user, logout } = useAuth();
     useOnClickOutside(menuRef, onClose);
     
     useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);
@@ -255,6 +356,72 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                                 </button>
                             </div>
                             
+                            {/* User Section */}
+                            {user ? (
+                              <div className="p-6 border-b">
+                                <div className="flex items-center gap-3 mb-4">
+                                  {user.picture ? (
+                                    <Image
+                                      src={user.picture}
+                                      alt={user.name}
+                                      width={40}
+                                      height={40}
+                                      className="rounded-full"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                                      <User size={20} className="text-slate-600" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-medium text-slate-900">{user.name}</p>
+                                    <p className="text-sm text-slate-500">{user.email}</p>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  
+                                    href="/user/profile"
+                                    className="block py-2 text-slate-700 hover:text-red-500"
+                                    onClick={onClose}
+                                  >
+                                    My Profile
+                                  </a>
+                                  
+                                    href="/user/bookings"
+                                    className="block py-2 text-slate-700 hover:text-red-500"
+                                    onClick={onClose}
+                                  >
+                                    My Bookings
+                                  </a>
+                                  <button
+                                    onClick={() => { logout(); onClose(); }}
+                                    className="block py-2 text-red-600 hover:text-red-700 w-full text-left"
+                                  >
+                                    Sign Out
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-6 border-b">
+                                <div className="space-y-3">
+                                  
+                                    href="/login"
+                                    className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
+                                    onClick={onClose}
+                                  >
+                                    Log In
+                                  </a>
+                                  
+                                    href="/signup"
+                                    className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
+                                    onClick={onClose}
+                                  >
+                                    Sign Up
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                            
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 <button 
                                     onClick={() => { onOpenSearch(); onClose(); }}
@@ -268,7 +435,7 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                                     <h3 className="font-bold text-lg text-slate-800 mb-4">Destinations</h3>
                                     <div className="space-y-2">
                                         {megaMenuData.destinations.map(dest => (
-                                            <a key={dest.name} href="#" className="block py-2 text-slate-700 hover:text-red-500">
+                                            <a key={dest.name} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                                                 {dest.name}
                                             </a>
                                         ))}
@@ -279,7 +446,7 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                                     <h3 className="font-bold text-lg text-slate-800 mb-4">Activities</h3>
                                     <div className="space-y-2">
                                         {megaMenuData.activities.map(activity => (
-                                            <a key={activity.name} href="#" className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500">
+                                            <a key={activity.name} href={`/categories/${activity.slug}`} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                                                 <activity.icon size={16} />
                                                 <span>{activity.name}</span>
                                             </a>
@@ -323,6 +490,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const [isSearchModalOpen, setSearchModalOpen] = useState(false);
   
   const { openCart, itemCount } = useCart();
+  const { user, logout } = useAuth();
   const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
 
@@ -341,7 +509,6 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   
   const handleSearch = useCallback((term: string) => {
     addSearchTerm(term);
-    console.log(`Searching for: ${term}`);
   }, [addSearchTerm]);
 
   const headerBg = isTransparent ? 'bg-transparent' : 'bg-white shadow-lg';
@@ -382,6 +549,20 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                     <button onClick={handleSearchModalOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
                         <Search size={22} className="group-hover:text-red-500" />
                     </button>
+
+                    {/* User Authentication */}
+                    {user ? (
+                      <UserMenu user={user} onLogout={logout} />
+                    ) : (
+                      <div className="hidden md:flex items-center gap-3">
+                        <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>
+                          Log In
+                        </a>
+                        <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">
+                          Sign Up
+                        </a>
+                      </div>
+                    )}
                     
                     <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
                         <Menu size={24} className={`${headerText} ${linkHoverColor}`} />

@@ -3,6 +3,7 @@ import { Inter, Almarai } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import CartSidebar from "@/components/CartSidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
@@ -25,12 +26,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
-        <SettingsProvider>
-          <CartProvider>
-            {children}
-            <CartSidebar />
-          </CartProvider>
-        </SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <CartProvider>
+              {children}
+              <CartSidebar />
+            </CartProvider>
+          </SettingsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

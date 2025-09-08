@@ -1,23 +1,19 @@
 'use client';
 
-import React from "react";
-import { Facebook, Twitter, Mail, Search, Menu, ChevronDown, User, Lock, Google } from "lucide-react";
+import React, { useEffect } from "react";
+import { Facebook } from "lucide-react";
 import Image from "next/image";
-
-// Import reusable components
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
-// =================================================================
-// --- DARK HERO SECTION COMPONENT ---
-// Reusing this component to maintain consistent styling.
-// =================================================================
 function DarkHero() {
   return (
     <div className="relative h-96 bg-slate-900 flex items-center justify-center text-white text-center px-4 overflow-hidden">
       <div className="absolute inset-0 z-0 opacity-20">
         <Image
-          src="/images/dark-hero-bg.jpg" // Placeholder for a dark, stylish background image
+          src="/images/dark-hero-bg.jpg"
           alt="Abstract dark background"
           layout="fill"
           objectFit="cover"
@@ -35,10 +31,28 @@ function DarkHero() {
   );
 }
 
-// =================================================================
-// --- SIGN-UP PAGE COMPONENT ---
-// =================================================================
 export default function SignUpPage() {
+  const { user, isLoading, loginWithRedirect } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user && !isLoading) {
+      router.push('/');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return null;
+  }
+
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
       <DarkHero />
@@ -56,58 +70,14 @@ export default function SignUpPage() {
             </a>
           </p>
 
-          <form className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                required
-                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-colors"
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                Email address
-              </label>
-              <input
-                type="email"
-                id="email"
-                required
-                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-colors"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                required
-                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-colors"
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700 mb-1">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                id="confirm-password"
-                required
-                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-colors"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full h-12 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors shadow-md"
+          <div className="space-y-4">
+            <button 
+              onClick={loginWithRedirect}
+              className="w-full flex items-center justify-center gap-2 p-3 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors"
             >
-              Sign up
+              Get Started with Auth0
             </button>
-          </form>
+          </div>
 
           <div className="mt-8 relative flex items-center">
             <div className="flex-grow border-t border-slate-300"></div>
@@ -116,7 +86,10 @@ export default function SignUpPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-6">
-            <button className="flex-1 flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+            <button 
+              onClick={loginWithRedirect}
+              className="flex-1 flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
               <Image src="/icons/google.svg" alt="Google" width={20} height={20} />
               Google
             </button>
@@ -125,6 +98,13 @@ export default function SignUpPage() {
               Facebook
             </button>
           </div>
+
+          <p className="text-xs text-slate-500 text-center mt-6">
+            By signing up, you agree to our{' '}
+            <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>
+            {' '}and{' '}
+            <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
+          </p>
         </div>
       </main>
 

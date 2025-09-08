@@ -1,8 +1,7 @@
-// app/tour/[slug]/page.tsx
 'use client';
 
-import { ArrowLeft, Clock, Star, Users, ShoppingCart, Calendar, MapPin, Info, CheckCircle, Heart, Share2, MessageCircle, Camera, Utensils, Music, Sunset } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Clock, Star, Users, ShoppingCart, Calendar, MapPin, Info, CheckCircle, Heart, Share2, MessageCircle, Camera } from 'lucide-react';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -10,81 +9,12 @@ import BookingSidebar from '@/components/BookingSidebar';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/contexts/CartContext';
 import { Tour } from '@/types';
+import { getTourById, tours } from '@/lib/data/tours';
+import { notFound } from 'next/navigation';
 
-// Enhanced tour data with more comprehensive information
-const tourData: { [key: string]: Tour } = {
-  'new-york-pizza-lovers-canal-cruise': {
-    id: 'new-york-pizza-lovers-canal-cruise',
-    title: 'New York Pizza by LOVERS Canal Cruise in Amsterdam',
-    image: '/images2/2.png',
-    duration: '75 minutes',
-    rating: 4.6,
-    bookings: 21080,
-    originalPrice: 43.50,
-    discountPrice: 37.50,
-    tags: ['-15%', 'With food', 'On the water'],
-    description: 'Complete your visit to Amsterdam with this unique New York Pizza by LOVERS canal cruise! Enjoy an oven-fresh pizza, drinks and an ice cream on board as you cruise the Amsterdam canals.',
-    highlights: [
-      'A New York Pizza per person',
-      'Drinks: Heineken beer, wine, soft drinks and water',
-      'Cookie Dough Chocolate Chip Ice Cream',
-      'Admire the Amsterdam canals, official UNESCO World Heritage',
-      'Sightseeing, pizza and drinks all in one!'
-    ],
-    includes: [
-      'A New York Pizza per person',
-      'Drinks: Heineken beer, wine, soft drinks and water',
-      'Cookie Dough Chocolate Chip Ice Cream',
-      'Professional crew and commentary',
-      'Life jackets and safety equipment'
-    ],
-    meetingPoint: 'LOVERS Cafe, Prins Hendrikkade 25, 1012 TM Amsterdam',
-    languages: ['English', 'Dutch', 'German', 'French'],
-    ageRestriction: 'Child ticket for 4-13 year olds. Free access for children 0-3 years.',
-    cancellationPolicy: 'Free cancellation up to 8 hours in advance',
-    operatedBy: 'LOVERS Canal Cruises',
-    location: {
-      lat: 52.3740,
-      lng: 4.9010,
-      address: 'Prins Hendrikkade 25, 1012 TM Amsterdam'
-    }
-  },
-  '1-hour-amsterdam-canal-cruise': {
-    id: '1-hour-amsterdam-canal-cruise',
-    title: '1 Hour Amsterdam Canal Cruise',
-    image: '/images2/1.png',
-    duration: '60 minutes',
-    rating: 4.5,
-    bookings: 4506416,
-    originalPrice: 20,
-    discountPrice: 15.50,
-    tags: ['Online only deal', 'Staff favourite', '-25%'],
-    description: 'Experience Amsterdam from a unique perspective with our 1-hour canal cruise. Sail through the city\'s historic waterways, marvel at the iconic canal houses, and learn about Amsterdam\'s rich history with our audio guide.',
-    highlights: [
-      'See the famous canal houses and bridges',
-      'Audio guide available in multiple languages',
-      'Perfect for first-time visitors',
-      'Departs from a central location',
-      'Professional commentary about Amsterdam history'
-    ],
-    includes: [
-      'Audio guide in multiple languages',
-      'Professional tour guide',
-      'Life jackets and safety equipment',
-      'Onboard refreshments available for purchase'
-    ],
-    meetingPoint: 'Central Station, Pier 5, Amsterdam',
-    languages: ['English', 'Dutch', 'German', 'French', 'Spanish', 'Italian'],
-    ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
-    operatedBy: 'Amsterdam Canal Tours',
-    location: {
-      lat: 52.3785,
-      lng: 4.9004,
-      address: 'Stationsplein, 1012 AB Amsterdam'
-    }
-  }
-};
+interface TourPageProps {
+  params: { slug: string };
+}
 
 // Mock reviews data
 const reviewsData = [
@@ -94,7 +24,7 @@ const reviewsData = [
     rating: 5,
     date: '2 days ago',
     title: 'Amazing experience!',
-    text: 'The pizza was delicious and the canal views were spectacular. Our guide was very knowledgeable and entertaining. Highly recommend!',
+    text: 'The tour was incredible and our guide was very knowledgeable and entertaining. Highly recommend!',
     verified: true,
     helpful: 12
   },
@@ -103,103 +33,67 @@ const reviewsData = [
     name: 'Marco P.',
     rating: 4,
     date: '1 week ago',
-    title: 'Great combination',
-    text: 'Perfect way to see Amsterdam while enjoying good food. The ice cream was a nice touch. Only wish it was a bit longer.',
+    title: 'Great experience',
+    text: 'Perfect way to see the city. Only wish it was a bit longer.',
     verified: true,
     helpful: 8
-  },
-  {
-    id: 3,
-    name: 'Jennifer L.',
-    rating: 5,
-    date: '2 weeks ago',
-    title: 'Perfect for families',
-    text: 'Our kids loved the pizza and the boat ride. Staff was very friendly and accommodating. Great value for money!',
-    verified: true,
-    helpful: 15
   }
 ];
-
-// Related tours data
-const relatedTours = [
-  {
-    id: 'wine-cheese-cruise',
-    title: 'Wine & Cheese Cruise in Amsterdam',
-    image: '/images2/4.png',
-    duration: '90 minutes',
-    rating: 4.9,
-    bookings: 10245,
-    originalPrice: 38.50,
-    discountPrice: 35,
-    tags: ['New', '-10%']
-  },
-  {
-    id: 'dinner-cruise',
-    title: 'Amsterdam Dinner Cruise',
-    image: '/images2/5.png',
-    duration: '2 hours',
-    rating: 4.8,
-    bookings: 5008,
-    discountPrice: 89,
-    tags: ['Staff favourite']
-  },
-  {
-    id: 'pancake-cruise',
-    title: 'Pancake Cruise Amsterdam',
-    image: '/images2/6.png',
-    duration: '75 minutes',
-    rating: 4.8,
-    bookings: 11859,
-    discountPrice: 26,
-    tags: ['Family friendly']
-  }
-];
-
-interface TourPageProps {
-  params: { slug: string };
-}
 
 export default function TourPage({ params }: TourPageProps) {
-  const tour = tourData[params.slug as keyof typeof tourData];
+  const [tour, setTour] = useState<Tour | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  // Mock multiple images for gallery
-  const tourImages = tour ? [
-    tour.image,
-    '/images2/1.png',
-    '/images2/3.png',
-    '/images2/4.png'
-  ] : [];
-
   useEffect(() => {
-    if (!tour) {
-      // Handle tour not found
-      return;
-    }
-  }, [tour]);
+    const fetchTour = async () => {
+      setIsLoading(true);
+      try {
+        const tourData = getTourById(params.slug);
+        if (!tourData) {
+          notFound();
+          return;
+        }
+        setTour(tourData);
+      } catch (error) {
+        console.error('Error fetching tour:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  if (!tour) {
+    fetchTour();
+  }, [params.slug]);
+
+  if (isLoading) {
     return (
       <>
         <Header startSolid={true} />
         <main className="bg-slate-50 pt-24 min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-800 mb-4">Tour not found</h1>
-            <p className="text-slate-600 mb-8">The tour you're looking for doesn't exist or has been removed.</p>
-            <a href="/" className="inline-flex items-center gap-2 bg-red-600 text-white font-bold py-3 px-6 rounded-full hover:bg-red-700 transition-colors">
-              <ArrowLeft size={20} />
-              Back to all tours
-            </a>
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading tour...</p>
           </div>
         </main>
         <Footer />
       </>
     );
   }
+
+  if (!tour) {
+    return null;
+  }
+
+  const tourImages = tour.images || [tour.image];
+  const relatedTours = tours.filter(t => 
+    t.id !== tour.id && 
+    (t.destinationId === tour.destinationId || 
+     t.categoryIds.some(cat => tour.categoryIds.includes(cat)))
+  ).slice(0, 3);
 
   const handleQuickAdd = () => {
     addToCart(tour);
@@ -220,7 +114,7 @@ export default function TourPage({ params }: TourPageProps) {
             <nav className="flex items-center gap-2 text-sm">
               <a href="/" className="text-slate-500 hover:text-red-600">Home</a>
               <span className="text-slate-400">/</span>
-              <a href="/tours" className="text-slate-500 hover:text-red-600">Amsterdam Canal Cruises</a>
+              <a href="/tours" className="text-slate-500 hover:text-red-600">Tours</a>
               <span className="text-slate-400">/</span>
               <span className="text-slate-800 font-medium">{tour.title}</span>
             </nav>
@@ -281,27 +175,29 @@ export default function TourPage({ params }: TourPageProps) {
                 </div>
 
                 {/* Image Gallery Thumbnails */}
-                <div className="flex gap-2 mb-6">
-                  {tourImages.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImageIndex(index)}
-                      className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                        selectedImageIndex === index 
-                          ? 'border-red-600' 
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <Image
-                        src={image}
-                        alt={`${tour.title} ${index + 1}`}
-                        width={80}
-                        height={64}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
+                {tourImages.length > 1 && (
+                  <div className="flex gap-2 mb-6">
+                    {tourImages.map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImageIndex(index)}
+                        className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                          selectedImageIndex === index 
+                            ? 'border-red-600' 
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <Image
+                          src={image}
+                          alt={`${tour.title} ${index + 1}`}
+                          width={80}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Tour Title and Basic Info */}
                 <div className="flex items-start justify-between mb-6">
@@ -319,7 +215,7 @@ export default function TourPage({ params }: TourPageProps) {
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
-                        <span>Amsterdam</span>
+                        <span>{tour.location?.address || 'Amsterdam'}</span>
                       </div>
                     </div>
                   </div>
@@ -342,7 +238,7 @@ export default function TourPage({ params }: TourPageProps) {
                 <div className="bg-slate-50 p-4 rounded-lg text-center">
                   <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
                   <h3 className="font-bold text-slate-800">Free Cancellation</h3>
-                  <p className="text-sm text-slate-600">Up to 8 hours in advance</p>
+                  <p className="text-sm text-slate-600">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-lg text-center">
                   <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
@@ -359,49 +255,57 @@ export default function TourPage({ params }: TourPageProps) {
               {/* Description */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 mb-4">About this experience</h2>
-                <p className="text-slate-600 leading-relaxed mb-6">{tour.description}</p>
+                <p className="text-slate-600 leading-relaxed mb-6">
+                  {tour.longDescription || tour.description}
+                </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">What's included</h3>
-                    <ul className="space-y-2">
-                      {tour.includes?.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-slate-600">
-                          <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {tour.includes && tour.includes.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800 mb-3">What's included</h3>
+                      <ul className="space-y-2">
+                        {tour.includes.map((item, index) => (
+                          <li key={index} className="flex items-start gap-2 text-slate-600">
+                            <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Highlights</h3>
-                    <ul className="space-y-2">
-                      {tour.highlights?.map((highlight, index) => (
-                        <li key={index} className="flex items-start gap-2 text-slate-600">
-                          <Star size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm">{highlight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {tour.highlights && tour.highlights.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800 mb-3">Highlights</h3>
+                      <ul className="space-y-2">
+                        {tour.highlights.map((highlight, index) => (
+                          <li key={index} className="flex items-start gap-2 text-slate-600">
+                            <Star size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">{highlight}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Meeting Point */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
-                <div className="flex items-start gap-4">
-                  <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
-                  <div>
-                    <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
-                    <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
-                    <button className="text-red-600 hover:underline text-sm font-medium mt-2">
-                      View on map
-                    </button>
+              {tour.meetingPoint && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
+                  <div className="flex items-start gap-4">
+                    <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
+                    <div>
+                      <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
+                      <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
+                      <button className="text-red-600 hover:underline text-sm font-medium mt-2">
+                        View on map
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Important Information */}
               <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
@@ -410,10 +314,10 @@ export default function TourPage({ params }: TourPageProps) {
                   <div>
                     <h3 className="font-bold text-blue-900 mb-2">Important information</h3>
                     <ul className="space-y-1 text-sm text-blue-800">
-                      <li>• {tour.ageRestriction}</li>
-                      <li>• Only service dogs are allowed on the boat</li>
+                      <li>• {tour.ageRestriction || 'Suitable for all ages'}</li>
+                      <li>• Only service dogs are allowed</li>
                       <li>• Weather conditions may affect the tour</li>
-                      <li>• {tour.cancellationPolicy}</li>
+                      <li>• {tour.cancellationPolicy || 'Check cancellation policy'}</li>
                     </ul>
                   </div>
                 </div>
@@ -474,47 +378,49 @@ export default function TourPage({ params }: TourPageProps) {
               </div>
 
               {/* Related Tours */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {relatedTours.map((relatedTour) => (
-                    <a key={relatedTour.id} href={`/tour/${relatedTour.id}`} className="group">
-                      <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="relative">
-                          <Image
-                            src={relatedTour.image}
-                            alt={relatedTour.title}
-                            width={300}
-                            height={200}
-                            className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          {relatedTour.tags?.map((tag, index) => (
-                            <span key={index} className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                              tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
-                            }`}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="p-3">
-                          <h3 className="font-bold text-sm text-slate-800 mb-1 line-clamp-2">{relatedTour.title}</h3>
-                          <div className="flex items-center gap-1 mb-1 text-xs text-slate-500">
-                            <Clock size={12} />
-                            <span>{relatedTour.duration}</span>
+              {relatedTours.length > 0 && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {relatedTours.map((relatedTour) => (
+                      <a key={relatedTour.id} href={`/tours/${relatedTour.slug}`} className="group">
+                        <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                          <div className="relative">
+                            <Image
+                              src={relatedTour.image}
+                              alt={relatedTour.title}
+                              width={300}
+                              height={200}
+                              className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            {relatedTour.tags?.map((tag, index) => (
+                              <span key={index} className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
+                                tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
+                              }`}>
+                                {tag}
+                              </span>
+                            ))}
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              <Star size={12} className="text-yellow-500 fill-current" />
-                              <span className="text-xs font-bold">{relatedTour.rating}</span>
+                          <div className="p-3">
+                            <h3 className="font-bold text-sm text-slate-800 mb-1 line-clamp-2">{relatedTour.title}</h3>
+                            <div className="flex items-center gap-1 mb-1 text-xs text-slate-500">
+                              <Clock size={12} />
+                              <span>{relatedTour.duration}</span>
                             </div>
-                            <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <Star size={12} className="text-yellow-500 fill-current" />
+                                <span className="text-xs font-bold">{relatedTour.rating}</span>
+                              </div>
+                              <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </a>
-                  ))}
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Booking Sidebar */}
