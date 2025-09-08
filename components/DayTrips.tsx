@@ -1,50 +1,18 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, ArrowRight, X } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
-
-// --- Coming Soon Modal Component ---
-const ComingSoonModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300 ease-in-out">
-            <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors">
-                    <X size={24} />
-                </button>
-                <div className="text-center">
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Coming Soon!</h2>
-                    <p className="text-gray-600 mb-6">
-                        This feature is currently under development. Stay tuned for new and exciting updates!
-                    </p>
-                    <button onClick={onClose} className="w-full bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors">
-                        Close
-                    </button>
-                </div>
-            </div>
-            <style jsx>{`
-                @keyframes scale-in {
-                    from { transform: scale(0.95); opacity: 0; }
-                    to { transform: scale(1); opacity: 1; }
-                }
-                .animate-scale-in {
-                    animation: scale-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                }
-            `}</style>
-        </div>
-    );
-};
 
 // --- Mock Data with Tour interface compatibility ---
 const dayTrips: Tour[] = [
     { 
         id: 'countryside-windmills-tour',
         title: 'Countryside & Windmills Tour from Amsterdam', 
+        slug: 'countryside-windmills-tour',
         duration: '6 hours', 
         bookings: 20568, 
         rating: 4.4, 
@@ -58,11 +26,14 @@ const dayTrips: Tour[] = [
             'Explore picturesque Dutch countryside',
             'Learn about traditional Dutch culture',
             'Professional tour guide included'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'zaanse-schans-day-trip',
         title: 'Zaanse Schans, Marken, Edam & Volendam Day Trip', 
+        slug: 'zaanse-schans-day-trip',
         duration: '7.5 hours', 
         bookings: 8153, 
         rating: 4.7, 
@@ -76,11 +47,14 @@ const dayTrips: Tour[] = [
             'Cheese tasting in Edam',
             'Fishing village of Volendam',
             'Traditional wooden houses in Marken'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'giethoorn-zaanse-schans-tour',
         title: 'Fairytale Giethoorn & Zaanse Schans Tour', 
+        slug: 'giethoorn-zaanse-schans-tour',
         duration: '9 hours', 
         bookings: 10831, 
         rating: 4.6, 
@@ -94,11 +68,14 @@ const dayTrips: Tour[] = [
             'Traditional windmills',
             'Canal boat ride',
             'Historic Dutch villages'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'rotterdam-delft-hague-tour',
         title: 'Rotterdam, Delft & The Hague incl. Madurodam', 
+        slug: 'rotterdam-delft-hague-tour',
         duration: '9 hours', 
         bookings: 3568, 
         rating: 4.9, 
@@ -112,11 +89,14 @@ const dayTrips: Tour[] = [
             'Historic Delft pottery',
             'Dutch government buildings in The Hague',
             'Madurodam miniature park'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'bruges-day-trip',
         title: 'Full Day Trip to the Medieval City of Bruges', 
+        slug: 'bruges-day-trip',
         duration: '12 hours', 
         bookings: 5179, 
         rating: 4.7, 
@@ -129,12 +109,14 @@ const dayTrips: Tour[] = [
             'Famous Belgian chocolates',
             'Historic market square',
             'Canal boat ride through Bruges'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
 ];
 
 // --- Day Trip Card Component ---
-const DayTripCard = ({ trip, onCardClick, onAddToCartClick }: { trip: Tour; onCardClick: (trip: Tour) => void; onAddToCartClick: (trip: Tour) => void; }) => {
+const DayTripCard = ({ trip, onAddToCartClick }: { trip: Tour; onAddToCartClick: (trip: Tour) => void; }) => {
     const { formatPrice } = useSettings();
     
     const getTagColor = (tag: string) => {
@@ -146,8 +128,7 @@ const DayTripCard = ({ trip, onCardClick, onAddToCartClick }: { trip: Tour; onCa
 
     return (
         <a 
-            href="#" 
-            onClick={(e) => { e.preventDefault(); onCardClick(trip); }}
+            href={`/tour/${trip.slug}`}
             className="flex-shrink-0 w-[270px] bg-white shadow-lg overflow-hidden snap-start transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group"
         >
             <div className="relative">
@@ -168,13 +149,11 @@ const DayTripCard = ({ trip, onCardClick, onAddToCartClick }: { trip: Tour; onCa
                     </div>
                 )}
                 <button 
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick(trip); }}
-                    className="absolute top-3 right-3 bg-white/70 p-2 rounded-full text-slate-600 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-white"
-                >
-                    <Heart size={20} />
-                </button>
-                <button 
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCartClick(trip); }}
+                    onClick={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        onAddToCartClick(trip); 
+                    }}
                     className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110"
                     aria-label="Add to cart"
                 >
@@ -207,7 +186,6 @@ export default function DayTripsSection() {
     const scrollContainer = useRef<HTMLDivElement>(null);
     const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleAddToCartClick = (tour: Tour) => {
         setSelectedTour(tour);
@@ -217,10 +195,6 @@ export default function DayTripsSection() {
     const closeSidebar = () => {
         setBookingSidebarOpen(false);
         setTimeout(() => setSelectedTour(null), 300);
-    };
-
-    const handleCardClick = () => {
-        setIsModalOpen(true);
     };
 
     const scroll = (direction: 'left' | 'right') => {
@@ -250,13 +224,12 @@ export default function DayTripsSection() {
                     </div>
                     <div ref={scrollContainer} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth" style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}>
                         <div className="flex-shrink-0 w-1"></div> {/* Left padding */}
-                        {dayTrips.map(trip => <DayTripCard key={trip.id} trip={trip} onCardClick={handleCardClick} onAddToCartClick={handleAddToCartClick} />)}
+                        {dayTrips.map(trip => <DayTripCard key={trip.id} trip={trip} onAddToCartClick={handleAddToCartClick} />)}
                         <div className="flex-shrink-0 w-1"></div> {/* Right padding */}
                     </div>
                     <div className="text-center mt-12">
                         <a 
-                            href="#" 
-                            onClick={(e) => { e.preventDefault(); handleCardClick(); }}
+                            href="/destinations/amsterdam"
                             className="inline-flex justify-center items-center h-14 px-10 text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out shadow-lg"
                         >
                             <span>SEE ALL DAY TRIPS FROM AMSTERDAM</span>
@@ -270,8 +243,6 @@ export default function DayTripsSection() {
                 onClose={closeSidebar} 
                 tour={selectedTour} 
             />
-
-            <ComingSoonModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
             
             {/* Global Styles */}
             <style jsx global>{`

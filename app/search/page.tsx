@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Search, Filter, Star, Clock, MapPin, ChevronDown, X } from 'lucide-react';
+import { Search, Filter, Star, Clock, MapPin, ChevronDown, X, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import { tours, searchTours } from '@/lib/data/tours';
 import { destinations } from '@/lib/data/destinations';
-import { categories } from '@/lib/data/categories';
+import { categories } from '@/lib/categories';
 import { Tour, SearchFilters } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/contexts/CartContext';
@@ -18,6 +18,15 @@ const ITEMS_PER_PAGE = 12;
 const TourCard = ({ tour }: { tour: Tour }) => {
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
+
+  const getTagColor = (tag: string) => {
+    if (tag.includes('%')) return 'bg-red-600 text-white';
+    if (tag === 'Staff favourite') return 'bg-blue-600 text-white';
+    if (tag === 'Online only deal') return 'bg-emerald-600 text-white';
+    if (tag === 'New') return 'bg-purple-600 text-white';
+    if (tag === 'Best for Kids') return 'bg-yellow-500 text-black';
+    return 'bg-gray-200 text-gray-800';
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -30,17 +39,25 @@ const TourCard = ({ tour }: { tour: Tour }) => {
           className="w-full h-48 object-cover"
         />
         {tour.tags && tour.tags.length > 0 && (
-          <div className="absolute top-3 left-3">
-            <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-              {tour.tags[0]}
-            </span>
+          <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+            {tour.tags.slice(0, 2).map((tag, index) => (
+              <span 
+                key={index}
+                className={`text-xs font-bold px-2 py-1 rounded ${getTagColor(tag)}`}
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         )}
         <button
-          onClick={() => addToCart(tour)}
-          className="absolute bottom-3 right-3 bg-white/90 p-2 rounded-full hover:bg-white transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            addToCart(tour);
+          }}
+          className="absolute bottom-3 right-3 bg-white/90 p-2 rounded-full hover:bg-white transition-colors hover:scale-110"
         >
-          <Star size={16} className="text-red-600" />
+          <ShoppingCart size={16} className="text-red-600" />
         </button>
       </div>
       <div className="p-4">
@@ -54,6 +71,11 @@ const TourCard = ({ tour }: { tour: Tour }) => {
             <Star size={14} className="text-yellow-500 fill-current" />
             <span>{tour.rating}</span>
           </div>
+          {tour.bookings && (
+            <div className="flex items-center gap-1">
+              <span>{tour.bookings.toLocaleString()} booked</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -66,8 +88,8 @@ const TourCard = ({ tour }: { tour: Tour }) => {
               {formatPrice(tour.discountPrice)}
             </span>
           </div>
-          
-            href={`/tours/${tour.slug}`}
+          <a
+            href={`/tour/${tour.slug}`}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
           >
             View Details
@@ -93,6 +115,10 @@ export default function SearchPage() {
     setSearchQuery(query);
     if (query) {
       performSearch(query);
+    } else {
+      // Show all tours if no query
+      setSearchResults(tours);
+      setFilteredResults(tours);
     }
   }, [searchParams]);
 
@@ -148,11 +174,18 @@ export default function SearchPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    const url = new URL(window.location.href);
+    url.searchParams.set('q', searchQuery);
+    window.history.pushState({}, '', url);
     performSearch(searchQuery);
   };
 
   const clearFilter = (filterKey: keyof SearchFilters) => {
     setFilters(prev => ({ ...prev, [filterKey]: undefined }));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({});
   };
 
   return (
@@ -209,6 +242,14 @@ export default function SearchPage() {
                     </button>
                   </div>
                 )}
+                {filters.priceRange && (
+                  <div className="flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                    <span>€{filters.priceRange[0]} - €{filters.priceRange[1]}</span>
+                    <button onClick={() => clearFilter('priceRange')}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 {filters.rating && (
                   <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
                     <span>{filters.rating}+ stars</span>
@@ -217,6 +258,12 @@ export default function SearchPage() {
                     </button>
                   </div>
                 )}
+                <button
+                  onClick={clearAllFilters}
+                  className="text-red-600 hover:text-red-700 text-sm font-medium"
+                >
+                  Clear all filters
+                </button>
               </div>
             )}
 
@@ -303,7 +350,7 @@ export default function SearchPage() {
                 {searchQuery ? `Search results for "${searchQuery}"` : 'All Tours'}
               </h1>
               <p className="text-slate-600">
-                {filteredResults.length} tours found
+                {filteredResults.length} tour{filteredResults.length !== 1 ? 's' : ''} found
               </p>
             </div>
           </div>
@@ -328,26 +375,75 @@ export default function SearchPage() {
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🔍</div>
                   <h3 className="text-xl font-semibold text-slate-700 mb-2">No tours found</h3>
-                  <p className="text-slate-500">Try adjusting your search or filters</p>
+                  <p className="text-slate-500 mb-4">
+                    {searchQuery 
+                      ? `No results found for "${searchQuery}". Try adjusting your search or filters.`
+                      : 'Try adjusting your filters to see more results.'
+                    }
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <button
+                      onClick={clearAllFilters}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                    <a
+                      href="/destinations/amsterdam"
+                      className="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors"
+                    >
+                      Browse Amsterdam
+                    </a>
+                  </div>
                 </div>
               )}
 
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-4 py-2 rounded-lg ${
-                        currentPage === i + 1
-                          ? 'bg-red-600 text-white'
-                          : 'bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = currentPage === pageNum;
+                    const showPage = pageNum === 1 || pageNum === totalPages || 
+                                   (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+                    
+                    if (!showPage) {
+                      if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                        return <span key={i} className="px-2">...</span>;
+                      }
+                      return null;
+                    }
+                    
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-4 py-2 rounded-lg ${
+                          isCurrentPage
+                            ? 'bg-red-600 text-white'
+                            : 'bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </>

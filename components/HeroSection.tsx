@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, X, Clock, Zap } from 'lucide-react';
-import Image from 'next/image';
 
 // --- Type Definitions ---
 type Tag = {
@@ -46,7 +45,7 @@ const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
 
 // --- Other Data ---
 const usePopularSearches = () => useMemo(() => [
-  'LIGHT FESTIVAL', 'MUSEUM', 'MOST POPULAR SEARCH QUERY'
+  'CANAL CRUISE', 'MUSEUM', 'FOOD TOUR'
 ], []);
 
 // --- Custom Hooks ---
@@ -123,7 +122,14 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 
 // --- Sub-components (Enhanced) ---
 const FloatingTag = ({ tag }: { tag: Tag }) => (
-  <button style={tag.position} className={`absolute px-4 py-2 text-xs md:text-sm font-semibold rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in ${tag.highlight ? 'bg-red-500 text-white scale-110 -rotate-3 hover:bg-red-600' : 'bg-white/90 text-slate-800 hover:bg-white backdrop-blur-sm'}`}>
+  <button 
+    style={tag.position} 
+    onClick={() => {
+      // Navigate to search with the tag as query
+      window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
+    }}
+    className={`absolute px-4 py-2 text-xs md:text-sm font-semibold rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in ${tag.highlight ? 'bg-red-500 text-white scale-110 -rotate-3 hover:bg-red-600' : 'bg-white/90 text-slate-800 hover:bg-white backdrop-blur-sm'}`}
+  >
     {tag.name}
   </button>
 );
@@ -151,9 +157,23 @@ const SearchModal = ({ isOpen, onClose, onSearch }: { isOpen: boolean, onClose: 
         e?.preventDefault();
         if (searchTerm.trim()) {
             onSearch(searchTerm);
+            // Navigate to search page
+            window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
             setSearchTerm('');
             onClose();
         }
+    };
+
+    const handlePopularSearch = (term: string) => {
+        onSearch(term);
+        window.location.href = `/search?q=${encodeURIComponent(term)}`;
+        onClose();
+    };
+
+    const handleRecentSearch = (term: string) => {
+        onSearch(term);
+        window.location.href = `/search?q=${encodeURIComponent(term)}`;
+        onClose();
     };
 
     useEffect(() => {
@@ -194,14 +214,14 @@ const SearchModal = ({ isOpen, onClose, onSearch }: { isOpen: boolean, onClose: 
                     <div>
                         <h3 className="text-slate-500 font-bold text-sm tracking-widest uppercase mb-4">Most popular</h3>
                         <div className="flex flex-wrap gap-4">
-                            {popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={(term) => { onSearch(term); onClose(); }} />)}
+                            {popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />)}
                         </div>
                     </div>
                     {recentSearches.length > 0 && (
                         <div>
                             <h3 className="text-slate-500 font-bold text-sm tracking-widest uppercase mb-4">Your recent searches</h3>
                             <div className="flex flex-wrap gap-4">
-                                {recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={(term) => { onSearch(term); onClose(); }} onRemove={removeSearchTerm}/>)}
+                                {recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm}/>)}
                             </div>
                         </div>
                     )}

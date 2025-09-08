@@ -8,13 +8,17 @@ export default function Destinations() {
   const [selectedDestination, setSelectedDestination] = useState('');
 
   const handleDestinationClick = (destinationSlug: string, destinationName: string) => {
-    // Check if destination has tours
+    // Check if destination has tours and if we have a page for it
     const destination = destinations.find(d => d.slug === destinationSlug);
-    if (destination && destination.tourCount > 0) {
-      // Navigate to destination page
+    
+    // Only Amsterdam has a dedicated page currently
+    if (destinationSlug === 'amsterdam') {
+      window.location.href = `/destinations/amsterdam`;
+    } else if (destination && destination.tourCount > 0) {
+      // For other destinations with tours, navigate to their page
       window.location.href = `/destinations/${destinationSlug}`;
     } else {
-      // Show coming soon modal
+      // Show coming soon modal for destinations without pages
       setSelectedDestination(destinationName);
       setModalOpen(true);
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Star, ShoppingCart, Clock, Users, X } from 'lucide-react';
+import { ArrowRight, Star, ShoppingCart, Clock, Users } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -13,6 +13,7 @@ const featuredTours: Tour[] = [
     id: 'amsterdam-canal-cruise',
     image: '/images2/1.png', 
     title: '1-Hour Amsterdam Canal Cruise', 
+    slug: '1-hour-amsterdam-canal-cruise',
     duration: '60 minutes', 
     rating: 4.5, 
     bookings: 4506416, 
@@ -25,12 +26,15 @@ const featuredTours: Tour[] = [
       'Audio guide available in multiple languages',
       'Perfect for first-time visitors',
       'Departs from a central location'
-    ]
+    ],
+    destinationId: 'amsterdam',
+    categoryIds: ['canal-cruises', 'sightseeing']
   },
   { 
     id: 'pizza-lovers-cruise',
     image: '/images2/2.png', 
     title: 'New York Pizza by LOVERS Canal Cruise', 
+    slug: 'new-york-pizza-lovers-canal-cruise',
     duration: '75 minutes', 
     rating: 4.6, 
     bookings: 21080, 
@@ -43,12 +47,15 @@ const featuredTours: Tour[] = [
       'Scenic canal views',
       'Perfect lunch or dinner option',
       'Unique dining experience'
-    ]
+    ],
+    destinationId: 'amsterdam',
+    categoryIds: ['canal-cruises', 'food-tours']
   },
   { 
     id: 'evening-night-cruise',
     image: '/images2/3.png', 
     title: 'Amsterdam Evening & Night Boat Tour', 
+    slug: 'amsterdam-evening-night-cruise',
     duration: '60 minutes', 
     rating: 4.5, 
     bookings: 1256854, 
@@ -61,12 +68,15 @@ const featuredTours: Tour[] = [
       'Romantic evening atmosphere',
       'Historic canal district at night',
       'Professional commentary'
-    ]
+    ],
+    destinationId: 'amsterdam',
+    categoryIds: ['canal-cruises', 'romantic']
   },
   { 
     id: 'wine-cheese-cruise',
     image: '/images2/4.png', 
     title: 'Wine & Cheese Cruise in Amsterdam', 
+    slug: 'wine-cheese-cruise',
     duration: '90 minutes', 
     rating: 4.9, 
     bookings: 10245, 
@@ -79,12 +89,15 @@ const featuredTours: Tour[] = [
       'Premium wine selection',
       'Expert sommelier guidance',
       'Scenic canal views'
-    ]
+    ],
+    destinationId: 'amsterdam',
+    categoryIds: ['canal-cruises', 'food-tours']
   },
   { 
     id: 'exclusive-dinner-cruise',
     image: '/images2/5.png', 
     title: 'Exclusive Amsterdam Dinner Cruise', 
+    slug: 'exclusive-dinner-cruise',
     duration: '2 hours', 
     rating: 4.8, 
     bookings: 5008, 
@@ -96,12 +109,15 @@ const featuredTours: Tour[] = [
       'Luxury boat with panoramic windows',
       'Professional service',
       'Romantic atmosphere'
-    ]
+    ],
+    destinationId: 'amsterdam',
+    categoryIds: ['canal-cruises', 'food-tours']
   },
   { 
     id: 'family-pancake-cruise',
     image: '/images2/6.png', 
     title: 'Family-Friendly Pancake Cruise', 
+    slug: 'family-pancake-cruise',
     duration: '75 minutes', 
     rating: 4.8, 
     bookings: 11859, 
@@ -113,45 +129,14 @@ const featuredTours: Tour[] = [
       'Kid-friendly atmosphere',
       'Educational canal commentary',
       'Great for all ages'
-    ]
+    ],
+    destinationId: 'amsterdam',
+    categoryIds: ['canal-cruises', 'family-friendly']
   },
 ];
 
-// --- Coming Soon Modal Component ---
-const ComingSoonModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300 ease-in-out">
-      <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors">
-          <X size={24} />
-        </button>
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Coming Soon!</h2>
-          <p className="text-gray-600 mb-6">
-            This feature is currently under development. Stay tuned for new and exciting updates!
-          </p>
-          <button onClick={onClose} className="w-full bg-red-600 text-white font-semibold py-3 rounded-md hover:bg-red-700 transition-colors">
-            Close
-          </button>
-        </div>
-      </div>
-      <style jsx>{`
-        @keyframes scale-in {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-      `}</style>
-    </div>
-  );
-};
-
 // --- Tour Card Component (Enhanced & Clickable) ---
-const TourCard = ({ tour, onCardClick, onAddToCartClick }: { tour: Tour; onCardClick: (tour: Tour) => void; onAddToCartClick: (tour: Tour) => void }) => {
+const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
 
   const formatBookings = (num: number) => {
@@ -171,11 +156,7 @@ const TourCard = ({ tour, onCardClick, onAddToCartClick }: { tour: Tour; onCardC
 
   return (
     <a 
-      href="#" 
-      onClick={(e) => {
-        e.preventDefault();
-        onCardClick(tour);
-      }}
+      href={`/tour/${tour.slug}`}
       className="block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
     >
       <div className="relative">
@@ -196,7 +177,7 @@ const TourCard = ({ tour, onCardClick, onAddToCartClick }: { tour: Tour; onCardC
         <button 
           onClick={(e) => {
             e.preventDefault(); 
-            e.stopPropagation(); // Prevents the parent 'a' tag from being clicked
+            e.stopPropagation();
             onAddToCartClick(tour);
           }}
           className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110"
@@ -238,7 +219,6 @@ const TourCard = ({ tour, onCardClick, onAddToCartClick }: { tour: Tour; onCardC
 export default function FeaturedTours() {
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleAddToCartClick = (tour: Tour) => {
     setSelectedTour(tour);
@@ -248,10 +228,6 @@ export default function FeaturedTours() {
   const closeSidebar = () => {
     setBookingSidebarOpen(false);
     setTimeout(() => setSelectedTour(null), 300);
-  };
-
-  const handleCardClick = () => {
-    setIsModalOpen(true);
   };
   
   // Duplicate tours for seamless animation
@@ -267,11 +243,7 @@ export default function FeaturedTours() {
               <p className="mt-2 text-lg text-gray-600 max-w-2xl">Discover top-rated experiences in Amsterdam, handpicked by our travel experts.</p>
             </div>
             <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                handleCardClick();
-              }}
+              href="/destinations/amsterdam"
               className="flex-shrink-0 mt-6 sm:mt-0 flex items-center gap-2 bg-red-600 text-white font-semibold px-6 py-3 shadow-md hover:bg-red-700 transition-all duration-300"
             >
               <span>See all tours</span>
@@ -288,7 +260,6 @@ export default function FeaturedTours() {
                 <div key={`${tour.id}-${index}`} className="flex-shrink-0 px-4">
                   <TourCard 
                     tour={tour} 
-                    onCardClick={handleCardClick} 
                     onAddToCartClick={handleAddToCartClick}
                   />
                 </div>
@@ -298,14 +269,11 @@ export default function FeaturedTours() {
         </div>
       </section>
       
-      {/* Conditionally render the new modal */}
       <BookingSidebar 
         isOpen={isBookingSidebarOpen} 
         onClose={closeSidebar} 
         tour={selectedTour} 
       />
-
-      <ComingSoonModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       
       {/* Global Styles & Fonts */}
       <style jsx global>{`
