@@ -149,7 +149,7 @@ export default function ProfilePage() {
                         <Calendar size={48} className="text-slate-300 mx-auto mb-4" />
                         <h3 className="text-xl font-semibold text-slate-700 mb-2">No bookings yet</h3>
                         <p className="text-slate-500 mb-4">Start exploring and book your first adventure!</p>
-                        
+                        <a
                           href="/search"
                           className="inline-block bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
                         >
@@ -166,7 +166,7 @@ export default function ProfilePage() {
                         <Heart size={48} className="text-slate-300 mx-auto mb-4" />
                         <h3 className="text-xl font-semibold text-slate-700 mb-2">No favorites yet</h3>
                         <p className="text-slate-500 mb-4">Save tours you love to find them easily later!</p>
-                        
+                        <a
                           href="/search"
                           className="inline-block bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
                         >
