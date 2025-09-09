@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 'react';
-import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap, Menu, User, LogOut } from 'lucide-react';
+import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap, Menu, User, LogOut, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
@@ -10,7 +10,6 @@ import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { destinations } from '@/lib/data/destinations';
-import { categories } from '@/lib/categories';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 import AuthModal from '@/components/AuthModal';
 
@@ -49,13 +48,13 @@ const megaMenuData = {
     slug: dest.slug
   })),
   activities: [
-    { name: 'Attractions', icon: Landmark, slug: 'attractions' }, 
+    { name: 'Attractions', icon: Landmark, slug: 'attractions' },
     { name: 'Museums', icon: Landmark, slug: 'museums' },
-    { name: 'Canal Cruises', icon: Ticket, slug: 'canal-cruises' }, 
+    { name: 'Canal Cruises', icon: Ticket, slug: 'canal-cruises' },
     { name: 'City Passes', icon: Ticket, slug: 'city-passes' },
-    { name: 'Hop-On Hop-Off', icon: Ticket, slug: 'hop-on-hop-off' }, 
+    { name: 'Hop-On Hop-Off', icon: Ticket, slug: 'hop-on-hop-off' },
     { name: 'Bike Tours', icon: Ticket, slug: 'bike-tours' },
-    { name: 'Day Trips', icon: Star, slug: 'day-trips' }, 
+    { name: 'Day Trips', icon: Star, slug: 'day-trips' },
     { name: 'Combi Tickets', icon: Star, slug: 'combi-tickets' },
     { name: 'Food Tours', icon: Star, slug: 'food-tours' },
   ],
@@ -75,12 +74,12 @@ function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: M
       handler(event);
     };
 
-    document.addEventListener('click', listener);
-    document.addEventListener('touchend', listener);
+    document.addEventListener('mousedown', listener);
+    document.addEventListener('touchstart', listener);
 
     return () => {
-      document.removeEventListener('click', listener);
-      document.removeEventListener('touchend', listener);
+      document.removeEventListener('mousedown', listener);
+      document.removeEventListener('touchstart', listener);
     };
   }, [ref, handler]);
 }
@@ -136,29 +135,29 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
 
     const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
         e?.preventDefault();
-        if (searchTerm.trim()) { 
+        if (searchTerm.trim()) {
           window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-          onSearch(searchTerm); 
-          setSearchTerm(''); 
-          onClose(); 
+          onSearch(searchTerm);
+          setSearchTerm('');
+          onClose();
         }
     }, [searchTerm, onSearch, onClose]);
-    
-    const handlePopularSearch = useCallback((term: string) => { 
+
+    const handlePopularSearch = useCallback((term: string) => {
       window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term); 
-      onClose(); 
+      onSearch(term);
+      onClose();
     }, [onSearch, onClose]);
-    
-    const handleRecentSearch = useCallback((term: string) => { 
+
+    const handleRecentSearch = useCallback((term: string) => {
       window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term); 
-      onClose(); 
+      onSearch(term);
+      onClose();
     }, [onSearch, onClose]);
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => { 
-            if (e.key === 'Escape') onClose(); 
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
         };
         window.addEventListener('keydown', handleKeyDown);
         document.body.style.overflow = 'hidden';
@@ -247,10 +246,10 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
 });
 
 // User Menu Component
-const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) => {
+const UserMenu: FC<{ user: any; onLogout: () => void; }> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  
+
   useOnClickOutside(menuRef, () => setIsOpen(false));
 
   return (
@@ -287,23 +286,23 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
               <p className="font-medium text-slate-900">{user.name}</p>
               <p className="text-sm text-slate-500">{user.email}</p>
             </div>
-            
+
             <div className="py-2">
-              
+              <a
                 href="/user/profile"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <User size={16} />
                 <span>My Profile</span>
               </a>
-              
+              <a
                 href="/user/bookings"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <Calendar size={16} />
                 <span>My Bookings</span>
               </a>
-              
+              <a
                 href="/user/favorites"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
@@ -311,7 +310,7 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
                 <span>Favorites</span>
               </a>
             </div>
-            
+
             <div className="border-t py-2">
               <button
                 onClick={onLogout}
@@ -329,147 +328,148 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
 };
 
 const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; onOpenAuth: (state: 'login' | 'signup') => void; }> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth }) => {
-    const menuRef = useRef<HTMLDivElement>(null);
-    const { user, logout } = useAuth();
-    useOnClickOutside(menuRef, onClose);
-    
-    useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
+  useOnClickOutside(menuRef, onClose);
+  
+  // No longer needed here, as the parent component handles it.
+  // We can remove this line: `useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);`
 
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div 
-                    className="fixed inset-0 z-[9999] md:hidden"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                >
-                    <div className="absolute inset-0 bg-black/50" />
-                    <motion.div
-                        ref={menuRef}
-                        className="absolute top-0 left-0 h-full w-full max-w-sm bg-white shadow-2xl"
-                        initial={{ x: '-100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '-100%' }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9999] md:hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+          <motion.div
+            ref={menuRef}
+            className="absolute top-0 left-0 h-full w-full max-w-sm bg-white shadow-2xl"
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          >
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-10 object-contain" />
+                <button onClick={onClose} className="p-2 rounded-full text-slate-500 hover:bg-slate-100">
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* User Section */}
+              {user ? (
+                <div className="p-6 border-b">
+                  <div className="flex items-center gap-3 mb-4">
+                    {user.picture ? (
+                      <Image
+                        src={user.picture}
+                        alt={user.name}
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                        <User size={20} className="text-slate-600" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-slate-900">{user.name}</p>
+                      <p className="text-sm text-slate-500">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <a
+                      href="/user/profile"
+                      className="block py-2 text-slate-700 hover:text-red-500"
+                      onClick={onClose}
                     >
-                        <div className="flex flex-col h-full">
-                            <div className="flex items-center justify-between p-6 border-b">
-                                <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-10 object-contain" />
-                                <button onClick={onClose} className="p-2 rounded-full text-slate-500 hover:bg-slate-100">
-                                    <X size={24} />
-                                </button>
-                            </div>
-                            
-                            {/* User Section */}
-                            {user ? (
-                              <div className="p-6 border-b">
-                                <div className="flex items-center gap-3 mb-4">
-                                  {user.picture ? (
-                                    <Image
-                                      src={user.picture}
-                                      alt={user.name}
-                                      width={40}
-                                      height={40}
-                                      className="rounded-full"
-                                    />
-                                  ) : (
-                                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                                      <User size={20} className="text-slate-600" />
-                                    </div>
-                                  )}
-                                  <div>
-                                    <p className="font-medium text-slate-900">{user.name}</p>
-                                    <p className="text-sm text-slate-500">{user.email}</p>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  
-                                    href="/user/profile"
-                                    className="block py-2 text-slate-700 hover:text-red-500"
-                                    onClick={onClose}
-                                  >
-                                    My Profile
-                                  </a>
-                                  
-                                    href="/user/bookings"
-                                    className="block py-2 text-slate-700 hover:text-red-500"
-                                    onClick={onClose}
-                                  >
-                                    My Bookings
-                                  </a>
-                                  <button
-                                    onClick={() => { logout(); onClose(); }}
-                                    className="block py-2 text-red-600 hover:text-red-700 w-full text-left"
-                                  >
-                                    Sign Out
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="p-6 border-b">
-                                <div className="space-y-3">
-                                  <button
-                                    onClick={() => { onOpenAuth('login'); onClose(); }}
-                                    className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
-                                  >
-                                    Log In
-                                  </button>
-                                  <button
-                                    onClick={() => { onOpenAuth('signup'); onClose(); }}
-                                    className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
-                                  >
-                                    Sign Up
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                <button 
-                                    onClick={() => { onOpenSearch(); onClose(); }}
-                                    className="w-full flex items-center gap-3 p-4 bg-slate-100 rounded-lg text-left"
-                                >
-                                    <Search size={20} className="text-slate-500" />
-                                    <span className="text-slate-700">Search tours & tickets</span>
-                                </button>
-                                
-                                <div>
-                                    <h3 className="font-bold text-lg text-slate-800 mb-4">Destinations</h3>
-                                    <div className="space-y-2">
-                                        {megaMenuData.destinations.map(dest => (
-                                            <a key={dest.name} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
-                                                {dest.name}
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <h3 className="font-bold text-lg text-slate-800 mb-4">Activities</h3>
-                                    <div className="space-y-2">
-                                        {megaMenuData.activities.map(activity => (
-                                            <a key={activity.name} href={`/categories/${activity.slug}`} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
-                                                <activity.icon size={16} />
-                                                <span>{activity.name}</span>
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-6 border-t">
-                                <CurrencyLanguageSwitcher variant="footer" />
-                            </div>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
+                      My Profile
+                    </a>
+                    <a
+                      href="/user/bookings"
+                      className="block py-2 text-slate-700 hover:text-red-500"
+                      onClick={onClose}
+                    >
+                      My Bookings
+                    </a>
+                    <button
+                      onClick={() => { logout(); onClose(); }}
+                      className="block py-2 text-red-600 hover:text-red-700 w-full text-left"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 border-b">
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => { onOpenAuth('login'); onClose(); }}
+                      className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Log In
+                    </button>
+                    <button
+                      onClick={() => { onOpenAuth('signup'); onClose(); }}
+                      className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <button
+                  onClick={() => { onOpenSearch(); onClose(); }}
+                  className="w-full flex items-center gap-3 p-4 bg-slate-100 rounded-lg text-left"
+                >
+                  <Search size={20} className="text-slate-500" />
+                  <span className="text-slate-700">Search tours & tickets</span>
+                </button>
+
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800 mb-4">Destinations</h3>
+                  <div className="space-y-2">
+                    {megaMenuData.destinations.map(dest => (
+                      <a key={dest.name} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                        {dest.name}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800 mb-4">Activities</h3>
+                  <div className="space-y-2">
+                    {megaMenuData.activities.map(activity => (
+                      <a key={activity.name} href={`/categories/${activity.slug}`} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                        <activity.icon size={16} />
+                        <span>{activity.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t">
+                <CurrencyLanguageSwitcher variant="footer" />
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 });
 
-const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = React.memo(({ onFocus, isTransparent }) => {
+const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean; }> = React.memo(({ onFocus, isTransparent }) => {
     const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
     const borderColor = isTransparent ? 'border-transparent' : 'border-slate-200';
     return (
@@ -487,13 +487,13 @@ const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = Rea
 // =================================================================
 // --- MAIN HEADER COMPONENT (EXPORTED) ---
 // =================================================================
-export default function Header({ startSolid = false }: { startSolid?: boolean }) {
+export default function Header({ startSolid = false }: { startSolid?: boolean; }) {
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchModalOpen, setSearchModalOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
-  
+
   const { openCart, itemCount } = useCart();
   const { user, logout } = useAuth();
   const { scrollY, isVisible } = useScrollDirection();
@@ -501,23 +501,36 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
 
   const isScrolled = scrollY > 100;
   const isTransparent = !(isScrolled || isMegaMenuOpen || startSolid);
-  
-  const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
+
+  const handleMegaMenuToggle = useCallback(() => {
     setMegaMenuOpen(prev => !prev);
   }, []);
 
-  const handleSearchModalOpen = useCallback(() => setSearchModalOpen(true), []);
-  const handleSearchModalClose = useCallback(() => setSearchModalOpen(false), []);
-  const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
-  const handleMobileMenuClose = useCallback(() => setMobileMenuOpen(false), []);
-  
+  const handleSearchModalOpen = useCallback(() => {
+    setSearchModalOpen(true);
+  }, []);
+  const handleSearchModalClose = useCallback(() => {
+    setSearchModalOpen(false);
+  }, []);
+
+  const handleMobileMenuOpen = useCallback(() => {
+    setMobileMenuOpen(true);
+    document.body.style.overflow = 'hidden'; // Prevents background scroll
+  }, []);
+  const handleMobileMenuClose = useCallback(() => {
+    setMobileMenuOpen(false);
+    document.body.style.overflow = 'auto'; // Restores background scroll
+  }, []);
+
   const handleAuthModalOpen = useCallback((state: 'login' | 'signup') => {
     setAuthModalState(state);
     setAuthModalOpen(true);
   }, []);
-  
-  const handleAuthModalClose = useCallback(() => setAuthModalOpen(false), []);
-  
+
+  const handleAuthModalClose = useCallback(() => {
+    setAuthModalOpen(false);
+  }, []);
+
   const handleSearch = useCallback((term: string) => {
     addSearchTerm(term);
   }, [addSearchTerm]);
@@ -533,10 +546,10 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
             <div className="flex items-center justify-between h-16 md:h-20">
                 <div className="flex items-center gap-4 lg:gap-8">
                     <a href="/" className="flex items-center h-full">
-                        <img src={isTransparent ? '/EEO-logo.png' : '/EEO-logo.png'} alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
+                        <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
                     </a>
                     <nav className="hidden md:flex items-center relative">
-                        <button onMouseDown={(e) => e.stopPropagation()} onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
+                        <button onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
                             <span>EXPLORE</span>
                             <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}><ChevronDown size={20} /></motion.div>
                         </button>
@@ -544,19 +557,19 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                 </div>
 
                 {isScrolled && <HeaderSearchBar onFocus={handleSearchModalOpen} isTransparent={isTransparent} />}
-                
+
                 <div className="flex items-center gap-3 md:gap-5">
-                    <CurrencyLanguageSwitcher 
-                      variant="header" 
-                      headerLinkClasses={`${headerText} ${linkHoverColor}`} 
+                    <CurrencyLanguageSwitcher
+                      variant="header"
+                      headerLinkClasses={`${headerText} ${linkHoverColor}`}
                       isTransparent={isTransparent}
                     />
-                    
+
                     <button onClick={openCart} className="relative group p-2">
                         <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
                         {itemCount > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{itemCount}</span>}
                     </button>
-                    
+
                     <button onClick={handleSearchModalOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
                         <Search size={22} className="group-hover:text-red-500" />
                     </button>
@@ -566,13 +579,13 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                       <UserMenu user={user} onLogout={logout} />
                     ) : (
                       <div className="hidden md:flex items-center gap-3">
-                        <button 
+                        <button
                           onClick={() => handleAuthModalOpen('login')}
                           className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
                         >
                           Log In
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleAuthModalOpen('signup')}
                           className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
                         >
@@ -580,7 +593,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
                         </button>
                       </div>
                     )}
-                    
+
                     <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
                         <Menu size={24} className={`${headerText} ${linkHoverColor}`} />
                     </button>
@@ -589,20 +602,20 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
         </div>
         <MegaMenu isOpen={isMegaMenuOpen} onClose={() => setMegaMenuOpen(false)} />
       </header>
-      
-      <MobileMenu 
-        isOpen={isMobileMenuOpen} 
-        onClose={handleMobileMenuClose} 
+
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={handleMobileMenuClose}
         onOpenSearch={handleSearchModalOpen}
         onOpenAuth={handleAuthModalOpen}
       />
-      
+
       <AnimatePresence>
         {isSearchModalOpen && (
           <SearchModal onClose={handleSearchModalClose} onSearch={handleSearch} />
         )}
       </AnimatePresence>
-      
+
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={handleAuthModalClose}
