@@ -1,3 +1,4 @@
+// components/Header.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 'react';
@@ -11,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { destinations } from '@/lib/data/destinations';
 import { categories } from '@/lib/categories';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
+import AuthModal from '@/components/AuthModal';
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -287,21 +289,21 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             </div>
             
             <div className="py-2">
-              <a
+              
                 href="/user/profile"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <User size={16} />
                 <span>My Profile</span>
               </a>
-              <a
+              
                 href="/user/bookings"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <Calendar size={16} />
                 <span>My Bookings</span>
               </a>
-              <a
+              
                 href="/user/favorites"
                 className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
               >
@@ -326,7 +328,7 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
   );
 };
 
-const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; }> = React.memo(({ isOpen, onClose, onOpenSearch }) => {
+const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; onOpenAuth: (state: 'login' | 'signup') => void; }> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     const { user, logout } = useAuth();
     useOnClickOutside(menuRef, onClose);
@@ -382,14 +384,14 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                                   </div>
                                 </div>
                                 <div className="space-y-2">
-                                  <a
+                                  
                                     href="/user/profile"
                                     className="block py-2 text-slate-700 hover:text-red-500"
                                     onClick={onClose}
                                   >
                                     My Profile
                                   </a>
-                                  <a
+                                  
                                     href="/user/bookings"
                                     className="block py-2 text-slate-700 hover:text-red-500"
                                     onClick={onClose}
@@ -407,20 +409,18 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                             ) : (
                               <div className="p-6 border-b">
                                 <div className="space-y-3">
-                                  <a
-                                    href="/login"
+                                  <button
+                                    onClick={() => { onOpenAuth('login'); onClose(); }}
                                     className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
-                                    onClick={onClose}
                                   >
                                     Log In
-                                  </a>
-                                  <a
-                                    href="/signup"
+                                  </button>
+                                  <button
+                                    onClick={() => { onOpenAuth('signup'); onClose(); }}
                                     className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
-                                    onClick={onClose}
                                   >
                                     Sign Up
-                                  </a>
+                                  </button>
                                 </div>
                               </div>
                             )}
@@ -491,6 +491,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchModalOpen, setSearchModalOpen] = useState(false);
+  const [isAuthModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
   
   const { openCart, itemCount } = useCart();
   const { user, logout } = useAuth();
@@ -500,14 +502,21 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
   const isScrolled = scrollY > 100;
   const isTransparent = !(isScrolled || isMegaMenuOpen || startSolid);
   
-const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
-  setMegaMenuOpen(prev => !prev);
-}, []);
+  const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
+    setMegaMenuOpen(prev => !prev);
+  }, []);
 
   const handleSearchModalOpen = useCallback(() => setSearchModalOpen(true), []);
   const handleSearchModalClose = useCallback(() => setSearchModalOpen(false), []);
   const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
   const handleMobileMenuClose = useCallback(() => setMobileMenuOpen(false), []);
+  
+  const handleAuthModalOpen = useCallback((state: 'login' | 'signup') => {
+    setAuthModalState(state);
+    setAuthModalOpen(true);
+  }, []);
+  
+  const handleAuthModalClose = useCallback(() => setAuthModalOpen(false), []);
   
   const handleSearch = useCallback((term: string) => {
     addSearchTerm(term);
@@ -527,7 +536,7 @@ const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
                         <img src={isTransparent ? '/EEO-logo.png' : '/EEO-logo.png'} alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
                     </a>
                     <nav className="hidden md:flex items-center relative">
-<button onMouseDown={(e) => e.stopPropagation()} onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
+                        <button onMouseDown={(e) => e.stopPropagation()} onClick={handleMegaMenuToggle} className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}>
                             <span>EXPLORE</span>
                             <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}><ChevronDown size={20} /></motion.div>
                         </button>
@@ -557,12 +566,18 @@ const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
                       <UserMenu user={user} onLogout={logout} />
                     ) : (
                       <div className="hidden md:flex items-center gap-3">
-                        <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>
+                        <button 
+                          onClick={() => handleAuthModalOpen('login')}
+                          className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
+                        >
                           Log In
-                        </a>
-                        <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">
+                        </button>
+                        <button 
+                          onClick={() => handleAuthModalOpen('signup')}
+                          className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
+                        >
                           Sign Up
-                        </a>
+                        </button>
                       </div>
                     )}
                     
@@ -579,6 +594,7 @@ const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
         isOpen={isMobileMenuOpen} 
         onClose={handleMobileMenuClose} 
         onOpenSearch={handleSearchModalOpen}
+        onOpenAuth={handleAuthModalOpen}
       />
       
       <AnimatePresence>
@@ -586,6 +602,12 @@ const handleMegaMenuToggle = useCallback((e: React.MouseEvent) => {
           <SearchModal onClose={handleSearchModalClose} onSearch={handleSearch} />
         )}
       </AnimatePresence>
+      
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={handleAuthModalClose}
+        initialState={authModalState}
+      />
     </>
   );
 }
