@@ -1,4 +1,3 @@
-// HeroSection.tsx
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -127,9 +126,11 @@ const useIsMobile = (breakpoint = 768) => {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < breakpoint);
-    if (typeof window !== "undefined") checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-    return () => window.removeEventListener("resize", checkIsMobile);
+    if (typeof window !== "undefined") {
+      checkIsMobile();
+      window.addEventListener("resize", checkIsMobile);
+      return () => window.removeEventListener("resize", checkIsMobile);
+    }
   }, [breakpoint]);
   return isMobile;
 };
@@ -300,8 +301,17 @@ const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
   );
 };
 
-// --- Background Slideshow Component (crossfade, 3 images) ---
-const BackgroundSlideshow = ({ images = ["/bg4.png", "/stockholm.png", "/bg3.png"], interval = 5000, fadeDuration = 1000 }: { images?: string[]; interval?: number; fadeDuration?: number }) => {
+// --- Background Slideshow Component (FIXED) ---
+const BackgroundSlideshow = ({ 
+    // FIXED: Updated default images to remove confusion.
+    images = ["/bg1.png", "/bg2.png", "/bg3.png"], 
+    interval = 5000, 
+    fadeDuration = 1000 
+}: { 
+    images?: string[]; 
+    interval?: number; 
+    fadeDuration?: number 
+}) => {
   const [index, setIndex] = useState(0);
   const count = images.length;
 
@@ -323,7 +333,6 @@ const BackgroundSlideshow = ({ images = ["/bg4.png", "/stockholm.png", "/bg3.png
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
       {images.map((src, i) => {
-        // visible if i === index
         const visible = i === index;
         return (
           <div
@@ -333,12 +342,10 @@ const BackgroundSlideshow = ({ images = ["/bg4.png", "/stockholm.png", "/bg3.png
             style={{
               opacity: visible ? 1 : 0,
               transitionDuration: `${fadeDuration}ms`,
-              // slight scale for the visible image to give a gentle motion
               transform: visible ? "scale(1.03)" : "scale(1)",
             }}
           >
             <img src={src} alt="" className="w-full h-full object-cover will-change-transform" />
-            {/* subtle gradient overlay for contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none" />
           </div>
         );
@@ -361,7 +368,7 @@ export default function HeroSection() {
   return (
     <>
       <section className="relative h-screen min-h-[650px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
-        {/* Background slideshow (subtle crossfade) */}
+        {/* The component now correctly receives the new image paths */}
         <BackgroundSlideshow images={["/bg1.png", "/bg2.png", "/bg3.png"]} interval={5000} fadeDuration={1000} />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
@@ -406,7 +413,6 @@ export default function HeroSection() {
         .text-shadow-lg { text-shadow: 2px 2px 8px rgb(0 0 0 / 0.6); }
         .font-sans { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
 
-        /* Small optimization: ensure background images repaint smoothly */
         img { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
       `}</style>
 
