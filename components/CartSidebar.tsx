@@ -3,7 +3,7 @@
 import { FC } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
+import { X, ShoppingCart, Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useSettings } from '@/hooks/useSettings';
 import { CartItem } from '@/types';
@@ -13,7 +13,6 @@ const CartSidebar: FC = () => {
   const { isCartOpen, closeCart, cartItems, cartTotal, removeFromCart, updateQuantity } = useCart();
   const { formatPrice } = useSettings();
 
-  // consider cartItems === undefined/null as loading
   const isLoading = cartItems == null;
 
   const backdropVariants = {
@@ -27,10 +26,16 @@ const CartSidebar: FC = () => {
   };
 
   const handleProceedToCheckout = () => {
-    if (isLoading) return;
+    if (isLoading || cartItems.length === 0) return;
     closeCart();
     router.push('/checkout');
   };
+  
+  const handleStartExploring = () => {
+    closeCart();
+    router.push('/'); // Navigate to the homepage or a main tours page
+  };
+
 
   return (
     <AnimatePresence>
@@ -42,7 +47,7 @@ const CartSidebar: FC = () => {
           exit="hidden"
         >
           <motion.div
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             variants={backdropVariants}
             onClick={closeCart}
           />
@@ -67,12 +72,23 @@ const CartSidebar: FC = () => {
                 <CartSkeleton />
               </div>
             ) : cartItems.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+              // --- MODIFIED EMPTY CART STATE ---
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                 <ShoppingCart size={48} className="text-slate-300 mb-4" />
                 <h3 className="text-xl font-semibold text-slate-700">Your cart is empty</h3>
-                <p className="text-slate-500 mt-2">Looks like you haven't added anything to your cart yet.</p>
+                <p className="text-slate-500 mt-2 max-w-xs mx-auto">
+                  Looks like you haven't added any amazing experiences yet.
+                </p>
+                <button
+                  onClick={handleStartExploring}
+                  className="mt-8 flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-3 px-8 rounded-full transition-transform transform hover:scale-105 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Start Exploring
+                  <ArrowRight size={20} />
+                </button>
               </div>
             ) : (
+              // --- CART WITH ITEMS ---
               <>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {cartItems.map((item) => (
@@ -93,9 +109,9 @@ const CartSidebar: FC = () => {
                   <button
                     onClick={handleProceedToCheckout}
                     className={`w-full text-white font-bold py-3 px-6 rounded-full transition-transform transform hover:scale-105 ${
-                      isLoading ? 'bg-slate-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+                      isLoading || cartItems.length === 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
                     }`}
-                    disabled={isLoading}
+                    disabled={isLoading || cartItems.length === 0}
                   >
                     Proceed to Checkout
                   </button>
@@ -119,12 +135,23 @@ const CartItemCard: FC<{
   formatPrice: (value: number) => string;
 }> = ({ item, onUpdateQuantity, onRemove, formatPrice }) => {
   const safeUpdate = (id: string | number, qty: number) => {
-    if (qty < 1) return;
+    // allow decreasing to 0, which should trigger removal logic if desired
+    if (qty < 1) {
+      onRemove(id);
+      return;
+    };
     onUpdateQuantity(id, qty);
   };
 
   return (
-    <div className="flex gap-4">
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3 }}
+      className="flex gap-4 p-2 -mx-2 rounded-lg hover:bg-slate-50 transition-colors"
+    >
       <img
         src={item.image || 'https://placehold.co/100x100/EEE/31343C?text=Tour'}
         alt={item.title}
@@ -132,8 +159,8 @@ const CartItemCard: FC<{
       />
       <div className="flex-1 flex flex-col justify-between">
         <div>
-          <h4 className="font-bold text-slate-800 leading-tight">{item.title}</h4>
-          <p className="text-lg font-semibold text-red-600 mt-1">{formatPrice(item.discountPrice)}</p>
+          <h4 className="font-bold text-slate-800 leading-tight line-clamp-2">{item.title}</h4>
+          <p className="text-lg font-semibold text-red-600 mt-1">{formatPrice(item.discountPrice * item.quantity)}</p>
           {item.details && <p className="text-sm text-slate-500 mt-1">{item.details}</p>}
         </div>
 
@@ -146,7 +173,7 @@ const CartItemCard: FC<{
             >
               <Minus size={16} />
             </button>
-            <span className="px-3 font-semibold">{item.quantity}</span>
+            <span className="px-3 font-semibold text-slate-700 w-8 text-center">{item.quantity}</span>
             <button
               onClick={() => safeUpdate(item.id, (item.quantity || 1) + 1)}
               className="p-2 text-slate-500 hover:text-red-600"
@@ -158,14 +185,14 @@ const CartItemCard: FC<{
 
           <button
             onClick={() => onRemove(item.id)}
-            className="p-2 text-slate-400 hover:text-red-600"
+            className="p-2 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50"
             aria-label={`Remove ${item.title} from cart`}
           >
             <Trash2 size={18} />
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -176,11 +203,12 @@ const CartSkeleton: FC = () => {
   const row = (key: number) => (
     <div key={key} className="flex gap-4 items-start animate-pulse" aria-hidden="true">
       <div className="w-24 h-24 bg-slate-200 rounded-lg flex-shrink-0" />
-      <div className="flex-1">
-        <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
-        <div className="h-5 bg-slate-200 rounded w-1/3 mb-3" />
-        <div className="flex items-center justify-between">
-          <div className="h-8 bg-slate-200 rounded-full w-28" />
+      <div className="flex-1 space-y-3">
+        <div className="h-4 bg-slate-200 rounded w-3/4" />
+        <div className="h-4 bg-slate-200 rounded w-full" />
+        <div className="h-5 bg-slate-200 rounded w-1/3" />
+        <div className="flex items-center justify-between pt-2">
+          <div className="h-9 bg-slate-200 rounded-full w-28" />
           <div className="h-8 bg-slate-200 rounded-full w-10" />
         </div>
       </div>
@@ -189,13 +217,12 @@ const CartSkeleton: FC = () => {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-6">
         {row(1)}
         {row(2)}
-        {row(3)}
       </div>
 
-      <div className="mt-6 border-t pt-6">
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t bg-slate-50">
         <div className="flex items-center justify-between mb-4">
           <div className="h-5 bg-slate-200 rounded w-1/3 animate-pulse" />
           <div className="h-6 bg-slate-200 rounded w-1/4 animate-pulse" />
