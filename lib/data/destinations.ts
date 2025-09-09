@@ -282,7 +282,7 @@ export const destinations: Destination[] = [
     name: 'Stockholm',
     slug: 'stockholm',
     country: 'Sweden',
-    image: '/images/5.png',
+    image: '/stockholm.png',
     description: 'Experience the beauty of the Venice of the North with its stunning archipelago and royal heritage.',
     longDescription: 'Stockholm, the capital of Sweden, is built on 14 islands connected by over 50 bridges, earning it the nickname "Venice of the North." The city seamlessly blends medieval architecture with modern Scandinavian design, creating one of Europe\'s most beautiful capitals. Gamla Stan, the old town, features narrow cobblestone streets and colorful buildings dating back to the 13th century. Stockholm is surrounded by the stunning archipelago of 30,000 islands, skerries, and rocks, offering endless opportunities for island hopping and nature experiences. As the hometown of ABBA and the Nobel Prize, Stockholm has made significant contributions to music, literature, and science. The city is known for its commitment to sustainability, innovation, and quality of life.',
     featured: false,
