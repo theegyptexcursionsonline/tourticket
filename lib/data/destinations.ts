@@ -6,7 +6,7 @@ export const destinations: Destination[] = [
     name: 'Amsterdam',
     slug: 'amsterdam',
     country: 'Netherlands',
-    image: '/images/amsterdam.png',
+    image: '/Amsterdam.png',
     description: 'Discover the Venice of the North. Your next unforgettable adventure starts here, with our handpicked tours and activities.',
     longDescription: 'Amsterdam, the capital of the Netherlands, is a city of contrasts where historic charm meets modern innovation. Known for its artistic heritage, elaborate canal system, and narrow houses with gabled facades. The city is famous for its museums, including the Van Gogh Museum, Rijksmuseum, and Anne Frank House. With over 100 kilometers of canals, 1,500 bridges, and a bike-friendly culture, Amsterdam offers visitors a unique blend of history, art, and progressive thinking. From the bustling Dam Square to the quiet corners of the Jordaan district, every neighborhood tells a story.',
     featured: true,
