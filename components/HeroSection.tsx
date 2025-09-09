@@ -301,7 +301,7 @@ const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
 };
 
 // --- Background Slideshow Component (crossfade, 3 images) ---
-const BackgroundSlideshow = ({ images = ["/bg4.png", "/bg2.png", "/bg3.png"], interval = 5000, fadeDuration = 1000 }: { images?: string[]; interval?: number; fadeDuration?: number }) => {
+const BackgroundSlideshow = ({ images = ["/bg4.png", "/stockholm.png", "/bg3.png"], interval = 5000, fadeDuration = 1000 }: { images?: string[]; interval?: number; fadeDuration?: number }) => {
   const [index, setIndex] = useState(0);
   const count = images.length;
 
