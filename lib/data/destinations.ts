@@ -212,7 +212,7 @@ export const destinations: Destination[] = [
     name: 'Rotterdam',
     slug: 'rotterdam',
     country: 'Netherlands',
-    image: '/images/4.png',
+    image: '/Rotterdam.png',
     description: 'Discover the modern architectural marvel of the Netherlands and Europe\'s largest port city.',
     longDescription: 'Rotterdam is the Netherlands\' second-largest city and Europe\'s largest port, known for its bold modern architecture and innovative urban planning. Unlike most Dutch cities, Rotterdam was largely rebuilt after World War II, creating a unique skyline filled with cutting-edge buildings and experimental designs. The city is a living laboratory of architecture, featuring iconic structures like the Cube Houses, Erasmus Bridge, and the stunning Central Station. Rotterdam\'s maritime heritage is evident everywhere, from its massive port operations to its excellent Maritime Museum. The city has embraced modernity while maintaining its working-class roots, creating a vibrant cultural scene with world-class museums, festivals, and a thriving food culture.',
     featured: false,
