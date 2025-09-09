@@ -42,6 +42,14 @@ const paymentMethods = [
 // --- FOOTER COMPONENT ---
 // =================================================================
 export default function Footer() {
+  // Dispatch a custom event to open the chatbot (Chatbot listens for 'open-chatbot')
+  const openChatbot = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-chatbot'));
+    }
+  };
+
   return (
     <footer className="bg-[#E9ECEE] text-slate-700">
       <div className="container mx-auto px-4 py-8">
@@ -133,7 +141,14 @@ export default function Footer() {
                 </li>
                 <li className="flex gap-3 items-center">
                   <MessageSquare size={18} className="text-red-600 flex-shrink-0" />
-                  <a href="#" className="hover:underline">Chat with us</a>
+                  {/* This button opens the Chatbot via CustomEvent */}
+                  <button
+                    onClick={openChatbot}
+                    className="text-sm font-medium underline hover:text-red-600 transition-colors"
+                    aria-label="Open chat"
+                  >
+                    Chat with us
+                  </button>
                 </li>
               </ul>
             </div>

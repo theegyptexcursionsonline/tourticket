@@ -17,6 +17,7 @@ export default function Chatbot() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Function to scroll to the latest message
   const scrollToBottom = () => {
@@ -32,11 +33,33 @@ export default function Chatbot() {
     }
   }, [isOpen, messages.length]);
 
-  // Effect to scroll down when new messages are added
+  // Listen for external events (from Footer)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      // Optionally, you could read e.detail if you want to pass metadata
+      setIsOpen(true);
+
+      // focus input after animation/open
+      setTimeout(() => inputRef.current?.focus(), 120);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('open-chatbot', handler as EventListener);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('open-chatbot', handler as EventListener);
+      }
+    };
+  }, []);
+
+  // Effect to scroll down when new messages are added or typing changes
   useEffect(scrollToBottom, [messages, isTyping]);
 
   const toggleChat = () => {
-    setIsOpen(!isOpen);
+    setIsOpen(prev => !prev);
+    // focus when opening via toggle
+    if (!isOpen) setTimeout(() => inputRef.current?.focus(), 120);
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -108,9 +131,9 @@ export default function Chatbot() {
                   <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0"><User size={16} className="text-slate-600"/></div>
                   <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-slate-100 shadow-sm rounded-bl-none">
                     <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce delay-0"></span>
-                      <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce delay-150"></span>
-                      <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce delay-300"></span>
+                      <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></span>
+                      <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                     </div>
                   </div>
                 </div>
@@ -122,6 +145,7 @@ export default function Chatbot() {
             <div className="p-4 border-t border-slate-200">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -145,7 +169,7 @@ export default function Chatbot() {
         whileTap={{ scale: 0.9 }}
         aria-label={isOpen ? 'Close chat' : 'Open chat'}
       >
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
             {isOpen ? (
                 <motion.div key="close" initial={{opacity: 0, rotate: -90}} animate={{opacity: 1, rotate: 0}} exit={{opacity: 0, rotate: 90}}>
                     <X size={30} />
