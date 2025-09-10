@@ -164,7 +164,7 @@ export const tours: Tour[] = [
     bookings: 20568,
     originalPrice: 59,
     discountPrice: 37.50,
-    tags: ['Operated by Egypt Excursions Online', 'Staff favourite', '-35%'],
+    tags: ['Egypt Excursions Online', 'Staff favourite', '-35%'],
     description: 'Explore the beautiful Dutch countryside and visit traditional windmills on this full-day tour from Amsterdam.',
     longDescription: 'Escape the city and discover the authentic Dutch countryside on this comprehensive 6-hour tour. Visit historic windmills still in operation, learn about traditional Dutch crafts like cheese-making and clog-carving, and explore picturesque villages that showcase the Netherlands\' rich cultural heritage.',
     highlights: [
@@ -212,7 +212,7 @@ export const tours: Tour[] = [
     bookings: 8153,
     originalPrice: 66.50,
     discountPrice: 45,
-    tags: ['Operated by Egypt Excursions Online', 'Best deal', '-30%'],
+    tags: ['Egypt Excursions Online', 'Best deal', '-30%'],
     description: 'Visit the most charming villages near Amsterdam including Zaanse Schans, Marken, Edam, and Volendam.',
     longDescription: 'Experience the authentic Dutch countryside on this comprehensive day trip. Visit the famous windmills of Zaanse Schans, taste traditional cheese in Edam, explore the fishing village of Volendam, and discover the traditional wooden houses in Marken.',
     highlights: [
@@ -259,7 +259,7 @@ export const tours: Tour[] = [
     bookings: 10831,
     originalPrice: 89,
     discountPrice: 79,
-    tags: ['Operated by Egypt Excursions Online', 'Staff favourite', '-10%'],
+    tags: ['Egypt Excursions Online', 'Staff favourite', '-10%'],
     description: 'Discover the fairy-tale village of Giethoorn and the historic windmills of Zaanse Schans.',
     longDescription: 'Experience two of the Netherlands\' most picturesque destinations in one unforgettable day. Explore Giethoorn, known as the "Venice of the North," with its charming canals and traditional farmhouses, then visit the historic windmills of Zaanse Schans.',
     highlights: [
@@ -306,7 +306,7 @@ export const tours: Tour[] = [
     bookings: 3568,
     originalPrice: 89,
     discountPrice: 79,
-    tags: ['Operated by Egypt Excursions Online', 'Staff favourite', '-10%'],
+    tags: ['Egypt Excursions Online', 'Staff favourite', '-10%'],
     description: 'Explore three iconic Dutch cities in one day, including the miniature park Madurodam.',
     longDescription: 'Discover the contrasts of the Netherlands on this comprehensive three-city tour. Experience modern Rotterdam\'s architecture, historic Delft\'s pottery tradition, The Hague\'s political importance, and the charming miniature world of Madurodam.',
     highlights: [
@@ -352,7 +352,7 @@ export const tours: Tour[] = [
     rating: 4.7,
     bookings: 5179,
     discountPrice: 79,
-    tags: ['Operated by Egypt Excursions Online'],
+    tags: ['Egypt Excursions Online'],
     description: 'Step back in time with a visit to the medieval city of Bruges, Belgium.',
     longDescription: 'Journey to the enchanting medieval city of Bruges, often called the "Pearl of Belgium." Explore cobblestone streets, historic market squares, and sample famous Belgian chocolates in this UNESCO World Heritage city.',
     highlights: [
