@@ -17,7 +17,7 @@ const dayTrips: Tour[] = [
         originalPrice: 59, 
         discountPrice: 37.50, 
         image: '/images/6.png', 
-        tags: ['Operated by Egypt Excursions Online', 'Staff favourite', '-35%'],
+        tags: ['Egypt Excursions Online', 'Staff favourite', '-35%'],
         description: 'Explore the beautiful Dutch countryside and visit traditional windmills on this full-day tour from Amsterdam.',
         highlights: [
             'Visit authentic working windmills',
@@ -35,7 +35,7 @@ const dayTrips: Tour[] = [
         originalPrice: 66.50, 
         discountPrice: 45, 
         image: '/images/7.png', 
-        tags: ['Operated by Egypt Excursions Online', 'Best deal', '-30%'],
+        tags: ['Egypt Excursions Online', 'Best deal', '-30%'],
         description: 'Visit the most charming villages near Amsterdam including Zaanse Schans, Marken, Edam, and Volendam.',
         highlights: [
             'Traditional windmills at Zaanse Schans',
@@ -53,7 +53,7 @@ const dayTrips: Tour[] = [
         originalPrice: 89, 
         discountPrice: 79, 
         image: '/images/8.png', 
-        tags: ['Operated by Egypt Excursions Online', 'Staff favourite', '-10%'],
+        tags: ['Egypt Excursions Online', 'Staff favourite', '-10%'],
         description: 'Discover the fairy-tale village of Giethoorn and the historic windmills of Zaanse Schans.',
         highlights: [
             'Venice of the North - Giethoorn',
@@ -71,7 +71,7 @@ const dayTrips: Tour[] = [
         originalPrice: 89, 
         discountPrice: 79, 
         image: '/images/9.png', 
-        tags: ['Operated by Egypt Excursions Online', 'Staff favourite', '-10%'],
+        tags: ['Egypt Excursions Online', 'Staff favourite', '-10%'],
         description: 'Explore three iconic Dutch cities in one day, including the miniature park Madurodam.',
         highlights: [
             'Modern architecture in Rotterdam',
@@ -88,7 +88,7 @@ const dayTrips: Tour[] = [
         rating: 4.7, 
         discountPrice: 79, 
         image: '/images/10.png', 
-        tags: ['Operated by Egypt Excursions Online'],
+        tags: ['Egypt Excursions Online'],
         description: 'Step back in time with a visit to the medieval city of Bruges, Belgium.',
         highlights: [
             'Medieval architecture',
