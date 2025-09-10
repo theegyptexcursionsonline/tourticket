@@ -14,6 +14,34 @@ const faqData = [
     {
         question: 'What languages do the tour guides speak?',
         answer: 'Our live guided tours are most commonly offered in English and the local language. Many tours also offer audio guides in multiple languages, including Spanish, French, German, Italian, and more. The available languages are always listed on the product page.'
+    },
+    {
+        question: 'Is my booking confirmed instantly?',
+        answer: 'Yes, most of our bookings are confirmed instantly after a successful payment. You will receive a booking confirmation email with your tickets and all necessary information right away.'
+    },
+    {
+        question: 'Do I need to print my ticket?',
+        answer: 'No, you don\'t! All our tickets are mobile-friendly. You can simply show the e-ticket on your smartphone or tablet to the tour guide or at the entrance. This makes your experience smooth and hassle-free.'
+    },
+    {
+        question: 'What happens if my tour is canceled by the operator?',
+        answer: 'In the rare event that a tour is canceled by the operator due to unforeseen circumstances (e.g., bad weather), we will notify you immediately via email and provide a full refund or help you find a suitable alternative.'
+    },
+    {
+        question: 'Are there any hidden fees?',
+        answer: 'The price you see on the product page is the final price. It includes all taxes and fees unless otherwise stated. We believe in transparent pricing, so you won\'t be surprised by any extra charges at checkout.'
+    },
+    {
+        question: 'Can I pay with a different currency?',
+        answer: 'Yes, our website supports multiple currencies. You can change your preferred currency at the top of the page. The final payment will be processed in your chosen currency at the prevailing exchange rate.'
+    },
+    {
+        question: 'Are the tours accessible for people with disabilities?',
+        answer: 'Accessibility varies by tour. We provide detailed information about accessibility on each product page. If you have specific needs, we recommend contacting our support team before booking to ensure the tour is suitable for you.'
+    },
+    {
+        question: 'What should I bring on my tour?',
+        answer: 'The items you should bring depend on the tour. We generally recommend comfortable shoes, a water bottle, and weather-appropriate clothing. Specific recommendations are listed in the "What to bring" section on each product page.'
     }
 ];
 
@@ -21,13 +49,17 @@ const FaqItem = ({ item }: { item: typeof faqData[0] }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="border-b border-slate-200 py-6">
+        <div className="border-b border-slate-200 py-6 group">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex justify-between items-center text-left"
+                className="w-full flex justify-between items-center text-left hover:text-red-600 transition-colors"
             >
-                <h3 className="text-lg font-semibold text-slate-800">{item.question}</h3>
-                {isOpen ? <Minus className="w-6 h-6 text-red-500" /> : <Plus className="w-6 h-6 text-slate-500" />}
+                <h3 className="text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors">{item.question}</h3>
+                {isOpen ? (
+                    <Minus className="w-6 h-6 text-red-500 transition-transform duration-300 transform rotate-180" />
+                ) : (
+                    <Plus className="w-6 h-6 text-slate-500 transition-transform duration-300" />
+                )}
             </button>
             <div
                 className={`grid transition-all duration-500 ease-in-out ${
@@ -46,10 +78,10 @@ const FaqItem = ({ item }: { item: typeof faqData[0] }) => {
 
 export default function FAQ() {
     return (
-        <section className="bg-white py-16">
+        <section className="bg-white py-20 font-sans">
             <div className="container mx-auto px-4 max-w-4xl">
                 <div className="text-center mb-10">
-                    <h2 className="text-3xl font-extrabold text-slate-800">
+                    <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
                         FREQUENTLY ASKED QUESTIONS
                     </h2>
                 </div>
@@ -58,10 +90,10 @@ export default function FAQ() {
                         <FaqItem key={index} item={item} />
                     ))}
                 </div>
-                <div className="text-center mt-10">
-                    <button className="font-bold text-red-600 hover:text-red-700 transition-colors">
+                <div className="text-center mt-12">
+                    <a href="/faqs" className="inline-flex justify-center items-center h-14 px-10 text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out">
                         VIEW ALL
-                    </button>
+                    </a>
                 </div>
             </div>
         </section>

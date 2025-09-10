@@ -20,37 +20,45 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
+  // Load cart from localStorage on mount
   useEffect(() => {
     try {
-      const item = window.localStorage.getItem('shoppingCart');
-      if (item) {
-        setCartItems(JSON.parse(item));
+      const savedCart = window.localStorage.getItem('shoppingCart');
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+        setCartItems(parsedCart);
       }
     } catch (error) {
       console.error("Failed to load cart from localStorage", error);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
 
+  // Save cart to localStorage whenever cartItems changes
   useEffect(() => {
-    try {
-      window.localStorage.setItem('shoppingCart', JSON.stringify(cartItems));
-    } catch (error) {
-      console.error("Failed to save cart to localStorage", error);
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem('shoppingCart', JSON.stringify(cartItems));
+      } catch (error) {
+        console.error("Failed to save cart to localStorage", error);
+      }
     }
-  }, [cartItems]);
+  }, [cartItems, isLoaded]);
 
   const addToCart = (tour: Tour) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === tour.id);
       if (existingItem) {
         return prevItems.map(item =>
-          item.id === tour.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === tour.id ? { ...item, quantity: item.quantity + (tour.quantity || 1) } : item
         );
       }
-      return [...prevItems, { ...tour, quantity: 1 }];
+      return [...prevItems, { ...tour, quantity: tour.quantity || 1 }];
     });
-    openCart();
+    // Don't automatically open cart when adding from BookingSidebar
   };
 
   const removeFromCart = (itemId: number | string) => {

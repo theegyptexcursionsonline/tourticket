@@ -1,9 +1,12 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Inter, Almarai } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import CartSidebar from "@/components/CartSidebar";
+import Chatbot from "@/components/Chatbot";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -14,7 +17,8 @@ const almarai = Almarai({
 
 export const metadata: Metadata = {
   title: "Egypt Excursions Online - Unforgettable Experiences",
-  description: "Discover and book unforgettable activities, tours, and experiences across the globe. Your adventure starts here.",
+  description:
+    "Discover and book unforgettable activities, tours, and experiences across the globe. Your adventure starts here.",
 };
 
 export default function RootLayout({
@@ -24,15 +28,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head />
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
-        <SettingsProvider>
-          <CartProvider>
-            {children}
-            <CartSidebar />
-          </CartProvider>
-        </SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <CartProvider>
+              {children}
+              <CartSidebar />
+              <Chatbot />
+            </CartProvider>
+          </SettingsProvider>
+        </AuthProvider>
       </body>
     </html>
   );
 }
-

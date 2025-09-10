@@ -1,56 +1,64 @@
 'use client';
 
-import { Smile, Users, Bus, Ship, Moon, Camera } from 'lucide-react';
 import React from 'react';
+import { Smile, Users, Bus, Ship, Moon, Camera } from 'lucide-react';
+
+// --- Reusable Icons Component ---
+const icons = { Smile, Users, Bus, Ship, Moon, Camera };
 
 const interests = [
     {
         name: 'FUN',
         products: 212,
-        icon: Smile,
-        color: 'bg-red-500',
+        icon: 'Smile',
+        color: 'from-red-500 to-rose-600',
     },
     {
         name: 'FAMILY-FRIENDLY',
         products: 180,
-        icon: Users,
-        color: 'bg-blue-500',
+        icon: 'Users',
+        color: 'from-blue-500 to-indigo-600',
     },
     {
         name: 'BUS TOURS',
         products: 59,
-        icon: Bus,
-        color: 'bg-yellow-500',
+        icon: 'Bus',
+        color: 'from-yellow-500 to-orange-600',
     },
     {
         name: 'ON THE WATER',
         products: 66,
-        icon: Ship,
-        color: 'bg-cyan-500',
+        icon: 'Ship',
+        color: 'from-cyan-500 to-sky-600',
     },
     {
         name: 'NIGHTLIFE',
         products: 26,
-        icon: Moon,
-        color: 'bg-indigo-500',
+        icon: 'Moon',
+        color: 'from-indigo-500 to-purple-600',
     },
     {
         name: 'SELFIE MUSEUM',
         products: 40,
-        icon: Camera,
-        color: 'bg-pink-500',
+        icon: 'Camera',
+        color: 'from-pink-500 to-fuchsia-600',
     },
 ];
 
 const InterestCard = ({ interest }: { interest: typeof interests[0] }) => {
-    const Icon = interest.icon;
+    const IconComponent = icons[interest.icon as keyof typeof icons];
     return (
-        <a href="#" className="relative block bg-slate-800 rounded-lg overflow-hidden group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-            <div className={`absolute -bottom-8 -right-8 w-32 h-32 ${interest.color} rounded-full opacity-20 group-hover:opacity-30 transition-opacity duration-300`}></div>
-            <div className="p-6 text-white relative z-10">
-                <Icon className="w-12 h-12 mb-4 opacity-80" />
-                <h3 className="font-extrabold text-2xl">{interest.name}</h3>
-                <p className="text-sm opacity-70 mt-1">{interest.products} products</p>
+        <a 
+            href="#" 
+            className="relative block bg-slate-900 border-2 border-slate-800 transform transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-red-500 overflow-hidden group"
+        >
+            <div className={`absolute -bottom-10 -right-10 w-40 h-40 bg-gradient-to-tr ${interest.color} rounded-full opacity-20 group-hover:scale-125 transition-transform duration-500`}></div>
+            <div className="p-8 text-white relative z-10 flex flex-col justify-between h-48">
+                <IconComponent className="w-12 h-12 text-white group-hover:text-red-500 transition-colors duration-300 mb-4" />
+                <div>
+                    <h3 className="font-extrabold text-2xl tracking-tight leading-tight uppercase">{interest.name}</h3>
+                    <p className="text-sm text-slate-400 mt-2">{interest.products} products</p>
+                </div>
             </div>
         </a>
     );
@@ -58,12 +66,12 @@ const InterestCard = ({ interest }: { interest: typeof interests[0] }) => {
 
 export default function PopularInterests() {
     return (
-        <section className="bg-slate-50 py-16">
+        <section className="bg-slate-50 py-20 font-sans">
             <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-extrabold text-slate-800 text-center mb-10">
+                <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 text-center mb-12 tracking-tight">
                     Activities based on popular interests
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
                     {interests.map(interest => (
                         <InterestCard key={interest.name} interest={interest} />
                     ))}

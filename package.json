@@ -9,13 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.4.0",
+    "@auth0/nextjs-auth0": "^4.9.0",
+    "auth0": "^4.29.0",
+    "bcryptjs": "^3.0.2",
+    "cookie": "^1.0.2",
+    "currency.js": "^2.0.4",
     "firebase": "^11.10.0",
-    "framer-motion": "^12.23.3",
+    "framer-motion": "^12.23.12",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.542.0",
-    "mongodb": "^6.17.0",
+    "mongodb": "^6.19.0",
     "mongoose": "^8.16.3",
     "motion": "^12.23.3",
-    "next": "15.2.0",
+    "next": "^15.5.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "swiper": "^11.2.10"
@@ -23,6 +30,9 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/cookie": "^1.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",

@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart } from 'lucide-react';
-import BookingSidebar from '@/components/BookingSidebar';
+import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
+import BookingSidebar from '@/components/BookingSidebar';
 
 // --- Mock Data with Tour interface compatibility ---
 const dayTrips: Tour[] = [
     { 
         id: 'countryside-windmills-tour',
         title: 'Countryside & Windmills Tour from Amsterdam', 
+        slug: 'countryside-windmills-tour',
         duration: '6 hours', 
         bookings: 20568, 
         rating: 4.4, 
@@ -24,11 +26,14 @@ const dayTrips: Tour[] = [
             'Explore picturesque Dutch countryside',
             'Learn about traditional Dutch culture',
             'Professional tour guide included'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'zaanse-schans-day-trip',
         title: 'Zaanse Schans, Marken, Edam & Volendam Day Trip', 
+        slug: 'zaanse-schans-day-trip',
         duration: '7.5 hours', 
         bookings: 8153, 
         rating: 4.7, 
@@ -42,11 +47,14 @@ const dayTrips: Tour[] = [
             'Cheese tasting in Edam',
             'Fishing village of Volendam',
             'Traditional wooden houses in Marken'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'giethoorn-zaanse-schans-tour',
         title: 'Fairytale Giethoorn & Zaanse Schans Tour', 
+        slug: 'giethoorn-zaanse-schans-tour',
         duration: '9 hours', 
         bookings: 10831, 
         rating: 4.6, 
@@ -60,11 +68,14 @@ const dayTrips: Tour[] = [
             'Traditional windmills',
             'Canal boat ride',
             'Historic Dutch villages'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'rotterdam-delft-hague-tour',
         title: 'Rotterdam, Delft & The Hague incl. Madurodam', 
+        slug: 'rotterdam-delft-hague-tour',
         duration: '9 hours', 
         bookings: 3568, 
         rating: 4.9, 
@@ -78,11 +89,14 @@ const dayTrips: Tour[] = [
             'Historic Delft pottery',
             'Dutch government buildings in The Hague',
             'Madurodam miniature park'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
     { 
         id: 'bruges-day-trip',
         title: 'Full Day Trip to the Medieval City of Bruges', 
+        slug: 'bruges-day-trip',
         duration: '12 hours', 
         bookings: 5179, 
         rating: 4.7, 
@@ -95,7 +109,9 @@ const dayTrips: Tour[] = [
             'Famous Belgian chocolates',
             'Historic market square',
             'Canal boat ride through Bruges'
-        ]
+        ],
+        destinationId: 'amsterdam',
+        categoryIds: ['day-trips', 'cultural']
     },
 ];
 
@@ -103,44 +119,65 @@ const dayTrips: Tour[] = [
 const DayTripCard = ({ trip, onAddToCartClick }: { trip: Tour; onAddToCartClick: (trip: Tour) => void; }) => {
     const { formatPrice } = useSettings();
     
+    const getTagColor = (tag: string) => {
+        if (tag.includes('%')) return 'bg-red-600 text-white';
+        if (tag === 'Staff favourite') return 'bg-blue-600 text-white';
+        if (tag === 'Best deal') return 'bg-emerald-600 text-white';
+        return 'bg-gray-200 text-gray-800';
+    };
+
     return (
-        <div className="flex-shrink-0 w-[270px] bg-white rounded-xl shadow-lg overflow-hidden snap-start group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+        <a 
+            href={`/tour/${trip.slug}`}
+            className="flex-shrink-0 w-[270px] bg-white shadow-lg overflow-hidden snap-start transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group"
+        >
             <div className="relative">
-                <img src={trip.image} alt={trip.title} className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105" />
-                {trip.tags?.find(tag => tag.includes('%')) && (
-                    <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                        {trip.tags.find(tag => tag.includes('%'))}
+                <Image 
+                    src={trip.image} 
+                    alt={trip.title} 
+                    width={270}
+                    height={160}
+                    className="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
+                {trip.tags?.find(tag => tag.includes('%') || tag === 'Best deal') && (
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                        {trip.tags.filter(tag => tag.includes('%') || tag === 'Best deal').map(tag => (
+                            <span key={tag} className={`px-2.5 py-1 text-xs font-bold uppercase ${getTagColor(tag)}`}>
+                                {tag}
+                            </span>
+                        ))}
                     </div>
                 )}
-                <button className="absolute top-3 right-3 bg-white/80 p-2 rounded-full text-slate-600 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-white">
-                    <Heart size={20} />
-                </button>
                 <button 
-                    onClick={() => onAddToCartClick(trip)}
-                    className="absolute bottom-3 right-3 bg-red-600 text-white p-2.5 rounded-full shadow-lg transform translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-in-out hover:bg-red-700 hover:scale-110"
+                    onClick={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        onAddToCartClick(trip); 
+                    }}
+                    className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110"
                     aria-label="Add to cart"
                 >
-                    <ShoppingCart size={20} />
+                    <ShoppingCart size={22} />
                 </button>
             </div>
             <div className="p-4 flex flex-col h-[180px]">
-                <h3 className="font-bold text-base text-slate-800 transition-colors group-hover:text-red-600 line-clamp-2 flex-grow">{trip.title}</h3>
+                <h3 className="font-bold text-lg text-slate-900 transition-colors group-hover:text-red-600 line-clamp-2 flex-grow">{trip.title}</h3>
                 <p className="text-sm text-slate-500 mt-1">{trip.duration}</p>
                 <div className="flex items-center mt-2 text-sm">
                     <div className="flex items-center text-yellow-500">
-                        <Star size={16} fill="currentColor" />
+                        <Star size={18} fill="currentColor" />
                         <span className="font-bold text-slate-800 ml-1">{trip.rating}</span>
                     </div>
                     <span className="text-slate-500 ml-2">({trip.bookings?.toLocaleString()})</span>
                 </div>
                 <div className="flex items-baseline justify-end mt-auto pt-2">
                     {trip.originalPrice && (
-                        <span className="text-slate-500 line-through mr-2">{formatPrice(trip.originalPrice)}</span>
+                        <span className="text-slate-500 line-through mr-2 text-base">{formatPrice(trip.originalPrice)}</span>
                     )}
-                    <span className="font-extrabold text-2xl text-slate-900">{formatPrice(trip.discountPrice)}</span>
+                    <span className="font-extrabold text-2xl text-red-600">{formatPrice(trip.discountPrice)}</span>
                 </div>
             </div>
-        </div>
+        </a>
     );
 };
 
@@ -169,11 +206,11 @@ export default function DayTripsSection() {
     
     return (
         <>
-            <section className="bg-slate-50 py-20 font-sans">
-                <div className="container mx-auto">
-                    <div className="flex justify-between items-center mb-8 px-4">
+            <section className="bg-white py-20 font-sans">
+                <div className="container mx-auto px-4 md:px-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12">
                         <div className="max-w-2xl">
-                            <h2 className="text-4xl font-extrabold text-slate-800 tracking-tight">Best Deals on Tours from Amsterdam</h2>
+                            <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">Best Deals on Tours from Amsterdam</h2>
                             <p className="mt-2 text-lg text-slate-600">Explore beyond the city with these top-rated day trips, all with exclusive online discounts.</p>
                         </div>
                         <div className="hidden md:flex gap-3">
@@ -191,14 +228,16 @@ export default function DayTripsSection() {
                         <div className="flex-shrink-0 w-1"></div> {/* Right padding */}
                     </div>
                     <div className="text-center mt-12">
-                        <button className="bg-red-600 text-white font-bold py-3.5 px-10 rounded-full text-base hover:bg-red-700 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg">
-                            SEE ALL DAY TRIPS FROM AMSTERDAM
-                        </button>
+                        <a 
+                            href="/destinations/amsterdam"
+                            className="inline-flex justify-center items-center h-14 px-10 text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out shadow-lg"
+                        >
+                            <span>SEE ALL DAY TRIPS FROM AMSTERDAM</span>
+                        </a>
                     </div>
                 </div>
             </section>
             
-            {/* Use the proper BookingSidebar component */}
             <BookingSidebar 
                 isOpen={isBookingSidebarOpen} 
                 onClose={closeSidebar} 
