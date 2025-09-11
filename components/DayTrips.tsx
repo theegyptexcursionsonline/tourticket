@@ -15,6 +15,7 @@ const dayTrips: Tour[] = [
         bookings: 20568, 
         rating: 4.4, 
         originalPrice: 59, 
+        
         discountPrice: 37.50, 
         image: '/images/6.png', 
         tags: ['Egypt Excursions Online', 'Staff favourite', '-35%'],
