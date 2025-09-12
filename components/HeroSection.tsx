@@ -304,7 +304,7 @@ const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
 // --- Background Slideshow Component (FIXED) ---
 const BackgroundSlideshow = ({ 
     // FIXED: Updated default images to remove confusion.
-    images = ["/bg.png", "/bg.png", "/bg.png"], 
+    images = ["/bg4.png", "/copenhagen.png", "/stockholm.png"], 
     interval = 5000, 
     fadeDuration = 1000 
 }: { 
@@ -369,7 +369,7 @@ export default function HeroSection() {
     <>
       <section className="relative h-screen min-h-[650px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
         {/* The component now correctly receives the new image paths */}
-        <BackgroundSlideshow images={["/bg.png", "/bg.png", "/stockholm.png"]} interval={5000} fadeDuration={1000} />
+        <BackgroundSlideshow images={["/bg4.png", "/copenhagen.png", "/stockholm.png"]} interval={5000} fadeDuration={1000} />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
           <div className="max-w-xl">
