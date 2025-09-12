@@ -9,7 +9,7 @@ export default function IcebarPromo() {
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/images/iceberg.png"
+          src="/iceberg.png"
           alt="A vibrant, blue-lit bar interior suggesting an ice theme"
           className="w-full h-full object-cover opacity-30"
         />
