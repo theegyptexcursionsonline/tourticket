@@ -1,16 +1,20 @@
 'use client';
 
-import { FC, useState, useEffect, useRef } from 'react';
+import { FC, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar as CalendarIcon, Users } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 interface BookingStep1Props {
-    bookingData: any;
-    setBookingData: (data: any) => void;
+  bookingData: {
+    selectedDate: Date;
+    selectedTime: string;
+    guests?: number;
+    [k: string]: any;
+  };
+  setBookingData: (updater: (prev: any) => any) => void;
 }
 
-// --- HELPER HOOK: useOnClickOutside ---
-function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
+function useOnClickOutside<T extends HTMLElement>(ref: React.RefObject<T>, handler: (e: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
       if (!ref.current || ref.current.contains(event.target as Node)) return;
@@ -25,181 +29,222 @@ function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: M
   }, [ref, handler]);
 }
 
-
-// --- HELPER COMPONENT: CalendarPopup ---
 const CalendarPopup: FC<{
+  anchorRef: React.RefObject<HTMLElement>;
   selectedDate: Date;
   selectedTime: string;
   onDateSelect: (date: Date) => void;
   onTimeSelect: (time: string) => void;
   onClose: () => void;
-}> = ({ selectedDate, selectedTime, onDateSelect, onTimeSelect, onClose }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth()));
-  const calendarRef = useRef<HTMLDivElement>(null);
-  useOnClickOutside(calendarRef, onClose);
+}> = ({ anchorRef, selectedDate, selectedTime, onDateSelect, onTimeSelect, onClose }) => {
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  useOnClickOutside(popupRef, onClose);
 
+  // Build month grid (simple implementation)
+  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+
   const startDate = new Date(startOfMonth);
-  startDate.setDate(startDate.getDate() - startDate.getDay());
+  startDate.setDate(startDate.getDate() - startDate.getDay()); // go to Sunday start
   const endDate = new Date(endOfMonth);
-  endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+  endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // to Saturday end
 
   const dates: Date[] = [];
-  let currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    dates.push(new Date(currentDate));
-    currentDate.setDate(currentDate.getDate() + 1);
+  const d = new Date(startDate);
+  while (d <= endDate) {
+    dates.push(new Date(d));
+    d.setDate(d.getDate() + 1);
   }
 
-  const isSameDay = (d1: Date, d2: Date) =>
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate();
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-  const timeSlots = ['17:45', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'];
-
-  const goToPreviousMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
-  };
+  const timeSlots = ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00', '19:30'];
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black bg-opacity-30 z-50" onClick={onClose} />
-      <div ref={calendarRef} className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-lg shadow-2xl border w-[90vw] max-w-[600px] max-h-[90vh] overflow-hidden">
-        <div className="p-6 flex flex-col h-full">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-gray-800">Select Date & Time</h3>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <X size={20} className="text-gray-500" />
-            </button>
-          </div>
+    <motion.div
+      ref={popupRef}
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.14 }}
+      className="fixed inset-0 z-50 flex items-start justify-center sm:items-center"
+      aria-modal="true"
+      role="dialog"
+    >
+      {/* backdrop */}
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
-          <div className="flex gap-6 flex-1 overflow-hidden">
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-4">
-                <button onClick={goToPreviousMonth} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                  <span className="text-lg font-bold text-gray-600">‹</span>
+      <div className="relative bg-white shadow-2xl rounded-lg max-w-[900px] w-[92vw] max-h-[86vh] overflow-hidden z-50">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <h3 className="text-lg font-semibold">Select Date & Time</h3>
+          <button onClick={onClose} className="p-2 rounded hover:bg-slate-100">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 p-5">
+          {/* Calendar */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                  aria-label="Previous month"
+                  className="p-2 rounded hover:bg-slate-100"
+                >
+                  ‹
                 </button>
-                <div className="font-bold text-lg text-gray-800">
-                  {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                <div className="font-semibold">
+                  {currentMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
                 </div>
-                <button onClick={goToNextMonth} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                  <span className="text-lg font-bold text-gray-600">›</span>
+                <button
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                  aria-label="Next month"
+                  className="p-2 rounded hover:bg-slate-100"
+                >
+                  ›
                 </button>
               </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center text-sm mb-2">
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                  <div key={day} className="font-semibold text-gray-500 p-2">{day}</div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                {dates.map((date, i) => {
-                  const isSelected = isSameDay(date, selectedDate);
-                  const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                  const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
-
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => !isPast && onDateSelect(date)}
-                      disabled={isPast}
-                      className={`p-3 rounded-full transition-colors ${
-                        isSelected
-                          ? 'bg-red-500 text-white'
-                          : !isCurrentMonth
-                          ? 'text-gray-300'
-                          : isPast
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'hover:bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {date.getDate()}
-                    </button>
-                  );
-                })}
-              </div>
+              <div className="text-sm text-slate-500">Selected: <span className="font-medium">{selectedDate.toLocaleDateString('en-GB')}</span></div>
             </div>
 
-            <div className="w-px bg-gray-200"></div>
-            <div className="flex-1">
-              <h4 className="font-bold mb-4 text-gray-800">Pick a timeslot</h4>
-              <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                {timeSlots.map(time => (
+            <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500 mb-2">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+                <div key={d} className="font-semibold py-2">{d}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {dates.map((dt, idx) => {
+                const disabled = dt < new Date(new Date().setHours(0, 0, 0, 0));
+                const inMonth = dt.getMonth() === currentMonth.getMonth();
+                const selected = isSameDay(dt, selectedDate);
+
+                return (
                   <button
-                    key={time}
-                    onClick={() => onTimeSelect(time)}
-                    className={`w-full text-left p-3 hover:bg-gray-50 rounded-lg transition-colors border ${selectedTime === time ? 'border-red-500' : 'border-gray-200 hover:border-red-300'} flex justify-between items-center`}
+                    key={idx}
+                    onClick={() => !disabled && onDateSelect(new Date(dt))}
+                    disabled={disabled}
+                    className={`p-2 rounded-full transition-colors ${
+                      selected ? 'bg-red-500 text-white' : !inMonth ? 'text-slate-300' : disabled ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-slate-100 text-slate-700'
+                    }`}
+                    aria-pressed={selected}
+                    aria-disabled={disabled}
                   >
-                    <span className="font-medium text-gray-800">{time}</span>
-                    <div className="flex items-center text-gray-500 text-sm">
-                      <Users size={14} className="mr-1"/>
-                      {Math.floor(Math.random() * 100)}
-                    </div>
+                    {dt.getDate()}
                   </button>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Timeslots */}
+          <div className="w-full sm:w-80 border-l sm:border-l-1 pl-0 sm:pl-4">
+            <h4 className="font-semibold mb-3">Available times</h4>
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+              {timeSlots.map((t) => {
+                const active = t === selectedTime;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => onTimeSelect(t)}
+                    className={`w-full text-left p-3 rounded-lg flex justify-between items-center border transition ${
+                      active ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-red-300'
+                    }`}
+                    aria-pressed={active}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Clock size={16} />
+                      <span className="font-medium">{t}</span>
+                    </div>
+                    <div className="text-sm text-slate-500">Availability</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
-    </>
+    </motion.div>
   );
 };
 
-
 const BookingStep1: FC<BookingStep1Props> = ({ bookingData, setBookingData }) => {
-    const [showCalendar, setShowCalendar] = useState(false);
+  const [openCalendar, setOpenCalendar] = useState(false);
+  const inputRef = useRef<HTMLButtonElement | null>(null);
 
-    const handleDateSelect = (date: Date) => {
-        setBookingData(prev => ({ ...prev, selectedDate: date }));
+  const handleDateSelect = (date: Date) => {
+    setBookingData((prev: any) => ({ ...prev, selectedDate: date }));
+  };
+  const handleTimeSelect = (time: string) => {
+    setBookingData((prev: any) => ({ ...prev, selectedTime: time }));
+    setOpenCalendar(false);
+  };
+
+  useEffect(() => {
+    // close calendar on Escape
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenCalendar(false);
     };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
-    const handleTimeSelect = (time: string) => {
-        setBookingData(prev => ({ ...prev, selectedTime: time }));
-        setShowCalendar(false);
-    };
+  return (
+    <div>
+      <h2 className="text-3xl font-extrabold text-slate-800 mb-6">Select Date & Time</h2>
 
-    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <h2 className="text-3xl font-extrabold text-slate-800 mb-6">Select Date & Time</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="font-semibold text-slate-700">Date</label>
-                    <button onClick={() => setShowCalendar(true)} className="w-full mt-1 p-3 border-2 border-slate-200 rounded-lg text-left flex justify-between items-center bg-white hover:border-slate-300">
-                        <span className="text-slate-700">{bookingData.selectedDate.toLocaleDateString('en-GB')}</span>
-                        <CalendarIcon className="w-5 h-5 text-slate-400"/>
-                    </button>
-                </div>
-                <div>
-                    <label className="font-semibold text-slate-700">Time <span className="text-yellow-400">*</span></label>
-                    <button onClick={() => setShowCalendar(true)} className={`w-full mt-1 p-3 border-2 rounded-lg text-left transition-colors ${bookingData.selectedTime ? 'border-slate-200 text-slate-700' : 'border-slate-200 text-slate-400'}`}>
-                        <span>{bookingData.selectedTime || 'Pick a time'}</span>
-                    </button>
-                </div>
-            </div>
-
-            <AnimatePresence>
-                {showCalendar && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        <CalendarPopup
-                            selectedDate={bookingData.selectedDate}
-                            selectedTime={bookingData.selectedTime}
-                            onDateSelect={handleDateSelect}
-                            onTimeSelect={handleTimeSelect}
-                            onClose={() => setShowCalendar(false)}
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Date</label>
+          <div>
+            <button
+              ref={inputRef}
+              onClick={() => setOpenCalendar(true)}
+              className="w-full mt-1 p-3 border-2 border-slate-200 rounded-lg text-left flex justify-between items-center bg-white hover:border-slate-300"
+              aria-haspopup="dialog"
+              aria-expanded={openCalendar}
+            >
+              <span className="text-slate-700">{bookingData.selectedDate.toLocaleDateString('en-GB')}</span>
+              <CalendarIcon className="w-5 h-5 text-slate-400" />
+            </button>
+          </div>
         </div>
-    );
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Time <span className="text-amber-400">*</span></label>
+          <div>
+            <button
+              onClick={() => setOpenCalendar(true)}
+              className={`w-full mt-1 p-3 border-2 rounded-lg text-left transition ${bookingData.selectedTime ? 'border-slate-200 text-slate-700' : 'border-slate-200 text-slate-400'}`}
+              aria-haspopup="dialog"
+            >
+              <span>{bookingData.selectedTime || 'Pick a time'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 text-sm text-slate-500">
+        <p>Please select a suitable date and time. Times are shown in local timezone.</p>
+      </div>
+
+      <AnimatePresence>
+        {openCalendar && (
+          <CalendarPopup
+            anchorRef={inputRef}
+            selectedDate={bookingData.selectedDate}
+            selectedTime={bookingData.selectedTime}
+            onDateSelect={handleDateSelect}
+            onTimeSelect={handleTimeSelect}
+            onClose={() => setOpenCalendar(false)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 export default BookingStep1;

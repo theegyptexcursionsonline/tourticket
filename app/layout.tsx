@@ -6,7 +6,6 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import CartSidebar from "@/components/CartSidebar";
-import Chatbot from "@/components/Chatbot";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -35,7 +34,6 @@ export default function RootLayout({
             <CartProvider>
               {children}
               <CartSidebar />
-              <Chatbot />
             </CartProvider>
           </SettingsProvider>
         </AuthProvider>
