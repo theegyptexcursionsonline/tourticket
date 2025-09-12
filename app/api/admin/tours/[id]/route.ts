@@ -1,3 +1,4 @@
+// app/api/admin/tours/[id]/route.ts
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextResponse } from 'next/server';
@@ -25,6 +26,16 @@ export async function PUT(request: Request, { params }: { params: Params }) {
   await dbConnect();
   try {
     const body = await request.json();
+
+    // **FIX: Sanitize the slug before updating**
+    if (body.slug) {
+      body.slug = body.slug
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+    }
+
     const tour = await Tour.findByIdAndUpdate(params.id, body, {
       new: true,
       runValidators: true,

@@ -1,10 +1,12 @@
 // app/admin/layout.tsx
+'use client'; // Required because withAuth is a client-side HOC
 
 import React from 'react';
 import AdminSidebar from '@/components/admin/Sidebar';
 import AdminHeader from '@/components/admin/Header';
+import withAuth from '@/components/admin/withAuth'; // Import the HOC
 
-export default function AdminLayout({
+function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -23,3 +25,6 @@ export default function AdminLayout({
     </div>
   );
 }
+
+// Wrap the layout component with the withAuth HOC before exporting
+export default withAuth(AdminLayout);

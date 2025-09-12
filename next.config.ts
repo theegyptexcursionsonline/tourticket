@@ -14,6 +14,14 @@ const nextConfig = {
 
   images: {
     remotePatterns: [
+      // Cloudinary (your cloud)
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        // scope only to your cloud + allow any path under it
+        pathname: '/dm3sxllch/**',
+      },
+
       // Wikimedia (example)
       {
         protocol: 'https',

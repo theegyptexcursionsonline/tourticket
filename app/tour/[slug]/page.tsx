@@ -1,7 +1,6 @@
 // app/tour/[slug]/page.tsx
 'use client';
 
-// FIX 1: Import the 'use' hook from React
 import { useEffect, useState, use } from 'react';
 import {
   ArrowLeft,
@@ -40,92 +39,90 @@ const reviewsData = [
 
 // Skeleton Component for the loading state
 const TourPageSkeleton = () => (
-  <>
-    <Header startSolid={true} />
-    <main className="bg-white pt-20 animate-pulse">
-      <div className="bg-slate-50 py-4">
-        <div className="container mx-auto px-4">
-          <div className="h-5 w-1/2 rounded bg-slate-200"></div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="h-6 w-36 mb-6 rounded bg-slate-200"></div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <div className="h-6 w-24 rounded-full bg-slate-200"></div>
-                <div className="h-6 w-32 rounded-full bg-slate-200"></div>
-              </div>
-              <div className="w-full h-[420px] md:h-[500px] rounded-xl bg-slate-200 mb-6"></div>
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex-1 pr-6 space-y-3">
-                  <div className="h-10 w-3/4 rounded bg-slate-200"></div>
-                  <div className="h-6 w-full rounded bg-slate-200"></div>
-                </div>
-                <div className="text-right flex-shrink-0 space-y-2">
-                  <div className="h-5 w-20 ml-auto rounded bg-slate-200"></div>
-                  <div className="h-10 w-28 rounded bg-slate-200"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-              <div className="h-8 w-1/2 rounded bg-slate-200"></div>
-              <div className="h-4 w-full rounded bg-slate-200"></div>
-              <div className="h-4 w-full rounded bg-slate-200"></div>
-              <div className="h-4 w-5/6 rounded bg-slate-200"></div>
-            </div>
-          </div>
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-                <div className="h-10 w-1/2 mx-auto mb-2 rounded bg-slate-200"></div>
-                <div className="h-4 w-1/4 mx-auto mb-6 rounded bg-slate-200"></div>
-                <div className="space-y-3 mb-6">
-                  <div className="h-5 w-3/4 rounded bg-slate-200"></div>
-                  <div className="h-5 w-full rounded bg-slate-200"></div>
-                  <div className="h-5 w-2/3 rounded bg-slate-200"></div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-14 w-full rounded-full bg-slate-200"></div>
-                  <div className="h-12 w-full rounded-full bg-slate-100"></div>
-                </div>
-              </div>
-            </div>
+    <>
+      <Header startSolid={true} />
+      <main className="bg-white pt-20 animate-pulse">
+        <div className="bg-slate-50 py-4">
+          <div className="container mx-auto px-4">
+            <div className="h-5 w-1/2 rounded bg-slate-200"></div>
           </div>
         </div>
-      </div>
-    </main>
-    <Footer />
-  </>
-);
+  
+        <div className="container mx-auto px-4 py-8">
+          <div className="h-6 w-36 mb-6 rounded bg-slate-200"></div>
+  
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              <div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="h-6 w-24 rounded-full bg-slate-200"></div>
+                  <div className="h-6 w-32 rounded-full bg-slate-200"></div>
+                </div>
+                <div className="w-full h-[420px] md:h-[500px] rounded-xl bg-slate-200 mb-6"></div>
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex-1 pr-6 space-y-3">
+                    <div className="h-10 w-3/4 rounded bg-slate-200"></div>
+                    <div className="h-6 w-full rounded bg-slate-200"></div>
+                  </div>
+                  <div className="text-right flex-shrink-0 space-y-2">
+                    <div className="h-5 w-20 ml-auto rounded bg-slate-200"></div>
+                    <div className="h-10 w-28 rounded bg-slate-200"></div>
+                  </div>
+                </div>
+              </div>
+  
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div className="h-8 w-1/2 rounded bg-slate-200"></div>
+                <div className="h-4 w-full rounded bg-slate-200"></div>
+                <div className="h-4 w-full rounded bg-slate-200"></div>
+                <div className="h-4 w-5/6 rounded bg-slate-200"></div>
+              </div>
+            </div>
+            <div className="lg:col-span-1">
+              <div className="sticky top-24 space-y-6">
+                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+                  <div className="h-10 w-1/2 mx-auto mb-2 rounded bg-slate-200"></div>
+                  <div className="h-4 w-1/4 mx-auto mb-6 rounded bg-slate-200"></div>
+                  <div className="space-y-3 mb-6">
+                    <div className="h-5 w-3/4 rounded bg-slate-200"></div>
+                    <div className="h-5 w-full rounded bg-slate-200"></div>
+                    <div className="h-5 w-2/3 rounded bg-slate-200"></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="h-14 w-full rounded-full bg-slate-200"></div>
+                    <div className="h-12 w-full rounded-full bg-slate-100"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
 
-// FIX 2: Rename the destructured 'params' prop and use the hook to unwrap it.
 export default function TourPage({ params: paramsPromise }: TourPageProps) {
-  // By unwrapping the promise here, the rest of the component can use 'params' as a regular object.
-  const params = use(paramsPromise);
-
-  const [tour, setTour] = useState<Tour | null>(null);
-  const [relatedTours, setRelatedTours] = useState<Tour[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { formatPrice } = useSettings();
-  const { addToCart } = useCart();
-  const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [added, setAdded] = useState(false);
-  const [liveMessage, setLiveMessage] = useState('');
+    const params = use(paramsPromise);
+    const [tour, setTour] = useState<Tour | null>(null);
+    const [relatedTours, setRelatedTours] = useState<Tour[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { formatPrice } = useSettings();
+    const { addToCart } = useCart();
+    const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [isWishlisted, setIsWishlisted] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
+    const [added, setAdded] = useState(false);
+    const [liveMessage, setLiveMessage] = useState('');
 
   useEffect(() => {
     const fetchTourAndRelated = async () => {
       setIsLoading(true);
+      const sanitizedSlug = params.slug.split(':')[0];
+
       try {
-        // Fetch a single tour by its slug
-        const tourResponse = await fetch(`/api/admin/tours/search?slug=${params.slug}`);
+        const tourResponse = await fetch(`/api/admin/tours/search?slug=${sanitizedSlug}`);
         const tourData = await tourResponse.json();
 
         if (tourData.success && tourData.data.length > 0) {
@@ -133,13 +130,12 @@ export default function TourPage({ params: paramsPromise }: TourPageProps) {
           setTour(fetchedTour);
           setSelectedImageIndex(0);
 
-          // Fetch related tours from the database
           const relatedResponse = await fetch(`/api/admin/tours`);
           const allTours = await relatedResponse.json();
 
           if (allTours.success) {
             const related = allTours.data.filter((t: any) =>
-              t.destination && fetchedTour.destination && t.destination._id === fetchedTour.destination._id && t.slug !== params.slug
+              t.destination && fetchedTour.destination && t.destination._id === fetchedTour.destination._id && t.slug !== sanitizedSlug
             ).slice(0, 3);
             setRelatedTours(related);
           }
@@ -154,11 +150,9 @@ export default function TourPage({ params: paramsPromise }: TourPageProps) {
       }
     };
 
-    // Ensure params.slug exists before fetching
     if (params.slug) {
         fetchTourAndRelated();
     }
-  // The dependency array now correctly uses the unwrapped params.slug, fixing the error.
   }, [params.slug]);
 
   if (isLoading) {
@@ -489,7 +483,8 @@ export default function TourPage({ params: paramsPromise }: TourPageProps) {
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
-                      <Link key={relatedTour.id} href={`/tour/${relatedTour.slug}`} className="group">
+                      // **FIX: Changed key from relatedTour.id to relatedTour._id**
+                      <Link key={relatedTour._id} href={`/tour/${relatedTour.slug}`} className="group">
                         <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                           <div className="relative">
                             <Image

@@ -60,11 +60,11 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     
     toast.promise(promise, {
       loading: 'Uploading image...',
-      success: (message) => message,
+      success: (message) => message as string,
       error: 'Upload failed. Please try again.',
+    }).finally(() => {
+        setIsUploading(false)
     });
-    
-    setIsUploading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +75,11 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     }
     setIsSubmitting(true);
 
-    const apiEndpoint = editingDestination ? `/api/admin/destinations/${editingDestination._id}` : '/api/admin/destinations';
+    // **FIX: Corrected the API endpoint to include '/tours'**
+    const apiEndpoint = editingDestination 
+      ? `/api/admin/tours/destinations/${editingDestination._id}` 
+      : '/api/admin/tours/destinations';
+      
     const method = editingDestination ? 'PUT' : 'POST';
 
     const promise = fetch(apiEndpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)})
@@ -92,13 +96,13 @@ export default function DestinationManager({ initialDestinations }: { initialDes
         return `Destination saved successfully!`;
       },
       error: 'Failed to save destination.',
+    }).finally(() => {
+        setIsSubmitting(false)
     });
-
-    setIsSubmitting(false);
   };
 
   const handleDelete = (destId: string, destName: string) => {
-    const promise = fetch(`/api/admin/destinations/${destId}`, { method: 'DELETE' })
+    const promise = fetch(`/api/admin/tours/destinations/${destId}`, { method: 'DELETE' }) // **FIX: Corrected API endpoint**
       .then(res => {
         if (!res.ok) throw new Error('Failed to delete.');
         return res.json();

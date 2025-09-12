@@ -16,10 +16,20 @@ export default function Destinations() {
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
-        const response = await fetch('/api/admin/destinations');
+        // **FIX: Corrected the API endpoint URL**
+        const response = await fetch('/api/admin/tours/destinations');
+        
+        // Add a check to ensure the response is successful before parsing
+        if (!response.ok) {
+            throw new Error(`Failed to fetch destinations: ${response.statusText}`);
+        }
+
         const data = await response.json();
         if (data.success) {
           setDestinations(data.data);
+        } else {
+          // If the API returns success: false, log that error
+          console.error('API returned an error:', data.error);
         }
       } catch (error) {
         console.error('Failed to fetch destinations:', error);
@@ -32,14 +42,11 @@ export default function Destinations() {
   }, []);
 
   const handleDestinationClick = (destinationSlug: string, destinationName: string) => {
-    const destination = destinations.find(d => d.slug === destinationSlug);
-    
-    if (destination) {
-      window.location.href = `/destinations/${destinationSlug}`;
-    } else {
-      setSelectedDestination(destinationName);
-      setModalOpen(true);
-    }
+    // This logic seems designed to show a "coming soon" modal for destinations
+    // that exist in the UI but may not have a dedicated page yet.
+    // For now, we'll assume all fetched destinations are valid and link directly.
+    // You can re-add your original logic if needed.
+    router.push(`/destinations/${destinationSlug}`);
   };
 
   if (isLoading) {
@@ -70,10 +77,10 @@ export default function Destinations() {
           </h2>
           <div className="flex justify-center gap-8 flex-wrap">
             {destinations.map((destination) => (
-              <div
+              <Link
                 key={destination._id}
-                className="text-center group cursor-pointer"
-                onClick={() => handleDestinationClick(destination.slug, destination.name)}
+                href={`/destinations/${destination.slug}`}
+                className="text-center group"
               >
                 <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl">
                   <Image
@@ -89,7 +96,7 @@ export default function Destinations() {
                   {destination.name}
                 </h3>
                 <p className="text-sm text-slate-500">{destination.tourCount} tours</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

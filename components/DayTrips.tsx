@@ -69,11 +69,18 @@ export default function DayTripsSection() {
             setIsLoading(true);
             try {
                 const response = await fetch('/api/admin/tours');
+                if (!response.ok) {
+                    throw new Error(`API call failed: ${response.statusText}`);
+                }
                 const data = await response.json();
                 if (data.success) {
-                    // Filter for tours that are day trips or have relevant tags
-                    const dayTrips = data.data.filter((t: Tour) => t.categoryIds.includes('day-trips'));
+                    // **FIX: Correctly filter tours based on the category slug**
+                    const dayTrips = data.data.filter((t: Tour) =>
+                        t.categories && t.categories.some((cat: any) => cat.slug === 'day-trips')
+                    );
                     setTours(dayTrips);
+                } else {
+                    console.error('API returned an error:', data.error);
                 }
             } catch (error) {
                 console.error('Failed to fetch tours:', error);
@@ -113,8 +120,8 @@ export default function DayTripsSection() {
                             <div className="h-10 w-10 bg-slate-200 rounded-full" />
                         </div>
                     </div>
-                    <div className="flex gap-6 overflow-hidden">
-                        {[...Array(3)].map((_, i) => (
+                    <div className="flex gap-6 overflow-hidden px-4">
+                        {[...Array(4)].map((_, i) => (
                             <div key={i} className="flex-shrink-0 w-[270px] h-[360px] bg-slate-200 rounded-xl" />
                         ))}
                     </div>
@@ -124,6 +131,7 @@ export default function DayTripsSection() {
     }
     
     if (tours.length === 0) {
+        // This will render nothing if no day trips are found, which is intended.
         return null;
     }
 
@@ -145,10 +153,9 @@ export default function DayTripsSection() {
                             </button>
                         </div>
                     </div>
-                    <div ref={scrollContainer} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth" style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}>
-                        <div className="flex-shrink-0 w-1"></div>
-                        {tours.map(trip => <DayTripCard key={trip.id} trip={trip} onAddToCartClick={handleAddToCartClick} />)}
-                        <div className="flex-shrink-0 w-1"></div>
+                    <div ref={scrollContainer} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth px-4" style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}>
+                        {/* The empty divs for padding are not strictly necessary with container padding */}
+                        {tours.map(trip => <DayTripCard key={trip._id} trip={trip} onAddToCartClick={handleAddToCartClick} />)}
                     </div>
                     <div className="text-center mt-12">
                         <Link href="/search" className="bg-red-600 text-white font-bold py-3.5 px-10 rounded-full text-base hover:bg-red-700 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg">

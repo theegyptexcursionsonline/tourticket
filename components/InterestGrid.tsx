@@ -1,32 +1,17 @@
+// components/InterestGrid.tsx
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
 
-const allInterests = [
-  { name: "FUN", products: 212 },
-  { name: "FAMILY-FRIENDLY", products: 180 },
-  { name: "SIGHTSEEING", products: 123 },
-  { name: "HISTORICAL", products: 107 },
-  { name: "BUS TOURS", products: 59 },
-  { name: "ON THE WATER", products: 66 },
-  { name: "ROMANTIC", products: 24 },
-  { name: "INSTAGRAM MUSEUMS", products: 41 },
-  { name: "PARTY", products: 19 },
-  { name: "ART", products: 49 },
-  { name: "WITH FOOD", products: 23 },
-  { name: "NIGHTLIFE", products: 26 },
-  { name: "SELFIE MUSEUM", products: 40 },
-  { name: "WITH DRINKS", products: 36 },
-  { name: "PLANTS & FLOWERS", products: 24 },
-  { name: "CROSSING THE BORDER", products: 2 },
-  { name: "BIKE TOURS", products: 4 },
-  { name: "WALKING TOURS", products: 9 },
-  { name: "ANIMALS", products: 13 },
-];
+// The Interest type will now be inferred from the fetched data,
+// but we can define it for clarity.
+interface Interest {
+  name: string;
+  products: number;
+}
 
-type Interest = typeof allInterests[number];
-
+// --- ComingSoonModal (No changes needed, but included for completeness) ---
 function ComingSoonModal({
   isOpen,
   onClose,
@@ -39,25 +24,20 @@ function ComingSoonModal({
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
-  // Lock body scroll and save last focused element
   useEffect(() => {
     if (isOpen) {
       lastFocusedRef.current = document.activeElement as HTMLElement | null;
       document.body.style.overflow = "hidden";
-      // focus close button shortly after render
       setTimeout(() => closeBtnRef.current?.focus(), 50);
     } else {
       document.body.style.overflow = "";
-      // return focus to last focused element
       lastFocusedRef.current?.focus?.();
     }
-
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
 
-  // close on Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) onClose();
@@ -76,13 +56,10 @@ function ComingSoonModal({
       aria-modal="true"
       aria-label="Coming soon modal"
     >
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-
-      {/* Modal panel */}
       <div className="relative z-10 max-w-xl w-full mx-4">
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="flex items-start justify-between p-6 border-b">
@@ -95,7 +72,6 @@ function ComingSoonModal({
                 category ( {interest.products} products ) is launching soon.
               </p>
             </div>
-
             <div className="ml-4">
               <button
                 ref={closeBtnRef}
@@ -107,21 +83,17 @@ function ComingSoonModal({
               </button>
             </div>
           </div>
-
           <div className="p-6">
             <p className="text-slate-600 mb-6 leading-relaxed">
               We're polishing this experience to deliver the best possible
               tours and activities for the selected interest. Want to be
               notified when it launches?
             </p>
-
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 className="flex-1 inline-flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-full text-lg border-2 border-red-600 bg-red-600 text-white hover:opacity-95 transition"
-                // This is a demo / coming soon CTA — adjust to real behavior as needed
                 onClick={() => {
-                  // example action: show a tiny toast or just close modal for now
                   alert(`Thanks — we'll notify you when ${interest.name} is live.`);
                   onClose();
                 }}
@@ -129,7 +101,6 @@ function ComingSoonModal({
                 Notify Me
                 <ArrowRight className="w-4 h-4" />
               </button>
-
               <button
                 type="button"
                 onClick={onClose}
@@ -139,7 +110,6 @@ function ComingSoonModal({
               </button>
             </div>
           </div>
-
           <div className="px-6 py-4 bg-slate-50 text-xs text-slate-500">
             Tip: You can still browse other categories while we finish this one.
           </div>
@@ -149,6 +119,7 @@ function ComingSoonModal({
   );
 }
 
+// --- InterestCard (No changes needed) ---
 const InterestCard = ({
   interest,
   onClick,
@@ -170,9 +141,37 @@ const InterestCard = ({
   );
 };
 
+
+// --- InterestGrid Component (Updated to be dynamic) ---
 export default function InterestGrid() {
+  const [interests, setInterests] = useState<Interest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [openInterest, setOpenInterest] = useState<Interest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  useEffect(() => {
+    const fetchInterests = async () => {
+      try {
+        const response = await fetch('/api/interests');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        if (data.success) {
+          setInterests(data.data);
+        } else {
+          throw new Error(data.error || 'Failed to fetch interests');
+        }
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInterests();
+  }, []);
+
 
   function handleOpen(interest: Interest) {
     setOpenInterest(interest);
@@ -181,9 +180,39 @@ export default function InterestGrid() {
 
   function handleClose() {
     setIsModalOpen(false);
-    // keep interest value so modal content can be read until modal unmounts if needed
     setOpenInterest(null);
   }
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 animate-pulse">
+          {[...Array(18)].map((_, i) => (
+            <div key={i} className="bg-white p-5 rounded-lg shadow-lg">
+                <div className="h-6 w-3/4 bg-slate-200 rounded mb-2"></div>
+                <div className="h-4 w-1/2 bg-slate-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (error) {
+        return <p className="text-center text-red-500">Error: {error}</p>;
+    }
+    
+    if (interests.length === 0) {
+        return <p className="text-center text-slate-500">No interests found.</p>;
+    }
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        {interests.map((interest) => (
+          <InterestCard key={interest.name} interest={interest} onClick={handleOpen} />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <section className="bg-slate-50 py-20">
@@ -194,7 +223,6 @@ export default function InterestGrid() {
           </h2>
           <button
             onClick={() => {
-              // simple behavior for the top action — could scroll or open search
               window.scrollTo({ top: document.body.scrollHeight / 2, behavior: "smooth" });
             }}
             className="mt-6 inline-flex items-center gap-3 px-8 py-3 font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 group rounded-full"
@@ -204,12 +232,9 @@ export default function InterestGrid() {
             <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
           </button>
         </div>
+        
+        {renderContent()}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-          {allInterests.map((interest) => (
-            <InterestCard key={interest.name} interest={interest} onClick={handleOpen} />
-          ))}
-        </div>
       </div>
 
       <ComingSoonModal

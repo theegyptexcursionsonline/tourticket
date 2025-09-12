@@ -1,4 +1,4 @@
-// app/admin/tours/TourForm.tsx
+// components/TourForm.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -30,8 +30,8 @@ const FormLabel = ({ children }: { children: React.ReactNode }) => (
   <label className="block text-sm font-semibold text-slate-700 mb-1.5">{children}</label>
 );
 
-const SmallHint = ({ children }: { children: React.ReactNode }) => (
-  <p className="mt-1 text-xs text-slate-500">{children}</p>
+const SmallHint = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <p className={`mt-1 text-xs text-slate-500 ${className}`}>{children}</p>
 );
 
 const inputBase = "block w-full px-3 py-2 border border-slate-200 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed";
@@ -65,14 +65,22 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // **FIX: Corrected the fetch URL for categories**
         const [destRes, catRes] = await Promise.all([
-          fetch('/api/admin/destinations'),
-          fetch('/api/admin/categories')
+          fetch('/api/admin/tours/destinations'),
+          fetch('/api/categories') // Removed '/admin' from the path
         ]);
+
+        // Add checks to ensure responses are OK before parsing JSON
+        if (!destRes.ok) throw new Error(`Failed to fetch destinations: ${destRes.statusText}`);
+        if (!catRes.ok) throw new Error(`Failed to fetch categories: ${catRes.statusText}`);
+
         const destData = await destRes.json();
         const catData = await catRes.json();
+
         if (destData?.success) setDestinations(destData.data);
         if (catData?.success) setCategories(catData.data);
+
       } catch (err) {
         console.error(err);
         toast.error('Failed to load destinations or categories.');
@@ -190,7 +198,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     }
   };
 
-  // tag preview array
   const tagList = formData.tags
     ? formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
     : [];
@@ -198,7 +205,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
       <div className="space-y-6">
-        {/* Header row */}
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Tour Content</h3>
@@ -222,7 +228,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           </div>
         </div>
 
-        {/* Basic fields */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-4">
             <FormLabel>Title</FormLabel>
@@ -254,7 +259,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           </div>
         </div>
 
-        {/* Description */}
         <div className="space-y-2">
           <FormLabel>Short Description</FormLabel>
           <textarea
@@ -279,7 +283,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           />
         </div>
 
-        {/* Pricing and meta */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <FormLabel>Duration</FormLabel>
@@ -297,7 +300,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           </div>
         </div>
 
-        {/* Destination / Category / Tags */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <FormLabel>Destination</FormLabel>
@@ -315,7 +317,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             <div className="relative">
               <select name="categories" value={formData.categories[0] || ''} onChange={handleChange} className={`${inputBase} appearance-none pr-8`}>
                 <option value="">Select a Category</option>
-                {categories.map(c => <option key={c._id} value={c._1d}>{/* ensure no typo */}{c.name}</option>)}
+                {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
             </div>
@@ -330,8 +332,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
               </button>
             </div>
             <SmallHint>Tags help internal filtering and quick labels on the listing.</SmallHint>
-
-            {/* tag preview */}
             <div className="mt-2 flex flex-wrap gap-2">
               {tagList.map((t: string) => (
                 <span key={t} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-sm text-slate-700">
@@ -344,7 +344,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           </div>
         </div>
 
-        {/* Highlights / Includes */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormLabel>Highlights</FormLabel>
@@ -381,7 +380,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           </div>
         </div>
 
-        {/* Images */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormLabel>Main Image</FormLabel>
@@ -433,7 +431,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
           </div>
         </div>
 
-        {/* Footer controls */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-slate-100 pt-4">
           <div className="flex items-center gap-3">
             <input id="isFeatured" name="isFeatured" type="checkbox" checked={formData.isFeatured} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
@@ -461,7 +458,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             }); toast('Form cleared'); }} className="px-3 py-2 rounded-md border border-slate-200 bg-white text-sm shadow-sm">Reset</button>
 
             <button type="submit" disabled={isSubmitting || isUploading} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-semibold shadow">
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               <span>{isSubmitting ? 'Saving...' : 'Save Tour'}</span>
             </button>
           </div>
