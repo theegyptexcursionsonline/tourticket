@@ -1,111 +1,19 @@
+// components/DayTrips.tsx
 'use client';
 
-import React, { useRef, useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, Loader2 } from 'lucide-react';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-
-// --- Mock Data with Tour interface compatibility ---
-const dayTrips: Tour[] = [
-    { 
-        id: 'countryside-windmills-tour',
-        title: 'Countryside & Windmills Tour from Amsterdam', 
-        duration: '6 hours', 
-        bookings: 20568, 
-        rating: 4.4, 
-        originalPrice: 59, 
-        
-        discountPrice: 37.50, 
-        image: '/images/6.png', 
-        tags: ['Egypt Excursions Online', 'Staff favourite', '-35%'],
-        description: 'Explore the beautiful Dutch countryside and visit traditional windmills on this full-day tour from Amsterdam.',
-        highlights: [
-            'Visit authentic working windmills',
-            'Explore picturesque Dutch countryside',
-            'Learn about traditional Dutch culture',
-            'Professional tour guide included'
-        ]
-    },
-    { 
-        id: 'zaanse-schans-day-trip',
-        title: 'Zaanse Schans, Marken, Edam & Volendam Day Trip', 
-        duration: '7.5 hours', 
-        bookings: 8153, 
-        rating: 4.7, 
-        originalPrice: 66.50, 
-        discountPrice: 45, 
-        image: '/images/7.png', 
-        tags: ['Egypt Excursions Online', 'Best deal', '-30%'],
-        description: 'Visit the most charming villages near Amsterdam including Zaanse Schans, Marken, Edam, and Volendam.',
-        highlights: [
-            'Traditional windmills at Zaanse Schans',
-            'Cheese tasting in Edam',
-            'Fishing village of Volendam',
-            'Traditional wooden houses in Marken'
-        ]
-    },
-    { 
-        id: 'giethoorn-zaanse-schans-tour',
-        title: 'Fairytale Giethoorn & Zaanse Schans Tour', 
-        duration: '9 hours', 
-        bookings: 10831, 
-        rating: 4.6, 
-        originalPrice: 89, 
-        discountPrice: 79, 
-        image: '/images/8.png', 
-        tags: ['Egypt Excursions Online', 'Staff favourite', '-10%'],
-        description: 'Discover the fairy-tale village of Giethoorn and the historic windmills of Zaanse Schans.',
-        highlights: [
-            'Venice of the North - Giethoorn',
-            'Traditional windmills',
-            'Canal boat ride',
-            'Historic Dutch villages'
-        ]
-    },
-    { 
-        id: 'rotterdam-delft-hague-tour',
-        title: 'Rotterdam, Delft & The Hague incl. Madurodam', 
-        duration: '9 hours', 
-        bookings: 3568, 
-        rating: 4.9, 
-        originalPrice: 89, 
-        discountPrice: 79, 
-        image: '/images/9.png', 
-        tags: ['Egypt Excursions Online', 'Staff favourite', '-10%'],
-        description: 'Explore three iconic Dutch cities in one day, including the miniature park Madurodam.',
-        highlights: [
-            'Modern architecture in Rotterdam',
-            'Historic Delft pottery',
-            'Dutch government buildings in The Hague',
-            'Madurodam miniature park'
-        ]
-    },
-    { 
-        id: 'bruges-day-trip',
-        title: 'Full Day Trip to the Medieval City of Bruges', 
-        duration: '12 hours', 
-        bookings: 5179, 
-        rating: 4.7, 
-        discountPrice: 79, 
-        image: '/images/10.png', 
-        tags: ['Egypt Excursions Online'],
-        description: 'Step back in time with a visit to the medieval city of Bruges, Belgium.',
-        highlights: [
-            'Medieval architecture',
-            'Famous Belgian chocolates',
-            'Historic market square',
-            'Canal boat ride through Bruges'
-        ]
-    },
-];
+import Link from 'next/link';
 
 // --- Day Trip Card Component ---
 const DayTripCard = ({ trip, onAddToCartClick }: { trip: Tour; onAddToCartClick: (trip: Tour) => void; }) => {
     const { formatPrice } = useSettings();
     
     return (
-        <div className="flex-shrink-0 w-[270px] bg-white rounded-xl shadow-lg overflow-hidden snap-start group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+        <Link href={`/tour/${trip.slug}`} className="flex-shrink-0 w-[270px] bg-white rounded-xl shadow-lg overflow-hidden snap-start group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div className="relative">
                 <img src={trip.image} alt={trip.title} className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105" />
                 {trip.tags?.find(tag => tag.includes('%')) && (
@@ -117,7 +25,10 @@ const DayTripCard = ({ trip, onAddToCartClick }: { trip: Tour; onAddToCartClick:
                     <Heart size={20} />
                 </button>
                 <button 
-                    onClick={() => onAddToCartClick(trip)}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        onAddToCartClick(trip);
+                    }}
                     className="absolute bottom-3 right-3 bg-red-600 text-white p-2.5 rounded-full shadow-lg transform translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-in-out hover:bg-red-700 hover:scale-110"
                     aria-label="Add to cart"
                 >
@@ -141,15 +52,38 @@ const DayTripCard = ({ trip, onAddToCartClick }: { trip: Tour; onAddToCartClick:
                     <span className="font-extrabold text-2xl text-slate-900">{formatPrice(trip.discountPrice)}</span>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 };
 
 // --- Main Component ---
 export default function DayTripsSection() {
     const scrollContainer = useRef<HTMLDivElement>(null);
+    const [tours, setTours] = useState<Tour[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+
+    useEffect(() => {
+        const fetchTours = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch('/api/admin/tours');
+                const data = await response.json();
+                if (data.success) {
+                    // Filter for tours that are day trips or have relevant tags
+                    const dayTrips = data.data.filter((t: Tour) => t.categoryIds.includes('day-trips'));
+                    setTours(dayTrips);
+                }
+            } catch (error) {
+                console.error('Failed to fetch tours:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTours();
+    }, []);
 
     const handleAddToCartClick = (tour: Tour) => {
         setSelectedTour(tour);
@@ -168,6 +102,31 @@ export default function DayTripsSection() {
         }
     };
     
+    if (isLoading) {
+        return (
+            <section className="bg-slate-50 py-20 font-sans animate-pulse">
+                <div className="container mx-auto">
+                    <div className="flex justify-between items-center mb-8 px-4">
+                        <div className="h-10 w-1/2 bg-slate-200 rounded-lg" />
+                        <div className="flex gap-3">
+                            <div className="h-10 w-10 bg-slate-200 rounded-full" />
+                            <div className="h-10 w-10 bg-slate-200 rounded-full" />
+                        </div>
+                    </div>
+                    <div className="flex gap-6 overflow-hidden">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="flex-shrink-0 w-[270px] h-[360px] bg-slate-200 rounded-xl" />
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+    }
+    
+    if (tours.length === 0) {
+        return null;
+    }
+
     return (
         <>
             <section className="bg-slate-50 py-20 font-sans">
@@ -187,26 +146,24 @@ export default function DayTripsSection() {
                         </div>
                     </div>
                     <div ref={scrollContainer} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth" style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}>
-                        <div className="flex-shrink-0 w-1"></div> {/* Left padding */}
-                        {dayTrips.map(trip => <DayTripCard key={trip.id} trip={trip} onAddToCartClick={handleAddToCartClick} />)}
-                        <div className="flex-shrink-0 w-1"></div> {/* Right padding */}
+                        <div className="flex-shrink-0 w-1"></div>
+                        {tours.map(trip => <DayTripCard key={trip.id} trip={trip} onAddToCartClick={handleAddToCartClick} />)}
+                        <div className="flex-shrink-0 w-1"></div>
                     </div>
                     <div className="text-center mt-12">
-                        <button className="bg-red-600 text-white font-bold py-3.5 px-10 rounded-full text-base hover:bg-red-700 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg">
+                        <Link href="/search" className="bg-red-600 text-white font-bold py-3.5 px-10 rounded-full text-base hover:bg-red-700 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg">
                             SEE ALL DAY TRIPS FROM AMSTERDAM
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </section>
             
-            {/* Use the proper BookingSidebar component */}
             <BookingSidebar 
                 isOpen={isBookingSidebarOpen} 
                 onClose={closeSidebar} 
                 tour={selectedTour} 
             />
             
-            {/* Global Styles */}
             <style jsx global>{`
                 .line-clamp-2 {
                     display: -webkit-box;

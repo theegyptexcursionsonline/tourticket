@@ -1,145 +1,19 @@
+// components/FeaturedTours.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { ArrowRight, Star, ShoppingCart, Clock, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Star, ShoppingCart, Clock, Users, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 
-// --- Mock Data with proper Tour interface ---
-const featuredTours: Tour[] = [
-  { 
-    id: 'amsterdam-canal-cruise',
-    image: '/images2/1.png', 
-    title: '1-Hour Amsterdam Canal Cruise', 
-    slug: '1-hour-amsterdam-canal-cruise',
-    duration: '60 minutes', 
-    rating: 4.5, 
-    bookings: 4506416, 
-    originalPrice: 20, 
-    discountPrice: 15.50, 
-    tags: ['Online only deal', 'Staff favourite', '-25%'],
-    description: 'Experience Amsterdam from a unique perspective with our 1-hour canal cruise.',
-    highlights: [
-      'See the famous canal houses and bridges',
-      'Audio guide available in multiple languages',
-      'Perfect for first-time visitors',
-      'Departs from a central location'
-    ],
-    destinationId: 'amsterdam',
-    categoryIds: ['canal-cruises', 'sightseeing']
-  },
-  { 
-    id: 'pizza-lovers-cruise',
-    image: '/images2/2.png', 
-    title: 'New York Pizza by LOVERS Canal Cruise', 
-    slug: 'new-york-pizza-lovers-canal-cruise',
-    duration: '75 minutes', 
-    rating: 4.6, 
-    bookings: 21080, 
-    originalPrice: 43.50, 
-    discountPrice: 37.50, 
-    tags: ['-15%'],
-    description: 'Combine delicious New York-style pizza with a scenic Amsterdam canal cruise.',
-    highlights: [
-      'Fresh New York-style pizza on board',
-      'Scenic canal views',
-      'Perfect lunch or dinner option',
-      'Unique dining experience'
-    ],
-    destinationId: 'amsterdam',
-    categoryIds: ['canal-cruises', 'food-tours']
-  },
-  { 
-    id: 'evening-night-cruise',
-    image: '/images2/3.png', 
-    title: 'Amsterdam Evening & Night Boat Tour', 
-    slug: 'amsterdam-evening-night-cruise',
-    duration: '60 minutes', 
-    rating: 4.5, 
-    bookings: 1256854, 
-    originalPrice: 20, 
-    discountPrice: 15.50, 
-    tags: ['Staff favourite', '-25%'],
-    description: 'See Amsterdam illuminated at night on this magical evening canal cruise.',
-    highlights: [
-      'Beautiful city lights reflection on water',
-      'Romantic evening atmosphere',
-      'Historic canal district at night',
-      'Professional commentary'
-    ],
-    destinationId: 'amsterdam',
-    categoryIds: ['canal-cruises', 'romantic']
-  },
-  { 
-    id: 'wine-cheese-cruise',
-    image: '/images2/4.png', 
-    title: 'Wine & Cheese Cruise in Amsterdam', 
-    slug: 'wine-cheese-cruise',
-    duration: '90 minutes', 
-    rating: 4.9, 
-    bookings: 10245, 
-    originalPrice: 38.50, 
-    discountPrice: 35, 
-    tags: ['New', '-10%'],
-    description: 'Indulge in premium Dutch cheeses and fine wines while cruising Amsterdam\'s canals.',
-    highlights: [
-      'Selection of Dutch cheeses',
-      'Premium wine selection',
-      'Expert sommelier guidance',
-      'Scenic canal views'
-    ],
-    destinationId: 'amsterdam',
-    categoryIds: ['canal-cruises', 'food-tours']
-  },
-  { 
-    id: 'exclusive-dinner-cruise',
-    image: '/images2/5.png', 
-    title: 'Exclusive Amsterdam Dinner Cruise', 
-    slug: 'exclusive-dinner-cruise',
-    duration: '2 hours', 
-    rating: 4.8, 
-    bookings: 5008, 
-    discountPrice: 89, 
-    tags: ['Staff favourite'],
-    description: 'An exclusive dining experience aboard a luxury canal cruise vessel.',
-    highlights: [
-      'Multi-course gourmet dinner',
-      'Luxury boat with panoramic windows',
-      'Professional service',
-      'Romantic atmosphere'
-    ],
-    destinationId: 'amsterdam',
-    categoryIds: ['canal-cruises', 'food-tours']
-  },
-  { 
-    id: 'family-pancake-cruise',
-    image: '/images2/6.png', 
-    title: 'Family-Friendly Pancake Cruise', 
-    slug: 'family-pancake-cruise',
-    duration: '75 minutes', 
-    rating: 4.8, 
-    bookings: 11859, 
-    discountPrice: 26, 
-    tags: ['Best for Kids'],
-    description: 'Perfect for families - enjoy traditional Dutch pancakes while cruising the canals.',
-    highlights: [
-      'Traditional Dutch pancakes',
-      'Kid-friendly atmosphere',
-      'Educational canal commentary',
-      'Great for all ages'
-    ],
-    destinationId: 'amsterdam',
-    categoryIds: ['canal-cruises', 'family-friendly']
-  },
-];
-
-// --- Tour Card Component (Enhanced & Clickable) ---
+// Reusable Tour Card Component
 const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
 
-  const formatBookings = (num: number) => {
+  const formatBookings = (num?: number) => {
+    if (!num) return '0';
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}m`;
     if (num >= 1000) return `${Math.floor(num / 1000)}k`;
     return num.toString();
@@ -167,13 +41,15 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
           height={192}
           className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105" 
         />
-        <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-          {tour.tags?.map(tag => (
-            <span key={tag} className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shadow-sm ${getTagColor(tag)}`}>
-              {tag}
-            </span>
-          ))}
-        </div>
+        {tour.tags && tour.tags.length > 0 && (
+          <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+            {tour.tags.slice(0, 2).map((tag, index) => (
+              <span key={index} className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shadow-sm ${getTagColor(tag)}`}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
         <button 
           onClick={(e) => {
             e.preventDefault(); 
@@ -195,7 +71,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
           </div>
           <div className="flex items-center gap-1.5">
             <Users size={16} className="text-gray-400"/>
-            <span className="font-medium">{formatBookings(tour.bookings || 0)} booked</span>
+            <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
           </div>
         </div>
         <div className="mt-auto flex items-end justify-between">
@@ -215,10 +91,31 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   );
 };
 
-// --- Main Component ---
+// Main Component
 export default function FeaturedTours() {
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+
+  useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        const response = await fetch('/api/admin/tours');
+        const data = await response.json();
+        if (data.success) {
+          const featured = data.data.filter((t: Tour) => t.isFeatured);
+          setTours(featured);
+        }
+      } catch (error) {
+        console.error('Failed to fetch tours:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTours();
+  }, []);
 
   const handleAddToCartClick = (tour: Tour) => {
     setSelectedTour(tour);
@@ -231,7 +128,29 @@ export default function FeaturedTours() {
   };
   
   // Duplicate tours for seamless animation
-  const duplicatedTours = [...featuredTours, ...featuredTours];
+  const duplicatedTours = [...tours, ...tours];
+
+  if (isLoading) {
+    return (
+      <section className="bg-white py-20 font-sans">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 animate-pulse">
+            <div className="h-10 w-2/3 bg-slate-200 rounded-lg" />
+            <div className="h-10 w-1/4 bg-slate-200 rounded-lg" />
+          </div>
+          <div className="flex gap-4 overflow-hidden">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-[340px] h-[360px] bg-slate-200 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (tours.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -275,7 +194,6 @@ export default function FeaturedTours() {
         tour={selectedTour} 
       />
       
-      {/* Global Styles & Fonts */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
         

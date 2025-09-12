@@ -12,7 +12,6 @@ import PopularInterest from "@/components/PopularInterest";
 import Reviews from "@/components/Reviews";
 import VisitUs from "@/components/VisitUs";
 import Destinations from "@/components/Destinations";
-// Chatbot removed from here (now global in layout)
 
 export default function HomePage() {
   return (
@@ -29,7 +28,6 @@ export default function HomePage() {
       <Reviews />
       <FAQ />
       <Footer />
-      {/* Chatbot is now injected globally from layout; no local render here */}
     </main>
   );
 }
