@@ -54,7 +54,7 @@ const SummaryItem: React.FC<{item: CartItem}> = ({ item }) => {
             </div>
             <div className="text-right flex flex-col justify-between items-end">
                 <p className="font-bold text-lg text-slate-800">{formatPrice(item.totalPrice || item.discountPrice * item.quantity)}</p>
-                <button onClick={() => removeFromCart(item._id!)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                <button onClick={() => removeFromCart(item.uniqueId!)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
             </div>
         </div>
     )
@@ -63,16 +63,16 @@ const SummaryItem: React.FC<{item: CartItem}> = ({ item }) => {
 // --- Booking Summary Component ---
 const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode }: any) => {
     const { formatPrice } = useSettings();
-    const { cartItems } = useCart();
+    const { cart } = useCart(); // Corrected: use 'cart' instead of 'cartItems'
 
-    if (!cartItems || cartItems.length === 0) return null;
+    if (!cart || cart.length === 0) return null;
 
     return (
         <aside className="bg-white/80 backdrop-blur-sm rounded-3xl border border-slate-100 p-6 shadow-lg sticky top-28">
             <h3 className="text-2xl font-bold text-slate-900 mb-4">Your Booking Summary</h3>
             <div className="divide-y divide-slate-200">
-                {cartItems.map((item, index) => (
-                    <SummaryItem key={`${item._id}-${index}`} item={item} />
+                {cart.map((item, index) => (
+                    <SummaryItem key={`${item.id}-${index}`} item={item} />
                 ))}
             </div>
             <div className="mt-4 rounded-xl p-4 bg-slate-50 border border-slate-100">
@@ -161,7 +161,7 @@ const ThankYouPage = ({ orderedItems }: { orderedItems: CartItem[] }) => {
             <div className="mx-auto w-fit mb-6 p-4 rounded-full bg-emerald-100"><CheckCircle size={48} className="text-emerald-600" /></div>
             <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed</h1>
             <p className="text-slate-600 mb-6">We’ve emailed the booking details and payment confirmation to you.</p>
-            <div className="space-y-3 mb-6">{orderedItems.map((item, index) => (<div key={`${item._id}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg overflow-hidden"><Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/></div><div><p className="font-semibold text-slate-800">{item.title}</p><p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p></div></div><div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div></div>))}</div>
+            <div className="space-y-3 mb-6">{orderedItems.map((item, index) => (<div key={`${item.id}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg overflow-hidden"><Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/></div><div><p className="font-semibold text-slate-800">{item.title}</p><p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p></div></div><div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div></div>))}</div>
             <div className="flex justify-center gap-3"><button onClick={() => window.location.assign('/')} className="px-5 py-2 rounded-xl border border-slate-200 hover:shadow-sm">Go to homepage</button><button onClick={() => window.print()} className="px-5 py-2 rounded-xl bg-slate-900 text-white">Print receipt</button></div>
         </motion.div>
     );
@@ -179,7 +179,7 @@ const TrustIndicators = () => (
 
 // --- MAIN CHECKOUT PAGE COMPONENT ---
 export default function CheckoutPage() {
-    const { cartItems, clearCart } = useCart();
+    const { cart, clearCart } = useCart(); // Corrected: use 'cart' instead of 'cartItems'
     const { formatPrice } = useSettings();
     const router = useRouter();
     const [isConfirmed, setIsConfirmed] = useState(false);
@@ -188,13 +188,12 @@ export default function CheckoutPage() {
     const [discount, setDiscount] = useState(0);
 
     const pricing = useMemo(() => {
-        // FIX: Safely access cartItems by providing a fallback empty array
-        const subtotal = (cartItems || []).reduce((acc, item) => acc + (item.totalPrice || (item.discountPrice * item.quantity)), 0);
+        const subtotal = (cart || []).reduce((acc, item) => acc + (item.totalPrice || (item.discountPrice * item.quantity)), 0);
         const serviceFee = +(subtotal * 0.03).toFixed(2);
         const tax = +(subtotal * 0.05).toFixed(2);
         const total = +(subtotal + serviceFee + tax - discount).toFixed(2);
         return { subtotal, serviceFee, tax, total, discount };
-    }, [cartItems, discount]);
+    }, [cart, discount]);
 
     const applyPromoCode = () => {
         if (promoCode.trim().toUpperCase() === 'SALE10') {
@@ -205,19 +204,19 @@ export default function CheckoutPage() {
     };
 
     const handlePaymentSuccess = () => {
-        setOrderedItems([...(cartItems || [])]); 
+        setOrderedItems([...(cart || [])]); 
         clearCart(); 
         setIsConfirmed(true); 
     };
     
     // This effect handles the case where the user lands on the page with an empty cart
     useEffect(() => {
-        if (cartItems && cartItems.length === 0 && !isConfirmed) {
+        if (cart && cart.length === 0 && !isConfirmed) {
             router.push('/');
         }
-    }, [cartItems, isConfirmed, router]);
+    }, [cart, isConfirmed, router]);
 
-    if (!cartItems) {
+    if (!cart) { // Corrected: check for 'cart' instead of 'cartItems'
         return ( // Show a loading state until the cart is hydrated from localStorage
             <>
                 <Header startSolid={true} />
@@ -231,7 +230,7 @@ export default function CheckoutPage() {
         )
     }
 
-    if (cartItems.length === 0 && !isConfirmed) {
+    if (cart.length === 0 && !isConfirmed) { // Corrected: check for 'cart' instead of 'cartItems'
         return ( // Show an empty cart message if the cart is empty after loading
             <>
                 <Header startSolid={true} />
@@ -283,7 +282,7 @@ export default function CheckoutPage() {
                 </div>
             </main>
 
-            {!isConfirmed && cartItems && cartItems.length > 0 && (
+            {!isConfirmed && cart && cart.length > 0 && ( // Corrected: check for 'cart' instead of 'cartItems'
                 <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-slate-200 p-4 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                     <div className="flex justify-between items-center mb-3">
                         <span className="text-slate-600">Total price:</span>
