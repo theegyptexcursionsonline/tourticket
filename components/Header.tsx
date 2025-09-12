@@ -494,7 +494,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
-const { cart, totalItems, ... } = useCart(); // The correct property is `totalItems`  const { user, logout } = useAuth();
+const { openCart, totalItems } = useCart();
+  const { user, logout } = useAuth();
   const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
 
@@ -566,7 +567,7 @@ const { cart, totalItems, ... } = useCart(); // The correct property is `totalIt
 
                     <button onClick={openCart} className="relative group p-2">
                         <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
-                        {itemCount > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{itemCount}</span>}
+                        {totalItems > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{totalItems}</span>}
                     </button>
 
                     <button onClick={handleSearchModalOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
