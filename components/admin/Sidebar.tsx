@@ -113,7 +113,7 @@ const AdminSidebar = () => {
 
       {/* Footer */}
       <div className="px-4 py-3 border-t border-slate-700 text-xs text-slate-400">
-        {isOpen ? "© 2025 Your Company" : "©"}
+        {isOpen ? "© 2025 Egypt Excursions Online" : "©"}
       </div>
     </aside>
   );
