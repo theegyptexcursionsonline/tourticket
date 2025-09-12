@@ -1,78 +1,167 @@
+// components/booking/BookingStep4.tsx
 'use client';
 
-import { FC, useState } from 'react';
-import { Tour } from '@/types';
+import { FC, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Tour, CartItem } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-import { ShoppingCart, Loader2 } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
+import { Calendar, Clock, Users, ShoppingCart, CreditCard, Loader2, Check } from 'lucide-react';
+import { addOnData } from './addOnData';
 
+// --- UPDATED PROPS INTERFACE ---
 interface BookingStep4Props {
-    bookingData: any;
+    bookingData: {
+        selectedDate: Date;
+        selectedTime: string;
+        adults: number;
+        children: number;
+        selectedAddOn: 'atv-sunset' | 'shared-quad' | null;
+        addOnTime: string;
+    };
     tour: Tour;
-    onProceed: () => void;
+    onClose: () => void; // <-- FIX: Add the onClose prop
 }
 
-const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onProceed }) => {
+const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onClose }) => {
     const { formatPrice } = useSettings();
-    const [isProcessing, setIsProcessing] = useState(false);
+    const { addToCart } = useCart();
+    const router = useRouter();
+    const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
 
-    const handleProceed = async () => {
-        setIsProcessing(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        onProceed();
-        setIsProcessing(false);
+    // --- Price Calculation (no changes needed) ---
+    const { subtotal, extras, total, selectedAddOnDetails } = useMemo(() => {
+        const pricePerAdult = tour.discountPrice || 0;
+        const pricePerChild = pricePerAdult / 2;
+        const subtotalCalc = (bookingData.adults * pricePerAdult) + (bookingData.children * pricePerChild);
+        let extrasCalc = 0;
+        const addOn = addOnData.find(a => a.id === bookingData.selectedAddOn);
+        if (addOn) {
+            extrasCalc = addOn.price * bookingData.adults;
+        }
+        return {
+            subtotal: subtotalCalc,
+            extras: extrasCalc,
+            total: subtotalCalc + extrasCalc,
+            selectedAddOnDetails: addOn
+        };
+    }, [tour, bookingData]);
+
+    // --- UPDATED Action Handlers ---
+    const handleFinalAction = async (action: 'cart' | 'checkout') => {
+        setIsProcessing(action);
+
+        // 1. Create main tour item
+        const mainTourCartItem: CartItem = {
+            ...tour,
+            quantity: bookingData.adults,
+            childQuantity: bookingData.children,
+            selectedDate: bookingData.selectedDate.toISOString(),
+            selectedTime: bookingData.selectedTime,
+        };
+        // FIX: Add to cart WITHOUT opening the sidebar
+        addToCart(mainTourCartItem, false);
+
+        // 2. Create and add add-on item
+        if (selectedAddOnDetails) {
+            const addOnCartItem: CartItem = {
+                id: `addon_${selectedAddOnDetails.id}`,
+                title: selectedAddOnDetails.title,
+                image: '/bg2.png',
+                originalPrice: selectedAddOnDetails.price,
+                discountPrice: selectedAddOnDetails.price,
+                quantity: bookingData.adults,
+                childQuantity: 0,
+                selectedDate: bookingData.selectedDate.toISOString(),
+                selectedTime: bookingData.addOnTime,
+            };
+            // FIX: Add to cart WITHOUT opening the sidebar
+            addToCart(addOnCartItem, false);
+        }
+
+        // 3. FIX: Close the booking sidebar
+        onClose();
+
+        // 4. FIX: Wait for animation, then redirect
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (action === 'cart') {
+            router.push('/');
+        } else {
+            router.push('/checkout');
+        }
     };
 
     return (
         <div>
-            <h2 className="text-3xl font-extrabold text-slate-800 mb-4">Review & Book</h2>
-            <div className="bg-slate-50 p-6 rounded-lg space-y-4 text-slate-700 border border-slate-200">
-                <div className="flex justify-between items-center">
-                    <span className="font-semibold">Tour:</span>
-                    <span className="font-medium text-right">{tour.title}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="font-semibold">Date:</span>
-                    <span className="font-medium">{bookingData.selectedDate.toLocaleDateString('en-GB')}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="font-semibold">Time:</span>
-                    <span className="font-medium">{bookingData.selectedTime}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="font-semibold">Guests:</span>
-                    <span className="font-medium">{bookingData.guests}</span>
-                </div>
-                {bookingData.privateTransfer && (
-                    <div className="flex justify-between items-center">
-                        <span className="font-semibold">Private Transfer:</span>
-                        <span className="font-medium">{formatPrice(75.00)}</span>
-                    </div>
-                )}
-                {bookingData.privateGuide && (
-                    <div className="flex justify-between items-center">
-                        <span className="font-semibold">Private Guide:</span>
-                        <span className="font-medium">{formatPrice(150.00)}</span>
-                    </div>
-                )}
-                <div className="pt-4 border-t border-slate-200 mt-4 flex justify-between items-baseline">
-                    <span className="font-extrabold text-xl">Total</span>
-                    <span className="font-extrabold text-2xl text-slate-800">
-                        {formatPrice(
-                            (tour.discountPrice * bookingData.guests) +
-                            (bookingData.privateTransfer ? 75.00 : 0) +
-                            (bookingData.privateGuide ? 150.00 : 0)
-                        )}
-                    </span>
-                </div>
+            <div className="text-center mb-8">
+                <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 260, damping: 20 }}
+                    className="w-16 h-16 bg-red-50 text-red-500 rounded-full mx-auto flex items-center justify-center mb-4"
+                >
+                    <Check size={32} />
+                </motion.div>
+                <h2 className="text-3xl font-extrabold text-slate-800">Review & Book</h2>
+                <p className="text-slate-600 mt-2">Please confirm your selections before proceeding.</p>
             </div>
 
-            <div className="space-y-3 mt-6">
-                <button
-                    onClick={handleProceed}
-                    disabled={isProcessing}
-                    className="w-full bg-red-500 text-white font-bold py-3 rounded-full hover:bg-red-600 disabled:bg-red-300 transition-colors text-lg flex items-center justify-center gap-2"
+            {/* Booking Summary Card */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white p-6 rounded-2xl border-2 border-slate-200 space-y-5"
+            >
+                {/* Main Tour Details */}
+                <div>
+                    <h3 className="font-bold text-lg text-slate-800">{tour.title}</h3>
+                    <div className="text-sm text-slate-500 mt-2 space-y-2">
+                        <p className="flex items-center gap-2"><Calendar size={14} /> <span>{bookingData.selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></p>
+                        <p className="flex items-center gap-2"><Clock size={14} /> <span>{bookingData.selectedTime}</span></p>
+                        <p className="flex items-center gap-2"><Users size={14} /> <span>{bookingData.adults} Adults, {bookingData.children} Children</span></p>
+                    </div>
+                </div>
+
+                {/* Add-on Details */}
+                {selectedAddOnDetails && (
+                    <div className="pt-4 border-t border-slate-200">
+                        <h4 className="font-semibold text-slate-700">Your Add-on:</h4>
+                        <h3 className="font-bold text-lg text-slate-800">{selectedAddOnDetails.title}</h3>
+                         <div className="text-sm text-slate-500 mt-2 space-y-2">
+                            <p className="flex items-center gap-2"><Clock size={14} /> <span>{bookingData.addOnTime}</span></p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Price Breakdown */}
+                <div className="pt-4 border-t border-slate-200 space-y-2">
+                    <div className="flex justify-between text-slate-600"><p>Main Tour Subtotal</p><p>{formatPrice(subtotal)}</p></div>
+                    {selectedAddOnDetails && <div className="flex justify-between text-slate-600"><p>Add-on Subtotal</p><p>{formatPrice(extras)}</p></div>}
+                    <div className="flex justify-between items-baseline text-slate-900 pt-2">
+                        <p className="text-xl font-bold">Grand Total</p>
+                        <p className="text-2xl font-extrabold">{formatPrice(total)}</p>
+                    </div>
+                </div>
+            </motion.div>
+            
+            {/* Action Buttons */}
+            <div className="mt-8 space-y-4">
+                 <button
+                    onClick={() => handleFinalAction('checkout')}
+                    disabled={!!isProcessing}
+                    className="w-full bg-red-600 text-white font-bold py-4 rounded-full text-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:bg-red-400"
                 >
-                    {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <><ShoppingCart size={20} /> Proceed to Checkout</>}
+                    {isProcessing === 'checkout' ? <Loader2 size={24} className="animate-spin" /> : <><CreditCard size={20} /> Proceed to Checkout</>}
+                </button>
+                 <button
+                    onClick={() => handleFinalAction('cart')}
+                    disabled={!!isProcessing}
+                    className="w-full bg-white text-slate-700 font-bold py-4 rounded-full text-lg flex items-center justify-center gap-2 border-2 border-slate-300 transition-all transform hover:scale-105 hover:bg-slate-50 disabled:bg-slate-200"
+                >
+                    {isProcessing === 'cart' ? <Loader2 size={24} className="animate-spin" /> : <><ShoppingCart size={20} /> Add to Cart & Continue</>}
                 </button>
             </div>
         </div>

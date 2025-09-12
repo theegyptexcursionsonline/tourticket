@@ -494,8 +494,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
-  const { openCart, itemCount } = useCart();
-  const { user, logout } = useAuth();
+const { cart, totalItems, ... } = useCart(); // The correct property is `totalItems`  const { user, logout } = useAuth();
   const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
 

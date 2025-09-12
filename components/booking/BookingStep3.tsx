@@ -1,199 +1,195 @@
+// components/booking/BookingStep3.tsx
 'use client';
 
-import { FC, useState } from 'react';
+import React, { FC, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tour } from '@/types';
-import { Plus, Check, Loader2, Star } from 'lucide-react';
+import { Clock, Check, Users, Languages } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
-import { useCart } from '@/contexts/CartContext';
-import Image from 'next/image';
 
-interface BookingStep3Props {
-    bookingData: any;
-    setBookingData: (data: any) => void;
+// --- Type Definitions for this specific UI ---
+interface AddOnTour {
+  id: 'atv-sunset' | 'shared-quad';
+  title: string;
+  duration: string;
+  languages: string[];
+  description: string;
+  price: number;
+  availableTimes: string[];
 }
 
-// --- MOCK DATA FOR RELATED TOURS ---
-const relatedTours: Tour[] = [
-  {
-    id: 'amsterdam-light-festival',
-    title: 'Amsterdam Light Festival 2025 - 2026',
-    duration: '75-105 minutes',
-    rating: 4.7,
-    bookings: 134962,
-    discountPrice: 32.50,
-    image: '/images2/1.png',
-    tags: ['Official partner', 'Staff favourite'],
-    description: 'Experience Amsterdam\'s spectacular light festival',
-    highlights: []
-  },
-  {
-    id: 'body-worlds',
-    title: 'BODY WORLDS Amsterdam',
-    duration: '90 minutes',
-    rating: 4.7,
-    bookings: 300030,
-    discountPrice: 25.00,
-    image: '/images2/2.png',
-    tags: ['Staff favourite', '-10%'],
-    description: 'Fascinating journey through the human body',
-    highlights: []
-  },
-  {
-    id: 'art-museum',
-    title: 'Amsterdam Art Museum',
-    duration: '2 hours',
-    rating: 4.2,
-    bookings: 125000,
-    discountPrice: 28.00,
-    originalPrice: 35.00,
-    image: '/images2/3.png',
-    tags: ['Staff favourite', '-20%'],
-    description: 'Discover masterpieces of Dutch art',
-    highlights: []
-  },
-];
+interface AddOnTourCardProps {
+  addOn: AddOnTour;
+  isSelected: boolean;
+  selectedTime: string;
+  onSelect: (time: string) => void;
+  onDeselect: () => void;
+}
 
 
-const RelatedTourCard: FC<{ tour: Tour; onAdd: (tour: Tour) => void }> = ({ tour, onAdd }) => {
+// --- Reusable, Sophisticated Add-on Tour Card ---
+const AddOnTourCard: FC<AddOnTourCardProps> = ({ addOn, isSelected, selectedTime, onSelect, onDeselect }) => {
   const { formatPrice } = useSettings();
-  const [isAdding, setIsAdding] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  
-  const handleAddClick = async () => {
-    setIsAdding(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    onAdd(tour);
-    setIsAdding(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
+
+  const handleTimeClick = (time: string) => {
+    // If the same time is clicked again, deselect it. Otherwise, select the new time.
+    if (isSelected && selectedTime === time) {
+      onDeselect();
+    } else {
+      onSelect(time);
+    }
   };
-  
+
   return (
-    <div className="flex-shrink-0 w-64 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="relative">
-        <Image src={tour.image} alt={tour.title} width={256} height={128} className="w-full h-32 object-cover" />
-        <button 
-          onClick={handleAddClick}
-          disabled={isAdding || showSuccess}
-          className={`absolute bottom-2 right-2 p-2 rounded-full shadow-lg transition-all duration-300 ${
-            showSuccess 
-              ? 'bg-green-500 text-white scale-110' 
-              : isAdding 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-              : 'bg-white text-gray-700 hover:bg-red-500 hover:text-white hover:scale-110'
-          }`}
-        >
-          <AnimatePresence mode="wait">
-            {showSuccess ? (
-              <motion.div key="success" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ duration: 0.2 }}>
-                <Check size={16} />
-              </motion.div>
-            ) : isAdding ? (
-              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Loader2 size={16} className="animate-spin" />
-              </motion.div>
-            ) : (
-              <motion.div key="plus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Plus size={16} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </button>
-      </div>
-      
-      <div className="p-3">
-        <h4 className="font-bold text-sm text-gray-900 mb-2 line-clamp-2 leading-tight">{tour.title}</h4>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center text-xs text-gray-500">
-            <Star size={12} className="text-yellow-400 mr-1" fill="currentColor" />
-            <span>{tour.rating} ({tour.bookings} reviews)</span>
-          </div>
-          <div className="text-right">
-            {tour.originalPrice && (
-              <span className="text-xs text-gray-500 line-through mr-1">
-                {formatPrice(tour.originalPrice)}
-              </span>
-            )}
-            <span className="font-bold text-lg text-gray-900">
-              {formatPrice(tour.discountPrice)}
-            </span>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: addOn.id === 'atv-sunset' ? 0.2 : 0.35, type: 'spring', stiffness: 100 }}
+      className={`p-5 border-2 rounded-2xl transition-all duration-300 ease-in-out ${
+        isSelected ? 'bg-purple-50 border-purple-600 shadow-2xl' : 'bg-white border-slate-200 hover:border-slate-300'
+      }`}
+    >
+      <div className="flex flex-col">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row gap-2 justify-between items-start">
+          <h4 className="font-extrabold text-slate-900 text-xl">{addOn.title}</h4>
+          {isSelected && (
+            <div className="flex items-center gap-2 bg-green-100 text-green-800 font-semibold px-3 py-1 rounded-full text-sm">
+              <Check size={16} />
+              <span>Selected</span>
+            </div>
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 my-3 text-sm text-slate-600">
+          <div className="flex items-center gap-1.5"><Clock size={14} /><span>{addOn.duration}</span></div>
+          <div className="flex items-center gap-1.5"><Languages size={14} /><span>{addOn.languages.join(', ')}</span></div>
+        </div>
+        <p className="text-sm text-slate-600 mb-4">{addOn.description}</p>
+        <a href="#" className="text-sm font-bold text-purple-700 hover:underline mb-5">View Pickup Areas</a>
+
+        {/* Time Selection */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-800 mb-2">Select a starting time:</label>
+          <div className="flex flex-wrap gap-3">
+            {addOn.availableTimes.map(time => {
+              const isTimeSelected = isSelected && selectedTime === time;
+              return (
+                <button
+                  key={time}
+                  onClick={() => handleTimeClick(time)}
+                  className={`px-6 py-3 rounded-xl text-base font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${
+                    isTimeSelected
+                      ? 'bg-purple-600 text-white shadow-lg scale-105'
+                      : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-purple-500'
+                  }`}
+                >
+                  {time}
+                </button>
+              );
+            })}
           </div>
         </div>
+
+        {/* Footer with Price */}
+        <AnimatePresence>
+        {isSelected && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: '20px', paddingTop: '20px' }}
+            exit={{ opacity: 0, height: 0, marginTop: 0, paddingTop: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="border-t border-slate-300 flex justify-between items-center"
+          >
+            <div className="text-slate-700">
+              <span className="font-semibold">Adults:</span>
+              <span className="ml-2">1 x {formatPrice(addOn.price)}</span>
+            </div>
+            <div className="text-right">
+              <span className="text-sm text-slate-600 block">Total</span>
+              <span className="text-2xl font-extrabold text-slate-900">{formatPrice(addOn.price)}</span>
+            </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-const BookingStep3: FC<BookingStep3Props> = ({ bookingData, setBookingData }) => {
-    const { addToCart } = useCart();
-    const { formatPrice } = useSettings();
 
-    const handleAddRelatedTour = (relatedTour: Tour) => {
-        addToCart(relatedTour);
+// --- Main Component for Step 3 ---
+interface BookingStep3Props {
+    bookingData: {
+        selectedAddOn: 'atv-sunset' | 'shared-quad' | null;
+        addOnTime: string;
+        [key: string]: any;
+    };
+    setBookingData: (updater: (prev: any) => any) => void;
+    tour: Tour; // The main tour being booked
+}
+
+const BookingStep3: FC<BookingStep3Props> = ({ bookingData, setBookingData }) => {
+    
+    const addOnData: AddOnTour[] = [
+        {
+            id: 'atv-sunset',
+            title: '3-Hour ATV Quad Tour Sunset with Transfer',
+            duration: '3 Hours',
+            languages: ['English', 'German'],
+            description: 'Enjoy a thrilling 30 k.m quad bike ride deep into the desert to a traditional Bedouin village. Here, you will be welcomed with authentic hospitality, learn about their ancient culture...',
+            price: 25.00,
+            availableTimes: ['2:00 PM', '3:00 PM'],
+        },
+        {
+            id: 'shared-quad',
+            title: 'Shared 2-Hour Quad Bike Tour',
+            duration: '2 Hours',
+            languages: ['English'],
+            description: 'A thrilling shared quad bike adventure through the desert canyons. This tour is perfect for a quick and exciting taste of the desert landscape...',
+            price: 22.00, // Example price
+            availableTimes: ['10:00 AM', '2:00 PM'],
+        }
+    ];
+
+    const handleSelectAddOn = (addOnId: AddOnTour['id'], time: string) => {
+      setBookingData(prev => ({
+        ...prev,
+        selectedAddOn: addOnId,
+        addOnTime: time
+      }));
+    };
+    
+    const handleDeselectAddOn = () => {
+        setBookingData(prev => ({
+            ...prev,
+            selectedAddOn: null,
+            addOnTime: ''
+        }));
     };
 
     return (
         <div>
-            <h2 className="text-3xl font-extrabold text-slate-800 mb-6">Enhance Your Trip</h2>
+            <div className="text-center mb-10">
+                <h2 className="text-3xl font-extrabold text-slate-800">Available Add-ons</h2>
+                <p className="text-slate-600 mt-2 max-w-md mx-auto">
+                    Enhance your main tour by adding one of these exciting local experiences.
+                </p>
+            </div>
+
             <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                    <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Plus size={24} className="text-red-600" />
-                        </div>
-                        <div>
-                            <p className="font-semibold text-slate-800">Private Transfer</p>
-                            <p className="text-sm text-slate-500">Add an airport transfer for a seamless start to your trip.</p>
-                            <p className="text-sm font-bold text-red-600 mt-1">{formatPrice(75.00)}</p>
-                        </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={bookingData.privateTransfer}
-                            onChange={(e) => setBookingData(prev => ({ ...prev, privateTransfer: e.target.checked }))}
-                        />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                    </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                    <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Plus size={24} className="text-red-600" />
-                        </div>
-                        <div>
-                            <p className="font-semibold text-slate-800">Private Guide</p>
-                            <p className="text-sm text-slate-500">Hire a private guide for an exclusive and personalized experience.</p>
-                            <p className="text-sm font-bold text-red-600 mt-1">{formatPrice(150.00)}</p>
-                        </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={bookingData.privateGuide}
-                            onChange={(e) => setBookingData(prev => ({ ...prev, privateGuide: e.target.checked }))}
-                        />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                    </label>
-                </div>
+                {addOnData.map(addOn => (
+                    <AddOnTourCard 
+                        key={addOn.id}
+                        addOn={addOn}
+                        isSelected={bookingData.selectedAddOn === addOn.id}
+                        selectedTime={bookingData.addOnTime}
+                        onSelect={(time) => handleSelectAddOn(addOn.id, time)}
+                        onDeselect={handleDeselectAddOn}
+                    />
+                ))}
             </div>
-
-            <div className="mt-8 border-t pt-6">
-                <h3 className="font-bold text-lg text-slate-800 mb-4">YOU MAY ALSO LIKE</h3>
-                <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-                    {relatedTours.map((relatedTour) => (
-                        <RelatedTourCard key={relatedTour.id} tour={relatedTour} onAdd={handleAddRelatedTour} />
-                    ))}
-                </div>
-            </div>
-
-            <style jsx>{`
-                .scrollbar-hide::-webkit-scrollbar { display: none; }
-                .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
         </div>
     );
 };
