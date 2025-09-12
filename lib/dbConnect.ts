@@ -7,6 +7,7 @@ import './models/Tour';
 import './models/Destination';
 import './models/Category';
 import './models/user';
+import './models/BlogPost'; // Import the new BlogPost model to register it
 
 const MONGODB_URI = process.env.MONGODB_URI;
 

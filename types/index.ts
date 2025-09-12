@@ -13,6 +13,7 @@ export interface Language {
 }
 
 export interface Destination {
+  _id: string;
   id: string;
   name: string;
   slug: string;
@@ -34,6 +35,7 @@ export interface Destination {
 }
 
 export interface Category {
+  _id: string;
   id: string;
   name: string;
   slug: string;
@@ -51,6 +53,7 @@ export interface AddOn {
 }
 
 export interface Tour {
+  _id: string;
   id: number | string;
   title: string;
   slug: string;
@@ -77,26 +80,26 @@ export interface Tour {
     lng: number;
     address: string;
   };
+  destination?: Destination;
+  categories?: Category[];
   destinationId: string;
   categoryIds: string[];
-  availability?: {
-    date: string;
-    slots: string[];
-    available: boolean;
-  }[];
+  availability?: any;
   featured?: boolean;
   quantity?: number; // General quantity, for compatibility
   addOns?: AddOn[]; // Optional addons for a tour
 }
 
 export interface CartItem extends Tour {
+  uniqueId?: string;
   quantity: number; // This will represent the number of adults
   childQuantity: number;
   selectedDate: string;
   selectedTime: string;
-  selectedLanguage: string;
-  selectedAddOns: AddOn[];
+  selectedLanguage?: string;
+  selectedAddOns?: AddOn[];
   details?: string;
+  totalPrice?: number;
 }
 
 export interface Booking {
@@ -141,7 +144,7 @@ export interface Review {
 }
 
 export interface BlogPost {
-  id: string;
+  _id: string;
   title: string;
   slug: string;
   excerpt: string;
@@ -149,11 +152,15 @@ export interface BlogPost {
   image: string;
   category: string;
   author: string;
-  authorAvatar?: string; // optional avatar for blog author
-  publishedAt: string;   // ISO date string recommended
-  readTime: number;      // minutes to read
+  authorAvatar?: string;
+  publishedAt: string;
+  readTime: number;
   tags: string[];
+  status: 'published' | 'draft';
+  createdAt?: string;
+  updatedAt?: string;
 }
+
 
 export interface SearchFilters {
   destination?: string;
@@ -170,4 +177,4 @@ export interface SearchResult {
   total: number;
   page: number;
   limit: number;
-}s
+}

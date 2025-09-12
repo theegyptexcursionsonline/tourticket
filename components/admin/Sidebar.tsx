@@ -17,7 +17,8 @@ import {
   Percent,
   MessageSquare,
   Users,
-  TrendingUp, // Import the TrendingUp icon for reports
+  TrendingUp,
+  PenSquare, // Added for Blog
 } from "lucide-react";
 
 const navItems = [
@@ -25,10 +26,11 @@ const navItems = [
   { href: "/admin/tours", label: "Tours", icon: Compass },
   { href: "/admin/bookings", label: "Bookings", icon: FileText },
   { href: "/admin/manifests", label: "Manifests", icon: ListPlus },
+  { href: "/admin/blog", label: "Blog", icon: PenSquare }, // Added Blog link
   { href: "/admin/discounts", label: "Discounts", icon: Percent },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/reports", label: "Reports", icon: TrendingUp }, // Added Reports link
+  { href: "/admin/reports", label: "Reports", icon: TrendingUp },
   { href: "/admin/destinations", label: "Destinations", icon: Map },
   { href: "/admin/categories", label: "Categories", icon: Tag },
 ];
@@ -84,7 +86,7 @@ const AdminSidebar = () => {
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
+            const active = pathname.startsWith(href) && (href !== '/admin' || pathname === '/admin');
             return (
               <li key={href}>
                 <Link

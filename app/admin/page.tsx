@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import Link from 'next/link';
 import { Plus, List, PenSquare, BarChart2, DollarSign, BookOpen, Clock, Users } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface DashboardStats {
   totalBookings: number;
@@ -13,7 +14,15 @@ interface DashboardStats {
   totalUsers: number;
   recentBookingsCount: number;
   recentActivities: { id: string; text: string }[];
-  salesTrendData?: { month: string; revenue: number }[];
+}
+
+interface MonthlyRevenue {
+  name: string;
+  revenue: number;
+}
+
+interface ReportData {
+  monthlyRevenue: MonthlyRevenue[];
 }
 
 const DashboardSkeleton = () => (
@@ -52,6 +61,7 @@ const StatCard = ({ title, value, icon: Icon }: { title: string, value: string |
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,16 +70,29 @@ const AdminDashboard = () => {
       setIsLoading(true);
       try {
         const token = localStorage.getItem('admin-auth-token');
-        const response = await fetch('/api/admin/dashboard', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('Failed to fetch data');
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.data);
+        const [dashboardRes, reportRes] = await Promise.all([
+            fetch('/api/admin/dashboard', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/admin/reports', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (!dashboardRes.ok) throw new Error('Failed to fetch dashboard data');
+        if (!reportRes.ok) throw new Error('Failed to fetch report data');
+
+        const dashboardData = await dashboardRes.json();
+        const reportData = await reportRes.json();
+
+        if (dashboardData.success) {
+          setStats(dashboardData.data);
         } else {
-          throw new Error(data.error || 'Failed to fetch dashboard data');
+          throw new Error(dashboardData.error || 'Failed to fetch dashboard data');
         }
+
+        if (reportData) {
+          setReportData(reportData);
+        } else {
+          throw new Error('Failed to fetch report data');
+        }
+
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -139,9 +162,27 @@ const AdminDashboard = () => {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-slate-800">Sales Trends</h2>
-            <div className="h-80 flex items-center justify-center text-gray-400 bg-slate-50/50 rounded-md">
-                <BarChart2 className="h-10 w-10 mb-2"/> Chart coming soon.
+            <h2 className="text-xl font-semibold mb-4 text-slate-800">Sales Trends (Last 6 months)</h2>
+            <div className="h-80">
+              {reportData?.monthlyRevenue ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reportData.monthlyRevenue} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip
+                        formatter={(value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)}
+                        cursor={{fill: 'rgba(241, 245, 249, 0.6)'}}
+                    />
+                    <Legend />
+                    <Bar dataKey="revenue" fill="#0284c7" name="Revenue" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                    <BarChart2 className="h-10 w-10 mb-2"/> Chart data is loading or unavailable.
+                </div>
+              )}
             </div>
         </div>
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
