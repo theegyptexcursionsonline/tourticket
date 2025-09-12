@@ -12,12 +12,47 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/contexts/CartContext';
 import { CartItem } from '@/types';
 
-// --- Reusable SVG Icons ---
-const VisaIcon = () => ( <svg width="48" height="28" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg" className="opacity-95"><rect width="38" height="24" rx="4" fill="#1A1F71"/><g transform="translate(3,4)" fill="#FFF" fontFamily="Arial"><text x="0" y="12" fontSize="8" fontWeight="700">VISA</text></g></svg> );
-const MastercardIcon = () => ( <svg width="48" height="28" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg" className="opacity-95"><rect width="38" height="24" rx="4" fill="#FFFFFF"/><circle cx="15" cy="12" r="7" fill="#EB001B"/><circle cx="23" cy="12" r="7" fill="#F79E1B"/></svg> );
-const AmexIcon = () => ( <svg width="48" height="28" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg" className="opacity-95"><rect width="38" height="24" rx="4" fill="#006FCF"/><g transform="translate(6,6)" fill="#FFF" fontFamily="Arial"><text x="0" y="8" fontSize="7" fontWeight="700">AMEX</text></g></svg> );
-const PayPalIcon = () => ( <svg width="48" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="opacity-95"><path d="M3 21c.2.4.6.6 1 .6h8c2.8 0 5-2 5-4.6 0-2.8-2.1-4.4-5.1-4.4H8" fill="#0070BA"/></svg> );
+const VisaIcon = () => (
+  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
+    <rect width="48" height="28" rx="4" fill="#1A1F71"/>
+    <path d="M18.5 8.5h3.2l-2 11h-3.2l2-11zm8.8 0c-1 0-1.8.4-2.4.9l-.4-2.4h-2.8l-2.5 15h3.2l.7-3.8c.6-.3 1.3-.5 2.1-.5 2.8 0 4.7-1.9 5.2-4.5.3-1.4 0-2.5-.6-3.3-.7-.8-1.7-1.2-2.9-1.2-.6 0-1.2.1-1.7.3l.1-.5zm5.2 7.3c-.2 1.3-1.1 2.2-2.3 2.2-.6 0-1-.2-1.3-.6-.3-.4-.3-.9-.1-1.5.2-1.3 1.1-2.2 2.3-2.2.6 0 1 .2 1.3.6.2.4.3.9.1 1.5z" fill="#fff"/>
+    <text x="8" y="22" fill="#fff" fontSize="6" fontFamily="Arial, sans-serif" fontWeight="700">VISA</text>
+  </svg>
+);
 
+const MastercardIcon = () => (
+  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
+    <rect width="48" height="28" rx="4" fill="#fff" stroke="#e5e7eb"/>
+    <circle cx="18" cy="14" r="8" fill="#EB001B"/>
+    <circle cx="30" cy="14" r="8" fill="#F79E1B"/>
+    <path d="M24 8c1.5 1.2 2.5 3 2.5 5s-1 3.8-2.5 5c-1.5-1.2-2.5-3-2.5-5s1-3.8 2.5-5z" fill="#FF5F00"/>
+  </svg>
+);
+
+const AmexIcon = () => (
+  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
+    <rect width="48" height="28" rx="4" fill="#006FCF"/>
+    <path d="M8 10h4l1 2 1-2h4v8h-3v-4l-1 2h-2l-1-2v4H8v-8zm12 0h8v2h-5v1h4v2h-4v1h5v2h-8v-8zm12 0h4l3 5v-5h3v8h-4l-3-5v5h-3v-8z" fill="#fff"/>
+  </svg>
+);
+
+const PayPalIcon = () => (
+ <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-paypal" viewBox="0 0 16 16">
+  <path d="M14.06 3.713c.12-1.071-.093-1.832-.702-2.526C12.628.356 11.312 0 9.626 0H4.734a.7.7 0 0 0-.691.59L2.005 13.509a.42.42 0 0 0 .415.486h2.756l-.202 1.28a.628.628 0 0 0 .62.726H8.14c.429 0 .793-.31.862-.731l.025-.13.48-3.043.03-.164.001-.007a.35.35 0 0 1 .348-.297h.38c1.266 0 2.425-.256 3.345-.91q.57-.403.993-1.005a4.94 4.94 0 0 0 .88-2.195c.242-1.246.13-2.356-.57-3.154a2.7 2.7 0 0 0-.76-.59l-.094-.061ZM6.543 8.82a.7.7 0 0 1 .321-.079H8.3c2.82 0 5.027-1.144 5.672-4.456l.003-.016q.326.186.548.438c.546.623.679 1.535.45 2.71-.272 1.397-.866 2.307-1.663 2.874-.802.57-1.842.815-3.043.815h-.38a.87.87 0 0 0-.863.734l-.03.164-.48 3.043-.024.13-.001.004a.35.35 0 0 1-.348.296H5.595a.106.106 0 0 1-.105-.123l.208-1.32z"/>
+</svg>
+);
+
+const BankIcon = () => (
+  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
+    <rect width="48" height="28" rx="4" fill="#4B5563" stroke="#e5e7eb"/>
+    <path d="M24 6l12 6v2H12v-2l12-6z" fill="#fff"/>
+    <rect x="15" y="16" width="2" height="6" fill="#fff"/>
+    <rect x="20" y="16" width="2" height="6" fill="#fff"/>
+    <rect x="25" y="16" width="2" height="6" fill="#fff"/>
+    <rect x="30" y="16" width="2" height="6" fill="#fff"/>
+    <rect x="12" y="22" width="24" height="2" fill="#fff"/>
+  </svg>
+);
 // --- Reusable Input Component ---
 const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange }: any) => (
     <div>
