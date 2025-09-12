@@ -12,11 +12,23 @@ import {
   Tag,
   Menu,
   ChevronLeft,
+  FileText,
+  ListPlus,
+  Percent,
+  MessageSquare,
+  Users,
+  TrendingUp, // Import the TrendingUp icon for reports
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/tours", label: "Tours", icon: Compass },
+  { href: "/admin/bookings", label: "Bookings", icon: FileText },
+  { href: "/admin/manifests", label: "Manifests", icon: ListPlus },
+  { href: "/admin/discounts", label: "Discounts", icon: Percent },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/reports", label: "Reports", icon: TrendingUp }, // Added Reports link
   { href: "/admin/destinations", label: "Destinations", icon: Map },
   { href: "/admin/categories", label: "Categories", icon: Tag },
 ];

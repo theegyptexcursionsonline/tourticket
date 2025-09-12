@@ -1,27 +1,52 @@
-import mongoose, { Document, Schema, models } from 'mongoose';
+// lib/models/Booking.ts
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IBooking extends Document {
-  tourId: mongoose.Schema.Types.ObjectId;
-  userId: mongoose.Schema.Types.ObjectId;
+  tour: mongoose.Schema.Types.ObjectId;
+  user: mongoose.Schema.Types.ObjectId;
   date: Date;
   time: string;
   guests: number;
-  totalAmount: number;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
-  bookingReference: string;
+  totalPrice: number;
+  status: 'Confirmed' | 'Pending' | 'Cancelled'; // Added status field
   createdAt: Date;
+  updatedAt: Date;
 }
 
-const BookingSchema: Schema = new Schema({
-  tourId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tour', required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  date: { type: Date, required: true },
-  time: { type: String, required: true },
-  guests: { type: Number, required: true, min: 1 },
-  totalAmount: { type: Number, required: true },
-  status: { type: String, enum: ['confirmed', 'pending', 'cancelled', 'completed'], default: 'pending' },
-  bookingReference: { type: String, required: true, unique: true },
-  createdAt: { type: Date, default: Date.now }
-});
+const BookingSchema: Schema<IBooking> = new Schema({
+  tour: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tour',
+    required: true,
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  date: {
+    type: Date,
+    required: true,
+  },
+  time: {
+    type: String,
+    required: true,
+  },
+  guests: {
+    type: Number,
+    required: true,
+  },
+  totalPrice: {
+    type: Number,
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ['Confirmed', 'Pending', 'Cancelled'],
+    default: 'Confirmed', // Set a default status for new bookings
+  },
+}, { timestamps: true });
 
-export default models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
+const Booking: Model<IBooking> = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
+
+export default Booking;
