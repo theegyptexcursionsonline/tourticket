@@ -1,106 +1,191 @@
 // app/admin/tours/TourActions.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Edit, Trash2, Loader2, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Edit, Trash2, MoreVertical, X, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
-export default function TourActions({ tourId }: { tourId: string }) {
-  const router = useRouter();
+export const TourActions = ({ tourId }: { tourId: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const router = useRouter();
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (menuRef.current.contains(e.target as Node)) return;
+      setIsOpen(false);
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        setShowConfirm(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
+
+  // focus trick: when menu opens, focus first item
+  useEffect(() => {
+    if (isOpen) {
+      // small delay to allow rendering
+      setTimeout(() => {
+        const first = menuRef.current?.querySelector<HTMLElement>("a,button");
+        first?.focus();
+      }, 50);
+    }
+  }, [isOpen]);
+
+  const openMenu = () => setIsOpen(true);
+  const toggleMenu = () => setIsOpen(v => !v);
 
   const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/admin/tours/${tourId}`, {
-        method: 'DELETE',
-      });
+    setShowConfirm(true);
+    setIsOpen(false);
+  };
 
-      if (res.ok) {
-        setIsModalOpen(false);
-        router.refresh();
-      } else {
-        alert('Failed to delete the tour. Please try again.');
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    const promise = (async () => {
+      const res = await fetch(`/api/admin/tours/${tourId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Failed to delete" }));
+        throw new Error(err?.message || "Delete failed");
       }
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred. Please try again.');
+      return res;
+    })();
+
+    toast.promise(promise, {
+      loading: "Deleting tour...",
+      success: "Tour deleted.",
+      error: (err) => `Delete failed: ${err?.message ?? "Unknown error"}`,
+    });
+
+    try {
+      await promise;
+      // after success, refresh listing
+      router.refresh();
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsDeleting(false);
+      setShowConfirm(false);
     }
   };
 
   return (
-    <>
-      <div className="flex items-center justify-end gap-2">
-        <Link 
-          href={`/admin/tours/edit/${tourId}`} 
-          className="p-2 border border-slate-300 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-        >
-          <Edit className="h-4 w-4" />
-          <span className="sr-only">Edit</span>
-        </Link>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="p-2 border border-red-200 bg-red-50 rounded-md text-red-600 hover:bg-red-100 hover:text-red-800 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">Delete</span>
-        </button>
-      </div>
+    <div className="relative inline-block text-left" ref={menuRef}>
+      <button
+        ref={btnRef}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        onClick={toggleMenu}
+        className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-2 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-400"
+        title="Actions"
+      >
+        <MoreVertical className="h-5 w-5 text-slate-600" />
+      </button>
 
-      {/* Custom Deletion Modal */}
-      {isModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-          aria-labelledby="modal-title"
-          role="dialog"
-          aria-modal="true"
+      {isOpen && (
+        <div
+          className="origin-top-right absolute right-0 mt-2 w-44 rounded-lg bg-white border border-slate-100 shadow-lg ring-1 ring-black ring-opacity-5 z-20 overflow-hidden"
+          role="menu"
+          aria-orientation="vertical"
+          aria-labelledby="options-menu"
         >
-          <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <div className="text-center">
-              <h3 id="modal-title" className="text-lg font-semibold text-slate-900">
-                Are you absolutely sure?
-              </h3>
-              <div className="mt-2">
-                <p className="text-sm text-slate-600">
-                  This action cannot be undone. This will permanently delete the tour.
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDelete}
-                className="inline-flex justify-center px-4 py-2 text-sm font-semibold text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:bg-red-300"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Yes, delete it'
-                )}
-              </button>
-            </div>
-             <button onClick={() => setIsModalOpen(false)} className="absolute top-2 right-2 p-1 rounded-full text-slate-400 hover:bg-slate-100">
-                <X size={20}/>
-             </button>
+          <div className="py-1">
+            <Link
+              href={`/admin/tours/edit/${tourId}`}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+              role="menuitem"
+            >
+              <Edit className="w-4 h-4 text-slate-500" />
+              <span>Edit</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none"
+              role="menuitem"
+            >
+              <Trash2 className="w-4 h-4 text-rose-500" />
+              <span>Delete</span>
+            </button>
           </div>
         </div>
       )}
-    </>
+
+      {/* Confirm modal (small) */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !isDeleting && setShowConfirm(false)} />
+
+          <div className="relative max-w-sm w-full bg-white rounded-lg shadow-xl border border-slate-100 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-1">
+                <Trash2 className="w-6 h-6 text-rose-500" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">Delete tour</h3>
+                <p className="mt-1 text-xs text-slate-500">This action is permanent. Are you sure you want to delete this tour?</p>
+
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(false)}
+                    disabled={isDeleting}
+                    className="px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={confirmDelete}
+                    disabled={isDeleting}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-rose-600 text-white text-sm shadow-sm hover:opacity-95 disabled:opacity-60"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4" fill="none" /></svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Delete
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => !isDeleting && setShowConfirm(false)}
+                className="ml-2 p-1 rounded-md text-slate-400 hover:bg-slate-50"
+                aria-label="Close"
+                disabled={isDeleting}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
-}
+};

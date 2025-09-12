@@ -2,7 +2,7 @@
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import { ICategory } from '@/lib/models/Category';
-import CategoryManager from './CategoryManager'; // We will create this next
+import CategoryManager from './CategoryManager'; // client component
 
 async function getCategories(): Promise<ICategory[]> {
   await dbConnect();
@@ -14,19 +14,19 @@ export default async function CategoriesPage() {
   const categories = await getCategories();
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Categories</h2>
-          <p className="text-sm text-slate-600">
-            Group your tours into categories for better organization.
-          </p>
+    <div className="max-w-5xl mx-auto px-6 lg:px-8 py-8">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-start justify-between gap-6 mb-6">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">Categories</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Organize tours into categories for easier discovery and filtering.
+            </p>
+          </div>
         </div>
-        {/* The "Create" button will be part of the client component */}
+
+        <CategoryManager initialCategories={categories} />
       </div>
-      
-      {/* Pass the server-fetched categories to the client component */}
-      <CategoryManager initialCategories={categories} />
     </div>
   );
 }

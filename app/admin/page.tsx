@@ -1,25 +1,35 @@
-// app/admin/tours/new/page.tsx
+// app/admin/page.tsx
 
-import TourForm from '@/components/TourForm'; // Make sure this path is correct
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 
-export default function NewTourPage() {
+export default function AdminPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        {/* This Link is styled directly and does NOT use a <Button> component */}
-        <Link 
-          href="/admin/tours"
-          className="p-2 border border-slate-300 rounded-md text-slate-600 hover:bg-slate-100 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="sr-only">Back to Tours</span>
-        </Link>
-        <h1 className="text-2xl font-semibold">Create a New Tour</h1>
-      </div>
-     
-      <TourForm />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
+      <nav>
+        <ul className="space-y-2">
+          <li>
+            <Link href="/admin/tours" className="text-blue-500 hover:underline">
+              Manage Tours
+            </Link>
+          </li>
+          <li>
+            <Link href="/admin/destinations" className="text-blue-500 hover:underline">
+              Manage Destinations
+            </Link>
+          </li>
+          <li>
+            <Link href="/admin/categories" className="text-blue-500 hover:underline">
+              Manage Categories
+            </Link>
+          </li>
+          <li>
+            <Link href="/admin/seed" className="text-blue-500 hover:underline">
+              Seed Database
+            </Link>
+          </li>
+        </ul>
+      </nav>
     </div>
   );
 }
