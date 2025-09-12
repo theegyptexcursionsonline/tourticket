@@ -43,6 +43,13 @@ export interface Category {
   tourCount: number;
 }
 
+export interface AddOn {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+}
+
 export interface Tour {
   id: number | string;
   title: string;
@@ -78,13 +85,17 @@ export interface Tour {
     available: boolean;
   }[];
   featured?: boolean;
-  quantity?: number;
+  quantity?: number; // General quantity, for compatibility
+  addOns?: AddOn[]; // Optional addons for a tour
 }
 
 export interface CartItem extends Tour {
-  quantity: number;
-  selectedDate?: string;
-  selectedTime?: string;
+  quantity: number; // This will represent the number of adults
+  childQuantity: number;
+  selectedDate: string;
+  selectedTime: string;
+  selectedLanguage: string;
+  selectedAddOns: AddOn[];
   details?: string;
 }
 
@@ -159,4 +170,4 @@ export interface SearchResult {
   total: number;
   page: number;
   limit: number;
-}
+}s

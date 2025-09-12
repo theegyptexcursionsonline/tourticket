@@ -38,7 +38,9 @@ const SummaryItem: React.FC<{item: CartItem}> = ({ item }) => {
     const { removeFromCart } = useCart();
     return (
         <div className="flex gap-4 py-4">
-            <Image src={item.image || ''} alt={item.title} width={64} height={64} className="w-16 h-16 object-cover rounded-md" />
+            {item.image && (
+                <Image src={item.image} alt={item.title} width={64} height={64} className="w-16 h-16 object-cover rounded-md" />
+            )}
             <div className="flex-1">
                 <h4 className="font-bold text-md text-slate-800 leading-tight">{item.title}</h4>
                 <p className="text-sm text-slate-500">{item.details}</p>
@@ -190,7 +192,7 @@ export default function CheckoutPage() {
   };
 
   // If the cart is empty and we're not on the thank you page yet, show an empty state.
-  if (!cartItems || cartItems.length === 0 && currentStep < 3) {
+  if ((!cartItems || cartItems.length === 0) && currentStep < 3) {
       return (
            <>
               <Header startSolid={true} />

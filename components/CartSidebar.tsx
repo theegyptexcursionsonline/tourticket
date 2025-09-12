@@ -1,6 +1,7 @@
+// components/CartSidebar.tsx
 'use client';
 
-import { FC } from 'react';
+import React, { FC } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
