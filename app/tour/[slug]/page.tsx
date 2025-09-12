@@ -1,7 +1,8 @@
 // app/tour/[slug]/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+// FIX 1: Import the 'use' hook from React
+import { useEffect, useState, use } from 'react';
 import {
   ArrowLeft,
   Clock,
@@ -30,6 +31,12 @@ import Link from 'next/link';
 interface TourPageProps {
   params: { slug: string };
 }
+
+// Mock reviews data, as there is no reviews API
+const reviewsData = [
+  { id: 1, name: 'Sarah M.', rating: 5, date: '2 days ago', title: 'Amazing experience!', text: 'The tour was incredible and our guide was very knowledgeable and entertaining. Highly recommend!', verified: true, helpful: 12 },
+  { id: 2, name: 'Marco P.', rating: 4, date: '1 week ago', title: 'Great experience', text: 'Perfect way to see the city. Only wish it was a bit longer.', verified: true, helpful: 8 }
+];
 
 // Skeleton Component for the loading state
 const TourPageSkeleton = () => (
@@ -96,7 +103,11 @@ const TourPageSkeleton = () => (
   </>
 );
 
-export default function TourPage({ params }: TourPageProps) {
+// FIX 2: Rename the destructured 'params' prop and use the hook to unwrap it.
+export default function TourPage({ params: paramsPromise }: TourPageProps) {
+  // By unwrapping the promise here, the rest of the component can use 'params' as a regular object.
+  const params = use(paramsPromise);
+
   const [tour, setTour] = useState<Tour | null>(null);
   const [relatedTours, setRelatedTours] = useState<Tour[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,37 +119,30 @@ export default function TourPage({ params }: TourPageProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [liveMessage, setLiveMessage] = useState('');
-  
-  // Mock reviews data, as there is no reviews API
-  const reviewsData = [
-    { id: 1, name: 'Sarah M.', rating: 5, date: '2 days ago', title: 'Amazing experience!', text: 'The tour was incredible and our guide was very knowledgeable and entertaining. Highly recommend!', verified: true, helpful: 12 },
-    { id: 2, name: 'Marco P.', rating: 4, date: '1 week ago', title: 'Great experience', text: 'Perfect way to see the city. Only wish it was a bit longer.', verified: true, helpful: 8 }
-  ];
 
   useEffect(() => {
     const fetchTourAndRelated = async () => {
       setIsLoading(true);
       try {
-        const toursResponse = await fetch(`/api/admin/tours`);
-        const allTours = await toursResponse.json();
+        // Fetch a single tour by its slug
+        const tourResponse = await fetch(`/api/admin/tours/search?slug=${params.slug}`);
+        const tourData = await tourResponse.json();
 
-        if (allTours.success && allTours.data) {
-          const tourData = allTours.data.find((t: Tour) => t.slug === params.slug);
-
-          if (!tourData) {
-            notFound();
-            return;
-          }
-          
-          setTour(tourData);
+        if (tourData.success && tourData.data.length > 0) {
+          const fetchedTour = tourData.data[0];
+          setTour(fetchedTour);
           setSelectedImageIndex(0);
 
-          const related = allTours.data.filter((t: Tour) => 
-            t.destination._id === tourData.destination._id && t.slug !== params.slug
-          ).slice(0, 3);
-          
-          setRelatedTours(related);
+          // Fetch related tours from the database
+          const relatedResponse = await fetch(`/api/admin/tours`);
+          const allTours = await relatedResponse.json();
 
+          if (allTours.success) {
+            const related = allTours.data.filter((t: any) =>
+              t.destination && fetchedTour.destination && t.destination._id === fetchedTour.destination._id && t.slug !== params.slug
+            ).slice(0, 3);
+            setRelatedTours(related);
+          }
         } else {
           notFound();
         }
@@ -150,7 +154,11 @@ export default function TourPage({ params }: TourPageProps) {
       }
     };
 
-    fetchTourAndRelated();
+    // Ensure params.slug exists before fetching
+    if (params.slug) {
+        fetchTourAndRelated();
+    }
+  // The dependency array now correctly uses the unwrapped params.slug, fixing the error.
   }, [params.slug]);
 
   if (isLoading) {
@@ -162,7 +170,7 @@ export default function TourPage({ params }: TourPageProps) {
   }
 
   const tourImages = tour.images && tour.images.length > 0 ? tour.images : [tour.image];
-  
+
   const handleQuickAdd = async () => {
     if (isAdding) return;
     setIsAdding(true);
@@ -417,9 +425,9 @@ export default function TourPage({ params }: TourPageProps) {
                     <h3 className="font-bold text-blue-900 mb-2">Important information</h3>
                     <ul className="space-y-1 text-sm text-blue-800">
                       <li>• {tour.ageRestriction || 'Suitable for all ages'}</li>
-                      <li>• {tour.cancellationPolicy || 'Check cancellation policy'}</li>
-                      <li>• Weather conditions may affect the tour</li>
                       <li>• Only service dogs are allowed</li>
+                      <li>• Weather conditions may affect the tour</li>
+                      <li>• {tour.cancellationPolicy || 'Check cancellation policy'}</li>
                     </ul>
                   </div>
                 </div>
@@ -481,7 +489,7 @@ export default function TourPage({ params }: TourPageProps) {
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
-                      <Link key={relatedTour._id} href={`/tour/${relatedTour.slug}`} className="group">
+                      <Link key={relatedTour.id} href={`/tour/${relatedTour.slug}`} className="group">
                         <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                           <div className="relative">
                             <Image
