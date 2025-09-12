@@ -3,6 +3,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -34,13 +35,27 @@ const AdminSidebar = () => {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-700">
-        <h1
-          className={`text-xl font-bold tracking-tight text-white transition-opacity duration-200 ${
-            !isOpen && "opacity-0"
-          }`}
-        >
-          Admin
-        </h1>
+        <div className="flex items-center gap-3">
+          {/* Logo */}
+          <Image
+            src="/EEO-logo.png"
+            alt="Logo"
+            width={32}
+            height={32}
+            className="rounded-md"
+          />
+
+          {/* Title */}
+          <span
+            className={`text-sm font-semibold tracking-wide text-white transition-opacity duration-200 ${
+              !isOpen && "opacity-0"
+            }`}
+          >
+            AdminPanel
+          </span>
+        </div>
+
+        {/* Toggle button */}
         <button
           onClick={toggleSidebar}
           className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-slate-700 transition"
@@ -70,7 +85,9 @@ const AdminSidebar = () => {
                 >
                   <Icon
                     className={`h-5 w-5 shrink-0 ${
-                      active ? "text-sky-400" : "text-slate-400 group-hover:text-slate-200"
+                      active
+                        ? "text-sky-400"
+                        : "text-slate-400 group-hover:text-slate-200"
                     }`}
                   />
                   <span
