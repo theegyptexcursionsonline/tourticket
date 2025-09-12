@@ -1,45 +1,33 @@
 // app/admin/categories/CategoryManager.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Edit, Trash2, Loader2, X, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { PlusCircle, Edit, Trash2, Loader2, X } from 'lucide-react';
 import { ICategory } from '@/lib/models/Category';
 
-const generateSlug = (name: string) =>
-  name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+const generateSlug = (name: string) => 
+  name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-type Props = { initialCategories: ICategory[] };
-
-export default function CategoryManager({ initialCategories }: Props) {
+export default function CategoryManager({ initialCategories }: { initialCategories: ICategory[] }) {
   const router = useRouter();
-  const [categories, setCategories] = useState<ICategory[]>(initialCategories || []);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
   const [formData, setFormData] = useState({ name: '', slug: '' });
-  const [search, setSearch] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setCategories(initialCategories || []);
-  }, [initialCategories]);
-
-  const openModalForCreate = () => {
+  const openPanelForCreate = () => {
     setEditingCategory(null);
     setFormData({ name: '', slug: '' });
-    setIsModalOpen(true);
+    setIsPanelOpen(true);
   };
 
-  const openModalForEdit = (category: ICategory) => {
-    setEditingCategory(category);
-    setFormData({ name: category.name, slug: category.slug });
-    setIsModalOpen(true);
+  const openPanelForEdit = (cat: ICategory) => {
+    setEditingCategory(cat);
+    setFormData({ name: cat.name, slug: cat.slug });
+    setIsPanelOpen(true);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,209 +38,139 @@ export default function CategoryManager({ initialCategories }: Props) {
     }
   };
 
-  const validate = () => {
-    if (!formData.name.trim()) {
-      toast.error('Name is required');
-      return false;
-    }
-    if (!formData.slug.trim()) {
-      toast.error('Slug is required');
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
     setIsSubmitting(true);
 
-    const apiEndpoint = editingCategory ? `/api/admin/categories/${editingCategory._id}` : '/api/admin/categories';
+    // **FIX: Corrected the API endpoint to remove '/admin'**
+    const apiEndpoint = editingCategory 
+      ? `/api/categories/${editingCategory._id}` 
+      : '/api/categories';
+      
     const method = editingCategory ? 'PUT' : 'POST';
-    const payload = { name: formData.name.trim(), slug: formData.slug.trim() };
 
-    // Optimistic UI: update local state immediately
-    let optimisticId = '';
     try {
-      if (!editingCategory) {
-        optimisticId = `temp-${Date.now()}`;
-        setCategories(prev => [{ _id: optimisticId, ...payload } as ICategory, ...prev]);
-      } else {
-        setCategories(prev => prev.map(c => (c._id === editingCategory._id ? ({ ...c, ...payload } as ICategory) : c)));
-      }
-
-      const res = await fetch(apiEndpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const res = await fetch(apiEndpoint, { 
+        method, 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(formData)
       });
 
       if (!res.ok) {
-        // rollback optimistic update
-        if (!editingCategory) {
-          setCategories(prev => prev.filter(c => c._id !== optimisticId));
-        } else {
-          // revert by reloading server data
-          router.refresh();
-        }
-        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || errorData.message || 'Failed to save');
+        const errorData = await res.json().catch(() => ({ error: 'An unknown server error occurred.' }));
+        throw new Error(errorData.error || 'Failed to save category.');
       }
 
-      const saved = await res.json();
-
-      // Replace temp id with real id if created
-      if (!editingCategory) {
-        setCategories(prev => prev.map(c => (c._id === optimisticId ? saved.data : c)));
-        toast.success('Category created');
-      } else {
-        toast.success('Category updated');
-      }
-
-      setIsModalOpen(false);
-      setFormData({ name: '', slug: '' });
-      setEditingCategory(null);
-      // refresh server-side data if needed
+      toast.success('Category saved successfully!');
+      setIsPanelOpen(false);
       router.refresh();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || 'An error occurred');
+      
+    } catch (err) {
+      toast.error((err as Error).message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (categoryId: string) => {
-    if (!confirm('Delete category? This will remove it from any linked tours.')) return;
-    setDeletingId(categoryId);
+  const handleDelete = async (catId: string, catName: string) => {
+    if (!confirm(`Are you sure you want to delete the category "${catName}"?`)) return;
 
-    // optimistic remove
-    const prev = categories;
-    setCategories(prev => prev.filter(c => c._id !== categoryId));
+    const toastId = toast.loading(`Deleting ${catName}...`);
 
     try {
-      const res = await fetch(`/api/admin/categories/${categoryId}`, { method: 'DELETE' });
+      // **FIX: Corrected the API endpoint to remove '/admin'**
+      const res = await fetch(`/api/categories/${catId}`, { method: 'DELETE' });
+
       if (!res.ok) {
-        throw new Error('Failed to delete category');
+        const errorData = await res.json().catch(() => ({ error: 'An unknown server error occurred.' }));
+        throw new Error(errorData.error || 'Failed to delete category.');
       }
-      toast.success('Category deleted');
+      
+      toast.success(`${catName} deleted.`, { id: toastId });
       router.refresh();
+
     } catch (err) {
-      console.error(err);
-      toast.error('Delete failed');
-      setCategories(prev); // rollback
-    } finally {
-      setDeletingId(null);
+      toast.error((err as Error).message, { id: toastId });
     }
   };
-
-  const filtered = categories.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.slug.toLowerCase().includes(search.toLowerCase()));
-
-  const inputStyles = "block w-full px-3 py-2 border border-slate-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400 sm:text-sm";
+  
+  const inputStyles = "block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm";
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3 w-full md:max-w-md">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search categories..."
-            className="w-full pl-3 pr-3 py-2 rounded-md border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-          />
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Manage Categories</h1>
+          <p className="text-slate-500">Add, edit, or delete tour categories.</p>
         </div>
-
-        <div className="text-right">
-          <button
-            onClick={openModalForCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors shadow"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Create Category
-          </button>
-        </div>
+        <button onClick={openPanelForCreate} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors shadow-sm">
+          <PlusCircle className="h-5 w-5" />
+          Add Category
+        </button>
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-slate-100">
-        <table className="min-w-full text-sm text-left text-slate-600">
-          <thead className="bg-slate-50 text-xs text-slate-700 uppercase">
-            <tr>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Slug</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-slate-400">No categories found.</td>
-              </tr>
-            )}
-            {filtered.map(cat => (
-              <tr key={cat._id} className="bg-white border-t last:border-b hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-900">{cat.name}</td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-500">{cat.slug}</td>
-                <td className="px-4 py-3 text-right">
-                  <div className="inline-flex items-center gap-2">
-                    <button onClick={() => openModalForEdit(cat)} className="p-2 rounded-md border border-slate-200 hover:bg-slate-50">
-                      <Edit className="h-4 w-4 text-slate-600" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cat._id)}
-                      className="p-2 rounded-md border border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-100"
-                      disabled={deletingId === cat._id}
-                    >
-                      {deletingId === cat._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </td>
-              </tr>
+      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <ul className="divide-y divide-slate-200">
+            {initialCategories.map(cat => (
+                <li key={cat._id} className="p-4 flex justify-between items-center hover:bg-slate-50">
+                    <div>
+                        <p className="font-semibold text-slate-800">{cat.name}</p>
+                        <p className="text-xs text-slate-500 font-mono">{cat.slug}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => openPanelForEdit(cat)} className="p-2 text-slate-500 hover:text-blue-600 transition-colors"><Edit size={18} /></button>
+                        <button onClick={() => handleDelete(cat._id, cat.name)} className="p-2 text-slate-500 hover:text-red-600 transition-colors"><Trash2 size={18} /></button>
+                    </div>
+                </li>
             ))}
-          </tbody>
-        </table>
+        </ul>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !isSubmitting && setIsModalOpen(false)} />
-          <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-100 p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">{editingCategory ? 'Edit Category' : 'Create Category'}</h3>
-                <p className="text-xs text-slate-500 mt-1">Create a category to organize tours. Slug will be used in URLs.</p>
-              </div>
-              <button onClick={() => !isSubmitting && setIsModalOpen(false)} className="p-1 rounded-md text-slate-400 hover:bg-slate-50">
-                <X className="h-5 w-5" />
-              </button>
+      <AnimatePresence>
+        {isPanelOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsPanelOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isPanelOpen && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col"
+          >
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-slate-800">{editingCategory ? 'Edit Category' : 'Add New Category'}</h2>
+              <button onClick={() => setIsPanelOpen(false)} className="p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors"><X size={24} /></button>
             </div>
-
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Name</label>
-                <input name="name" value={formData.name} onChange={handleInputChange} className={inputStyles} required />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Slug</label>
-                <input name="slug" value={formData.slug} onChange={handleInputChange} className={inputStyles} required />
-                <p className="mt-1 text-xs text-slate-500">Only lowercase letters, numbers and hyphens allowed.</p>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button type="button" onClick={() => { setIsModalOpen(false); setEditingCategory(null); }} className="px-3 py-2 rounded-md border bg-white text-slate-700">
-                  Cancel
-                </button>
-
-                <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 text-white font-semibold">
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-                </button>
-              </div>
+            
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div>
+                    <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-1.5">Category Name</label>
+                    <input type="text" name="name" id="name" value={formData.name} onChange={handleInputChange} required className={inputStyles} />
+                </div>
+                 <div>
+                    <label htmlFor="slug" className="block text-sm font-semibold text-slate-700 mb-1.5">URL Slug</label>
+                    <input type="text" name="slug" id="slug" value={formData.slug} onChange={handleInputChange} required className={`${inputStyles} bg-slate-50`} />
+                </div>
             </form>
-          </div>
-        </div>
-      )}
+
+            <div className="p-6 border-t bg-slate-50 mt-auto">
+                <button type="submit" onClick={handleSubmit} disabled={isSubmitting} className="w-full inline-flex justify-center items-center px-6 py-3 text-base font-bold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : 'Save Category'}
+                </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
