@@ -2,14 +2,18 @@
 'use client';
 
 import { FC, useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, ArrowLeft, Calendar, Users } from 'lucide-react';
-import { Tour, CartItem } from '@/types';
-import { useCart } from '@/contexts/CartContext';
+import { X, ArrowRight, ArrowLeft, Calendar } from 'lucide-react';
+import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import Image from 'next/image';
-import { addOnData } from './booking/addOnData'; // Import the shared add-on data
+
+// Standard imports for step components
+import BookingStep1 from './booking/BookingStep1';
+import BookingStep2 from './booking/BookingStep2';
+import BookingStep3 from './booking/BookingStep3';
+import BookingStep4 from './booking/BookingStep4';
+import { addOnData } from './booking/addOnData';
 
 // STEP PROGRESS INDICATOR
 const StepIndicator: FC<{ currentStep: number; totalSteps: number }> = ({ currentStep, totalSteps }) => {
@@ -53,7 +57,6 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const totalSteps = 4;
   const [currentStep, setCurrentStep] = useState(1);
 
-  // --- UPDATED STATE ---
   const [bookingData, setBookingData] = useState({
     selectedDate: new Date(),
     selectedTime: '',
@@ -77,13 +80,11 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     }
   }, [isOpen]);
 
-  // --- UPDATED DYNAMIC PRICE CALCULATION ---
-  const { subtotal, extras, total } = useMemo(() => {
-    if (!tour) return { subtotal: 0, extras: 0, total: 0 };
+  const { total } = useMemo(() => {
+    if (!tour) return { total: 0 };
     
     const pricePerAdult = tour.discountPrice || 0;
     const pricePerChild = pricePerAdult / 2;
-
     const subtotalCalc = (bookingData.adults * pricePerAdult) + (bookingData.children * pricePerChild);
     
     let extrasCalc = 0;
@@ -95,14 +96,14 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     }
     
     return {
-      subtotal: subtotalCalc,
-      extras: extrasCalc,
       total: subtotalCalc + extrasCalc,
     };
   }, [tour, bookingData]);
 
-  // --- NAVIGATION HANDLERS ---
   const handleNext = () => {
+    if (currentStep === 1 && !bookingData.selectedTime) {
+      return;
+    }
     if (currentStep < totalSteps) setCurrentStep(s => s + 1);
   };
 
@@ -112,17 +113,20 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   
   if (!tour) return null;
 
-  // --- DYNAMIC STEP RENDERING ---
+  // REFACTORED: Use a switch statement for cleaner step rendering
   const renderStep = () => {
-    const StepComponents = [
-      require('./booking/BookingStep1').default,
-      require('./booking/BookingStep2').default,
-      require('./booking/BookingStep3').default,
-      require('./booking/BookingStep4').default,
-    ];
-    const Step = StepComponents[currentStep - 1];
-    // --- FIX: Pass the onClose prop down to the step components ---
-    return <Step bookingData={bookingData} setBookingData={setBookingData} tour={tour} onClose={onClose} />;
+    switch (currentStep) {
+      case 1:
+        return <BookingStep1 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
+      case 2:
+        return <BookingStep2 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
+      case 3:
+        return <BookingStep3 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
+      case 4:
+        return <BookingStep4 bookingData={bookingData} tour={tour} onClose={onClose} />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -163,7 +167,7 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
             {/* STEP CONTENT */}
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">{renderStep()}</div>
 
-            {/* UPDATED FOOTER */}
+            {/* FOOTER */}
             <div className="p-4 border-t bg-white">
               <div className="flex items-center justify-between">
                 <button
@@ -175,7 +179,6 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
                   <ArrowLeft size={16} /> Back
                 </button>
 
-                {/* Hide Next button on the final step */}
                 {currentStep < totalSteps ? (
                   <button
                     onClick={handleNext}
@@ -186,12 +189,10 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
                     <ArrowRight size={16} />
                   </button>
                 ) : (
-                    // On the last step, this space is empty because Step 4 has its own buttons.
                     <div className="w-36 h-12"></div>
                 )}
               </div>
 
-              {/* DYNAMIC PRICE SUMMARY */}
               <div className="mt-3 flex items-center justify-between text-sm text-slate-600">
                 <span>
                   {bookingData.adults} Adult{bookingData.adults > 1 ? 's' : ''}
