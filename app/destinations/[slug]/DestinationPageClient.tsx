@@ -198,7 +198,160 @@ export default function DestinationPageClient({ destination, destinationTours, a
           </div>
         </section>
         
-        {/* ... Rest of the page JSX (Quick Info, Local Guide, etc.) remains the same as your original file ... */}
+        {/* Quick Info */}
+        <section className="bg-slate-50 py-12">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+              <div className="text-center">
+                <h3 className="font-bold text-slate-800 mb-2">Best Time to Visit</h3>
+                <p className="text-slate-600">{destination.bestTimeToVisit}</p>
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-slate-800 mb-2">Currency</h3>
+                <p className="text-slate-600">{destination.currency}</p>
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-slate-800 mb-2">Time Zone</h3>
+                <p className="text-slate-600">{destination.timezone}</p>
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-slate-800 mb-2">Available Tours</h3>
+                <p className="text-slate-600">{destination.tourCount} experiences</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Your Local Guide Section */}
+        <section className="bg-white py-20">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+              <div className="col-span-1 md:col-span-1 lg:col-span-1">
+                <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Your Local Guide In {destination.name}</h2>
+                <p className="text-lg text-slate-600 mb-6">
+                  {destination.longDescription}
+                </p>
+                <a href="/about" className="inline-flex items-center gap-2 text-red-600 font-bold hover:text-red-700 transition-colors">
+                  <span>Learn more about us</span>
+                  <ArrowRight size={20} />
+                </a>
+              </div>
+              <div className="col-span-1 md:col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="bg-slate-50 p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
+                  <Award className="w-10 h-10 text-red-600 mb-4" />
+                  <h3 className="font-bold text-xl text-slate-900">Expert Local Guides</h3>
+                  <p className="mt-2 text-slate-600">
+                    Our experienced local guides know all the hidden gems and stories of {destination.name}.
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
+                  <Star className="w-10 h-10 text-red-600 mb-4" />
+                  <h3 className="font-bold text-xl text-slate-900">Quality Experiences</h3>
+                  <p className="mt-2 text-slate-600">
+                    We offer you the best experiences in {destination.name}, handpicked by our experts.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Top 10 Things to Do */}
+        {top10Tours.length > 0 && (
+          <section className="py-20 bg-slate-50">
+            <div className="container mx-auto px-4">
+              <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-12">TOP 10 THINGS TO DO IN {destination.name.toUpperCase()}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                {top10Tours.map((tour, index) => (
+                  <Top10Card key={tour._id} tour={tour} index={index} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Explore by Interest */}
+        {destinationCategories.length > 0 && (
+          <section className="bg-white py-20">
+            <div className="container mx-auto px-4 text-center">
+              <h2 className="text-4xl font-extrabold text-slate-900 mb-6">
+                Discover {destination.name} by Interest
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-12">
+                Find the perfect experience for you, whether you're interested in culture, adventure, or food.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                {destinationCategories.map((category) => (
+                  <InterestCard key={category._id} category={category} tourCount={category.tourCount} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+        
+        {/* Featured Tours Carousel */}
+        {featuredTours.length > 0 && (
+          <section className="py-20 bg-slate-50 overflow-hidden">
+            <div className="container mx-auto">
+                <div className="px-4 mb-10">
+                    <h2 className="text-4xl font-extrabold text-slate-900">Best Deals in {destination.name}</h2>
+                </div>
+                <div className="relative">
+                    <div ref={combiScrollContainer} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth px-4" style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}>
+                        {featuredTours.map(tour => <CombiDealCard key={tour._id} tour={tour} />)}
+                    </div>
+                    <button 
+                        onClick={() => scroll(combiScrollContainer, 'left')} 
+                        aria-label="Scroll left"
+                        className="absolute top-1/2 -translate-y-1/2 left-0 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300 backdrop-blur-sm ml-2"
+                    >
+                        <ChevronLeft size={24} className="text-slate-700"/>
+                    </button>
+                    <button 
+                        onClick={() => scroll(combiScrollContainer, 'right')} 
+                        aria-label="Scroll right"
+                        className="absolute top-1/2 -translate-y-1/2 right-0 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300 backdrop-blur-sm mr-2"
+                    >
+                        <ChevronRight size={24} className="text-slate-700"/>
+                    </button>
+                </div>
+            </div>
+          </section>
+        )}
+
+        {/* Fun Facts Section */}
+        {destination.highlights && destination.highlights.length > 0 && (
+          <section className="bg-white py-20">
+            <div className="container mx-auto px-4 max-w-4xl">
+              <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-10">Why Visit {destination.name}?</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {destination.highlights.map((highlight, index) => (
+                  <div key={index} className="flex items-start gap-4">
+                    <CheckCircle2 className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" />
+                    <p className="text-lg text-slate-600">{highlight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Coming Soon Section for destinations without tours */}
+        {destinationTours.length === 0 && (
+          <section className="bg-white py-20">
+            <div className="container mx-auto px-4 text-center max-w-2xl">
+              <h2 className="text-4xl font-extrabold text-slate-900 mb-6">Coming Soon!</h2>
+              <p className="text-lg text-slate-600 mb-8">
+                We're working hard to bring you exciting tours and experiences in {destination.name}. 
+                Check back soon for amazing deals and unforgettable adventures!
+              </p>
+              <a href="/" className="inline-flex items-center gap-2 bg-red-600 text-white font-bold py-3 px-8 rounded-full hover:bg-red-700 transition-colors">
+                <span>Explore Other Destinations</span>
+                <ArrowRight size={20} />
+              </a>
+            </div>
+          </section>
+        )}
         
       </main>
       <Footer />
@@ -217,3 +370,4 @@ export default function DestinationPageClient({ destination, destinationTours, a
     </>
   );
 }
+

@@ -1,4 +1,3 @@
-// components/Destinations.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import ComingSoonModal from './ComingSoonModal';
@@ -16,10 +15,8 @@ export default function Destinations() {
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
-        // **FIX: Corrected the API endpoint URL**
         const response = await fetch('/api/admin/tours/destinations');
         
-        // Add a check to ensure the response is successful before parsing
         if (!response.ok) {
             throw new Error(`Failed to fetch destinations: ${response.statusText}`);
         }
@@ -28,7 +25,6 @@ export default function Destinations() {
         if (data.success) {
           setDestinations(data.data);
         } else {
-          // If the API returns success: false, log that error
           console.error('API returned an error:', data.error);
         }
       } catch (error) {
@@ -41,12 +37,14 @@ export default function Destinations() {
     fetchDestinations();
   }, []);
 
-  const handleDestinationClick = (destinationSlug: string, destinationName: string) => {
-    // This logic seems designed to show a "coming soon" modal for destinations
-    // that exist in the UI but may not have a dedicated page yet.
-    // For now, we'll assume all fetched destinations are valid and link directly.
-    // You can re-add your original logic if needed.
-    router.push(`/destinations/${destinationSlug}`);
+  const handleDestinationClick = (e: React.MouseEvent, destination: Destination) => {
+    // If there are no tours, prevent navigation and open the modal
+    if (destination.tourCount === 0) {
+      e.preventDefault();
+      setSelectedDestination(destination.name);
+      setModalOpen(true);
+    }
+    // Otherwise, the <Link> component will handle navigation
   };
 
   if (isLoading) {
@@ -80,6 +78,7 @@ export default function Destinations() {
               <Link
                 key={destination._id}
                 href={`/destinations/${destination.slug}`}
+                onClick={(e) => handleDestinationClick(e, destination)}
                 className="text-center group"
               >
                 <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl">
