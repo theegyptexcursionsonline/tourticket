@@ -7,7 +7,6 @@ import './models/Tour';
 import './models/Destination';
 import './models/Category';
 import './models/user';
-import './models/BlogPost'; // Import the new BlogPost model to register it
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -22,10 +21,10 @@ if (!MONGODB_URI) {
  * in development. This prevents connections from growing exponentially
  * during API Route usage.
  */
-let cached = global.mongoose;
+let cached = (global as any).mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 async function dbConnect() {
@@ -42,7 +41,7 @@ async function dbConnect() {
       return mongoose;
     });
   }
-  
+
   try {
     cached.conn = await cached.promise;
   } catch (e) {
