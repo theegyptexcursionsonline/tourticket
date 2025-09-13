@@ -1,3 +1,4 @@
+// app/tours/page.tsx
 import React from 'react';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
@@ -14,7 +15,7 @@ async function getAllTours(): Promise<ITour[]> {
   
   const tours = await Tour.find({})
     .populate('destination', 'name')
-    .populate('categories', 'name')
+    .populate('category', 'name') // Corrected from 'categories' to 'category'
     .sort({ createdAt: -1 })
     .lean();
   

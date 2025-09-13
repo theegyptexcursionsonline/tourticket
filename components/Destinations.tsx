@@ -1,3 +1,4 @@
+// components/Destinations.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import ComingSoonModal from './ComingSoonModal';
