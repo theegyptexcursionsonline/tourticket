@@ -4,13 +4,11 @@ import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 're
 import { ChevronDown, Search, Globe, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap, Menu, User, LogOut, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-
-// Import the real cart hook, settings, and destinations data
-import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
+import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
-import { destinations } from '@/lib/data/destinations';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 import AuthModal from '@/components/AuthModal';
+import { Destination, Category } from '@/types';
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -36,27 +34,6 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
     try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); } catch (error) { console.error("Failed to save recent searches", error); }
   };
   return { recentSearches, addSearchTerm, removeSearchTerm };
-};
-
-// Convert destinations data for mega menu
-const megaMenuData = {
-  destinations: destinations.slice(0, 5).map(dest => ({
-    name: dest.name.toUpperCase(),
-    country: dest.country,
-    imageUrl: dest.image,
-    slug: dest.slug
-  })),
-  activities: [
-    { name: 'Attractions', icon: Landmark, slug: 'attractions' },
-    { name: 'Museums', icon: Landmark, slug: 'museums' },
-    { name: 'Canal Cruises', icon: Ticket, slug: 'canal-cruises' },
-    { name: 'City Passes', icon: Ticket, slug: 'city-passes' },
-    { name: 'Hop-On Hop-Off', icon: Ticket, slug: 'hop-on-hop-off' },
-    { name: 'Bike Tours', icon: Ticket, slug: 'bike-tours' },
-    { name: 'Day Trips', icon: Star, slug: 'day-trips' },
-    { name: 'Combi Tickets', icon: Star, slug: 'combi-tickets' },
-    { name: 'Food Tours', icon: Star, slug: 'food-tours' },
-  ],
 };
 
 const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'CANAL CRUISE'], []);
@@ -109,7 +86,6 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex];
 };
 
-// ... (Rest of the file remains unchanged, including sub-components like SearchModal, MegaMenu, etc.)
 // =================================================================
 // --- SUB-COMPONENTS ---
 // =================================================================
@@ -200,9 +176,22 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
     );
 };
 
-const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ isOpen, onClose }) => {
+const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destination[]; categories: Category[]; }> = React.memo(({ isOpen, onClose, destinations, categories }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(menuRef, onClose);
+    
+    const activityIcons: { [key: string]: React.ElementType } = {
+        'attractions': Landmark,
+        'museums': Landmark,
+        'canal-cruises': Ticket,
+        'city-passes': Ticket,
+        'hop-on-hop-off': Ticket,
+        'bike-tours': Ticket,
+        'day-trips': Star,
+        'combi-tickets': Star,
+        'food-tours': Star,
+    };
+    
     return (
         <AnimatePresence>
             {isOpen && (
@@ -212,14 +201,14 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
                             <div className="md:col-span-2">
                                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Top Destinations</h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                    {megaMenuData.destinations.map(dest => (
-                                        <a href={`/destinations/${dest.slug}`} key={dest.name} className="group block">
+                                    {destinations.slice(0, 6).map(dest => (
+                                        <a href={`/destinations/${dest.slug}`} key={dest._id} className="group block">
                                             <div className="aspect-square w-full rounded-lg overflow-hidden relative bg-slate-200">
-                                                <Image src={dest.imageUrl} alt={dest.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
+                                                <Image src={dest.image} alt={dest.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                                                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
                                             </div>
-                                            <h4 className="mt-2 font-bold text-gray-900 group-hover:text-red-500">{dest.name}</h4>
-                                            <p className="text-xs text-gray-500">{dest.country}</p>
+                                            <h4 className="mt-2 font-bold text-gray-900 group-hover:text-red-500">{dest.name.toUpperCase()}</h4>
+                                            <p className="text-xs text-gray-500">{(dest as any).country || ''}</p>
                                         </a>
                                     ))}
                                 </div>
@@ -227,9 +216,11 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
                             <div>
                                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Activity Types</h3>
                                 <ul className="space-y-3">
-                                    {megaMenuData.activities.map(activity => (
-                                        <li key={activity.name}><a href={`/categories/${activity.slug}`} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group"><activity.icon size={20} className="text-gray-400 group-hover:text-red-500" /> <span className="font-semibold">{activity.name}</span></a></li>
-                                    ))}
+                                    {categories.slice(0, 9).map(activity => {
+                                        const Icon = activityIcons[activity.slug] || Ticket;
+                                        return (
+                                        <li key={activity._id}><a href={`/categories/${activity.slug}`} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group"><Icon size={20} className="text-gray-400 group-hover:text-red-500" /> <span className="font-semibold">{activity.name}</span></a></li>
+                                    )})}
                                 </ul>
                             </div>
                             <div className="bg-gray-50 rounded-lg p-6 flex flex-col justify-center items-center text-center">
@@ -328,12 +319,24 @@ const UserMenu: FC<{ user: any; onLogout: () => void; }> = ({ user, onLogout }) 
   );
 };
 
-const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; onOpenAuth: (state: 'login' | 'signup') => void; }> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth }) => {
+const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; onOpenAuth: (state: 'login' | 'signup') => void; destinations: Destination[]; categories: Category[]; }> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth, destinations, categories }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   useOnClickOutside(menuRef, onClose);
   
   useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);
+
+  const activityIcons: { [key: string]: React.ElementType } = {
+        'attractions': Landmark,
+        'museums': Landmark,
+        'canal-cruises': Ticket,
+        'city-passes': Ticket,
+        'hop-on-hop-off': Ticket,
+        'bike-tours': Ticket,
+        'day-trips': Star,
+        'combi-tickets': Star,
+        'food-tours': Star,
+    };
 
   return (
     <AnimatePresence>
@@ -436,8 +439,8 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                 <div>
                   <h3 className="font-bold text-lg text-slate-800 mb-4">Destinations</h3>
                   <div className="space-y-2">
-                    {megaMenuData.destinations.map(dest => (
-                      <a key={dest.name} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                    {destinations.map(dest => (
+                      <a key={dest._id} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                         {dest.name}
                       </a>
                     ))}
@@ -447,12 +450,15 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                 <div>
                   <h3 className="font-bold text-lg text-slate-800 mb-4">Activities</h3>
                   <div className="space-y-2">
-                    {megaMenuData.activities.map(activity => (
-                      <a key={activity.name} href={`/categories/${activity.slug}`} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
-                        <activity.icon size={16} />
-                        <span>{activity.name}</span>
-                      </a>
-                    ))}
+                    {categories.map(activity => {
+                      const Icon = activityIcons[activity.slug] || Ticket;
+                      return (
+                        <a key={activity._id} href={`/categories/${activity.slug}`} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                          <Icon size={16} />
+                          <span>{activity.name}</span>
+                        </a>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -494,6 +500,27 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
   const [isSearchModalOpen, setSearchModalOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
+  
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  
+  useEffect(() => {
+    const fetchNavData = async () => {
+        try {
+            const [destRes, catRes] = await Promise.all([
+                fetch('/api/admin/tours/destinations'),
+                fetch('/api/categories'),
+            ]);
+            const destData = await destRes.json();
+            const catData = await catRes.json();
+            if(destData.success) setDestinations(destData.data);
+            if(catData.success) setCategories(catData.data);
+        } catch (error) {
+            console.error("Failed to fetch nav data", error);
+        }
+    };
+    fetchNavData();
+  }, []);
 
   const { openCart, totalItems } = useCart();
   const { user, logout } = useAuth();
@@ -598,7 +625,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
                 </div>
             </div>
         </div>
-        <MegaMenu isOpen={isMegaMenuOpen} onClose={() => setMegaMenuOpen(false)} />
+        <MegaMenu isOpen={isMegaMenuOpen} onClose={() => setMegaMenuOpen(false)} destinations={destinations} categories={categories} />
       </header>
 
       <MobileMenu
@@ -606,6 +633,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
         onClose={handleMobileMenuClose}
         onOpenSearch={handleSearchModalOpen}
         onOpenAuth={handleAuthModalOpen}
+        destinations={destinations}
+        categories={categories}
       />
 
       <AnimatePresence>
