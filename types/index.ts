@@ -1,5 +1,4 @@
 // types/index.ts
-
 export interface Currency {
   code: string;
   name: string;
@@ -102,23 +101,23 @@ export interface CartItem extends Tour {
   totalPrice?: number;
 }
 
+// MODIFIED: This interface now correctly matches the backend Mongoose model.
 export interface Booking {
-  id: string;
-  tourId: string;
-  userId: string;
-  tourTitle: string;
-  tourImage: string;
-  date: string;
+  _id: string;
+  tour: Tour; // The API populates this, so it should be the Tour object
+  user: User; // The API populates this
+  date: string; // Dates are serialized to strings
   time: string;
   guests: number;
-  totalAmount: number;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
-  bookingReference: string;
+  totalPrice: number;
+  status: 'Confirmed' | 'Pending' | 'Cancelled';
   createdAt: string;
   updatedAt: string;
 }
 
+
 export interface User {
+  _id: string;
   id: string;
   email: string;
   name: string;

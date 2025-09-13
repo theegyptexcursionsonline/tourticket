@@ -11,36 +11,81 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/types';
 
-// --- Icon components (Visa/Mastercard/Amex/PayPal) ---
-const VisaIcon = () => (
-  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
+// Replace VisaIcon with this exact SVG component
+const VisaIcon = ({ className = '', width = 48, height = 28 }: { className?: string; width?: number; height?: number }) => (
+  <svg
+    width={width}
+    height={height}
+    viewBox="0 0 48 28"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    className={className}
+  >
     <rect width="48" height="28" rx="4" fill="#1A1F71"/>
-    <path d="M18.5 8.5h3.2l-2 11h-3.2l2-11zm8.8 0c-1 0-1.8.4-2.4.9l-.4-2.4h-2.8l-2.5 15h3.2l.7-3.8c.6-.3 1.3-.5 2.1-.5 2.8 0 4.7-1.9 5.2-4.5.3-1.4 0-2.5-.6-3.3-.7-.8-1.7-1.2-2.9-1.2-.6 0-1.2.1-1.7.3l.1-.5zm5.2 7.3c-.2 1.3-1.1 2.2-2.3 2.2-.6 0-1-.2-1.3-.6-.3-.4-.3-.9-.1-1.5.2-1.3 1.1-2.2 2.3-2.2.6 0 1 .2 1.3.6.2.4.3.9.1 1.5z" fill="#fff"/>
-    <text x="8" y="22" fill="#fff" fontSize="6" fontFamily="Arial, sans-serif" fontWeight="700">VISA</text>
+    {/* Stylized VISA wordmark (simplified vector shapes for crisp rendering) */}
+    <path d="M11.2 19.6h2.1l2.1-11.2H13L11.2 19.6zM18.9 8.4c-1.15 0-2.05.55-2.6 1.3l-.5-1.9h-2.9l-1.9 11.2h2.4l.7-3.9c.65-.35 1.45-.55 2.3-.55 3.15 0 5.15-2.2 5.7-5.15.35-1.55.05-2.75-.65-3.45-.8-.8-1.95-1.2-3.45-1.2zM28.3 16.1c-.25 1.45-1.3 2.45-2.8 2.45-.7 0-1.2-.25-1.6-.8-.35-.6-.3-1.25-.05-2 .25-1.45 1.3-2.45 2.8-2.45.7 0 1.2.25 1.6.8.35.6.3 1.25.05 2z" fill="#fff"/>
+    {/* Fallback text for accessibility (visually hidden by default) */}
+    <text x="6" y="23" fill="transparent" fontSize="8" fontFamily="Arial, sans-serif" fontWeight="700">VISA</text>
   </svg>
 );
 
-const MastercardIcon = () => (
-  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
-    <rect width="48" height="28" rx="4" fill="#fff" stroke="#e5e7eb"/>
-    <circle cx="18" cy="14" r="8" fill="#EB001B"/>
-    <circle cx="30" cy="14" r="8" fill="#F79E1B"/>
-    <path d="M24 8c1.5 1.2 2.5 3 2.5 5s-1 3.8-2.5 5c-1.5-1.2-2.5-3-2.5-5s1-3.8 2.5-5z" fill="#FF5F00"/>
+
+const MastercardIcon = ({ className = '', width = 48, height = 28 }: { className?: string; width?: number; height?: number }) => (
+  <svg
+    width={width}
+    height={height}
+    viewBox="0 0 48 28"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    className={className}
+  >
+    <rect width="48" height="28" rx="4" fill="#fff" stroke="#e6e7ea"/>
+    <g transform="translate(8,4)">
+      <circle cx="10" cy="10" r="8" fill="#EB001B" />
+      <circle cx="22" cy="10" r="8" fill="#F79E1B" />
+      <path d="M16 2c1.6 1.3 2.6 3.2 2.6 5.2 0 2-1 3.9-2.6 5.2-1.6-1.3-2.6-3.2-2.6-5.2C13.4 5.2 14.4 3.3 16 2z" fill="#FF5F00"/>
+    </g>
   </svg>
 );
 
-const AmexIcon = () => (
-  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
+
+// AmexIcon — paste above CheckoutFormStep
+const AmexIcon = ({ className = '', width = 48, height = 28 }: { className?: string; width?: number; height?: number }) => (
+  <svg
+    width={width}
+    height={height}
+    viewBox="0 0 48 28"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    className={className}
+  >
     <rect width="48" height="28" rx="4" fill="#006FCF"/>
-    <path d="M8 10h4l1 2 1-2h4v8h-3v-4l-1 2h-2l-1-2v4H8v-8zm12 0h8v2h-5v1h4v2h-4v1h5v2h-8v-8zm12 0h4l3 5v-5h3v8h-4l-3-5v5h-3v-8z" fill="#fff"/>
+    <g transform="translate(4,6)" fill="#fff">
+      <path d="M2 2h6l1 2 1-2h6v8h-3v-4l-1 2h-2l-1-2v4H2V2z" />
+      <path d="M14 2h8v2h-5v1h4v2h-4v1h5v2h-8v-8z" />
+      <path d="M26 2h4l3 5v-5h3v8h-4l-3-5v5h-3v-8z" />
+    </g>
+  </svg>
+);
+// Replace PayPalIcon with this exact SVG component (increased default size)
+const PayPalIcon = ({ className = '', width = 36, height = 24 }: { className?: string; width?: number; height?: number }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={width}
+    height={height}
+    viewBox="0 0 36 24"
+    aria-hidden="true"
+    className={className}
+  >
+    {/* Background shapes removed — keep logo just the mark for clean UI */}
+    <g fill="none" fillRule="evenodd">
+      <path fill="#003087" d="M11.9 1.2H6.4C5.8 1.2 5.3 1.6 5.1 2.2L2 14.6c-.1.4.2.8.6.8h3.1l-.2 1.3c-.1.4.2.8.6.8h2.4c.4 0 .8-.3.9-.7l.5-3.1.1-.6c.1-.4.4-.7.8-.7h1.1c3 0 5.4-1.1 6.5-3.7.4-1 .4-2.1.1-3.1-.3-1.4-1.1-2.4-2.1-3.1-.4-.2-.8-.4-1.2-.5-1.2-.3-2.6-.3-4.1-.3z"/>
+      <path fill="#009CDE" d="M6.7 16.3h2.1c.4 0 .8-.3.9-.7l.5-3.1c.1-.4.4-.7.8-.7h1.1c2.9 0 5-1.1 5.7-3.9.2-1 .1-1.9-.3-2.7.8.5 1.3 1.4 1.5 2.6.3 1.5.2 2.7-.4 3.9-.9 1.9-2.8 3.3-5.6 3.7H9.3c-.6 0-1 .4-1.1 1l-.2 1.3z"/>
+      <path fill="#112E51" d="M9.8 6.2h3.9c1 0 1.8.2 2.3.6.2.1.4.3.6.5.2.2.3.5.4.8.1.4.1.9-.1 1.4-.6 2-2.3 3.2-5.2 3.2H9.3c-.6 0-1 .4-1.1 1l-.2 1.3h3.4l-.2 1.3H7.2L9.8 6.2z"/>
+    </g>
   </svg>
 );
 
-const PayPalIcon = () => (
- <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-paypal" viewBox="0 0 16 16">
-  <path d="M14.06 3.713c.12-1.071-.093-1.832-.702-2.526C12.628.356 11.312 0 9.626 0H4.734a.7.7 0 0 0-.691.59L2.005 13.509a.42.42 0 0 0 .415.486h2.756l-.202 1.28a.628.628 0 0 0 .62.726H8.14c.429 0 .793-.31.862-.731l.025-.13.48-3.043.03-.164.001-.007a.35.35 0 0 1 .348-.297h.38c1.266 0 2.425-.256 3.345-.91q.57-.403.993-1.005a4.94 4.94 0 0 0 .88-2.195c.242-1.246.13-2.356-.57-3.154a2.7 2.7 0 0 0-.76-.59l-.094-.061ZM6.543 8.82a.7.7 0 0 1 .321-.079H8.3c2.82 0 5.027-1.144 5.672-4.456l.003-.016q.326.186.548.438c.546.623.679 1.535.45 2.71-.272 1.397-.866 2.307-1.663 2.874-.802.57-1.842.815-3.043.815h-.38a.87.87 0 0 0-.863.734l-.03.164-.48 3.043-.024.13-.001.004a.35.35 0 0 1-.348.296H5.595a.106.106 0 0 1-.105-.123l.208-1.32z"/>
-</svg>
-);
 
 // --- Reusable Input Component ---
 const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false }: any) => (
@@ -171,10 +216,70 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
             </section>
             <section>
                 <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                    <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><div className="flex gap-1 items-center"> <VisaIcon /> <MastercardIcon /> <AmexIcon /> </div><span className="text-sm font-medium">Card</span></button>
-                    <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><PayPalIcon /><span className="text-sm font-medium">PayPal</span></button>
-                </div>
+              <div className="grid grid-cols-3 gap-3 mb-6">
+  {/* Card option */}
+  <button
+    type="button"
+    onClick={() => setPaymentMethod('card')}
+    aria-pressed={paymentMethod === 'card'}
+    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${
+      paymentMethod === 'card'
+        ? 'bg-red-50 border-red-200 shadow-sm'
+        : 'bg-white border-slate-100 hover:shadow-sm'
+    }`}
+  >
+    <Image
+      src="/visam.png"
+      alt="Credit & debit cards"
+      width={144}
+      height={40}
+      className="h-10 w-auto object-contain"
+    />
+    <span className="text-sm font-medium text-slate-700">Card</span>
+  </button>
+
+  {/* PayPal option */}
+  <button
+    type="button"
+    onClick={() => setPaymentMethod('paypal')}
+    aria-pressed={paymentMethod === 'paypal'}
+    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${
+      paymentMethod === 'paypal'
+        ? 'bg-red-50 border-red-200 shadow-sm'
+        : 'bg-white border-slate-100 hover:shadow-sm'
+    }`}
+  >
+    <Image
+      src="/paypal.png"
+      alt="PayPal"
+      width={144}
+      height={40}
+      className="h-10 w-auto object-contain"
+    />
+  </button>
+
+  {/* Bank Transfer option */}
+  <button
+    type="button"
+    onClick={() => setPaymentMethod('bank')}
+    aria-pressed={paymentMethod === 'bank'}
+    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${
+      paymentMethod === 'bank'
+        ? 'bg-red-50 border-red-200 shadow-sm'
+        : 'bg-white border-slate-100 hover:shadow-sm'
+    }`}
+  >
+    <Image
+      src="/bank.png"
+      alt="Bank Transfer"
+      width={144}
+      height={40}
+      className="h-10 w-auto object-contain"
+    />
+    <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
+  </button>
+</div>
+
                 <AnimatePresence mode="wait">
                     <motion.div key={paymentMethod} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
                         {paymentMethod === 'card' && (<div className="space-y-4 p-6 bg-slate-50 rounded-xl border border-slate-100"><div className="grid grid-cols-1 gap-4"><FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} disabled={isProcessing}/><FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} disabled={isProcessing}/></div><div className="grid grid-cols-2 gap-4"><FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} disabled={isProcessing}/><FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} disabled={isProcessing}/></div></div>)}

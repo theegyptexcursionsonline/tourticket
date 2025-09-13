@@ -1,9 +1,7 @@
-// app/login/page.tsx
 'use client';
 
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
-import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +9,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const { user, isLoading, isAuthenticated, login } = useAuth();
+  // We still use useAuth only to read auth state/loading; actual login POST goes to your route
+  const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   
   const [formData, setFormData] = useState({
@@ -88,10 +87,53 @@ export default function LoginPage() {
     setLoginError('');
 
     try {
-      await login(formData.email, formData.password);
+      // POST to the provided login route - adjust path if your route lives elsewhere
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // handle trusted error messages from the route
+        const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `Login failed (${res.status})`;
+        setLoginError(msg);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // expected shape from your route: { success: true, message, token, user }
+      if (data?.token) {
+        // store token (adapt storage method if you use cookies or a context setter)
+        try {
+          localStorage.setItem('token', data.token);
+        } catch (err) {
+          console.warn('Could not store token in localStorage', err);
+        }
+
+        // optionally store user payload
+        if (data.user) {
+          try {
+            localStorage.setItem('user', JSON.stringify(data.user));
+          } catch (err) {
+            console.warn('Could not store user in localStorage', err);
+          }
+        }
+
+        // navigate to dashboard
+        router.push('/user/dashboard');
+        return;
+      } else {
+        setLoginError(data?.error || data?.message || 'Login failed: no token returned.');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
-      setLoginError(error.message || 'Login failed. Please check your credentials and try again.');
+      setLoginError(error?.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -227,6 +269,7 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               disabled={isSubmitting}
             >
+              {/* Google SVG */}
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
                 <path fill="#4285F4" d="M24 9.5c3.94 0 6.6 1.7 8.12 3.13l5.94-5.94C34.45 3.3 29.68 1 24 1 14.64 1 6.72 6.64 3.16 14.73l6.9 5.36C11.95 14.9 17.53 9.5 24 9.5z"/>
                 <path fill="#34A853" d="M46.1 24.5c0-1.6-.14-3.13-.41-4.6H24v8.7h12.47c-.54 2.8-2.15 5.16-4.58 6.74l7.06 5.48c4.13-3.81 6.15-9.43 6.15-16.32z"/>
@@ -240,6 +283,7 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               disabled={isSubmitting}
             >
+              {/* Facebook SVG */}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>

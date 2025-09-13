@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import Booking from '@/lib/models/Booking';
+// app/api/user/bookings/route.ts
+import Booking from '@/lib/models/Booking'; // Corrected import
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
 import { verifyToken } from '@/lib/jwt'; // Using your JWT verification
@@ -50,4 +51,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to fetch bookings', details: errorMessage }, { status: 500 });
   }
 }
-
