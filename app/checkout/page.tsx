@@ -4,13 +4,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lock, Shield, CheckCircle, CalendarDays, User, Trash2, Smartphone, Headphones } from 'lucide-react';
+import { ArrowLeft, Lock, Shield, CheckCircle, CalendarDays, User, Trash2, Smartphone, Headphones, Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useSettings } from '@/hooks/useSettings';
-import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
+import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/types';
 
+// --- Icon Components ---
 const VisaIcon = () => (
   <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
     <rect width="48" height="28" rx="4" fill="#1A1F71"/>
@@ -42,7 +43,7 @@ const PayPalIcon = () => (
 );
 
 // --- Reusable Input Component ---
-const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange }: any) => (
+const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false }: any) => (
     <div>
         <label htmlFor={name} className="block text-sm font-medium text-slate-700 mb-2">{label}{required && <span className="text-rose-500 ml-1">*</span>}</label>
         <input
@@ -53,7 +54,8 @@ const FormInput = ({ label, name, type = 'text', placeholder, required = true, v
             required={required}
             value={value}
             onChange={onChange}
-            className="w-full bg-white/80 backdrop-blur-sm border border-slate-200 px-4 py-3 rounded-xl shadow-sm placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition duration-200"
+            disabled={disabled}
+            className="w-full bg-white/80 backdrop-blur-sm border border-slate-200 px-4 py-3 rounded-xl shadow-sm placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition duration-200 disabled:bg-slate-100 disabled:cursor-not-allowed"
         />
     </div>
 );
@@ -84,7 +86,7 @@ const SummaryItem: React.FC<{item: CartItem}> = ({ item }) => {
 }
 
 // --- Booking Summary Component ---
-const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode }: any) => {
+const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing }: any) => {
     const { formatPrice } = useSettings();
     const { cart } = useCart();
 
@@ -117,8 +119,8 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode }: an
                 </div>
             </div>
             <div className="mt-6 hidden lg:block">
-                <button type="submit" form="checkout-form" className="w-full rounded-2xl py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition">
-                    <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Complete Booking & Pay</span>
+                <button type="submit" form="checkout-form" disabled={isProcessing} className="w-full rounded-2xl py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center">
+                    {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Complete Booking & Pay</span>}
                 </button>
                 <p className="text-xs text-slate-500 text-center mt-3">By completing this booking you agree to our <a className="underline" href="/terms">Terms of Service</a>.</p>
             </div>
@@ -127,8 +129,8 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode }: an
 };
 
 // --- Checkout Form Step ---
-const CheckoutFormStep = ({ onPaymentSuccess }: { onPaymentSuccess: () => void; }) => {
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'bank'>('card');
+const CheckoutFormStep = ({ onPaymentProcess, isProcessing }: { onPaymentProcess: () => void; isProcessing: boolean }) => {
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' >('card');
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', email: '', phone: '', emergencyContact: '', specialRequests: '',
         cardholderName: '', cardNumber: '', expiryDate: '', cvv: ''
@@ -140,8 +142,7 @@ const CheckoutFormStep = ({ onPaymentSuccess }: { onPaymentSuccess: () => void; 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Processing payment with data:', formData);
-        onPaymentSuccess();
+        onPaymentProcess();
     };
 
     return (
@@ -149,23 +150,23 @@ const CheckoutFormStep = ({ onPaymentSuccess }: { onPaymentSuccess: () => void; 
             <section>
                 <div className="flex items-center justify-between mb-4"><h2 className="text-2xl font-extrabold text-slate-900">Contact Information</h2><div className="flex items-center gap-2 text-sm text-slate-500"><Shield size={14} className="text-emerald-500" /> <span>Secure &amp; encrypted</span></div></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormInput label="First Name" name="firstName" placeholder="Enter your first name" value={formData.firstName} onChange={handleInputChange} />
-                    <FormInput label="Last Name" name="lastName" placeholder="Enter your last name" value={formData.lastName} onChange={handleInputChange} />
-                    <FormInput label="Email Address" name="email" type="email" placeholder="Enter your email address" value={formData.email} onChange={handleInputChange} />
-                    <FormInput label="Phone Number" name="phone" type="tel" placeholder="Enter your phone number" value={formData.phone} onChange={handleInputChange} />
-                    <div className="md:col-span-2"><FormInput label="Emergency Contact (optional)" name="emergencyContact" placeholder="Name and phone number" required={false} value={formData.emergencyContact} onChange={handleInputChange} /></div>
-                    <div className="md:col-span-2"><label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label><textarea name="specialRequests" value={formData.specialRequests} onChange={handleInputChange} placeholder="Any special requirements, dietary restrictions, etc..." rows={4} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus-visible:ring-2 focus-visible:ring-red-500" /></div>
+                    <FormInput label="First Name" name="firstName" placeholder="Enter your first name" value={formData.firstName} onChange={handleInputChange} disabled={isProcessing}/>
+                    <FormInput label="Last Name" name="lastName" placeholder="Enter your last name" value={formData.lastName} onChange={handleInputChange} disabled={isProcessing}/>
+                    <FormInput label="Email Address" name="email" type="email" placeholder="Enter your email address" value={formData.email} onChange={handleInputChange} disabled={isProcessing}/>
+                    <FormInput label="Phone Number" name="phone" type="tel" placeholder="Enter your phone number" value={formData.phone} onChange={handleInputChange} disabled={isProcessing}/>
+                    <div className="md:col-span-2"><FormInput label="Emergency Contact (optional)" name="emergencyContact" placeholder="Name and phone number" required={false} value={formData.emergencyContact} onChange={handleInputChange} disabled={isProcessing}/></div>
+                    <div className="md:col-span-2"><label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label><textarea name="specialRequests" value={formData.specialRequests} onChange={handleInputChange} placeholder="Any special requirements, dietary restrictions, etc..." rows={4} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus-visible:ring-2 focus-visible:ring-red-500" disabled={isProcessing}/></div>
                 </div>
             </section>
             <section>
                 <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-2 gap-3 mb-6">
                     <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><div className="flex gap-1 items-center"> <VisaIcon /> <MastercardIcon /> <AmexIcon /> </div><span className="text-sm font-medium">Card</span></button>
                     <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><PayPalIcon /><span className="text-sm font-medium">PayPal</span></button>
                 </div>
                 <AnimatePresence mode="wait">
                     <motion.div key={paymentMethod} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
-                        {paymentMethod === 'card' && (<div className="space-y-4 p-6 bg-slate-50 rounded-xl border border-slate-100"><div className="grid grid-cols-1 gap-4"><FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} /><FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} /></div><div className="grid grid-cols-2 gap-4"><FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} /><FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} /></div></div>)}
+                        {paymentMethod === 'card' && (<div className="space-y-4 p-6 bg-slate-50 rounded-xl border border-slate-100"><div className="grid grid-cols-1 gap-4"><FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} disabled={isProcessing}/><FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} disabled={isProcessing}/></div><div className="grid grid-cols-2 gap-4"><FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} disabled={isProcessing}/><FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} disabled={isProcessing}/></div></div>)}
                         {paymentMethod === 'paypal' && (<div className="rounded-xl p-6 bg-slate-50 border border-slate-100 text-center text-slate-700"><p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p></div>)}
                     </motion.div>
                 </AnimatePresence>
@@ -175,15 +176,44 @@ const CheckoutFormStep = ({ onPaymentSuccess }: { onPaymentSuccess: () => void; 
 };
 
 // --- Thank You Page ---
-const ThankYouPage = ({ orderedItems }: { orderedItems: CartItem[] }) => {
+const ThankYouPage = ({ orderedItems, pricing }: { orderedItems: CartItem[], pricing: any }) => {
     const { formatPrice } = useSettings();
     return (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white/90 backdrop-blur-sm rounded-3xl p-10 shadow-xl max-w-3xl mx-auto text-center">
             <div className="mx-auto w-fit mb-6 p-4 rounded-full bg-emerald-100"><CheckCircle size={48} className="text-emerald-600" /></div>
-            <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed</h1>
-            <p className="text-slate-600 mb-6">We’ve emailed the booking details and payment confirmation to you.</p>
-            <div className="space-y-3 mb-6">{orderedItems.map((item, index) => (<div key={`${item._id}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg overflow-hidden"><Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/></div><div><p className="font-semibold text-slate-800">{item.title}</p><p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p></div></div><div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div></div>))}</div>
-            <div className="flex justify-center gap-3"><button onClick={() => window.location.assign('/')} className="px-5 py-2 rounded-xl border border-slate-200 hover:shadow-sm">Go to homepage</button><button onClick={() => window.print()} className="px-5 py-2 rounded-xl bg-slate-900 text-white">Print receipt</button></div>
+            <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
+            <p className="text-slate-600 mb-6">We've sent a booking confirmation and receipt to your email address.</p>
+            
+            <div className="text-left bg-slate-50 rounded-xl p-6 border border-slate-100 mb-6">
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Your Receipt</h3>
+                <div className="space-y-3 mb-4 divide-y divide-slate-200">
+                    {orderedItems.map((item, index) => (
+                        <div key={`${item._id}-${index}`} className="flex items-center justify-between pt-3 first:pt-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden">
+                                    <Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-slate-800">{item.title}</p>
+                                    <p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p>
+                                </div>
+                            </div>
+                            <div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div>
+                        </div>
+                    ))}
+                </div>
+                <div className="border-t border-slate-200 pt-3 space-y-1">
+                    <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
+                    {pricing.discount > 0 && <div className="flex justify-between text-sm text-emerald-700"><span>Discount</span><span>-{formatPrice(pricing.discount)}</span></div>}
+                    <div className="flex justify-between text-sm text-slate-600"><span>Fees & Taxes</span><span>{formatPrice(pricing.serviceFee + pricing.tax)}</span></div>
+                    <div className="flex justify-between text-lg font-bold text-slate-900 mt-2"><span>Total Paid</span><span>{formatPrice(pricing.total)}</span></div>
+                </div>
+            </div>
+
+            <div className="flex justify-center gap-3">
+                <button onClick={() => window.location.assign('/')} className="px-5 py-2 rounded-xl border border-slate-200 hover:shadow-sm">Go to homepage</button>
+                <button onClick={() => window.print()} className="px-5 py-2 rounded-xl bg-slate-900 text-white">Print receipt</button>
+            </div>
         </motion.div>
     );
 };
@@ -204,7 +234,9 @@ export default function CheckoutPage() {
     const { formatPrice } = useSettings();
     const router = useRouter();
     const [isConfirmed, setIsConfirmed] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
+    const [finalPricing, setFinalPricing] = useState<any>(null);
     const [promoCode, setPromoCode] = useState('');
     const [discount, setDiscount] = useState(0);
 
@@ -224,10 +256,16 @@ export default function CheckoutPage() {
         }
     };
 
-    const handlePaymentSuccess = () => {
-        setOrderedItems([...(cart || [])]); 
-        clearCart(); 
-        setIsConfirmed(true); 
+    const handlePaymentProcess = () => {
+        setIsProcessing(true);
+        // Simulate payment processing time
+        setTimeout(() => {
+            setOrderedItems([...(cart || [])]);
+            setFinalPricing(pricing);
+            clearCart();
+            setIsConfirmed(true);
+            setIsProcessing(false);
+        }, 2000); // 2-second delay
     };
     
     useEffect(() => {
@@ -250,22 +288,6 @@ export default function CheckoutPage() {
         )
     }
 
-    if (cart.length === 0 && !isConfirmed) {
-        return (
-            <>
-                <Header startSolid={true} />
-                <main className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
-                    <div className="text-center p-4">
-                        <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
-                        <p className="text-slate-600 mb-8">Please add tours to your cart before proceeding.</p>
-                        <a href="/" className="px-8 py-3 bg-red-600 text-white font-semibold hover:bg-red-700 rounded-full transition-colors">Explore Tours</a>
-                    </div>
-                </main>
-                <Footer />
-            </>
-        )
-    }
-
     return (
         <>
             <Header startSolid={true} />
@@ -280,11 +302,11 @@ export default function CheckoutPage() {
                             transition={{ duration: 0.45 }}
                         >
                             {isConfirmed ? (
-                                <ThankYouPage orderedItems={orderedItems} />
+                                <ThankYouPage orderedItems={orderedItems} pricing={finalPricing} />
                             ) : (
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-start">
                                     <div className="lg:col-span-2">
-                                        <CheckoutFormStep onPaymentSuccess={handlePaymentSuccess} />
+                                        <CheckoutFormStep onPaymentProcess={handlePaymentProcess} isProcessing={isProcessing} />
                                     </div>
                                     <div className="lg:col-span-1">
                                         <BookingSummary
@@ -292,6 +314,7 @@ export default function CheckoutPage() {
                                             promoCode={promoCode}
                                             setPromoCode={setPromoCode}
                                             applyPromoCode={applyPromoCode}
+                                            isProcessing={isProcessing}
                                         />
                                     </div>
                                 </div>
@@ -311,16 +334,15 @@ export default function CheckoutPage() {
                     <button
                         type="submit"
                         form="checkout-form"
-                        className="w-full rounded-2xl py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition"
+                        disabled={isProcessing}
+                        className="w-full rounded-2xl py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
                     >
-                        <span className="inline-flex items-center justify-center gap-2">
-                            <Lock size={16} /> Complete Booking & Pay
-                        </span>
+                        {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Complete Booking & Pay</span>}
                     </button>
                 </div>
             )}
-
             <Footer />
         </>
     );
 }
+
