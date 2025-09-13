@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
+// --- Interfaces ---
 interface User {
   id: string;
   email: string;
@@ -10,8 +11,6 @@ interface User {
   firstName: string;
   lastName: string;
   picture?: string;
-  emailVerified: boolean;
-  createdAt: string;
 }
 
 interface SignupData {
@@ -23,17 +22,18 @@ interface SignupData {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
-  loginWithRedirect: () => void;
+  logout: () => void;
 }
 
+// --- Context Creation ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// --- Custom Hook ---
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -42,169 +42,104 @@ export const useAuth = () => {
   return context;
 };
 
+// --- Auth Provider Component ---
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // --- Effect to check for stored token on initial load ---
   useEffect(() => {
-    checkAuthStatus();
+    try {
+      const storedToken = localStorage.getItem('authToken');
+      const storedUser = localStorage.getItem('authUser');
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Failed to parse auth data from localStorage", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUser(data.user);
-        }
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  // --- Helper to handle successful authentication ---
+  const handleAuthSuccess = (newToken: string, newUser: User) => {
+    localStorage.setItem('authToken', newToken);
+    localStorage.setItem('authUser', JSON.stringify(newUser));
+    setToken(newToken);
+    setUser(newUser);
   };
 
+  // --- Login Function ---
   const login = async (email: string, password: string): Promise<void> => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      if (data.success && data.user) {
-        setUser(data.user);
-        router.push('/');
-      } else {
-        throw new Error('Login failed');
-      }
+      if (!response.ok) throw new Error(data.error || 'Login failed');
+      
+      handleAuthSuccess(data.token, data.user);
+      router.push('/');
     } catch (error: any) {
       console.error('Login error:', error);
-      throw new Error(error.message || 'Login failed. Please check your credentials.');
+      throw new Error(error.message || 'Failed to log in. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --- Signup Function ---
   const signup = async (data: SignupData): Promise<void> => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
       const responseData = await response.json();
+      if (!response.ok) throw new Error(responseData.error || 'Signup failed');
 
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Signup failed');
-      }
-
-      if (responseData.success) {
-        // For Auth0, we need to login after signup
-        try {
-          await login(data.email, data.password);
-        } catch (loginError) {
-          // If auto-login fails, redirect to login with success message
-          router.push('/login?message=Account created successfully! Please log in.');
-        }
-      } else {
-        throw new Error('Signup failed');
-      }
+      handleAuthSuccess(responseData.token, responseData.user);
+      router.push('/'); // Redirect home after successful signup and login
     } catch (error: any) {
       console.error('Signup error:', error);
-      throw new Error(error.message || 'Signup failed. Please try again.');
+      throw new Error(error.message || 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      setUser(null);
-      
-      // Optionally redirect to Auth0 logout URL for complete logout
-      if (data.logoutUrl) {
-        window.location.href = data.logoutUrl;
-      } else {
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      setUser(null);
-      router.push('/');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refreshUser = async (): Promise<void> => {
-    try {
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUser(data.user);
-        }
-      }
-    } catch (error) {
-      console.error('Refresh user error:', error);
-    }
-  };
-
-  const loginWithRedirect = () => {
+  // --- Logout Function ---
+  const logout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    setUser(null);
+    setToken(null);
     router.push('/login');
   };
 
+  // --- Context Value ---
   const value: AuthContextType = {
     user,
+    token,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!token && !!user,
     login,
     signup,
     logout,
-    refreshUser,
-    loginWithRedirect
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

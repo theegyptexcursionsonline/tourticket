@@ -1,0 +1,29 @@
+import { SignJWT, jwtVerify } from 'jose';
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+const issuer = 'urn:tourticket:issuer';
+const audience = 'urn:tourticket:audience';
+const expiresAt = '2h';
+
+export async function signToken(payload: any) {
+  const token = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setIssuer(issuer)
+    .setAudience(audience)
+    .setExpirationTime(expiresAt)
+    .sign(secret);
+  return token;
+}
+
+export async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, secret, {
+      issuer,
+      audience,
+    });
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
