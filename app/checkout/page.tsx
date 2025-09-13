@@ -244,11 +244,12 @@ const ThankYouPage = ({ orderedItems, pricing, lastOrderId }: { orderedItems: Ca
                         body: JSON.stringify(payload),
                       });
 
-                      if (!res.ok) {
-                        const text = await res.text();
-                        console.error('Failed to get receipt:', text);
-                        return;
-                      }
+                     if (!res.ok) {
+  const text = await res.text().catch(() => '<no body>');
+  console.error('Failed to get receipt:', res.status, text);
+  return;
+}
+
 
                       const blob = await res.blob();
                       const url = URL.createObjectURL(blob);
@@ -368,7 +369,7 @@ export default function CheckoutPage() {
 
             if (!res.ok) {
               // If PDF generation failed, log for debugging and optionally inform the user
-              console.error('Receipt API failed', await res.text());
+console.error('Receipt API failed', res.status, await res.text().catch(() => '<no body>'));
               return;
             }
 
