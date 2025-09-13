@@ -1,4 +1,4 @@
-// app/api/admin/tours/destinations/route.ts
+// app/api/admin/destinations/route.ts
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import { NextResponse } from 'next/server';

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { PlusCircle, Edit, Trash2, Loader2, X, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
 
-const generateSlug = (name: string) => 
+const generateSlug = (name: string) =>
   name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
 export default function DestinationManager({ initialDestinations }: { initialDestinations: IDestination[] }) {
@@ -46,7 +46,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     setIsUploading(true);
     const uploadFormData = new FormData();
     uploadFormData.append('file', file);
-    
+
     const promise = fetch('/api/upload', { method: 'POST', body: uploadFormData })
       .then(res => res.json())
       .then(data => {
@@ -57,7 +57,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
           throw new Error('Upload failed.');
         }
       });
-    
+
     toast.promise(promise, {
       loading: 'Uploading image...',
       success: (message) => message as string,
@@ -75,16 +75,18 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     }
     setIsSubmitting(true);
 
-    // **FIX: Corrected the API endpoint to include '/tours'**
-    const apiEndpoint = editingDestination 
-      ? `/api/admin/tours/destinations/${editingDestination._id}` 
+    const apiEndpoint = editingDestination
+      ? `/api/admin/tours/destinations/${editingDestination._id}`
       : '/api/admin/tours/destinations';
-      
+
     const method = editingDestination ? 'PUT' : 'POST';
 
     const promise = fetch(apiEndpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)})
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to save.');
+      .then(async res => {
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || 'Failed to save.');
+        }
         return res.json();
       });
 
@@ -95,14 +97,14 @@ export default function DestinationManager({ initialDestinations }: { initialDes
         router.refresh();
         return `Destination saved successfully!`;
       },
-      error: 'Failed to save destination.',
+      error: (err) => err.message || 'Failed to save destination.',
     }).finally(() => {
         setIsSubmitting(false)
     });
   };
 
   const handleDelete = (destId: string, destName: string) => {
-    const promise = fetch(`/api/admin/tours/destinations/${destId}`, { method: 'DELETE' }) // **FIX: Corrected API endpoint**
+    const promise = fetch(`/api/admin/tours/destinations/${destId}`, { method: 'DELETE' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to delete.');
         return res.json();
@@ -171,7 +173,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
               <h2 className="text-xl font-bold text-slate-800">{editingDestination ? 'Edit Destination' : 'Add New Destination'}</h2>
               <button onClick={() => setIsPanelOpen(false)} className="p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors"><X size={24} /></button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
                 <div>
                     <label htmlFor="image" className="block text-sm font-semibold text-slate-700 mb-1.5">Destination Image</label>
