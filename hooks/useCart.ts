@@ -1,7 +1,7 @@
 'use client';
 
 import { useContext } from 'react';
-import { CartContext } from '../contexts/CartContext';
+import { CartContext } from '../contexts/CartContext'; // This import is correct
 
 export const useCart = () => {
   const context = useContext(CartContext);

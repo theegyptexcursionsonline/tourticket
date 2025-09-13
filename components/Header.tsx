@@ -1,4 +1,3 @@
-// components/Header.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 'react';
@@ -7,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 // Import the real cart hook, settings, and destinations data
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
 import { useAuth } from '@/contexts/AuthContext';
 import { destinations } from '@/lib/data/destinations';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -110,6 +109,7 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex];
 };
 
+// ... (Rest of the file remains unchanged, including sub-components like SearchModal, MegaMenu, etc.)
 // =================================================================
 // --- SUB-COMPONENTS ---
 // =================================================================
@@ -244,8 +244,9 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; }> = React.memo(({ is
         </AnimatePresence>
     );
 });
+MegaMenu.displayName = 'MegaMenu';
 
-// User Menu Component
+
 const UserMenu: FC<{ user: any; onLogout: () => void; }> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -332,8 +333,7 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
   const { user, logout } = useAuth();
   useOnClickOutside(menuRef, onClose);
   
-  // No longer needed here, as the parent component handles it.
-  // We can remove this line: `useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);`
+  useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -361,7 +361,6 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                 </button>
               </div>
 
-              {/* User Section */}
               {user ? (
                 <div className="p-6 border-b">
                   <div className="flex items-center gap-3 mb-4">
@@ -468,6 +467,7 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
     </AnimatePresence>
   );
 });
+MobileMenu.displayName = 'MobileMenu';
 
 const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean; }> = React.memo(({ onFocus, isTransparent }) => {
     const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
@@ -483,6 +483,7 @@ const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean; }> = Re
         </div>
     );
 });
+HeaderSearchBar.displayName = 'HeaderSearchBar';
 
 // =================================================================
 // --- MAIN HEADER COMPONENT (EXPORTED) ---
@@ -494,7 +495,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
-const { openCart, totalItems } = useCart();
+  const { openCart, totalItems } = useCart();
   const { user, logout } = useAuth();
   const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
@@ -515,11 +516,9 @@ const { openCart, totalItems } = useCart();
 
   const handleMobileMenuOpen = useCallback(() => {
     setMobileMenuOpen(true);
-    document.body.style.overflow = 'hidden'; // Prevents background scroll
   }, []);
   const handleMobileMenuClose = useCallback(() => {
     setMobileMenuOpen(false);
-    document.body.style.overflow = 'auto'; // Restores background scroll
   }, []);
 
   const handleAuthModalOpen = useCallback((state: 'login' | 'signup') => {
@@ -574,7 +573,6 @@ const { openCart, totalItems } = useCart();
                         <Search size={22} className="group-hover:text-red-500" />
                     </button>
 
-                    {/* User Authentication */}
                     {user ? (
                       <UserMenu user={user} onLogout={logout} />
                     ) : (

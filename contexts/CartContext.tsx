@@ -1,12 +1,10 @@
-// contexts/CartContext.tsx
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { CartItem } from '@/types';
+import { CartItem, Tour } from '@/types';
 
 interface CartContextType {
     cart: CartItem[];
-    // Add an optional parameter to control cart opening
     addToCart: (item: CartItem, openCartSidebar?: boolean) => void;
     removeFromCart: (itemId: string) => void;
     clearCart: () => void;
@@ -16,7 +14,8 @@ interface CartContextType {
     totalItems: number;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+// Create and EXPORT the context
+export const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -35,34 +34,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     useEffect(() => {
-        // This prevents overwriting the cart with an empty array on initial load
-        if (cart && cart.length > 0) {
+        try {
             localStorage.setItem('cart', JSON.stringify(cart));
-        } else if (cart && cart.length === 0) {
-            // If the user empties the cart, we should update localStorage
-             localStorage.removeItem('cart');
+        } catch (error)      {
+            console.error("Failed to save cart to localStorage", error);
         }
     }, [cart]);
 
     const addToCart = (item: CartItem, openCartSidebar = true) => {
         setCart(prevCart => {
-            // Use a unique key for each item, including add-ons
-            const itemKey = `${item.id}-${item.selectedDate}-${item.selectedTime}`;
-            const existingItem = prevCart.find(cartItem => {
-                const cartItemKey = `${cartItem.id}-${cartItem.selectedDate}-${cartItem.selectedTime}`;
-                return cartItemKey === itemKey;
-            });
+            const uniqueId = `${item.id}-${item.selectedDate}-${item.selectedTime}-${JSON.stringify(item.selectedAddOns)}`;
+            const existingItem = prevCart.find(cartItem => cartItem.uniqueId === uniqueId);
             
             if (existingItem) {
-                // Update quantity of existing item
                 return prevCart.map(cartItem =>
-                    `${cartItem.id}-${cartItem.selectedDate}-${cartItem.selectedTime}` === itemKey
+                    cartItem.uniqueId === uniqueId
                         ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
                         : cartItem
                 );
             }
-            // Add new item
-            return [...prevCart, { ...item, uniqueId: itemKey }];
+            return [...prevCart, { ...item, uniqueId }];
         });
 
         if (openCartSidebar) {
@@ -82,7 +73,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const openCart = () => setIsCartOpen(true);
     const closeCart = () => setIsCartOpen(false);
     
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
     return (
         <CartContext.Provider value={{ cart, totalItems, addToCart, removeFromCart, clearCart, isCartOpen, openCart, closeCart }}>
@@ -90,11 +81,3 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         </CartContext.Provider>
     );
 };
-
-export function useCart() {
-    const context = useContext(CartContext);
-    if (context === undefined) {
-        throw new Error('useCart must be used within a CartProvider');
-    }
-    return context;
-}

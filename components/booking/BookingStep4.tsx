@@ -1,4 +1,3 @@
-// components/booking/BookingStep4.tsx
 'use client';
 
 import { FC, useState, useMemo } from 'react';
@@ -6,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Tour, CartItem } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
 import { Calendar, Clock, Users, ShoppingCart, CreditCard, Loader2, Check } from 'lucide-react';
 import { addOnData } from './addOnData';
 
@@ -21,7 +20,7 @@ interface BookingStep4Props {
         addOnTime: string;
     };
     tour: Tour;
-    onClose: () => void; // <-- FIX: Add the onClose prop
+    onClose: () => void;
 }
 
 const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onClose }) => {
@@ -30,7 +29,7 @@ const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onClose }) => 
     const router = useRouter();
     const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
 
-    // --- Price Calculation (no changes needed) ---
+    // --- Price Calculation ---
     const { subtotal, extras, total, selectedAddOnDetails } = useMemo(() => {
         const pricePerAdult = tour.discountPrice || 0;
         const pricePerChild = pricePerAdult / 2;
@@ -48,7 +47,7 @@ const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onClose }) => 
         };
     }, [tour, bookingData]);
 
-    // --- UPDATED Action Handlers ---
+    // --- Action Handlers ---
     const handleFinalAction = async (action: 'cart' | 'checkout') => {
         setIsProcessing(action);
 
@@ -60,13 +59,13 @@ const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onClose }) => 
             selectedDate: bookingData.selectedDate.toISOString(),
             selectedTime: bookingData.selectedTime,
         };
-        // FIX: Add to cart WITHOUT opening the sidebar
         addToCart(mainTourCartItem, false);
 
         // 2. Create and add add-on item
         if (selectedAddOnDetails) {
             const addOnCartItem: CartItem = {
                 id: `addon_${selectedAddOnDetails.id}`,
+                _id: `addon_${selectedAddOnDetails.id}`, // Ensure _id is also set for compatibility
                 title: selectedAddOnDetails.title,
                 image: '/bg2.png',
                 originalPrice: selectedAddOnDetails.price,
@@ -75,19 +74,21 @@ const BookingStep4: FC<BookingStep4Props> = ({ bookingData, tour, onClose }) => 
                 childQuantity: 0,
                 selectedDate: bookingData.selectedDate.toISOString(),
                 selectedTime: bookingData.addOnTime,
+                destinationId: tour.destinationId,
+                categoryIds: [],
             };
-            // FIX: Add to cart WITHOUT opening the sidebar
             addToCart(addOnCartItem, false);
         }
 
-        // 3. FIX: Close the booking sidebar
+        // 3. Close the booking sidebar
         onClose();
 
-        // 4. FIX: Wait for animation, then redirect
+        // 4. Wait for animation, then redirect
         await new Promise(resolve => setTimeout(resolve, 500));
         
         if (action === 'cart') {
-            router.push('/');
+            // If just adding to cart, maybe just stay on the page or go to home
+            // router.push('/'); // You can decide where this goes
         } else {
             router.push('/checkout');
         }

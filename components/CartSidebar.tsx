@@ -1,17 +1,15 @@
-// components/CartSidebar.tsx
 'use client';
 
 import React, { FC } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Trash2 } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
 import { useSettings } from '@/hooks/useSettings';
 import Image from 'next/image';
 
 const CartSidebar: FC = () => {
     const router = useRouter();
-    // Destructure the correct values from our established CartContext
     const { isCartOpen, closeCart, cart, totalItems, removeFromCart } = useCart();
     const { formatPrice } = useSettings();
 
