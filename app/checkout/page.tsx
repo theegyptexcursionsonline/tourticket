@@ -11,7 +11,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/types';
 
-// --- Icon Components ---
+// --- Icon components (Visa/Mastercard/Amex/PayPal) ---
 const VisaIcon = () => (
   <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
     <rect width="48" height="28" rx="4" fill="#1A1F71"/>
@@ -128,22 +128,33 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
     );
 };
 
-// --- Checkout Form Step ---
-const CheckoutFormStep = ({ onPaymentProcess, isProcessing }: { onPaymentProcess: () => void; isProcessing: boolean }) => {
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' >('card');
-    const [formData, setFormData] = useState({
-        firstName: '', lastName: '', email: '', phone: '', emergencyContact: '', specialRequests: '',
-        cardholderName: '', cardNumber: '', expiryDate: '', cvv: ''
-    });
+// --- Checkout Form Step (now controlled via props) ---
+type FormDataShape = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  emergencyContact: string;
+  specialRequests: string;
+  cardholderName: string;
+  cardNumber: string;
+  expiryDate: string;
+  cvv: string;
+};
+
+const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormData }: { onPaymentProcess: () => void; isProcessing: boolean; formData: FormDataShape; setFormData: (v: FormDataShape) => void }) => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onPaymentProcess();
     };
+
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' >('card');
 
     return (
         <form onSubmit={handleSubmit} id="checkout-form" className="bg-white/90 backdrop-blur-sm rounded-3xl border border-slate-100 p-8 shadow-md space-y-8">
@@ -176,7 +187,7 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing }: { onPaymentProcess
 };
 
 // --- Thank You Page ---
-const ThankYouPage = ({ orderedItems, pricing }: { orderedItems: CartItem[], pricing: any }) => {
+const ThankYouPage = ({ orderedItems, pricing, lastOrderId }: { orderedItems: CartItem[], pricing: any, lastOrderId?: string }) => {
     const { formatPrice } = useSettings();
     return (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white/90 backdrop-blur-sm rounded-3xl p-10 shadow-xl max-w-3xl mx-auto text-center">
@@ -212,7 +223,52 @@ const ThankYouPage = ({ orderedItems, pricing }: { orderedItems: CartItem[], pri
 
             <div className="flex justify-center gap-3">
                 <button onClick={() => window.location.assign('/')} className="px-5 py-2 rounded-xl border border-slate-200 hover:shadow-sm">Go to homepage</button>
-                <button onClick={() => window.print()} className="px-5 py-2 rounded-xl bg-slate-900 text-white">Print receipt</button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      // If we have lastOrderId and server stored that PDF (or regenerates), use it.
+                      // We'll regenerate on-demand with the same data in the UI.
+                      const orderId = lastOrderId ?? `ORD-${Date.now()}`;
+                      const payload = {
+                        orderId,
+                        customer: { name: '', email: '', phone: '' },
+                        orderedItems,
+                        pricing,
+                        notes: 'Receipt requested from Thank You page'
+                      };
+
+                      const res = await fetch('/api/checkout/receipt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                      });
+
+                      if (!res.ok) {
+                        const text = await res.text();
+                        console.error('Failed to get receipt:', text);
+                        return;
+                      }
+
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `receipt-${orderId}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('Download receipt error:', err);
+                    }
+                  }}
+                  className="px-5 py-2 rounded-xl bg-slate-900 text-white"
+                >
+                  Download receipt
+                </button>
+
+                <button onClick={() => window.print()} className="px-5 py-2 rounded-xl border border-slate-200 hover:shadow-sm">Print</button>
             </div>
         </motion.div>
     );
@@ -239,6 +295,21 @@ export default function CheckoutPage() {
     const [finalPricing, setFinalPricing] = useState<any>(null);
     const [promoCode, setPromoCode] = useState('');
     const [discount, setDiscount] = useState(0);
+    const [lastOrderId, setLastOrderId] = useState<string | undefined>(undefined);
+
+    // Controlled form state lifted to parent so we can include customer data in receipt payload
+    const [formData, setFormData] = useState<FormDataShape>({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      emergencyContact: '',
+      specialRequests: '',
+      cardholderName: '',
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+    });
 
     const pricing = useMemo(() => {
         const subtotal = (cart || []).reduce((acc, item) => acc + (item.totalPrice || (item.discountPrice * item.quantity)), 0);
@@ -256,18 +327,68 @@ export default function CheckoutPage() {
         }
     };
 
-    const handlePaymentProcess = () => {
+    // ---------- NEW: handlePaymentProcess implemented to call receipt API ----------
+    const handlePaymentProcess = async () => {
         setIsProcessing(true);
-        // Simulate payment processing time
-        setTimeout(() => {
+
+        try {
+            // Simulate payment delay (keep your current UX)
+            await new Promise((res) => setTimeout(res, 2000));
+
+            // finalize order data
+            const createdOrderId = `ORD-${Date.now()}`;
+            const payload = {
+              orderId: createdOrderId,
+              customer: {
+                name: `${formData.firstName} ${formData.lastName}`.trim(),
+                email: formData.email,
+                phone: formData.phone
+              },
+              orderedItems: cart || [],
+              pricing: pricing,
+              notes: 'Booking created via website'
+            };
+
+            // Update UI state
             setOrderedItems([...(cart || [])]);
             setFinalPricing(pricing);
+            setLastOrderId(createdOrderId);
+
+            // Clear cart and show thank you state
             clearCart();
             setIsConfirmed(true);
             setIsProcessing(false);
-        }, 2000); // 2-second delay
+
+            // Request PDF from server and download it
+            const res = await fetch('/api/checkout/receipt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+              // If PDF generation failed, log for debugging and optionally inform the user
+              console.error('Receipt API failed', await res.text());
+              return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `receipt-${createdOrderId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+        } catch (err) {
+            console.error('Payment / Receipt flow error:', err);
+            setIsProcessing(false);
+            // Optionally show error notification/toast here
+        }
     };
-    
+
     useEffect(() => {
         if (cart && cart.length === 0 && !isConfirmed) {
             router.push('/');
@@ -302,11 +423,11 @@ export default function CheckoutPage() {
                             transition={{ duration: 0.45 }}
                         >
                             {isConfirmed ? (
-                                <ThankYouPage orderedItems={orderedItems} pricing={finalPricing} />
+                                <ThankYouPage orderedItems={orderedItems} pricing={finalPricing} lastOrderId={lastOrderId} />
                             ) : (
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-start">
                                     <div className="lg:col-span-2">
-                                        <CheckoutFormStep onPaymentProcess={handlePaymentProcess} isProcessing={isProcessing} />
+                                        <CheckoutFormStep onPaymentProcess={handlePaymentProcess} isProcessing={isProcessing} formData={formData} setFormData={setFormData} />
                                     </div>
                                     <div className="lg:col-span-1">
                                         <BookingSummary
@@ -345,4 +466,3 @@ export default function CheckoutPage() {
         </>
     );
 }
-
