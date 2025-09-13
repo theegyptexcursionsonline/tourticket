@@ -1,14 +1,13 @@
+// app/signup/page.tsx
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
-import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-
-
+import Link from "next/link";
 
 export default function SignUpPage() {
   const { user, isLoading, isAuthenticated, signup } = useAuth();
@@ -28,9 +27,27 @@ export default function SignUpPage() {
   const [signupError, setSignupError] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+  // Moved useMemo hook before any early returns to fix the React hook error.
+  const getPasswordStrength = useMemo(() => {
+    const password = formData.password;
+    if (!password) return { strength: 0, text: '', color: '' };
+    
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[^a-zA-Z\d]/.test(password)) strength++;
+    
+    if (strength <= 2) return { strength, text: 'Weak', color: 'text-red-600' };
+    if (strength <= 3) return { strength, text: 'Fair', color: 'text-yellow-600' };
+    if (strength <= 4) return { strength, text: 'Good', color: 'text-blue-600' };
+    return { strength, text: 'Strong', color: 'text-green-600' };
+  }, [formData.password]);
+
   useEffect(() => {
     if (isAuthenticated && user && !isLoading) {
-      router.push('/');
+      router.push('/user/dashboard');
     }
   }, [isAuthenticated, user, isLoading, router]);
 
@@ -92,15 +109,10 @@ export default function SignUpPage() {
       [name]: value
     }));
     
-    // Clear specific error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
     
-    // Clear general signup error
     if (signupError) {
       setSignupError('');
     }
@@ -117,15 +129,12 @@ export default function SignUpPage() {
     setSignupError('');
 
     try {
-      // Call the signup function from AuthContext
       await signup({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password
       });
-      
-      // Redirect will be handled by the useEffect above
     } catch (error: any) {
       console.error('Signup error:', error);
       setSignupError(error.message || 'Signup failed. Please try again.');
@@ -133,34 +142,10 @@ export default function SignUpPage() {
       setIsSubmitting(false);
     }
   };
-
-  const handleSocialSignup = (provider: string) => {
-    // This could be implemented for social signup
-    console.log(`Social signup with ${provider}`);
-  };
-
-  const getPasswordStrength = () => {
-    const password = formData.password;
-    if (!password) return { strength: 0, text: '', color: '' };
-    
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[^a-zA-Z\d]/.test(password)) strength++;
-    
-    if (strength <= 2) return { strength, text: 'Weak', color: 'text-red-600' };
-    if (strength <= 3) return { strength, text: 'Fair', color: 'text-yellow-600' };
-    if (strength <= 4) return { strength, text: 'Good', color: 'text-blue-600' };
-    return { strength, text: 'Strong', color: 'text-green-600' };
-  };
-
-  const passwordStrength = getPasswordStrength();
-
+  
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <Header />
+      <Header startSolid />
 
       <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[#E9ECEE]">
         <div className="w-full max-w-lg bg-white p-8 sm:p-12 rounded-lg shadow-lg">
@@ -169,9 +154,9 @@ export default function SignUpPage() {
           </h1>
           <p className="text-center text-slate-500 mb-8">
             Already have an account? 
-            <a href="/login" className="text-blue-600 hover:underline ml-1">
+            <Link href="/login" className="text-blue-600 hover:underline ml-1">
               Log in
-            </a>
+            </Link>
           </p>
 
           {signupError && (
@@ -297,15 +282,15 @@ export default function SignUpPage() {
                     <div className="flex-1 bg-slate-200 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full transition-all duration-300 ${
-                          passwordStrength.strength <= 2 ? 'bg-red-500' :
-                          passwordStrength.strength <= 3 ? 'bg-yellow-500' :
-                          passwordStrength.strength <= 4 ? 'bg-blue-500' : 'bg-green-500'
+                          getPasswordStrength.strength <= 2 ? 'bg-red-500' :
+                          getPasswordStrength.strength <= 3 ? 'bg-yellow-500' :
+                          getPasswordStrength.strength <= 4 ? 'bg-blue-500' : 'bg-green-500'
                         }`}
-                        style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
+                        style={{ width: `${(getPasswordStrength.strength / 5) * 100}%` }}
                       />
                     </div>
-                    <span className={`text-sm font-medium ${passwordStrength.color}`}>
-                      {passwordStrength.text}
+                    <span className={`text-sm font-medium ${getPasswordStrength.color}`}>
+                      {getPasswordStrength.text}
                     </span>
                   </div>
                 </div>
@@ -396,48 +381,6 @@ export default function SignUpPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-8 relative flex items-center">
-            <div className="flex-grow border-t border-slate-300"></div>
-            <span className="flex-shrink mx-4 text-slate-500 text-sm">Or sign up with</span>
-            <div className="flex-grow border-t border-slate-300"></div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button 
-              onClick={() => handleSocialSignup('google')}
-              className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-              disabled={isSubmitting}
-            >
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
-  <path fill="#4285F4" d="M24 9.5c3.94 0 6.6 1.7 8.12 3.13l5.94-5.94C34.45 3.3 29.68 1 24 1 14.64 1 6.72 6.64 3.16 14.73l6.9 5.36C11.95 14.9 17.53 9.5 24 9.5z"/>
-  <path fill="#34A853" d="M46.1 24.5c0-1.6-.14-3.13-.41-4.6H24v8.7h12.47c-.54 2.8-2.15 5.16-4.58 6.74l7.06 5.48c4.13-3.81 6.15-9.43 6.15-16.32z"/>
-  <path fill="#FBBC05" d="M10.06 28.09c-.45-1.3-.7-2.7-.7-4.09s.25-2.79.7-4.09l-6.9-5.36C1.58 16.9 0 20.3 0 24c0 3.7 1.58 7.1 4.16 9.45l6.9-5.36z"/>
-  <path fill="#EA4335" d="M24 48c6.48 0 11.9-2.13 15.87-5.8l-7.06-5.48c-2.07 1.38-4.73 2.23-8.81 2.23-6.47 0-12.05-5.4-13.94-12.73l-6.9 5.36C6.72 41.36 14.64 48 24 48z"/>
-</svg>
-              <span>Google</span>
-            </button>
-            <button 
-              onClick={() => handleSocialSignup('facebook')}
-              className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-              disabled={isSubmitting}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              <span>Facebook</span>
-            </button>
-          </div>
-
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">Why join us?</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Save your favorite tours and destinations</li>
-              <li>• Track your booking history</li>
-              <li>• Get exclusive member discounts</li>
-              <li>• Receive personalized travel recommendations</li>
-            </ul>
-          </div>
         </div>
       </main>
 
@@ -445,3 +388,4 @@ export default function SignUpPage() {
     </div>
   );
 }
+

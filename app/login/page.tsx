@@ -1,3 +1,4 @@
+// app/login/page.tsx
 'use client';
 
 import React, { useState, useEffect } from "react";
@@ -7,8 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-
-
+import Link from "next/link";
 
 export default function LoginPage() {
   const { user, isLoading, isAuthenticated, login } = useAuth();
@@ -25,7 +25,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated && user && !isLoading) {
-      router.push('/');
+      router.push('/user/dashboard');
     }
   }, [isAuthenticated, user, isLoading, router]);
 
@@ -52,8 +52,6 @@ export default function LoginPage() {
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
     }
 
     setErrors(newErrors);
@@ -67,7 +65,6 @@ export default function LoginPage() {
       [name]: value
     }));
     
-    // Clear specific error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -75,7 +72,6 @@ export default function LoginPage() {
       }));
     }
     
-    // Clear general login error
     if (loginError) {
       setLoginError('');
     }
@@ -92,10 +88,7 @@ export default function LoginPage() {
     setLoginError('');
 
     try {
-      // Call the login function from AuthContext
       await login(formData.email, formData.password);
-      
-      // Redirect will be handled by the useEffect above
     } catch (error: any) {
       console.error('Login error:', error);
       setLoginError(error.message || 'Login failed. Please check your credentials and try again.');
@@ -105,13 +98,12 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: string) => {
-    // This could be implemented for social login
     console.log(`Social login with ${provider}`);
   };
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <Header />
+      <Header startSolid />
 
       <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[#E9ECEE]">
         <div className="w-full max-w-lg bg-white p-8 sm:p-12 rounded-lg shadow-lg">
@@ -120,9 +112,9 @@ export default function LoginPage() {
           </h1>
           <p className="text-center text-slate-500 mb-8">
             Don't have an account? 
-            <a href="/signup" className="text-blue-600 hover:underline ml-1">
+            <Link href="/signup" className="text-blue-600 hover:underline ml-1">
               Sign up
-            </a>
+            </Link>
           </p>
 
           {loginError && (
@@ -202,9 +194,9 @@ export default function LoginPage() {
                 />
                 <span className="ml-2 text-sm text-slate-600">Remember me</span>
               </label>
-              <a href="/forgot" className="text-sm text-blue-600 hover:underline">
+              <Link href="/forgot" className="text-sm text-blue-600 hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <button
@@ -235,12 +227,12 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-2 p-3 border border-slate-300 rounded-md font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               disabled={isSubmitting}
             >
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
-  <path fill="#4285F4" d="M24 9.5c3.94 0 6.6 1.7 8.12 3.13l5.94-5.94C34.45 3.3 29.68 1 24 1 14.64 1 6.72 6.64 3.16 14.73l6.9 5.36C11.95 14.9 17.53 9.5 24 9.5z"/>
-  <path fill="#34A853" d="M46.1 24.5c0-1.6-.14-3.13-.41-4.6H24v8.7h12.47c-.54 2.8-2.15 5.16-4.58 6.74l7.06 5.48c4.13-3.81 6.15-9.43 6.15-16.32z"/>
-  <path fill="#FBBC05" d="M10.06 28.09c-.45-1.3-.7-2.7-.7-4.09s.25-2.79.7-4.09l-6.9-5.36C1.58 16.9 0 20.3 0 24c0 3.7 1.58 7.1 4.16 9.45l6.9-5.36z"/>
-  <path fill="#EA4335" d="M24 48c6.48 0 11.9-2.13 15.87-5.8l-7.06-5.48c-2.07 1.38-4.73 2.23-8.81 2.23-6.47 0-12.05-5.4-13.94-12.73l-6.9 5.36C6.72 41.36 14.64 48 24 48z"/>
-</svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#4285F4" d="M24 9.5c3.94 0 6.6 1.7 8.12 3.13l5.94-5.94C34.45 3.3 29.68 1 24 1 14.64 1 6.72 6.64 3.16 14.73l6.9 5.36C11.95 14.9 17.53 9.5 24 9.5z"/>
+                <path fill="#34A853" d="M46.1 24.5c0-1.6-.14-3.13-.41-4.6H24v8.7h12.47c-.54 2.8-2.15 5.16-4.58 6.74l7.06 5.48c4.13-3.81 6.15-9.43 6.15-16.32z"/>
+                <path fill="#FBBC05" d="M10.06 28.09c-.45-1.3-.7-2.7-.7-4.09s.25-2.79.7-4.09l-6.9-5.36C1.58 16.9 0 20.3 0 24c0 3.7 1.58 7.1 4.16 9.45l6.9-5.36z"/>
+                <path fill="#EA4335" d="M24 48c6.48 0 11.9-2.13 15.87-5.8l-7.06-5.48c-2.07 1.38-4.73 2.23-8.81 2.23-6.47 0-12.05-5.4-13.94-12.73l-6.9 5.36C6.72 41.36 14.64 48 24 48z"/>
+              </svg>
               <span>Google</span>
             </button>
             <button 
