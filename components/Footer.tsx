@@ -1,11 +1,11 @@
 'use client';
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { Destination } from '@/types';
 
-// Import destinations data for dynamic links
-import { destinations } from '@/lib/data/destinations';
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 
@@ -14,10 +14,10 @@ import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitch
 // =================================================================
 
 const socialLinks = [
-  { icon: Facebook, href: "#" },
-  { icon: Instagram, href: "#" },
-  { icon: Twitter, href: "#" },
-  { icon: Youtube, href: "#" },
+  { icon: Facebook, href: "https://facebook.com" },
+  { icon: Instagram, href: "https://instagram.com" },
+  { icon: Twitter, href: "https://twitter.com" },
+  { icon: Youtube, href: "https://youtube.com" },
 ];
 
 const PaymentIcons = {
@@ -42,6 +42,25 @@ const paymentMethods = [
 // --- FOOTER COMPONENT ---
 // =================================================================
 export default function Footer() {
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const response = await fetch('/api/admin/tours/destinations');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setDestinations(data.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch destinations for footer:", error);
+      }
+    };
+    fetchDestinations();
+  }, []);
+
   // Dispatch a custom event to open the chatbot (Chatbot listens for 'open-chatbot')
   const openChatbot = (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -59,7 +78,7 @@ export default function Footer() {
           
           {/* Column 1: Brand Info */}
           <div className="space-y-6">
-            <a href="/" className="inline-block">
+            <Link href="/" className="inline-block">
               <Image
                 src="/EEO-logo.png"
                 alt="Egypt Excursions Online"
@@ -67,7 +86,7 @@ export default function Footer() {
                 height={80}
                 className="h-16 sm:h-20 w-auto object-contain"
               />
-            </a>
+            </Link>
             <p className="text-sm text-slate-600 leading-relaxed max-w-xs">
               Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt.
             </p>
@@ -78,13 +97,13 @@ export default function Footer() {
             <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Things to do</h3>
             <ul className="space-y-2 text-sm">
               {destinations.slice(0, 5).map((destination) => (
-                <li key={destination.id}>
-                  <a 
+                <li key={destination._id}>
+                  <Link 
                     className="hover:text-red-600 transition-colors" 
                     href={`/destinations/${destination.slug}`}
                   >
                     Things to do in {destination.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -95,13 +114,13 @@ export default function Footer() {
             <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Destinations</h3>
             <ul className="space-y-2 text-sm">
               {destinations.slice(0, 5).map((destination) => (
-                <li key={destination.id}>
-                  <a 
+                <li key={destination._id}>
+                  <Link 
                     className="hover:text-red-600 transition-colors" 
                     href={`/destinations/${destination.slug}`}
                   >
                     {destination.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -109,11 +128,10 @@ export default function Footer() {
             <div className="mt-6">
               <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Tours &amp; Tickets</h3>
               <ul className="space-y-2 text-sm">
-                <li><a className="hover:text-red-600 transition-colors" href="/contact">Contact</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="/about">About us</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="/faqs">FAQ</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="/blog">Blog</a></li>
-                <li><a className="hover:text-red-600 transition-colors" href="/careers">Careers</a></li>
+                <li><Link className="hover:text-red-600 transition-colors" href="/contact">Contact</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors" href="/about">About us</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors" href="/faqs">FAQ</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors" href="/careers">Careers</Link></li>
               </ul>
             </div>
           </div>
@@ -126,7 +144,7 @@ export default function Footer() {
                 <li className="flex gap-3">
                   <Phone size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="font-medium">+201142222920</div>
+                    <a href="tel:+201142222920" className="font-medium hover:text-red-600">+201142222920</a>
                     <div className="text-xs text-slate-500">From 8.30 - 17.00 EET</div>
                   </div>
                 </li>
@@ -141,7 +159,6 @@ export default function Footer() {
                 </li>
                 <li className="flex gap-3 items-center">
                   <MessageSquare size={18} className="text-red-600 flex-shrink-0" />
-                  {/* This button opens the Chatbot via CustomEvent */}
                   <button
                     onClick={openChatbot}
                     className="text-sm font-medium underline hover:text-red-600 transition-colors"
@@ -179,8 +196,10 @@ export default function Footer() {
                   <a 
                     key={i} 
                     href={href} 
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors" 
-                    aria-label={`Follow us on ${Icon.displayName || 'social media'}`}
+                    aria-label={`Follow us on social media`}
                   >
                     <Icon size={18} />
                   </a>
@@ -198,12 +217,11 @@ export default function Footer() {
             <div className="flex-shrink-0">
               <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
             <div className="flex items-center gap-3 mb-2">
-  <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
-  <div className="flex text-xl leading-none text-red-500">
-    <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-  </div>
-</div>
-
+              <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
+              <div className="flex text-xl leading-none text-red-500">
+                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+              </div>
+            </div>
               <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
             </div>
 
@@ -233,9 +251,9 @@ export default function Footer() {
         {/* Legal Footer */}
         <div className="border-t border-slate-300 pt-4 text-xs text-slate-500 text-center">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-3">
-            <a className="underline hover:text-slate-700 transition-colors" href="/privacy">Privacy policy</a>
+            <Link className="underline hover:text-slate-700 transition-colors" href="/privacy">Privacy policy</Link>
             <span className="hidden sm:inline">·</span>
-            <a className="underline hover:text-slate-700 transition-colors" href="/terms">Terms and conditions</a>
+            <Link className="underline hover:text-slate-700 transition-colors" href="/terms">Terms and conditions</Link>
           </div>
           <p>© {new Date().getFullYear()} Egypt Excursions Online. All rights reserved.</p>
         </div>
@@ -243,3 +261,4 @@ export default function Footer() {
     </footer>
   );
 }
+
