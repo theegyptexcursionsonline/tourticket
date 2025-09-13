@@ -2,10 +2,13 @@
 'use client';
 
 import { FC, useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, ArrowLeft, Calendar } from 'lucide-react';
-import { Tour } from '@/types';
+import { X, ArrowRight, ArrowLeft, Calendar, ShoppingCart, CreditCard, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Tour, CartItem } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
+import { useCart } from '@/hooks/useCart';
 import Image from 'next/image';
 
 // Standard imports for step components
@@ -54,8 +57,11 @@ interface BookingSidebarProps {
 
 const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const { formatPrice } = useSettings();
+  const { addToCart, openCart } = useCart();
+  const router = useRouter();
   const totalSteps = 4;
   const [currentStep, setCurrentStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
 
   const [bookingData, setBookingData] = useState({
     selectedDate: new Date(),
@@ -111,23 +117,104 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     if (currentStep > 1) setCurrentStep(s => s - 1);
   };
   
-  if (!tour) return null;
+  const handleFinalAction = async (action: 'cart' | 'checkout') => {
+    if (!tour) return;
+    setIsProcessing(action);
 
-  // REFACTORED: Use a switch statement for cleaner step rendering
+    const mainTourCartItem: CartItem = {
+      ...tour,
+      quantity: bookingData.adults,
+      childQuantity: bookingData.children,
+      selectedDate: bookingData.selectedDate.toISOString(),
+      selectedTime: bookingData.selectedTime,
+    };
+    addToCart(mainTourCartItem, false);
+
+    const selectedAddOnDetails = addOnData.find(a => a.id === bookingData.selectedAddOn);
+    if (selectedAddOnDetails) {
+        const addOnCartItem: CartItem = {
+            id: `addon_${selectedAddOnDetails.id}`,
+            _id: `addon_${selectedAddOnDetails.id}`,
+            title: selectedAddOnDetails.title,
+            image: '/bg2.png',
+            originalPrice: selectedAddOnDetails.price,
+            discountPrice: selectedAddOnDetails.price,
+            quantity: bookingData.adults,
+            childQuantity: 0,
+            selectedDate: bookingData.selectedDate.toISOString(),
+            selectedTime: bookingData.addOnTime,
+            destinationId: tour.destinationId,
+            categoryIds: [],
+        };
+        addToCart(addOnCartItem, false);
+    }
+    
+    onClose();
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    if (action === 'checkout') {
+      router.push('/checkout');
+    } else if (action === 'cart') {
+      toast.custom(
+        (t) => (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className={`max-w-md w-full bg-red-600 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+          >
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <Image src={tour.image} alt={tour.title} width={40} height={40} className="rounded-full object-cover" />
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-white">
+                    Added to Cart!
+                  </p>
+                  <p className="mt-1 text-sm text-red-100 line-clamp-1">
+                    {tour.title}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex border-l border-red-500">
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  openCart();
+                }}
+                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-white hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                View Cart
+              </button>
+            </div>
+          </motion.div>
+        ),
+        {
+          duration: 5000,
+          position: 'top-center',
+        }
+      );
+    }
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <BookingStep1 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
+        return <BookingStep1 bookingData={bookingData} setBookingData={setBookingData} />;
       case 2:
         return <BookingStep2 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
       case 3:
         return <BookingStep3 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
       case 4:
-        return <BookingStep4 bookingData={bookingData} tour={tour} onClose={onClose} />;
+        return <BookingStep4 bookingData={bookingData} tour={tour} />;
       default:
         return null;
     }
   };
+  
+  if (!tour) return null;
 
   return (
     <AnimatePresence>
@@ -168,18 +255,36 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">{renderStep()}</div>
 
             {/* FOOTER */}
-            <div className="p-4 border-t bg-white">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={handleBack}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-slate-600 hover:bg-slate-100 transition-opacity ${
-                      currentStep === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                  }`}
-                >
-                  <ArrowLeft size={16} /> Back
-                </button>
-
-                {currentStep < totalSteps ? (
+            <div className="p-4 border-t bg-white space-y-3">
+              {currentStep === totalSteps ? (
+                // Final step buttons
+                <div className="space-y-3">
+                   <button
+                        onClick={() => handleFinalAction('checkout')}
+                        disabled={!!isProcessing}
+                        className="w-full bg-red-600 text-white font-bold py-3 rounded-full text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:bg-red-400"
+                    >
+                        {isProcessing === 'checkout' ? <Loader2 size={20} className="animate-spin" /> : <><CreditCard size={18} /> Proceed to Checkout</>}
+                    </button>
+                     <button
+                        onClick={() => handleFinalAction('cart')}
+                        disabled={!!isProcessing}
+                        className="w-full bg-white text-slate-700 font-bold py-3 rounded-full text-base flex items-center justify-center gap-2 border-2 border-slate-300 transition-all transform hover:scale-105 hover:bg-slate-50 disabled:bg-slate-200"
+                    >
+                        {isProcessing === 'cart' ? <Loader2 size={20} className="animate-spin" /> : <><ShoppingCart size={18} /> Add & Continue Browsing</>}
+                    </button>
+                </div>
+              ) : (
+                // Navigation buttons for other steps
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={handleBack}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-slate-600 hover:bg-slate-100 transition-opacity ${
+                        currentStep === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                    }`}
+                  >
+                    <ArrowLeft size={16} /> Back
+                  </button>
                   <button
                     onClick={handleNext}
                     disabled={currentStep === 1 && !bookingData.selectedTime}
@@ -188,12 +293,10 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
                     {currentStep === totalSteps - 1 ? 'Review & Book' : 'Next Step'}
                     <ArrowRight size={16} />
                   </button>
-                ) : (
-                    <div className="w-36 h-12"></div>
-                )}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between text-sm text-slate-600">
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between text-sm text-slate-600 pt-2">
                 <span>
                   {bookingData.adults} Adult{bookingData.adults > 1 ? 's' : ''}
                   {bookingData.children > 0 && `, ${bookingData.children} Child${bookingData.children > 1 ? 'ren' : ''}`}
@@ -209,3 +312,4 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
 };
 
 export default BookingSidebar;
+
