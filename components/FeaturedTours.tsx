@@ -162,7 +162,7 @@ export default function FeaturedTours() {
               <p className="mt-2 text-lg text-gray-600 max-w-2xl">Discover top-rated experiences in Amsterdam, handpicked by our travel experts.</p>
             </div>
             <a 
-              href="/destinations/amsterdam"
+              href="/tours"
               className="flex-shrink-0 mt-6 sm:mt-0 flex items-center gap-2 bg-red-600 text-white font-semibold px-6 py-3 shadow-md hover:bg-red-700 transition-all duration-300"
             >
               <span>See all tours</span>

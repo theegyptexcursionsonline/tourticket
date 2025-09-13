@@ -38,8 +38,8 @@ export default function RootLayout({
                 className: 'react-hot-toast',
                 style: {
                     borderRadius: '9999px',
-                    background: '#ff0000ff',
-                    color: '#ffffffff',
+                    background: '#ffffff',
+                    color: '#1f2937',
                     boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
                     border: '1px solid #e5e7eb',
                     padding: '8px 12px',

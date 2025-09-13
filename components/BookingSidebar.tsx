@@ -125,7 +125,8 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     let toastId: string | undefined;
 
     if (action === 'checkout') {
-      toastId = toast.loading('Redirecting to checkout...', {
+      // This toast provides immediate feedback while the sidebar closes.
+      toast.loading('Redirecting to checkout...', {
         position: 'bottom-center',
       });
     }
@@ -165,7 +166,7 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     if (action === 'checkout') {
-      toast.dismiss(toastId);
+      toast.dismiss(); // Dismiss the loading toast before navigating
       router.push('/checkout');
     } else if (action === 'cart') {
       toast.success(
@@ -199,7 +200,11 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
         }
       );
     }
-    setIsProcessing(false);
+    // Note: isProcessing is not reset here because the component unmounts on navigation
+    // or the action completes for the "add to cart" flow.
+    if (action === 'cart') {
+      setIsProcessing(false);
+    }
   };
 
   const renderStep = () => {
@@ -265,9 +270,9 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
                    <button
                         onClick={() => handleFinalAction('checkout')}
                         disabled={!!isProcessing}
-                        className="w-full bg-red-600 text-white font-bold py-3 rounded-full text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:bg-red-400"
+                        className="w-full bg-red-600 text-white font-bold py-3 rounded-full text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:bg-red-400 disabled:cursor-not-allowed"
                     >
-                        {isProcessing === 'checkout' ? <Loader2 size={20} className="animate-spin" /> : <><CreditCard size={18} /> Proceed to Checkout</>}
+                        {isProcessing === 'checkout' ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><CreditCard size={18} /> Proceed to Checkout</>}
                     </button>
                      <button
                         onClick={() => handleFinalAction('cart')}
