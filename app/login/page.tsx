@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -145,7 +143,6 @@ export default function LoginPage() {
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <Header startSolid />
 
       <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[#E9ECEE]">
         <div className="w-full max-w-lg bg-white p-8 sm:p-12 rounded-lg shadow-lg">
@@ -302,7 +299,6 @@ export default function LoginPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

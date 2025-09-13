@@ -600,24 +600,25 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
                         <Search size={22} className="group-hover:text-red-500" />
                     </button>
 
-                    {user ? (
-                      <UserMenu user={user} onLogout={logout} />
-                    ) : (
-                      <div className="hidden md:flex items-center gap-3">
-                        <button
-                          onClick={() => handleAuthModalOpen('login')}
-                          className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
-                        >
-                          Log In
-                        </button>
-                        <button
-                          onClick={() => handleAuthModalOpen('signup')}
-                          className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
-                        >
-                          Sign Up
-                        </button>
-                      </div>
-                    )}
+                 {user ? (
+  <UserMenu user={user} onLogout={logout} />
+) : (
+  <div className="hidden md:flex items-center gap-3">
+    <button
+      onClick={() => (window.location.href = '/login')}
+      className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
+    >
+      Log In
+    </button>
+    <button
+      onClick={() => (window.location.href = '/signup')}
+      className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
+    >
+      Sign Up
+    </button>
+  </div>
+)}
+
 
                     <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
                         <Menu size={24} className={`${headerText} ${linkHoverColor}`} />

@@ -5,8 +5,6 @@ import { Mail, Lock, User, AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 const SignupPage: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -36,7 +34,6 @@ const SignupPage: React.FC = () => {
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <Header startSolid />
 
       <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[#E9ECEE]">
         <div className="w-full max-w-lg bg-white p-8 sm:p-12 rounded-lg shadow-lg">
@@ -171,7 +168,6 @@ const SignupPage: React.FC = () => {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 };
