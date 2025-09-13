@@ -1,4 +1,3 @@
-// app/checkout/page.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { ArrowLeft, Lock, Shield, CheckCircle, CalendarDays, User, Trash2, Smart
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useSettings } from '@/hooks/useSettings';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
 import { CartItem } from '@/types';
 
 const VisaIcon = () => (
@@ -37,22 +36,11 @@ const AmexIcon = () => (
 );
 
 const PayPalIcon = () => (
- <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-paypal" viewBox="0 0 16 16">
+ <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-paypal" viewBox="0 0 16 16">
   <path d="M14.06 3.713c.12-1.071-.093-1.832-.702-2.526C12.628.356 11.312 0 9.626 0H4.734a.7.7 0 0 0-.691.59L2.005 13.509a.42.42 0 0 0 .415.486h2.756l-.202 1.28a.628.628 0 0 0 .62.726H8.14c.429 0 .793-.31.862-.731l.025-.13.48-3.043.03-.164.001-.007a.35.35 0 0 1 .348-.297h.38c1.266 0 2.425-.256 3.345-.91q.57-.403.993-1.005a4.94 4.94 0 0 0 .88-2.195c.242-1.246.13-2.356-.57-3.154a2.7 2.7 0 0 0-.76-.59l-.094-.061ZM6.543 8.82a.7.7 0 0 1 .321-.079H8.3c2.82 0 5.027-1.144 5.672-4.456l.003-.016q.326.186.548.438c.546.623.679 1.535.45 2.71-.272 1.397-.866 2.307-1.663 2.874-.802.57-1.842.815-3.043.815h-.38a.87.87 0 0 0-.863.734l-.03.164-.48 3.043-.024.13-.001.004a.35.35 0 0 1-.348.296H5.595a.106.106 0 0 1-.105-.123l.208-1.32z"/>
 </svg>
 );
 
-const BankIcon = () => (
-  <svg width="48" height="28" viewBox="0 0 48 28" className="opacity-95">
-    <rect width="48" height="28" rx="4" fill="#4B5563" stroke="#e5e7eb"/>
-    <path d="M24 6l12 6v2H12v-2l12-6z" fill="#fff"/>
-    <rect x="15" y="16" width="2" height="6" fill="#fff"/>
-    <rect x="20" y="16" width="2" height="6" fill="#fff"/>
-    <rect x="25" y="16" width="2" height="6" fill="#fff"/>
-    <rect x="30" y="16" width="2" height="6" fill="#fff"/>
-    <rect x="12" y="22" width="24" height="2" fill="#fff"/>
-  </svg>
-);
 // --- Reusable Input Component ---
 const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange }: any) => (
     <div>
@@ -98,7 +86,7 @@ const SummaryItem: React.FC<{item: CartItem}> = ({ item }) => {
 // --- Booking Summary Component ---
 const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode }: any) => {
     const { formatPrice } = useSettings();
-    const { cart } = useCart(); // Corrected: use 'cart' instead of 'cartItems'
+    const { cart } = useCart();
 
     if (!cart || cart.length === 0) return null;
 
@@ -107,7 +95,7 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode }: an
             <h3 className="text-2xl font-bold text-slate-900 mb-4">Your Booking Summary</h3>
             <div className="divide-y divide-slate-200">
                 {cart.map((item, index) => (
-                    <SummaryItem key={`${item.id}-${index}`} item={item} />
+                    <SummaryItem key={`${item._id}-${index}`} item={item} />
                 ))}
             </div>
             <div className="mt-4 rounded-xl p-4 bg-slate-50 border border-slate-100">
@@ -174,13 +162,11 @@ const CheckoutFormStep = ({ onPaymentSuccess }: { onPaymentSuccess: () => void; 
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><div className="flex gap-1 items-center"> <VisaIcon /> <MastercardIcon /> <AmexIcon /> </div><span className="text-sm font-medium">Card</span></button>
                     <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><PayPalIcon /><span className="text-sm font-medium">PayPal</span></button>
-                    <button type="button" onClick={() => setPaymentMethod('bank')} aria-pressed={paymentMethod === 'bank'} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-100 hover:shadow-sm'}`}><div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center"><Image src="/bank.svg" alt="Bank" width={20} height={20}/></div><span className="text-sm font-medium">Bank</span></button>
                 </div>
                 <AnimatePresence mode="wait">
                     <motion.div key={paymentMethod} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
                         {paymentMethod === 'card' && (<div className="space-y-4 p-6 bg-slate-50 rounded-xl border border-slate-100"><div className="grid grid-cols-1 gap-4"><FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} /><FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} /></div><div className="grid grid-cols-2 gap-4"><FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} /><FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} /></div></div>)}
                         {paymentMethod === 'paypal' && (<div className="rounded-xl p-6 bg-slate-50 border border-slate-100 text-center text-slate-700"><p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p></div>)}
-                        {paymentMethod === 'bank' && (<div className="rounded-xl p-6 bg-slate-50 border border-slate-100 text-center text-slate-700"><p className="font-medium">Bank transfer details will be provided after booking.</p></div>)}
                     </motion.div>
                 </AnimatePresence>
             </section>
@@ -196,7 +182,7 @@ const ThankYouPage = ({ orderedItems }: { orderedItems: CartItem[] }) => {
             <div className="mx-auto w-fit mb-6 p-4 rounded-full bg-emerald-100"><CheckCircle size={48} className="text-emerald-600" /></div>
             <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed</h1>
             <p className="text-slate-600 mb-6">We’ve emailed the booking details and payment confirmation to you.</p>
-            <div className="space-y-3 mb-6">{orderedItems.map((item, index) => (<div key={`${item.id}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg overflow-hidden"><Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/></div><div><p className="font-semibold text-slate-800">{item.title}</p><p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p></div></div><div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div></div>))}</div>
+            <div className="space-y-3 mb-6">{orderedItems.map((item, index) => (<div key={`${item._id}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg overflow-hidden"><Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/></div><div><p className="font-semibold text-slate-800">{item.title}</p><p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p></div></div><div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div></div>))}</div>
             <div className="flex justify-center gap-3"><button onClick={() => window.location.assign('/')} className="px-5 py-2 rounded-xl border border-slate-200 hover:shadow-sm">Go to homepage</button><button onClick={() => window.print()} className="px-5 py-2 rounded-xl bg-slate-900 text-white">Print receipt</button></div>
         </motion.div>
     );
@@ -214,7 +200,7 @@ const TrustIndicators = () => (
 
 // --- MAIN CHECKOUT PAGE COMPONENT ---
 export default function CheckoutPage() {
-    const { cart, clearCart } = useCart(); // Corrected: use 'cart' instead of 'cartItems'
+    const { cart, clearCart } = useCart();
     const { formatPrice } = useSettings();
     const router = useRouter();
     const [isConfirmed, setIsConfirmed] = useState(false);
@@ -244,15 +230,14 @@ export default function CheckoutPage() {
         setIsConfirmed(true); 
     };
     
-    // This effect handles the case where the user lands on the page with an empty cart
     useEffect(() => {
         if (cart && cart.length === 0 && !isConfirmed) {
             router.push('/');
         }
     }, [cart, isConfirmed, router]);
 
-    if (!cart) { // Corrected: check for 'cart' instead of 'cartItems'
-        return ( // Show a loading state until the cart is hydrated from localStorage
+    if (!cart) {
+        return (
             <>
                 <Header startSolid={true} />
                 <main className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
@@ -265,8 +250,8 @@ export default function CheckoutPage() {
         )
     }
 
-    if (cart.length === 0 && !isConfirmed) { // Corrected: check for 'cart' instead of 'cartItems'
-        return ( // Show an empty cart message if the cart is empty after loading
+    if (cart.length === 0 && !isConfirmed) {
+        return (
             <>
                 <Header startSolid={true} />
                 <main className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
@@ -317,7 +302,7 @@ export default function CheckoutPage() {
                 </div>
             </main>
 
-            {!isConfirmed && cart && cart.length > 0 && ( // Corrected: check for 'cart' instead of 'cartItems'
+            {!isConfirmed && cart && cart.length > 0 && (
                 <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-slate-200 p-4 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                     <div className="flex justify-between items-center mb-3">
                         <span className="text-slate-600">Total price:</span>

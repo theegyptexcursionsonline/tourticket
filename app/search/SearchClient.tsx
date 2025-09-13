@@ -1,4 +1,3 @@
-// app/search/SearchClient.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Tour, SearchFilters, Destination, Category } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
 
 const ITEMS_PER_PAGE = 12;
 
@@ -87,12 +86,9 @@ const TourCard = ({ tour }: { tour: Tour }) => {
 export default function SearchClient() {
   const searchParams = useSearchParams();
   
-  // State for all data
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allDestinations, setAllDestinations] = useState<Destination[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
-
-  // State for UI and filtering
   const [filteredResults, setFilteredResults] = useState<Tour[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,7 +96,6 @@ export default function SearchClient() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  // Fetch all necessary data on initial load
   useEffect(() => {
     const fetchAllData = async () => {
       setIsLoading(true);
@@ -127,22 +122,19 @@ export default function SearchClient() {
     fetchAllData();
   }, []);
   
-  // Effect to apply search and filters whenever data or filters change
   useEffect(() => {
     const query = searchParams.get('q') || '';
     setSearchQuery(query);
 
     let results = [...allTours];
 
-    // 1. Apply search query first
     if (query) {
       results = results.filter(tour =>
         tour.title.toLowerCase().includes(query.toLowerCase()) ||
-        tour.description.toLowerCase().includes(query.toLowerCase())
+        tour.description?.toLowerCase().includes(query.toLowerCase())
       );
     }
     
-    // 2. Apply filters
     if (filters.destination) {
       results = results.filter(tour => tour.destination?._id === filters.destination);
     }
@@ -160,7 +152,7 @@ export default function SearchClient() {
     }
     
     setFilteredResults(results);
-    setCurrentPage(1); // Reset to first page on new filter/search
+    setCurrentPage(1);
   }, [searchParams, allTours, filters]);
 
 
@@ -175,7 +167,6 @@ export default function SearchClient() {
     const url = new URL(window.location.href);
     url.searchParams.set('q', searchQuery);
     window.history.pushState({}, '', url.toString());
-    // The useEffect hook will re-run and apply the search
   };
 
   const clearFilter = (filterKey: keyof SearchFilters) => {
