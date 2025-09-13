@@ -301,55 +301,38 @@ const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
   );
 };
 
-// --- Background Slideshow Component (FIXED) ---
-const BackgroundSlideshow = ({ 
-    // FIXED: Updated default images to remove confusion.
-    images = ["/bg4.png", "/copenhagen.png", "/stockholm.png"], 
-    interval = 5000, 
-    fadeDuration = 1000 
-}: { 
-    images?: string[]; 
-    interval?: number; 
-    fadeDuration?: number 
+// --- Background Slideshow Component (SINGLE SLIDE) ---
+const BackgroundSlideshow = ({
+  // Keep only the first image — default is a single image now.
+  images = ["/bg4.png"],
+  fadeDuration = 1000,
+}: {
+  images?: string[];
+  fadeDuration?: number;
 }) => {
-  const [index, setIndex] = useState(0);
-  const count = images.length;
+  // We intentionally do NOT cycle slides since we keep only the first slide.
+  const src = images && images.length > 0 ? images[0] : "/bg4.png";
 
-  // Preload images
+  // Preload the single image
   useEffect(() => {
-    images.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, [images]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setIndex((i) => (i + 1) % count);
-    }, interval);
-    return () => clearInterval(t);
-  }, [count, interval]);
+    const img = new Image();
+    img.src = src;
+  }, [src]);
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
-      {images.map((src, i) => {
-        const visible = i === index;
-        return (
-          <div
-            key={src + i}
-            aria-hidden
-            className="absolute inset-0 w-full h-full transition-opacity duration-[1000ms] ease-in-out transform-gpu"
-            style={{
-              opacity: visible ? 1 : 0,
-              transitionDuration: `${fadeDuration}ms`,
-              transform: visible ? "scale(1.03)" : "scale(1)",
-            }}
-          >
-            <img src={src} alt="" className="w-full h-full object-cover will-change-transform" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none" />
-          </div>
-        );
-      })}
+      <div
+        aria-hidden
+        className="absolute inset-0 w-full h-full transition-opacity duration-[1000ms] ease-in-out transform-gpu"
+        style={{
+          opacity: 1,
+          transitionDuration: `${fadeDuration}ms`,
+          transform: "scale(1.03)",
+        }}
+      >
+        <img src={src} alt="" className="w-full h-full object-cover will-change-transform" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none" />
+      </div>
     </div>
   );
 };
@@ -368,8 +351,8 @@ export default function HeroSection() {
   return (
     <>
       <section className="relative h-screen min-h-[650px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
-        {/* The component now correctly receives the new image paths */}
-        <BackgroundSlideshow images={["/bg4.png", "/copenhagen.png", "/stockholm.png"]} interval={5000} fadeDuration={1000} />
+        {/* Only the first slide/image is used now */}
+        <BackgroundSlideshow images={["/bg4.png"]} fadeDuration={1000} />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
           <div className="max-w-xl">
