@@ -75,6 +75,7 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
+      setIsProcessing(false);
       setBookingData({
         selectedDate: new Date(),
         selectedTime: '',
@@ -108,6 +109,7 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
 
   const handleNext = () => {
     if (currentStep === 1 && !bookingData.selectedTime) {
+      toast.error('Please select a time slot.');
       return;
     }
     if (currentStep < totalSteps) setCurrentStep(s => s + 1);
@@ -118,9 +120,17 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   };
   
   const handleFinalAction = async (action: 'cart' | 'checkout') => {
-    if (!tour) return;
+    if (!tour || isProcessing) return;
     setIsProcessing(action);
+    let toastId: string | undefined;
 
+    if (action === 'checkout') {
+      toastId = toast.loading('Redirecting to checkout...', {
+        position: 'bottom-center',
+      });
+    }
+
+    // Add items to the cart without opening the sidebar immediately
     const mainTourCartItem: CartItem = {
       ...tour,
       quantity: bookingData.adults,
@@ -136,7 +146,7 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
             id: `addon_${selectedAddOnDetails.id}`,
             _id: `addon_${selectedAddOnDetails.id}`,
             title: selectedAddOnDetails.title,
-            image: '/bg2.png',
+            image: '/bg2.png', // A placeholder image for addons
             originalPrice: selectedAddOnDetails.price,
             discountPrice: selectedAddOnDetails.price,
             quantity: bookingData.adults,
@@ -150,53 +160,46 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     }
     
     onClose();
-    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Give a moment for the sidebar to close before navigating or showing toast
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     if (action === 'checkout') {
+      toast.dismiss(toastId);
       router.push('/checkout');
     } else if (action === 'cart') {
-      toast.custom(
+      toast.success(
         (t) => (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className={`max-w-md w-full bg-red-600 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-          >
-            <div className="flex-1 w-0 p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 pt-0.5">
-                  <Image src={tour.image} alt={tour.title} width={40} height={40} className="rounded-full object-cover" />
-                </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-white">
-                    Added to Cart!
-                  </p>
-                  <p className="mt-1 text-sm text-red-100 line-clamp-1">
-                    {tour.title}
-                  </p>
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <Image src={tour.image} alt={tour.title} width={40} height={40} className="rounded-full object-cover" />
             </div>
-            <div className="flex border-l border-red-500">
-              <button
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-800">
+                Added to Cart!
+              </p>
+              <p className="mt-1 text-sm text-slate-600 line-clamp-1">
+                {tour.title}
+              </p>
+            </div>
+            <button
                 onClick={() => {
                   toast.dismiss(t.id);
                   openCart();
                 }}
-                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-white hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="ml-4 px-3 py-1.5 border border-transparent rounded-lg text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
               >
                 View Cart
-              </button>
-            </div>
-          </motion.div>
+            </button>
+          </div>
         ),
         {
           duration: 5000,
-          position: 'top-center',
+          position: 'bottom-center',
         }
       );
     }
+    setIsProcessing(false);
   };
 
   const renderStep = () => {
@@ -204,11 +207,11 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
       case 1:
         return <BookingStep1 bookingData={bookingData} setBookingData={setBookingData} />;
       case 2:
-        return <BookingStep2 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
+        return <BookingStep2 bookingData={bookingData} setBookingData={setBookingData} tour={tour!} />;
       case 3:
-        return <BookingStep3 bookingData={bookingData} setBookingData={setBookingData} tour={tour} />;
+        return <BookingStep3 bookingData={bookingData} setBookingData={setBookingData} tour={tour!} />;
       case 4:
-        return <BookingStep4 bookingData={bookingData} tour={tour} />;
+        return <BookingStep4 bookingData={bookingData} tour={tour!} onClose={onClose} />;
       default:
         return null;
     }
@@ -312,4 +315,3 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
 };
 
 export default BookingSidebar;
-
