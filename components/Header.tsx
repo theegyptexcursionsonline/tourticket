@@ -409,22 +409,23 @@ const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () =>
                   </div>
                 </div>
               ) : (
-                <div className="p-6 border-b">
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => { onOpenAuth('login'); onClose(); }}
-                      className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Log In
-                    </button>
-                    <button
-                      onClick={() => { onOpenAuth('signup'); onClose(); }}
-                      className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      Sign Up
-                    </button>
-                  </div>
-                </div>
+               <div className="p-6 border-b">
+  <div className="space-y-3">
+    <a
+      href="/login"
+      className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors"
+    >
+      Log In
+    </a>
+    <a
+      href="/signup"
+      className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors"
+    >
+      Sign Up
+    </a>
+  </div>
+</div>
+
               )}
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -600,24 +601,25 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
                         <Search size={22} className="group-hover:text-red-500" />
                     </button>
 
-                 {user ? (
+               {user ? (
   <UserMenu user={user} onLogout={logout} />
 ) : (
   <div className="hidden md:flex items-center gap-3">
-    <button
-      onClick={() => (window.location.href = '/login')}
+    <a
+      href="/login"
       className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
     >
       Log In
-    </button>
-    <button
-      onClick={() => (window.location.href = '/signup')}
+    </a>
+    <a
+      href="/signup"
       className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
     >
       Sign Up
-    </button>
+    </a>
   </div>
 )}
+
 
 
                     <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
