@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * POST /api/checkout/receipt
@@ -26,8 +28,25 @@ export async function POST(request: NextRequest) {
     const pricing = body?.pricing ?? { subtotal: 0, serviceFee: 0, tax: 0, discount: 0, total: 0 };
     const notes = body?.notes ?? '';
 
+    // --- FIX START ---
+    // Manually load font files to prevent file system errors in serverless environments.
+    // NOTE: Ensure you have 'Roboto-Regular.ttf' and 'Roboto-Bold.ttf' in the '/public/fonts' directory.
+    const fontNormalPath = path.join(process.cwd(), 'public/fonts/Roboto-Regular.ttf');
+    const fontBoldPath = path.join(process.cwd(), 'public/fonts/Roboto-Bold.ttf');
+    
+    const fontNormal = fs.readFileSync(fontNormalPath);
+    const fontBold = fs.readFileSync(fontBoldPath);
+    // --- FIX END ---
+
     // Create a PDF document
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    // --- FIX START ---
+    // Register the fonts and alias them to the names used throughout the document.
+    // This allows the rest of the code to work without modification.
+    doc.registerFont('Helvetica', fontNormal);
+    doc.registerFont('Helvetica-Bold', fontBold);
+    // --- FIX END ---
 
     // Pipe PDF into a pass-through stream to collect into a buffer
     const stream = new PassThrough();
@@ -59,7 +78,6 @@ export async function POST(request: NextRequest) {
     // Draw date information on the right side
     doc.text(`Date Issued: ${formattedDate}`, 350, infoTopY, { align: 'right' });
     doc.text(`Order ID: ${orderId}`, 350, doc.y, { align: 'right' });
-
 
     doc.moveDown(2);
 
@@ -153,9 +171,17 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
+    // Add more specific error logging for missing font files
+    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      console.error(
+        "Receipt generation error: Font file not found. Ensure 'Roboto-Regular.ttf' and 'Roboto-Bold.ttf' are in the /public/fonts directory.",
+        err
+      );
+      return NextResponse.json({ message: 'Failed to generate receipt due to a server configuration error.', error: 'Missing font assets' }, { status: 500 });
+    }
+    
     console.error('Receipt generation error:', err);
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Failed to generate receipt', error: errorMessage }, { status: 500 });
   }
 }
-
