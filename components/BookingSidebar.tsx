@@ -55,6 +55,11 @@ interface BookingSidebarProps {
   tour: Tour | null;
 }
 
+// Define the type for the selected add-ons object
+type SelectedAddOns = {
+  [key: string]: string; // addonId: selectedTime
+};
+
 const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const { formatPrice } = useSettings();
   const { addToCart, openCart } = useCart();
@@ -63,15 +68,22 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
 
-  const [bookingData, setBookingData] = useState({
+  // Correctly typed state for booking data to handle multiple add-ons
+  const [bookingData, setBookingData] = useState<{
+    selectedDate: Date;
+    selectedTime: string;
+    adults: number;
+    children: number;
+    selectedAddOns: SelectedAddOns;
+  }>({
     selectedDate: new Date(),
     selectedTime: '',
     adults: 1,
     children: 0,
-    selectedAddOn: null as 'atv-sunset' | 'shared-quad' | null,
-    addOnTime: '',
+    selectedAddOns: {},
   });
 
+  // Reset state when the sidebar opens
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
@@ -81,12 +93,12 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
         selectedTime: '',
         adults: 1,
         children: 0,
-        selectedAddOn: null,
-        addOnTime: '',
+        selectedAddOns: {},
       });
     }
   }, [isOpen]);
 
+  // Corrected price calculation logic for multiple add-ons
   const { total } = useMemo(() => {
     if (!tour) return { total: 0 };
     
@@ -94,13 +106,14 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     const pricePerChild = pricePerAdult / 2;
     const subtotalCalc = (bookingData.adults * pricePerAdult) + (bookingData.children * pricePerChild);
     
-    let extrasCalc = 0;
-    if (bookingData.selectedAddOn) {
-        const addOn = addOnData.find(a => a.id === bookingData.selectedAddOn);
-        if (addOn) {
-            extrasCalc = addOn.price * bookingData.adults; 
-        }
-    }
+    const extrasCalc = Object.keys(bookingData.selectedAddOns).reduce((acc, addOnId) => {
+      const addOn = addOnData.find(a => a.id === addOnId);
+      if (addOn) {
+        // Price is per adult, as indicated in the UI
+        return acc + (addOn.price * bookingData.adults);
+      }
+      return acc;
+    }, 0);
     
     return {
       total: subtotalCalc + extrasCalc,
@@ -119,19 +132,16 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     if (currentStep > 1) setCurrentStep(s => s - 1);
   };
   
+  // Corrected final action handler to process multiple add-ons
   const handleFinalAction = async (action: 'cart' | 'checkout') => {
     if (!tour || isProcessing) return;
     setIsProcessing(action);
-    let toastId: string | undefined;
 
     if (action === 'checkout') {
-      // This toast provides immediate feedback while the sidebar closes.
-      toast.loading('Redirecting to checkout...', {
-        position: 'bottom-center',
-      });
+      toast.loading('Redirecting to checkout...', { position: 'bottom-center' });
     }
 
-    // Add items to the cart without opening the sidebar immediately
+    // Add main tour item to cart
     const mainTourCartItem: CartItem = {
       ...tour,
       quantity: bookingData.adults,
@@ -141,32 +151,34 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
     };
     addToCart(mainTourCartItem, false);
 
-    const selectedAddOnDetails = addOnData.find(a => a.id === bookingData.selectedAddOn);
-    if (selectedAddOnDetails) {
+    // Iterate over selected add-ons and add each to cart
+    Object.entries(bookingData.selectedAddOns).forEach(([addOnId, addOnTime]) => {
+      const selectedAddOnDetails = addOnData.find(a => a.id === addOnId);
+      if (selectedAddOnDetails) {
         const addOnCartItem: CartItem = {
-            id: `addon_${selectedAddOnDetails.id}`,
-            _id: `addon_${selectedAddOnDetails.id}`,
-            title: selectedAddOnDetails.title,
-            image: '/bg2.png', // A placeholder image for addons
-            originalPrice: selectedAddOnDetails.price,
-            discountPrice: selectedAddOnDetails.price,
-            quantity: bookingData.adults,
-            childQuantity: 0,
-            selectedDate: bookingData.selectedDate.toISOString(),
-            selectedTime: bookingData.addOnTime,
-            destinationId: tour.destinationId,
-            categoryIds: [],
+          id: `addon_${selectedAddOnDetails.id}_${new Date(bookingData.selectedDate).getTime()}`,
+          _id: `addon_${selectedAddOnDetails.id}_${new Date(bookingData.selectedDate).getTime()}`,
+          title: selectedAddOnDetails.title,
+          image: '/bg2.png', // Placeholder image
+          originalPrice: selectedAddOnDetails.price,
+          discountPrice: selectedAddOnDetails.price,
+          quantity: bookingData.adults, // Add-ons are per adult
+          childQuantity: 0,
+          selectedDate: bookingData.selectedDate.toISOString(),
+          selectedTime: addOnTime,
+          destinationId: tour.destinationId,
+          categoryIds: [],
         };
         addToCart(addOnCartItem, false);
-    }
+      }
+    });
     
     onClose();
 
-    // Give a moment for the sidebar to close before navigating or showing toast
     await new Promise(resolve => setTimeout(resolve, 300));
 
     if (action === 'checkout') {
-      toast.dismiss(); // Dismiss the loading toast before navigating
+      toast.dismiss();
       router.push('/checkout');
     } else if (action === 'cart') {
       toast.success(
@@ -176,32 +188,21 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
               <Image src={tour.image} alt={tour.title} width={40} height={40} className="rounded-full object-cover" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-800">
-                Added to Cart!
-              </p>
-              <p className="mt-1 text-sm text-slate-600 line-clamp-1">
-                {tour.title}
-              </p>
+              <p className="text-sm font-semibold text-slate-800">Added to Cart!</p>
+              <p className="mt-1 text-sm text-slate-600 line-clamp-1">{tour.title}</p>
             </div>
             <button
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  openCart();
-                }}
-                className="ml-4 px-3 py-1.5 border border-transparent rounded-lg text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                onClick={() => { toast.dismiss(t.id); openCart(); }}
+                className="ml-4 px-3 py-1.5 border border-transparent rounded-lg text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200"
               >
                 View Cart
             </button>
           </div>
         ),
-        {
-          duration: 5000,
-          position: 'bottom-center',
-        }
+        { duration: 5000, position: 'bottom-center' }
       );
     }
-    // Note: isProcessing is not reset here because the component unmounts on navigation
-    // or the action completes for the "add to cart" flow.
+    
     if (action === 'cart') {
       setIsProcessing(false);
     }
@@ -272,14 +273,22 @@ const BookingSidebar: FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
                         disabled={!!isProcessing}
                         className="w-full bg-red-600 text-white font-bold py-3 rounded-full text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:bg-red-400 disabled:cursor-not-allowed"
                     >
-                        {isProcessing === 'checkout' ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><CreditCard size={18} /> Proceed to Checkout</>}
+                        {isProcessing === 'checkout' ? (
+                            <><Loader2 size={20} className="animate-spin" /> Processing...</>
+                        ) : (
+                            <><CreditCard size={18} /> Proceed to Checkout</>
+                        )}
                     </button>
                      <button
                         onClick={() => handleFinalAction('cart')}
                         disabled={!!isProcessing}
                         className="w-full bg-white text-slate-700 font-bold py-3 rounded-full text-base flex items-center justify-center gap-2 border-2 border-slate-300 transition-all transform hover:scale-105 hover:bg-slate-50 disabled:bg-slate-200"
                     >
-                        {isProcessing === 'cart' ? <Loader2 size={20} className="animate-spin" /> : <><ShoppingCart size={18} /> Add & Continue Browsing</>}
+                        {isProcessing === 'cart' ? (
+                            <><Loader2 size={20} className="animate-spin" /> Adding...</>
+                        ) : (
+                            <><ShoppingCart size={18} /> Add & Continue Browsing</>
+                        )}
                     </button>
                 </div>
               ) : (
