@@ -1,185 +1,178 @@
 import { NextRequest, NextResponse } from 'next/server';
-import PDFDocument from 'pdfkit';
-import { PassThrough } from 'stream';
-import fs from 'fs';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { Buffer } from 'buffer';
+import fs from 'fs/promises';
 import path from 'path';
 
-/**
- * POST /api/checkout/receipt
- * Body (JSON):
- * {
- * orderId: string,
- * customer: { name?: string, email?: string, phone?: string },
- * orderedItems: Array<{ _id?: string, title: string, quantity: number, discountPrice: number }>,
- * pricing: { subtotal: number, serviceFee: number, tax: number, discount: number, total: number },
- * notes?: string
- * }
- *
- * Returns: application/pdf (attachment)
- */
+// Helper function to convert hex colors to a format pdf-lib understands
+const hexToPdfLibRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return rgb(0, 0, 0);
+  return rgb(
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255
+  );
+};
 
 export async function POST(request: NextRequest) {
   try {
+    // --- Data Parsing ---
     const body = await request.json();
+    const { orderId, customer, orderedItems, pricing, notes } = body;
+    const currencySymbol = pricing?.symbol || '$';
 
-    const orderId = body?.orderId ?? `ORDER-${Date.now()}`;
-    const customer = body?.customer ?? {};
-    const orderedItems: Array<any> = Array.isArray(body?.orderedItems) ? body.orderedItems : [];
-    const pricing = body?.pricing ?? { subtotal: 0, serviceFee: 0, tax: 0, discount: 0, total: 0 };
-    const notes = body?.notes ?? '';
+    // --- Document Setup ---
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    const { width, height } = page.getSize();
+    const margin = 50;
 
-    // --- FIX START ---
-    // Manually load font files to prevent file system errors in serverless environments.
-    // NOTE: Ensure you have 'Roboto-Regular.ttf' and 'Roboto-Bold.ttf' in the '/public/fonts' directory.
-    const fontNormalPath = path.join(process.cwd(), 'public/fonts/Roboto-Regular.ttf');
-    const fontBoldPath = path.join(process.cwd(), 'public/fonts/Roboto-Bold.ttf');
+    // --- Asset Loading ---
+    const fontBytes = await fs.readFile(path.join(process.cwd(), 'public/fonts/Roboto-Regular.ttf'));
+    const fontBoldBytes = await fs.readFile(path.join(process.cwd(), 'public/fonts/Roboto-Bold.ttf'));
+    const logoPath = path.join(process.cwd(), 'public/EEO-logo.png');
+    const logoBytes = await fs.readFile(logoPath);
     
-    const fontNormal = fs.readFileSync(fontNormalPath);
-    const fontBold = fs.readFileSync(fontBoldPath);
-    // --- FIX END ---
-
-    // Create a PDF document
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
-    // --- FIX START ---
-    // Register the fonts and alias them to the names used throughout the document.
-    // This allows the rest of the code to work without modification.
-    doc.registerFont('Helvetica', fontNormal);
-    doc.registerFont('Helvetica-Bold', fontBold);
-    // --- FIX END ---
-
-    // Pipe PDF into a pass-through stream to collect into a buffer
-    const stream = new PassThrough();
-    doc.pipe(stream);
-
-    // ---- Header ----
-    doc.font('Helvetica-Bold').fontSize(20).fillColor('#111827').text('Booking Receipt', { align: 'left' });
-
-    doc.moveDown(0.25);
-    doc.font('Helvetica').fontSize(10).fillColor('#6b7280').text(`Receipt ID: ${orderId}`);
-    doc.moveDown(1.5);
-
-    // ---- Customer / Date block ----
-    const now = new Date();
-    // FIX: Using a simple date formatter to avoid server environment issues with toLocaleString.
-    const day = now.getDate().toString().padStart(2, '0');
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const year = now.getFullYear();
-    const formattedDate = `${day}/${month}/${year}`;
-
-    doc.font('Helvetica').fontSize(10).fillColor('#374151');
-    const infoTopY = doc.y;
-    doc.text(`Billed to:`, { underline: true });
-    doc.moveDown(0.25);
-    if (customer?.name) doc.text(customer.name);
-    if (customer?.email) doc.text(customer.email);
-    if (customer?.phone) doc.text(customer.phone);
-
-    // Draw date information on the right side
-    doc.text(`Date Issued: ${formattedDate}`, 350, infoTopY, { align: 'right' });
-    doc.text(`Order ID: ${orderId}`, 350, doc.y, { align: 'right' });
-
-    doc.moveDown(2);
-
-    // ---- Items table-like listing ----
-    const tableTop = doc.y;
-    doc.font('Helvetica-Bold');
-    doc.text('Item Description', 55, tableTop);
-    doc.text('Quantity', 320, tableTop, { width: 50, align: 'right' });
-    doc.text('Total Price', 400, tableTop, { width: 100, align: 'right' });
-    doc.moveDown(0.5);
-    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#e5e7eb').stroke();
-    doc.moveDown(0.5);
-
-    // Items rows
-    doc.font('Helvetica');
-    orderedItems.forEach((item: any) => {
-      const y = doc.y;
-      const title = item.title ?? 'Item';
-      const qty = Number(item.quantity ?? 1);
-      const price = Number(item.discountPrice ?? 0) * qty;
-
-      // FIX: Improved table row drawing to handle wrapping and alignment correctly.
-      doc.text(title, 55, y, { width: 260, align: 'left' });
-      doc.text(String(qty), 320, y, { width: 50, align: 'right' });
-      doc.text(price.toFixed(2), 400, y, { width: 100, align: 'right' });
-      doc.moveDown(0.5); // Add padding after each item
+    pdfDoc.registerFontkit({
+        create: () => ({
+            regular: fontBytes,
+            bold: fontBoldBytes,
+        })
     });
-    
-    doc.moveDown(1);
-    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#e5e7eb').stroke();
-    doc.moveDown(0.5);
+    const customFont = await pdfDoc.embedFont('regular');
+    const customBoldFont = await pdfDoc.embedFont('bold');
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+    const logoDims = logoImage.scale(0.25); // Adjust logo size
 
-    // ---- Pricing summary ----
-    const drawTotalRow = (label: string, value: string, options: { bold?: boolean; color?: string } = {}) => {
-        const y = doc.y;
-        const finalColor = options.color || '#111827';
-        doc.font(options.bold ? 'Helvetica-Bold' : 'Helvetica');
-        doc.fillColor(options.color || '#6b7280').text(label, 320, y, { width: 150, align: 'right' });
-        doc.fillColor(finalColor).text(value, 470, y, { width: 70, align: 'right' });
-        doc.moveDown(0.6);
+    // --- Colors ---
+    const colors = {
+      primary: hexToPdfLibRgb('#111827'), // Dark Gray
+      secondary: hexToPdfLibRgb('#6B7280'), // Medium Gray
+      accent: hexToPdfLibRgb('#EF4444'), // Red
+      lightGray: hexToPdfLibRgb('#F3F4F6'), // Light Gray for background
+      lineColor: hexToPdfLibRgb('#E5E7EB'),
     };
 
-    drawTotalRow('Subtotal', (pricing.subtotal ?? 0).toFixed(2));
-    drawTotalRow('Service fee', (pricing.serviceFee ?? 0).toFixed(2));
-    drawTotalRow('Taxes & fees', (pricing.tax ?? 0).toFixed(2));
+    // --- Header ---
+    page.drawRectangle({
+      x: 0,
+      y: height - 120,
+      width,
+      height: 120,
+      color: colors.lightGray,
+    });
+    page.drawImage(logoImage, {
+      x: margin,
+      y: height - margin - logoDims.height + 20,
+      width: logoDims.width,
+      height: logoDims.height,
+    });
+    page.drawText('INVOICE / RECEIPT', {
+      x: width - margin - 200,
+      y: height - margin,
+      font: customBoldFont,
+      size: 24,
+      color: colors.primary,
+    });
+    page.drawText(`Order ID: ${orderId ?? `ORD-${Date.now()}`}`, {
+        x: width - margin - 200,
+        y: height - margin - 25,
+        font: customFont,
+        size: 10,
+        color: colors.secondary,
+    });
 
+    let y = height - 160;
+
+    // --- Billing Info ---
+    page.drawText('BILLED TO', { x: margin, y, font: customBoldFont, size: 10, color: colors.secondary });
+    page.drawText('FROM', { x: width / 2, y, font: customBoldFont, size: 10, color: colors.secondary });
+    y -= 15;
+    page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: colors.lineColor });
+    y -= 20;
+
+    page.drawText(customer?.name || 'Valued Customer', { x: margin, y, font: customBoldFont, size: 12, color: colors.primary });
+    page.drawText('Egypt Excursions Online', { x: width / 2, y, font: customBoldFont, size: 12, color: colors.primary });
+    y -= 15;
+    page.drawText(customer?.email || '', { x: margin, y, font: customFont, size: 10, color: colors.secondary });
+    page.drawText('123 Nile Street', { x: width / 2, y, font: customFont, size: 10, color: colors.secondary });
+    y -= 15;
+    page.drawText(customer?.phone || '', { x: margin, y, font: customFont, size: 10, color: colors.secondary });
+    page.drawText('Cairo, Egypt', { x: width / 2, y, font: customFont, size: 10, color: colors.secondary });
+
+    y -= 40;
+
+    // --- Table Header ---
+    page.drawRectangle({ x: margin, y: y - 10, width: width - margin * 2, height: 30, color: colors.lightGray, opacity: 0.5 });
+    y -= 5;
+    page.drawText('DESCRIPTION', { x: margin + 15, y, font: customBoldFont, size: 10, color: colors.secondary });
+    page.drawText('QTY', { x: width - margin - 150, y, font: customBoldFont, size: 10, color: colors.secondary });
+    page.drawText('TOTAL', { x: width - margin - 60, y, font: customBoldFont, size: 10, color: colors.secondary });
+    y -= 25;
+
+    // --- Table Rows ---
+    orderedItems.forEach((item: any, i: number) => {
+      const rowY = y;
+      const title = item.title ?? 'Item';
+      const qty = Number(item.quantity ?? 1);
+      const total = (Number(item.discountPrice ?? 0) * qty).toFixed(2);
+      
+      if (i % 2 !== 0) { // Alternating row color
+          page.drawRectangle({ x: margin, y: rowY - 15, width: width - margin * 2, height: 30, color: colors.lightGray, opacity: 0.5 });
+      }
+
+      page.drawText(title, { x: margin + 15, y: rowY - 5, font: customFont, size: 10, color: colors.primary, maxWidth: 300 });
+      page.drawText(String(qty), { x: width - margin - 150, y: rowY - 5, font: customFont, size: 10, color: colors.primary });
+      const totalText = `${currencySymbol}${total}`;
+      const totalWidth = customFont.widthOfTextAtSize(totalText, 10);
+      page.drawText(totalText, { x: width - margin - totalWidth, y: rowY - 5, font: customFont, size: 10, color: colors.primary });
+      
+      y -= 30;
+    });
+    
+    y -= 10;
+    page.drawLine({ start: { x: width / 2, y }, end: { x: width - margin, y }, thickness: 1, color: colors.lineColor });
+    y -= 25;
+    
+    // --- Pricing Summary ---
+    const drawTotalRow = (label: string, value: string, isBold = false) => {
+      const font = isBold ? customBoldFont : customFont;
+      const color = isBold ? colors.primary : colors.secondary;
+      page.drawText(label, { x: width - margin - 200, y, font, size: 10, color });
+      const valueWidth = font.widthOfTextAtSize(value, 10);
+      page.drawText(value, { x: width - margin - valueWidth, y, font, size: 10, color });
+      y -= 20;
+    };
+
+    drawTotalRow('Subtotal', `${currencySymbol}${(pricing.subtotal ?? 0).toFixed(2)}`);
+    drawTotalRow('Service Fee', `${currencySymbol}${(pricing.serviceFee ?? 0).toFixed(2)}`);
+    drawTotalRow('Taxes & Fees', `${currencySymbol}${(pricing.tax ?? 0).toFixed(2)}`);
     if ((pricing.discount ?? 0) > 0) {
-      drawTotalRow('Discount', `-${(pricing.discount ?? 0).toFixed(2)}`);
+      drawTotalRow('Discount', `-${currencySymbol}${(pricing.discount ?? 0).toFixed(2)}`);
     }
+    y -= 10;
 
-    doc.moveDown(0.25);
-    drawTotalRow('Total Paid', (pricing.total ?? 0).toFixed(2), { bold: true, color: '#b91c1c' });
-    doc.moveDown(1.25);
+    page.drawRectangle({ x: width / 2 - 25, y: y + 10, width: width / 2 - margin + 25, height: 35, color: colors.lightGray });
+    drawTotalRow('TOTAL PAID', `${currencySymbol}${(pricing.total ?? 0).toFixed(2)}`, true);
+    y -= 20;
 
-    // Optional notes
-    if (notes) {
-      doc.font('Helvetica-Bold').fillColor('#374151').text('Notes:', { underline: true });
-      doc.moveDown(0.25);
-      doc.font('Helvetica').fontSize(9).fillColor('#4b5563').text(notes, { width: 480 });
-      doc.moveDown(0.75);
-    }
+    // --- Footer ---
+    const footerY = margin + 20;
+    page.drawLine({ start: { x: margin, y: footerY }, end: { x: width - margin, y: footerY }, thickness: 1, color: colors.lineColor });
+    const footerText = 'Thank you for your business! If you have any questions, please contact support@example.com.';
+    const footerWidth = customFont.widthOfTextAtSize(footerText, 8);
+    page.drawText(footerText, { x: (width - footerWidth) / 2, y: footerY - 20, font: customFont, size: 8, color: colors.secondary });
 
-    // Footer / contact
-    const pageBottom = doc.page.height - 80;
-    doc.moveTo(50, pageBottom).lineTo(545, pageBottom).strokeColor('#e5e7eb').stroke();
-    doc.font('Helvetica').fontSize(9).fillColor('#6b7280').text('If you have any questions, please contact us at support@example.com.', 50, pageBottom + 10, {
-      align: 'center',
-      width: 500
-    });
+    const pdfBytes = await pdfDoc.save();
+    const finalBuffer = Buffer.from(pdfBytes);
 
-    // finalize PDF
-    doc.end();
-
-    // collect buffer from stream
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-    });
-
-    const finalBuffer = Buffer.concat(chunks);
-
-    // return PDF as attachment
     return new NextResponse(finalBuffer, {
       status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="receipt-${orderId}.pdf"`,
-        'Content-Length': String(finalBuffer.length),
-      },
+      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="receipt-${orderId}.pdf"` },
     });
+
   } catch (err: unknown) {
-    // Add more specific error logging for missing font files
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'ENOENT') {
-      console.error(
-        "Receipt generation error: Font file not found. Ensure 'Roboto-Regular.ttf' and 'Roboto-Bold.ttf' are in the /public/fonts directory.",
-        err
-      );
-      return NextResponse.json({ message: 'Failed to generate receipt due to a server configuration error.', error: 'Missing font assets' }, { status: 500 });
-    }
-    
     console.error('Receipt generation error:', err);
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Failed to generate receipt', error: errorMessage }, { status: 500 });

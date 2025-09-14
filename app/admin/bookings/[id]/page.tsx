@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import withAuth from '@/components/admin/withAuth';
 import { ArrowLeft, Calendar, Clock, User, Mail, Phone, Users, Hash, DollarSign, Tag } from 'lucide-react';
-import Link from 'next/link';
 import Image from 'next/image';
 
 // Define a type for the booking data for better type-safety

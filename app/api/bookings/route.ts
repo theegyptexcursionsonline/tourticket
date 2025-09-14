@@ -1,31 +1,22 @@
+// app/api/admin/bookings/route.ts
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
-import { NextResponse } from 'next/server';
+import Tour from '@/lib/models/Tour';
+import User from '@/lib/models/user';
 
-// GET all bookings for a user
-export async function GET(request: Request) {
+export async function GET() {
   await dbConnect();
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-  if (!userId) {
-    return NextResponse.json({ success: false, message: 'User ID is required' }, { status: 400 });
-  }
-  try {
-    const bookings = await Booking.find({ userId: userId }).populate('tourId');
-    return NextResponse.json({ success: true, data: bookings });
-  } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });
-  }
-}
 
-// POST a new booking
-export async function POST(request: Request) {
-  await dbConnect();
   try {
-    const body = await request.json();
-    const booking = await Booking.create(body);
-    return NextResponse.json({ success: true, data: booking }, { status: 201 });
+    const bookings = await Booking.find({})
+      .populate({ path: 'tour', model: Tour, select: 'title' })
+      .populate({ path: 'user', model: User, select: 'name email' })
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json(bookings);
   } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });
+    console.error('Failed to fetch bookings:', error);
+    return NextResponse.json({ message: 'Failed to fetch bookings' }, { status: 500 });
   }
 }
