@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lock, Shield, CheckCircle, CalendarDays, User, Trash2, Smartphone, Headphones, Loader2 } from 'lucide-react';
+import { ArrowLeft, Lock, Shield, CheckCircle, CalendarDays, User, Trash2, Smartphone, Headphones, Loader2, Download, Printer } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useSettings } from '@/hooks/useSettings';
@@ -151,10 +151,8 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
         <div className="flex justify-between text-sm text-slate-600"><span>Taxes & fees</span><span>{formatPrice(pricing.tax)}</span></div>
         {pricing.discount > 0 && <div className="flex justify-between text-sm text-emerald-700 font-medium mt-2"><span>Discount Applied</span><span>-{formatPrice(pricing.discount)}</span></div>}
         <div className="border-t pt-3 mt-3 flex justify-between items-center">
-          <div>
             <p className="text-sm text-slate-600">Total</p>
             <p className="text-lg font-bold text-rose-600">{formatPrice(pricing.total)}</p>
-          </div>
         </div>
       </div>
       <div className="mt-4">
@@ -175,16 +173,9 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
 
 // --- Checkout Form Step (now controlled via props) ---
 type FormDataShape = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  emergencyContact: string;
-  specialRequests: string;
-  cardholderName: string;
-  cardNumber: string;
-  expiryDate: string;
-  cvv: string;
+  firstName: string; lastName: string; email: string; phone: string;
+  emergencyContact: string; specialRequests: string; cardholderName: string;
+  cardNumber: string; expiryDate: string; cvv: string;
 };
 
 const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormData }: { onPaymentProcess: () => void; isProcessing: boolean; formData: FormDataShape; setFormData: (v: FormDataShape) => void }) => {
@@ -294,11 +285,116 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
 };
 
 // --- Thank You Page ---
-const ThankYouPage = ({ orderedItems, pricing, lastOrderId }: { orderedItems: CartItem[], pricing: any, lastOrderId?: string }) => {
+const ThankYouPage = ({ orderedItems, pricing, customer, lastOrderId }: { orderedItems: CartItem[], pricing: any, customer: FormDataShape, lastOrderId?: string }) => {
   const { formatPrice } = useSettings();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+const handleDownloadReceipt = async () => {
+  if (isDownloading) return;
+  setIsDownloading(true);
+  try {
+    const orderId = lastOrderId ?? `ORD-${Date.now()}`;
+
+    // Build ordered items payload exactly the way PDF expects
+    // Ensure each item has price, discountPrice (if any), finalPrice (if any), quantity, totalPrice
+    const orderedItemsForPdf = orderedItems.map((it) => {
+      // prefer existing canonical fields on item (totalPrice, discountPrice, etc.)
+      const qty = it.quantity || 1;
+      const price = Number(it.price ?? 0);
+      const discountPrice = it.discountPrice != null ? Number(it.discountPrice) : undefined;
+      const finalPrice = it.finalPrice != null ? Number(it.finalPrice) : (discountPrice ?? price);
+      const totalPrice = Number((finalPrice * qty).toFixed(2));
+      return {
+        _id: it._id,
+        title: it.title,
+        image: it.image,
+        price,
+        discountPrice: discountPrice ?? 0,
+        finalPrice,
+        quantity: qty,
+        totalPrice,
+        details: it.details ?? '',
+        addOns: it.addOns ?? [],
+      };
+    });
+
+    // Build pricing explicitly (same math as your UI's useMemo)
+    const subtotal = Number(orderedItemsForPdf.reduce((s, it) => s + it.totalPrice, 0).toFixed(2));
+    const serviceFee = Number((subtotal * 0.03).toFixed(2)); // same 3% as UI
+    const tax = Number((subtotal * 0.05).toFixed(2)); // same 5% as UI
+    const discountAmount = Number((discount || 0).toFixed(2)); // from state
+    const total = Number((subtotal + serviceFee + tax - discountAmount).toFixed(2));
+
+    const pricingForPdf = {
+      subtotal,
+      serviceFee,
+      tax,
+      discount: discountAmount,
+      total,
+      currency: pricing?.currency ?? selectedCurrency?.code ?? 'USD',
+      symbol: pricing?.symbol ?? selectedCurrency?.symbol ?? '$',
+    };
+
+    // Booking details you want on the receipt
+    const bookingForPdf = {
+      date: formData?.expiryDate ?? booking?.date ?? undefined, // use your booking data
+      time: booking?.time ?? undefined,
+      guests: orderedItemsForPdf.reduce((s, it) => s + (it.quantity || 1), 0),
+      pickup: booking?.pickup ?? '',
+      specialRequests: formData?.specialRequests ?? booking?.notes ?? '',
+    };
+
+    // If you have a booking URL, put it in qrData. Server can generate QR if needed.
+    const qrData = `https://your-site.example.com/booking/${orderId}`;
+
+    const payload = {
+      orderId,
+      customer: {
+        name: `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || customer.name || 'Guest',
+        email: customer.email,
+        phone: customer.phone,
+      },
+      orderedItems: orderedItemsForPdf,
+      pricing: pricingForPdf,
+      booking: bookingForPdf,
+      qrData, // server can generate QR from this if qrImageBase64 not provided
+      notes: formData?.specialRequests || 'Receipt requested from Thank You page',
+    };
+
+    const res = await fetch('/api/checkout/receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '<no body>');
+      console.error('Failed to get receipt:', res.status, text);
+      alert('Failed to generate receipt. Please try again later.');
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt-${orderId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Download receipt error:', err);
+    alert('An error occurred while downloading the receipt.');
+  } finally {
+    setIsDownloading(false);
+  }
+};
+
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200">
-      <div className="mx-auto w-fit mb-6 p-4 bg-emerald-100"><CheckCircle size={48} className="text-emerald-600" /></div>
+      <div className="mx-auto w-fit mb-6 p-4 bg-emerald-100 rounded-full"><CheckCircle size={48} className="text-emerald-600" /></div>
       <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
       <p className="text-slate-600 mb-6">We've sent a booking confirmation and receipt to your email address.</p>
 
@@ -307,16 +403,7 @@ const ThankYouPage = ({ orderedItems, pricing, lastOrderId }: { orderedItems: Ca
         <div className="space-y-3 mb-4 divide-y divide-slate-200">
           {orderedItems.map((item, index) => (
             <div key={`${item._id}-${index}`} className="flex items-center justify-between pt-3 first:pt-0">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 overflow-hidden">
-                  <Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">{item.title}</p>
-                  <p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-              <div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div>
+              <div className="flex items-center gap-3"><div className="w-12 h-12 overflow-hidden"><Image src={item.image!} alt={item.title} width={48} height={48} className="object-cover"/></div><div><p className="font-semibold text-slate-800">{item.title}</p><p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p></div></div><div className="text-slate-700 font-medium">{formatPrice((item.discountPrice) * item.quantity)}</div>
             </div>
           ))}
         </div>
@@ -329,56 +416,19 @@ const ThankYouPage = ({ orderedItems, pricing, lastOrderId }: { orderedItems: Ca
       </div>
 
       <div className="flex justify-center gap-3">
-        <button onClick={() => window.location.assign('/')} className="px-5 py-2 border border-slate-200 hover:shadow-sm">Go to homepage</button>
-
-        <button
-          onClick={async () => {
-            try {
-              const orderId = lastOrderId ?? `ORD-${Date.now()}`;
-              const payload = {
-                orderId,
-                customer: { name: '', email: '', phone: '' },
-                orderedItems,
-                pricing,
-                notes: 'Receipt requested from Thank You page'
-              };
-
-              const res = await fetch('/api/checkout/receipt', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-              });
-
-             if (!res.ok) {
-              const text = await res.text().catch(() => '<no body>');
-              console.error('Failed to get receipt:', res.status, text);
-              return;
-            }
-
-
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `receipt-${orderId}.pdf`;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(url);
-            } catch (err) {
-              console.error('Download receipt error:', err);
-            }
-          }}
-          className="px-5 py-2 bg-slate-900 text-white"
-        >
-          Download receipt
+        <button onClick={() => window.location.assign('/')} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg">Go to homepage</button>
+        <button onClick={handleDownloadReceipt} disabled={isDownloading} className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2">
+          {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+          Download PDF
         </button>
-
-        <button onClick={() => window.print()} className="px-5 py-2 border border-slate-200 hover:shadow-sm">Print</button>
+        <button onClick={() => window.print()} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg flex items-center gap-2">
+          <Printer size={18} /> Print
+        </button>
       </div>
     </motion.div>
   );
 };
+
 
 // --- Trust Indicators ---
 const TrustIndicators = () => (
@@ -393,28 +443,20 @@ const TrustIndicators = () => (
 // --- MAIN CHECKOUT PAGE COMPONENT ---
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
-  const { formatPrice } = useSettings();
+  const { formatPrice, selectedCurrency } = useSettings(); // Get currency info
   const router = useRouter();
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [finalPricing, setFinalPricing] = useState<any>(null);
+  const [finalCustomer, setFinalCustomer] = useState<FormDataShape | null>(null);
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [lastOrderId, setLastOrderId] = useState<string | undefined>(undefined);
 
-  // Controlled form state lifted to parent so we can include customer data in receipt payload
   const [formData, setFormData] = useState<FormDataShape>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    emergencyContact: '',
-    specialRequests: '',
-    cardholderName: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
+    firstName: '', lastName: '', email: '', phone: '', emergencyContact: '',
+    specialRequests: '', cardholderName: '', cardNumber: '', expiryDate: '', cvv: '',
   });
 
   const pricing = useMemo(() => {
@@ -422,76 +464,36 @@ export default function CheckoutPage() {
     const serviceFee = +(subtotal * 0.03).toFixed(2);
     const tax = +(subtotal * 0.05).toFixed(2);
     const total = +(subtotal + serviceFee + tax - discount).toFixed(2);
-    return { subtotal, serviceFee, tax, total, discount };
-  }, [cart, discount]);
+    // Add currency info here
+    return { subtotal, serviceFee, tax, total, discount, currency: selectedCurrency.code, symbol: selectedCurrency.symbol };
+  }, [cart, discount, selectedCurrency]);
 
   const applyPromoCode = () => {
     if (promoCode.trim().toUpperCase() === 'SALE10') {
       setDiscount(Math.round(pricing.subtotal * 0.10 * 100) / 100);
-    } else {
-      setDiscount(0);
-    }
+    } else { setDiscount(0); }
   };
 
-  // ---------- NEW: handlePaymentProcess implemented to call receipt API ----------
   const handlePaymentProcess = async () => {
     setIsProcessing(true);
-
     try {
-      // Simulate payment delay (keep your current UX)
       await new Promise((res) => setTimeout(res, 2000));
-
-      // finalize order data
       const createdOrderId = `ORD-${Date.now()}`;
-      const payload = {
-        orderId: createdOrderId,
-        customer: {
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          email: formData.email,
-          phone: formData.phone
-        },
-        orderedItems: cart || [],
-        pricing: pricing,
-        notes: 'Booking created via website'
-      };
-
-      // Update UI state
+      
+      // Set the final state for the thank you page
       setOrderedItems([...(cart || [])]);
       setFinalPricing(pricing);
+      setFinalCustomer(formData); // Pass customer data
       setLastOrderId(createdOrderId);
 
-      // Clear cart and show thank you state
       clearCart();
       setIsConfirmed(true);
-      setIsProcessing(false);
-
-      // Request PDF from server and download it
-      const res = await fetch('/api/checkout/receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        // If PDF generation failed, log for debugging and optionally inform the user
-console.error('Receipt API failed', res.status, await res.text().catch(() => '<no body>'));
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt-${createdOrderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
+      // No more automatic download
     } catch (err) {
-      console.error('Payment / Receipt flow error:', err);
-      setIsProcessing(false);
+      console.error('Payment flow error:', err);
       // Optionally show error notification/toast here
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -529,7 +531,12 @@ console.error('Receipt API failed', res.status, await res.text().catch(() => '<n
               transition={{ duration: 0.45 }}
             >
               {isConfirmed ? (
-                <ThankYouPage orderedItems={orderedItems} pricing={finalPricing} lastOrderId={lastOrderId} />
+                <ThankYouPage 
+                  orderedItems={orderedItems} 
+                  pricing={finalPricing} 
+                  customer={finalCustomer!} // Pass the saved customer data
+                  lastOrderId={lastOrderId} 
+                />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-start">
                   <div className="lg:col-span-2">
@@ -537,11 +544,8 @@ console.error('Receipt API failed', res.status, await res.text().catch(() => '<n
                   </div>
                   <div className="lg:col-span-1">
                     <BookingSummary
-                      pricing={pricing}
-                      promoCode={promoCode}
-                      setPromoCode={setPromoCode}
-                      applyPromoCode={applyPromoCode}
-                      isProcessing={isProcessing}
+                      pricing={pricing} promoCode={promoCode} setPromoCode={setPromoCode}
+                      applyPromoCode={applyPromoCode} isProcessing={isProcessing}
                     />
                   </div>
                 </div>
@@ -558,12 +562,8 @@ console.error('Receipt API failed', res.status, await res.text().catch(() => '<n
             <span className="text-slate-600">Total price:</span>
             <span className="font-bold text-xl text-rose-600">{formatPrice(pricing.total)}</span>
           </div>
-          <button
-            type="submit"
-            form="checkout-form"
-            disabled={isProcessing}
-            className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
-          >
+          <button type="submit" form="checkout-form" disabled={isProcessing}
+            className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center">
             {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Complete Booking & Pay</span>}
           </button>
         </div>
