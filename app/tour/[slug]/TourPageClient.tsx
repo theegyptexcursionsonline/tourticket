@@ -1,3 +1,4 @@
+// app/tour/[slug]/TourPageClient.tsx
 'use client';
 
 import { useState } from 'react';
@@ -48,7 +49,17 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     setLiveMessage('Adding tour to cart');
 
     try {
-      addToCart(tour as CartItem);
+      const quickAddCartItem = {
+        ...tour,
+        uniqueId: `${tour.id}-quick-add-${Date.now()}`,
+        quantity: 1,
+        childQuantity: 0,
+        selectedDate: new Date().toISOString(),
+        selectedTime: 'Anytime',
+        selectedAddOns: {},
+        totalPrice: tour.discountPrice,
+      } as CartItem;
+      addToCart(quickAddCartItem);
       setAdded(true);
       setLiveMessage('Added to cart');
 

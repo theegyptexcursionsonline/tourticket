@@ -7,6 +7,7 @@ import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // --- Day Trip Card Component ---
 const DayTripCard = ({ trip, onAddToCartClick }: { trip: Tour; onAddToCartClick: (trip: Tour) => void; }) => {

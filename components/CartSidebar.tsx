@@ -1,10 +1,11 @@
+// components/CartSidebar.tsx
 'use client';
 
 import React, { FC } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Trash2 } from 'lucide-react';
-import { useCart } from '@/hooks/useCart'; // CORRECTED IMPORT PATH
+import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
 import Image from 'next/image';
 

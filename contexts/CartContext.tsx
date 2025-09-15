@@ -1,3 +1,4 @@
+// contexts/CartContext.tsx
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -73,7 +74,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const openCart = () => setIsCartOpen(true);
     const closeCart = () => setIsCartOpen(false);
     
-const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0), 0);
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0), 0);
 
     return (
         <CartContext.Provider value={{ cart, totalItems, addToCart, removeFromCart, clearCart, isCartOpen, openCart, closeCart }}>

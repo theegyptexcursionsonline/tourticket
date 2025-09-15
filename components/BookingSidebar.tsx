@@ -1,3 +1,4 @@
+// components/BookingSidebar.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,6 +14,7 @@ import { 
   Phone, Mail, MessageCircle, Globe, Wifi, Coffee, Calculator
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useCart } from '@/hooks/useCart';
 
 // Enhanced Types with more detailed properties
 interface Tour {
@@ -914,6 +916,7 @@ interface BookingSidebarProps {
 const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
   const router = useRouter();
   const { formatPrice } = useSettings();
+  const { addToCart } = useCart();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -1193,41 +1196,63 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     
     setIsProcessing(action);
     
-    // Show immediate feedback
     const loadingToast = toast.loading(
-      action === 'checkout' 
-        ? 'Preparing your adventure...' 
+      action === 'checkout'
+        ? 'Preparing your adventure...'
         : 'Adding to your collection...',
-      { 
+      {
         position: 'bottom-center',
         style: { background: '#1F2937', color: 'white' }
       }
     );
 
     try {
-      // Simulate booking process
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      
+      const selectedOption = availability?.tourOptions.find(option =>
+        option.timeSlots.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+      );
+
+      if (!selectedOption || !tour || !bookingData.selectedDate || !bookingData.selectedTimeSlot) {
+        throw new Error('Incomplete booking data.');
+      }
+
+      // Prepare the cart item
+      const newCartItem = {
+        ...tour,
+        id: tour.id,
+        uniqueId: `${tour.id}-${bookingData.selectedDate.toISOString()}-${bookingData.selectedTimeSlot.id}-${JSON.stringify(bookingData.selectedAddOns)}`,
+        quantity: bookingData.adults,
+        childQuantity: bookingData.children,
+        infantQuantity: bookingData.infants,
+        selectedDate: bookingData.selectedDate.toISOString(),
+        selectedTime: bookingData.selectedTimeSlot.time,
+        selectedAddOns: bookingData.selectedAddOns,
+        price: selectedOption.price,
+        originalPrice: selectedOption.originalPrice,
+        discountPrice: selectedOption.price,
+        totalPrice: total,
+      };
+
+      addToCart(newCartItem, false); // Add item to cart but don't open the sidebar yet
+
       toast.dismiss(loadingToast);
-      onClose();
-      
-      // Wait for sidebar to close
+      onClose(); // Close the booking sidebar
+
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (action === 'checkout') {
-        toast.success('Redirecting to secure checkout...', { 
+        toast.success('Redirecting to secure checkout...', {
           icon: '🔒',
           duration: 3000,
           style: { background: '#10B981', color: 'white' }
         });
         router.push('/checkout');
       } else {
-        toast.success('🎉 Added to Cart! Ready for more adventures?', { 
+        toast.success('🎉 Added to Cart! Ready for more adventures?', {
           duration: 6000,
           position: 'bottom-center',
           style: { background: '#059669', color: 'white' }
         });
-        router.push('/');
+        router.push('/'); // Or stay on the same page, depending on desired UX
       }
     } catch (error) {
       toast.dismiss(loadingToast);
@@ -1235,7 +1260,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, onClose, router]);
+  }, [isProcessing, onClose, router, bookingData, availability, tour, addToCart, total]);
 
   const formatDate = useCallback((date: Date) => {
     return date.toLocaleDateString('en-US', { 

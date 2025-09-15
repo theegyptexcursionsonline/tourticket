@@ -1,4 +1,5 @@
 // components/FeaturedTours.tsx
+// components/FeaturedTours.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,6 +8,7 @@ import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
+import Link from 'next/link';
 
 // Reusable Tour Card Component
 const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
@@ -31,7 +33,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   return (
     <a 
       href={`/tour/${tour.slug}`}
-      className="block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+      className="block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group"
     >
       <div className="relative">
         <Image 
