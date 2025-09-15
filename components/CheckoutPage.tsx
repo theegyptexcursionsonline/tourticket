@@ -1,4 +1,3 @@
-// components/CheckoutPage.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -18,12 +17,17 @@ import {
   Loader2,
   Download,
   Printer,
+  X,
+  CreditCard,
+  CreditCardIcon,
+  Ticket,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/types';
+import toast from 'react-hot-toast';
 
 // -------------------------------
 // Small payment SVG icons (kept inline to avoid external imports)
@@ -68,7 +72,7 @@ const PayPalIcon = ({ className = '', width = 36, height = 24 }: { className?: s
 
 // -------------------------------
 // Small form input component
-const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false }: any) => (
+const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false, error }: any) => (
   <div>
     <label htmlFor={name} className="block text-sm font-medium text-slate-700 mb-2">
       {label}
@@ -83,8 +87,11 @@ const FormInput = ({ label, name, type = 'text', placeholder, required = true, v
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full bg-white border border-slate-300 px-4 py-3 shadow-sm placeholder:text-slate-400 focus:outline-none focus:border-slate-500 focus-visible:ring-2 focus-visible:ring-red-500 transition duration-200 disabled:bg-slate-100 disabled:cursor-not-allowed"
+      className={`w-full bg-white border px-4 py-3 shadow-sm placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500 transition duration-200 disabled:bg-slate-100 disabled:cursor-not-allowed ${
+        error ? 'border-rose-500' : 'border-slate-300'
+      }`}
     />
+    {error && <p className="mt-1 text-xs text-rose-500">{error}</p>}
   </div>
 );
 
@@ -95,7 +102,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const { removeFromCart } = useCart();
   return (
     <div className="flex gap-4 py-4">
-      <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded">
+      <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded-lg">
         {item.image ? (
           <Image src={item.image} alt={item.title} width={64} height={64} className="w-16 h-16 object-cover" />
         ) : (
@@ -104,11 +111,12 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
       </div>
       <div className="flex-1">
         <h4 className="font-bold text-md text-slate-800 leading-tight">{item.title}</h4>
-        <p className="text-sm text-slate-500">{item.details}</p>
-        <p className="text-sm text-slate-500">{item.quantity} x adult(s)</p>
-        {item.childQuantity > 0 && <p className="text-sm text-slate-500">{item.childQuantity} x child(ren)</p>}
+        <p className="text-sm text-slate-500 mt-1">{item.details}</p>
+        <p className="text-xs text-slate-500">
+          {item.quantity} Adult{item.quantity > 1 ? 's' : ''} {item.childQuantity > 0 ? `, ${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}` : ''}
+        </p>
         {item.selectedAddOns && Object.keys(item.selectedAddOns).length > 0 && (
-          <div className="text-xs text-slate-500 mt-1 pl-4 border-l-2">
+          <div className="text-xs text-slate-500 mt-2 pl-3 border-l-2 border-slate-200">
             <strong>Add-ons:</strong> {Object.keys(item.selectedAddOns).join(', ')}
           </div>
         )}
@@ -132,56 +140,60 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
   if (!cart || cart.length === 0) return null;
 
   return (
-    <aside className="bg-white border-t border-b border-l border-slate-200 p-6 shadow-xl sticky top-28">
-      <h3 className="text-2xl font-bold text-slate-900 mb-4">Your Booking Summary</h3>
+    <aside className="bg-white border border-slate-200 rounded-xl p-6 shadow-xl sticky top-28">
+      <h3 className="text-2xl font-bold text-slate-900 mb-6">Your Booking Summary</h3>
       <div className="divide-y divide-slate-200">
         {cart.map((item, index) => (
           <SummaryItem key={`${item._id ?? item.uniqueId}-${index}`} item={item} />
         ))}
       </div>
 
-      <div className="mt-4 p-4 bg-slate-50 border-t border-b border-slate-200">
-        <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
-        <div className="flex justify-between text-sm text-slate-600 mt-2"><span>Service fee</span><span>{formatPrice(pricing.serviceFee)}</span></div>
-        <div className="flex justify-between text-sm text-slate-600"><span>Taxes & fees</span><span>{formatPrice(pricing.tax)}</span></div>
-        {pricing.discount > 0 && (
-          <div className="flex justify-between text-sm text-emerald-700 font-medium mt-2">
-            <span>Discount Applied</span>
-            <span>-{formatPrice(pricing.discount)}</span>
+      <div className="mt-6">
+        <h4 className="font-bold text-slate-800 mb-3">Pricing Details</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
+          <div className="flex justify-between text-slate-600"><span>Service fee</span><span>{formatPrice(pricing.serviceFee)}</span></div>
+          <div className="flex justify-between text-slate-600"><span>Taxes & fees</span><span>{formatPrice(pricing.tax)}</span></div>
+          {pricing.discount > 0 && (
+            <div className="flex justify-between text-emerald-600 font-bold">
+              <span>Discount</span>
+              <span>-{formatPrice(pricing.discount)}</span>
+            </div>
+          )}
+          <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-center text-lg font-bold">
+            <p className="text-slate-900">Total</p>
+            <p className="text-rose-600">{formatPrice(pricing.total)}</p>
           </div>
-        )}
-        <div className="border-t pt-3 mt-3 flex justify-between items-center">
-          <p className="text-sm text-slate-600">Total</p>
-          <p className="text-lg font-bold text-rose-600">{formatPrice(pricing.total)}</p>
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-6 border-t border-slate-200 pt-6">
+        <h4 className="font-bold text-slate-800 mb-3">Have a promo code?</h4>
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Promotional code"
+            placeholder="Enter code here"
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value)}
-            className="flex-1 px-4 py-2 border border-slate-300 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-200 transition"
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition"
           />
-          <button onClick={applyPromoCode} type="button" className="px-4 py-2 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
+          <button onClick={applyPromoCode} type="button" className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition">
             Apply
           </button>
         </div>
       </div>
 
-      <div className="mt-6 hidden lg:block">
+      <div className="mt-8 hidden lg:block">
         <button
           type="submit"
           form="checkout-form"
           disabled={isProcessing}
-          className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
+          className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 rounded-xl active:translate-y-[1px] transform-gpu shadow-lg transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Complete Booking & Pay</span>}
+          {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <><Lock size={18} /> Complete Booking & Pay</>}
         </button>
-        <p className="text-xs text-slate-500 text-center mt-3">
-          By completing this booking you agree to our <a className="underline" href="/terms">Terms of Service</a>.
+        <p className="text-xs text-slate-500 text-center mt-4">
+          By completing this booking you agree to our <a className="underline text-slate-700" href="/terms">Terms of Service</a>.
         </p>
       </div>
     </aside>
@@ -204,20 +216,36 @@ type FormDataShape = {
 };
 
 const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormData }: { onPaymentProcess: () => void; isProcessing: boolean; formData: FormDataShape; setFormData: (v: FormDataShape) => void }) => {
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'bank'>('card');
+  const [errors, setErrors] = useState<Partial<Record<keyof FormDataShape, string>>>({});
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onPaymentProcess();
+  const validateForm = () => {
+    const newErrors: Partial<Record<keyof FormDataShape, string>> = {};
+    if (!formData.firstName) newErrors.firstName = 'First name is required.';
+    if (!formData.lastName) newErrors.lastName = 'Last name is required.';
+    if (!formData.email) newErrors.email = 'Email address is required.';
+    if (!formData.phone) newErrors.phone = 'Phone number is required.';
+    // Add more validation rules here
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'bank'>('card');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      onPaymentProcess();
+    } else {
+      toast.error('Please fill in all required fields.');
+    }
+  };
 
   return (
-    <form onSubmit={handleSubmit} id="checkout-form" className="bg-white p-8 shadow-xl space-y-8 border-t border-b border-r border-slate-200">
+    <form onSubmit={handleSubmit} id="checkout-form" className="bg-white p-8 rounded-xl shadow-xl space-y-8 border border-slate-200">
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-extrabold text-slate-900">Contact Information</h2>
@@ -225,17 +253,17 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="First Name" name="firstName" placeholder="Enter your first name" value={formData.firstName} onChange={handleInputChange} disabled={isProcessing} />
-          <FormInput label="Last Name" name="lastName" placeholder="Enter your last name" value={formData.lastName} onChange={handleInputChange} disabled={isProcessing} />
-          <FormInput label="Email Address" name="email" type="email" placeholder="Enter your email address" value={formData.email} onChange={handleInputChange} disabled={isProcessing} />
-          <FormInput label="Phone Number" name="phone" type="tel" placeholder="Enter your phone number" value={formData.phone} onChange={handleInputChange} disabled={isProcessing} />
+          <FormInput label="First Name" name="firstName" placeholder="Enter your first name" value={formData.firstName} onChange={handleInputChange} disabled={isProcessing} error={errors.firstName} />
+          <FormInput label="Last Name" name="lastName" placeholder="Enter your last name" value={formData.lastName} onChange={handleInputChange} disabled={isProcessing} error={errors.lastName} />
+          <FormInput label="Email Address" name="email" type="email" placeholder="Enter your email address" value={formData.email} onChange={handleInputChange} disabled={isProcessing} error={errors.email} />
+          <FormInput label="Phone Number" name="phone" type="tel" placeholder="Enter your phone number" value={formData.phone} onChange={handleInputChange} disabled={isProcessing} error={errors.phone} />
           <div className="md:col-span-2">
-            <FormInput label="Emergency Contact (optional)" name="emergencyContact" placeholder="Name and phone number" required={false} value={formData.emergencyContact} onChange={handleInputChange} disabled={isProcessing} />
+            <FormInput label="Emergency Contact (optional)" name="emergencyContact" placeholder="Name and phone number" required={false} value={formData.emergencyContact} onChange={handleInputChange} disabled={isProcessing} error={errors.emergencyContact} />
           </div>
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label>
-            <textarea name="specialRequests" value={formData.specialRequests} onChange={handleInputChange} placeholder="Any special requirements, dietary restrictions, etc..." rows={4} className="w-full px-4 py-3 border border-slate-300 focus-visible:ring-2 focus-visible:ring-red-500" disabled={isProcessing} />
+            <textarea name="specialRequests" value={formData.specialRequests} onChange={handleInputChange} placeholder="Any special requirements, dietary restrictions, etc..." rows={4} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500 transition disabled:bg-slate-100" disabled={isProcessing} />
           </div>
         </div>
       </section>
@@ -243,44 +271,69 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
       <section>
         <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10"><VisaIcon /></div>
-            <span className="text-sm font-medium text-slate-700">Card</span>
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <motion.button
+            type="button"
+            onClick={() => setPaymentMethod('card')}
+            aria-pressed={paymentMethod === 'card'}
+            whileTap={{ scale: 0.98 }}
+            className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all ${paymentMethod === 'card' ? 'bg-red-50 border-red-500 shadow-md' : 'bg-white border-slate-200 hover:shadow-sm'}`}
+          >
+            <div className="h-10 flex items-center gap-2">
+              <VisaIcon width={36} height={20} />
+              <MastercardIcon width={36} height={20} />
+            </div>
+            <span className="text-sm font-semibold text-slate-700">Credit/Debit Card</span>
+          </motion.button>
 
-          <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10"><PayPalIcon /></div>
-            <span className="text-sm font-medium text-slate-700">PayPal</span>
-          </button>
+          <motion.button
+            type="button"
+            onClick={() => setPaymentMethod('paypal')}
+            aria-pressed={paymentMethod === 'paypal'}
+            whileTap={{ scale: 0.98 }}
+            className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-500 shadow-md' : 'bg-white border-slate-200 hover:shadow-sm'}`}
+          >
+            <div className="h-10 flex items-center">
+              <PayPalIcon width={48} height={30} />
+            </div>
+            <span className="text-sm font-semibold text-slate-700">PayPal</span>
+          </motion.button>
 
-          <button type="button" onClick={() => setPaymentMethod('bank')} aria-pressed={paymentMethod === 'bank'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10"><MastercardIcon /></div>
-            <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
-          </button>
+          <motion.button
+            type="button"
+            onClick={() => setPaymentMethod('bank')}
+            aria-pressed={paymentMethod === 'bank'}
+            whileTap={{ scale: 0.98 }}
+            className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all ${paymentMethod === 'bank' ? 'bg-red-50 border-red-500 shadow-md' : 'bg-white border-slate-200 hover:shadow-sm'}`}
+          >
+            <div className="h-10 flex items-center">
+              <CreditCard size={36} className="text-slate-500" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700">Bank Transfer</span>
+          </motion.button>
         </div>
 
         <AnimatePresence mode="wait">
           <motion.div key={paymentMethod} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
             {paymentMethod === 'card' && (
-              <div className="space-y-4 p-6 bg-slate-50 border border-slate-200">
+              <div className="space-y-4 p-6 bg-slate-50 border border-slate-200 rounded-xl">
                 <div className="grid grid-cols-1 gap-4">
-                  <FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} disabled={isProcessing} />
-                  <FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} disabled={isProcessing} />
+                  <FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} disabled={isProcessing} error={errors.cardholderName} />
+                  <FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} disabled={isProcessing} error={errors.cardNumber} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} disabled={isProcessing} />
-                  <FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} disabled={isProcessing} />
+                  <FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} disabled={isProcessing} error={errors.expiryDate} />
+                  <FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} disabled={isProcessing} error={errors.cvv} />
                 </div>
               </div>
             )}
             {paymentMethod === 'paypal' && (
-              <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
+              <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-700">
                 <p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p>
               </div>
             )}
             {paymentMethod === 'bank' && (
-              <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
+              <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-700">
                 <p className="font-medium">Please follow the instructions in the confirmation email to complete your bank transfer.</p>
               </div>
             )}
@@ -410,20 +463,20 @@ const ThankYouPage = ({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200 rounded-xl">
       <div className="mx-auto w-fit mb-6 p-4 bg-emerald-100 rounded-full">
         <CheckCircle size={48} className="text-emerald-600" />
       </div>
-      <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
+      <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
       <p className="text-slate-600 mb-6">We've sent a booking confirmation and receipt to your email address.</p>
 
-      <div className="text-left bg-slate-50 p-6 border border-slate-200 mb-6">
+      <div className="text-left bg-slate-50 p-6 border border-slate-200 mb-6 rounded-xl">
         <h3 className="font-bold text-lg text-slate-800 mb-4">Your Receipt</h3>
         <div className="space-y-3 mb-4 divide-y divide-slate-200">
           {orderedItems.map((item, index) => (
             <div key={`${item._id ?? index}-${index}`} className="flex items-center justify-between pt-3 first:pt-0">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 overflow-hidden rounded">
+                <div className="w-12 h-12 overflow-hidden rounded-lg">
                   {item.image ? <Image src={item.image} alt={item.title} width={48} height={48} className="object-cover" /> : <div className="w-12 h-12 bg-slate-100" />}
                 </div>
                 <div>
@@ -440,17 +493,17 @@ const ThankYouPage = ({
           <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
           {pricing.discount > 0 && <div className="flex justify-between text-sm text-emerald-700"><span>Discount</span><span>-{formatPrice(pricing.discount)}</span></div>}
           <div className="flex justify-between text-sm text-slate-600"><span>Fees & Taxes</span><span>{formatPrice(pricing.serviceFee + pricing.tax)}</span></div>
-          <div className="flex justify-between text-lg font-bold text-slate-900 mt-2"><span>Total Paid</span><span>{formatPrice(pricing.total)}</span></div>
+          <div className="flex justify-between text-xl font-bold text-slate-900 mt-2"><span>Total Paid</span><span>{formatPrice(pricing.total)}</span></div>
         </div>
       </div>
 
-      <div className="flex justify-center gap-3">
-        <button onClick={() => window.location.assign('/')} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg">Go to homepage</button>
-        <button onClick={handleDownloadReceipt} disabled={isDownloading} className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-center gap-3">
+        <button onClick={() => window.location.assign('/')} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg text-sm">Go to homepage</button>
+        <button onClick={handleDownloadReceipt} disabled={isDownloading} className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2 text-sm">
           {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
           Download PDF
         </button>
-        <button onClick={() => window.print()} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg flex items-center gap-2">
+        <button onClick={() => window.print()} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg flex items-center gap-2 text-sm">
           <Printer size={18} /> Print
         </button>
       </div>
@@ -463,7 +516,7 @@ const ThankYouPage = ({
 const TrustIndicators = () => (
   <div className="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-12 py-8 mt-12 border-t border-slate-200">
     <div className="flex items-center gap-2 text-slate-600"><Shield size={20} className="text-emerald-600" /><span>Easy and secure booking</span></div>
-    <div className="flex items-center gap-2 text-slate-600"><Smartphone size={20} className="text-red-600" /><span>Ticket available on smartphone</span></div>
+    <div className="flex items-center gap-2 text-slate-600"><Smartphone size={20} className="text-rose-600" /><span>Ticket available on smartphone</span></div>
     <div className="flex items-center gap-2 text-slate-600"><Headphones size={20} className="text-slate-900" /><span>Excellent customer service</span></div>
   </div>
 );
@@ -516,8 +569,10 @@ export default function CheckoutPage() {
   const applyPromoCode = () => {
     if (promoCode.trim().toUpperCase() === 'SALE10') {
       setDiscount(Math.round(pricing.subtotal * 0.10 * 100) / 100);
+      toast.success('Promo code applied successfully!');
     } else {
       setDiscount(0);
+      toast.error('Invalid promo code.');
     }
   };
 
@@ -539,7 +594,7 @@ export default function CheckoutPage() {
       setIsConfirmed(true);
     } catch (err) {
       console.error('Payment flow error:', err);
-      // Consider showing a toast / notification to the user here
+      toast.error('Payment failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -597,8 +652,8 @@ export default function CheckoutPage() {
             <span className="text-slate-600">Total price:</span>
             <span className="font-bold text-xl text-rose-600">{formatPrice(pricing.total)}</span>
           </div>
-          <button type="submit" form="checkout-form" disabled={isProcessing} className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center">
-            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Complete Booking & Pay</span>}
+          <button type="submit" form="checkout-form" disabled={isProcessing} className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 rounded-lg active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <><Lock size={16} /> Complete Booking & Pay</>}
           </button>
         </div>
       )}

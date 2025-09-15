@@ -2,16 +2,17 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { 
-  X, ArrowRight, ArrowLeft, Calendar, ShoppingCart, CreditCard, 
+import {
+  X, ArrowRight, ArrowLeft, Calendar, ShoppingCart, CreditCard,
   Loader2, Clock, User, Users, Plus, Minus, Check, Languages,
   ChevronDown, ChevronLeft, ChevronRight, Star, MapPin, Shield,
   ChevronUp, Info, Zap, Award, Heart, Eye, Camera, Car,
   Gift, Sparkles, TrendingUp, CheckCircle, AlertCircle,
-  Phone, Mail, MessageCircle, Globe, Wifi, Coffee, Calculator
+  Phone, Mail, MessageCircle, Globe, Wifi, Coffee, Calculator,
+  BadgeDollarSign
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
@@ -62,6 +63,7 @@ interface AddOnTour {
   category?: 'Transport' | 'Photography' | 'Food' | 'Experience';
   icon?: React.ElementType;
   savings?: number;
+  perGuest?: boolean;
 }
 
 interface AvailabilityData {
@@ -218,6 +220,7 @@ const addOnData: AddOnTour[] = [
     category: 'Experience',
     icon: Shield,
     savings: 6,
+    perGuest: true,
   },
   {
     id: 'refreshment-upgrade',
@@ -237,7 +240,7 @@ const addOnData: AddOnTour[] = [
 const useSettings = () => ({
   formatPrice: (price: number) => `€${price.toFixed(2)}`,
   selectedCurrency: { symbol: '€', code: 'EUR' },
-  formatDiscount: (original: number, current: number) => 
+  formatDiscount: (original: number, current: number) =>
     Math.round(((original - current) / original) * 100)
 });
 
@@ -248,18 +251,18 @@ const CalendarWidget: React.FC<{
   availabilityData?: { [key: string]: 'high' | 'medium' | 'low' | 'full' };
 }> = ({ selectedDate, onDateSelect, availabilityData = {} }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
   const today = new Date();
-  
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  
+
   const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  
+
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => {
       const newMonth = new Date(prev);
@@ -271,7 +274,7 @@ const CalendarWidget: React.FC<{
       return newMonth;
     });
   };
-  
+
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
       case 'high': return 'bg-green-100 border-green-300 text-green-800';
@@ -281,24 +284,24 @@ const CalendarWidget: React.FC<{
       default: return 'bg-gray-50 border-gray-200 text-gray-700';
     }
   };
-  
+
   const renderCalendarDays = () => {
     const days = [];
-    
+
     // Previous month's trailing days
     for (let i = 0; i < firstDayOfMonth; i++) {
       const prevMonth = new Date(currentMonth);
       prevMonth.setMonth(currentMonth.getMonth() - 1);
       const prevMonthDays = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).getDate();
       const day = prevMonthDays - firstDayOfMonth + i + 1;
-      
+
       days.push(
         <div key={`prev-${day}`} className="w-10 h-10 text-sm text-gray-300 flex items-center justify-center">
           {day}
         </div>
       );
     }
-    
+
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
@@ -308,7 +311,7 @@ const CalendarWidget: React.FC<{
       const dateKey = currentDate.toISOString().split('T')[0];
       const availability = availabilityData[dateKey];
       const isFull = availability === 'full';
-      
+
       days.push(
         <motion.button
           key={day}
@@ -318,9 +321,9 @@ const CalendarWidget: React.FC<{
           whileTap={{ scale: isPast || isFull ? 1 : 0.95 }}
           className={`relative w-10 h-10 text-sm rounded-xl border-2 transition-all font-medium ${
             isSelected
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-600 shadow-lg scale-110'
+              ? 'bg-gradient-to-br from-red-500 to-orange-600 text-white border-red-600 shadow-lg scale-110'
               : isToday
-              ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 border-blue-300 font-bold'
+              ? 'bg-gradient-to-br from-red-100 to-red-200 text-red-700 border-red-300 font-bold'
               : isPast
               ? 'text-gray-300 bg-gray-50 border-gray-100 cursor-not-allowed'
               : availability
@@ -339,12 +342,12 @@ const CalendarWidget: React.FC<{
         </motion.button>
       );
     }
-    
+
     return days;
   };
-  
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6"
@@ -376,7 +379,7 @@ const CalendarWidget: React.FC<{
           </motion.button>
         </div>
       </div>
-      
+
       {/* Availability Legend */}
       <div className="flex items-center justify-center gap-4 mb-4 text-xs">
         <div className="flex items-center gap-1">
@@ -396,7 +399,7 @@ const CalendarWidget: React.FC<{
           <span className="text-gray-600">Full</span>
         </div>
       </div>
-      
+
       {/* Day names */}
       <div className="grid grid-cols-7 gap-1 mb-3">
         {dayNames.map(day => (
@@ -405,7 +408,7 @@ const CalendarWidget: React.FC<{
           </div>
         ))}
       </div>
-      
+
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1">
         {renderCalendarDays()}
@@ -414,7 +417,9 @@ const CalendarWidget: React.FC<{
   );
 };
 
-// Enhanced Tour Option Card with better design
+// ---
+// Tour Option Card
+// ---
 const TourOptionCard: React.FC<{
   option: TourOption;
   onSelect: (timeSlot: TimeSlot) => void;
@@ -422,7 +427,7 @@ const TourOptionCard: React.FC<{
   adults: number;
   children: number;
 }> = ({ option, onSelect, selectedTimeSlot, adults, children }) => {
-  const { formatPrice, formatDiscount } = useSettings();
+  const { formatPrice } = useSettings();
   const basePrice = option.price;
   const subtotal = (adults * basePrice) + (children * basePrice * 0.5);
   const originalSubtotal = option.originalPrice ? (adults * option.originalPrice) + (children * option.originalPrice * 0.5) : subtotal;
@@ -430,158 +435,156 @@ const TourOptionCard: React.FC<{
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative border-2 rounded-2xl p-6 transition-all cursor-pointer group ${
-        option.isRecommended 
-          ? 'border-gradient-to-r from-blue-400 to-purple-400 bg-gradient-to-br from-blue-50 to-purple-50' 
-          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
+      className={`relative border rounded-xl p-4 transition-all cursor-pointer ${
+        option.isRecommended
+          ? 'border-red-400 bg-red-50 ring-1 ring-red-200'
+          : 'border-gray-200 bg-white hover:border-red-300 hover:shadow-md'
       }`}
     >
-      {/* Badges */}
-      <div className="absolute -top-3 left-6 flex gap-2">
-        {option.isRecommended && (
-          <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-            <Sparkles size={12} />
-            Recommended
-          </span>
-        )}
-        {option.badge && (
-          <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-            {option.badge}
-          </span>
-        )}
-        {option.discount && (
-          <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-            -{option.discount}%
-          </span>
-        )}
-      </div>
-      
-      <div className="flex items-start justify-between mb-4 mt-2">
-        <div className="flex-1 pr-4">
-          <h4 className="font-bold text-gray-800 text-lg mb-2 leading-tight">{option.title}</h4>
-          
-          {/* Tour Details */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
-            <span className="flex items-center gap-1">
-              <Clock size={14} className="text-blue-500" />
-              {option.duration}
-            </span>
-            <span className="flex items-center gap-1">
-              <Languages size={14} className="text-green-500" />
-              {option.languages.join(', ')}
-            </span>
-            {option.groupSize && (
-              <span className="flex items-center gap-1">
-                <Users size={14} className="text-purple-500" />
-                {option.groupSize}
+      {/* Compact Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 pr-2">
+          <div className="flex items-center gap-2 mb-2">
+            {option.isRecommended && (
+              <span className="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                <Sparkles size={10} />
+                Recommended
               </span>
             )}
-            {option.difficulty && (
-              <span className="flex items-center gap-1">
-                <TrendingUp size={14} className="text-orange-500" />
-                {option.difficulty}
+            {option.discount && (
+              <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                -{option.discount}%
               </span>
             )}
           </div>
-          
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">{option.description}</p>
-          
-          {/* Highlights */}
-          {option.highlights && (
-            <div className="mb-4">
-              <h5 className="font-semibold text-gray-700 text-sm mb-2">What's Included:</h5>
-              <div className="grid grid-cols-1 gap-1">
-                {option.highlights.slice(0, 3).map((highlight, index) => (
-                  <div key={index} className="flex items-center gap-2 text-xs text-gray-600">
-                    <CheckCircle size={12} className="text-green-500 flex-shrink-0" />
-                    <span>{highlight}</span>
-                  </div>
-                ))}
-                {option.highlights.length > 3 && (
-                  <span className="text-xs text-blue-500 font-medium">
-                    +{option.highlights.length - 3} more included
-                  </span>
-                )}
-              </div>
+          <h3 className="text-sm font-bold text-gray-900 leading-tight mb-2">
+            {option.title}
+          </h3>
+        </div>
+
+        {/* Compact Price */}
+        <div className="text-right">
+          {originalSubtotal > subtotal && (
+            <div className="text-xs text-gray-400 line-through">
+              {formatPrice(originalSubtotal)}
             </div>
           )}
-        </div>
-        
-        {/* Price Section */}
-        <div className="text-right flex-shrink-0">
-          <div className="mb-2">
-            {option.originalPrice && option.originalPrice > option.price && (
-              <span className="text-sm text-gray-400 line-through block">
-                {formatPrice(originalSubtotal)}
-              </span>
-            )}
-            <span className="text-2xl font-bold text-blue-600 block">
-              {formatPrice(subtotal)}
-            </span>
-            {savings > 0 && (
-              <span className="text-xs text-green-600 font-semibold">
-                Save {formatPrice(savings)}
-              </span>
-            )}
-          </div>
-          <div className="text-xs text-gray-500 mb-4">
-            {adults > 0 && <div>{adults} adult{adults > 1 ? 's' : ''} × {formatPrice(basePrice)}</div>}
-            {children > 0 && <div>{children} child{children > 1 ? 'ren' : ''} × {formatPrice(basePrice * 0.5)}</div>}
+          <div className="text-lg font-bold text-red-600">
+            {formatPrice(subtotal)}
           </div>
         </div>
       </div>
-      
-      {/* Time Slots */}
-      <div className="pt-4 border-t border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-semibold text-gray-700">Available Times:</p>
-          <span className="text-xs text-gray-500">Select to continue</span>
+
+      {/* Compact Specs - Single Row */}
+      <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
+        <div className="flex items-center gap-1">
+          <Clock size={12} className="text-red-500" />
+          <span>{option.duration}</span>
         </div>
-        
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-1">
+          <Users size={12} className="text-purple-500" />
+          <span>Max {option.groupSize?.replace('Max ', '').replace(' people', '')}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <TrendingUp size={12} className="text-orange-500" />
+          <span>{option.difficulty}</span>
+        </div>
+      </div>
+
+      {/* Compact Description */}
+      <p className="text-xs text-gray-600 leading-relaxed mb-3 line-clamp-2">
+        {option.description}
+      </p>
+
+      {/* Key Highlights - Compact */}
+      {option.highlights && (
+        <div className="mb-4">
+          <div className="space-y-1">
+            {option.highlights.slice(0, 2).map((highlight, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <CheckCircle size={12} className="text-green-500 flex-shrink-0" />
+                <span className="text-xs text-gray-700">{highlight}</span>
+              </div>
+            ))}
+            {option.highlights.length > 2 && (
+              <span className="text-xs text-red-600 font-medium ml-4">
+                +{option.highlights.length - 2} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Summary */}
+      <div className="bg-gray-50 rounded-lg p-3 mb-3">
+        <div className="flex justify-between items-center text-xs mb-1">
+          <span className="text-gray-600">
+            {adults} adult{adults > 1 ? 's' : ''}{children > 0 && `, ${children} child${children > 1 ? 'ren' : ''}`}
+          </span>
+          {savings > 0 && (
+            <span className="text-green-600 font-medium">
+              Save {formatPrice(savings)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Compact Time Slots */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-medium text-gray-800 text-xs">Available Times</h4>
+          <span className="text-xs text-gray-500">Select one</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
           {option.timeSlots.map(timeSlot => {
             const isSelected = selectedTimeSlot?.id === timeSlot.id;
             const isLowAvailability = timeSlot.available <= 3;
-            const availabilityPercentage = timeSlot.originalAvailable ? 
-              (timeSlot.available / timeSlot.originalAvailable) * 100 : 100;
-            
+            const isSoldOut = timeSlot.available === 0;
+
             return (
               <motion.button
                 key={timeSlot.id}
-                onClick={() => onSelect(timeSlot)}
-                disabled={timeSlot.available === 0}
-                whileHover={{ scale: timeSlot.available > 0 ? 1.02 : 1 }}
-                whileTap={{ scale: timeSlot.available > 0 ? 0.98 : 1 }}
-                className={`relative p-4 rounded-xl font-semibold transition-all text-sm ${
-                  isSelected 
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' 
-                    : timeSlot.available === 0
+                onClick={() => !isSoldOut && onSelect(timeSlot)}
+                disabled={isSoldOut}
+                whileHover={{ scale: isSoldOut ? 1 : 1.02 }}
+                whileTap={{ scale: isSoldOut ? 1 : 0.98 }}
+                className={`relative p-3 rounded-lg text-xs font-medium transition-all ${
+                  isSelected
+                    ? 'bg-red-600 text-white shadow-md'
+                    : isSoldOut
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-50 text-gray-800 hover:bg-gray-100 border-2 border-transparent hover:border-blue-200'
+                    : 'bg-white border border-gray-200 text-gray-800 hover:border-red-300'
                 }`}
               >
-                <div className="flex flex-col items-center">
-                  <span className="font-bold">{timeSlot.time}</span>
-                  <span className={`text-xs mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
-                    {timeSlot.available === 0 ? 'Sold Out' : `${timeSlot.available} spots left`}
-                  </span>
-                  
-                  {timeSlot.isPopular && !isSelected && (
-                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                      Popular
-                    </span>
-                  )}
-                  
-                  {isLowAvailability && timeSlot.available > 0 && !isSelected && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
-                        Almost full!
-                      </div>
-                    </div>
-                  )}
+                <div className="text-center">
+                  <div className="font-bold">{timeSlot.time}</div>
+                  <div className={`text-xs mt-1 ${isSelected ? 'text-red-100' : 'text-gray-500'}`}>
+                    {isSoldOut ? 'Sold Out' : `${timeSlot.available} left`}
+                  </div>
                 </div>
+
+                {timeSlot.isPopular && !isSelected && (
+                  <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                    Hot
+                  </div>
+                )}
+
+                {isLowAvailability && !isSoldOut && !isSelected && (
+                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                      Few left!
+                    </div>
+                  </div>
+                )}
+
+                {isSelected && (
+                  <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check size={10} />
+                  </div>
+                )}
               </motion.button>
             );
           })}
@@ -591,35 +594,45 @@ const TourOptionCard: React.FC<{
   );
 };
 
-// Enhanced Add-on Card with better visual hierarchy
+// ---
+// Add-on Card (Modified for toggle selection)
+// ---
 const AddOnCard: React.FC<{
   addOn: AddOnTour;
   quantity: number;
   onQuantityChange: (id: string, quantity: number) => void;
-}> = ({ addOn, quantity, onQuantityChange }) => {
+  guestCount: number;
+}> = ({ addOn, quantity, onQuantityChange, guestCount }) => {
   const { formatPrice } = useSettings();
   const IconComponent = addOn.icon || Gift;
   const isSelected = quantity > 0;
-  const totalPrice = addOn.price * quantity;
-  const totalSavings = addOn.savings ? addOn.savings * quantity : 0;
+  
+  const calculatedQuantity = addOn.perGuest ? guestCount : 1;
+  const totalPrice = isSelected ? addOn.price * calculatedQuantity : 0;
+  const totalSavings = isSelected && addOn.savings ? addOn.savings * calculatedQuantity : 0;
 
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Photography': return 'from-purple-400 to-pink-400';
-      case 'Transport': return 'from-blue-400 to-cyan-400';
+      case 'Transport': return 'from-red-400 to-orange-400';
       case 'Experience': return 'from-green-400 to-emerald-400';
       case 'Food': return 'from-orange-400 to-red-400';
       default: return 'from-gray-400 to-gray-500';
     }
   };
 
+  const handleToggle = () => {
+    onQuantityChange(addOn.id, isSelected ? 0 : calculatedQuantity);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`relative border-2 rounded-2xl p-5 transition-all ${
-        isSelected 
-          ? 'border-blue-400 bg-blue-50 shadow-lg scale-105' 
+      onClick={handleToggle}
+      className={`relative border-2 rounded-2xl p-5 transition-all cursor-pointer ${
+        isSelected
+          ? 'border-red-400 bg-red-50 shadow-lg scale-105'
           : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
       }`}
     >
@@ -629,7 +642,7 @@ const AddOnCard: React.FC<{
           {addOn.category}
         </span>
       </div>
-      
+
       {/* Popular Badge */}
       {addOn.popular && (
         <div className="absolute -top-2 right-4">
@@ -639,18 +652,18 @@ const AddOnCard: React.FC<{
           </span>
         </div>
       )}
-      
+
       <div className="flex items-start gap-4 mb-4 mt-2">
         {/* Icon */}
         <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(addOn.category || '')} flex items-center justify-center text-white flex-shrink-0`}>
           <IconComponent size={24} />
         </div>
-        
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-gray-800 text-base mb-1">{addOn.title}</h4>
           <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3">{addOn.description}</p>
-          
+
           {/* Price Section */}
           <div className="flex items-center justify-between">
             <div>
@@ -660,7 +673,7 @@ const AddOnCard: React.FC<{
                 </span>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-blue-600">
+                <span className="text-lg font-bold text-red-600">
                   {formatPrice(addOn.price)}
                 </span>
                 {addOn.savings && (
@@ -669,68 +682,39 @@ const AddOnCard: React.FC<{
                   </span>
                 )}
               </div>
-            </div>
-            
-            {/* Quantity Controls */}
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => onQuantityChange(addOn.id, Math.max(0, quantity - 1))}
-                disabled={quantity === 0}
-                className="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center disabled:opacity-50 hover:bg-gray-300 transition-colors"
-              >
-                <Minus size={14} />
-              </motion.button>
-              
-              <span className="w-8 text-center font-bold text-lg">{quantity}</span>
-              
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => onQuantityChange(addOn.id, Math.min(addOn.maxQuantity || 99, quantity + 1))}
-                disabled={quantity >= (addOn.maxQuantity || 99)}
-                className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center disabled:opacity-50 hover:bg-blue-600 transition-colors"
-              >
-                <Plus size={14} />
-              </motion.button>
-            </div>
-          </div>
-          
-          {/* Total for multiple quantities */}
-          {quantity > 1 && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Total for {quantity} items:</span>
-                <div className="text-right">
-                  <span className="font-bold text-blue-600">{formatPrice(totalPrice)}</span>
-                  {totalSavings > 0 && (
-                    <span className="block text-xs text-green-600">
-                      Total savings: {formatPrice(totalSavings)}
-                    </span>
-                  )}
-                </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {addOn.perGuest ? `Price is per person` : `Price is for the group`}
               </div>
             </div>
-          )}
+
+            {/* Selection Indicator */}
+            {isSelected ? (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center"
+              >
+                <Check size={20} />
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-10 h-10 rounded-full border-2 border-gray-300 text-gray-500 flex items-center justify-center"
+              >
+                <Plus size={20} />
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
-      
-      {/* Selection Indicator */}
-      {isSelected && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="absolute top-4 right-4 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center"
-        >
-          <Check size={14} />
-        </motion.div>
-      )}
     </motion.div>
   );
 };
 
-// Enhanced Loading Skeletons with better animations
+// ---
+// Loading Skeletons
+// ---
 const LoadingSkeleton: React.FC<{ type: 'full' | 'addons' | 'summary' }> = ({ type }) => {
   if (type === 'full') {
     return (
@@ -751,7 +735,7 @@ const LoadingSkeleton: React.FC<{ type: 'full' | 'addons' | 'summary' }> = ({ ty
       </div>
     );
   }
-  
+
   if (type === 'addons') {
     return (
       <div className="space-y-4 p-6">
@@ -764,7 +748,7 @@ const LoadingSkeleton: React.FC<{ type: 'full' | 'addons' | 'summary' }> = ({ ty
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-4 p-6">
       <div className="animate-pulse">
@@ -777,7 +761,9 @@ const LoadingSkeleton: React.FC<{ type: 'full' | 'addons' | 'summary' }> = ({ ty
   );
 };
 
-// Enhanced Step Icons with better animations
+// ---
+// Step Icons
+// ---
 const StepIcons: React.FC<{ currentStep: number }> = ({ currentStep }) => {
   const steps = [
     { icon: Calendar, label: 'Date & Guests', description: 'Choose when & who' },
@@ -792,42 +778,42 @@ const StepIcons: React.FC<{ currentStep: number }> = ({ currentStep }) => {
         {/* Progress Line */}
         <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded-full">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+            className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full"
             initial={{ width: '0%' }}
             animate={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           />
         </div>
-        
+
         {steps.map((step, index) => {
           const IconComponent = step.icon;
           const isActive = currentStep === index + 1;
           const isCompleted = currentStep > index + 1;
           const isUpcoming = currentStep < index + 1;
-          
+
           return (
             <div key={index} className="relative flex flex-col items-center z-10">
               <motion.div
                 initial={{ scale: 0.8 }}
-                animate={{ 
+                animate={{
                   scale: isActive ? 1.2 : isCompleted ? 1.1 : 1,
                   rotate: isCompleted ? 360 : 0
                 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all shadow-lg ${
-                  isCompleted 
-                    ? 'bg-gradient-to-r from-green-400 to-green-500 text-white' 
-                    : isActive 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white' 
+                  isCompleted
+                    ? 'bg-gradient-to-r from-green-400 to-green-500 text-white'
+                    : isActive
+                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
                     : 'bg-white border-2 border-gray-300 text-gray-400'
                 }`}
               >
                 {isCompleted ? <Check size={18} /> : <IconComponent size={16} />}
               </motion.div>
-              
+
               <div className="text-center max-w-20">
                 <div className={`text-xs font-semibold ${
-                  isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                  isActive ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
                 }`}>
                   {step.label}
                 </div>
@@ -843,7 +829,9 @@ const StepIcons: React.FC<{ currentStep: number }> = ({ currentStep }) => {
   );
 };
 
-// Enhanced Price Summary Component
+// ---
+// Price Summary Component
+// ---
 const PriceSummary: React.FC<{
   subtotal: number;
   addOnsTotal: number;
@@ -859,13 +847,13 @@ const PriceSummary: React.FC<{
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200"
+      className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 border border-red-200"
     >
       <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-        <Calculator size={18} className="text-blue-500" />
+        <Calculator size={18} className="text-red-500" />
         Price Breakdown
       </h4>
-      
+
       <div className="space-y-3">
         {subtotal > 0 && (
           <div className="flex justify-between items-center">
@@ -873,28 +861,28 @@ const PriceSummary: React.FC<{
             <span className="font-semibold">{formatPrice(subtotal)}</span>
           </div>
         )}
-        
+
         {addOnsTotal > 0 && (
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Add-ons</span>
             <span className="font-semibold">{formatPrice(addOnsTotal)}</span>
           </div>
         )}
-        
+
         {savings > 0 && (
           <div className="flex justify-between items-center text-green-600">
             <span>Total savings</span>
             <span className="font-semibold">-{formatPrice(savings)}</span>
           </div>
         )}
-        
+
         <div className="h-px bg-gray-300 my-3"></div>
-        
+
         <div className="flex justify-between items-center text-lg">
           <span className="font-bold text-gray-800">Total</span>
           <motion.span
             key={total}
-            initial={{ scale: 1.2, color: '#3B82F6' }}
+            initial={{ scale: 1.2, color: '#DC2626' }}
             animate={{ scale: 1, color: '#1F2937' }}
             className="font-bold"
           >
@@ -907,6 +895,7 @@ const PriceSummary: React.FC<{
 };
 
 // Main Enhanced Booking Sidebar Component
+// ---
 interface BookingSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -939,7 +928,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   // Mock availability data with better realism
   const mockAvailabilityData = {
     '2025-09-16': 'high',
-    '2025-09-17': 'medium', 
+    '2025-09-17': 'medium',
     '2025-09-18': 'high',
     '2025-09-19': 'low',
     '2025-09-20': 'full',
@@ -951,11 +940,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const fetchAvailability = async (date: Date, totalGuests: number) => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const mockAvailability: AvailabilityData = {
         date: date.toISOString().split('T')[0],
         timeSlots: [],
@@ -977,7 +966,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           }
         ]
       };
-      
+
       setAvailability(mockAvailability);
       setCurrentStep(2);
       setAnimationKey(prev => prev + 1);
@@ -993,40 +982,43 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const { subtotal, addOnsTotal, total, totalSavings } = useMemo(() => {
     let basePrice = 0;
     let originalBasePrice = 0;
-    
+    const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
+
     if (bookingData.selectedTimeSlot) {
-      const selectedOption = availability?.tourOptions.find(option => 
+      const selectedOption = availability?.tourOptions.find(option =>
         option.timeSlots.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
       );
-      
+
       if (selectedOption) {
         basePrice = selectedOption.price;
         originalBasePrice = selectedOption.originalPrice || selectedOption.price;
       }
     }
-    
+
     const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * basePrice * 0.5);
     const originalSubtotal = (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
-    
+
     const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
       const addOn = addOnData.find(a => a.id === addOnId);
-      if (addOn && quantity > 0) {
-        return acc + (addOn.price * quantity);
+      if (addOn) {
+        const itemQuantity = addOn.perGuest ? totalGuests : 1;
+        return acc + (addOn.price * itemQuantity);
       }
       return acc;
     }, 0);
-    
+
     const addOnsSavings = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
       const addOn = addOnData.find(a => a.id === addOnId);
-      if (addOn && quantity > 0 && addOn.savings) {
-        return acc + (addOn.savings * quantity);
+      if (addOn && addOn.savings) {
+        const itemQuantity = addOn.perGuest ? totalGuests : 1;
+        return acc + (addOn.savings * itemQuantity);
       }
       return acc;
     }, 0);
-    
+
     const tourSavings = originalSubtotal - subtotalCalc;
     const totalSavingsCalc = tourSavings + addOnsSavings;
-    
+
     return {
       subtotal: subtotalCalc,
       addOnsTotal: addOnsCalc,
@@ -1067,7 +1059,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       });
       return;
     }
-    
+
     if (currentStep < 4) {
       setCurrentStep(s => s + 1);
       setAnimationKey(prev => prev + 1);
@@ -1088,21 +1080,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       toast.error('Date selection required', { icon: '📅' });
       return;
     }
-    
+
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
     if (totalGuests === 0) {
       setError('Please select at least one guest');
       toast.error('Guest selection required', { icon: '👥' });
       return;
     }
-    
+
     const maxSize = tour?.maxGroupSize || 20;
     if (totalGuests > maxSize) {
       setError(`Maximum group size is ${maxSize} guests`);
       toast.error(`Group too large (max ${maxSize} guests)`, { icon: '⚠️' });
       return;
     }
-    
+
     setError('');
     fetchAvailability(bookingData.selectedDate, totalGuests);
   }, [bookingData, tour?.maxGroupSize]);
@@ -1113,11 +1105,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     setShowDatePicker(false);
     setAvailability(null);
     setCurrentStep(1);
-    
+
     // Provide immediate feedback about availability
     const dateKey = date.toISOString().split('T')[0];
     const dayAvailability = mockAvailabilityData[dateKey];
-    
+
     if (dayAvailability === 'full') {
       toast.error('This date is fully booked. Please select another date.', {
         duration: 4000,
@@ -1138,7 +1130,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       toast.error('This time slot is fully booked');
       return;
     }
-    
+
     setBookingData(prev => ({ ...prev, selectedTimeSlot: timeSlot }));
     toast.success(`${timeSlot.time} selected!`, {
       icon: '⏰',
@@ -1152,15 +1144,15 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       const currentCount = prev[type];
       const minValue = type === 'adults' ? 1 : 0;
       const maxValue = (tour?.maxGroupSize || 20) - (prev.adults + prev.children + prev.infants - currentCount);
-      
-      let newCount = increment 
+
+      let newCount = increment
         ? Math.min(maxValue, currentCount + 1)
         : Math.max(minValue, currentCount - 1);
-      
+
       if (increment && newCount === currentCount && newCount < maxValue) {
         newCount = currentCount + 1;
       }
-      
+
       return { ...prev, [type]: newCount };
     });
   }, [tour?.maxGroupSize]);
@@ -1169,15 +1161,15 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
     let text = `${totalGuests} guest${totalGuests !== 1 ? 's' : ''}`;
     const details = [];
-    
+
     if (bookingData.adults > 0) details.push(`${bookingData.adults} adult${bookingData.adults > 1 ? 's' : ''}`);
     if (bookingData.children > 0) details.push(`${bookingData.children} child${bookingData.children > 1 ? 'ren' : ''}`);
     if (bookingData.infants > 0) details.push(`${bookingData.infants} infant${bookingData.infants > 1 ? 's' : ''}`);
-    
+
     return details.length > 0 ? `${text} (${details.join(', ')})` : text;
   }, [bookingData]);
 
-  // Enhanced add-on quantity management
+  // Enhanced add-on quantity management (simplified for toggle)
   const handleAddOnQuantityChange = useCallback((addOnId: string, quantity: number) => {
     setBookingData(prev => {
       const selectedAddOns = { ...prev.selectedAddOns };
@@ -1193,9 +1185,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   // Enhanced final booking actions with better feedback
   const handleFinalAction = useCallback(async (action: 'cart' | 'checkout') => {
     if (isProcessing) return;
-    
+
     setIsProcessing(action);
-    
+
     const loadingToast = toast.loading(
       action === 'checkout'
         ? 'Preparing your adventure...'
@@ -1263,11 +1255,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   }, [isProcessing, onClose, router, bookingData, availability, tour, addToCart, total]);
 
   const formatDate = useCallback((date: Date) => {
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
     });
   }, []);
 
@@ -1317,12 +1309,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
               <div className="relative inline-block mb-4">
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">{tour?.title}</h2>
                 {tour?.category && (
-                  <span className="absolute -top-2 -right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
                     {tour.category}
                   </span>
                 )}
               </div>
-              
+
               <div className="flex items-center justify-center gap-4 mb-4">
                 <div className="flex items-center gap-1">
                   <Star size={16} className="text-yellow-500 fill-current" />
@@ -1330,7 +1322,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 </div>
                 <div className="h-4 w-px bg-gray-300"></div>
                 <div className="flex items-center gap-1">
-                  <Eye size={16} className="text-blue-500" />
+                  <Eye size={16} className="text-red-500" />
                   <span className="text-sm text-gray-600">{tour?.bookings?.toLocaleString()} bookings</span>
                 </div>
                 <div className="h-4 w-px bg-gray-300"></div>
@@ -1339,18 +1331,18 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   <span className="text-sm text-gray-600">{tour?.duration}</span>
                 </div>
               </div>
-              
-              <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-6 text-white mb-6">
+
+              <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-6 text-white mb-6">
                 <div className="flex items-baseline justify-center gap-3 mb-2">
                   {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
-                    <span className="text-blue-100 line-through text-lg">
+                    <span className="text-red-100 line-through text-lg">
                       {formatPrice(tour.originalPrice)}
                     </span>
                   )}
                   <span className="text-3xl font-bold">
                     {formatPrice(tour?.discountPrice || 0)}
                   </span>
-                  <span className="text-blue-100">per adult</span>
+                  <span className="text-red-100">per adult</span>
                 </div>
                 {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
                   <div className="flex items-center justify-center gap-2">
@@ -1378,7 +1370,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             {/* Enhanced Date Input */}
             <div className="date-picker-dropdown">
               <label className="block text-sm font-bold text-gray-700 mb-3">
-                <Calendar className="inline w-5 h-5 mr-2 text-blue-500" />
+                <Calendar className="inline w-5 h-5 mr-2 text-red-500" />
                 When would you like to go?
               </label>
               <div className="relative">
@@ -1386,16 +1378,16 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-blue-300 transition-all shadow-sm"
+                  className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Calendar size={20} className="text-blue-600" />
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                      <Calendar size={20} className="text-red-600" />
                     </div>
                     <div>
                       <div className="font-semibold text-gray-800">
-                        {bookingData.selectedDate ? 
-                          formatDate(bookingData.selectedDate) : 
+                        {bookingData.selectedDate ?
+                          formatDate(bookingData.selectedDate) :
                           'Select your adventure date'
                         }
                       </div>
@@ -1408,7 +1400,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   </div>
                   <ChevronDown size={20} className={`text-gray-400 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
                 </motion.button>
-                
+
                 <AnimatePresence>
                   {showDatePicker && (
                     <motion.div
@@ -1431,7 +1423,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             {/* Enhanced Participants Dropdown */}
             <div className="participants-dropdown">
               <label className="block text-sm font-bold text-gray-700 mb-3">
-                <Users className="inline w-5 h-5 mr-2 text-purple-500" />
+                <Users className="inline w-5 h-5 mr-2 text-red-500" />
                 How many adventurers?
               </label>
               <div className="relative">
@@ -1439,11 +1431,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowParticipantsDropdown(!showParticipantsDropdown)}
-                  className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-purple-300 transition-all shadow-sm"
+                  className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Users size={20} className="text-purple-600" />
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                      <Users size={20} className="text-red-600" />
                     </div>
                     <div>
                       <div className="font-semibold text-gray-800">
@@ -1456,7 +1448,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   </div>
                   {showParticipantsDropdown ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
                 </motion.button>
-                
+
                 <AnimatePresence>
                   {showParticipantsDropdown && (
                     <motion.div
@@ -1469,8 +1461,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                         {/* Adults */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                              <User size={20} className="text-blue-600" />
+                            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+                              <User size={20} className="text-red-600" />
                             </div>
                             <div>
                               <div className="font-semibold text-gray-800">Adults</div>
@@ -1483,7 +1475,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                               whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('adults', false)}
                               disabled={bookingData.adults <= 1}
-                              className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                              className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 hover:border-red-400 hover:bg-red-50 transition-colors"
                             >
                               <Minus size={16} />
                             </motion.button>
@@ -1492,7 +1484,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('adults', true)}
-                              className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors"
+                              className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                             >
                               <Plus size={16} />
                             </motion.button>
@@ -1564,7 +1556,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                             </motion.button>
                           </div>
                         </div>
-                        
+
                         {/* Group size indicator */}
                         <div className="bg-gray-50 rounded-xl p-4 text-center">
                           <div className="text-sm text-gray-600 mb-1">Total Group Size</div>
@@ -1603,7 +1595,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
               whileTap={{ scale: 0.98 }}
               onClick={handleCheckAvailability}
               disabled={!bookingData.selectedDate || isLoading}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-4 rounded-2xl hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg"
+              className="w-full bg-gradient-to-r from-red-500 to-orange-600 text-white font-bold py-4 rounded-2xl hover:from-red-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg"
             >
               {isLoading ? (
                 <>
@@ -1633,7 +1625,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           >
             {/* Weather and Date Info */}
             {availability?.weatherInfo && (
-              <div className="bg-gradient-to-r from-blue-100 to-cyan-100 rounded-2xl p-4 flex items-center justify-between">
+              <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <h4 className="font-semibold text-gray-800">
                     {formatDate(bookingData.selectedDate!)}
@@ -1651,7 +1643,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             <div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">Choose Your Experience</h3>
               <p className="text-gray-600 mb-6">Select the perfect tour option for your group of {getParticipantsText().toLowerCase()}</p>
-              
+
               <div className="space-y-6">
                 {availability?.tourOptions.map(option => (
                   <TourOptionCard
@@ -1668,9 +1660,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
             {/* Special Offers */}
             {availability?.specialOffers && availability.specialOffers.length > 0 && (
-              <div className="bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl p-6 border-2 border-orange-200">
+              <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-2xl p-6 border-2 border-red-200">
                 <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                  <Gift size={18} className="text-orange-500" />
+                  <Gift size={18} className="text-red-500" />
                   Special Offers Available
                 </h4>
                 {availability.specialOffers.map(offer => (
@@ -1714,6 +1706,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   addOn={addOn}
                   quantity={bookingData.selectedAddOns[addOn.id] || 0}
                   onQuantityChange={handleAddOnQuantityChange}
+                  guestCount={bookingData.adults + bookingData.children}
                 />
               ))}
             </div>
@@ -1726,7 +1719,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 total={addOnsTotal}
                 savings={Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
                   const addOn = addOnData.find(a => a.id === addOnId);
-                  return acc + (addOn?.savings ? addOn.savings * quantity : 0);
+                  const itemQuantity = addOn?.perGuest ? bookingData.adults + bookingData.children : 1;
+                  return acc + (addOn?.savings ? addOn.savings * itemQuantity : 0);
                 }, 0)}
                 isVisible={true}
               />
@@ -1763,12 +1757,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 <CheckCircle size={20} className="text-green-500" />
                 Your Adventure Summary
               </h3>
-              
+
               {/* Tour Details */}
               <div className="space-y-4 mb-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Calendar size={20} className="text-blue-600" />
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <Calendar size={20} className="text-red-600" />
                   </div>
                   <div>
                     <div className="font-semibold text-gray-800">
@@ -1779,17 +1773,17 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Users size={20} className="text-purple-600" />
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <Users size={20} className="text-red-600" />
                   </div>
                   <div>
                     <div className="font-semibold text-gray-800">{getParticipantsText()}</div>
                     <div className="text-sm text-gray-600">Ready for adventure</div>
                   </div>
                 </div>
-                
+
                 {Object.keys(bookingData.selectedAddOns).length > 0 && (
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -1804,7 +1798,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   </div>
                 )}
               </div>
-              
+
               {/* Price Breakdown */}
               <div className="bg-white rounded-xl p-4 border border-gray-200">
                 <h4 className="font-semibold text-gray-800 mb-3">Price Breakdown</h4>
@@ -1831,16 +1825,16 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                       <span className="font-medium">-{formatPrice(totalSavings)}</span>
                     </div>
                   )}
-                  
+
                   <div className="h-px bg-gray-300 my-3"></div>
-                  
+
                   <div className="flex justify-between text-lg font-bold">
                     <span className="text-gray-800">Total Amount</span>
                     <motion.span
                       key={total}
-                      initial={{ scale: 1.2, color: '#3B82F6' }}
+                      initial={{ scale: 1.2, color: '#DC2626' }}
                       animate={{ scale: 1, color: '#1F2937' }}
-                      className="text-blue-600"
+                      className="text-red-600"
                     >
                       {formatPrice(total)}
                     </motion.span>
@@ -1848,7 +1842,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 </div>
               </div>
             </div>
-            
+
             {/* Trust Indicators */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -1860,13 +1854,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   </div>
                 </div>
               </div>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                 <div className="flex items-center gap-3">
-                  <Clock size={20} className="text-blue-500" />
+                  <Clock size={20} className="text-red-500" />
                   <div>
-                    <div className="font-semibold text-blue-800 text-sm">Free Cancellation</div>
-                    <div className="text-xs text-blue-600">Up to 24h before</div>
+                    <div className="font-semibold text-red-800 text-sm">Free Cancellation</div>
+                    <div className="text-xs text-red-600">Up to 24h before</div>
                   </div>
                 </div>
               </div>
@@ -1880,7 +1874,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
                   >
                     <Phone size={16} />
                     Call Us
@@ -1888,7 +1882,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
                   >
                     <MessageCircle size={16} />
                     Live Chat
@@ -1897,7 +1891,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 <div className="text-xs text-gray-500">Available 24/7</div>
               </div>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4 pt-4">
               <motion.button
@@ -1905,7 +1899,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleFinalAction('cart')}
                 disabled={!!isProcessing}
-                className="flex items-center justify-center gap-2 py-4 border-2 border-blue-500 text-blue-600 font-bold rounded-2xl transition-all disabled:opacity-50 hover:bg-blue-50"
+                className="flex items-center justify-center gap-2 py-4 border-2 border-red-500 text-red-600 font-bold rounded-2xl transition-all disabled:opacity-50 hover:bg-red-50"
               >
                 {isProcessing === 'cart' ? (
                   <><Loader2 className="animate-spin" size={18} /> Adding...</>
@@ -1913,13 +1907,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   <><ShoppingCart size={18} /> Add to Cart</>
                 )}
               </motion.button>
-              
+
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleFinalAction('checkout')}
                 disabled={!!isProcessing}
-                className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-2xl transition-all disabled:opacity-50 hover:from-blue-600 hover:to-purple-700 shadow-lg"
+                className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-red-500 to-orange-600 text-white font-bold rounded-2xl transition-all disabled:opacity-50 hover:from-red-600 hover:to-orange-700 shadow-lg"
               >
                 {isProcessing === 'checkout' ? (
                   <><Loader2 className="animate-spin" size={18} /> Processing...</>
@@ -1938,6 +1932,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
   if (!tour) return null;
 
+  const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -1949,14 +1945,14 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <motion.div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
-            onClick={onClose} 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
+          <motion.div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           />
-          
+
           <motion.div
             className="relative bg-white h-full w-full max-w-md shadow-2xl flex flex-col overflow-hidden"
             initial={{ x: '100%' }}
@@ -1965,7 +1961,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
             {/* Enhanced Header with gradient */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 shadow-lg sticky top-0 z-20">
+            <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white p-4 shadow-lg sticky top-0 z-20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -1986,7 +1982,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={onClose} 
+                  onClick={onClose}
                   className="p-2 hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X size={20} />
@@ -1994,111 +1990,145 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
               </div>
             </div>
 
-            {/* Enhanced Step Progress with better visual design */}
+            {/* Compact Step Progress */}
             <div className="bg-white shadow-sm sticky top-[72px] z-20">
-              <StepIcons currentStep={currentStep} />
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center justify-between relative">
+                  {/* Compact Progress Line */}
+                  <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 rounded-full">
+                    <motion.div
+                      className="h-full bg-red-500 rounded-full"
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${((currentStep - 1) / (3)) * 100}%` }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    />
+                  </div>
+                  {[
+                    { icon: Calendar, label: 'Date' },
+                    { icon: Clock, label: 'Tours' },
+                    { icon: Sparkles, label: 'Extras' },
+                    { icon: CreditCard, label: 'Book' }
+                  ].map((step, index) => {
+                    const IconComponent = step.icon;
+                    const isActive = currentStep === index + 1;
+                    const isCompleted = currentStep > index + 1;
+                    return (
+                      <div key={index} className="relative flex flex-col items-center z-10">
+                        <motion.div
+                          animate={{
+                            scale: isActive ? 1.1 : 1,
+                          }}
+                          transition={{ duration: 0.2 }}
+                          className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 transition-all ${
+                            isCompleted
+                              ? 'bg-green-500 text-white'
+                              : isActive
+                                ? 'bg-red-500 text-white'
+                                : 'bg-white border-2 border-gray-300 text-gray-400'
+                          }`}
+                        >
+                          {isCompleted ? <Check size={12} /> : <IconComponent size={12} />}
+                        </motion.div>
+                        <div className={`text-xs font-medium ${
+                          isActive ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          {step.label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Content with enhanced scrolling */}
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            {/* Content with enhanced scrolling and bottom padding */}
+            <div
+              ref={(el) => {
+                if (el && currentStep === 3) {
+                  el.scrollTop = 0;
+                }
+              }}
+              className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pb-28"
+            >
               <AnimatePresence mode="wait">
                 {renderStepContent()}
               </AnimatePresence>
             </div>
 
-            {/* Enhanced Footer - only visible when time slot is selected */}
+            {/* Enhanced Footer - Compact Version */}
             <AnimatePresence>
               {currentStep > 1 && bookingData.selectedTimeSlot && (
                 <motion.div
-                  initial={{ opacity: 0, y: 100 }}
+                  initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 100 }}
-                  className="bg-white border-t-2 border-gray-200 sticky bottom-0 z-20 shadow-2xl"
+                  exit={{ opacity: 0, y: 50 }}
+                  className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-20 shadow-lg"
                 >
-                  {/* Quick Price Preview */}
-                  <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-gray-600">{getParticipantsText()}</div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-gray-800">{formatPrice(total)}</span>
-                          {totalSavings > 0 && (
-                            <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full font-semibold">
-                              Save {formatPrice(totalSavings)}
-                            </span>
-                          )}
-                        </div>
+                  {/* Compact Price and Info Bar */}
+                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-gray-800">{formatPrice(total)}</span>
+                        {totalSavings > 0 && (
+                          <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
+                            Save {formatPrice(totalSavings)}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">
-                          {formatDate(bookingData.selectedDate!)}
-                        </div>
-                        <div className="text-sm font-semibold text-blue-600">
-                          {bookingData.selectedTimeSlot?.time}
-                        </div>
+                      <div className="text-xs text-gray-600">
+                        {formatDate(bookingData.selectedDate!).split(',')[0]} • {bookingData.selectedTimeSlot?.time}
                       </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {getParticipantsText()}
                     </div>
                   </div>
 
-                  {/* Navigation Controls */}
-                  <div className="p-4">
-                    <div className="flex justify-between items-center gap-4">
+                  {/* Compact Navigation */}
+                  <div className="px-4 py-3">
+                    <div className="flex justify-between items-center">
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-semibold"
+                        className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
                       >
-                        <ArrowLeft size={18} />
+                        <ArrowLeft size={16} />
                         Back
                       </motion.button>
-                      
-                      {currentStep < 4 && (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleNext}
-                          disabled={isLoading}
-                          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                        >
-                          {currentStep === 3 ? 'Review Booking' : 'Continue'}
-                          <ArrowRight size={18} />
-                        </motion.button>
-                      )}
-                    </div>
-                    
-                    {/* Progress indicator */}
-                    <div className="mt-3 flex justify-center">
-                      <div className="flex gap-2">
+
+                      <div className="flex items-center gap-1">
                         {Array.from({ length: 4 }).map((_, index) => (
                           <div
                             key={index}
-                            className={`w-2 h-2 rounded-full transition-all ${
-                              index + 1 <= currentStep ? 'bg-blue-500' : 'bg-gray-300'
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${
+                              index + 1 <= currentStep ? 'bg-red-500' : 'bg-gray-300'
                             }`}
                           />
                         ))}
                       </div>
+
+                      {currentStep < 4 && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleNext}
+                          disabled={isLoading}
+                          className="flex items-center gap-1 bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 transition-all text-sm"
+                        >
+                          {currentStep === 3 ? 'Review' : 'Continue'}
+                          <ArrowRight size={16} />
+                        </motion.button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Enhanced Step indicator at bottom - always visible */}
-            <div className="bg-gradient-to-r from-gray-100 to-gray-50 text-center py-2 text-xs font-bold text-gray-500 flex items-center justify-center gap-2">
-              <span>Step {currentStep} of 4</span>
-              <div className="flex gap-1">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      index + 1 === currentStep ? 'bg-blue-500' :
-                      index + 1 < currentStep ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
+            {/* Ultra-compact Step indicator at very bottom */}
+            <div className="bg-gray-100 text-center py-1 text-xs text-gray-500 fixed bottom-0 left-0 right-0 z-30">
+              Step {currentStep} of 4
             </div>
           </motion.div>
         </motion.div>
