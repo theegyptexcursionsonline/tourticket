@@ -28,83 +28,66 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
     return 'bg-gray-200 text-gray-800';
   };
 
-  // Handle add to cart click with proper event handling
-  const handleAddToCartClick = (e: React.MouseEvent) => {
-    e.preventDefault(); 
-    e.stopPropagation();
-    console.log('Add to cart clicked for:', tour.title); // Debug log
-    onAddToCartClick(tour);
-  };
-
   return (
-    <div className="relative block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-      {/* Make the card clickable but exclude the cart button */}
-      <a 
-        href={`/tour/${tour.slug}`}
-        className="block"
-        onClick={(e) => {
-          // Only navigate if cart button wasn't clicked
-          const target = e.target as HTMLElement;
-          if (target.closest('button[aria-label="Add to cart"]')) {
-            e.preventDefault();
-          }
-        }}
-      >
-        <div className="relative">
-          <Image 
-            src={tour.image} 
-            alt={tour.title} 
-            width={340}
-            height={192}
-            className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105" 
-          />
-          {tour.tags && tour.tags.length > 0 && (
-            <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-              {tour.tags.slice(0, 2).map((tag, index) => (
-                <span key={index} className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shadow-sm ${getTagColor(tag)}`}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="p-5 flex flex-col h-[180px]">
-          <h3 className="text-xl font-bold text-gray-900 leading-snug flex-grow line-clamp-2">{tour.title}</h3>
-          <div className="flex items-center gap-4 text-sm text-gray-500 my-3">
-            <div className="flex items-center gap-1.5">
-              <Clock size={16} className="text-gray-400"/>
-              <span className="font-medium">{tour.duration}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Users size={16} className="text-gray-400"/>
-              <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
-            </div>
+    <a 
+      href={`/tour/${tour.slug}`}
+      className="block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+    >
+      <div className="relative">
+        <Image 
+          src={tour.image} 
+          alt={tour.title} 
+          width={340}
+          height={192}
+          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105" 
+        />
+        {tour.tags && tour.tags.length > 0 && (
+          <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+            {tour.tags.slice(0, 2).map((tag, index) => (
+              <span key={index} className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shadow-sm ${getTagColor(tag)}`}>
+                {tag}
+              </span>
+            ))}
           </div>
-          <div className="mt-auto flex items-end justify-between">
-            <div className="flex items-center gap-1.5 text-yellow-500">
-              <Star size={20} className="fill-current" />
-              <span className="font-bold text-lg text-gray-800">{tour.rating?.toFixed(1)}</span>
-            </div>
-            <div className="text-right">
-               <span className="text-3xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
-              {tour.originalPrice && (
-                <span className="ml-2 text-base font-normal text-gray-500 line-through">{formatPrice(tour.originalPrice)}</span>
-              )}
-            </div>
+        )}
+        <button 
+          onClick={(e) => {
+            e.preventDefault(); 
+            e.stopPropagation();
+            onAddToCartClick(tour);
+          }}
+          className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110"
+          aria-label="Add to cart"
+        >
+          <ShoppingCart size={22} />
+        </button>
+      </div>
+      <div className="p-5 flex flex-col h-[180px]">
+        <h3 className="text-xl font-bold text-gray-900 leading-snug flex-grow line-clamp-2">{tour.title}</h3>
+        <div className="flex items-center gap-4 text-sm text-gray-500 my-3">
+          <div className="flex items-center gap-1.5">
+            <Clock size={16} className="text-gray-400"/>
+            <span className="font-medium">{tour.duration}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Users size={16} className="text-gray-400"/>
+            <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
           </div>
         </div>
-      </a>
-
-      {/* Cart button positioned absolutely outside the link */}
-      <button 
-        onClick={handleAddToCartClick}
-        className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110 shadow-lg z-10"
-        aria-label="Add to cart"
-        style={{ pointerEvents: 'auto' }} // Ensure button is clickable
-      >
-        <ShoppingCart size={22} />
-      </button>
-    </div>
+        <div className="mt-auto flex items-end justify-between">
+          <div className="flex items-center gap-1.5 text-yellow-500">
+            <Star size={20} className="fill-current" />
+            <span className="font-bold text-lg text-gray-800">{tour.rating?.toFixed(1)}</span>
+          </div>
+          <div className="text-right">
+             <span className="text-3xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
+            {tour.originalPrice && (
+              <span className="ml-2 text-base font-normal text-gray-500 line-through">{formatPrice(tour.originalPrice)}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </a>
   );
 };
 
@@ -135,13 +118,11 @@ export default function FeaturedTours() {
   }, []);
 
   const handleAddToCartClick = (tour: Tour) => {
-    console.log('Opening booking sidebar for:', tour.title); // Debug log
     setSelectedTour(tour);
     setBookingSidebarOpen(true);
   };
   
   const closeSidebar = () => {
-    console.log('Closing booking sidebar'); // Debug log
     setBookingSidebarOpen(false);
     setTimeout(() => setSelectedTour(null), 300);
   };
@@ -206,13 +187,6 @@ export default function FeaturedTours() {
           </div>
         </div>
       </section>
-      
-      {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 left-4 bg-black text-white p-2 text-xs rounded">
-          Sidebar Open: {isBookingSidebarOpen ? 'Yes' : 'No'} | Selected: {selectedTour?.title || 'None'}
-        </div>
-      )}
       
       <BookingSidebar 
         isOpen={isBookingSidebarOpen} 

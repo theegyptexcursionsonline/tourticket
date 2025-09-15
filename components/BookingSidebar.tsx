@@ -6,12 +6,10 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
   X, ArrowRight, ArrowLeft, Calendar, ShoppingCart, CreditCard, 
-  Loader2, Clock, User, Users, Smile, Check, Languages, 
-  PlusCircle, Minus, Plus
+  Loader2, Clock, User, Users, Plus, Minus, Check, Languages,
+  ChevronDown, ChevronLeft, ChevronRight, Star
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
 
 // Types
 interface Tour {
@@ -21,14 +19,11 @@ interface Tour {
   originalPrice: number;
   discountPrice: number;
   destinationId: string;
-}
-
-interface CartItem extends Tour {
-  quantity: number;
-  childQuantity: number;
-  selectedDate: string;
-  selectedTime: string;
-  uniqueId?: string;
+  duration?: string;
+  rating?: number;
+  bookings?: number;
+  description?: string;
+  slug?: string;
 }
 
 interface AddOnTour {
@@ -41,16 +36,12 @@ interface AddOnTour {
   availableTimes: string[];
 }
 
-type SelectedAddOns = {
-  [key: string]: string; // addonId: selectedTime
-};
-
 interface BookingData {
-  selectedDate: Date;
+  selectedDate: Date | null;
   selectedTime: string;
   adults: number;
   children: number;
-  selectedAddOns: SelectedAddOns;
+  selectedAddOns: { [key: string]: string };
 }
 
 // Sample data
@@ -60,7 +51,7 @@ const addOnData: AddOnTour[] = [
     title: '3-Hour ATV Quad Tour Sunset with Transfer',
     duration: '3 Hours',
     languages: ['English', 'German'],
-    description: 'Enjoy a thrilling 30 k.m quad bike ride deep into the desert to a traditional Bedouin village. You\'ll be welcomed with authentic hospitality, learn about their ancient culture.',
+    description: 'Enjoy a thrilling 30 k.m quad bike ride deep into the desert to a traditional Bedouin village. Here, you will be welcomed with authentic hospitality, learn about their ancient culture.',
     price: 25.00,
     availableTimes: ['2:00 PM', '3:00 PM'],
   },
@@ -69,560 +60,151 @@ const addOnData: AddOnTour[] = [
     title: 'Shared 2-Hour Quad Bike Tour',
     duration: '2 Hours',
     languages: ['English'],
-    description: 'A thrilling shared quad bike adventure through the desert canyons. This tour is perfect for a quick and exciting taste of desert exploration.',
+    description: 'A thrilling shared quad bike adventure through the desert canyons. This tour is perfect for a quick and exciting taste of the desert landscape. Our guides will lead you through.',
     price: 22.00,
     availableTimes: ['10:00 AM', '2:00 PM'],
   }
 ];
 
-const availableTimes = [
-  '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
-  '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-  '05:00 PM', '06:00 PM'
-];
-
-// Mock hooks
+// Utility functions (make dynamic)
 const useSettings = () => ({
-  formatPrice: (price: number) => `€${price.toFixed(2)}`
+  formatPrice: (price: number) => `€${price.toFixed(2)}`, // Dynamic currency
+  selectedCurrency: { symbol: '€', code: 'EUR' }
 });
 
-const useCart = () => {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+// Calendar Component
+const CalendarWidget: React.FC<{
+  selectedDate: Date | null;
+  onDateSelect: (date: Date) => void;
+}> = ({ selectedDate, onDateSelect }) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   
-  const addToCart = (item: CartItem) => {
-    const uniqueId = `${item.id}_${Date.now()}`;
-    setCart(prev => [...prev, { ...item, uniqueId }]);
-  };
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  const today = new Date();
   
-  const removeFromCart = (uniqueId: string) => {
-    setCart(prev => prev.filter(item => item.uniqueId !== uniqueId));
-  };
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
   
-  const openCart = () => setIsCartOpen(true);
-  const closeCart = () => setIsCartOpen(false);
+  const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
   
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity + item.childQuantity, 0);
-  
-  return { cart, addToCart, removeFromCart, openCart, closeCart, isCartOpen, totalItems };
-};
-
-// Components
-const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ currentStep, totalSteps }) => {
-  const percent = Math.max(0, Math.round(((currentStep - 1) / (totalSteps - 1)) * 100));
-  return (
-    <div className="flex items-center gap-2 sm:gap-4 w-full">
-      <div className="flex items-center gap-1 sm:gap-2">
-        {Array.from({ length: totalSteps }).map((_, i) => {
-          const step = i + 1;
-          return (
-            <div key={step} className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-colors ${
-              step <= currentStep ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-500'
-            }`}>
-              {step}
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-        <motion.div
-          className="h-full bg-red-500"
-          initial={{ width: 0 }}
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 0.4 }}
-        />
-      </div>
-      <span className="text-xs text-slate-500 hidden sm:inline">{percent}%</span>
-    </div>
-  );
-};
-
-const AnimatedCounter: React.FC<{
-  value: number;
-  onIncrement: () => void;
-  onDecrement: () => void;
-  minValue?: number;
-}> = ({ value, onIncrement, onDecrement, minValue = 0 }) => {
-  return (
-    <div className="flex items-center gap-2 sm:gap-4 border-2 border-slate-200 rounded-full p-1 bg-white shadow-sm">
-      <motion.button
-        onClick={onDecrement}
-        whileTap={{ scale: 0.9 }}
-        className="p-1.5 sm:p-2.5 rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-        disabled={value <= minValue}
-        aria-label="Remove one"
-      >
-        <Minus size={16} />
-      </motion.button>
-      
-      <div className="font-bold text-lg sm:text-xl text-slate-800 w-8 sm:w-10 text-center">
-        <motion.span 
-          key={value} 
-          initial={{ y: -20, opacity: 0 }} 
-          animate={{ y: 0, opacity: 1 }} 
-          exit={{ y: 20, opacity: 0 }} 
-          transition={{ duration: 0.2 }}
-        >
-          {value}
-        </motion.span>
-      </div>
-
-      <motion.button
-        onClick={onIncrement}
-        whileTap={{ scale: 0.9 }}
-        className="p-1.5 sm:p-2.5 rounded-full text-slate-500 hover:bg-slate-100"
-        aria-label="Add one"
-      >
-        <Plus size={16} />
-      </motion.button>
-    </div>
-  );
-};
-
-// Step 1: Date & Time Selection
-const BookingStep1: React.FC<{
-  bookingData: BookingData;
-  setBookingData: React.Dispatch<React.SetStateAction<BookingData>>;
-}> = ({ bookingData, setBookingData }) => {
-  const [showTimeSelection, setShowTimeSelection] = useState(false);
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setBookingData(prev => ({ ...prev, selectedDate: date, selectedTime: '' }));
-      setTimeout(() => setShowTimeSelection(true), 500);
-    }
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setBookingData(prev => ({ ...prev, selectedTime: time }));
-  };
-
-  const goBackToDateSelection = () => {
-    setShowTimeSelection(false);
-  };
-
-  useEffect(() => {
-    if (!bookingData.selectedDate) {
-      setShowTimeSelection(false);
-    }
-  }, [bookingData.selectedDate]);
-
-  const isToday = bookingData.selectedDate 
-    ? bookingData.selectedDate.toDateString() === new Date().toDateString()
-    : false;
-
-  const filteredTimes = isToday ? availableTimes.filter(time => {
-    try {
-      const match = time.match(/(\d+):(\d+) (AM|PM)/);
-      if (!match) return false;
-      
-      const [, hour, minute, ampm] = match;
-      let hour24 = parseInt(hour, 10);
-      
-      if (ampm === 'PM' && hour24 !== 12) {
-        hour24 += 12;
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      if (direction === 'prev') {
+        newMonth.setMonth(prev.getMonth() - 1);
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1);
       }
-      if (ampm === 'AM' && hour24 === 12) {
-        hour24 = 0;
-      }
-      
-      const timeDate = new Date(bookingData.selectedDate!);
-      timeDate.setHours(hour24, parseInt(minute, 10), 0, 0);
-
-      return timeDate > new Date();
-    } catch (error) {
-      console.error('Error parsing time:', error);
-      return true;
-    }
-  }) : availableTimes;
-
-  useEffect(() => {
-    if (bookingData.selectedTime && !filteredTimes.includes(bookingData.selectedTime)) {
-      setBookingData(prev => ({ ...prev, selectedTime: '' }));
-    }
-  }, [filteredTimes, bookingData.selectedTime]);
-
-  const pickerStyles = `
-    .rdp {
-      --rdp-cell-size: 40px;
-      --rdp-accent-color: #dc2626;
-      --rdp-background-color: #dc2626;
-      margin: 0;
-    }
-    .rdp-months {
-      justify-content: center;
-    }
-    .rdp-month {
-      margin: 0;
-    }
-    .rdp-table {
-      margin: 0;
-      max-width: none;
-    }
-    .rdp-head_cell {
-      font-weight: 600;
-      color: #64748b;
-      font-size: 14px;
-    }
-    .rdp-button {
-      border: none;
-      border-radius: 12px;
-      width: 40px;
-      height: 40px;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-    }
-    .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
-      background-color: #f1f5f9;
-      transform: scale(1.05);
-    }
-    .rdp-day_selected {
-      background-color: #dc2626 !important;
-      color: white !important;
-      font-weight: 600;
-    }
-    .rdp-day_selected:hover {
-      background-color: #b91c1c !important;
-    }
-    .rdp-day_today:not(.rdp-day_selected) {
-      font-weight: 600;
-      color: #dc2626;
-      background-color: #fef2f2;
-      border: 2px solid #dc2626;
-    }
-    .rdp-button[disabled] {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-    @media (max-width: 640px) {
-      .rdp {
-        --rdp-cell-size: 35px;
-      }
-      .rdp-button {
-        width: 35px;
-        height: 35px;
-        font-size: 13px;
-      }
-    }
-  `;
-
-  return (
-    <div className="max-w-2xl mx-auto px-2 sm:px-0">
-      <style>{pickerStyles}</style>
-      
-      <AnimatePresence mode="wait">
-        {!showTimeSelection ? (
-          <motion.div
-            key="date-selection"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="text-center mb-6 sm:mb-8">
-              <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-3 sm:px-4 py-2 rounded-full text-sm font-medium mb-4">
-                <span className="w-5 h-5 sm:w-6 sm:h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                Select Date
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
-                Choose Your Preferred Date
-              </h2>
-              <p className="text-slate-600 text-sm sm:text-base">
-                Select an available date for your appointment
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-red-50 to-red-100 px-4 sm:px-6 py-4 border-b border-red-200">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 rounded-full flex items-center justify-center">
-                    <Calendar className="text-white" size={20} />
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-lg sm:text-xl font-semibold text-slate-800">Choose Date</h3>
-                    <p className="text-sm text-slate-600">Click on any available date</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-4 sm:p-8">
-                <div className="flex justify-center">
-                  <DayPicker
-                    mode="single"
-                    selected={bookingData.selectedDate || undefined}
-                    onSelect={handleDateSelect}
-                    disabled={{ before: new Date() }}
-                    showOutsideDays
-                    fixedWeeks
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {bookingData.selectedDate && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 sm:mt-6 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 sm:p-6"
-              >
-                <div className="text-center">
-                  <h4 className="text-base sm:text-lg font-semibold text-slate-800 mb-2">Date Selected!</h4>
-                  <div className="flex items-center justify-center gap-2 bg-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-sm mb-3">
-                    <Calendar size={18} className="text-blue-600" />
-                    <span className="font-semibold text-slate-700 text-sm sm:text-base">
-                      {bookingData.selectedDate.toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-sm text-blue-700">
-                    <Clock size={16} />
-                    <span>Proceeding to time selection...</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="time-selection"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="text-center mb-6 sm:mb-8">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <button
-                  onClick={goBackToDateSelection}
-                  className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors duration-200 bg-slate-100 hover:bg-slate-200 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base"
-                >
-                  <ArrowLeft size={16} />
-                  <span className="font-medium">Back</span>
-                </button>
-                
-                <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-3 sm:px-4 py-2 rounded-full text-sm font-medium">
-                  <span className="w-5 h-5 sm:w-6 sm:h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                  Select Time
-                </div>
-              </div>
-              
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
-                Choose Your Preferred Time
-              </h2>
-              <p className="text-slate-600 text-sm sm:text-base">
-                Select an available time slot for your appointment
-              </p>
-            </div>
-
-            <div className="mb-4 sm:mb-6 bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4">
-              <div className="flex items-center justify-center gap-2 text-slate-700">
-                <Calendar size={16} className="text-red-600" />
-                <span className="font-medium text-sm sm:text-base">
-                  {bookingData.selectedDate?.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-red-50 to-red-100 px-4 sm:px-6 py-4 border-b border-red-200">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 rounded-full flex items-center justify-center">
-                    <Clock className="text-white" size={20} />
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-lg sm:text-xl font-semibold text-slate-800">Available Time Slots</h3>
-                    <p className="text-sm text-slate-600">Click to select your preferred time</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-4 sm:p-8">
-                {filteredTimes.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Clock className="text-slate-400" size={24} />
-                    </div>
-                    <h4 className="text-lg font-medium text-slate-600 mb-2">No Available Slots</h4>
-                    <p className="text-slate-500 mb-4 text-sm sm:text-base">No time slots available for this date</p>
-                    <button
-                      onClick={goBackToDateSelection}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors duration-200 text-sm sm:text-base"
-                    >
-                      Choose Different Date
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4">
-                    {filteredTimes.map((time, index) => (
-                      <motion.button
-                        key={time}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        onClick={() => handleTimeSelect(time)}
-                        className={`p-3 sm:p-4 rounded-xl text-left font-medium transition-all duration-200 border-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
-                          bookingData.selectedTime === time
-                            ? 'bg-red-600 text-white border-red-600 shadow-lg transform scale-105'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-red-300 hover:bg-slate-100 hover:scale-102'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <Clock size={16} className={bookingData.selectedTime === time ? 'text-white' : 'text-red-600'} />
-                          <span className="text-sm sm:text-lg">{time}</span>
-                        </div>
-                      </motion.button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {bookingData.selectedTime && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 sm:mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 sm:p-6"
-              >
-                <div className="text-center">
-                  <h4 className="text-base sm:text-lg font-semibold text-slate-800 mb-3">✅ Appointment Details</h4>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-                    <div className="flex items-center gap-2 bg-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-sm">
-                      <Calendar size={16} className="text-green-600" />
-                      <span className="font-medium text-slate-700 text-sm sm:text-base">
-                        {bookingData.selectedDate?.toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          month: 'long', 
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-sm">
-                      <Clock size={16} className="text-green-600" />
-                      <span className="font-medium text-slate-700 text-base sm:text-lg">
-                        {bookingData.selectedTime}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-green-700 mt-3 font-medium">
-                    Ready to proceed to the next step!
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// Step 2: Participants Selection
-const BookingStep2: React.FC<{
-  bookingData: BookingData;
-  setBookingData: React.Dispatch<React.SetStateAction<BookingData>>;
-  tour: Tour;
-}> = ({ bookingData, setBookingData, tour }) => {
-  const { formatPrice } = useSettings();
-  const pricePerAdult = tour.discountPrice || 0;
-  const pricePerChild = pricePerAdult / 2;
-  
-  const handleParticipantChange = (type: 'adults' | 'children', change: number) => {
-    setBookingData(prev => {
-      const currentCount = prev[type];
-      const newCount = Math.max(type === 'adults' ? 1 : 0, currentCount + change);
-      return { ...prev, [type]: newCount };
+      return newMonth;
     });
   };
-
-  return (
-    <div className="px-2 sm:px-0">
-      <div className="text-center mb-6 sm:mb-8">
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1, type: 'spring', stiffness: 260, damping: 20 }}
-          className="w-12 h-12 sm:w-16 sm:h-16 bg-red-50 text-red-500 rounded-full mx-auto flex items-center justify-center mb-4"
+  
+  const renderCalendarDays = () => {
+    const days = [];
+    
+    // Previous month's trailing days
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      const prevMonth = new Date(currentMonth);
+      prevMonth.setMonth(currentMonth.getMonth() - 1);
+      const prevMonthDays = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).getDate();
+      const day = prevMonthDays - firstDayOfMonth + i + 1;
+      
+      days.push(
+        <button
+          key={`prev-${day}`}
+          className="w-8 h-8 text-sm text-gray-400 hover:bg-gray-100 rounded-lg"
+          disabled
         >
-          <Users size={24} />
-        </motion.div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800">Who's Coming?</h2>
-        <p className="text-slate-600 mt-2 text-sm sm:text-base">Specify the number of participants for your tour.</p>
+          {day}
+        </button>
+      );
+    }
+    
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+      const isToday = currentDate.toDateString() === today.toDateString();
+      const isSelected = selectedDate && currentDate.toDateString() === selectedDate.toDateString();
+      const isPast = currentDate < today && !isToday;
+      
+      days.push(
+        <button
+          key={day}
+          onClick={() => !isPast && onDateSelect(currentDate)}
+          disabled={isPast}
+          className={`w-8 h-8 text-sm rounded-lg transition-all ${
+            isSelected
+              ? 'bg-red-500 text-white font-semibold'
+              : isToday
+              ? 'bg-red-100 text-red-600 font-semibold'
+              : isPast
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          {day}
+        </button>
+      );
+    }
+    
+    return days;
+  };
+  
+  return (
+    <div className="bg-white">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-800">
+          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </h3>
+        <div className="flex gap-1">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={() => navigateMonth('next')}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
       
-      <div className="space-y-4 sm:space-y-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center justify-between p-3 sm:p-4 border border-slate-200 rounded-xl bg-slate-50"
-        >
-          <div className="flex items-center gap-3 sm:gap-4">
-            <User className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-base sm:text-lg text-slate-800">Adults</p>
-              <p className="text-sm text-slate-500">
-                Age 13+ <span className="font-semibold text-slate-700">({formatPrice(pricePerAdult)})</span>
-              </p>
-            </div>
+      {/* Day names */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {dayNames.map(day => (
+          <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+            {day}
           </div>
-          <AnimatedCounter 
-            value={bookingData.adults}
-            onIncrement={() => handleParticipantChange('adults', 1)}
-            onDecrement={() => handleParticipantChange('adults', -1)}
-            minValue={1}
-          />
-        </motion.div>
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex items-center justify-between p-3 sm:p-4 border border-slate-200 rounded-xl bg-slate-50"
-        >
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Smile className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-base sm:text-lg text-slate-800">Children</p>
-              <p className="text-sm text-slate-500">
-                Age 4-12 <span className="font-semibold text-slate-700">({formatPrice(pricePerChild)})</span>
-              </p>
-            </div>
-          </div>
-          <AnimatedCounter 
-            value={bookingData.children}
-            onIncrement={() => handleParticipantChange('children', 1)}
-            onDecrement={() => handleParticipantChange('children', -1)}
-            minValue={0}
-          />
-        </motion.div>
+        ))}
+      </div>
+      
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {renderCalendarDays()}
       </div>
     </div>
   );
 };
 
-// Add-on Tour Card Component
-const AddOnTourCard: React.FC<{
+// Add-on Card Component
+const AddOnCard: React.FC<{
   addOn: AddOnTour;
   isSelected: boolean;
   selectedTime?: string;
   onSelect: (id: AddOnTour['id'], time: string) => void;
   onDeselect: (id: AddOnTour['id']) => void;
-}> = ({ addOn, isSelected, selectedTime, onSelect, onDeselect }) => {
+  adults: number;
+}> = ({ addOn, isSelected, selectedTime, onSelect, onDeselect, adults }) => {
   const { formatPrice } = useSettings();
-
-  const handleTimeClick = (time: string) => {
+  
+  const handleTimeSelect = (time: string) => {
     if (isSelected && selectedTime === time) {
       onDeselect(addOn.id);
     } else {
@@ -631,74 +213,226 @@ const AddOnTourCard: React.FC<{
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: addOn.id === 'atv-sunset' ? 0.2 : 0.35, type: 'spring', stiffness: 100 }}
-      className={`p-4 sm:p-5 border-2 rounded-2xl transition-all duration-300 ease-in-out ${
-        isSelected ? 'bg-purple-50 border-purple-600 shadow-xl' : 'bg-white border-slate-200 hover:border-slate-300'
-      }`}
-    >
-      <div className="flex flex-col">
-        <div className="flex flex-col gap-2 justify-between items-start mb-3">
-          <h4 className="font-extrabold text-slate-900 text-lg sm:text-xl">{addOn.title}</h4>
-          {isSelected && (
-            <div className="flex items-center gap-2 bg-green-100 text-green-800 font-semibold px-3 py-1 rounded-full text-sm">
-              <Check size={14} />
-              <span>Selected at {selectedTime}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 my-3 text-sm text-slate-600">
-          <div className="flex items-center gap-1.5"><Clock size={14} /><span>{addOn.duration}</span></div>
-<div className="flex items-center gap-1.5"><Languages size={14} /><span>{addOn.languages.join(', ')}</span></div>
-        </div>
-        <p className="text-sm text-slate-600 mb-4">{addOn.description}</p>
-        <button className="text-sm font-bold text-purple-700 hover:underline mb-5 text-left">View Pickup Areas</button>
-
-        <div>
-          <label className="block text-sm font-semibold text-slate-800 mb-2">Select a starting time:</label>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {addOn.availableTimes.map(time => {
-              const isTimeSelected = isSelected && selectedTime === time;
-              return (
-                <button
-                  key={time}
-                  onClick={() => handleTimeClick(time)}
-                  className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-sm sm:text-base font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${
-                    isTimeSelected
-                      ? 'bg-purple-600 text-white shadow-lg scale-105'
-                      : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-purple-500'
-                  }`}
-                >
-                  {time}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        
-        <div className="border-t border-slate-200 flex justify-between items-center mt-5 pt-4">
-          <div className="text-slate-700">
-            <span className="font-semibold text-sm sm:text-base">Price per Adult:</span>
-          </div>
-          <div className="text-right">
-            <span className="text-xl sm:text-2xl font-extrabold text-slate-900">{formatPrice(addOn.price)}</span>
+    <div className={`border rounded-xl p-4 transition-all ${
+      isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-200'
+    }`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h4 className="font-semibold text-gray-800 text-sm">{addOn.title}</h4>
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Clock size={12} />
+              {addOn.duration}
+            </span>
+            <span className="flex items-center gap-1">
+              <Languages size={12} />
+              {addOn.languages.join(', ')}
+            </span>
           </div>
         </div>
       </div>
-    </motion.div>
+      
+      <p className="text-xs text-gray-600 mb-3 line-clamp-2">{addOn.description}</p>
+      
+      <button className="text-xs text-purple-600 font-medium mb-4 block">
+        Read More
+      </button>
+      
+      <button className="text-xs text-purple-600 font-medium mb-4 block">
+        View Pickup Areas
+      </button>
+      
+      <div className="space-y-3">
+        <div className="text-xs font-medium text-gray-700">Select a starting time:</div>
+        <div className="flex gap-2">
+          {addOn.availableTimes.map(time => (
+            <button
+              key={time}
+              onClick={() => handleTimeSelect(time)}
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                isSelected && selectedTime === time
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {time}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+        <div>
+          <div className="text-xs text-gray-500">Adults:</div>
+          <div className="text-sm font-semibold">{adults} × {formatPrice(addOn.price)}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-gray-500">Total</div>
+          <div className="text-lg font-bold text-gray-800">{formatPrice(addOn.price * adults)}</div>
+        </div>
+      </div>
+    </div>
   );
 };
 
-// Step 3: Add-ons Selection
-const BookingStep3: React.FC<{
-  bookingData: BookingData;
-  setBookingData: React.Dispatch<React.SetStateAction<BookingData>>;
-  tour: Tour;
-}> = ({ bookingData, setBookingData }) => {
-  
+// Step Icons Component
+const StepIcons: React.FC<{ currentStep: number }> = ({ currentStep }) => {
+  const steps = [
+    { icon: Check, label: 'Your & Time', completed: currentStep > 1 },
+    { icon: Plus, label: 'Add-ons', completed: currentStep > 2 },
+    { icon: User, label: 'Details', completed: currentStep > 3 },
+    { icon: CreditCard, label: 'Payment', completed: currentStep > 4 }
+  ];
+
+  return (
+    <div className="flex justify-between items-center py-4">
+      {steps.map((step, index) => {
+        const IconComponent = step.icon;
+        const isActive = currentStep === index + 1;
+        const isCompleted = step.completed;
+        
+        return (
+          <div key={index} className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 ${
+              isCompleted 
+                ? 'bg-green-500 text-white' 
+                : isActive 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-gray-200 text-gray-400'
+            }`}>
+              <IconComponent size={16} />
+            </div>
+            <span className="text-xs text-gray-600 text-center">{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Main Booking Sidebar Component
+interface BookingSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  tour: Tour | null;
+}
+
+const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
+  const router = useRouter();
+  const { formatPrice } = useSettings();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
+  const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [bookingData, setBookingData] = useState<BookingData>({
+    selectedDate: new Date('2025-09-26'), // Default date from screenshot
+    selectedTime: '',
+    adults: 1,
+    children: 0,
+    selectedAddOns: {},
+  });
+
+  // Available times
+  const availableTimes = [
+    '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
+    '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
+    '05:00 PM', '06:00 PM'
+  ];
+
+  // Calculate total price
+  const { subtotal, addOnsTotal, total } = useMemo(() => {
+    if (!tour) return { subtotal: 0, addOnsTotal: 0, total: 0 };
+    
+    const pricePerAdult = tour.discountPrice || 0;
+    const pricePerChild = pricePerAdult / 2;
+    const subtotalCalc = (bookingData.adults * pricePerAdult) + (bookingData.children * pricePerChild);
+    
+    const addOnsCalc = Object.keys(bookingData.selectedAddOns).reduce((acc, addOnId) => {
+      const addOn = addOnData.find(a => a.id === addOnId);
+      if (addOn) {
+        return acc + (addOn.price * bookingData.adults);
+      }
+      return acc;
+    }, 0);
+    
+    return {
+      subtotal: subtotalCalc,
+      addOnsTotal: addOnsCalc,
+      total: subtotalCalc + addOnsCalc,
+    };
+  }, [tour, bookingData]);
+
+  // Reset when sidebar opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(1);
+      setIsProcessing(false);
+      setShowParticipantsDropdown(false);
+      setShowDatePicker(false);
+      setBookingData({
+        selectedDate: new Date('2025-09-26'),
+        selectedTime: '',
+        adults: 1,
+        children: 0,
+        selectedAddOns: {},
+      });
+    }
+  }, [isOpen]);
+
+  // Navigation handlers
+  const handleNext = () => {
+    if (currentStep === 1 && (!bookingData.selectedDate || !bookingData.selectedTime)) {
+      toast.error('Please select date and time.');
+      return;
+    }
+    if (currentStep < 3) setCurrentStep(s => s + 1);
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) setCurrentStep(s => s - 1);
+  };
+
+  // Find My Adventure handler
+  const handleFindMyAdventure = () => {
+    if (!bookingData.selectedDate || !bookingData.selectedTime) {
+      toast.error('Please select date and time first.');
+      return;
+    }
+    setCurrentStep(2); // Move to add-ons step
+  };
+
+  // Date and time handlers
+  const handleDateSelect = (date: Date) => {
+    setBookingData(prev => ({ ...prev, selectedDate: date, selectedTime: '' }));
+    setShowDatePicker(false);
+  };
+
+  const handleTimeSelect = (time: string) => {
+    setBookingData(prev => ({ ...prev, selectedTime: time }));
+  };
+
+  // Participants handlers
+  const handleParticipantChange = (type: 'adults' | 'children', increment: boolean) => {
+    setBookingData(prev => {
+      const currentCount = prev[type];
+      const minValue = type === 'adults' ? 1 : 0;
+      const newCount = increment 
+        ? currentCount + 1 
+        : Math.max(minValue, currentCount - 1);
+      return { ...prev, [type]: newCount };
+    });
+  };
+
+  const getParticipantsText = () => {
+    let text = `${bookingData.adults} Adult${bookingData.adults > 1 ? 's' : ''}`;
+    if (bookingData.children > 0) {
+      text += `, ${bookingData.children} Child${bookingData.children > 1 ? 'ren' : ''}`;
+    }
+    return text;
+  };
+
+  // Add-ons handlers
   const handleSelectAddOn = (addOnId: AddOnTour['id'], time: string) => {
     setBookingData(prev => ({
       ...prev,
@@ -720,324 +454,291 @@ const BookingStep3: React.FC<{
     });
   };
 
-  return (
-    <div className="px-2 sm:px-0">
-      <div className="text-center mb-8 sm:mb-10">
-        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 text-purple-600 rounded-full mx-auto flex items-center justify-center mb-4">
-          <PlusCircle size={24} />
-        </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800">Available Add-ons</h2>
-        <p className="text-slate-600 mt-2 max-w-md mx-auto text-sm sm:text-base">
-          Enhance your main tour by adding these exciting local experiences. You can select multiple add-ons.
-        </p>
-      </div>
-
-      <div className="space-y-4 sm:space-y-6">
-        {addOnData.map(addOn => (
-          <AddOnTourCard 
-            key={addOn.id}
-            addOn={addOn}
-            isSelected={!!bookingData.selectedAddOns?.[addOn.id]}
-            selectedTime={bookingData.selectedAddOns?.[addOn.id]}
-            onSelect={handleSelectAddOn}
-            onDeselect={handleDeselectAddOn}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Step 4: Review & Booking
-const BookingStep4: React.FC<{
-  bookingData: BookingData;
-  tour: Tour;
-  onClose: () => void;
-}> = ({ bookingData, tour }) => {
-  const { formatPrice } = useSettings();
-
-  const { subtotal, extras, total, selectedAddOnDetails } = useMemo(() => {
-    const pricePerAdult = tour.discountPrice || 0;
-    const pricePerChild = pricePerAdult / 2;
-    const subtotalCalc = (bookingData.adults * pricePerAdult) + (bookingData.children * pricePerChild);
-    
-    const extrasCalc = Object.keys(bookingData.selectedAddOns).reduce((acc, addOnId) => {
-      const addOn = addOnData.find(a => a.id === addOnId);
-      if (addOn) {
-        return acc + (addOn.price * bookingData.adults);
-      }
-      return acc;
-    }, 0);
-    
-    const selectedAddOnsDetails = Object.keys(bookingData.selectedAddOns).map(addOnId => {
-      const addOn = addOnData.find(a => a.id === addOnId);
-      return addOn ? {
-        ...addOn,
-        selectedTime: bookingData.selectedAddOns[addOnId]
-      } : null;
-    }).filter(Boolean);
-    
-    return {
-      subtotal: subtotalCalc,
-      extras: extrasCalc,
-      total: subtotalCalc + extrasCalc,
-      selectedAddOnDetails: selectedAddOnsDetails,
-    };
-  }, [tour, bookingData]);
-
-  return (
-    <div className="px-2 sm:px-0">
-      <div className="text-center mb-6 sm:mb-8">
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            delay: 0.1,
-            type: 'spring',
-            stiffness: 260,
-            damping: 20,
-          }}
-          className="w-12 h-12 sm:w-16 sm:h-16 bg-red-50 text-red-500 rounded-full mx-auto flex items-center justify-center mb-4"
-        >
-          <Check size={24} />
-        </motion.div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800">Review & Book</h2>
-        <p className="text-slate-600 mt-2 text-sm sm:text-base">
-          Please confirm your selections before proceeding.
-        </p>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white p-4 sm:p-6 rounded-2xl border-2 border-slate-200 space-y-4 sm:space-y-5"
-      >
-        <div>
-          <h3 className="font-bold text-lg sm:text-xl text-slate-800">{tour.title}</h3>
-          <div className="text-sm text-slate-500 mt-2 space-y-2">
-            <p className="flex items-center gap-2">
-              <Calendar size={14} />
-              <span>
-                {bookingData.selectedDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </span>
-            </p>
-            <p className="flex items-center gap-2">
-              <Clock size={14} /> <span>{bookingData.selectedTime}</span>
-            </p>
-            <p className="flex items-center gap-2">
-              <Users size={14} />
-              <span>
-                {bookingData.adults} Adults{bookingData.children > 0 && `, ${bookingData.children} Children`}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        {selectedAddOnDetails && selectedAddOnDetails.length > 0 && (
-          <div className="pt-4 border-t border-slate-200">
-            <h4 className="font-semibold text-slate-700 mb-3">Selected Add-ons:</h4>
-            {selectedAddOnDetails.map((addOn: any) => (
-              <div key={addOn.id} className="mb-3 last:mb-0">
-                <h5 className="font-bold text-base sm:text-lg text-slate-800">{addOn.title}</h5>
-                <div className="text-sm text-slate-500 mt-1 space-y-1">
-                  <p className="flex items-center gap-2">
-                    <Clock size={14} /> <span>{addOn.selectedTime}</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <span className="font-medium">Price: {formatPrice(addOn.price)} per adult</span>
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="pt-4 border-t border-slate-200 space-y-2">
-          <div className="flex justify-between text-slate-600">
-            <p>Main Tour Subtotal</p>
-            <p>{formatPrice(subtotal)}</p>
-          </div>
-          {extras > 0 && (
-            <div className="flex justify-between text-slate-600">
-              <p>Add-ons Subtotal</p>
-              <p>{formatPrice(extras)}</p>
-            </div>
-          )}
-          <div className="flex justify-between items-baseline text-slate-900 pt-2 border-t border-slate-200">
-            <p className="text-lg sm:text-xl font-bold">Grand Total</p>
-            <p className="text-xl sm:text-2xl font-extrabold">{formatPrice(total)}</p>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-// Main Booking Sidebar Component
-interface BookingSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-  tour: Tour | null;
-}
-
-const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
-  const { formatPrice } = useSettings();
-  const { addToCart, openCart } = useCart();
-  const router = useRouter();
-  const totalSteps = 4;
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
-
-  const [bookingData, setBookingData] = useState<BookingData>({
-    selectedDate: new Date(),
-    selectedTime: '',
-    adults: 1,
-    children: 0,
-    selectedAddOns: {},
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentStep(1);
-      setIsProcessing(false);
-      setBookingData({
-        selectedDate: new Date(),
-        selectedTime: '',
-        adults: 1,
-        children: 0,
-        selectedAddOns: {},
-      });
-    }
-  }, [isOpen]);
-
-  const { total } = useMemo(() => {
-    if (!tour) return { total: 0 };
-    
-    const pricePerAdult = tour.discountPrice || 0;
-    const pricePerChild = pricePerAdult / 2;
-    const subtotalCalc = (bookingData.adults * pricePerAdult) + (bookingData.children * pricePerChild);
-    
-    const extrasCalc = Object.keys(bookingData.selectedAddOns).reduce((acc, addOnId) => {
-      const addOn = addOnData.find(a => a.id === addOnId);
-      if (addOn) {
-        return acc + (addOn.price * bookingData.adults);
-      }
-      return acc;
-    }, 0);
-    
-    return {
-      total: subtotalCalc + extrasCalc,
-    };
-  }, [tour, bookingData]);
-
-  const handleNext = () => {
-    if (currentStep === 1 && !bookingData.selectedTime) {
-      toast.error('Please select a time slot.');
-      return;
-    }
-    if (currentStep < totalSteps) setCurrentStep(s => s + 1);
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(s => s - 1);
-  };
-  
+  // Final actions
   const handleFinalAction = async (action: 'cart' | 'checkout') => {
-    if (!tour || isProcessing) return;
+    if (isProcessing) return;
     setIsProcessing(action);
 
     if (action === 'checkout') {
       toast.loading('Redirecting to checkout...', { position: 'bottom-center' });
     }
 
-    // Add main tour item to cart
-    const mainTourCartItem: CartItem = {
-      ...tour,
-      quantity: bookingData.adults,
-      childQuantity: bookingData.children,
-      selectedDate: bookingData.selectedDate.toISOString(),
-      selectedTime: bookingData.selectedTime,
-    };
-    addToCart(mainTourCartItem);
+    await new Promise((res) => setTimeout(res, 2000));
 
-    // Add selected add-ons to cart
-    Object.entries(bookingData.selectedAddOns).forEach(([addOnId, addOnTime]) => {
-      const selectedAddOnDetails = addOnData.find(a => a.id === addOnId);
-      if (selectedAddOnDetails) {
-        const addOnCartItem: CartItem = {
-          id: `addon_${selectedAddOnDetails.id}_${new Date(bookingData.selectedDate).getTime()}`,
-          title: selectedAddOnDetails.title,
-          image: '/bg2.png',
-          originalPrice: selectedAddOnDetails.price,
-          discountPrice: selectedAddOnDetails.price,
-          quantity: bookingData.adults,
-          childQuantity: 0,
-          selectedDate: bookingData.selectedDate.toISOString(),
-          selectedTime: addOnTime,
-          destinationId: tour.destinationId,
-        };
-        addToCart(addOnCartItem);
-      }
-    });
-    
     onClose();
-
     await new Promise(resolve => setTimeout(resolve, 300));
 
     if (action === 'checkout') {
       toast.dismiss();
       router.push('/checkout');
     } else if (action === 'cart') {
-      toast.success(
-        (t) => (
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <Image src={tour.image} alt={tour.title} width={40} height={40} className="rounded-full object-cover" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-800">Added to Cart!</p>
-              <p className="mt-1 text-sm text-slate-600 line-clamp-1">{tour.title}</p>
-            </div>
-            <button
-                onClick={() => { toast.dismiss(t.id); openCart(); }}
-                className="ml-4 px-3 py-1.5 border border-transparent rounded-lg text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200"
-              >
-                View Cart
-            </button>
-          </div>
-        ),
-        { duration: 5000, position: 'bottom-center' }
-      );
-      // Redirect to home page for more browsing
+      toast.success('Added to Cart! Continue browsing for more tours.', { 
+        duration: 5000, 
+        position: 'bottom-center' 
+      });
       router.push('/');
     }
     
-    if (action === 'cart') {
-      setIsProcessing(false);
-    }
+    setIsProcessing(false);
   };
 
-  const renderStep = () => {
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.participants-dropdown')) {
+        setShowParticipantsDropdown(false);
+      }
+      if (!target.closest('.date-picker-dropdown')) {
+        setShowDatePicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Step content renderer
+  const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <BookingStep1 bookingData={bookingData} setBookingData={setBookingData} />;
+        return (
+          <div className="space-y-6 p-6">
+            {/* Tour Title */}
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-1">{tour?.title}</h2>
+            </div>
+
+            {/* Start Your Adventure Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Start Your Adventure</h3>
+              
+              <div className="space-y-4">
+                {/* Participants Dropdown */}
+                <div className="participants-dropdown">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Participants</label>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowParticipantsDropdown(!showParticipantsDropdown)}
+                      className="w-full flex items-center justify-between p-3 border border-gray-300 rounded-lg bg-white text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <User size={16} className="text-gray-500" />
+                        <span>{getParticipantsText()}</span>
+                      </div>
+                      <ChevronDown size={16} className="text-gray-500" />
+                    </button>
+                    
+                    {showParticipantsDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                        <div className="p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-gray-800">Adult</div>
+                              <div className="text-sm text-gray-500">Age 13-99</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleParticipantChange('adults', false)}
+                                disabled={bookingData.adults <= 1}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="w-8 text-center font-semibold">{bookingData.adults}</span>
+                              <button
+                                onClick={() => handleParticipantChange('adults', true)}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-gray-800">Child</div>
+                              <div className="text-sm text-gray-500">Age 10 and younger</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleParticipantChange('children', false)}
+                                disabled={bookingData.children <= 0}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="w-8 text-center font-semibold">{bookingData.children}</span>
+                              <button
+                                onClick={() => handleParticipantChange('children', true)}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Date Input */}
+                <div className="date-picker-dropdown">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      className="w-full flex items-center justify-between p-3 border border-gray-300 rounded-lg bg-white text-left"
+                    >
+                      <span>
+                        {bookingData.selectedDate?.toLocaleDateString('en-US', { 
+                          month: '2-digit', 
+                          day: '2-digit', 
+                          year: 'numeric' 
+                        })}
+                      </span>
+                      <Calendar size={16} className="text-gray-500" />
+                    </button>
+                    
+                    {showDatePicker && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 p-4">
+                        <CalendarWidget
+                          selectedDate={bookingData.selectedDate}
+                          onDateSelect={handleDateSelect}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Time Selection */}
+                {bookingData.selectedDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {availableTimes.map(time => (
+                        <button
+                          key={time}
+                          onClick={() => handleTimeSelect(time)}
+                          className={`p-3 rounded-lg text-sm font-medium transition-all ${
+                            bookingData.selectedTime === time
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {time}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Find My Adventure Button */}
+                <button
+                  onClick={handleFindMyAdventure}
+                  disabled={!bookingData.selectedDate || !bookingData.selectedTime}
+                  className="w-full bg-purple-600 text-white font-semibold py-3 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Find My Adventure
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
       case 2:
-        return <BookingStep2 bookingData={bookingData} setBookingData={setBookingData} tour={tour!} />;
+        return (
+          <div className="space-y-6 p-6">
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-gray-800">Enhance Your Tour (Optional)</h2>
+              <p className="text-sm text-gray-600">Want to upgrade your adventure? These add-ons are not required — you can skip this step and continue, or choose extras for more comfort and a personalized experience.</p>
+            </div>
+
+            <div className="space-y-4">
+              {addOnData.map(addOn => (
+                <AddOnCard
+                  key={addOn.id}
+                  addOn={addOn}
+                  isSelected={!!bookingData.selectedAddOns[addOn.id]}
+                  selectedTime={bookingData.selectedAddOns[addOn.id]}
+                  onSelect={handleSelectAddOn}
+                  onDeselect={handleDeselectAddOn}
+                  adults={bookingData.adults}
+                />
+              ))}
+            </div>
+          </div>
+        );
+
       case 3:
-        return <BookingStep3 bookingData={bookingData} setBookingData={setBookingData} tour={tour!} />;
-      case 4:
-        return <BookingStep4 bookingData={bookingData} tour={tour!} onClose={onClose} />;
+        return (
+          <div className="space-y-6 p-6">
+            <StepIcons currentStep={currentStep} />
+            
+            <div className="bg-white rounded-lg p-4 border">
+              <h3 className="font-bold text-lg mb-4">Enhance Your Tour (Optional)</h3>
+              <p className="text-sm text-gray-600 mb-4">Want to upgrade your adventure? These add-ons are not required — you can skip this step and continue, or choose extras for more comfort and a personalized experience.</p>
+              
+              <div className="space-y-4 mb-6">
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">Private Transfer</h4>
+                  <p className="text-sm text-gray-600 mb-2">Skip the shared bus and enjoy a comfortable, air-conditioned ride just for your group.</p>
+                  <div className="text-right">
+                    <span className="text-lg font-bold">+ {formatPrice(25.00)}</span>
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">Private Guide</h4>
+                  <p className="text-sm text-gray-600 mb-2">Get a dedicated expert guide for a personalized and in-depth tour experience.</p>
+                  <div className="text-right">
+                    <span className="text-lg font-bold">+ {formatPrice(50.00)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex justify-between">
+                  <span>Total Price</span>
+                  <span className="font-semibold">{formatPrice(total)}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleFinalAction('cart')}
+                disabled={!!isProcessing}
+                className="flex-1 border border-purple-600 text-purple-600 font-semibold py-3 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isProcessing === 'cart' ? (
+                  <><Loader2 className="animate-spin" size={16} /> Add to cart</>
+                ) : (
+                  <>🛒 Add to cart</>
+                )}
+              </button>
+              
+              <button
+                onClick={() => handleFinalAction('checkout')}
+                disabled={!!isProcessing}
+                className="flex-1 bg-purple-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isProcessing === 'checkout' ? (
+                  <><Loader2 className="animate-spin" size={16} /> Processing...</>
+                ) : (
+                  <>Next Step →</>
+                )}
+              </button>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
   };
-  
+
   if (!tour) return null;
 
   return (
@@ -1052,93 +753,63 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             exit={{ opacity: 0 }} 
           />
           <motion.div
-            className="relative bg-white h-full w-full max-w-sm sm:max-w-lg shadow-xl flex flex-col"
+            className="relative bg-white h-full w-full max-w-md shadow-xl flex flex-col"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
-            {/* HEADER */}
-            <div className="p-3 sm:p-4 border-b flex items-center gap-2 sm:gap-3">
-              <Image src={tour.image} alt={tour.title} width={48} height={48} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover" />
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-800 line-clamp-1 text-sm sm:text-base">{tour.title}</h3>
-                <p className="text-xs text-slate-500 flex items-center gap-1">
-                  <Calendar size={12} /> {bookingData.selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3">
+                <Star size={16} className="text-yellow-500 fill-current" />
+                <span className="font-semibold">{tour.rating}</span>
+                <span className="text-gray-500 text-sm">{tour.bookings?.toLocaleString()} bookings</span>
+                <span className="text-gray-500 text-sm">⏱ {tour.duration}</span>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-slate-900 text-sm sm:text-base">{formatPrice(tour.discountPrice)}</p>
-                <p className="text-xs text-slate-400">per adult</p>
-              </div>
-              <button onClick={onClose} className="ml-2 p-1.5 sm:p-2 rounded-full hover:bg-slate-100">
-                <X size={16} />
+              <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+                <X size={20} />
               </button>
             </div>
 
-            {/* STEP INDICATOR */}
-            <div className="p-3 sm:p-4 border-b">
-              <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+              {renderStepContent()}
             </div>
 
-            {/* STEP CONTENT */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-50">{renderStep()}</div>
-
-            {/* FOOTER */}
-            <div className="p-3 sm:p-4 border-t bg-white space-y-3">
-              {currentStep === totalSteps ? (
-                <div className="space-y-3">
-                   <button
-                        onClick={() => handleFinalAction('checkout')}
-                        disabled={!!isProcessing}
-                        className="w-full bg-red-600 text-white font-bold py-2.5 sm:py-3 rounded-full text-sm sm:text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105 disabled:bg-red-400 disabled:cursor-not-allowed"
-                    >
-                        {isProcessing === 'checkout' ? (
-                            <><Loader2 size={18} className="animate-spin" /> Processing...</>
-                        ) : (
-                            <><CreditCard size={16} /> Proceed to Checkout</>
-                        )}
-                    </button>
-                     <button
-                        onClick={() => handleFinalAction('cart')}
-                        disabled={!!isProcessing}
-                        className="w-full bg-white text-slate-700 font-bold py-2.5 sm:py-3 rounded-full text-sm sm:text-base flex items-center justify-center gap-2 border-2 border-slate-300 transition-all transform hover:scale-105 hover:bg-slate-50 disabled:bg-slate-200"
-                    >
-                        {isProcessing === 'cart' ? (
-                            <><Loader2 size={18} className="animate-spin" /> Adding...</>
-                        ) : (
-                            <><ShoppingCart size={16} /> Add & Continue Browsing</>
-                        )}
-                    </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
+            {/* Footer */}
+            {currentStep > 1 && (
+              <div className="p-4 border-t bg-white">
+                <div className="flex justify-between items-center mb-3">
                   <button
                     onClick={handleBack}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full font-semibold text-slate-600 hover:bg-slate-100 transition-opacity text-sm ${
-                        currentStep === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                    }`}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-600"
                   >
-                    <ArrowLeft size={14} /> Back
+                    <ArrowLeft size={16} />
+                    Back
                   </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={currentStep === 1 && !bookingData.selectedTime}
-                    className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm disabled:bg-red-300 disabled:cursor-not-allowed text-sm"
-                  >
-                    {currentStep === totalSteps - 1 ? 'Review & Book' : 'Next Step'}
-                    <ArrowRight size={14} />
-                  </button>
+                  
+                  {currentStep < 3 && (
+                    <button
+                      onClick={handleNext}
+                      className="flex items-center gap-2 bg-red-500 text-white px-6 py-2 rounded-lg font-semibold"
+                    >
+                      Next Step
+                      <ArrowRight size={16} />
+                    </button>
+                  )}
                 </div>
-              )}
-              
-              <div className="flex items-center justify-between text-xs sm:text-sm text-slate-600 pt-2">
-                <span>
-                  {bookingData.adults} Adult{bookingData.adults > 1 ? 's' : ''}
-                  {bookingData.children > 0 && `, ${bookingData.children} Child${bookingData.children > 1 ? 'ren' : ''}`}
-                </span>
-                <span>Total: <strong className="text-slate-900">{formatPrice(total)}</strong></span>
+                
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>{getParticipantsText()}</span>
+                  <span>Total: <strong className="text-gray-900">{formatPrice(total)}</strong></span>
+                </div>
               </div>
+            )}
+
+            {/* Step indicator at bottom */}
+            <div className="text-center py-4 text-4xl font-bold text-gray-300">
+              {currentStep}
             </div>
           </motion.div>
         </motion.div>
@@ -1147,53 +818,4 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   );
 };
 
-// Main Page Component
-const BookingPage: React.FC = () => {
-  const [isBookingSidebarOpen, setIsBookingSidebarOpen] = useState(false);
-  
-  // Sample tour data
-  const sampleTour: Tour = {
-    id: '1',
-    title: 'New York Pizza by LOVERS Canal Cruise in Amsterdam',
-    image: '/tour-image.jpg',
-    originalPrice: 75.00,
-    discountPrice: 50.00,
-    destinationId: 'amsterdam'
-  };
-
-  const openBookingSidebar = () => setIsBookingSidebarOpen(true);
-  const closeBookingSidebar = () => setIsBookingSidebarOpen(false);
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-        <Image
-          src={sampleTour.image}
-          alt={sampleTour.title}
-          width={400}
-          height={200}
-          className="w-full h-48 object-cover rounded-lg mb-4"
-        />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">{sampleTour.title}</h2>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-2xl font-bold text-red-600">€{sampleTour.discountPrice}</span>
-          <span className="text-lg text-gray-500 line-through">€{sampleTour.originalPrice}</span>
-        </div>
-        <button
-          onClick={openBookingSidebar}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
-        >
-          Book Now
-        </button>
-      </div>
-
-      <BookingSidebar
-        isOpen={isBookingSidebarOpen}
-        onClose={closeBookingSidebar}
-        tour={sampleTour}
-      />
-    </div>
-  );
-};
-
-export default BookingPage;
+export default BookingSidebar;
