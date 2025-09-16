@@ -1,12 +1,17 @@
 // app/tour/[slug]/TourPageClient.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { AnimatePresence, motion, useInView } from 'framer-motion';
 import {
   ArrowLeft, Clock, Star, Users, ShoppingCart, Calendar, MapPin,
-  Info, CheckCircle, Heart, Share2, MessageCircle, Camera
+  Info, CheckCircle, Heart, Share2, MessageCircle, Camera, ChevronDown,
+  ChevronUp, Shield, Umbrella, Thermometer, Bus, Utensils, Mountain,
+  Languages, CreditCard, Phone, Mail, AlertCircle, Car, Plane,
+  Navigation, Backpack, Sun, CloudRain, Snowflake, Eye, Gift,
+  Accessibility, Baby, PawPrint, Smartphone, Wifi, Headphones
 } from 'lucide-react';
 
 // Components
@@ -19,29 +24,704 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { Tour, CartItem } from '@/types';
 
-// The Client Component receives the fetched data as props.
-interface TourPageClientProps {
-    tour: Tour;
-    relatedTours: Tour[];
+// Enhanced interfaces for additional tour data
+interface ItineraryItem {
+  time: string;
+  title: string;
+  description: string;
+  duration?: string;
+  location?: string;
+  includes?: string[];
 }
 
-export default function TourPageClient({ tour, relatedTours }: TourPageClientProps) {
-    const { formatPrice } = useSettings();
-    const { addToCart } = useCart();
-    const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
-    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [isWishlisted, setIsWishlisted] = useState(false);
-    const [isAdding, setIsAdding] = useState(false);
-    const [added, setAdded] = useState(false);
-    const [liveMessage, setLiveMessage] = useState('');
+interface TourEnhancement {
+  itinerary?: ItineraryItem[];
+  whatToBring?: string[];
+  whatToWear?: string[];
+  physicalRequirements?: string;
+  accessibilityInfo?: string[];
+  groupSize?: { min: number; max: number };
+  transportationDetails?: string;
+  mealInfo?: string;
+  weatherPolicy?: string;
+  photoPolicy?: string;
+  tipPolicy?: string;
+  healthSafety?: string[];
+  culturalInfo?: string[];
+  seasonalVariations?: string;
+  localCustoms?: string[];
+}
 
-    // Mock reviews data, as there is no reviews API
-    const reviewsData = [
-      { id: 1, name: 'Sarah M.', rating: 5, date: '2 days ago', title: 'Amazing experience!', text: 'The tour was incredible and our guide was very knowledgeable and entertaining. Highly recommend!', verified: true, helpful: 12 },
-      { id: 2, name: 'Marco P.', rating: 4, date: '1 week ago', title: 'Great experience', text: 'Perfect way to see the city. Only wish it was a bit longer.', verified: true, helpful: 8 }
-    ];
+// The Client Component receives the fetched data as props.
+interface TourPageClientProps {
+  tour: Tour;
+  relatedTours: Tour[];
+}
+
+// Mock enhanced data - in real app this would come from your database
+const getEnhancedTourData = (tourId: string): TourEnhancement => {
+  return {
+    itinerary: [
+      {
+        time: "17:15",
+        title: "Meet at Central Meeting Point",
+        description: "Check-in and welcome aboard our comfortable glass-topped canal boat. Meet your friendly crew and fellow travelers.",
+        duration: "15 minutes",
+        location: "Prins Hendrikkade 25",
+        includes: ["Welcome drink", "Life jacket fitting", "Safety briefing"]
+      },
+      {
+        time: "17:30",
+        title: "Departure & Canal Ring Tour",
+        description: "Begin your journey through Amsterdam's UNESCO World Heritage canal ring. Pass by the historic merchant houses dating back to the Golden Age.",
+        duration: "25 minutes",
+        location: "Historic Canal District",
+        includes: ["Audio commentary", "Photo opportunities"]
+      },
+      {
+        time: "17:55",
+        title: "Pizza Service Begins",
+        description: "Enjoy freshly baked New York-style pizza while cruising past iconic Amsterdam landmarks including Anne Frank House and Westerkerk.",
+        duration: "20 minutes",
+        includes: ["NY Pizza per person", "Beverage selection"]
+      },
+      {
+        time: "18:15",
+        title: "Seven Bridges & Skinny Bridge",
+        description: "Navigate through the famous Seven Bridges area and pass under the romantic Skinny Bridge (Magere Brug), perfect for photos.",
+        duration: "15 minutes"
+      },
+      {
+        time: "18:30",
+        title: "Return Journey & Dessert",
+        description: "Enjoy your Cookie Dough Ice Cream while taking in the final views of Amsterdam's beautiful canal houses and bridges as we return to the starting point.",
+        duration: "15 minutes",
+        includes: ["Cookie Dough Ice Cream", "Final photo opportunities"]
+      }
+    ],
+    whatToBring: [
+      "Camera or smartphone for photos",
+      "Light jacket (boat can be breezy)",
+      "Comfortable seating clothes",
+      "Valid ID for alcohol service",
+      "Cash for optional gratuities"
+    ],
+    whatToWear: [
+      "Comfortable, weather-appropriate clothing",
+      "Flat, non-slip shoes (boat deck can be wet)",
+      "Layers - inside is heated but deck can be cool",
+      "Avoid high heels or loose clothing near the water"
+    ],
+    physicalRequirements: "Low physical activity required. Guests must be able to board the boat independently (2-3 steps). Suitable for most fitness levels.",
+    accessibilityInfo: [
+      "Wheelchair accessibility is limited - please contact us in advance",
+      "Restroom facilities available onboard",
+      "Indoor seating available if weather is poor",
+      "Visual impairments: audio commentary provided",
+      "Hearing impairments: visual landmarks and written information available"
+    ],
+    groupSize: { min: 1, max: 40 },
+    transportationDetails: "Climate-controlled glass-topped boat with panoramic windows. Indoor and outdoor seating available. Onboard restroom facilities.",
+    mealInfo: "Fresh NY-style pizza (vegetarian options available), selection of beverages (Heineken beer, wine, soft drinks, water), Cookie Dough Ice Cream dessert. Dietary restrictions can be accommodated with advance notice.",
+    weatherPolicy: "Tours operate in light rain (covered boat). Tours may be cancelled or rescheduled in severe weather conditions. Full refund provided for weather cancellations.",
+    photoPolicy: "Photography encouraged! Professional photos available for purchase. Please respect other guests' privacy and ask before including them in photos.",
+    tipPolicy: "Gratuities not included but appreciated for excellent service. Suggested 10-15% for exceptional experiences.",
+    healthSafety: [
+      "Enhanced cleaning protocols between tours",
+      "Hand sanitizer stations available onboard",
+      "First aid kit and trained crew onboard",
+      "Life jackets provided and safety briefing given",
+      "Emergency procedures clearly posted",
+      "COVID-19 protocols as per government guidelines"
+    ],
+    culturalInfo: [
+      "Learn about Amsterdam's Golden Age history (1600s)",
+      "Discover the engineering marvel of the canal system",
+      "Understand Dutch maritime heritage and trading history",
+      "Appreciate the architectural styles of canal houses",
+      "Experience modern Dutch hospitality and cuisine"
+    ],
+    seasonalVariations: "Spring/Summer: Extended daylight hours, outdoor seating popular. Fall/Winter: Cozy indoor atmosphere, shorter daylight, possible holiday decorations.",
+    localCustoms: [
+      "Dutch punctuality is highly valued - arrive 15 minutes early",
+      "Tipping is appreciated but not mandatory in the Netherlands",
+      "English is widely spoken by crew and guides",
+      "Respect for the environment and waterways is important",
+      "Photography of private residences should be respectful"
+    ]
+  };
+};
+
+// Enhanced Components
+const TabNavigation = ({ activeTab, tabs, scrollToSection }: any) => {
+  return (
+    <div className="sticky top-20 z-10 bg-white shadow-sm -mx-4 sm:mx-0 overflow-x-auto">
+      <nav className="flex space-x-1 p-1">
+        {tabs.map((tab: any) => (
+          <a
+            key={tab.id}
+            href={`#${tab.id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              scrollToSection(tab.id);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+              activeTab === tab.id
+                ? 'bg-red-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-red-600'
+            }`}
+          >
+            <tab.icon size={18} />
+            {tab.label}
+          </a>
+        ))}
+      </nav>
+    </div>
+  );
+};
+
+const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
+    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <Clock size={24} className="text-red-600" />
+      Detailed Itinerary
+    </h3>
+    <div className="relative">
+      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+      {itinerary.map((item, index) => (
+        <div key={index} className="relative flex items-start gap-4 pb-8">
+          <div className="flex-shrink-0 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm relative z-10">
+            {index + 1}
+          </div>
+          <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full">
+                  {item.time}
+                </span>
+                {item.duration && (
+                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                    {item.duration}
+                  </span>
+                )}
+              </div>
+              {item.location && (
+                <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <MapPin size={14} />
+                  {item.location}
+                </div>
+              )}
+            </div>
+            <h4 className="font-bold text-slate-800 mb-2">{item.title}</h4>
+            <p className="text-slate-600 text-sm leading-relaxed mb-3">{item.description}</p>
+            {item.includes && item.includes.length > 0 && (
+              <div className="border-t border-slate-100 pt-3">
+                <p className="text-xs font-semibold text-slate-700 mb-2">Includes:</p>
+                <div className="flex flex-wrap gap-2">
+                  {item.includes.map((include, i) => (
+                    <span key={i} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                      {include}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
+    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <Backpack size={24} className="text-blue-600" />
+      Practical Information
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* What to Bring */}
+      <div className="bg-slate-50 p-6 rounded-xl">
+        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <Backpack size={20} className="text-blue-600" />
+          What to Bring
+        </h4>
+        <ul className="space-y-2">
+          {enhancement.whatToBring?.map((item, index) => (
+            <li key={index} className="flex items-start gap-2 text-sm">
+              <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* What to Wear */}
+      <div className="bg-slate-50 p-6 rounded-xl">
+        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <Sun size={20} className="text-yellow-600" />
+          What to Wear
+        </h4>
+        <ul className="space-y-2">
+          {enhancement.whatToWear?.map((item, index) => (
+            <li key={index} className="flex items-start gap-2 text-sm">
+              <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    {/* Physical Requirements */}
+    {enhancement.physicalRequirements && (
+      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+        <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+          <Mountain size={20} />
+          Physical Requirements
+        </h4>
+        <p className="text-blue-800 text-sm leading-relaxed">{enhancement.physicalRequirements}</p>
+      </div>
+    )}
+
+    {/* Group Size */}
+    {enhancement.groupSize && (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
+          <Users size={24} className="text-slate-600 mx-auto mb-2" />
+          <div className="font-bold text-lg text-slate-800">
+            {enhancement.groupSize.min}-{enhancement.groupSize.max}
+          </div>
+          <div className="text-sm text-slate-500">Participants</div>
+        </div>
+        <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
+          <Languages size={24} className="text-slate-600 mx-auto mb-2" />
+          <div className="font-bold text-lg text-slate-800">Multi</div>
+          <div className="text-sm text-slate-500">Languages</div>
+        </div>
+        <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
+          <Shield size={24} className="text-slate-600 mx-auto mb-2" />
+          <div className="font-bold text-lg text-slate-800">Safe</div>
+          <div className="text-sm text-slate-500">& Secure</div>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-24">
+    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <Accessibility size={24} className="text-purple-600" />
+      Accessibility & Special Requirements
+    </h3>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Accessibility Info */}
+      <div className="bg-purple-50 p-6 rounded-xl">
+        <h4 className="font-bold text-purple-900 mb-4">Accessibility Information</h4>
+        <ul className="space-y-3">
+          {enhancement.accessibilityInfo?.map((item, index) => (
+            <li key={index} className="flex items-start gap-3 text-sm text-purple-800">
+              <Info size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Health & Safety */}
+      <div className="bg-green-50 p-6 rounded-xl">
+        <h4 className="font-bold text-green-900 mb-4">Health & Safety Measures</h4>
+        <ul className="space-y-3">
+          {enhancement.healthSafety?.map((item, index) => (
+            <li key={index} className="flex items-start gap-3 text-sm text-green-800">
+              <Shield size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    {/* Transportation Details */}
+    {enhancement.transportationDetails && (
+      <div className="bg-slate-50 p-6 rounded-xl">
+        <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <Bus size={20} className="text-blue-600" />
+          Transportation Details
+        </h4>
+        <p className="text-slate-700 text-sm leading-relaxed">{enhancement.transportationDetails}</p>
+      </div>
+    )}
+  </div>
+);
+
+const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-24">
+    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <Shield size={24} className="text-red-600" />
+      Policies
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Weather Policy */}
+      <div className="bg-sky-50 p-6 rounded-xl">
+        <h4 className="font-bold text-sky-900 mb-3 flex items-center gap-2">
+          <Umbrella size={20} className="text-sky-600" />
+          Weather Policy
+        </h4>
+        <p className="text-sky-800 text-sm leading-relaxed">{enhancement.weatherPolicy}</p>
+      </div>
+
+      {/* Photo Policy */}
+      <div className="bg-pink-50 p-6 rounded-xl">
+        <h4 className="font-bold text-pink-900 mb-3 flex items-center gap-2">
+          <Camera size={20} className="text-pink-600" />
+          Photography Policy
+        </h4>
+        <p className="text-pink-800 text-sm leading-relaxed">{enhancement.photoPolicy}</p>
+      </div>
+
+      {/* Tip Policy */}
+      <div className="bg-yellow-50 p-6 rounded-xl">
+        <h4 className="font-bold text-yellow-900 mb-3 flex items-center gap-2">
+          <CreditCard size={20} className="text-yellow-600" />
+          Gratuity Policy
+        </h4>
+        <p className="text-yellow-800 text-sm leading-relaxed">{enhancement.tipPolicy}</p>
+      </div>
+
+      {/* Meal Info */}
+      <div className="bg-orange-50 p-6 rounded-xl">
+        <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2">
+          <Utensils size={20} className="text-orange-600" />
+          Meal Information
+        </h4>
+        <p className="text-orange-800 text-sm leading-relaxed">{enhancement.mealInfo}</p>
+      </div>
+    </div>
+  </div>
+);
+
+const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-24">
+    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <Heart size={24} className="text-teal-600" />
+      Cultural Information
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Cultural Information */}
+      <div className="bg-indigo-50 p-6 rounded-xl">
+        <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
+          <Eye size={20} className="text-indigo-600" />
+          Cultural Highlights
+        </h4>
+        <ul className="space-y-2">
+          {enhancement.culturalInfo?.map((item, index) => (
+            <li key={index} className="flex items-start gap-2 text-sm text-indigo-800">
+              <Star size={16} className="text-indigo-600 mt-0.5 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Local Customs */}
+      <div className="bg-teal-50 p-6 rounded-xl">
+        <h4 className="font-bold text-teal-900 mb-4 flex items-center gap-2">
+          <Heart size={20} className="text-teal-600" />
+          Local Customs & Etiquette
+        </h4>
+        <ul className="space-y-2">
+          {enhancement.localCustoms?.map((item, index) => (
+            <li key={index} className="flex items-start gap-2 text-sm text-teal-800">
+              <Info size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    {/* Seasonal Information */}
+    {enhancement.seasonalVariations && (
+      <div className="bg-slate-50 p-6 rounded-xl">
+        <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <Snowflake size={20} className="text-slate-600" />
+          Seasonal Variations
+        </h4>
+        <p className="text-slate-700 text-sm leading-relaxed">{enhancement.seasonalVariations}</p>
+      </div>
+    )}
+  </div>
+);
+
+
+// Enhanced FAQ Component
+const EnhancedFAQ = ({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement> }) => {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  
+  const faqs = [
+    {
+      question: "What happens if I'm late for the departure?",
+      answer: "Please arrive 15 minutes before departure. Late arrivals cannot be accommodated due to strict departure schedules. No refunds are provided for missed departures due to tardiness."
+    },
+    {
+      question: "Can dietary restrictions be accommodated?",
+      answer: "Yes! We offer vegetarian pizza options and can accommodate most dietary restrictions with advance notice. Please inform us at least 24 hours before your tour."
+    },
+    {
+      question: "Is this tour suitable for children?",
+      answer: "Absolutely! Children 4-13 receive discounted pricing, and children 0-3 travel free. The tour is family-friendly with indoor facilities and safety measures in place."
+    },
+    {
+      question: "What if the weather is bad?",
+      answer: "Our boats are climate-controlled with glass roofs, so tours operate in most weather conditions. Only severe weather will result in cancellation with full refund."
+    },
+    {
+      question: "Can I bring my own food or drinks?",
+      answer: "Outside food and beverages are not permitted as meals and drinks are included in your tour. Special dietary needs can be accommodated with advance notice."
+    },
+    {
+      question: "Is the boat wheelchair accessible?",
+      answer: "Limited wheelchair accessibility is available. Please contact us in advance to discuss specific needs and ensure we can accommodate your requirements."
+    },
+    {
+      question: "Can I reschedule my booking?",
+      answer: "Yes, bookings can be rescheduled up to 8 hours before departure subject to availability. Changes within 8 hours may incur additional fees."
+    },
+    {
+      question: "Are professional photos available?",
+      answer: "Professional photography services can be arranged for an additional fee. Please inquire when booking. Personal photography is encouraged throughout the tour."
+    }
+  ];
+
+  return (
+    <div ref={sectionRef} id="faq" className="space-y-4 scroll-mt-24">
+      <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+        <MessageCircle size={24} className="text-orange-600" />
+        Frequently Asked Questions
+      </h3>
+      {faqs.map((faq, index) => (
+        <div key={index} className="border border-slate-200 rounded-lg">
+          <button
+            onClick={() => setOpenFaq(openFaq === index ? null : index)}
+            className="w-full p-4 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-semibold text-slate-800 pr-4">{faq.question}</span>
+            {openFaq === index ? (
+              <ChevronUp size={20} className="text-slate-500 flex-shrink-0" />
+            ) : (
+              <ChevronDown size={20} className="text-slate-500 flex-shrink-0" />
+            )}
+          </button>
+          {openFaq === index && (
+            <div className="px-4 pb-4 border-t border-slate-100">
+              <p className="text-slate-600 text-sm leading-relaxed mt-3">{faq.answer}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Reviews Section Component
+const ReviewsSection = ({ tour, reviewsData, sectionRef }: { tour: Tour, reviewsData: any[], sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-24">
+    <div className="flex items-center justify-between">
+      <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Star size={18} className="text-yellow-500 fill-current" />
+          <span className="font-bold text-lg">{tour.rating}</span>
+        </div>
+        <span className="text-slate-500">({tour.bookings?.toLocaleString()} reviews)</span>
+      </div>
+    </div>
+    <div className="space-y-4">
+      {reviewsData.map((review) => (
+        <div key={review.id} className="border-b border-slate-200 pb-4 last:border-b-0">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold text-slate-800">{review.name}</span>
+                {review.verified && (
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                    Verified
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      size={14}
+                      className={`${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-slate-500">{review.date}</span>
+              </div>
+            </div>
+          </div>
+          <h4 className="font-semibold text-slate-800 mb-1">{review.title}</h4>
+          <p className="text-slate-600 text-sm mb-2">{review.text}</p>
+          <button className="text-slate-500 hover:text-slate-700 text-xs">Helpful ({review.helpful})</button>
+        </div>
+      ))}
+    </div>
+    <button className="w-full mt-6 py-3 border-2 border-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+      View all reviews
+    </button>
+  </div>
+);
+
+// Overview Section Component
+const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.RefObject<HTMLDivElement> }) => (
+  <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-24">
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">About this experience</h2>
+      <div
+        className="prose prose-slate max-w-none mb-6"
+        dangerouslySetInnerHTML={{ __html: tour.longDescription || tour.description }}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {tour.includes && tour.includes.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-3">What's included</h3>
+            <ul className="space-y-2">
+              {tour.includes.map((item, index) => (
+                <li key={index} className="flex items-start gap-2 text-slate-600">
+                  <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {tour.highlights && tour.highlights.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-3">Highlights</h3>
+            <ul className="space-y-2">
+              {tour.highlights.map((highlight, index) => (
+                <li key={index} className="flex items-start gap-2 text-slate-600">
+                  <Star size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{highlight}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+    {/* Quick Info Cards */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
+        <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
+        <h3 className="font-semibold text-slate-900">Free Cancellation</h3>
+        <p className="text-sm text-slate-600">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
+      </div>
+      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
+        <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
+        <h3 className="font-semibold text-slate-900">Group Friendly</h3>
+        <p className="text-sm text-slate-600">Perfect for all group sizes</p>
+      </div>
+      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
+        <Smartphone className="w-8 h-8 text-red-600 mx-auto mb-2" />
+        <h3 className="font-semibold text-slate-900">Mobile Ticket</h3>
+        <p className="text-sm text-slate-600">Show on your smartphone</p>
+      </div>
+    </div>
+  </div>
+);
+
+
+export default function TourPageClient({ tour, relatedTours }: TourPageClientProps) {
+  const { formatPrice } = useSettings();
+  const { addToCart } = useCart();
+  const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [liveMessage, setLiveMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const overviewRef = useRef<HTMLDivElement>(null);
+  const itineraryRef = useRef<HTMLDivElement>(null);
+  const practicalRef = useRef<HTMLDivElement>(null);
+  const accessibilityRef = useRef<HTMLDivElement>(null);
+  const policiesRef = useRef<HTMLDivElement>(null);
+  const culturalRef = useRef<HTMLDivElement>(null);
+  const reviewsRef = useRef<HTMLDivElement>(null);
+  const faqRef = useRef<HTMLDivElement>(null);
+  
+  const inViewOptions = { threshold: 0.1 };
+  const isOverviewInView = useInView(overviewRef, inViewOptions);
+  const isItineraryInView = useInView(itineraryRef, inViewOptions);
+  const isPracticalInView = useInView(practicalRef, inViewOptions);
+  const isAccessibilityInView = useInView(accessibilityRef, inViewOptions);
+  const isPoliciesInView = useInView(policiesRef, inViewOptions);
+  const isCulturalInView = useInView(culturalRef, inViewOptions);
+  const isReviewsInView = useInView(reviewsRef, inViewOptions);
+  const isFaqInView = useInView(faqRef, inViewOptions);
+
+  useEffect(() => {
+    if (isFaqInView) setActiveTab('faq');
+    else if (isReviewsInView) setActiveTab('reviews');
+    else if (isCulturalInView) setActiveTab('cultural');
+    else if (isPoliciesInView) setActiveTab('policies');
+    else if (isAccessibilityInView) setActiveTab('accessibility');
+    else if (isPracticalInView) setActiveTab('practical');
+    else if (isItineraryInView) setActiveTab('itinerary');
+    else if (isOverviewInView) setActiveTab('overview');
+  }, [
+    isOverviewInView, isItineraryInView, isPracticalInView, isAccessibilityInView,
+    isPoliciesInView, isCulturalInView, isReviewsInView, isFaqInView
+  ]);
+  
+  const scrollToSection = (id: string) => {
+    let ref;
+    switch (id) {
+      case 'overview': ref = overviewRef; break;
+      case 'itinerary': ref = itineraryRef; break;
+      case 'practical': ref = practicalRef; break;
+      case 'accessibility': ref = accessibilityRef; break;
+      case 'policies': ref = policiesRef; break;
+      case 'cultural': ref = culturalRef; break;
+      case 'reviews': ref = reviewsRef; break;
+      case 'faq': ref = faqRef; break;
+    }
+
+    if (ref && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+
+  // Get enhanced tour data
+  const enhancement = getEnhancedTourData(tour.id!);
+
+  // Mock reviews data, as there is no reviews API
+  const reviewsData = [
+    { id: 1, name: 'Sarah M.', rating: 5, date: '2 days ago', title: 'Amazing experience!', text: 'The tour was incredible and our guide was very knowledgeable and entertaining. Highly recommend!', verified: true, helpful: 12 },
+    { id: 2, name: 'Marco P.', rating: 4, date: '1 week ago', title: 'Great experience', text: 'Perfect way to see the city. Only wish it was a bit longer.', verified: true, helpful: 8 }
+  ];
 
   const tourImages = tour.images && tour.images.length > 0 ? tour.images : [tour.image];
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Eye },
+    { id: 'itinerary', label: 'Itinerary', icon: Clock },
+    { id: 'practical', label: 'What to Know', icon: Backpack },
+    { id: 'accessibility', label: 'Accessibility', icon: Accessibility },
+    { id: 'policies', label: 'Policies', icon: Shield },
+    { id: 'cultural', label: 'Cultural Info', icon: Heart },
+    { id: 'reviews', label: 'Reviews', icon: Star },
+    { id: 'faq', label: 'FAQ', icon: MessageCircle }
+  ];
 
   const handleQuickAdd = async () => {
     if (isAdding) return;
@@ -80,6 +760,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
   const openBookingSidebar = () => {
     setBookingSidebarOpen(true);
   };
+
 
   return (
     <>
@@ -162,12 +843,12 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                 </div>
 
                 {tourImages.length > 1 && (
-                  <div className="flex gap-2 mb-6">
+                  <div className="flex gap-2 mb-6 overflow-x-auto">
                     {tourImages.map((image, index) => (
                       <button
                         key={index}
                         onClick={() => setSelectedImageIndex(index)}
-                        className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-all transform ${
+                        className={`relative w-20 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all transform ${
                           selectedImageIndex === index
                             ? 'border-red-600 scale-105 shadow'
                             : 'border-slate-200 hover:border-slate-300'
@@ -199,15 +880,13 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                         </div>
                         <span className="text-slate-500">({tour.bookings?.toLocaleString()} reviews)</span>
                       </div>
-
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
                         <span>{tour.duration}</span>
                       </div>
-
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
-                        <span>{tour.destination?.name || 'N/A'}</span>
+                        <span>{tour.destination?.name || 'Amsterdam'}</span>
                       </div>
                     </div>
                   </div>
@@ -224,64 +903,20 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-                  <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-slate-900">Free Cancellation</h3>
-                  <p className="text-sm text-slate-600">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
-                </div>
+              {/* Tab Navigation */}
+              <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} scrollToSection={scrollToSection} />
 
-                <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-                  <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-slate-900">Group Friendly</h3>
-                  <p className="text-sm text-slate-600">Perfect for all group sizes</p>
-                </div>
-
-                <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-                  <Camera className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-slate-900">Mobile Ticket</h3>
-                  <p className="text-sm text-slate-600">Show on your smartphone</p>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">About this experience</h2>
-                <div
-                  className="prose prose-slate max-w-none"
-                  dangerouslySetInnerHTML={{ __html: tour.longDescription || tour.description }}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  {tour.includes && tour.includes.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-800 mb-3">What's included</h3>
-                      <ul className="space-y-2">
-                        {tour.includes.map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-slate-600">
-                            <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {tour.highlights && tour.highlights.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-800 mb-3">Highlights</h3>
-                      <ul className="space-y-2">
-                        {tour.highlights.map((highlight, index) => (
-                          <li key={index} className="flex items-start gap-2 text-slate-600">
-                            <Star size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{highlight}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-
+              {/* All Sections */}
+              <OverviewSection tour={tour} sectionRef={overviewRef} />
+              {enhancement.itinerary && <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />}
+              <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />
+              <AccessibilitySection enhancement={enhancement} sectionRef={accessibilityRef} />
+              <PoliciesSection enhancement={enhancement} sectionRef={policiesRef} />
+              <CulturalSection enhancement={enhancement} sectionRef={culturalRef} />
+              <ReviewsSection tour={tour} reviewsData={reviewsData} sectionRef={reviewsRef} />
+              <EnhancedFAQ sectionRef={faqRef} />
+              
+              {/* Meeting Point */}
               {tour.meetingPoint && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
@@ -296,72 +931,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                 </div>
               )}
 
-              <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                <div className="flex items-start gap-3">
-                  <Info className="text-blue-600 mt-0.5 flex-shrink-0" size={20} />
-                  <div>
-                    <h3 className="font-bold text-blue-900 mb-2">Important information</h3>
-                    <ul className="space-y-1 text-sm text-blue-800">
-                      <li>• {tour.ageRestriction || 'Suitable for all ages'}</li>
-                      <li>• Only service dogs are allowed</li>
-                      <li>• Weather conditions may affect the tour</li>
-                      <li>• {tour.cancellationPolicy || 'Check cancellation policy'}</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <Star size={18} className="text-yellow-500 fill-current" />
-                      <span className="font-bold text-lg">{tour.rating}</span>
-                    </div>
-                    <span className="text-slate-500">({tour.bookings?.toLocaleString()} reviews)</span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {reviewsData.map((review) => (
-                    <div key={review.id} className="border-b border-slate-200 pb-4 last:border-b-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-slate-800">{review.name}</span>
-                            {review.verified && (
-                              <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                                Verified
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={14}
-                                  className={`${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-sm text-slate-500">{review.date}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <h4 className="font-semibold text-slate-800 mb-1">{review.title}</h4>
-                      <p className="text-slate-600 text-sm mb-2">{review.text}</p>
-                      <button className="text-slate-500 hover:text-slate-700 text-xs">Helpful ({review.helpful})</button>
-                    </div>
-                  ))}
-                </div>
-
-                <button className="w-full mt-6 py-3 border-2 border-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
-                  View all reviews
-                </button>
-              </div>
-
+              {/* Related Tours */}
               {relatedTours.length > 0 && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
@@ -410,6 +980,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
               )}
             </div>
 
+            {/* Sticky Sidebar */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 mb-6">
@@ -436,6 +1007,12 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                       <Users size={20} className="text-blue-500" />
                       <span>Available daily</span>
                     </div>
+                    {enhancement.groupSize && (
+                      <div className="flex items-center gap-3 text-slate-600">
+                        <Users size={20} className="text-green-500" />
+                        <span>Group size: {enhancement.groupSize.min}-{enhancement.groupSize.max} people</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -490,30 +1067,49 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                   </div>
 
                   <div className="mt-6 pt-6 border-t border-slate-200">
-                    <div className="flex items-center justify-center gap-4 text-sm text-slate-500">
-                      <div className="flex items-center gap-1">
+                    <div className="grid grid-cols-2 gap-4 text-sm text-slate-500">
+                      <div className="flex items-center gap-2">
                         <CheckCircle size={16} className="text-green-600" />
                         <span>Free cancellation</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Camera size={16} className="text-blue-600" />
+                      <div className="flex items-center gap-2">
+                        <Smartphone size={16} className="text-blue-600" />
                         <span>Mobile ticket</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Shield size={16} className="text-purple-600" />
+                        <span>Safe & secure</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Languages size={16} className="text-orange-600" />
+                        <span>Multi-language</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* Help Section */}
                 <div className="bg-slate-50 rounded-xl p-6">
-                  <h3 className="font-bold text-slate-800 mb-4">Need help?</h3>
+                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Headphones size={20} className="text-blue-600" />
+                    Need help?
+                  </h3>
                   <div className="space-y-3">
-                    <button className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
+                    <button className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left">
                       <MessageCircle size={18} />
                       <span>Chat with us</span>
                     </button>
                     <a href="tel:+31204204000" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
-                      <span className="text-lg">📞</span>
+                      <Phone size={18} />
                       <span>+31 (0)20 420 4000</span>
                     </a>
+                    <a href="mailto:info@egyptexcursionsonline.com" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
+                      <Mail size={18} />
+                      <span>Email support</span>
+                    </a>
+                  </div>
+                  <div className="mt-4 text-xs text-slate-500">
+                    <p>Available 24/7 • Average response time: 5 minutes</p>
                   </div>
                 </div>
               </div>

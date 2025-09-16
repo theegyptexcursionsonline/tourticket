@@ -1,4 +1,3 @@
-// components/BookingSidebar.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -137,7 +136,7 @@ const tourOptionsData: TourOption[] = [
     ],
     highlights: ['Professional guide', 'Safety equipment included', 'Traditional tea ceremony', 'Sunset photography stops'],
     included: ['Quad bike rental', 'Safety briefing', 'Bedouin village visit', 'Refreshments'],
-    groupSize: 'Max 12 people',
+    dgroupSize: 'Max 12 people',
     difficulty: 'Moderate',
     badge: 'Most Popular',
     discount: 29,
@@ -713,187 +712,6 @@ const AddOnCard: React.FC<{
 };
 
 // ---
-// Loading Skeletons
-// ---
-const LoadingSkeleton: React.FC<{ type: 'full' | 'addons' | 'summary' }> = ({ type }) => {
-  if (type === 'full') {
-    return (
-      <div className="space-y-6 p-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-xl w-2/3 mb-4"></div>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="mb-6 p-6 border-2 border-gray-100 rounded-2xl">
-              <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4 mb-3"></div>
-              <div className="h-3 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="h-16 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-xl"></div>
-                <div className="h-16 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-xl"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (type === 'addons') {
-    return (
-      <div className="space-y-4 p-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-xl w-1/2 mb-6"></div>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-2xl mb-4"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4 p-6">
-      <div className="animate-pulse">
-        <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-xl w-3/4 mb-6"></div>
-        <div className="h-32 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-2xl mb-4"></div>
-        <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-full mb-2"></div>
-        <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-2/3"></div>
-      </div>
-    </div>
-  );
-};
-
-// ---
-// Step Icons
-// ---
-const StepIcons: React.FC<{ currentStep: number }> = ({ currentStep }) => {
-  const steps = [
-    { icon: Calendar, label: 'Date & Guests', description: 'Choose when & who' },
-    { icon: Clock, label: 'Tour Options', description: 'Select experience' },
-    { icon: Sparkles, label: 'Enhancements', description: 'Add extras' },
-    { icon: CreditCard, label: 'Complete', description: 'Finalize booking' }
-  ];
-
-  return (
-    <div className="px-6 py-4">
-      <div className="flex justify-between items-center relative">
-        {/* Progress Line */}
-        <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded-full">
-          <motion.div
-            className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full"
-            initial={{ width: '0%' }}
-            animate={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
-          />
-        </div>
-
-        {steps.map((step, index) => {
-          const IconComponent = step.icon;
-          const isActive = currentStep === index + 1;
-          const isCompleted = currentStep > index + 1;
-          const isUpcoming = currentStep < index + 1;
-
-          return (
-            <div key={index} className="relative flex flex-col items-center z-10">
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{
-                  scale: isActive ? 1.2 : isCompleted ? 1.1 : 1,
-                  rotate: isCompleted ? 360 : 0
-                }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all shadow-lg ${
-                  isCompleted
-                    ? 'bg-gradient-to-r from-green-400 to-green-500 text-white'
-                    : isActive
-                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                    : 'bg-white border-2 border-gray-300 text-gray-400'
-                }`}
-              >
-                {isCompleted ? <Check size={18} /> : <IconComponent size={16} />}
-              </motion.div>
-
-              <div className="text-center max-w-20">
-                <div className={`text-xs font-semibold ${
-                  isActive ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                }`}>
-                  {step.label}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {step.description}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ---
-// Price Summary Component
-// ---
-const PriceSummary: React.FC<{
-  subtotal: number;
-  addOnsTotal: number;
-  total: number;
-  savings: number;
-  isVisible: boolean;
-}> = ({ subtotal, addOnsTotal, total, savings, isVisible }) => {
-  const { formatPrice } = useSettings();
-
-  if (!isVisible) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 border border-red-200"
-    >
-      <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-        <Calculator size={18} className="text-red-500" />
-        Price Breakdown
-      </h4>
-
-      <div className="space-y-3">
-        {subtotal > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Tour price</span>
-            <span className="font-semibold">{formatPrice(subtotal)}</span>
-          </div>
-        )}
-
-        {addOnsTotal > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Add-ons</span>
-            <span className="font-semibold">{formatPrice(addOnsTotal)}</span>
-          </div>
-        )}
-
-        {savings > 0 && (
-          <div className="flex justify-between items-center text-green-600">
-            <span>Total savings</span>
-            <span className="font-semibold">-{formatPrice(savings)}</span>
-          </div>
-        )}
-
-        <div className="h-px bg-gray-300 my-3"></div>
-
-        <div className="flex justify-between items-center text-lg">
-          <span className="font-bold text-gray-800">Total</span>
-          <motion.span
-            key={total}
-            initial={{ scale: 1.2, color: '#DC2626' }}
-            animate={{ scale: 1, color: '#1F2937' }}
-            className="font-bold"
-          >
-            {formatPrice(total)}
-          </motion.span>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
 // Main Enhanced Booking Sidebar Component
 // ---
 interface BookingSidebarProps {
@@ -910,8 +728,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(useState(false));
+  const [showDatePicker, setShowDatePicker] = useState(useState(false));
   const [availability, setAvailability] = useState<AvailabilityData | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
 
@@ -1159,7 +977,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
   const getParticipantsText = useCallback(() => {
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
-    let text = `${totalGuests} guest${totalGuests !== 1 ? 's' : ''}`;
+    let text = `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`;
     const details = [];
 
     if (bookingData.adults > 0) details.push(`${bookingData.adults} adult${bookingData.adults > 1 ? 's' : ''}`);
@@ -1190,8 +1008,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
     const loadingToast = toast.loading(
       action === 'checkout'
-        ? 'Preparing your adventure...'
-        : 'Adding to your collection...',
+        ? 'Preparing your booking...'
+        : 'Adding to cart...',
       {
         position: 'bottom-center',
         style: { background: '#1F2937', color: 'white' }
@@ -1263,37 +1081,55 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     });
   }, []);
 
-  // Enhanced click outside handler
+  // Fix: Enhanced click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.participants-dropdown')) {
+      
+      // Check if click is outside participants dropdown
+      if (showParticipantsDropdown && 
+          !target.closest('.participants-dropdown') && 
+          !target.closest('.participants-content')) {
         setShowParticipantsDropdown(false);
       }
-      if (!target.closest('.date-picker-dropdown')) {
+      
+      // Check if click is outside date picker
+      if (showDatePicker && 
+          !target.closest('.date-picker-dropdown') && 
+          !target.closest('.date-picker-content')) {
         setShowDatePicker(false);
       }
     };
 
-    if (isOpen) {
+    if (isOpen && (showParticipantsDropdown || showDatePicker)) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen]);
+  }, [isOpen, showParticipantsDropdown, showDatePicker]);
 
   // Enhanced step content renderer with better animations
   const renderStepContent = () => {
     if (isLoading) {
-      return <LoadingSkeleton type="full" />;
+      return (
+        <div className="space-y-6 p-6">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded-xl w-2/3 mb-4"></div>
+            <div className="h-24 bg-gray-200 rounded-2xl mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded-xl w-1/3 mb-4"></div>
+            <div className="h-16 bg-gray-200 rounded-2xl"></div>
+          </div>
+        </div>
+      );
     }
 
     const contentVariants = {
-      enter: { opacity: 0, x: 20, scale: 0.95 },
-      center: { opacity: 1, x: 0, scale: 1 },
-      exit: { opacity: 0, x: -20, scale: 0.95 }
+      enter: { opacity: 0, x: 20 },
+      center: { opacity: 1, x: 0 },
+      exit: { opacity: 0, x: -20 }
     };
 
     switch (currentStep) {
+      // Fix: Step 1 Content
       case 1:
         return (
           <motion.div
@@ -1302,112 +1138,70 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             initial="enter"
             animate="center"
             exit="exit"
-            className="space-y-8 p-6"
+            transition={{ duration: 0.3 }}
+            className="space-y-4 p-4" // Reduced from space-y-6 p-6
           >
-            {/* Enhanced Tour Header */}
-            <div className="text-center">
-              <div className="relative inline-block mb-4">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">{tour?.title}</h2>
-                {tour?.category && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                    {tour.category}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <div className="flex items-center gap-1">
-                  <Star size={16} className="text-yellow-500 fill-current" />
-                  <span className="font-semibold text-gray-700">{tour?.rating}</span>
-                </div>
-                <div className="h-4 w-px bg-gray-300"></div>
-                <div className="flex items-center gap-1">
-                  <Eye size={16} className="text-red-500" />
-                  <span className="text-sm text-gray-600">{tour?.bookings?.toLocaleString()} bookings</span>
-                </div>
-                <div className="h-4 w-px bg-gray-300"></div>
-                <div className="flex items-center gap-1">
-                  <Clock size={16} className="text-green-500" />
-                  <span className="text-sm text-gray-600">{tour?.duration}</span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-6 text-white mb-6">
-                <div className="flex items-baseline justify-center gap-3 mb-2">
-                  {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
-                    <span className="text-red-100 line-through text-lg">
-                      {formatPrice(tour.originalPrice)}
-                    </span>
-                  )}
-                  <span className="text-3xl font-bold">
-                    {formatPrice(tour?.discountPrice || 0)}
-                  </span>
-                  <span className="text-red-100">per adult</span>
-                </div>
+            {/* Compact Price Section */}
+            <div className="bg-gradient-to-r from-red-500 to-orange-600 rounded-xl p-4 text-white text-center shadow-lg">
+              <div className="flex items-center justify-center gap-2">
                 {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
-                  <div className="flex items-center justify-center gap-2">
-                    <Zap size={16} />
-                    <span className="text-sm font-semibold">
-                      Save {formatPrice((tour.originalPrice || 0) - (tour.discountPrice || 0))} per person!
-                    </span>
-                  </div>
+                  <span className="text-red-100 line-through text-lg font-medium">
+                    {formatPrice(tour.originalPrice)}
+                  </span>
                 )}
+                <span className="text-3xl font-bold">
+                  {formatPrice(tour?.discountPrice || 0)}
+                </span>
+                <span className="text-red-100 text-sm">per person</span>
               </div>
-
-              {/* Quick highlights */}
-              {tour?.highlights && (
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  {tour.highlights.slice(0, 4).map((highlight, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
-                      <span>{highlight}</span>
-                    </div>
-                  ))}
+              {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
+                <div className="flex items-center justify-center gap-2 text-xs font-semibold mt-1">
+                  <Zap size={12} />
+                  <span>Save {formatPrice((tour.originalPrice || 0) - (tour.discountPrice || 0))} per person!</span>
                 </div>
               )}
             </div>
 
-            {/* Enhanced Date Input */}
+            {/* Compact Highlights - Only show 2 */}
+            <div className="grid grid-cols-1 gap-2">
+              {tour?.highlights?.slice(0, 2).map((highlight, index) => (
+                <div key={index} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                  <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                  <span className="text-xs text-gray-700 font-medium leading-tight">{highlight}</span>
+                </div>
+              ))}
+              {tour?.highlights && tour.highlights.length > 2 && (
+                <div className="text-xs text-red-600 font-medium text-center">
+                  +{tour.highlights.length - 2} more benefits included
+                </div>
+              )}
+            </div>
+
+            {/* Date Picker */}
             <div className="date-picker-dropdown">
-              <label className="block text-sm font-bold text-gray-700 mb-3">
-                <Calendar className="inline w-5 h-5 mr-2 text-red-500" />
-                When would you like to go?
-              </label>
+              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. Select your date</h3>
               <div className="relative">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
+                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                      <Calendar size={20} className="text-red-600" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-red-500 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-gray-800">
-                        {bookingData.selectedDate ?
-                          formatDate(bookingData.selectedDate) :
-                          'Select your adventure date'
-                        }
+                      <div className="font-medium text-gray-800 text-sm">
+                        {bookingData.selectedDate ? formatDate(bookingData.selectedDate) : 'Choose Date'}
                       </div>
-                      {bookingData.selectedDate && (
-                        <div className="text-sm text-gray-500">
-                          {bookingData.selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
-                        </div>
-                      )}
                     </div>
                   </div>
-                  <ChevronDown size={20} className={`text-gray-400 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={18} className={`text-gray-400 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
                 </motion.button>
-
                 <AnimatePresence>
                   {showDatePicker && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute top-full left-0 right-0 mt-2 z-30"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 right-0 mt-2 z-30 date-picker-content"
                     >
                       <CalendarWidget
                         selectedDate={bookingData.selectedDate}
@@ -1420,151 +1214,100 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
               </div>
             </div>
 
-            {/* Enhanced Participants Dropdown */}
+            {/* Participants */}
             <div className="participants-dropdown">
-              <label className="block text-sm font-bold text-gray-700 mb-3">
-                <Users className="inline w-5 h-5 mr-2 text-red-500" />
-                How many adventurers?
-              </label>
+              <h3 className="font-semibold text-gray-800 mb-2 text-sm">2. How many participants?</h3>
               <div className="relative">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={() => setShowParticipantsDropdown(!showParticipantsDropdown)}
-                  className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
+                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                      <Users size={20} className="text-red-600" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Users size={18} className="text-red-500 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-gray-800">
+                      <div className="font-medium text-gray-800 text-sm">
                         {getParticipantsText()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Tap to customize your group
                       </div>
                     </div>
                   </div>
-                  {showParticipantsDropdown ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                  <ChevronDown size={18} className={`text-gray-400 transition-transform ${showParticipantsDropdown ? 'rotate-180' : ''}`} />
                 </motion.button>
-
                 <AnimatePresence>
                   {showParticipantsDropdown && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-2xl shadow-xl z-30 p-6"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-2xl shadow-xl z-30 p-4 participants-content"
                     >
-                      <div className="space-y-6">
-                        {/* Adults */}
+                      <div className="space-y-3">
+                        {/* Adult Counter */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-                              <User size={20} className="text-red-600" />
-                            </div>
-                            <div>
-                              <div className="font-semibold text-gray-800">Adults</div>
-                              <div className="text-sm text-gray-500">Age 13+ • Full price</div>
-                            </div>
+                          <div className="flex-1 pr-3">
+                            <div className="font-medium text-gray-800 text-sm">Adults</div>
+                            <div className="text-xs text-gray-500">Age 13+ • Full price</div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('adults', false)}
                               disabled={bookingData.adults <= 1}
-                              className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 hover:border-red-400 hover:bg-red-50 transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 text-sm"
                             >
-                              <Minus size={16} />
+                              <Minus size={14} />
                             </motion.button>
-                            <span className="w-8 text-center font-bold text-lg">{bookingData.adults}</span>
+                            <span className="w-6 text-center font-bold text-sm">{bookingData.adults}</span>
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('adults', true)}
-                              className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-red-500 text-red-500 flex items-center justify-center text-sm"
                             >
-                              <Plus size={16} />
+                              <Plus size={14} />
                             </motion.button>
                           </div>
                         </div>
-
-                        {/* Children */}
+                        {/* Children Counter */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                              <Heart size={20} className="text-green-600" />
-                            </div>
-                            <div>
-                              <div className="font-semibold text-gray-800">Children</div>
-                              <div className="text-sm text-gray-500">Age 4-12 • 50% discount</div>
-                            </div>
+                          <div className="flex-1 pr-3">
+                            <div className="font-medium text-gray-800 text-sm">Children</div>
+                            <div className="text-xs text-gray-500">Age 4-12 • 50% discount</div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('children', false)}
                               disabled={bookingData.children <= 0}
-                              className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 hover:border-green-400 hover:bg-green-50 transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 text-sm"
                             >
-                              <Minus size={16} />
+                              <Minus size={14} />
                             </motion.button>
-                            <span className="w-8 text-center font-bold text-lg">{bookingData.children}</span>
+                            <span className="w-6 text-center font-bold text-sm">{bookingData.children}</span>
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('children', true)}
-                              className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-red-500 text-red-500 flex items-center justify-center text-sm"
                             >
-                              <Plus size={16} />
+                              <Plus size={14} />
                             </motion.button>
                           </div>
                         </div>
-
-                        {/* Infants */}
+                        {/* Infants Counter */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-pink-100 flex items-center justify-center">
-                              <Heart size={20} className="text-pink-600" />
-                            </div>
-                            <div>
-                              <div className="font-semibold text-gray-800">Infants</div>
-                              <div className="text-sm text-gray-500">Age 0-3 • Free</div>
-                            </div>
+                          <div className="flex-1 pr-3">
+                            <div className="font-medium text-gray-800 text-sm">Infants</div>
+                            <div className="text-xs text-gray-500">Age 0-3 • Free</div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('infants', false)}
                               disabled={bookingData.infants <= 0}
-                              className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 hover:border-pink-400 hover:bg-pink-50 transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center disabled:opacity-50 text-sm"
                             >
-                              <Minus size={16} />
+                              <Minus size={14} />
                             </motion.button>
-                            <span className="w-8 text-center font-bold text-lg">{bookingData.infants}</span>
+                            <span className="w-6 text-center font-bold text-sm">{bookingData.infants}</span>
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => handleParticipantChange('infants', true)}
-                              className="w-10 h-10 rounded-full bg-pink-500 text-white flex items-center justify-center hover:bg-pink-600 transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-red-500 text-red-500 flex items-center justify-center text-sm"
                             >
-                              <Plus size={16} />
+                              <Plus size={14} />
                             </motion.button>
-                          </div>
-                        </div>
-
-                        {/* Group size indicator */}
-                        <div className="bg-gray-50 rounded-xl p-4 text-center">
-                          <div className="text-sm text-gray-600 mb-1">Total Group Size</div>
-                          <div className="text-2xl font-bold text-gray-800">
-                            {bookingData.adults + bookingData.children + bookingData.infants}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Max: {tour?.maxGroupSize || 20} people
                           </div>
                         </div>
                       </div>
@@ -1574,42 +1317,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
               </div>
             </div>
 
-            {/* Enhanced Error Display */}
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center gap-3"
-                >
-                  <AlertCircle size={20} className="text-red-500 flex-shrink-0" />
-                  <span className="text-red-700 font-medium">{error}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Enhanced Check Availability Button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleCheckAvailability}
-              disabled={!bookingData.selectedDate || isLoading}
-              className="w-full bg-gradient-to-r from-red-500 to-orange-600 text-white font-bold py-4 rounded-2xl hover:from-red-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin" size={24} />
-                  <span>Finding Your Perfect Adventure...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={24} />
-                  <span>Check Availability & Continue</span>
-                  <ArrowRight size={20} />
-                </>
-              )}
-            </motion.button>
+            {error && (
+              <p className="text-red-500 text-center text-sm">{error}</p>
+            )}
           </motion.div>
         );
 
@@ -1621,64 +1331,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             initial="enter"
             animate="center"
             exit="exit"
+            transition={{ duration: 0.3 }}
             className="space-y-6 p-6"
           >
-            {/* Weather and Date Info */}
-            {availability?.weatherInfo && (
-              <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-2xl p-4 flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-gray-800">
-                    {formatDate(bookingData.selectedDate!)}
-                  </h4>
-                  <p className="text-sm text-gray-600">Perfect weather for your adventure!</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl">{availability.weatherInfo.icon}</div>
-                  <div className="font-semibold text-gray-800">{availability.weatherInfo.temperature}</div>
-                  <div className="text-sm text-gray-600">{availability.weatherInfo.condition}</div>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Choose Your Experience</h3>
-              <p className="text-gray-600 mb-6">Select the perfect tour option for your group of {getParticipantsText().toLowerCase()}</p>
-
-              <div className="space-y-6">
-                {availability?.tourOptions.map(option => (
-                  <TourOptionCard
-                    key={option.id}
-                    option={option}
-                    onSelect={handleTimeSlotSelect}
-                    selectedTimeSlot={bookingData.selectedTimeSlot}
-                    adults={bookingData.adults}
-                    children={bookingData.children}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Special Offers */}
-            {availability?.specialOffers && availability.specialOffers.length > 0 && (
-              <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-2xl p-6 border-2 border-red-200">
-                <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                  <Gift size={18} className="text-red-500" />
-                  Special Offers Available
-                </h4>
-                {availability.specialOffers.map(offer => (
-                  <div key={offer.id} className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-gray-800">{offer.title}</div>
-                      <div className="text-sm text-gray-600">{offer.description}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-orange-600">{offer.discount}% OFF</div>
-                      <div className="text-xs text-gray-500">Until {offer.validUntil}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Choose your experience</h2>
+            <p className="text-gray-600 mb-6">Select the best option for your group of {getParticipantsText().toLowerCase()}.</p>
+            {availability?.tourOptions.map(option => (
+              <TourOptionCard
+                key={option.id}
+                option={option}
+                onSelect={handleTimeSlotSelect}
+                selectedTimeSlot={bookingData.selectedTimeSlot}
+                adults={bookingData.adults}
+                children={bookingData.children}
+              />
+            ))}
           </motion.div>
         );
 
@@ -1690,16 +1357,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             initial="enter"
             animate="center"
             exit="exit"
+            transition={{ duration: 0.3 }}
             className="space-y-6 p-6"
           >
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Make It Even Better</h2>
-              <p className="text-gray-600">
-                Add these premium experiences to create unforgettable memories
-              </p>
-            </div>
-
-            <div className="space-y-6 max-h-96 overflow-y-auto pr-2">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Make it even better</h2>
+            <p className="text-gray-600 mb-6">Enhance your adventure with these popular add-ons.</p>
+            <div className="space-y-6">
               {availability?.addOns.map(addOn => (
                 <AddOnCard
                   key={addOn.id}
@@ -1710,37 +1373,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 />
               ))}
             </div>
-
-            {/* Add-ons Summary */}
-            {addOnsTotal > 0 && (
-              <PriceSummary
-                subtotal={0}
-                addOnsTotal={addOnsTotal}
-                total={addOnsTotal}
-                savings={Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
-                  const addOn = addOnData.find(a => a.id === addOnId);
-                  const itemQuantity = addOn?.perGuest ? bookingData.adults + bookingData.children : 1;
-                  return acc + (addOn?.savings ? addOn.savings * itemQuantity : 0);
-                }, 0)}
-                isVisible={true}
-              />
-            )}
-
-            {/* No add-ons selected message */}
-            {addOnsTotal === 0 && (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles size={32} className="text-gray-400" />
-                </div>
-                <h4 className="font-semibold text-gray-600 mb-2">No extras selected</h4>
-                <p className="text-sm text-gray-500">
-                  You can always add these later or continue with your base tour
-                </p>
-              </div>
-            )}
           </motion.div>
         );
-
       case 4:
         return (
           <motion.div
@@ -1749,179 +1383,69 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             initial="enter"
             animate="center"
             exit="exit"
+            transition={{ duration: 0.3 }}
             className="space-y-6 p-6"
           >
-            {/* Booking Summary */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-gray-200 p-6">
-              <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
-                <CheckCircle size={20} className="text-green-500" />
-                Your Adventure Summary
-              </h3>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Review & Book</h2>
+            <p className="text-gray-600 mb-6">Your adventure is ready! Confirm the details and complete your booking.</p>
 
-              {/* Tour Details */}
-              <div className="space-y-4 mb-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                    <Calendar size={20} className="text-red-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-800">
-                      {formatDate(bookingData.selectedDate!)}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Departure at {bookingData.selectedTimeSlot?.time}
-                    </div>
-                  </div>
+            {/* Summary Card */}
+            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+              <h3 className="font-bold text-gray-800 text-lg mb-4">Booking Summary</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Calendar size={18} className="text-red-500" />
+                  <span className="text-gray-600">{formatDate(bookingData.selectedDate!)} at {bookingData.selectedTimeSlot?.time}</span>
                 </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                    <Users size={20} className="text-red-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-800">{getParticipantsText()}</div>
-                    <div className="text-sm text-gray-600">Ready for adventure</div>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <Users size={18} className="text-blue-500" />
+                  <span className="text-gray-600">{getParticipantsText()}</span>
                 </div>
-
                 {Object.keys(bookingData.selectedAddOns).length > 0 && (
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <Sparkles size={20} className="text-green-600" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">
-                        {Object.values(bookingData.selectedAddOns).reduce((sum, qty) => sum + qty, 0)} Premium Add-on{Object.values(bookingData.selectedAddOns).reduce((sum, qty) => sum + qty, 0) > 1 ? 's' : ''}
-                      </div>
-                      <div className="text-sm text-gray-600">Enhanced experience included</div>
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <Sparkles size={18} className="text-purple-500" />
+                    <span className="text-gray-600">
+                      {Object.keys(bookingData.selectedAddOns).length} Add-on{Object.keys(bookingData.selectedAddOns).length > 1 ? 's' : ''}
+                    </span>
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Price Breakdown */}
-              <div className="bg-white rounded-xl p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-800 mb-3">Price Breakdown</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Adults ({bookingData.adults})</span>
-                    <span className="font-medium">{formatPrice(bookingData.adults * (bookingData.selectedTimeSlot?.price || 0))}</span>
+            {/* Price Breakdown */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <h3 className="font-bold text-gray-800 text-lg mb-4">Price Breakdown</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-gray-600">
+                  <span>Tour Price</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                {addOnsTotal > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Add-ons</span>
+                    <span>{formatPrice(addOnsTotal)}</span>
                   </div>
-                  {bookingData.children > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Children ({bookingData.children})</span>
-                      <span className="font-medium">{formatPrice(bookingData.children * (bookingData.selectedTimeSlot?.price || 0) * 0.5)}</span>
-                    </div>
-                  )}
-                  {addOnsTotal > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Premium Add-ons</span>
-                      <span className="font-medium">{formatPrice(addOnsTotal)}</span>
-                    </div>
-                  )}
-                  {totalSavings > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Total Savings</span>
-                      <span className="font-medium">-{formatPrice(totalSavings)}</span>
-                    </div>
-                  )}
-
-                  <div className="h-px bg-gray-300 my-3"></div>
-
-                  <div className="flex justify-between text-lg font-bold">
-                    <span className="text-gray-800">Total Amount</span>
-                    <motion.span
-                      key={total}
-                      initial={{ scale: 1.2, color: '#DC2626' }}
-                      animate={{ scale: 1, color: '#1F2937' }}
-                      className="text-red-600"
-                    >
-                      {formatPrice(total)}
-                    </motion.span>
-                  </div>
+                )}
+                <div className="h-px bg-gray-200 my-2"></div>
+                <div className="flex justify-between text-lg font-bold text-gray-800">
+                  <span>Total</span>
+                  <span className="text-red-600">{formatPrice(total)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Trust Indicators */}
+            {/* Trust Badges */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <div className="flex items-center gap-3">
-                  <Shield size={20} className="text-green-500" />
-                  <div>
-                    <div className="font-semibold text-green-800 text-sm">Secure Booking</div>
-                    <div className="text-xs text-green-600">SSL encrypted</div>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 bg-green-50 p-4 rounded-lg">
+                <Shield size={20} className="text-green-600" />
+                <span className="text-sm font-medium text-green-800">Secure Payment</span>
               </div>
-
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <div className="flex items-center gap-3">
-                  <Clock size={20} className="text-red-500" />
-                  <div>
-                    <div className="font-semibold text-red-800 text-sm">Free Cancellation</div>
-                    <div className="text-xs text-red-600">Up to 24h before</div>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 bg-red-50 p-4 rounded-lg">
+                <Clock size={20} className="text-red-600" />
+                <span className="text-sm font-medium text-red-800">Free Cancellation</span>
               </div>
             </div>
 
-            {/* Contact Support */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-800 mb-3">Need Help?</h4>
-              <div className="flex justify-between items-center">
-                <div className="flex gap-4">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
-                  >
-                    <Phone size={16} />
-                    Call Us
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
-                  >
-                    <MessageCircle size={16} />
-                    Live Chat
-                  </motion.button>
-                </div>
-                <div className="text-xs text-gray-500">Available 24/7</div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleFinalAction('cart')}
-                disabled={!!isProcessing}
-                className="flex items-center justify-center gap-2 py-4 border-2 border-red-500 text-red-600 font-bold rounded-2xl transition-all disabled:opacity-50 hover:bg-red-50"
-              >
-                {isProcessing === 'cart' ? (
-                  <><Loader2 className="animate-spin" size={18} /> Adding...</>
-                ) : (
-                  <><ShoppingCart size={18} /> Add to Cart</>
-                )}
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleFinalAction('checkout')}
-                disabled={!!isProcessing}
-                className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-red-500 to-orange-600 text-white font-bold rounded-2xl transition-all disabled:opacity-50 hover:from-red-600 hover:to-orange-700 shadow-lg"
-              >
-                {isProcessing === 'checkout' ? (
-                  <><Loader2 className="animate-spin" size={18} /> Processing...</>
-                ) : (
-                  <><CreditCard size={18} /> Book Now</>
-                )}
-              </motion.button>
-            </div>
           </motion.div>
         );
 
@@ -1931,8 +1455,6 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   };
 
   if (!tour) return null;
-
-  const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
 
   return (
     <AnimatePresence>
@@ -1954,182 +1476,118 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           />
 
           <motion.div
-            className="relative bg-white h-full w-full max-w-md shadow-2xl flex flex-col overflow-hidden"
+            className="relative bg-white h-full w-full max-w-md shadow-2xl flex flex-col"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
-            {/* Enhanced Header with gradient */}
-            <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white p-4 shadow-lg sticky top-0 z-20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Star size={16} className="text-yellow-300 fill-current" />
-                    <span className="font-bold">{tour.rating}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/30"></div>
-                  <div className="flex items-center gap-1">
-                    <Eye size={16} />
-                    <span className="font-medium">{tour.bookings?.toLocaleString()}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/30"></div>
-                  <div className="flex items-center gap-1">
-                    <Clock size={16} />
-                    <span className="font-medium">{tour.duration}</span>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={onClose}
-                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </motion.button>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                {currentStep > 1 && (
+                  <motion.button
+                    onClick={handleBack}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <ArrowLeft size={20} />
+                  </motion.button>
+                )}
+                <h3 className="font-bold text-gray-800 text-lg">
+                  {currentStep === 1 ? 'Start Your Booking' : 'Customize Your Trip'}
+                </h3>
               </div>
+              <motion.button
+                onClick={onClose}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </motion.button>
             </div>
 
-            {/* Compact Step Progress */}
-            <div className="bg-white shadow-sm sticky top-[72px] z-20">
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center justify-between relative">
-                  {/* Compact Progress Line */}
-                  <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 rounded-full">
-                    <motion.div
-                      className="h-full bg-red-500 rounded-full"
-                      initial={{ width: '0%' }}
-                      animate={{ width: `${((currentStep - 1) / (3)) * 100}%` }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    />
-                  </div>
-                  {[
-                    { icon: Calendar, label: 'Date' },
-                    { icon: Clock, label: 'Tours' },
-                    { icon: Sparkles, label: 'Extras' },
-                    { icon: CreditCard, label: 'Book' }
-                  ].map((step, index) => {
-                    const IconComponent = step.icon;
-                    const isActive = currentStep === index + 1;
-                    const isCompleted = currentStep > index + 1;
-                    return (
-                      <div key={index} className="relative flex flex-col items-center z-10">
-                        <motion.div
-                          animate={{
-                            scale: isActive ? 1.1 : 1,
-                          }}
-                          transition={{ duration: 0.2 }}
-                          className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 transition-all ${
-                            isCompleted
-                              ? 'bg-green-500 text-white'
-                              : isActive
-                                ? 'bg-red-500 text-white'
-                                : 'bg-white border-2 border-gray-300 text-gray-400'
-                          }`}
-                        >
-                          {isCompleted ? <Check size={12} /> : <IconComponent size={12} />}
-                        </motion.div>
-                        <div className={`text-xs font-medium ${
-                          isActive ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                        }`}>
-                          {step.label}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Content with enhanced scrolling and bottom padding */}
-            <div
-              ref={(el) => {
-                if (el && currentStep === 3) {
-                  el.scrollTop = 0;
-                }
-              }}
-              className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pb-28"
-            >
+            {/* Fix: The combined content container */}
+            <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 {renderStepContent()}
               </AnimatePresence>
             </div>
 
-            {/* Enhanced Footer - Compact Version */}
+            {/* Fix: The combined footer with conditional rendering */}
             <AnimatePresence>
-              {currentStep > 1 && bookingData.selectedTimeSlot && (
+              {/* Fixed Action Button for Step 1 */}
+              {currentStep === 1 && (
                 <motion.div
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 50 }}
-                  className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-20 shadow-lg"
+                  className="bg-white border-t border-gray-200 p-4"
                 >
-                  {/* Compact Price and Info Bar */}
-                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-                    <div className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold text-gray-800">{formatPrice(total)}</span>
-                        {totalSavings > 0 && (
-                          <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
-                            Save {formatPrice(totalSavings)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {formatDate(bookingData.selectedDate!).split(',')[0]} • {bookingData.selectedTimeSlot?.time}
-                      </div>
+                  <motion.button
+                    onClick={handleCheckAvailability}
+                    disabled={!bookingData.selectedDate || (bookingData.adults + bookingData.children + bookingData.infants === 0) || isLoading}
+                    className="w-full bg-red-600 text-white font-bold py-3 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="animate-spin" size={18} />
+                        <span>Checking Availability...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={18} />
+                        <span>Find My Adventure</span>
+                      </>
+                    )}
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {/* Footer with Price and Actions - Only for Steps 2+ */}
+              {currentStep > 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 50 }}
+                  className="bg-white border-t border-gray-200 p-4 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="block font-bold text-lg text-red-600">{formatPrice(total)}</span>
+                      <span className="text-xs text-gray-500">Total Price</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {getParticipantsText()}
-                    </div>
-                  </div>
-
-                  {/* Compact Navigation */}
-                  <div className="px-4 py-3">
-                    <div className="flex justify-between items-center">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleBack}
-                        className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        <ArrowLeft size={16} />
-                        Back
-                      </motion.button>
-
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 4 }).map((_, index) => (
-                          <div
-                            key={index}
-                            className={`w-1.5 h-1.5 rounded-full transition-all ${
-                              index + 1 <= currentStep ? 'bg-red-500' : 'bg-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-
+                    <div className="flex gap-2">
                       {currentStep < 4 && (
                         <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
                           onClick={handleNext}
-                          disabled={isLoading}
-                          className="flex items-center gap-1 bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 transition-all text-sm"
+                          disabled={isLoading || (currentStep === 2 && !bookingData.selectedTimeSlot)}
+                          className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-bold rounded-full disabled:opacity-50"
                         >
-                          {currentStep === 3 ? 'Review' : 'Continue'}
-                          <ArrowRight size={16} />
+                          Continue <ArrowRight size={18} />
                         </motion.button>
+                      )}
+                      {currentStep === 4 && (
+                        <>
+                          <motion.button
+                            onClick={() => handleFinalAction('cart')}
+                            disabled={!!isProcessing}
+                            className="flex items-center gap-2 px-4 py-2 border border-red-600 text-red-600 font-bold rounded-full disabled:opacity-50"
+                          >
+                            <ShoppingCart size={18} /> Add to Cart
+                          </motion.button>
+                          <motion.button
+                            onClick={() => handleFinalAction('checkout')}
+                            disabled={!!isProcessing}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-full disabled:opacity-50"
+                          >
+                            <CreditCard size={18} /> Book Now
+                          </motion.button>
+                        </>
                       )}
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Ultra-compact Step indicator at very bottom */}
-            <div className="bg-gray-100 text-center py-1 text-xs text-gray-500 fixed bottom-0 left-0 right-0 z-30">
-              Step {currentStep} of 4
-            </div>
           </motion.div>
         </motion.div>
       )}
