@@ -1,0 +1,161 @@
+{
+  "wipeData": false,
+  "destinations": [
+    {
+      "name": "Cairo",
+      "slug": "cairo",
+      "image": "https://images.unsplash.com/photo-1539650116574-75c0c6d73b0e?w=500",
+      "description": "Egypt's bustling capital city"
+    },
+    {
+      "name": "Luxor", 
+      "slug": "luxor",
+      "image": "https://images.unsplash.com/photo-1523475000675-aec7f6c3c86e?w=500",
+      "description": "Ancient Thebes and Valley of the Kings"
+    },
+    {
+      "name": "Aswan",
+      "slug": "aswan",
+      "image": "https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=500", 
+      "description": "Southern gateway to ancient Nubia"
+    },
+    {
+      "name": "Alexandria",
+      "slug": "alexandria", 
+      "image": "https://images.unsplash.com/photo-1527004760525-b501db21baad?w=500",
+      "description": "Mediterranean coastal jewel"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Historical Tours",
+      "slug": "historical"
+    },
+    {
+      "name": "Family Friendly",
+      "slug": "family-friendly" 
+    },
+    {
+      "name": "Adventure Tours",
+      "slug": "adventure"
+    },
+    {
+      "name": "Cultural Experiences",
+      "slug": "cultural"
+    },
+    {
+      "name": "Romantic Getaways",
+      "slug": "romantic"
+    },
+    {
+      "name": "Food & Dining",
+      "slug": "food-dining"
+    }
+  ],
+  "tours": [
+    {
+      "title": "Pyramids of Giza Private Tour",
+      "slug": "pyramids-giza-private-tour",
+      "description": "Explore the last standing wonder of the ancient world with a private guide",
+      "price": 89,
+      "discountPrice": 69,
+      "duration": "4 hours",
+      "maxGroupSize": 8,
+      "destinationName": "Cairo",
+      "categoryNames": ["Historical Tours", "Family Friendly"],
+      "featured": true,
+      "image": "https://images.unsplash.com/photo-1539650116574-75c0c6d73b0e?w=800",
+      "images": [
+        "https://images.unsplash.com/photo-1539650116574-75c0c6d73b0e?w=800",
+        "https://images.unsplash.com/photo-1528209284158-2eb1d78a5cb2?w=800"
+      ]
+    },
+    {
+      "title": "Luxor Temple & Valley of Kings",
+      "slug": "luxor-temple-valley-kings",
+      "description": "Journey through ancient Egyptian temples and royal tombs",
+      "price": 120,
+      "discountPrice": 95,
+      "duration": "6 hours", 
+      "maxGroupSize": 12,
+      "destinationName": "Luxor",
+      "categoryNames": ["Historical Tours", "Cultural Experiences"],
+      "featured": true,
+      "image": "https://images.unsplash.com/photo-1523475000675-aec7f6c3c86e?w=800"
+    },
+    {
+      "title": "Nile River Dinner Cruise",
+      "slug": "nile-dinner-cruise",
+      "description": "Romantic dinner cruise with traditional entertainment",
+      "price": 65,
+      "duration": "3 hours",
+      "maxGroupSize": 50,
+      "destinationName": "Cairo", 
+      "categoryNames": ["Romantic Getaways", "Food & Dining"],
+      "featured": false,
+      "image": "https://images.unsplash.com/photo-1568147097732-6d33c3f8e39f?w=800"
+    },
+    {
+      "title": "Camel Safari Adventure", 
+      "slug": "camel-safari-adventure",
+      "description": "Desert adventure with camel riding and Bedouin experience",
+      "price": 85,
+      "discountPrice": 70,
+      "duration": "5 hours",
+      "maxGroupSize": 15,
+      "destinationName": "Aswan",
+      "categoryNames": ["Adventure Tours", "Cultural Experiences"], 
+      "featured": false,
+      "image": "https://images.unsplash.com/photo-1543832923-44667a44c804?w=800"
+    },
+    {
+      "title": "Alexandria Historical Walking Tour",
+      "slug": "alexandria-walking-tour", 
+      "description": "Explore the ancient Library of Alexandria and coastal landmarks",
+      "price": 45,
+      "duration": "3 hours",
+      "maxGroupSize": 20,
+      "destinationName": "Alexandria",
+      "categoryNames": ["Historical Tours", "Family Friendly"],
+      "featured": false,
+      "image": "https://images.unsplash.com/photo-1527004760525-b501db21baad?w=800"
+    },
+    {
+      "title": "Egyptian Cooking Class Experience",
+      "slug": "egyptian-cooking-class",
+      "description": "Learn to cook authentic Egyptian dishes with local ingredients", 
+      "price": 55,
+      "duration": "4 hours",
+      "maxGroupSize": 10,
+      "destinationName": "Cairo",
+      "categoryNames": ["Food & Dining", "Cultural Experiences"],
+      "featured": true,
+      "image": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800"
+    },
+    {
+      "title": "Family Fun at Egyptian Museum",
+      "slug": "family-egyptian-museum",
+      "description": "Interactive family tour of Egypt's most famous museum",
+      "price": 35,
+      "duration": "2.5 hours", 
+      "maxGroupSize": 25,
+      "destinationName": "Cairo",
+      "categoryNames": ["Family Friendly", "Historical Tours"],
+      "featured": false,
+      "image": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800"
+    },
+    {
+      "title": "Romantic Felucca Sunset Sail",
+      "slug": "romantic-felucca-sunset",
+      "description": "Private traditional sailboat experience at sunset",
+      "price": 75,
+      "discountPrice": 60,
+      "duration": "2 hours",
+      "maxGroupSize": 4,
+      "destinationName": "Aswan", 
+      "categoryNames": ["Romantic Getaways", "Adventure Tours"],
+      "featured": true,
+      "image": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800"
+    }
+  ]
+}

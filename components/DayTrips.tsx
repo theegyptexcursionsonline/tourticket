@@ -72,7 +72,6 @@ export default function DayTripsSection() {
       setFetchError(null);
 
       try {
-        // Optional: add Authorization header if you store a token in localStorage
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const headers: Record<string, string> = {
           'Accept': 'application/json',
@@ -82,18 +81,13 @@ export default function DayTripsSection() {
           headers['Authorization'] = `Bearer ${token}`;
         }
 
-        // If your API requires cookies for auth, uncomment credentials:
-        // const response = await fetch('/api/admin/tours', { headers, credentials: 'include' });
-
         const response = await fetch('/api/admin/tours', {
           headers,
         });
 
-        // Always read body as text first so we can safely log/parsethe content even on error
         const bodyText = await response.text();
 
         if (!response.ok) {
-          // try parse JSON body, otherwise keep as text
           let parsedBody: any = bodyText;
           try { parsedBody = JSON.parse(bodyText); } catch (e) { /* keep text */ }
 
@@ -104,15 +98,11 @@ export default function DayTripsSection() {
             body: parsedBody,
           });
 
-          // set user-facing error (short)
           const shortBody = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody).slice(0, 300);
           setFetchError(`Server returned ${response.status} ${response.statusText}: ${shortBody}`);
-
-          // throw so we hit catch block if needed
           throw new Error(`API ${response.status} ${response.statusText} - ${shortBody}`);
         }
 
-        // Parse JSON
         const data = bodyText ? JSON.parse(bodyText) : null;
 
         if (!data) {
@@ -123,22 +113,20 @@ export default function DayTripsSection() {
         }
 
         if (data.success) {
-          // Filter to category slug 'day-trips' as intended
-          const dayTrips = (data.data || []).filter((t: Tour) =>
-            t.categories && t.categories.some((cat: any) => cat.slug === 'day-trips')
-          );
+          // FIXED: Changed from filtering by categories (plural) to category (singular)
+          const dayTrips = (data.data || []).filter((t: Tour) => {
+            // Check if the tour has a populated category with slug 'day-trips'
+            return t.category && (t.category as any).slug === 'day-trips';
+          });
           setTours(dayTrips);
         } else {
-          // API responded but signalled failure
           setFetchError(data.error ? String(data.error) : 'API returned success:false');
           console.error('API returned success:false for /api/admin/tours', data);
           setTours([]);
         }
       } catch (error: any) {
-        // Generic network / parsing error
         console.error('Failed to fetch tours:', error);
         if (!fetchError) {
-          // Only set if not already set from non-ok response above
           setFetchError(error?.message ? String(error.message) : 'Unknown error while fetching tours.');
         }
       } finally {
@@ -163,6 +151,37 @@ export default function DayTripsSection() {
     if (scrollContainer.current) {
       const scrollAmount = direction === 'left' ? -294 : 294; // Card width (270) + gap (24)
       scrollContainer.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const retryFetch = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    
+    try {
+      const response = await fetch('/api/admin/tours');
+      const text = await response.text();
+      if (!response.ok) {
+        let parsed = text;
+        try { parsed = JSON.parse(text); } catch (e) {}
+        setFetchError(`Server returned ${response.status} ${response.statusText}: ${typeof parsed === 'string' ? parsed : JSON.stringify(parsed).slice(0, 300)}`);
+      } else {
+        const data = text ? JSON.parse(text) : null;
+        if (data?.success) {
+          // FIXED: Same fix here for retry function
+          const dayTrips = (data.data || []).filter((t: Tour) => {
+            return t.category && (t.category as any).slug === 'day-trips';
+          });
+          setTours(dayTrips);
+          setFetchError(null);
+        } else {
+          setFetchError(data?.error ? String(data.error) : 'API returned success:false');
+        }
+      }
+    } catch (err: any) {
+      setFetchError(err?.message ? String(err.message) : 'Unknown error while retrying.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -200,48 +219,14 @@ export default function DayTripsSection() {
 
           <div className="mt-8">
             <div className="inline-block bg-white p-6 rounded-xl shadow">
-              <h3 className="text-xl font-semibold text-slate-800">Couldn’t load day trips</h3>
+              <h3 className="text-xl font-semibold text-slate-800">Couldn't load day trips</h3>
               <p className="mt-2 text-slate-600">We had trouble loading tours. Try again later.</p>
               <pre className="mt-4 text-xs text-left p-3 bg-slate-100 rounded max-w-[720px] overflow-auto break-words">
                 {fetchError}
               </pre>
               <div className="mt-4">
                 <button
-                  onClick={() => {
-                    setIsLoading(true);
-                    setFetchError(null);
-                    // re-run effect by calling fetch manually — simplest is to reload the page:
-                    // location.reload();
-                    // But let's try re-invoking useEffect by toggling a small state would be ideal.
-                    // For now quick solution:
-                    (async () => {
-                      try {
-                        // force re-run by programmatic reload of data (simple approach)
-                        const response = await fetch('/api/admin/tours');
-                        const text = await response.text();
-                        if (!response.ok) {
-                          let parsed = text;
-                          try { parsed = JSON.parse(text); } catch (e) {}
-                          setFetchError(`Server returned ${response.status} ${response.statusText}: ${typeof parsed === 'string' ? parsed : JSON.stringify(parsed).slice(0, 300)}`);
-                        } else {
-                          const data = text ? JSON.parse(text) : null;
-                          if (data?.success) {
-                            const dayTrips = (data.data || []).filter((t: Tour) =>
-                              t.categories && t.categories.some((cat: any) => cat.slug === 'day-trips')
-                            );
-                            setTours(dayTrips);
-                            setFetchError(null);
-                          } else {
-                            setFetchError(data?.error ? String(data.error) : 'API returned success:false');
-                          }
-                        }
-                      } catch (err: any) {
-                        setFetchError(err?.message ? String(err.message) : 'Unknown error while retrying.');
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    })();
-                  }}
+                  onClick={retryFetch}
                   className="bg-red-600 text-white font-bold py-2 px-4 rounded-full hover:bg-red-700 transition"
                 >
                   Retry
@@ -254,7 +239,7 @@ export default function DayTripsSection() {
     );
   }
 
-  // If no day trips found, render nothing (same intent as before)
+  // If no day trips found, render nothing
   if (!isLoading && tours.length === 0) {
     return null;
   }

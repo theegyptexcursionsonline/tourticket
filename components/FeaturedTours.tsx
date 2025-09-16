@@ -1,5 +1,4 @@
 // components/FeaturedTours.tsx
-// components/FeaturedTours.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -99,18 +98,35 @@ export default function FeaturedTours() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTours = async () => {
       try {
         const response = await fetch('/api/admin/tours');
         const data = await response.json();
-        if (data.success) {
-          const featured = data.data.filter((t: Tour) => t.isFeatured);
-          setTours(featured);
+        
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
         }
-      } catch (error) {
+        
+        if (data.success) {
+          // FIXED: Handle both isFeatured boolean field and fallback to first few tours
+          let featured = data.data.filter((t: Tour) => t.isFeatured === true);
+          
+          // If no tours are marked as featured, take the first 6 tours as fallback
+          if (featured.length === 0) {
+            console.log('No tours marked as featured, using first 6 tours as fallback');
+            featured = data.data.slice(0, 6);
+          }
+          
+          setTours(featured);
+        } else {
+          throw new Error(data.error || 'API returned success: false');
+        }
+      } catch (error: any) {
         console.error('Failed to fetch tours:', error);
+        setFetchError(error.message || 'Failed to fetch tours');
       } finally {
         setIsLoading(false);
       }
@@ -150,8 +166,39 @@ export default function FeaturedTours() {
     );
   }
 
+  if (fetchError) {
+    return (
+      <section className="bg-white py-20 font-sans">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="text-center">
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">Featured Tours</h2>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+              <p className="text-red-800 font-medium">Failed to load featured tours</p>
+              <p className="text-red-600 text-sm mt-2">{fetchError}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   if (tours.length === 0) {
-    return null;
+    return (
+      <section className="bg-white py-20 font-sans">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="text-center">
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">Featured Tours</h2>
+            <p className="text-gray-600">No featured tours available at the moment.</p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (

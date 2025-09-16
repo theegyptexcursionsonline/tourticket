@@ -1,5 +1,6 @@
 // lib/models/Tour.ts
 import mongoose, { Document, Schema, Model } from 'mongoose';
+import './Review'; // Add this line to register the Review model
 
 // --- New Interface for Availability Slots ---
 export interface IAvailabilitySlot {

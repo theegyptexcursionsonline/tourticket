@@ -69,14 +69,14 @@ export async function POST(request: Request) {
           continue;
         }
 
-        toursToInsert.push({
-          ...restOfTourData,
-          slug: restOfTourData.slug || generateSlug(restOfTourData.title),
-          destination: destId,
-          categories: categoryIds,
-          image: restOfTourData.image || '/placeholder.jpg',
-          images: restOfTourData.images || [],
-        });
+    toursToInsert.push({
+  ...restOfTourData,
+  slug: restOfTourData.slug || generateSlug(restOfTourData.title),
+  destination: destId,
+  category: categoryIds[0], // ✅ Use singular 'category' and take first category
+  image: restOfTourData.image || '/placeholder.jpg',
+  images: restOfTourData.images || [],
+});
       }
 
       if (toursToInsert.length > 0) {
