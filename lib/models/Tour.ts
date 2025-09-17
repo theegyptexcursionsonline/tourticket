@@ -41,6 +41,9 @@ export interface ITour extends Document {
   isFeatured: boolean;
   reviews: mongoose.Schema.Types.ObjectId[];
   availability: IAvailability; // --- ADDED THIS FIELD ---
+  whatsIncluded?: string[];
+  whatsNotIncluded?: string[];
+  itinerary?: { day: number; title: string; description: string }[];
 }
 
 // --- New Schemas for Availability ---
@@ -75,13 +78,13 @@ const AvailabilitySchema = new Schema<IAvailability>({
 // --- Main Tour Schema ---
 const TourSchema: Schema<ITour> = new Schema({
   title: { type: String, required: true, trim: true },
-  slug: { type: String, required: true, unique: true },
+  slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
   destination: { type: mongoose.Schema.Types.ObjectId, ref: 'Destination', required: true },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
-  description: { type: String, required: true },
+  description: { type: String, required: true, trim: true },
   price: { type: Number, required: true },
   discountPrice: { type: Number },
-  duration: { type: String, required: true },
+  duration: { type: String, required: true, trim: true },
   images: [{ type: String }],
   includes: [{ type: String }],
   highlights: [{ type: String }],
@@ -89,6 +92,13 @@ const TourSchema: Schema<ITour> = new Schema({
   isFeatured: { type: Boolean, default: false },
   reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review' }],
   availability: { type: AvailabilitySchema, required: true, default: () => ({}) }, // --- ADDED THIS FIELD ---
+  whatsIncluded: [{ type: String }],
+  whatsNotIncluded: [{ type: String }],
+  itinerary: [{ 
+    day: { type: Number, required: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, required: true, trim: true }
+  }],
 }, { timestamps: true });
 
 const Tour: Model<ITour> = mongoose.models.Tour || mongoose.model<ITour>('Tour', TourSchema);

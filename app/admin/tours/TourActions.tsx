@@ -105,10 +105,12 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
           aria-labelledby="options-menu"
         >
           <div className="py-1">
+            {/* FIXED: Ensure consistent URL structure */}
             <Link
               href={`/admin/tours/edit/${tourId}`}
               className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
               role="menuitem"
+              onClick={() => setIsOpen(false)} // Close menu when clicking edit
             >
               <Edit className="w-4 h-4 text-slate-500" />
               <span>Edit</span>

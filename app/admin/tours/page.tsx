@@ -6,11 +6,19 @@ import Link from 'next/link';
 import { ToursListClient } from './ToursListClient';
 
 async function getTours(): Promise<PopulatedTour[]> {
-  await dbConnect();
-  const tours = await Tour.find({})
-    .populate('destination')
-    .sort({ createdAt: -1 });
-  return JSON.parse(JSON.stringify(tours));
+  try {
+    await dbConnect();
+    const tours = await Tour.find({})
+      .populate('destination')
+      .populate('category') // Added missing category population
+      .sort({ createdAt: -1 })
+      .lean(); // Using .lean() for better performance since we're serializing anyway
+    
+    return JSON.parse(JSON.stringify(tours));
+  } catch (error) {
+    console.error('Failed to fetch tours:', error);
+    return []; // Return empty array on error instead of throwing
+  }
 }
 
 export default async function ToursPage() {
@@ -25,7 +33,6 @@ export default async function ToursPage() {
             Create, edit and manage your tours. Use search or switch views below.
           </p>
         </div>
-
         <Link
           href="/admin/tours/new"
           className="inline-flex items-center gap-2 bg-gradient-to-tr from-sky-600 to-indigo-600 text-white px-4 py-2 rounded-md shadow hover:opacity-95 transition"
@@ -33,9 +40,15 @@ export default async function ToursPage() {
           Add New Tour
         </Link>
       </div>
-
-      {/* Pass data into the client component */}
-      <ToursListClient tours={tours} />
+      
+      {/* Show message if no tours */}
+      {tours.length === 0 ? (
+        <div className="text-center py-8 text-slate-500">
+          <p>No tours found. Create your first tour to get started.</p>
+        </div>
+      ) : (
+        <ToursListClient tours={tours} />
+      )}
     </div>
   );
 }

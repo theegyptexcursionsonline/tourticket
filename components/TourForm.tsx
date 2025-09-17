@@ -122,25 +122,32 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
 // --- Main Tour Form Component (MODIFIED) ---
 export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
   const router = useRouter();
+  
+  // Add slug management state
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
   const [formData, setFormData] = useState<any>({
-    title: tourToEdit?.title || '',
-    slug: tourToEdit?.slug || '',
-    description: tourToEdit?.description || '',
-    longDescription: tourToEdit?.longDescription || '',
-    duration: tourToEdit?.duration || '',
-    discountPrice: tourToEdit?.discountPrice || '',
-    originalPrice: tourToEdit?.originalPrice || '',
-    destination: tourToEdit?.destination?._id || '',
-    categories: tourToEdit?.categories?.[0]?._id ? [tourToEdit.categories[0]._id] : [],
-    image: tourToEdit?.image || '',
-    images: tourToEdit?.images || [],
-    highlights: tourToEdit?.highlights?.length > 0 ? tourToEdit.highlights : [''],
-    includes: tourToEdit?.includes?.length > 0 ? tourToEdit.includes : [''],
-    tags: tourToEdit?.tags?.join(', ') || '',
-    isFeatured: tourToEdit?.isFeatured || false,
-    // --- ADDED: Initialize availability ---
-    availability: tourToEdit?.availability || { 
+    title: '',
+    slug: '',
+    description: '',
+    longDescription: '',
+    duration: '',
+    discountPrice: '',
+    originalPrice: '',
+    destination: '',
+    categories: [],
+    image: '',
+    images: [],
+    highlights: [''],
+    includes: [''],
+    tags: '',
+    isFeatured: false,
+    // Add new array fields
+    whatsIncluded: [''],
+    whatsNotIncluded: [''],
+    itinerary: [{ day: 1, title: '', description: '' }],
+    // Initialize availability
+    availability: { 
         type: 'daily', 
         availableDays: [0, 1, 2, 3, 4, 5, 6], 
         slots: [{ time: '10:00', capacity: 10 }] 
@@ -153,9 +160,20 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    // Correctly initialize availability for existing tours
+    // Update useEffect for data population with defensive checks
     if (tourToEdit) {
-        const initialData = { ...tourToEdit };
+        setIsSlugManuallyEdited(true); // Prevent overwriting existing slug
+        const initialData = {
+            ...tourToEdit,
+            destination: tourToEdit.destination?._id?.toString() || '',
+            category: tourToEdit.category?._id?.toString() || '',
+            categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : [],
+            whatsIncluded: tourToEdit.whatsIncluded?.length > 0 ? tourToEdit.whatsIncluded : [''],
+            whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
+            itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
+        };
+        
+        // Ensure availability is properly initialized
         if (!initialData.availability || !initialData.availability.slots) {
             initialData.availability = {
                 type: 'daily',
@@ -163,7 +181,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 slots: [{ time: '10:00', capacity: 10 }]
             };
         }
-        setFormData(prev => ({...prev, ...initialData}));
+        setFormData(initialData);
     }
 
     const fetchData = async () => {
@@ -186,28 +204,70 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     fetchData();
   }, [tourToEdit]);
 
-  // --- ADDED: Handler to update availability from child component ---
+  // Handler to update availability from child component
   const setAvailability = (availabilityData: any) => {
     setFormData((prev: any) => ({ ...prev, availability: availabilityData }));
   };
   
-  // --- All your other handlers (handleChange, handleListChange, etc.) remain unchanged ---
+  // Enhanced handleChange with automatic slug generation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
     const { name, value, type } = target;
+    
     if (type === 'checkbox') {
       setFormData((p: any) => ({ ...p, [name]: (target as HTMLInputElement).checked }));
       return;
     }
+    
     if (name === 'categories') {
       setFormData((p: any) => ({ ...p, [name]: [value] }));
     } else {
       setFormData((p: any) => ({ ...p, [name]: value }));
     }
+    
+    // Implement automatic slug generation
     if (name === 'title') {
-      const newSlug = value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      setFormData((p: any) => ({ ...p, slug: newSlug }));
+      if (!isSlugManuallyEdited) {
+        const newSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        setFormData((p: any) => ({ ...p, slug: newSlug }));
+      }
     }
+    
+    if (name === 'slug') {
+      setIsSlugManuallyEdited(true);
+    }
+  };
+
+  // Handler for textarea array fields (whatsIncluded, whatsNotIncluded)
+  const handleTextAreaArrayChange = (fieldName: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const arrayValue = value.split('\n');
+    setFormData((p: any) => ({ ...p, [fieldName]: arrayValue }));
+  };
+
+  // Handler for itinerary changes
+  const handleItineraryChange = (index: number, field: string, value: string | number) => {
+    const updatedItinerary = [...formData.itinerary];
+    updatedItinerary[index] = { ...updatedItinerary[index], [field]: value };
+    setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
+  };
+
+  const addItineraryItem = () => {
+    const newDay = formData.itinerary.length + 1;
+    setFormData((p: any) => ({ 
+      ...p, 
+      itinerary: [...p.itinerary, { day: newDay, title: '', description: '' }] 
+    }));
+  };
+
+  const removeItineraryItem = (index: number) => {
+    if (formData.itinerary.length <= 1) return;
+    const updatedItinerary = formData.itinerary.filter((_: any, i: number) => i !== index);
+    // Re-number the days
+    updatedItinerary.forEach((item: any, i: number) => {
+      item.day = i + 1;
+    });
+    setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
   };
 
   const handleListChange = (index: number, value: string, field: 'highlights' | 'includes') => {
@@ -258,12 +318,25 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    // Clean up data on submission
+    const cleanedData = { ...formData };
+    
+    // Filter empty strings from array fields
+    if (cleanedData.whatsIncluded) {
+      cleanedData.whatsIncluded = cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '');
+    }
+    if (cleanedData.whatsNotIncluded) {
+      cleanedData.whatsNotIncluded = cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '');
+    }
+    
     const apiEndpoint = tourToEdit ? `/api/admin/tours/${tourToEdit._id}` : '/api/admin/tours';
     const method = tourToEdit ? 'PUT' : 'POST';
     const payload = {
-      ...formData,
-      tags: formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+      ...cleanedData,
+      tags: cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
     };
+    
     try {
       const res = await fetch(apiEndpoint, {
         method,
@@ -308,7 +381,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             </div>
         </div>
 
-        {/* --- All your existing form fields --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
                 <FormLabel>Title</FormLabel>
@@ -409,7 +481,77 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             </div>
         </div>
         
-        {/* --- ADDED: Availability Manager Section --- */}
+        {/* NEW: Array fields section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <FormLabel>What's Included (List)</FormLabel>
+                <textarea 
+                    value={formData.whatsIncluded.join('\n')} 
+                    onChange={(e) => handleTextAreaArrayChange('whatsIncluded', e)}
+                    rows={5} 
+                    className={`${inputBase} resize-y`} 
+                    placeholder="Enter each item on a new line"
+                />
+                <SmallHint>Each line will be a separate item in the list.</SmallHint>
+            </div>
+            <div>
+                <FormLabel>What's Not Included (List)</FormLabel>
+                <textarea 
+                    value={formData.whatsNotIncluded.join('\n')} 
+                    onChange={(e) => handleTextAreaArrayChange('whatsNotIncluded', e)}
+                    rows={5} 
+                    className={`${inputBase} resize-y`} 
+                    placeholder="Enter each item on a new line"
+                />
+                <SmallHint>Each line will be a separate item in the list.</SmallHint>
+            </div>
+        </div>
+
+        {/* NEW: Itinerary section */}
+        <div className="space-y-4">
+            <FormLabel>Itinerary</FormLabel>
+            <div className="space-y-4">
+                {formData.itinerary.map((day: any, i: number) => (
+                    <div key={i} className="border border-slate-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-slate-900">Day {day.day}</h4>
+                            <button 
+                                type="button" 
+                                disabled={formData.itinerary.length <= 1}
+                                onClick={() => removeItineraryItem(i)} 
+                                className="text-rose-500 hover:text-rose-700 disabled:opacity-50"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <input 
+                                    value={day.title} 
+                                    onChange={(e) => handleItineraryChange(i, 'title', e.target.value)}
+                                    className={`${inputBase}`} 
+                                    placeholder="Day title" 
+                                />
+                            </div>
+                            <div>
+                                <textarea 
+                                    value={day.description} 
+                                    onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
+                                    className={`${inputBase} resize-none`} 
+                                    rows={2}
+                                    placeholder="Day description" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                <button type="button" onClick={addItineraryItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-slate-200 shadow-sm text-sm">
+                    <Plus className="w-4 h-4" /> Add Day
+                </button>
+            </div>
+        </div>
+        
+        {/* Availability Manager Section */}
         {formData.availability && (
             <AvailabilityManager
                 availability={formData.availability}
@@ -417,8 +559,37 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             />
         )}
         
+        {/* Image upload sections - keeping minimal for now */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Image upload sections remain here */}
+            <div>
+                <FormLabel>Main Image</FormLabel>
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, true)} className={inputBase} />
+                {formData.image && (
+                    <div className="mt-2">
+                        <img src={formData.image} alt="Main" className="w-20 h-20 object-cover rounded" />
+                    </div>
+                )}
+            </div>
+            <div>
+                <FormLabel>Gallery Images</FormLabel>
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, false)} className={inputBase} />
+                {formData.images.length > 0 && (
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                        {formData.images.map((img: string, i: number) => (
+                            <div key={i} className="relative">
+                                <img src={img} alt={`Gallery ${i}`} className="w-20 h-20 object-cover rounded" />
+                                <button 
+                                    type="button" 
+                                    onClick={() => removeGalleryImage(img)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-slate-100 pt-6 mt-6">

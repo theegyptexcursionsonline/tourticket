@@ -51,6 +51,29 @@ export interface AddOn {
   price: number;
 }
 
+// NEW: Availability interfaces to match our Tour model
+export interface AvailabilitySlot {
+  time: string;
+  capacity: number;
+}
+
+export interface Availability {
+  type: 'daily' | 'date_range' | 'specific_dates';
+  availableDays?: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
+  startDate?: string;
+  endDate?: string;
+  specificDates?: string[];
+  slots: AvailabilitySlot[];
+  blockedDates?: string[];
+}
+
+// NEW: Itinerary item interface
+export interface ItineraryItem {
+  day: number;
+  title: string;
+  description: string;
+}
+
 export interface Tour {
   _id: string;
   id: number | string;
@@ -69,6 +92,10 @@ export interface Tour {
   highlights?: string[];
   includes?: string[];
   excludes?: string[];
+  // NEW: Added missing fields from our enhanced model
+  whatsIncluded?: string[];
+  whatsNotIncluded?: string[];
+  itinerary?: ItineraryItem[];
   meetingPoint?: string;
   languages?: string[];
   ageRestriction?: string;
@@ -80,13 +107,22 @@ export interface Tour {
     address: string;
   };
   destination?: Destination;
-  categories?: Category[];
+  category?: Category; // FIXED: Changed from categories array to singular category to match our model
   destinationId: string;
   categoryIds: string[];
-  availability?: any;
+  availability?: Availability; // FIXED: Now properly typed instead of any
   featured?: boolean;
-  quantity?: number; // General quantity, for compatibility
-  addOns?: AddOn[]; // Optional addons for a tour
+  quantity?: number;
+  addOns?: AddOn[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// NEW: PopulatedTour interface for server-side data fetching
+export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | 'destinationId' | 'categoryIds'> {
+  destination: Destination;
+  category: Category;
+  reviews?: Review[];
 }
 
 export interface CartItem extends Tour {
@@ -101,12 +137,12 @@ export interface CartItem extends Tour {
   totalPrice?: number;
 }
 
-// MODIFIED: This interface now correctly matches the backend Mongoose model.
+// FIXED: Updated to match our actual backend structure
 export interface Booking {
   _id: string;
-  tour: Tour; // The API populates this, so it should be the Tour object
-  user: User; // The API populates this
-  date: string; // Dates are serialized to strings
+  tour: Tour | string; // Can be populated or just ID
+  user: User | string; // Can be populated or just ID
+  date: string;
   time: string;
   guests: number;
   totalPrice: number;
@@ -115,12 +151,13 @@ export interface Booking {
   updatedAt: string;
 }
 
-
 export interface User {
   _id: string;
   id: string;
   email: string;
   name: string;
+  firstName?: string; // Added to match our User model
+  lastName?: string;   // Added to match our User model
   picture?: string;
   favorites: string[];
   bookings: Booking[];
@@ -129,6 +166,7 @@ export interface User {
 }
 
 export interface Review {
+  _id: string; // FIXED: Changed from id to _id to match MongoDB
   id: string;
   tourId: string;
   userId: string;
@@ -140,6 +178,8 @@ export interface Review {
   date: string;
   verified: boolean;
   helpful: number;
+  tour?: Tour; // For populated reviews
+  user?: User; // For populated reviews
 }
 
 export interface BlogPost {
@@ -160,7 +200,6 @@ export interface BlogPost {
   updatedAt?: string;
 }
 
-
 export interface SearchFilters {
   destination?: string;
   category?: string;
@@ -176,4 +215,40 @@ export interface SearchResult {
   total: number;
   page: number;
   limit: number;
+}
+
+// NEW: Admin-specific interfaces
+export interface AdminStats {
+  totalTours: number;
+  totalBookings: number;
+  totalUsers: number;
+  totalRevenue: number;
+  recentBookingsCount: number;
+  recentActivities: Array<{
+    id: string;
+    text: string;
+  }>;
+}
+
+// NEW: Form data interface for tour editing
+export interface TourFormData {
+  title: string;
+  slug: string;
+  description: string;
+  longDescription: string;
+  duration: string;
+  discountPrice: string | number;
+  originalPrice: string | number;
+  destination: string;
+  categories: string[];
+  image: string;
+  images: string[];
+  highlights: string[];
+  includes: string[];
+  whatsIncluded: string[];
+  whatsNotIncluded: string[];
+  itinerary: ItineraryItem[];
+  tags: string;
+  isFeatured: boolean;
+  availability: Availability;
 }
