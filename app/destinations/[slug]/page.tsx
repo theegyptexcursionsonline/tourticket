@@ -4,7 +4,7 @@ import DestinationModel from '@/lib/models/Destination';
 import TourModel from '@/lib/models/Tour';
 import CategoryModel from '@/lib/models/Category';
 import { Tour, Destination, Category } from '@/types';
-import DestinationPageClient from './DestinationPageClient'; // The new client component
+import DestinationPageClient from './DestinationPageClient'; 
 
 // This function tells Next.js which destination pages to pre-build.
 export async function generateStaticParams() {

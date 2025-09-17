@@ -1,11 +1,10 @@
-// app/admin/tours/edit/[id]/page.tsx
+// app/admin/tours/edit/[slug]/page.tsx
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import withAuth from '@/components/admin/withAuth';
-import { Calendar, Clock, Plus, Trash2, X } from 'lucide-react';
-import { DayPicker } from 'react-day-picker';
+import { Plus, Trash2 } from 'lucide-react';
 import 'react-day-picker/dist/style.css';
 
 // --- Helper: Availability Manager Component ---
@@ -87,56 +86,53 @@ const EditTourPage = () => {
     const [error, setError] = useState('');
     const params = useParams();
     const router = useRouter();
-    const id = params.id; // Now correctly accessing params.id since folder is [id]
+    const slug = params.slug as string; // Use slug from params
 
     useEffect(() => {
-        console.log('Tour ID:', id); // Debug log
-        
-        if (id) {
-            fetch(`/api/admin/tours/${id}`)
+        if (slug) {
+            fetch(`/api/admin/tours/${slug}`) // Fetch using the slug
                 .then(res => {
-                    console.log('Response status:', res.status); // Debug log
                     if (!res.ok) {
-                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                        throw new Error(`HTTP error! status: ${res.status}`);
                     }
                     return res.json();
                 })
                 .then(data => {
-                    console.log('Tour data received:', data); // Debug log
-                    
                     if (data.success && data.data) {
                         const tour = data.data;
                         // Ensure availability is a non-null object with proper defaults
-                        tour.availability = tour.availability || { 
-                            type: 'daily', 
+                        tour.availability = tour.availability || {
+                            type: 'daily',
                             slots: [{ time: '10:00', capacity: 10 }],
                             availableDays: [0,1,2,3,4,5,6]
                         };
-                        
+
                         if (!tour.availability.slots || tour.availability.slots.length === 0) {
                             tour.availability.slots = [{ time: '10:00', capacity: 10 }];
                         }
-                        
+
                         if (!tour.availability.availableDays) {
                             tour.availability.availableDays = [0,1,2,3,4,5,6];
                         }
-                        
+
                         setTourData(tour);
                     } else {
                         throw new Error(data.message || 'Failed to load tour data');
                     }
-                    setLoading(false);
                 })
                 .catch(err => {
-                    console.error('Error loading tour:', err); // Debug log
+                    console.error('Error loading tour:', err);
                     setError(`Failed to load tour data: ${err.message}`);
+                })
+                .finally(() => {
                     setLoading(false);
                 });
         } else {
-            setError('No tour ID provided');
+            setError('No tour slug provided');
             setLoading(false);
         }
-    }, [id]);
+    }, [slug]);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -150,67 +146,34 @@ const EditTourPage = () => {
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError('');
-        
+
         try {
-            console.log('Submitting tour data:', tourData); // Debug log
-            
-            const response = await fetch(`/api/admin/tours/${id}`, {
+            const response = await fetch(`/api/admin/tours/${slug}`, { // Use slug in the PUT request
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(tourData),
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
-                throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(result.error || 'An unknown error occurred');
             }
-            
+
             if (result.success) {
-                // Redirect back to tours list
                 router.push('/admin/tours');
             } else {
                 throw new Error(result.error || 'Update failed');
             }
         } catch (err: any) {
-            console.error('Error updating tour:', err);
             setError(`Failed to update tour: ${err.message}`);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="p-6">
-                <div className="flex items-center justify-center">
-                    <div className="text-lg">Loading tour data...</div>
-                </div>
-            </div>
-        );
-    }
-    
-    if (error) {
-        return (
-            <div className="p-6">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    <strong>Error:</strong> {error}
-                </div>
-                <button 
-                    onClick={() => router.push('/admin/tours')}
-                    className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                >
-                    Back to Tours
-                </button>
-            </div>
-        );
-    }
+    if (loading) return <div className="p-6">Loading...</div>;
+    if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
+    if (!tourData) return <div className="p-6">Tour not found.</div>;
 
-    if (!tourData) {
-        return (
-            <div className="p-6">
-                <div className="text-center text-gray-500">No tour data available</div>
-            </div>
-        );
-    }
 
     return (
         <div className="p-6">
@@ -218,41 +181,41 @@ const EditTourPage = () => {
                 <h1 className="text-3xl font-bold text-slate-800">Edit Tour</h1>
                 <p className="text-slate-600 mt-2">Editing: {tourData.title}</p>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
-                            <input 
-                                type="text" 
-                                name="title" 
-                                id="title" 
-                                value={tourData.title || ''} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="title"
+                                id="title"
+                                value={tourData.title || ''}
+                                onChange={handleChange}
                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
                                 required
                             />
                         </div>
                         <div>
                             <label htmlFor="duration" className="block text-sm font-medium text-gray-700">Duration</label>
-                            <input 
-                                type="text" 
-                                name="duration" 
-                                id="duration" 
-                                value={tourData.duration || ''} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="duration"
+                                id="duration"
+                                value={tourData.duration || ''}
+                                onChange={handleChange}
                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
                             />
                         </div>
                         <div className="md:col-span-2">
                             <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea 
-                                name="description" 
-                                id="description" 
-                                value={tourData.description || ''} 
-                                onChange={handleChange} 
-                                rows={5} 
+                            <textarea
+                                name="description"
+                                id="description"
+                                value={tourData.description || ''}
+                                onChange={handleChange}
+                                rows={5}
                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
                             />
                         </div>
@@ -261,8 +224,8 @@ const EditTourPage = () => {
 
                 {/* Availability Section */}
                 {tourData.availability && (
-                    <AvailabilityManager 
-                        availability={tourData.availability} 
+                    <AvailabilityManager
+                        availability={tourData.availability}
                         setAvailability={setAvailability}
                     />
                 )}
@@ -276,15 +239,15 @@ const EditTourPage = () => {
 
                 {/* Form Actions */}
                 <div className="mt-6 flex justify-between">
-                    <button 
+                    <button
                         type="button"
                         onClick={() => router.push('/admin/tours')}
                         className="px-6 py-2 bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600"
                     >
                         Cancel
                     </button>
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         className="px-6 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700"
                     >
                         Save Changes
