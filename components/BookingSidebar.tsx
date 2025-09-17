@@ -11,10 +11,11 @@ import {
   ChevronUp, Info, Zap, Award, Heart, Eye, Camera, Car,
   Gift, Sparkles, TrendingUp, CheckCircle, AlertCircle,
   Phone, Mail, MessageCircle, Globe, Wifi, Coffee, Calculator,
-  BadgeDollarSign
+  BadgeDollarSign, Edit, Edit3, Settings, RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
+import { useSettings } from '@/hooks/useSettings';
 
 // Enhanced Types with more detailed properties
 interface Tour {
@@ -112,6 +113,7 @@ interface BookingData {
   children: number;
   infants: number;
   selectedAddOns: { [key: string]: number };
+  selectedLanguage: string;
   specialRequests?: string;
   contactInfo?: {
     email: string;
@@ -136,7 +138,7 @@ const tourOptionsData: TourOption[] = [
     ],
     highlights: ['Professional guide', 'Safety equipment included', 'Traditional tea ceremony', 'Sunset photography stops'],
     included: ['Quad bike rental', 'Safety briefing', 'Bedouin village visit', 'Refreshments'],
-    dgroupSize: 'Max 12 people',
+    groupSize: 'Max 12 people',
     difficulty: 'Moderate',
     badge: 'Most Popular',
     discount: 29,
@@ -235,13 +237,117 @@ const addOnData: AddOnTour[] = [
   }
 ];
 
-// Enhanced utility functions
-const useSettings = () => ({
-  formatPrice: (price: number) => `€${price.toFixed(2)}`,
-  selectedCurrency: { symbol: '€', code: 'EUR' },
-  formatDiscount: (original: number, current: number) =>
-    Math.round(((original - current) / original) * 100)
-});
+// Steps configuration
+const STEPS = [
+  { id: 1, title: 'Date & Guests', shortTitle: 'Date', icon: Calendar },
+  { id: 2, title: 'Tour Options', shortTitle: 'Options', icon: Star },
+  { id: 3, title: 'Enhance Tour', shortTitle: 'Enhance', icon: Sparkles },
+  { id: 4, title: 'Review & Book', shortTitle: 'Review', icon: CheckCircle },
+];
+
+// Steps Progress Indicator Component
+const StepsIndicator: React.FC<{
+  currentStep: number;
+  onStepClick?: (step: number) => void;
+  isClickable?: boolean;
+}> = ({ currentStep, onStepClick, isClickable = false }) => {
+  return (
+    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+      {/* Mobile View - Horizontal scrollable */}
+      <div className="sm:hidden">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-slate-600">Step {currentStep} of {STEPS.length}</span>
+          <span className="text-xs text-slate-500">{Math.round((currentStep / STEPS.length) * 100)}% Complete</span>
+        </div>
+        <div className="w-full bg-slate-200 rounded-full h-2">
+          <motion.div
+            className="bg-red-600 h-2 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+        <div className="mt-2 text-sm font-medium text-slate-800">
+          {STEPS.find(s => s.id === currentStep)?.title}
+        </div>
+      </div>
+
+      {/* Desktop View - Full steps */}
+      <div className="hidden sm:block">
+        <div className="flex items-center justify-between">
+          {STEPS.map((step, index) => {
+            const isCompleted = step.id < currentStep;
+            const isCurrent = step.id === currentStep;
+            const isUpcoming = step.id > currentStep;
+            
+            return (
+              <React.Fragment key={step.id}>
+                <motion.div
+                  onClick={() => isClickable && onStepClick?.(step.id)}
+                  className={`flex items-center gap-2 ${isClickable ? 'cursor-pointer' : 'cursor-default'} group`}
+                  whileHover={isClickable ? { scale: 1.02 } : {}}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                      isCompleted
+                        ? 'bg-green-600 text-white'
+                        : isCurrent
+                        ? 'bg-red-600 text-white shadow-lg'
+                        : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check size={16} />
+                    ) : (
+                      <step.icon size={16} />
+                    )}
+                  </div>
+                  <div className="hidden lg:block">
+                    <div
+                      className={`text-sm font-medium ${
+                        isCompleted || isCurrent
+                          ? 'text-slate-800'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {step.title}
+                    </div>
+                  </div>
+                  <div className="lg:hidden">
+                    <div
+                      className={`text-xs font-medium ${
+                        isCompleted || isCurrent
+                          ? 'text-slate-800'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {step.shortTitle}
+                    </div>
+                  </div>
+                </motion.div>
+                
+                {index < STEPS.length - 1 && (
+                  <div className="flex-1 mx-2">
+                    <div className="w-full bg-slate-200 rounded-full h-1">
+                      <motion.div
+                        className="bg-red-600 h-1 rounded-full"
+                        initial={{ width: '0%' }}
+                        animate={{ 
+                          width: step.id < currentStep ? '100%' : '0%'
+                        }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Enhanced Calendar Component with availability indicators
 const CalendarWidget: React.FC<{
@@ -349,15 +455,15 @@ const CalendarWidget: React.FC<{
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6"
+      className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-6"
     >
       {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div>
-          <h3 className="text-xl font-bold text-gray-800">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800">
             {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </h3>
-          <p className="text-sm text-gray-500 mt-1">Select your adventure date</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Select your adventure date</p>
         </div>
         <div className="flex gap-2">
           <motion.button
@@ -379,8 +485,8 @@ const CalendarWidget: React.FC<{
         </div>
       </div>
 
-      {/* Availability Legend */}
-      <div className="flex items-center justify-center gap-4 mb-4 text-xs">
+      {/* Availability Legend - Mobile Friendly */}
+      <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 text-xs">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full bg-green-400"></div>
           <span className="text-gray-600">High</span>
@@ -416,9 +522,7 @@ const CalendarWidget: React.FC<{
   );
 };
 
-// ---
-// Tour Option Card
-// ---
+// Compact Tour Option Card
 const TourOptionCard: React.FC<{
   option: TourOption;
   onSelect: (timeSlot: TimeSlot) => void;
@@ -593,9 +697,7 @@ const TourOptionCard: React.FC<{
   );
 };
 
-// ---
-// Add-on Card (Modified for toggle selection)
-// ---
+// Enhanced Add-on Card
 const AddOnCard: React.FC<{
   addOn: AddOnTour;
   quantity: number;
@@ -629,7 +731,7 @@ const AddOnCard: React.FC<{
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       onClick={handleToggle}
-      className={`relative border-2 rounded-2xl p-5 transition-all cursor-pointer ${
+      className={`relative border-2 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer ${
         isSelected
           ? 'border-red-400 bg-red-50 shadow-lg scale-105'
           : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
@@ -652,16 +754,16 @@ const AddOnCard: React.FC<{
         </div>
       )}
 
-      <div className="flex items-start gap-4 mb-4 mt-2">
+      <div className="flex items-start gap-3 sm:gap-4 mb-4 mt-2">
         {/* Icon */}
-        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(addOn.category || '')} flex items-center justify-center text-white flex-shrink-0`}>
-          <IconComponent size={24} />
+        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(addOn.category || '')} flex items-center justify-center text-white flex-shrink-0`}>
+          <IconComponent size={20} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <h4 className="font-bold text-gray-800 text-base mb-1">{addOn.title}</h4>
-          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3">{addOn.description}</p>
+          <h4 className="font-bold text-gray-800 text-sm sm:text-base mb-1">{addOn.title}</h4>
+          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3">{addOn.description}</p>
 
           {/* Price Section */}
           <div className="flex items-center justify-between">
@@ -672,7 +774,7 @@ const AddOnCard: React.FC<{
                 </span>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-red-600">
+                <span className="text-base sm:text-lg font-bold text-red-600">
                   {formatPrice(addOn.price)}
                 </span>
                 {addOn.savings && (
@@ -691,17 +793,17 @@ const AddOnCard: React.FC<{
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-500 text-white flex items-center justify-center"
               >
-                <Check size={20} />
+                <Check size={16} />
               </motion.div>
             ) : (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="w-10 h-10 rounded-full border-2 border-gray-300 text-gray-500 flex items-center justify-center"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 text-gray-500 flex items-center justify-center"
               >
-                <Plus size={20} />
+                <Plus size={16} />
               </motion.div>
             )}
           </div>
@@ -711,9 +813,145 @@ const AddOnCard: React.FC<{
   );
 };
 
-// ---
+// Enhanced Booking Summary Card
+const BookingSummaryCard: React.FC<{
+  bookingData: BookingData;
+  tour: Tour | null;
+  onEditClick: (section: 'date' | 'guests' | 'language') => void;
+}> = ({ bookingData, tour, onEditClick }) => {
+  const { formatPrice, formatDate } = useSettings();
+
+  const formatParticipants = () => {
+    const total = bookingData.adults + bookingData.children + bookingData.infants;
+    const parts = [];
+    if (bookingData.adults > 0) parts.push(`${bookingData.adults} Adult${bookingData.adults > 1 ? 's' : ''}`);
+    if (bookingData.children > 0) parts.push(`${bookingData.children} Child${bookingData.children > 1 ? 'ren' : ''}`);
+    if (bookingData.infants > 0) parts.push(`${bookingData.infants} Infant${bookingData.infants > 1 ? 's' : ''}`);
+    return `${total} Participant${total > 1 ? 's' : ''} (${parts.join(', ')})`;
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg sm:text-xl font-bold text-slate-900">Booking Summary</h3>
+        <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
+          Final Review
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {/* Date & Time */}
+        <motion.div 
+          className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+          whileHover={{ scale: 1.01 }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Calendar size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800 text-sm sm:text-base">
+                {bookingData.selectedDate ? formatDate(bookingData.selectedDate) : 'No date selected'}
+              </div>
+              <div className="text-xs sm:text-sm text-slate-500">
+                {bookingData.selectedTimeSlot ? `at ${bookingData.selectedTimeSlot.time}` : 'No time selected'}
+              </div>
+            </div>
+          </div>
+          <motion.button
+            onClick={() => onEditClick('date')}
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Edit size={16} />
+          </motion.button>
+        </motion.div>
+
+        {/* Participants */}
+        <motion.div 
+          className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+          whileHover={{ scale: 1.01 }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <Users size={20} className="text-purple-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800 text-sm sm:text-base">
+                {formatParticipants()}
+              </div>
+              <div className="text-xs sm:text-sm text-slate-500">
+                Group size
+              </div>
+            </div>
+          </div>
+          <motion.button
+            onClick={() => onEditClick('guests')}
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Edit size={16} />
+          </motion.button>
+        </motion.div>
+
+        {/* Language */}
+        <motion.div 
+          className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+          whileHover={{ scale: 1.01 }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <Languages size={20} className="text-green-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800 text-sm sm:text-base">
+                {bookingData.selectedLanguage || 'English'}
+              </div>
+              <div className="text-xs sm:text-sm text-slate-500">
+                Tour language
+              </div>
+            </div>
+          </div>
+          <motion.button
+            onClick={() => onEditClick('language')}
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Edit size={16} />
+          </motion.button>
+        </motion.div>
+
+        {/* Tour Information */}
+        {tour && (
+          <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200">
+            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+              <Image 
+                src={tour.image} 
+                alt={tour.title} 
+                width={48} 
+                height={48} 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+            <div className="flex-1">
+              <div className="font-bold text-slate-800 text-sm sm:text-base line-clamp-2">
+                {tour.title}
+              </div>
+              <div className="text-xs sm:text-sm text-slate-600 mt-1">
+                {tour.duration} • {tour.rating} ⭐ ({tour.bookings?.toLocaleString()} reviews)
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Main Enhanced Booking Sidebar Component
-// ---
 interface BookingSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -728,8 +966,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(useState(false));
-  const [showDatePicker, setShowDatePicker] = useState(useState(false));
+  const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [availability, setAvailability] = useState<AvailabilityData | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
 
@@ -740,6 +978,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     children: 0,
     infants: 0,
     selectedAddOns: {},
+    selectedLanguage: 'English',
     specialRequests: '',
   });
 
@@ -863,6 +1102,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         children: 0,
         infants: 0,
         selectedAddOns: {},
+        selectedLanguage: 'English',
         specialRequests: '',
       });
     }
@@ -887,6 +1127,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
       setCurrentStep(s => s - 1);
+      setAnimationKey(prev => prev + 1);
+    }
+  }, [currentStep]);
+
+  const handleStepClick = useCallback((step: number) => {
+    if (step <= currentStep || step === 1) {
+      setCurrentStep(step);
       setAnimationKey(prev => prev + 1);
     }
   }, [currentStep]);
@@ -1081,6 +1328,25 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     });
   }, []);
 
+  // Handle editing from final step
+  const handleEditClick = useCallback((section: 'date' | 'guests' | 'language') => {
+    switch (section) {
+      case 'date':
+        setShowDatePicker(true);
+        setCurrentStep(1);
+        break;
+      case 'guests':
+        setShowParticipantsDropdown(true);
+        setCurrentStep(1);
+        break;
+      case 'language':
+        // Could open a language selector
+        toast.info('Language selection coming soon!');
+        break;
+    }
+    setAnimationKey(prev => prev + 1);
+  }, []);
+
   // Fix: Enhanced click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1111,7 +1377,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const renderStepContent = () => {
     if (isLoading) {
       return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-4 sm:p-6">
           <div className="animate-pulse">
             <div className="h-6 bg-gray-200 rounded-xl w-2/3 mb-4"></div>
             <div className="h-24 bg-gray-200 rounded-2xl mb-4"></div>
@@ -1129,7 +1395,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     };
 
     switch (currentStep) {
-      // Fix: Step 1 Content
+      // Step 1 Content
       case 1:
         return (
           <motion.div
@@ -1139,7 +1405,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             animate="center"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="space-y-4 p-4" // Reduced from space-y-6 p-6
+            className="space-y-4 p-4 sm:p-6"
           >
             {/* Compact Price Section */}
             <div className="bg-gradient-to-r from-red-500 to-orange-600 rounded-xl p-4 text-white text-center shadow-lg">
@@ -1149,7 +1415,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                     {formatPrice(tour.originalPrice)}
                   </span>
                 )}
-                <span className="text-3xl font-bold">
+                <span className="text-2xl sm:text-3xl font-bold">
                   {formatPrice(tour?.discountPrice || 0)}
                 </span>
                 <span className="text-red-100 text-sm">per person</span>
@@ -1332,9 +1598,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             animate="center"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="space-y-6 p-6"
+            className="space-y-6 p-4 sm:p-6"
           >
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Choose your experience</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Choose your experience</h2>
             <p className="text-gray-600 mb-6">Select the best option for your group of {getParticipantsText().toLowerCase()}.</p>
             {availability?.tourOptions.map(option => (
               <TourOptionCard
@@ -1358,11 +1624,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             animate="center"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="space-y-6 p-6"
+            className="space-y-6 p-4 sm:p-6"
           >
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Make it even better</h2>
-            <p className="text-gray-600 mb-6">Enhance your adventure with these popular add-ons.</p>
-            <div className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Enhance your experience</h2>
+            <p className="text-gray-600 mb-6">Make your adventure even more memorable with these popular add-ons.</p>
+            <div className="space-y-4 sm:space-y-6">
               {availability?.addOns.map(addOn => (
                 <AddOnCard
                   key={addOn.id}
@@ -1375,6 +1641,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             </div>
           </motion.div>
         );
+
       case 4:
         return (
           <motion.div
@@ -1384,50 +1651,82 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             animate="center"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="space-y-6 p-6"
+            className="space-y-6 p-4 sm:p-6"
           >
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Review & Book</h2>
-            <p className="text-gray-600 mb-6">Your adventure is ready! Confirm the details and complete your booking.</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Review & Book</h2>
+            <p className="text-gray-600 mb-6">Your adventure is ready! Review the details and complete your booking.</p>
 
-            {/* Summary Card */}
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-              <h3 className="font-bold text-gray-800 text-lg mb-4">Booking Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-red-500" />
-                  <span className="text-gray-600">{formatDate(bookingData.selectedDate!)} at {bookingData.selectedTimeSlot?.time}</span>
+            {/* Booking Summary Card */}
+            <BookingSummaryCard
+              bookingData={bookingData}
+              tour={tour}
+              onEditClick={handleEditClick}
+            />
+
+            {/* Add-ons Summary */}
+            {Object.keys(bookingData.selectedAddOns).length > 0 && (
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-4 sm:p-6">
+                <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
+                  <Sparkles size={20} className="text-purple-600" />
+                  Tour Enhancements
+                </h3>
+                <div className="space-y-3">
+                  {Object.entries(bookingData.selectedAddOns).map(([addOnId, quantity]) => {
+                    const addOn = addOnData.find(a => a.id === addOnId);
+                    if (!addOn) return null;
+                    
+                    const IconComponent = addOn.icon || Gift;
+                    const totalPrice = addOn.price * (addOn.perGuest ? (bookingData.adults + bookingData.children) : 1);
+                    
+                    return (
+                      <div key={addOnId} className="flex items-center gap-3 bg-white p-3 rounded-xl">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <IconComponent size={16} className="text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-800 text-sm">{addOn.title}</div>
+                          <div className="text-xs text-gray-500">{addOn.category}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-purple-600">{formatPrice(totalPrice)}</div>
+                          {addOn.savings && (
+                            <div className="text-xs text-green-600">
+                              Save {formatPrice(addOn.savings * (addOn.perGuest ? (bookingData.adults + bookingData.children) : 1))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center gap-3">
-                  <Users size={18} className="text-blue-500" />
-                  <span className="text-gray-600">{getParticipantsText()}</span>
-                </div>
-                {Object.keys(bookingData.selectedAddOns).length > 0 && (
-                  <div className="flex items-center gap-3">
-                    <Sparkles size={18} className="text-purple-500" />
-                    <span className="text-gray-600">
-                      {Object.keys(bookingData.selectedAddOns).length} Add-on{Object.keys(bookingData.selectedAddOns).length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
 
             {/* Price Breakdown */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <h3 className="font-bold text-gray-800 text-lg mb-4">Price Breakdown</h3>
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-lg">
+              <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                <Calculator size={20} className="text-green-600" />
+                Price Breakdown
+              </h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-gray-600">
-                  <span>Tour Price</span>
+                  <span>Tour Price ({bookingData.adults} Adults{bookingData.children > 0 ? `, ${bookingData.children} Children` : ''})</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 {addOnsTotal > 0 && (
                   <div className="flex justify-between text-gray-600">
-                    <span>Add-ons</span>
+                    <span>Add-ons ({Object.keys(bookingData.selectedAddOns).length})</span>
                     <span>{formatPrice(addOnsTotal)}</span>
                   </div>
                 )}
+                {totalSavings > 0 && (
+                  <div className="flex justify-between text-green-700 font-medium">
+                    <span>Total Savings</span>
+                    <span>-{formatPrice(totalSavings)}</span>
+                  </div>
+                )}
                 <div className="h-px bg-gray-200 my-2"></div>
-                <div className="flex justify-between text-lg font-bold text-gray-800">
+                <div className="flex justify-between text-xl font-bold text-gray-800">
                   <span>Total</span>
                   <span className="text-red-600">{formatPrice(total)}</span>
                 </div>
@@ -1435,17 +1734,16 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             </div>
 
             {/* Trust Badges */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2 bg-green-50 p-4 rounded-lg">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 bg-green-50 p-3 sm:p-4 rounded-lg">
                 <Shield size={20} className="text-green-600" />
                 <span className="text-sm font-medium text-green-800">Secure Payment</span>
               </div>
-              <div className="flex items-center gap-2 bg-red-50 p-4 rounded-lg">
+              <div className="flex items-center gap-2 bg-red-50 p-3 sm:p-4 rounded-lg">
                 <Clock size={20} className="text-red-600" />
                 <span className="text-sm font-medium text-red-800">Free Cancellation</span>
               </div>
             </div>
-
           </motion.div>
         );
 
@@ -1476,43 +1774,59 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           />
 
           <motion.div
-            className="relative bg-white h-full w-full max-w-md shadow-2xl flex flex-col"
+            className="relative bg-white h-full w-full max-w-md shadow-2xl flex flex-col overflow-hidden"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
               <div className="flex items-center gap-2">
                 {currentStep > 1 && (
                   <motion.button
                     onClick={handleBack}
                     className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <ArrowLeft size={20} />
                   </motion.button>
                 )}
-                <h3 className="font-bold text-gray-800 text-lg">
-                  {currentStep === 1 ? 'Start Your Booking' : 'Customize Your Trip'}
-                </h3>
+                <div>
+                  <h3 className="font-bold text-gray-800 text-lg">
+                    {currentStep === 1 ? 'Start Your Booking' : 'Customize Your Trip'}
+                  </h3>
+                  {tour && (
+                    <p className="text-xs text-gray-500 line-clamp-1">{tour.title}</p>
+                  )}
+                </div>
               </div>
               <motion.button
                 onClick={onClose}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <X size={20} />
               </motion.button>
             </div>
 
-            {/* Fix: The combined content container */}
+            {/* Steps Progress Indicator */}
+            <StepsIndicator
+              currentStep={currentStep}
+              onStepClick={handleStepClick}
+              isClickable={currentStep >= 2}
+            />
+
+            {/* Content Area */}
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 {renderStepContent()}
               </AnimatePresence>
             </div>
 
-            {/* Fix: The combined footer with conditional rendering */}
+            {/* Footer Actions */}
             <AnimatePresence>
               {/* Fixed Action Button for Step 1 */}
               {currentStep === 1 && (
@@ -1520,12 +1834,14 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 50 }}
-                  className="bg-white border-t border-gray-200 p-4"
+                  className="bg-white border-t border-gray-200 p-4 shadow-lg"
                 >
                   <motion.button
                     onClick={handleCheckAvailability}
                     disabled={!bookingData.selectedDate || (bookingData.adults + bookingData.children + bookingData.infants === 0) || isLoading}
                     className="w-full bg-red-600 text-white font-bold py-3 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     {isLoading ? (
                       <>
@@ -1550,36 +1866,53 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   exit={{ opacity: 0, y: 50 }}
                   className="bg-white border-t border-gray-200 p-4 shadow-lg"
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Price Display - Always visible for steps 2+ */}
+                  <div className="flex items-center justify-between mb-4">
                     <div>
                       <span className="block font-bold text-lg text-red-600">{formatPrice(total)}</span>
-                      <span className="text-xs text-gray-500">Total Price</span>
+                      <span className="text-xs text-gray-500">
+                        Total Price {totalSavings > 0 && `(Save ${formatPrice(totalSavings)})`}
+                      </span>
                     </div>
+                    
+                    {/* Action Buttons */}
                     <div className="flex gap-2">
                       {currentStep < 4 && (
                         <motion.button
                           onClick={handleNext}
                           disabled={isLoading || (currentStep === 2 && !bookingData.selectedTimeSlot)}
-                          className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-bold rounded-full disabled:opacity-50"
+                          className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-bold rounded-full disabled:opacity-50 shadow-lg"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
                           Continue <ArrowRight size={18} />
                         </motion.button>
                       )}
+                      
                       {currentStep === 4 && (
                         <>
                           <motion.button
                             onClick={() => handleFinalAction('cart')}
                             disabled={!!isProcessing}
                             className="flex items-center gap-2 px-4 py-2 border border-red-600 text-red-600 font-bold rounded-full disabled:opacity-50"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
                             <ShoppingCart size={18} /> Add to Cart
                           </motion.button>
                           <motion.button
                             onClick={() => handleFinalAction('checkout')}
                             disabled={!!isProcessing}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-full disabled:opacity-50"
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-full disabled:opacity-50 shadow-lg"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
-                            <CreditCard size={18} /> Book Now
+                            {isProcessing === 'checkout' ? (
+                              <Loader2 className="animate-spin" size={18} />
+                            ) : (
+                              <CreditCard size={18} />
+                            )}
+                            Book Now
                           </motion.button>
                         </>
                       )}

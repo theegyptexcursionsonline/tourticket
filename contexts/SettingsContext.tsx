@@ -16,6 +16,12 @@ interface SettingsContextType {
   exchangeRates: { [key: string]: number };
   isLoading: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
+  // Enhanced methods for booking
+  formatPriceRange: (minPrice: number, maxPrice: number) => string;
+  formatDiscount: (originalPrice: number, discountedPrice: number) => string;
+  formatSavings: (savings: number) => string;
+  getCurrencySymbol: () => string;
+  convertPrice: (priceInEur: number) => number;
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -41,6 +47,18 @@ const translations: Record<string, Record<string, string>> = {
     'common.success': 'Success',
     'price.from': 'from',
     'price.perPerson': 'per person',
+    'booking.adults': 'Adults',
+    'booking.children': 'Children',
+    'booking.infants': 'Infants',
+    'booking.selectDate': 'Select Date',
+    'booking.selectTime': 'Select Time',
+    'booking.participants': 'participants',
+    'booking.total': 'Total',
+    'booking.save': 'Save',
+    'booking.discount': 'Discount',
+    'booking.addOns': 'Add-ons',
+    'booking.enhance': 'Enhance Your Tour',
+    'booking.review': 'Review & Book',
   },
   es: {
     'header.explore': 'EXPLORAR',
@@ -61,6 +79,18 @@ const translations: Record<string, Record<string, string>> = {
     'common.success': 'Éxito',
     'price.from': 'desde',
     'price.perPerson': 'por persona',
+    'booking.adults': 'Adultos',
+    'booking.children': 'Niños',
+    'booking.infants': 'Bebés',
+    'booking.selectDate': 'Seleccionar Fecha',
+    'booking.selectTime': 'Seleccionar Hora',
+    'booking.participants': 'participantes',
+    'booking.total': 'Total',
+    'booking.save': 'Ahorrar',
+    'booking.discount': 'Descuento',
+    'booking.addOns': 'Extras',
+    'booking.enhance': 'Mejora tu Tour',
+    'booking.review': 'Revisar y Reservar',
   },
   fr: {
     'header.explore': 'EXPLORER',
@@ -81,6 +111,18 @@ const translations: Record<string, Record<string, string>> = {
     'common.success': 'Succès',
     'price.from': 'à partir de',
     'price.perPerson': 'par personne',
+    'booking.adults': 'Adultes',
+    'booking.children': 'Enfants',
+    'booking.infants': 'Bébés',
+    'booking.selectDate': 'Sélectionner la Date',
+    'booking.selectTime': 'Sélectionner l\'Heure',
+    'booking.participants': 'participants',
+    'booking.total': 'Total',
+    'booking.save': 'Économiser',
+    'booking.discount': 'Remise',
+    'booking.addOns': 'Extras',
+    'booking.enhance': 'Améliorez Votre Tour',
+    'booking.review': 'Réviser et Réserver',
   },
   de: {
     'header.explore': 'ERKUNDEN',
@@ -101,6 +143,18 @@ const translations: Record<string, Record<string, string>> = {
     'common.success': 'Erfolg',
     'price.from': 'ab',
     'price.perPerson': 'pro Person',
+    'booking.adults': 'Erwachsene',
+    'booking.children': 'Kinder',
+    'booking.infants': 'Kleinkinder',
+    'booking.selectDate': 'Datum Auswählen',
+    'booking.selectTime': 'Zeit Auswählen',
+    'booking.participants': 'Teilnehmer',
+    'booking.total': 'Gesamt',
+    'booking.save': 'Sparen',
+    'booking.discount': 'Rabatt',
+    'booking.addOns': 'Extras',
+    'booking.enhance': 'Verbessern Sie Ihre Tour',
+    'booking.review': 'Überprüfen & Buchen',
   },
 };
 
@@ -136,23 +190,68 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
   return [state, setValue];
 };
 
-// Exchange rate fetching function
+// Enhanced exchange rate fetching function with fallback and caching
 const fetchExchangeRates = async (): Promise<{ [key: string]: number }> => {
+  const CACHE_KEY = 'exchangeRates';
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+  
   try {
-    // Using a free API service (you can replace with your preferred service)
-    const response = await fetch('https://api.exchangerate-api.com/v4/latest/EUR');
-    if (response.ok) {
-      const data = await response.json();
-      return {
-        EUR: 1,
-        ...data.rates,
-      };
+    // Check cached rates first
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { rates, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return rates;
+      }
+    }
+  } catch (error) {
+    console.log('Error reading cached exchange rates');
+  }
+
+  try {
+    // Try multiple API sources for better reliability
+    const apiSources = [
+      'https://api.exchangerate-api.com/v4/latest/EUR',
+      'https://api.fixer.io/latest?base=EUR',
+    ];
+
+    for (const apiUrl of apiSources) {
+      try {
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const rates = {
+            EUR: 1,
+            ...data.rates,
+          };
+          
+          // Cache the successful response
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+              rates,
+              timestamp: Date.now(),
+            }));
+          } catch (error) {
+            console.log('Error caching exchange rates');
+          }
+          
+          return rates;
+        }
+      } catch (error) {
+        console.log(`Failed to fetch from ${apiUrl}:`, error);
+        continue;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch exchange rates:', error);
   }
   
-  // Fallback to mock rates if API fails
+  // Enhanced fallback rates (more comprehensive and recent)
   return {
     EUR: 1,
     USD: 1.08,
@@ -175,11 +274,23 @@ const fetchExchangeRates = async (): Promise<{ [key: string]: number }> => {
     BRL: 5.58,
     ZAR: 20.25,
     DKK: 7.46,
+    PLN: 4.32,
+    CZK: 24.15,
+    HUF: 389.25,
+    RON: 4.98,
+    BGN: 1.96,
+    HRK: 7.53,
+    ISK: 145.35,
+    THB: 38.25,
+    MYR: 4.85,
+    PHP: 61.25,
+    IDR: 16850.5,
+    VND: 26450.75,
   };
 };
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [selectedCurrency, setSelectedCurrency] = usePersistentState<Currency>('selectedCurrency', currencies[1]); // Default to EUR
+  const [selectedCurrency, setSelectedCurrency] = usePersistentState<Currency>('selectedCurrency', currencies[0]); // Default to EUR
   const [selectedLanguage, setSelectedLanguage] = usePersistentState<Language>('selectedLanguage', languages[0]); // Default to English
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -201,9 +312,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  const formatPrice = useCallback((priceInEur: number): string => {
+  const convertPrice = useCallback((priceInEur: number): number => {
     const rate = exchangeRates[selectedCurrency.code] || 1;
-    const convertedPrice = priceInEur * rate;
+    return priceInEur * rate;
+  }, [exchangeRates, selectedCurrency.code]);
+
+  const formatPrice = useCallback((priceInEur: number): string => {
+    const convertedPrice = convertPrice(priceInEur);
     
     // Get locale based on currency for proper formatting
     const getLocale = (currencyCode: string): string => {
@@ -229,6 +344,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         BRL: 'pt-BR',
         ZAR: 'en-ZA',
         DKK: 'da-DK',
+        PLN: 'pl-PL',
+        CZK: 'cs-CZ',
+        HUF: 'hu-HU',
+        RON: 'ro-RO',
+        BGN: 'bg-BG',
+        HRK: 'hr-HR',
+        ISK: 'is-IS',
+        THB: 'th-TH',
+        MYR: 'ms-MY',
+        PHP: 'en-PH',
+        IDR: 'id-ID',
+        VND: 'vi-VN',
       };
       return localeMap[currencyCode] || 'en-US';
     };
@@ -237,20 +364,46 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const formatter = new Intl.NumberFormat(getLocale(selectedCurrency.code), {
         style: 'currency',
         currency: selectedCurrency.code,
-        minimumFractionDigits: selectedCurrency.code === 'JPY' || selectedCurrency.code === 'KRW' ? 0 : 2,
-        maximumFractionDigits: selectedCurrency.code === 'JPY' || selectedCurrency.code === 'KRW' ? 0 : 2,
+        minimumFractionDigits: ['JPY', 'KRW', 'VND', 'IDR'].includes(selectedCurrency.code) ? 0 : 2,
+        maximumFractionDigits: ['JPY', 'KRW', 'VND', 'IDR'].includes(selectedCurrency.code) ? 0 : 2,
       });
 
       return formatter.format(convertedPrice);
     } catch (error) {
-      // Fallback formatting if Intl.NumberFormat fails
-      const decimals = selectedCurrency.code === 'JPY' || selectedCurrency.code === 'KRW' ? 0 : 2;
-      return `${selectedCurrency.symbol}${convertedPrice.toLocaleString('en-US', { 
+      // Enhanced fallback formatting if Intl.NumberFormat fails
+      const decimals = ['JPY', 'KRW', 'VND', 'IDR'].includes(selectedCurrency.code) ? 0 : 2;
+      const formattedNumber = convertedPrice.toLocaleString('en-US', { 
         minimumFractionDigits: decimals, 
         maximumFractionDigits: decimals 
-      })}`;
+      });
+      return `${selectedCurrency.symbol}${formattedNumber}`;
     }
-  }, [selectedCurrency, exchangeRates]);
+  }, [selectedCurrency, convertPrice]);
+
+  // Enhanced method for formatting price ranges
+  const formatPriceRange = useCallback((minPrice: number, maxPrice: number): string => {
+    if (minPrice === maxPrice) {
+      return formatPrice(minPrice);
+    }
+    return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+  }, [formatPrice]);
+
+  // Method for formatting discount percentages
+  const formatDiscount = useCallback((originalPrice: number, discountedPrice: number): string => {
+    if (originalPrice <= discountedPrice) return '';
+    const discountPercent = Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
+    return `-${discountPercent}%`;
+  }, []);
+
+  // Method for formatting savings amounts
+  const formatSavings = useCallback((savings: number): string => {
+    return `${t('booking.save')} ${formatPrice(savings)}`;
+  }, [formatPrice]);
+
+  // Method to get currency symbol
+  const getCurrencySymbol = useCallback((): string => {
+    return selectedCurrency.symbol;
+  }, [selectedCurrency.symbol]);
 
   const formatNumber = useCallback((number: number): string => {
     const getLocale = (): string => {
@@ -349,7 +502,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       formatDate,
       exchangeRates,
       isLoading,
-      t
+      t,
+      // Enhanced methods
+      formatPriceRange,
+      formatDiscount,
+      formatSavings,
+      getCurrencySymbol,
+      convertPrice,
     }}>
       {children}
     </SettingsContext.Provider>
