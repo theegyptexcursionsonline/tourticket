@@ -522,7 +522,7 @@ const CalendarWidget: React.FC<{
   );
 };
 
-// Compact Tour Option Card
+// Enhanced Tour Option Card with better UI
 const TourOptionCard: React.FC<{
   option: TourOption;
   onSelect: (timeSlot: TimeSlot) => void;
@@ -536,112 +536,148 @@ const TourOptionCard: React.FC<{
   const originalSubtotal = option.originalPrice ? (adults * option.originalPrice) + (children * option.originalPrice * 0.5) : subtotal;
   const savings = originalSubtotal - subtotal;
 
+  // Hardcoded values for now
+  const rating = 4.8;
+  const totalBookings = 1247;
+  const maxParticipants = 12;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative border rounded-xl p-4 transition-all cursor-pointer ${
+      className={`relative border-2 rounded-2xl p-5 transition-all cursor-pointer bg-white hover:shadow-lg ${
         option.isRecommended
-          ? 'border-red-400 bg-red-50 ring-1 ring-red-200'
-          : 'border-gray-200 bg-white hover:border-red-300 hover:shadow-md'
+          ? 'border-red-400 bg-gradient-to-br from-red-50 to-orange-50 ring-2 ring-red-200 shadow-md'
+          : 'border-gray-200 hover:border-red-300 hover:bg-gray-50'
       }`}
+      whileHover={{ scale: 1.01 }}
     >
-      {/* Compact Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 pr-2">
-          <div className="flex items-center gap-2 mb-2">
+      {/* Header with Badges */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 pr-3">
+          <div className="flex items-center gap-2 mb-3">
             {option.isRecommended && (
-              <span className="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                <Sparkles size={10} />
-                Recommended
+              <span className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                <Sparkles size={12} />
+                Most Popular
               </span>
             )}
             {option.discount && (
-              <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                -{option.discount}%
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                Save {option.discount}%
               </span>
             )}
           </div>
-          <h3 className="text-sm font-bold text-gray-900 leading-tight mb-2">
+          
+          <h3 className="text-base font-bold text-gray-900 leading-tight mb-3">
             {option.title}
           </h3>
+
+          {/* Rating and Bookings Row */}
+          <div className="flex items-center gap-4 mb-3">
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
+              <Star size={14} className="text-yellow-500 fill-yellow-500" />
+              <span className="text-sm font-semibold text-gray-800">{rating}</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
+              <Users size={14} className="text-blue-500" />
+              <span className="text-sm font-medium text-gray-700">{totalBookings.toLocaleString()} booked</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
+              <User size={14} className="text-purple-500" />
+              <span className="text-sm font-medium text-gray-700">Max {maxParticipants}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Compact Price */}
-        <div className="text-right">
+        {/* Price Section */}
+        <div className="text-right bg-gray-50 rounded-xl p-3 min-w-[100px]">
           {originalSubtotal > subtotal && (
-            <div className="text-xs text-gray-400 line-through">
+            <div className="text-sm text-gray-400 line-through mb-1">
               {formatPrice(originalSubtotal)}
             </div>
           )}
-          <div className="text-lg font-bold text-red-600">
+          <div className="text-xl font-bold text-red-600">
             {formatPrice(subtotal)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Total price
           </div>
         </div>
       </div>
 
-      {/* Compact Specs - Single Row */}
-      <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
-        <div className="flex items-center gap-1">
-          <Clock size={12} className="text-red-500" />
-          <span>{option.duration}</span>
+      {/* Specs Row */}
+      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4 bg-gray-50 rounded-lg p-3">
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-red-500" />
+          <span className="font-medium">{option.duration}</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Users size={12} className="text-purple-500" />
-          <span>Max {option.groupSize?.replace('Max ', '').replace(' people', '')}</span>
+        <div className="flex items-center gap-2">
+          <Languages size={16} className="text-green-500" />
+          <span className="font-medium">{option.languages.slice(0, 2).join(', ')}</span>
+          {option.languages.length > 2 && (
+            <span className="text-xs bg-gray-200 px-1.5 py-0.5 rounded">
+              +{option.languages.length - 2}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          <TrendingUp size={12} className="text-orange-500" />
-          <span>{option.difficulty}</span>
+        <div className="flex items-center gap-2">
+          <TrendingUp size={16} className="text-orange-500" />
+          <span className="font-medium">{option.difficulty}</span>
         </div>
       </div>
 
-      {/* Compact Description */}
-      <p className="text-xs text-gray-600 leading-relaxed mb-3 line-clamp-2">
+      {/* Description */}
+      <p className="text-sm text-gray-700 leading-relaxed mb-4 bg-white rounded-lg p-3 border border-gray-100">
         {option.description}
       </p>
 
-      {/* Key Highlights - Compact */}
+      {/* Highlights */}
       {option.highlights && (
-        <div className="mb-4">
-          <div className="space-y-1">
-            {option.highlights.slice(0, 2).map((highlight, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <CheckCircle size={12} className="text-green-500 flex-shrink-0" />
-                <span className="text-xs text-gray-700">{highlight}</span>
+        <div className="mb-5">
+          <h4 className="font-semibold text-gray-800 text-sm mb-2">What's Included</h4>
+          <div className="grid grid-cols-1 gap-2">
+            {option.highlights.slice(0, 3).map((highlight, index) => (
+              <div key={index} className="flex items-center gap-2 bg-green-50 rounded-lg p-2">
+                <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                <span className="text-sm text-gray-800 font-medium">{highlight}</span>
               </div>
             ))}
-            {option.highlights.length > 2 && (
-              <span className="text-xs text-red-600 font-medium ml-4">
-                +{option.highlights.length - 2} more
-              </span>
+            {option.highlights.length > 3 && (
+              <div className="text-sm text-red-600 font-medium bg-red-50 rounded-lg p-2 text-center">
+                +{option.highlights.length - 3} more benefits included
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Pricing Summary */}
-      <div className="bg-gray-50 rounded-lg p-3 mb-3">
-        <div className="flex justify-between items-center text-xs mb-1">
-          <span className="text-gray-600">
-            {adults} adult{adults > 1 ? 's' : ''}{children > 0 && `, ${children} child${children > 1 ? 'ren' : ''}`}
+      {/* Price Summary */}
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 mb-5 border border-gray-200">
+        <div className="flex justify-between items-center text-sm mb-2">
+          <span className="text-gray-700 font-medium">
+            {adults} Adult{adults > 1 ? 's' : ''}{children > 0 && `, ${children} Child${children > 1 ? 'ren' : ''}`}
           </span>
           {savings > 0 && (
-            <span className="text-green-600 font-medium">
-              Save {formatPrice(savings)}
+            <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-xs">
+              You Save {formatPrice(savings)}
             </span>
           )}
         </div>
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600 text-sm">Per person: {formatPrice(basePrice)}</span>
+          <span className="text-lg font-bold text-gray-900">{formatPrice(subtotal)}</span>
+        </div>
       </div>
 
-      {/* Compact Time Slots */}
+      {/* Time Slots */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-medium text-gray-800 text-xs">Available Times</h4>
-          <span className="text-xs text-gray-500">Select one</span>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold text-gray-800 text-sm">Available Times Today</h4>
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Select one to continue</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-3">
           {option.timeSlots.map(timeSlot => {
             const isSelected = selectedTimeSlot?.id === timeSlot.id;
             const isLowAvailability = timeSlot.available <= 3;
@@ -654,43 +690,66 @@ const TourOptionCard: React.FC<{
                 disabled={isSoldOut}
                 whileHover={{ scale: isSoldOut ? 1 : 1.02 }}
                 whileTap={{ scale: isSoldOut ? 1 : 0.98 }}
-                className={`relative p-3 rounded-lg text-xs font-medium transition-all ${
+                className={`relative p-4 rounded-xl text-sm font-medium transition-all border-2 ${
                   isSelected
-                    ? 'bg-red-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white border-red-600 shadow-lg'
                     : isSoldOut
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white border border-gray-200 text-gray-800 hover:border-red-300'
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-white border-gray-300 text-gray-800 hover:border-red-400 hover:shadow-md hover:bg-red-50'
                 }`}
               >
-                <div className="text-center">
-                  <div className="font-bold">{timeSlot.time}</div>
-                  <div className={`text-xs mt-1 ${isSelected ? 'text-red-100' : 'text-gray-500'}`}>
-                    {isSoldOut ? 'Sold Out' : `${timeSlot.available} left`}
+                <div className="flex items-center justify-between">
+                  <div className="text-left">
+                    <div className="font-bold text-base">{timeSlot.time}</div>
+                    <div className={`text-xs mt-1 ${isSelected ? 'text-red-100' : 'text-gray-500'}`}>
+                      {isSoldOut ? 'Fully Booked' : `${timeSlot.available} spots left`}
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    {timeSlot.isPopular && !isSelected && (
+                      <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-bold mb-1">
+                        Popular
+                      </div>
+                    )}
+                    <div className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-gray-600'}`}>
+                      {formatPrice(timeSlot.price)}
+                    </div>
                   </div>
                 </div>
 
-                {timeSlot.isPopular && !isSelected && (
-                  <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
-                    Hot
-                  </div>
-                )}
-
                 {isLowAvailability && !isSoldOut && !isSelected && (
-                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
-                      Few left!
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-red-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg">
+                      Almost Full!
                     </div>
                   </div>
                 )}
 
                 {isSelected && (
-                  <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
-                    <Check size={10} />
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check size={12} />
                   </div>
                 )}
               </motion.button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Trust Indicators */}
+      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
+        <div className="flex items-center gap-1.5 text-xs text-gray-600">
+          <Shield size={12} className="text-green-500" />
+          <span>Free cancellation</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-gray-600">
+          <CheckCircle size={12} className="text-blue-500" />
+          <span>Instant confirmation</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-gray-600">
+          <Heart size={12} className="text-red-500" />
+          <span>Highly rated</span>
         </div>
       </div>
     </motion.div>

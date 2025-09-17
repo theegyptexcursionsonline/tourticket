@@ -245,17 +245,23 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10"><VisaIcon /></div>
+<div className="h-10 flex items-center">
+  <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
+</div>
             <span className="text-sm font-medium text-slate-700">Card</span>
           </button>
 
           <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10"><PayPalIcon /></div>
+<div className="h-10 flex items-center">
+  <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
+</div>
             <span className="text-sm font-medium text-slate-700">PayPal</span>
           </button>
 
           <button type="button" onClick={() => setPaymentMethod('bank')} aria-pressed={paymentMethod === 'bank'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10"><MastercardIcon /></div>
+<div className="h-10 flex items-center">
+  <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
+</div>
             <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
           </button>
         </div>

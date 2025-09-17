@@ -279,10 +279,10 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
             whileTap={{ scale: 0.98 }}
             className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all ${paymentMethod === 'card' ? 'bg-red-50 border-red-500 shadow-md' : 'bg-white border-slate-200 hover:shadow-sm'}`}
           >
-            <div className="h-10 flex items-center gap-2">
-              <VisaIcon width={36} height={20} />
-              <MastercardIcon width={36} height={20} />
-            </div>
+          <div className="h-10 flex items-center gap-2">
+  <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
+</div>
+
             <span className="text-sm font-semibold text-slate-700">Credit/Debit Card</span>
           </motion.button>
 
@@ -293,9 +293,10 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
             whileTap={{ scale: 0.98 }}
             className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-500 shadow-md' : 'bg-white border-slate-200 hover:shadow-sm'}`}
           >
-            <div className="h-10 flex items-center">
-              <PayPalIcon width={48} height={30} />
-            </div>
+          <div className="h-10 flex items-center">
+  <Image src="/payment/paypal.png" alt="PayPal" width={48} height={30} className="object-contain" />
+</div>
+
             <span className="text-sm font-semibold text-slate-700">PayPal</span>
           </motion.button>
 
@@ -306,9 +307,10 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
             whileTap={{ scale: 0.98 }}
             className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all ${paymentMethod === 'bank' ? 'bg-red-50 border-red-500 shadow-md' : 'bg-white border-slate-200 hover:shadow-sm'}`}
           >
-            <div className="h-10 flex items-center">
-              <CreditCard size={36} className="text-slate-500" />
-            </div>
+          <div className="h-10 flex items-center">
+  <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
+</div>
+
             <span className="text-sm font-semibold text-slate-700">Bank Transfer</span>
           </motion.button>
         </div>
