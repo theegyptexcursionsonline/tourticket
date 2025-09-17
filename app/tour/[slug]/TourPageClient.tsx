@@ -1,4 +1,3 @@
-// app/tour/[slug]/TourPageClient.tsx
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -11,7 +10,8 @@ import {
   ChevronUp, Shield, Umbrella, Thermometer, Bus, Utensils, Mountain,
   Languages, CreditCard, Phone, Mail, AlertCircle, Car, Plane,
   Navigation, Backpack, Sun, CloudRain, Snowflake, Eye, Gift,
-  Accessibility, Baby, PawPrint, Smartphone, Wifi, Headphones
+  Accessibility, Baby, PawPrint, Smartphone, Wifi, Headphones,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 // Components
@@ -56,6 +56,27 @@ interface TourEnhancement {
 interface TourPageClientProps {
   tour: Tour;
   relatedTours: Tour[];
+}
+
+// -----------------------------------------------------------------------------
+// NEW: useScrollDirection hook
+// -----------------------------------------------------------------------------
+function useScrollDirection() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
+  useEffect(() => {
+    let lastScrollY = typeof window !== 'undefined' ? window.pageYOffset : 0;
+    const updateScroll = () => {
+      const currentScrollY = window.pageYOffset;
+      // Header is visible if scrolling up or near the top
+      setIsVisible(lastScrollY > currentScrollY || currentScrollY < 100);
+      setScrollY(currentScrollY);
+      lastScrollY = currentScrollY;
+    };
+    window.addEventListener('scroll', updateScroll, { passive: true });
+    return () => window.removeEventListener('scroll', updateScroll);
+  }, []);
+  return { scrollY, isVisible };
 }
 
 // Mock enhanced data - in real app this would come from your database
@@ -153,29 +174,113 @@ const getEnhancedTourData = (tourId: string): TourEnhancement => {
 };
 
 // Enhanced Components
-const TabNavigation = ({ activeTab, tabs, scrollToSection }: any) => {
+// -----------------------------------------------------------------------------
+// NEW: TabNavigation receives isHeaderVisible prop
+// -----------------------------------------------------------------------------
+const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: any) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const checkScrollButtons = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 200;
+      const newScrollLeft = direction === 'left' 
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    const handleResize = () => checkScrollButtons();
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [tabs]);
+  
+  // Dynamic top position based on header visibility
+  const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
+
   return (
-    <div className="sticky top-20 z-10 bg-white shadow-sm -mx-4 sm:mx-0 overflow-x-auto">
-      <nav className="flex space-x-1 p-1">
-        {tabs.map((tab: any) => (
-          <a
-            key={tab.id}
-            href={`#${tab.id}`}
-            onClick={(e) => {
-              e.preventDefault();
-              scrollToSection(tab.id);
-            }}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-              activeTab === tab.id
-                ? 'bg-red-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-red-600'
-            }`}
-          >
-            <tab.icon size={18} />
-            {tab.label}
-          </a>
-        ))}
-      </nav>
+    <div className={`sticky ${stickyTop} z-10 bg-white shadow-sm -mx-4 sm:mx-0 transition-all duration-300`}>
+      <div className="relative">
+        {/* Left Arrow */}
+        <button
+          onClick={() => scrollTabs('left')}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${
+            showLeftArrow 
+              ? 'opacity-100 visible hover:bg-slate-50' 
+              : 'opacity-0 invisible'
+          }`}
+          aria-label="Scroll tabs left"
+        >
+          <ChevronLeft size={16} className="text-slate-600" />
+        </button>
+
+        {/* Scrollable Tab Container */}
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-x-auto scrollbar-hide px-8"
+          onScroll={checkScrollButtons}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <nav className="flex space-x-1 p-1 min-w-max">
+            {tabs.map((tab: any) => (
+              <a
+                key={tab.id}
+                href={`#${tab.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  scrollToSection(tab.id);
+                }}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-red-600'
+                }`}
+              >
+                <tab.icon size={18} />
+                {tab.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+
+        {/* Right Arrow */}
+        <button
+          onClick={() => scrollTabs('right')}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${
+            showRightArrow 
+              ? 'opacity-100 visible hover:bg-slate-50' 
+              : 'opacity-0 invisible'
+          }`}
+          aria-label="Scroll tabs right"
+        >
+          <ChevronRight size={16} className="text-slate-600" />
+        </button>
+
+        {/* Fade gradients */}
+        <div className={`absolute left-8 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none transition-opacity duration-200 ${
+          showLeftArrow ? 'opacity-100' : 'opacity-0'
+        }`} />
+        <div className={`absolute right-8 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none transition-opacity duration-200 ${
+          showRightArrow ? 'opacity-100' : 'opacity-0'
+        }`} />
+      </div>
     </div>
   );
 };
@@ -637,7 +742,9 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
   </div>
 );
 
-
+// -----------------------------------------------------------------------------
+// NEW: TourPageClient component updated
+// -----------------------------------------------------------------------------
 export default function TourPageClient({ tour, relatedTours }: TourPageClientProps) {
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
@@ -649,6 +756,9 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
   const [liveMessage, setLiveMessage] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Add this line to track header visibility
+  const { isVisible: isHeaderVisible } = useScrollDirection();
+  
   const overviewRef = useRef<HTMLDivElement>(null);
   const itineraryRef = useRef<HTMLDivElement>(null);
   const practicalRef = useRef<HTMLDivElement>(null);
@@ -903,8 +1013,14 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                 </div>
               </div>
 
-              {/* Tab Navigation */}
-              <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} scrollToSection={scrollToSection} />
+              {/* Tab Navigation with dynamic header visibility */}
+              <TabNavigation 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
+                tabs={tabs} 
+                scrollToSection={scrollToSection}
+                isHeaderVisible={isHeaderVisible}
+              />
 
               {/* All Sections */}
               <OverviewSection tour={tour} sectionRef={overviewRef} />
@@ -1125,6 +1241,12 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
       <div className="sr-only" aria-live="polite">
         {liveMessage}
       </div>
+
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </>
   );
 }

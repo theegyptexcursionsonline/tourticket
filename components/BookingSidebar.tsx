@@ -36,6 +36,7 @@ interface Tour {
   location?: string;
   difficulty?: 'Easy' | 'Moderate' | 'Challenging';
   category?: string;
+  reviews?: number; // Added reviews field
 }
 
 interface TimeSlot {
@@ -1466,25 +1467,33 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             transition={{ duration: 0.3 }}
             className="space-y-4 p-4 sm:p-6"
           >
-            {/* Compact Price Section */}
-            <div className="bg-gradient-to-r from-red-500 to-orange-600 rounded-xl p-4 text-white text-center shadow-lg">
-              <div className="flex items-center justify-center gap-2">
-                {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
-                  <span className="text-red-100 line-through text-lg font-medium">
-                    {formatPrice(tour.originalPrice)}
-                  </span>
-                )}
-                <span className="text-2xl sm:text-3xl font-bold">
+            {/* Chips for reviews and bookings */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                <Star size={14} className="text-blue-500 fill-current" />
+                {tour?.rating ? `${tour.rating} (${(tour.reviews || 0).toLocaleString()} reviews)` : 'No ratings yet'}
+              </div>
+              <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                <Users size={14} className="text-red-500" />
+                {tour?.bookings ? `${tour.bookings.toLocaleString()} booked` : 'No bookings yet'}
+              </div>
+            </div>
+
+            {/* Compact Price Section - Now with a Badge look */}
+            <div className="flex justify-between items-center bg-gray-100 rounded-xl p-4 text-gray-800 border border-gray-200">
+              <div>
+                <span className="text-sm text-gray-500 line-through block">
+                  {tour?.originalPrice ? formatPrice(tour.originalPrice) : ''}
+                </span>
+                <span className="text-2xl sm:text-3xl font-bold text-red-600 block">
                   {formatPrice(tour?.discountPrice || 0)}
                 </span>
-                <span className="text-red-100 text-sm">per person</span>
+                <span className="text-xs text-gray-500">per person</span>
               </div>
-              {tour?.originalPrice && tour.originalPrice > tour.discountPrice && (
-                <div className="flex items-center justify-center gap-2 text-xs font-semibold mt-1">
-                  <Zap size={12} />
-                  <span>Save {formatPrice((tour.originalPrice || 0) - (tour.discountPrice || 0))} per person!</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full text-sm">
+                <BadgeDollarSign size={16} />
+                <span>You Save</span>
+              </div>
             </div>
 
             {/* Compact Highlights - Only show 2 */}
