@@ -1,4 +1,5 @@
-// app/api/upload/route.ts
+// File: app/api/upload/route.ts
+
 import { v2 as cloudinary } from 'cloudinary';
 import { NextResponse } from 'next/server';
 import { Readable } from 'stream';
@@ -27,13 +28,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'No file uploaded.' }, { status: 400 });
     }
 
-    // Convert the file to a buffer
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // Use a Promise to handle the stream-based upload
     const result: any = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
+          // --- THIS IS THE REQUIRED FIX ---
+          // Add the upload_preset from your environment variables
+          upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET,
           folder: 'tours', // Optional: organize uploads in a folder
         },
         (error, result) => {
@@ -45,8 +47,6 @@ export async function POST(request: Request) {
           }
         }
       );
-
-      // Create a readable stream from the buffer and pipe it to Cloudinary
       bufferToStream(fileBuffer).pipe(uploadStream);
     });
 
@@ -55,6 +55,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Server-side upload error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    // Provide a clearer error message if the preset is missing
+    if (errorMessage.toLowerCase().includes('upload preset not found')) {
+        return NextResponse.json({ success: false, error: 'Server configuration error: Cloudinary upload preset is missing or invalid. Please check your .env.local file.' }, { status: 500 });
+    }
     return NextResponse.json({ success: false, error: `Upload failed on the server: ${errorMessage}` }, { status: 500 });
   }
 }

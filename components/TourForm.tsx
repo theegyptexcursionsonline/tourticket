@@ -11,14 +11,11 @@ import {
     X,
     Plus,
     Image as ImageIcon,
-    Tag as TagIcon,
-    UploadCloud,
     Check,
     Calendar,
     Clock,
     HelpCircle,
     Settings,
-    Users,
 } from 'lucide-react';
 
 // --- Interface Definitions ---
@@ -126,7 +123,6 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
 export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const router = useRouter();
     
-    // Add slug management state
     const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
     const [formData, setFormData] = useState<any>({
@@ -145,18 +141,15 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         includes: [''],
         tags: '',
         isFeatured: false,
-        // Add new array fields
         whatsIncluded: [''],
         whatsNotIncluded: [''],
         itinerary: [{ day: 1, title: '', description: '' }],
-        // Add missing fields
         faqs: [{ question: '', answer: '' }],
         bookingOptions: [{ type: 'Per Person', label: '', price: 0 }],
         addOns: [{ name: '', description: '', price: 0 }],
         isPublished: false,
         difficulty: '',
         maxGroupSize: 10,
-        // Initialize availability
         availability: { 
             type: 'daily', 
             availableDays: [0, 1, 2, 3, 4, 5, 6], 
@@ -170,12 +163,10 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
-        // Update useEffect for data population with defensive checks
         if (tourToEdit) {
-            setIsSlugManuallyEdited(true); // Prevent overwriting existing slug
+            setIsSlugManuallyEdited(true);
             
-            // Properly map backend data to form structure
-            const initialData = {
+            const initialData: any = {
                 title: tourToEdit.title || '',
                 slug: tourToEdit.slug || '',
                 description: tourToEdit.description || '',
@@ -184,20 +175,16 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 discountPrice: tourToEdit.discountPrice || '',
                 originalPrice: tourToEdit.originalPrice || '',
                 destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
-                category: tourToEdit.category?._id?.toString() || tourToEdit.category || '',
                 categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
-                // MODIFIED: This line now checks for `featuredImage` as a fallback
                 image: tourToEdit.image || tourToEdit.featuredImage || '',
                 images: tourToEdit.images || [],
                 highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
                 includes: tourToEdit.includes?.length > 0 ? tourToEdit.includes : [''],
                 tags: Array.isArray(tourToEdit.tags) ? tourToEdit.tags.join(', ') : (tourToEdit.tags || ''),
                 isFeatured: tourToEdit.isFeatured || false,
-                // Array fields with proper fallbacks
                 whatsIncluded: tourToEdit.whatsIncluded?.length > 0 ? tourToEdit.whatsIncluded : [''],
                 whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
                 itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
-                // Handle FAQ mapping (backend uses 'faq', frontend uses 'faqs')
                 faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
                 bookingOptions: tourToEdit.bookingOptions?.length > 0 ? tourToEdit.bookingOptions : [{ type: 'Per Person', label: '', price: 0 }],
                 addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
@@ -206,7 +193,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 maxGroupSize: tourToEdit.maxGroupSize || 10,
             };
             
-            // Ensure availability is properly initialized
             if (tourToEdit.availability && tourToEdit.availability.slots) {
                 initialData.availability = {
                     type: tourToEdit.availability.type || 'daily',
@@ -221,7 +207,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 };
             }
             
-            console.log('Setting initial form data:', initialData); // Debug log
             setFormData(initialData);
         }
 
@@ -245,12 +230,10 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         fetchData();
     }, [tourToEdit]);
 
-    // Handler to update availability from child component
     const setAvailability = (availabilityData: any) => {
         setFormData((prev: any) => ({ ...prev, availability: availabilityData }));
     };
     
-    // Enhanced handleChange with automatic slug generation
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const target = e.target as HTMLInputElement;
         const { name, value, type } = target;
@@ -266,12 +249,9 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             setFormData((p: any) => ({ ...p, [name]: value }));
         }
         
-        // Implement automatic slug generation
-        if (name === 'title') {
-            if (!isSlugManuallyEdited) {
-                const newSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-                setFormData((p: any) => ({ ...p, slug: newSlug }));
-            }
+        if (name === 'title' && !isSlugManuallyEdited) {
+            const newSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            setFormData((p: any) => ({ ...p, slug: newSlug }));
         }
         
         if (name === 'slug') {
@@ -279,14 +259,12 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         }
     };
 
-    // Handler for textarea array fields (whatsIncluded, whatsNotIncluded)
     const handleTextAreaArrayChange = (fieldName: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value;
         const arrayValue = value.split('\n');
         setFormData((p: any) => ({ ...p, [fieldName]: arrayValue }));
     };
 
-    // Handler for itinerary changes
     const handleItineraryChange = (index: number, field: string, value: string | number) => {
         const updatedItinerary = [...formData.itinerary];
         updatedItinerary[index] = { ...updatedItinerary[index], [field]: value };
@@ -304,14 +282,12 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const removeItineraryItem = (index: number) => {
         if (formData.itinerary.length <= 1) return;
         const updatedItinerary = formData.itinerary.filter((_: any, i: number) => i !== index);
-        // Re-number the days
         updatedItinerary.forEach((item: any, i: number) => {
             item.day = i + 1;
         });
         setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
     };
 
-    // Handler for FAQ changes
     const handleFAQChange = (index: number, field: string, value: string) => {
         const updatedFAQs = [...formData.faqs];
         updatedFAQs[index] = { ...updatedFAQs[index], [field]: value };
@@ -331,7 +307,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
     };
 
-    // Handler for booking option changes
     const handleBookingOptionChange = (index: number, field: string, value: string | number) => {
         const updatedOptions = [...formData.bookingOptions];
         updatedOptions[index] = { ...updatedOptions[index], [field]: value };
@@ -351,7 +326,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
     };
 
-    // Handler for add-on changes
     const handleAddOnChange = (index: number, field: string, value: string | number) => {
         const updatedAddOns = [...formData.addOns];
         updatedAddOns[index] = { ...updatedAddOns[index], [field]: value };
@@ -389,31 +363,35 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMainImage = true) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         setIsUploading(true);
         const uploadFormData = new FormData();
         uploadFormData.append('file', file);
 
         const promise = fetch('/api/upload', { method: 'POST', body: uploadFormData })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return res.json();
+            })
             .then(data => {
-                if (data.success) {
+                if (data.success && data.url) {
                     if (isMainImage) {
-                        console.log('Setting main image:', data.url); // Debug log
-                        setFormData((p: any) => ({ ...p, image: data.url }));
+                        setFormData((prevData: any) => ({ ...prevData, image: data.url }));
                     } else {
-                        setFormData((p: any) => ({ ...p, images: [...p.images, data.url] }));
+                        setFormData((prevData: any) => ({ ...prevData, images: [...prevData.images, data.url] }));
                     }
                     return 'Image uploaded successfully!';
                 } else {
-                    throw new Error('Upload failed.');
+                    throw new Error(data.error || 'Upload failed: Invalid response from server.');
                 }
             });
 
         toast.promise(promise, {
             loading: 'Uploading image...',
             success: (message) => message as string,
-            error: 'Upload failed. Please try again.',
+            error: (err) => err.message || 'Upload failed. Please try again.',
         }).finally(() => {
             setIsUploading(false);
         });
@@ -427,47 +405,21 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     e.preventDefault();
     setIsSubmitting(true);
     
-    console.log('Form data before submit:', formData); // Debug log
-    
-    // Validate required fields before submission
-    if (!formData.title?.trim()) {
-        toast.error('Title is required');
-        setIsSubmitting(false);
-        return;
-    }
-    
-    if (!formData.description?.trim()) {
-        toast.error('Description is required');
-        setIsSubmitting(false);
-        return;
-    }
-    
-    if (!formData.duration?.trim()) {
-        toast.error('Duration is required');
-        setIsSubmitting(false);
-        return;
-    }
-    
-    if (!formData.discountPrice) {
-        toast.error('Discount price is required');
+    if (!formData.title?.trim() || !formData.description?.trim() || !formData.duration?.trim() || !formData.discountPrice) {
+        toast.error('Please fill all required fields: Title, Description, Duration, and Discount Price.');
         setIsSubmitting(false);
         return;
     }
     
     try {
-        // Create a clean copy of form data
         const cleanedData = { ...formData };
         
-        // Ensure required fields are always included
         const payload = {
-            // Required fields first
             title: cleanedData.title.trim(),
             slug: cleanedData.slug.trim(),
             description: cleanedData.description.trim(),
             duration: cleanedData.duration.trim(),
             discountPrice: parseFloat(cleanedData.discountPrice) || 0,
-            
-            // Optional fields
             longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
             originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
             destination: cleanedData.destination,
@@ -476,37 +428,25 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
             isPublished: Boolean(cleanedData.isPublished),
             isFeatured: Boolean(cleanedData.isFeatured),
-            
-            // Image fields (only include if they exist)
             ...(cleanedData.image && cleanedData.image.trim() !== '' && { image: cleanedData.image }),
             images: Array.isArray(cleanedData.images) ? cleanedData.images : [],
-            
-            // Arrays - filter out empty values
             highlights: Array.isArray(cleanedData.highlights) ? cleanedData.highlights.filter((item: string) => item.trim() !== '') : [],
             includes: Array.isArray(cleanedData.includes) ? cleanedData.includes.filter((item: string) => item.trim() !== '') : [],
             whatsIncluded: Array.isArray(cleanedData.whatsIncluded) ? cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '') : [],
             whatsNotIncluded: Array.isArray(cleanedData.whatsNotIncluded) ? cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '') : [],
-            
-            // Complex objects - filter out empty ones
             itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: any) => item.title?.trim() && item.description?.trim()) : [],
             faqs: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: any) => faq.question?.trim() && faq.answer?.trim()) : [],
             bookingOptions: Array.isArray(cleanedData.bookingOptions) ? cleanedData.bookingOptions.filter((option: any) => option.label?.trim()) : [],
             addOns: Array.isArray(cleanedData.addOns) ? cleanedData.addOns.filter((addon: any) => addon.name?.trim()) : [],
-            
-            // Tags processing
             tags: typeof cleanedData.tags === 'string' 
                 ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) 
                 : Array.isArray(cleanedData.tags) ? cleanedData.tags : [],
-            
-            // Availability
             availability: cleanedData.availability || {
                 type: 'daily',
                 availableDays: [0, 1, 2, 3, 4, 5, 6],
                 slots: [{ time: '10:00', capacity: 10 }]
             }
         };
-        
-        console.log('Final payload being sent:', payload); // Debug log
         
         const apiEndpoint = tourToEdit ? `/api/admin/tours/${tourToEdit._id}` : '/api/admin/tours';
         const method = tourToEdit ? 'PUT' : 'POST';
@@ -520,14 +460,12 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         });
         
         const responseData = await response.json();
-        console.log('Server response:', responseData); // Debug log
         
         if (response.ok) {
             toast.success(`Tour ${tourToEdit ? 'updated' : 'created'} successfully!`);
             router.push('/admin/tours');
             router.refresh();
         } else {
-            console.error('Server error:', responseData);
             toast.error(`Failed to save tour: ${responseData?.error || 'Unknown error'}`);
         }
         
@@ -538,8 +476,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setIsSubmitting(false);
     }
 };
-
-    const tagList = formData.tags ? formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
 
     return (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
@@ -562,63 +498,62 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div className="space-y-4">
-        <FormLabel>Title *</FormLabel>
-        <input 
-            name="title" 
-            value={formData.title || ''} 
-            onChange={handleChange} 
-            className={`${inputBase} text-lg font-medium`} 
-            placeholder="e.g., 1-Hour Amsterdam Canal Cruise" 
-            required 
-        />
-        <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
-    </div>
-    <div className="space-y-4">
-        <FormLabel>URL Slug *</FormLabel>
-        <div className="relative">
-            <input 
-                name="slug" 
-                value={formData.slug || ''} 
-                onChange={handleChange} 
-                className={`${inputBase} pr-28`} 
-                placeholder="auto-generated-from-title" 
-                required 
-            />
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-3 py-1 rounded-md bg-slate-50 border border-slate-100">
-                /{formData.slug || 'your-slug'}
-            </span>
-        </div>
-        <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
-    </div>
-</div>
+                <div className="space-y-4">
+                    <FormLabel>Title *</FormLabel>
+                    <input 
+                        name="title" 
+                        value={formData.title || ''} 
+                        onChange={handleChange} 
+                        className={`${inputBase} text-lg font-medium`} 
+                        placeholder="e.g., 1-Hour Amsterdam Canal Cruise" 
+                        required 
+                    />
+                    <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
+                </div>
+                <div className="space-y-4">
+                    <FormLabel>URL Slug *</FormLabel>
+                    <div className="relative">
+                        <input 
+                            name="slug" 
+                            value={formData.slug || ''} 
+                            onChange={handleChange} 
+                            className={`${inputBase} pr-28`} 
+                            placeholder="auto-generated-from-title" 
+                            required 
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-3 py-1 rounded-md bg-slate-50 border border-slate-100">
+                            /{formData.slug || 'your-slug'}
+                        </span>
+                    </div>
+                    <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
+                </div>
+              </div>
 
-<div className="space-y-2">
-    <FormLabel>Short Description *</FormLabel>
-    <textarea 
-        name="description" 
-        value={formData.description || ''} 
-        onChange={handleChange} 
-        rows={3} 
-        className={`${inputBase} resize-none`} 
-        placeholder="Short summary that appears on the listing" 
-        required
-    />
-</div>
+                <div className="space-y-2">
+                    <FormLabel>Short Description *</FormLabel>
+                    <textarea 
+                        name="description" 
+                        value={formData.description || ''} 
+                        onChange={handleChange} 
+                        rows={3} 
+                        className={`${inputBase} resize-none`} 
+                        placeholder="Short summary that appears on the listing" 
+                        required
+                    />
+                </div>
 
-<div className="space-y-2">
-    <FormLabel>Long Description</FormLabel>
-    <textarea 
-        name="longDescription" 
-        value={formData.longDescription || ''} 
-        onChange={handleChange} 
-        rows={5} 
-        className={`${inputBase} resize-y`} 
-        placeholder="Full description shown on the tour detail page" 
-    />
-</div>
+                <div className="space-y-2">
+                    <FormLabel>Long Description</FormLabel>
+                    <textarea 
+                        name="longDescription" 
+                        value={formData.longDescription || ''} 
+                        onChange={handleChange} 
+                        rows={5} 
+                        className={`${inputBase} resize-y`} 
+                        placeholder="Full description shown on the tour detail page" 
+                    />
+                </div>
 
-                {/* Basic Tour Settings */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                         <FormLabel>Duration</FormLabel>
@@ -711,7 +646,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
                 
-                {/* Array fields section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <FormLabel>What's Included (List)</FormLabel>
@@ -737,7 +671,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* Itinerary section */}
                 <div className="space-y-4">
                     <FormLabel>Itinerary</FormLabel>
                     <div className="space-y-4">
@@ -781,7 +714,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* FAQ section */}
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <HelpCircle className="h-5 w-5"/>
@@ -828,7 +760,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* Booking Options section */}
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <Settings className="h-5 w-5"/>
@@ -886,7 +817,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* Add-ons section */}
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <Plus className="h-5 w-5"/>
@@ -942,7 +872,6 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
                 
-                {/* Availability Manager Section */}
                 {formData.availability && (
                     <AvailabilityManager
                         availability={formData.availability}
@@ -950,29 +879,35 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     />
                 )}
                 
-                {/* Image upload sections */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <FormLabel>Main Image</FormLabel>
                         {formData.image && (
-                            <div className="mt-2 mb-3">
-                                <img src={formData.image} alt="Main" className="w-20 h-20 object-cover rounded border" />
-                                <button 
-                                    type="button" 
-                                    onClick={() => setFormData(p => ({ ...p, image: '' }))}
-                                    className="mt-1 text-xs text-red-600 hover:text-red-800"
+                            <div className="mt-2 mb-3 relative w-24 h-24">
+                                <img 
+                                    src={formData.image} 
+                                    alt="Main tour preview" 
+                                    className="w-full h-full object-cover rounded-md border" 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData((p: any) => ({ ...p, image: '' }))}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 transition-all"
+                                    aria-label="Remove main image"
                                 >
-                                    Remove image
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         )}
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => handleImageUpload(e, true)} 
+                        
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, true)}
                             className={inputBase}
                             disabled={isUploading}
                         />
+                        
                         {isUploading && <SmallHint className="text-blue-600">Uploading image...</SmallHint>}
                         <SmallHint>Upload a high-quality image for the main tour photo.</SmallHint>
                     </div>
