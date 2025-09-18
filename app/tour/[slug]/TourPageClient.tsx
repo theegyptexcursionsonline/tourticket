@@ -1122,55 +1122,57 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     )}
                   </div>
 
-                  <div className="space-y-3">
-                    <button
-                      onClick={openBookingSidebar}
-                      className="w-full bg-red-600 text-white font-bold py-4 px-6 rounded-full hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
-                    >
-                      <Calendar size={20} />
-                      <span>Select Date & Time</span>
-                    </button>
+                <div className="space-y-3">
+  <button
+    onClick={openBookingSidebar}
+    className="shimmer-effect w-full bg-red-600 text-white font-bold py-4 px-6 rounded-full hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
+  >
+    <span className="shimmer-line"></span>
+    <Calendar size={20} />
+    <span>Select Date & Time</span>
+  </button>
 
-                    <button
-                      onClick={handleQuickAdd}
-                      disabled={isAdding}
-                      className={`w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${added
-                          ? 'bg-green-600 text-white border-green-600 shadow-lg scale-105'
-                          : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
-                        }`}
-                      aria-live="polite"
-                      aria-disabled={isAdding}
-                    >
-                      {isAdding && (
-                        <svg
-                          className="animate-spin -ml-1 mr-2 h-5 w-5 text-current"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8v8z"
-                          ></path>
-                        </svg>
-                      )}
+  <button
+    onClick={handleQuickAdd}
+    disabled={isAdding}
+    className={`shimmer-effect w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${added
+      ? 'bg-green-600 text-white border-green-600 shadow-lg scale-105'
+      : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
+      }`}
+    aria-live="polite"
+    aria-disabled={isAdding}
+  >
+    <span className="shimmer-line"></span>
+    {isAdding && (
+      <svg
+        className="animate-spin -ml-1 mr-2 h-5 w-5 text-current"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v8z"
+        ></path>
+      </svg>
+    )}
 
-                      {added ? (
-                        <>
-                          <CheckCircle size={18} />
-                          <span>Added</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart size={18} />
-                          <span>Quick Add to Cart</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+    {added ? (
+      <>
+        <CheckCircle size={18} />
+        <span>Added</span>
+      </>
+    ) : (
+      <>
+        <ShoppingCart size={18} />
+        <span>Quick Add to Cart</span>
+      </>
+    )}
+  </button>
+</div>
 
                   <div className="mt-6 pt-6 border-t border-slate-200">
                     <div className="grid grid-cols-2 gap-4 text-sm text-slate-500">
@@ -1238,9 +1240,33 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
         {liveMessage}
       </div>
 
-      <style jsx>{`
+   <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
+        }
+        .shimmer-effect {
+          position: relative;
+          overflow: hidden;
+        }
+        .shimmer-effect .shimmer-line {
+          position: absolute;
+          top: 0;
+          left: -150%;
+          width: 75%;
+          height: 100%;
+          background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          transform: skewX(-25deg);
+          animation: shimmer 2.5s infinite;
+        }
+        @keyframes shimmer {
+          100% {
+            left: 150%;
+          }
         }
       `}</style>
     </>
