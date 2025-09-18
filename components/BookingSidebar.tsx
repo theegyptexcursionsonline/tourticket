@@ -17,26 +17,74 @@ import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
 
-// Enhanced Types with more detailed properties
+// Enhanced Types with database compatibility
 interface Tour {
-  id: string;
+  id?: string;
+  _id?: string;
   title: string;
   image: string;
-  originalPrice: number;
+  originalPrice?: number;
   discountPrice: number;
-  destinationId: string;
+  destination?: {
+    _id: string;
+    name: string;
+    slug?: string;
+  } | string;
   duration?: string;
   rating?: number;
   bookings?: number;
+  reviews?: number;
   description?: string;
+  longDescription?: string;
   slug?: string;
   maxGroupSize?: number;
   highlights?: string[];
-  included?: string[];
-  location?: string;
+  includes?: string[];
+  whatsIncluded?: string[];
+  whatsNotIncluded?: string[];
+  bookingOptions?: BookingOption[];
+  addOns?: AddOnTour[];
+  location?: {
+    lat: number;
+    lng: number;
+    address: string;
+  } | string;
   difficulty?: 'Easy' | 'Moderate' | 'Challenging';
-  category?: string;
-  reviews?: number; // Added reviews field
+  category?: {
+    _id: string;
+    name: string;
+    slug?: string;
+  } | string;
+  tags?: string[];
+  isFeatured?: boolean;
+  availability?: {
+    type: string;
+    availableDays: number[];
+    slots: { time: string; capacity: number }[];
+  };
+  cancellationPolicy?: string;
+  languages?: string[];
+  operatedBy?: string;
+  meetingPoint?: string;
+}
+
+interface BookingOption {
+  id?: string;
+  type: string;
+  label: string;
+  price: number;
+  originalPrice?: number;
+  description?: string;
+  duration?: string;
+  languages?: string[];
+  highlights?: string[];
+  included?: string[];
+  groupSize?: string;
+  difficulty?: string;
+  badge?: string;
+  discount?: number;
+  isRecommended?: boolean;
+  timeSlots?: TimeSlot[];
 }
 
 interface TimeSlot {
@@ -51,7 +99,8 @@ interface TimeSlot {
 
 interface AddOnTour {
   id: string;
-  title: string;
+  name?: string;
+  title?: string;
   duration?: string;
   languages?: string[];
   description: string;
@@ -122,74 +171,12 @@ interface BookingData {
   };
 }
 
-// Enhanced sample data with more details
-const tourOptionsData: TourOption[] = [
-  {
-    id: 'atv-sunset-tour',
-    title: '3-Hour ATV Quad Tour Sunset with Traditional Bedouin Experience',
-    price: 25.00,
-    originalPrice: 35.00,
-    duration: '3 Hours',
-    languages: ['English', 'German', 'Arabic'],
-    description: 'Embark on an exhilarating 30km quad bike adventure deep into the pristine desert landscape. Experience authentic Bedouin hospitality in a traditional village, complete with mint tea ceremony and cultural storytelling under the stars.',
-    timeSlots: [
-      { id: '1', time: '2:00 PM', available: 8, originalAvailable: 15, price: 25.00, isPopular: true },
-      { id: '2', time: '3:00 PM', available: 3, originalAvailable: 12, price: 25.00 },
-      { id: '3', time: '4:00 PM', available: 12, originalAvailable: 15, price: 25.00 },
-    ],
-    highlights: ['Professional guide', 'Safety equipment included', 'Traditional tea ceremony', 'Sunset photography stops'],
-    included: ['Quad bike rental', 'Safety briefing', 'Bedouin village visit', 'Refreshments'],
-    groupSize: 'Max 12 people',
-    difficulty: 'Moderate',
-    badge: 'Most Popular',
-    discount: 29,
-    isRecommended: true,
-  },
-  {
-    id: 'shared-quad-tour',
-    title: 'Shared 2-Hour Desert Canyon Discovery',
-    price: 22.00,
-    originalPrice: 28.00,
-    duration: '2 Hours',
-    languages: ['English', 'Spanish'],
-    description: 'Perfect for beginners! Navigate through stunning desert canyons and ancient rock formations. This shared adventure offers incredible photo opportunities and insights into the desert ecosystem.',
-    timeSlots: [
-      { id: '4', time: '10:00 AM', available: 6, originalAvailable: 10, price: 22.00 },
-      { id: '5', time: '2:00 PM', available: 9, originalAvailable: 10, price: 22.00 },
-      { id: '6', time: '5:00 PM', available: 4, originalAvailable: 8, price: 22.00 },
-    ],
-    highlights: ['Beginner-friendly', 'Canyon exploration', 'Rock formation viewing', 'Group photos'],
-    included: ['Quad bike rental', 'Helmet & goggles', 'Basic refreshments'],
-    groupSize: 'Max 8 people',
-    difficulty: 'Easy',
-    discount: 21,
-  },
-  {
-    id: 'private-luxury-tour',
-    title: 'Private Luxury Desert Safari with Gourmet Dinner',
-    price: 89.00,
-    originalPrice: 120.00,
-    duration: '4 Hours',
-    languages: ['English', 'French', 'German'],
-    description: 'Ultimate luxury experience with private quad bikes, dedicated guide, and a gourmet dinner under the stars. Includes premium refreshments and professional photography service.',
-    timeSlots: [
-      { id: '7', time: '3:00 PM', available: 4, originalAvailable: 6, price: 89.00, isPopular: true },
-      { id: '8', time: '4:00 PM', available: 2, originalAvailable: 4, price: 89.00 },
-    ],
-    highlights: ['Private experience', 'Gourmet dinner', 'Professional photos', 'Premium vehicles'],
-    included: ['Private quad bikes', 'Dedicated guide', '3-course dinner', 'Photography service', 'Premium transfers'],
-    groupSize: 'Max 4 people',
-    difficulty: 'Easy to Moderate',
-    badge: 'Luxury Experience',
-    discount: 26,
-  },
-];
-
+// Default Add-on data (used as a fallback)
 const addOnData: AddOnTour[] = [
   {
     id: 'photo-package',
     title: 'Professional Photography Package',
-    description: 'Capture your adventure with 50+ edited high-resolution photos and a highlight video delivered within 24 hours',
+    description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
     price: 35.00,
     originalPrice: 50.00,
     required: false,
@@ -202,7 +189,7 @@ const addOnData: AddOnTour[] = [
   {
     id: 'transport-premium',
     title: 'Premium Hotel Transfer Service',
-    description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi. Covers all major hotels in the area',
+    description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
     price: 15.00,
     originalPrice: 25.00,
     required: false,
@@ -212,30 +199,18 @@ const addOnData: AddOnTour[] = [
     savings: 10,
   },
   {
-    id: 'gear-upgrade',
-    title: 'Premium Safety Gear & GoPro Mount',
-    description: 'Upgraded helmets with built-in communication system and GoPro mounting for your own camera',
-    price: 12.00,
-    originalPrice: 18.00,
-    required: false,
-    maxQuantity: 4,
-    category: 'Experience',
-    icon: Shield,
-    savings: 6,
-    perGuest: true,
-  },
-  {
     id: 'refreshment-upgrade',
     title: 'Gourmet Refreshment Package',
-    description: 'Premium snacks, fresh juices, and traditional sweets served during rest stops',
-    price: 8.00,
-    originalPrice: 12.00,
+    description: 'Premium snacks, fresh juices, and traditional treats',
+    price: 12.00,
+    originalPrice: 18.00,
     required: false,
     maxQuantity: 1,
     category: 'Food',
     icon: Coffee,
-    savings: 4,
-  }
+    savings: 6,
+    perGuest: true,
+  },
 ];
 
 // Steps configuration
@@ -523,24 +498,25 @@ const CalendarWidget: React.FC<{
   );
 };
 
-// Enhanced Tour Option Card with better UI
+// MODIFIED: TourOptionCard now uses real tour data
 const TourOptionCard: React.FC<{
   option: TourOption;
   onSelect: (timeSlot: TimeSlot) => void;
   selectedTimeSlot: TimeSlot | null;
   adults: number;
   children: number;
-}> = ({ option, onSelect, selectedTimeSlot, adults, children }) => {
+  tour: Tour; // Added tour prop
+}> = ({ option, onSelect, selectedTimeSlot, adults, children, tour }) => {
   const { formatPrice } = useSettings();
   const basePrice = option.price;
   const subtotal = (adults * basePrice) + (children * basePrice * 0.5);
   const originalSubtotal = option.originalPrice ? (adults * option.originalPrice) + (children * option.originalPrice * 0.5) : subtotal;
   const savings = originalSubtotal - subtotal;
 
-  // Hardcoded values for now
-  const rating = 4.8;
-  const totalBookings = 1247;
-  const maxParticipants = 12;
+  // Use real tour data instead of hardcoded values
+  const rating = tour.rating || 4.5;
+  const totalBookings = tour.bookings || tour.reviews || 0;
+  const maxParticipants = tour.maxGroupSize || 15;
 
   return (
     <motion.div
@@ -560,7 +536,7 @@ const TourOptionCard: React.FC<{
             {option.isRecommended && (
               <span className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
                 <Sparkles size={12} />
-                Most Popular
+                {option.badge || 'Recommended'}
               </span>
             )}
             {option.discount && (
@@ -574,7 +550,7 @@ const TourOptionCard: React.FC<{
             {option.title}
           </h3>
 
-          {/* Rating and Bookings Row */}
+          {/* Rating and Bookings Row - Now using real data */}
           <div className="flex items-center gap-4 mb-3">
             <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
               <Star size={14} className="text-yellow-500 fill-yellow-500" />
@@ -879,7 +855,16 @@ const BookingSummaryCard: React.FC<{
   tour: Tour | null;
   onEditClick: (section: 'date' | 'guests' | 'language') => void;
 }> = ({ bookingData, tour, onEditClick }) => {
-  const { formatPrice, formatDate } = useSettings();
+  const { formatPrice } = useSettings();
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   const formatParticipants = () => {
     const total = bookingData.adults + bookingData.children + bookingData.infants;
@@ -889,6 +874,19 @@ const BookingSummaryCard: React.FC<{
     if (bookingData.infants > 0) parts.push(`${bookingData.infants} Infant${bookingData.infants > 1 ? 's' : ''}`);
     return `${total} Participant${total > 1 ? 's' : ''} (${parts.join(', ')})`;
   };
+
+  // Get tour display data with proper fallbacks
+  const tourDisplayData = tour ? {
+    id: tour.id || tour._id,
+    title: tour.title,
+    image: tour.image,
+    duration: tour.duration,
+    rating: tour.rating || 4.5,
+    bookings: tour.bookings || tour.reviews || 0,
+    destination: typeof tour.destination === 'string' 
+      ? tour.destination 
+      : tour.destination?.name || 'Unknown',
+  } : null;
 
   return (
     <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-lg">
@@ -985,12 +983,12 @@ const BookingSummaryCard: React.FC<{
         </motion.div>
 
         {/* Tour Information */}
-        {tour && (
+        {tourDisplayData && (
           <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200">
             <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
               <Image 
-                src={tour.image} 
-                alt={tour.title} 
+                src={tourDisplayData.image} 
+                alt={tourDisplayData.title} 
                 width={48} 
                 height={48} 
                 className="w-full h-full object-cover" 
@@ -998,11 +996,17 @@ const BookingSummaryCard: React.FC<{
             </div>
             <div className="flex-1">
               <div className="font-bold text-slate-800 text-sm sm:text-base line-clamp-2">
-                {tour.title}
+                {tourDisplayData.title}
               </div>
               <div className="text-xs sm:text-sm text-slate-600 mt-1">
-                {tour.duration} • {tour.rating} ⭐ ({tour.bookings?.toLocaleString()} reviews)
+                {tourDisplayData.duration} • {tourDisplayData.rating} ⭐ ({tourDisplayData.bookings.toLocaleString()} reviews)
               </div>
+              {tourDisplayData.destination && (
+                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                  <MapPin size={12} />
+                  {tourDisplayData.destination}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1015,7 +1019,7 @@ const BookingSummaryCard: React.FC<{
 interface BookingSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  tour: Tour | null;
+  tour: Tour;
 }
 
 const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }) => {
@@ -1044,16 +1048,237 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
   // Mock availability data with better realism
   const mockAvailabilityData = {
-    '2025-09-16': 'high',
-    '2025-09-17': 'medium',
-    '2025-09-18': 'high',
-    '2025-09-19': 'low',
-    '2025-09-20': 'full',
+    '2025-09-19': 'high',
+    '2025-09-20': 'medium',
     '2025-09-21': 'high',
-    '2025-09-22': 'medium',
+    '2025-09-22': 'low',
+    '2025-09-23': 'full',
+    '2025-09-24': 'high',
+    '2025-09-25': 'medium',
   };
 
-  // Enhanced availability fetching with weather info
+  // Get tour display data with proper fallbacks
+  const tourDisplayData = useMemo(() => {
+    if (!tour) return null;
+    
+    return {
+      id: tour.id || tour._id,
+      title: tour.title,
+      image: tour.image,
+      duration: tour.duration,
+      rating: tour.rating || 4.5,
+      bookings: tour.bookings || tour.reviews || 0,
+      destination: typeof tour.destination === 'string' 
+        ? tour.destination 
+        : tour.destination?.name || 'Unknown',
+      discountPrice: tour.discountPrice,
+      originalPrice: tour.originalPrice,
+      maxGroupSize: tour.maxGroupSize || 15,
+      highlights: tour.highlights || [],
+      includes: tour.includes || [],
+      whatsIncluded: tour.whatsIncluded || [],
+      bookingOptions: tour.bookingOptions || [],
+      tags: tour.tags || [],
+      cancellationPolicy: tour.cancellationPolicy || 'Free cancellation up to 24 hours in advance',
+      operatedBy: tour.operatedBy || 'Tour Operator',
+      meetingPoint: tour.meetingPoint || 'Central meeting point',
+      languages: tour.languages || ['English'],
+    };
+  }, [tour]);
+
+  // MODIFIED: Generate time slots from tour availability or create default ones
+ // Updated time slots generation to support different pricing and premium options
+const generateTimeSlotsFromAvailability = useCallback((tourData: Tour, price: number, isPremium: boolean = false): TimeSlot[] => {
+  if (tourData.availability && tourData.availability.slots) {
+    return tourData.availability.slots.map((slot, index) => ({
+      id: `slot-${isPremium ? 'premium-' : ''}${index}`,
+      time: slot.time,
+      available: isPremium ? Math.min(slot.capacity || 15, 8) : (slot.capacity || 15),
+      originalAvailable: isPremium ? 8 : (slot.capacity || 15),
+      price: price,
+      isPopular: index === 0 && !isPremium,
+    }));
+  }
+
+  // Generate different time slots based on option type
+  const baseSlots = [
+    { time: '09:00', capacity: 15 },
+    { time: '11:00', capacity: 15 },
+    { time: '14:00', capacity: 15 },
+    { time: '16:00', capacity: 15 },
+    { time: '18:00', capacity: 12 },
+  ];
+
+  if (isPremium) {
+    // Premium slots with limited capacity
+    return [
+      { id: 'premium-slot-1', time: '10:00', available: 6, originalAvailable: 8, price: price },
+      { id: 'premium-slot-2', time: '15:00', available: 4, originalAvailable: 8, price: price, isPopular: true },
+      { id: 'premium-slot-3', time: '17:00', available: 8, originalAvailable: 8, price: price },
+    ];
+  }
+
+  return baseSlots.map((slot, index) => ({
+    id: `slot-${index}`,
+    time: slot.time,
+    available: Math.floor(Math.random() * slot.capacity) + Math.floor(slot.capacity * 0.3), // Random availability
+    originalAvailable: slot.capacity,
+    price: price,
+    isPopular: index === 1, // Make second slot popular
+  }));
+}, []);
+
+ // Generate multiple tour options dynamically from the tour data
+const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] => {
+  const options: TourOption[] = [];
+
+  // If tour has bookingOptions, use those
+  if (tourData.bookingOptions && tourData.bookingOptions.length > 0) {
+    tourData.bookingOptions.forEach((bookingOption, index) => {
+      options.push({
+        id: `tour-option-${index}`,
+        title: bookingOption.label || `${tourData.title} - Option ${index + 1}`,
+        price: bookingOption.price || tourData.discountPrice,
+        originalPrice: tourData.originalPrice,
+        duration: tourData.duration || '60 minutes',
+        languages: tourData.languages || ['English'],
+        description: tourData.description || 'Experience this amazing tour',
+        timeSlots: generateTimeSlotsFromAvailability(tourData, bookingOption.price || tourData.discountPrice),
+        highlights: tourData.highlights || [],
+        included: tourData.whatsIncluded || tourData.includes || [],
+        groupSize: `Max ${tourData.maxGroupSize || 15} people`,
+        difficulty: tourData.difficulty || 'Easy',
+        badge: index === 0 ? 'Most Popular' : bookingOption.type,
+        discount: tourData.originalPrice ? Math.round(((tourData.originalPrice - (bookingOption.price || tourData.discountPrice)) / tourData.originalPrice) * 100) : undefined,
+        isRecommended: index === 0,
+      });
+    });
+  } else {
+    // Generate multiple default options if no bookingOptions exist
+    const basePrice = tourData.discountPrice;
+    const originalPrice = tourData.originalPrice;
+
+    // Standard Option
+    options.push({
+      id: 'standard-option',
+      title: `${tourData.title} - Standard Experience`,
+      price: basePrice,
+      originalPrice: originalPrice,
+      duration: tourData.duration || '75 minutes',
+      languages: tourData.languages || ['English', 'Dutch'],
+      description: tourData.description || 'Experience this amazing tour with our standard package including all essential features.',
+      timeSlots: generateTimeSlotsFromAvailability(tourData, basePrice),
+      highlights: tourData.highlights?.slice(0, 4) || [
+        'Professional guide',
+        'Safety equipment included',
+        'Basic refreshments',
+        'Group experience'
+      ],
+      included: tourData.whatsIncluded?.slice(0, 4) || tourData.includes?.slice(0, 4) || [
+        'Tour guide',
+        'Safety briefing',
+        'Basic amenities',
+        'Group photos'
+      ],
+      groupSize: `Max ${tourData.maxGroupSize || 15} people`,
+      difficulty: tourData.difficulty || 'Easy',
+      badge: 'Most Popular',
+      discount: originalPrice ? Math.round(((originalPrice - basePrice) / originalPrice) * 100) : 15,
+      isRecommended: true,
+    });
+
+    // Premium Option (if tour price allows)
+    if (basePrice > 20) {
+      const premiumPrice = Math.round(basePrice * 1.6);
+      options.push({
+        id: 'premium-option',
+        title: `${tourData.title} - Premium Experience`,
+        price: premiumPrice,
+        originalPrice: originalPrice ? Math.round(originalPrice * 1.6) : Math.round(premiumPrice * 1.2),
+        duration: tourData.duration || '90 minutes',
+        languages: tourData.languages || ['English', 'Dutch', 'German'],
+        description: 'Enhanced experience with premium amenities, smaller groups, and additional features for a more exclusive adventure.',
+        timeSlots: generateTimeSlotsFromAvailability(tourData, premiumPrice, true), // Premium slots
+        highlights: [
+          ...(tourData.highlights?.slice(0, 3) || ['Professional guide', 'Safety equipment', 'Premium service']),
+          'Small group experience',
+          'Premium refreshments',
+          'Priority boarding',
+          'Complimentary photos'
+        ],
+        included: [
+          ...(tourData.whatsIncluded?.slice(0, 3) || tourData.includes?.slice(0, 3) || ['Tour guide', 'Safety briefing', 'Basic amenities']),
+          'Premium refreshments',
+          'Professional photos',
+          'Priority access',
+          'Small group (max 8)'
+        ],
+        groupSize: `Max 8 people`,
+        difficulty: tourData.difficulty || 'Easy',
+        badge: 'Premium',
+        discount: 20,
+        isRecommended: false,
+      });
+    }
+
+    // Budget Option (if applicable)
+    if (basePrice > 15) {
+      const budgetPrice = Math.round(basePrice * 0.75);
+      options.push({
+        id: 'budget-option',
+        title: `${tourData.title} - Essential Experience`,
+        price: budgetPrice,
+        originalPrice: basePrice,
+        duration: tourData.duration?.replace(/\d+/, (match) => Math.max(45, parseInt(match) - 15).toString()) || '60 minutes',
+        languages: ['English'],
+        description: 'Great value option covering all the essentials with a focus on the main highlights of the tour.',
+        timeSlots: generateTimeSlotsFromAvailability(tourData, budgetPrice),
+        highlights: tourData.highlights?.slice(0, 3) || [
+          'Professional guide',
+          'Essential highlights',
+          'Safety included'
+        ],
+        included: tourData.includes?.slice(0, 3) || [
+          'Tour guide',
+          'Safety briefing',
+          'Essential amenities'
+        ],
+        groupSize: `Max ${tourData.maxGroupSize || 15} people`,
+        difficulty: tourData.difficulty || 'Easy',
+        badge: 'Best Value',
+        discount: Math.round(((basePrice - budgetPrice) / basePrice) * 100),
+        isRecommended: false,
+      });
+    }
+  }
+
+  return options;
+}, [generateTimeSlotsFromAvailability]);
+  
+  // MODIFIED: Generate add-ons from tour data or use defaults
+  const generateAddOnsFromTour = useCallback((tourData: Tour): AddOnTour[] => {
+    if (tourData.addOns && tourData.addOns.length > 0) {
+      return tourData.addOns.map((addon, index) => ({
+        id: addon.id || `addon-${index}`,
+        title: addon.name || 'Tour Enhancement',
+        description: addon.description || 'Enhance your tour experience',
+        price: addon.price || 15,
+        originalPrice: addon.price ? addon.price * 1.3 : 20,
+        required: false,
+        maxQuantity: 1,
+        popular: index === 0,
+        category: 'Experience' as const,
+        icon: Gift,
+        savings: addon.price ? Math.round(addon.price * 0.3) : 5,
+        perGuest: false,
+      }));
+    }
+
+    // Return default add-ons if none in tour data
+    return addOnData;
+  }, []);
+
+  // MODIFIED: Enhanced availability fetching with real tour data
   const fetchAvailability = async (date: Date, totalGuests: number) => {
     setIsLoading(true);
     setError('');
@@ -1065,23 +1290,14 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       const mockAvailability: AvailabilityData = {
         date: date.toISOString().split('T')[0],
         timeSlots: [],
-        addOns: addOnData,
-        tourOptions: tourOptionsData,
+        addOns: generateAddOnsFromTour(tour), // Use real tour data
+        tourOptions: generateTourOptionsFromTour(tour), // Use real tour data
         weatherInfo: {
           condition: 'Sunny',
-          temperature: '28°C',
+          temperature: '22°C',
           icon: '☀️'
         },
-        specialOffers: [
-          {
-            id: 'early-bird',
-            title: 'Early Bird Special',
-            description: 'Book 2 hours ahead and save 10%',
-            discount: 10,
-            validUntil: '2025-09-20',
-            type: 'early-bird'
-          }
-        ]
+        specialOffers: []
       };
 
       setAvailability(mockAvailability);
@@ -1095,6 +1311,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     }
   };
 
+
   // Enhanced price calculations with savings
   const { subtotal, addOnsTotal, total, totalSavings } = useMemo(() => {
     let basePrice = 0;
@@ -1103,13 +1320,17 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
     if (bookingData.selectedTimeSlot) {
       const selectedOption = availability?.tourOptions.find(option =>
-        option.timeSlots.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+        option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
       );
 
       if (selectedOption) {
         basePrice = selectedOption.price;
         originalBasePrice = selectedOption.originalPrice || selectedOption.price;
       }
+    } else if (tourDisplayData) {
+      // Use tour price as fallback
+      basePrice = tourDisplayData.discountPrice;
+      originalBasePrice = tourDisplayData.originalPrice || tourDisplayData.discountPrice;
     }
 
     const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * basePrice * 0.5);
@@ -1142,7 +1363,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       total: subtotalCalc + addOnsCalc,
       totalSavings: totalSavingsCalc,
     };
-  }, [bookingData, availability]);
+  }, [bookingData, availability, tourDisplayData]);
 
   // Reset when sidebar opens with enhanced animations
   useEffect(() => {
@@ -1213,7 +1434,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       return;
     }
 
-    const maxSize = tour?.maxGroupSize || 20;
+    const maxSize = tourDisplayData?.maxGroupSize || 20;
     if (totalGuests > maxSize) {
       setError(`Maximum group size is ${maxSize} guests`);
       toast.error(`Group too large (max ${maxSize} guests)`, { icon: '⚠️' });
@@ -1222,7 +1443,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
     setError('');
     fetchAvailability(bookingData.selectedDate, totalGuests);
-  }, [bookingData, tour?.maxGroupSize]);
+  }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability]);
 
   // Enhanced date selection with availability feedback
   const handleDateSelect = useCallback((date: Date) => {
@@ -1248,7 +1469,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     } else if (dayAvailability === 'high') {
       toast.success('Great choice! Plenty of availability.', { icon: '✨' });
     }
-  }, []);
+  }, [mockAvailabilityData]);
 
   const handleTimeSlotSelect = useCallback((timeSlot: TimeSlot) => {
     if (timeSlot.available === 0) {
@@ -1268,7 +1489,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     setBookingData(prev => {
       const currentCount = prev[type];
       const minValue = type === 'adults' ? 1 : 0;
-      const maxValue = (tour?.maxGroupSize || 20) - (prev.adults + prev.children + prev.infants - currentCount);
+      const maxValue = (tourDisplayData?.maxGroupSize || 20) - (prev.adults + prev.children + prev.infants - currentCount);
 
       let newCount = increment
         ? Math.min(maxValue, currentCount + 1)
@@ -1280,7 +1501,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
       return { ...prev, [type]: newCount };
     });
-  }, [tour?.maxGroupSize]);
+  }, [tourDisplayData?.maxGroupSize]);
 
   const getParticipantsText = useCallback(() => {
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
@@ -1309,7 +1530,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
   // Enhanced final booking actions with better feedback
   const handleFinalAction = useCallback(async (action: 'cart' | 'checkout') => {
-    if (isProcessing) return;
+    if (isProcessing || !tourDisplayData) return;
 
     setIsProcessing(action);
 
@@ -1325,27 +1546,31 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
     try {
       const selectedOption = availability?.tourOptions.find(option =>
-        option.timeSlots.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+        option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
       );
 
-      if (!selectedOption || !tour || !bookingData.selectedDate || !bookingData.selectedTimeSlot) {
+      if (!selectedOption && !tourDisplayData) {
+        throw new Error('Tour data not available.');
+      }
+
+      if (!bookingData.selectedDate || !bookingData.selectedTimeSlot) {
         throw new Error('Incomplete booking data.');
       }
 
-      // Prepare the cart item
+      // Prepare the cart item with all necessary data
       const newCartItem = {
-        ...tour,
-        id: tour.id,
-        uniqueId: `${tour.id}-${bookingData.selectedDate.toISOString()}-${bookingData.selectedTimeSlot.id}-${JSON.stringify(bookingData.selectedAddOns)}`,
+        ...tourDisplayData,
+        id: tourDisplayData.id,
+        uniqueId: `${tourDisplayData.id}-${bookingData.selectedDate.toISOString()}-${bookingData.selectedTimeSlot.id}-${JSON.stringify(bookingData.selectedAddOns)}`,
         quantity: bookingData.adults,
         childQuantity: bookingData.children,
         infantQuantity: bookingData.infants,
         selectedDate: bookingData.selectedDate.toISOString(),
         selectedTime: bookingData.selectedTimeSlot.time,
         selectedAddOns: bookingData.selectedAddOns,
-        price: selectedOption.price,
-        originalPrice: selectedOption.originalPrice,
-        discountPrice: selectedOption.price,
+        price: selectedOption?.price || tourDisplayData.discountPrice,
+        originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
+        discountPrice: selectedOption?.price || tourDisplayData.discountPrice,
         totalPrice: total,
       };
 
@@ -1369,7 +1594,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           position: 'bottom-center',
           style: { background: '#059669', color: 'white' }
         });
-        router.push('/'); // Or stay on the same page, depending on desired UX
+        // Stay on the same page or redirect as needed
       }
     } catch (error) {
       toast.dismiss(loadingToast);
@@ -1377,7 +1602,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, onClose, router, bookingData, availability, tour, addToCart, total]);
+  }, [isProcessing, onClose, router, bookingData, availability, tourDisplayData, addToCart, total]);
 
   const formatDate = useCallback((date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -1407,7 +1632,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     setAnimationKey(prev => prev + 1);
   }, []);
 
-  // Fix: Enhanced click outside handler
+  // Enhanced click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -1467,46 +1692,48 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             transition={{ duration: 0.3 }}
             className="space-y-4 p-4 sm:p-6"
           >
-            {/* Chips for reviews and bookings */}
-            <div className="flex items-center gap-2 mb-4">
+            {/* Tour info chips */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Star size={14} className="text-blue-500 fill-current" />
-                {tour?.rating ? `${tour.rating} (${(tour.reviews || 0).toLocaleString()} reviews)` : 'No ratings yet'}
+                {tourDisplayData ? `${tourDisplayData.rating} (${tourDisplayData.bookings.toLocaleString()} reviews)` : 'No ratings yet'}
               </div>
               <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Users size={14} className="text-red-500" />
-                {tour?.bookings ? `${tour.bookings.toLocaleString()} booked` : 'No bookings yet'}
+                Max {tourDisplayData?.maxGroupSize || 15}
               </div>
             </div>
 
-            {/* Compact Price Section - Now with a Badge look */}
+            {/* Compact Price Section */}
             <div className="flex justify-between items-center bg-gray-100 rounded-xl p-4 text-gray-800 border border-gray-200">
               <div>
-                <span className="text-sm text-gray-500 line-through block">
-                  {tour?.originalPrice ? formatPrice(tour.originalPrice) : ''}
-                </span>
+                {tourDisplayData?.originalPrice && (
+                  <span className="text-sm text-gray-500 line-through block">
+                    {formatPrice(tourDisplayData.originalPrice)}
+                  </span>
+                )}
                 <span className="text-2xl sm:text-3xl font-bold text-red-600 block">
-                  {formatPrice(tour?.discountPrice || 0)}
+                  {formatPrice(tourDisplayData?.discountPrice || 0)}
                 </span>
                 <span className="text-xs text-gray-500">per person</span>
               </div>
               <div className="flex items-center gap-2 text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full text-sm">
                 <BadgeDollarSign size={16} />
-                <span>You Save</span>
+                <span>Great Value</span>
               </div>
             </div>
 
             {/* Compact Highlights - Only show 2 */}
             <div className="grid grid-cols-1 gap-2">
-              {tour?.highlights?.slice(0, 2).map((highlight, index) => (
+              {tourDisplayData?.highlights?.slice(0, 2).map((highlight, index) => (
                 <div key={index} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
                   <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
                   <span className="text-xs text-gray-700 font-medium leading-tight">{highlight}</span>
                 </div>
               ))}
-              {tour?.highlights && tour.highlights.length > 2 && (
+              {tourDisplayData?.highlights && tourDisplayData.highlights.length > 2 && (
                 <div className="text-xs text-red-600 font-medium text-center">
-                  +{tour.highlights.length - 2} more benefits included
+                  +{tourDisplayData.highlights.length - 2} more benefits included
                 </div>
               )}
             </div>
@@ -1678,6 +1905,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 selectedTimeSlot={bookingData.selectedTimeSlot}
                 adults={bookingData.adults}
                 children={bookingData.children}
+                tour={tour} // MODIFIED: Pass the real tour data
               />
             ))}
           </motion.div>
@@ -1727,7 +1955,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             {/* Booking Summary Card */}
             <BookingSummaryCard
               bookingData={bookingData}
-              tour={tour}
+              tour={tourDisplayData}
               onEditClick={handleEditClick}
             />
 
@@ -1740,7 +1968,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                 </h3>
                 <div className="space-y-3">
                   {Object.entries(bookingData.selectedAddOns).map(([addOnId, quantity]) => {
-                    const addOn = addOnData.find(a => a.id === addOnId);
+                    const addOn = availability?.addOns.find(a => a.id === addOnId);
                     if (!addOn) return null;
                     
                     const IconComponent = addOn.icon || Gift;
@@ -1820,7 +2048,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     }
   };
 
-  if (!tour) return null;
+  if (!tour || !tourDisplayData) return null;
 
   return (
     <AnimatePresence>
@@ -1865,8 +2093,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                   <h3 className="font-bold text-gray-800 text-lg">
                     {currentStep === 1 ? 'Start Your Booking' : 'Customize Your Trip'}
                   </h3>
-                  {tour && (
-                    <p className="text-xs text-gray-500 line-clamp-1">{tour.title}</p>
+                  {tourDisplayData && (
+                    <p className="text-xs text-gray-500 line-clamp-1">{tourDisplayData.title}</p>
                   )}
                 </div>
               </div>
