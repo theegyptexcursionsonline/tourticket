@@ -74,6 +74,19 @@ export interface ItineraryItem {
   description: string;
 }
 
+// NEW: FAQ interface
+export interface FAQ {
+  question: string;
+  answer: string;
+}
+
+// NEW: Booking Option interface
+export interface BookingOption {
+  type: string;
+  label: string;
+  price: number;
+}
+
 export interface Tour {
   _id: string;
   id: number | string;
@@ -96,6 +109,12 @@ export interface Tour {
   whatsIncluded?: string[];
   whatsNotIncluded?: string[];
   itinerary?: ItineraryItem[];
+  faqs?: FAQ[];
+  bookingOptions?: BookingOption[];
+  addOns?: AddOn[];
+  isPublished?: boolean;
+  difficulty?: string;
+  maxGroupSize?: number;
   meetingPoint?: string;
   languages?: string[];
   ageRestriction?: string;
@@ -107,13 +126,12 @@ export interface Tour {
     address: string;
   };
   destination?: Destination;
-  category?: Category; // FIXED: Changed from categories array to singular category to match our model
+  category?: Category;
   destinationId: string;
   categoryIds: string[];
-  availability?: Availability; // FIXED: Now properly typed instead of any
+  availability?: Availability;
   featured?: boolean;
   quantity?: number;
-  addOns?: AddOn[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -248,6 +266,12 @@ export interface TourFormData {
   whatsIncluded: string[];
   whatsNotIncluded: string[];
   itinerary: ItineraryItem[];
+  faqs: FAQ[];
+  bookingOptions: BookingOption[];
+  addOns: AddOn[];
+  isPublished: boolean;
+  difficulty: string;
+  maxGroupSize: number;
   tags: string;
   isFeatured: boolean;
   availability: Availability;

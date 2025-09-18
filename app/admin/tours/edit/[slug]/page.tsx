@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import withAuth from '@/components/admin/withAuth';
 import { Plus, Trash2 } from 'lucide-react';
 import 'react-day-picker/dist/style.css';
+import TourForm from '@/components/TourForm';
 
 // --- Helper: Availability Manager Component ---
 const AvailabilityManager = ({ availability, setAvailability }: { availability: any, setAvailability: (data: any) => void }) => {
@@ -65,7 +66,7 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
             )}
             <div className="mt-6">
                 <h3 className="text-lg font-medium text-gray-900">Time Slots & Capacity</h3>
-                 {(availability?.slots || []).map((slot: any, index: number) => (
+                {(availability?.slots || []).map((slot: any, index: number) => (
                     <div key={index} className="flex items-center gap-4 mt-2">
                         <input type="time" value={slot.time || ''} onChange={(e) => handleSlotChange(index, 'time', e.target.value)} className="p-2 border rounded" />
                         <input type="number" value={slot.capacity || 0} onChange={(e) => handleSlotChange(index, 'capacity', Number(e.target.value))} className="p-2 border rounded w-24" placeholder="Capacity" />
@@ -114,7 +115,7 @@ const EditTourPage = () => {
                         if (!tour.availability.availableDays) {
                             tour.availability.availableDays = [0,1,2,3,4,5,6];
                         }
-
+                        console.log('Tour data received from backend:', tour); // Add this line
                         setTourData(tour);
                     } else {
                         throw new Error(data.message || 'Failed to load tour data');
@@ -133,47 +134,9 @@ const EditTourPage = () => {
         }
     }, [slug]);
 
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setTourData((prev: any) => ({ ...prev, [name]: value }));
-    };
-
-    const setAvailability = (availabilityData: any) => {
-        setTourData((prev: any) => ({ ...prev, availability: availabilityData }));
-    };
-
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        try {
-            const response = await fetch(`/api/admin/tours/${slug}`, { // Use slug in the PUT request
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(tourData),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'An unknown error occurred');
-            }
-
-            if (result.success) {
-                router.push('/admin/tours');
-            } else {
-                throw new Error(result.error || 'Update failed');
-            }
-        } catch (err: any) {
-            setError(`Failed to update tour: ${err.message}`);
-        }
-    };
-
     if (loading) return <div className="p-6">Loading...</div>;
     if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
     if (!tourData) return <div className="p-6">Tour not found.</div>;
-
 
     return (
         <div className="p-6">
@@ -182,78 +145,8 @@ const EditTourPage = () => {
                 <p className="text-slate-600 mt-2">Editing: {tourData.title}</p>
             </div>
 
-            <form onSubmit={handleSubmit}>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
-                            <input
-                                type="text"
-                                name="title"
-                                id="title"
-                                value={tourData.title || ''}
-                                onChange={handleChange}
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="duration" className="block text-sm font-medium text-gray-700">Duration</label>
-                            <input
-                                type="text"
-                                name="duration"
-                                id="duration"
-                                value={tourData.duration || ''}
-                                onChange={handleChange}
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea
-                                name="description"
-                                id="description"
-                                value={tourData.description || ''}
-                                onChange={handleChange}
-                                rows={5}
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Availability Section */}
-                {tourData.availability && (
-                    <AvailabilityManager
-                        availability={tourData.availability}
-                        setAvailability={setAvailability}
-                    />
-                )}
-
-                {/* Error Display */}
-                {error && (
-                    <div className="mt-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        <strong>Error:</strong> {error}
-                    </div>
-                )}
-
-                {/* Form Actions */}
-                <div className="mt-6 flex justify-between">
-                    <button
-                        type="button"
-                        onClick={() => router.push('/admin/tours')}
-                        className="px-6 py-2 bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        className="px-6 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700"
-                    >
-                        Save Changes
-                    </button>
-                </div>
-            </form>
+            {/* Use the comprehensive TourForm component */}
+            <TourForm tourToEdit={tourData} />
         </div>
     );
 };
