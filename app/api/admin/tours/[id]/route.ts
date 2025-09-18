@@ -127,7 +127,8 @@ export async function PUT(
                 originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
                 destination: destination,
                 category: categories?.[0] || category, // Handle both category and categories
-                image: image || '', // Ensure image is set
+                // FIX: Only update image if a new one is provided and not empty
+                ...(image && image.trim() !== '' && { image: image }),
                 images: Array.isArray(images) ? images : [],
                 highlights: Array.isArray(highlights) ? highlights.filter(Boolean) : [],
                 includes: Array.isArray(includes) ? includes.filter(Boolean) : [],
@@ -158,8 +159,9 @@ export async function PUT(
             }
         };
 
-console.log('Update data prepared:', JSON.stringify(updateData, null, 2));
-console.log('Image field being saved:', image); // Add this line
+        console.log('Update data prepared:', JSON.stringify(updateData, null, 2));
+        console.log('Image field being saved:', image); // Add this line
+
         let updatedTour;
         const options = { 
             new: true, 

@@ -6,10 +6,10 @@ import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 
 // Utility function to generate URL-friendly slugs
-const generateSlug = (name: string): string => 
+const generateSlug = (name: string): string =>
   name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-// Interface definitions for type safety
+// Interface definitions for better type safety
 interface SeedDestination {
   name: string;
   slug?: string;
@@ -70,6 +70,7 @@ interface SeedData {
   categories?: SeedCategory[];
   tours?: SeedTour[];
   wipeData?: boolean;
+  updateMode?: 'insert' | 'upsert' | 'replace';
 }
 
 interface ImportReport {
@@ -77,6 +78,9 @@ interface ImportReport {
   destinationsCreated: number;
   categoriesCreated: number;
   toursCreated: number;
+  destinationsUpdated: number;
+  categoriesUpdated: number;
+  toursUpdated: number;
   errors: string[];
   warnings: string[];
 }
@@ -87,13 +91,14 @@ export async function POST(request: Request) {
   
   try {
     const seedData: SeedData = await request.json();
-    const { destinations, categories, tours, wipeData } = seedData;
+    const { destinations, categories, tours, wipeData, updateMode = 'insert' } = seedData;
 
     console.log('Received data:', {
       destinations: destinations?.length || 0,
       categories: categories?.length || 0,
       tours: tours?.length || 0,
-      wipeData
+      wipeData,
+      updateMode
     });
 
     const report: ImportReport = {
@@ -101,6 +106,9 @@ export async function POST(request: Request) {
       destinationsCreated: 0,
       categoriesCreated: 0,
       toursCreated: 0,
+      destinationsUpdated: 0,
+      categoriesUpdated: 0,
+      toursUpdated: 0,
       errors: [],
       warnings: [],
     };
@@ -122,77 +130,135 @@ export async function POST(request: Request) {
       }
     }
 
-    // Step 2: Create destinations
+    // Step 2: Process destinations with upsert logic
     if (destinations && destinations.length > 0) {
-      console.log(`Creating ${destinations.length} destinations...`);
-      try {
-        const destinationDocs = destinations.map((dest) => ({
-          name: dest.name?.trim(),
-          slug: dest.slug?.trim() || generateSlug(dest.name),
-          image: dest.image || '/placeholder-destination.jpg',
-          description: dest.description?.trim() || '',
-        }));
+      console.log(`Processing ${destinations.length} destinations with ${updateMode} mode...`);
+      
+      let destinationsCreated = 0;
+      let destinationsUpdated = 0;
 
-        // Validate destinations
-        const validDestinations = destinationDocs.filter((dest) => {
-          if (!dest.name) {
+      for (const destData of destinations) {
+        try {
+          if (!destData.name?.trim()) {
             report.warnings.push('Skipped destination with missing name');
-            return false;
+            continue;
           }
-          return true;
-        });
 
-        if (validDestinations.length > 0) {
-          const created = await Destination.insertMany(validDestinations, { ordered: false });
-          report.destinationsCreated = created.length;
-          console.log(`Successfully created ${created.length} destinations`);
-        }
-      } catch (destError: any) {
-        console.error('Error creating destinations:', destError);
-        if (destError.code === 11000) {
-          report.errors.push('Some destinations already exist (duplicate names/slugs)');
-        } else {
-          report.errors.push(`Error creating destinations: ${destError.message}`);
+          const destinationDoc = {
+            name: destData.name.trim(),
+            slug: destData.slug?.trim() || generateSlug(destData.name),
+            image: destData.image || '/placeholder-destination.jpg',
+            description: destData.description?.trim() || '',
+            updatedAt: new Date(),
+          };
+
+          const existingDestination = await Destination.findOne({
+            $or: [
+              { slug: destinationDoc.slug },
+              { name: destinationDoc.name }
+            ]
+          });
+
+          if (existingDestination && (updateMode === 'upsert' || updateMode === 'replace')) {
+            // Update existing destination
+            await Destination.findByIdAndUpdate(
+              existingDestination._id,
+              { $set: destinationDoc },
+              { runValidators: true }
+            );
+            destinationsUpdated++;
+            console.log(`Updated destination: ${destinationDoc.name}`);
+          } else if (!existingDestination || updateMode === 'insert') {
+            // Create new destination
+            await Destination.create({
+              ...destinationDoc,
+              createdAt: new Date()
+            });
+            destinationsCreated++;
+            console.log(`Created destination: ${destinationDoc.name}`);
+          } else {
+            report.warnings.push(`Destination "${destData.name}" already exists (skipped)`);
+          }
+        } catch (destError: any) {
+          console.error(`Error processing destination "${destData.name}":`, destError);
+          if (destError.code === 11000) {
+            report.warnings.push(`Destination "${destData.name}" already exists (duplicate)`);
+          } else {
+            report.errors.push(`Error processing destination "${destData.name}": ${destError.message}`);
+          }
         }
       }
+
+      report.destinationsCreated = destinationsCreated;
+      report.destinationsUpdated = destinationsUpdated;
+      console.log(`Destinations processed: ${destinationsCreated} created, ${destinationsUpdated} updated`);
     }
 
-    // Step 3: Create categories
+    // Step 3: Process categories with upsert logic
     if (categories && categories.length > 0) {
-      console.log(`Creating ${categories.length} categories...`);
-      try {
-        const categoryDocs = categories.map((cat) => ({
-          name: cat.name?.trim(),
-          slug: cat.slug?.trim() || generateSlug(cat.name),
-        }));
+      console.log(`Processing ${categories.length} categories with ${updateMode} mode...`);
+      
+      let categoriesCreated = 0;
+      let categoriesUpdated = 0;
 
-        // Validate categories
-        const validCategories = categoryDocs.filter((cat) => {
-          if (!cat.name) {
+      for (const catData of categories) {
+        try {
+          if (!catData.name?.trim()) {
             report.warnings.push('Skipped category with missing name');
-            return false;
+            continue;
           }
-          return true;
-        });
 
-        if (validCategories.length > 0) {
-          const created = await Category.insertMany(validCategories, { ordered: false });
-          report.categoriesCreated = created.length;
-          console.log(`Successfully created ${created.length} categories`);
-        }
-      } catch (catError: any) {
-        console.error('Error creating categories:', catError);
-        if (catError.code === 11000) {
-          report.errors.push('Some categories already exist (duplicate names/slugs)');
-        } else {
-          report.errors.push(`Error creating categories: ${catError.message}`);
+          const categoryDoc = {
+            name: catData.name.trim(),
+            slug: catData.slug?.trim() || generateSlug(catData.name),
+            updatedAt: new Date(),
+          };
+
+          const existingCategory = await Category.findOne({
+            $or: [
+              { slug: categoryDoc.slug },
+              { name: categoryDoc.name }
+            ]
+          });
+
+          if (existingCategory && (updateMode === 'upsert' || updateMode === 'replace')) {
+            // Update existing category
+            await Category.findByIdAndUpdate(
+              existingCategory._id,
+              { $set: categoryDoc },
+              { runValidators: true }
+            );
+            categoriesUpdated++;
+            console.log(`Updated category: ${categoryDoc.name}`);
+          } else if (!existingCategory || updateMode === 'insert') {
+            // Create new category
+            await Category.create({
+              ...categoryDoc,
+              createdAt: new Date()
+            });
+            categoriesCreated++;
+            console.log(`Created category: ${categoryDoc.name}`);
+          } else {
+            report.warnings.push(`Category "${catData.name}" already exists (skipped)`);
+          }
+        } catch (catError: any) {
+          console.error(`Error processing category "${catData.name}":`, catError);
+          if (catError.code === 11000) {
+            report.warnings.push(`Category "${catData.name}" already exists (duplicate)`);
+          } else {
+            report.errors.push(`Error processing category "${catData.name}": ${catError.message}`);
+          }
         }
       }
+
+      report.categoriesCreated = categoriesCreated;
+      report.categoriesUpdated = categoriesUpdated;
+      console.log(`Categories processed: ${categoriesCreated} created, ${categoriesUpdated} updated`);
     }
 
-    // Step 4: Create tours with proper linking
+    // Step 4: Process tours with upsert logic
     if (tours && tours.length > 0) {
-      console.log(`Processing ${tours.length} tours...`);
+      console.log(`Processing ${tours.length} tours with ${updateMode} mode...`);
       
       try {
         // Fetch all destinations and categories for reference mapping
@@ -211,7 +277,8 @@ export async function POST(request: Request) {
           allCategories.map((cat) => [cat.name.toLowerCase().trim(), cat._id])
         );
 
-        const toursToInsert = [];
+        let toursCreated = 0;
+        let toursUpdated = 0;
 
         for (const tourData of tours) {
           const { destinationName, categoryNames, featured, isFeatured, ...restOfTourData } = tourData;
@@ -313,44 +380,97 @@ export async function POST(request: Request) {
               slots: [{ time: '10:00', capacity: restOfTourData.maxGroupSize || 10 }],
               blockedDates: [],
             },
+            
+            // Timestamp
+            updatedAt: new Date(),
           };
 
-          toursToInsert.push(tourDoc);
+          try {
+            // UPSERT LOGIC: Update if exists, create if new
+            const existingTour = await Tour.findOne({ 
+              $or: [
+                { slug: tourDoc.slug },
+                { title: tourDoc.title }
+              ]
+            });
+
+            if (existingTour && (updateMode === 'upsert' || updateMode === 'replace')) {
+              // UPDATE existing tour
+              const updatedTour = await Tour.findByIdAndUpdate(
+                existingTour._id,
+                { $set: tourDoc },
+                { 
+                  new: true, 
+                  runValidators: true,
+                  populate: [
+                    { path: 'category', select: 'name slug' },
+                    { path: 'destination', select: 'name slug' }
+                  ]
+                }
+              );
+              
+              if (updatedTour) {
+                toursUpdated++;
+                console.log(`Updated tour: ${updatedTour.title}`);
+              }
+              
+            } else if (!existingTour || updateMode === 'insert') {
+              // CREATE new tour
+              const newTour = await Tour.create({
+                ...tourDoc,
+                createdAt: new Date()
+              });
+              
+              if (newTour) {
+                toursCreated++;
+                console.log(`Created tour: ${newTour.title}`);
+              }
+            } else {
+              // Skip if exists and mode is insert-only
+              report.warnings.push(`Tour "${tourData.title}" already exists (skipped due to insert-only mode)`);
+            }
+
+          } catch (tourError: any) {
+            console.error(`Error processing tour "${tourData.title}":`, tourError);
+            if (tourError.code === 11000) {
+              report.warnings.push(`Tour "${tourData.title}" already exists (duplicate)`);
+            } else {
+              report.errors.push(`Error processing tour "${tourData.title}": ${tourError.message}`);
+            }
+          }
         }
 
-        // Insert valid tours
-        if (toursToInsert.length > 0) {
-          console.log(`Inserting ${toursToInsert.length} valid tours...`);
-          const created = await Tour.insertMany(toursToInsert, { ordered: false });
-          report.toursCreated = created.length;
-          console.log(`Successfully created ${created.length} tours`);
-        } else {
-          console.log('No valid tours to insert');
-        }
+        report.toursCreated = toursCreated;
+        report.toursUpdated = toursUpdated;
+        console.log(`Tours processed: ${toursCreated} created, ${toursUpdated} updated`);
 
       } catch (tourError: any) {
-        console.error('Error processing tours:', tourError);
-        if (tourError.code === 11000) {
-          report.errors.push('Some tours already exist (duplicate titles/slugs)');
-        } else {
-          report.errors.push(`Error creating tours: ${tourError.message}`);
-        }
+        console.error('Error in tour processing:', tourError);
+        report.errors.push(`Error in tour processing: ${tourError.message}`);
       }
     }
 
     // Summary logging
     console.log('Import completed:', {
       destinationsCreated: report.destinationsCreated,
+      destinationsUpdated: report.destinationsUpdated,
       categoriesCreated: report.categoriesCreated,
+      categoriesUpdated: report.categoriesUpdated,
       toursCreated: report.toursCreated,
+      toursUpdated: report.toursUpdated,
       errors: report.errors.length,
       warnings: report.warnings.length,
     });
 
+    // Determine success based on whether any items were processed
+    const totalProcessed = report.destinationsCreated + report.destinationsUpdated + 
+                          report.categoriesCreated + report.categoriesUpdated + 
+                          report.toursCreated + report.toursUpdated;
+
     return NextResponse.json({
       success: true,
       report,
-      message: `Successfully imported ${report.destinationsCreated + report.categoriesCreated + report.toursCreated} items`,
+      message: `Successfully processed ${totalProcessed} items (${report.destinationsCreated + report.categoriesCreated + report.toursCreated} created, ${report.destinationsUpdated + report.categoriesUpdated + report.toursUpdated} updated)`,
     });
 
   } catch (error: any) {
@@ -361,7 +481,7 @@ export async function POST(request: Request) {
       const duplicateField = Object.keys(error.keyPattern || {})[0] || 'unknown field';
       return NextResponse.json({
         success: false,
-        error: `Duplicate ${duplicateField} detected. Consider using "wipeData: true" to clear existing data first.`,
+        error: `Duplicate ${duplicateField} detected. Consider using "updateMode: upsert" to update existing items.`,
         details: error.message,
       }, { status: 409 });
     }

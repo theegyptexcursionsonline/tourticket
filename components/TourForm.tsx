@@ -389,85 +389,155 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMainImage = true) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        
         setIsUploading(true);
         const uploadFormData = new FormData();
         uploadFormData.append('file', file);
-        const uploadPromise = fetch('/api/upload', { method: 'POST', body: uploadFormData })
+
+        const promise = fetch('/api/upload', { method: 'POST', body: uploadFormData })
             .then(res => res.json())
             .then(data => {
-                if (data?.success) {
+                if (data.success) {
                     if (isMainImage) {
+                        console.log('Setting main image:', data.url); // Debug log
                         setFormData((p: any) => ({ ...p, image: data.url }));
                     } else {
                         setFormData((p: any) => ({ ...p, images: [...p.images, data.url] }));
                     }
-                    return 'Image uploaded!';
+                    return 'Image uploaded successfully!';
+                } else {
+                    throw new Error('Upload failed.');
                 }
-                throw new Error('Upload failed');
             });
-        toast.promise(uploadPromise, {
+
+        toast.promise(promise, {
             loading: 'Uploading image...',
-            success: (msg) => msg as string,
-            error: 'Upload failed. Try again.',
-        }).finally(() => setIsUploading(false));
+            success: (message) => message as string,
+            error: 'Upload failed. Please try again.',
+        }).finally(() => {
+            setIsUploading(false);
+        });
     };
 
     const removeGalleryImage = (imageUrl: string) => {
         setFormData((p: any) => ({ ...p, images: p.images.filter((u: string) => u !== imageUrl) }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        
-        // Clean up data on submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    console.log('Form data before submit:', formData); // Debug log
+    
+    // Validate required fields before submission
+    if (!formData.title?.trim()) {
+        toast.error('Title is required');
+        setIsSubmitting(false);
+        return;
+    }
+    
+    if (!formData.description?.trim()) {
+        toast.error('Description is required');
+        setIsSubmitting(false);
+        return;
+    }
+    
+    if (!formData.duration?.trim()) {
+        toast.error('Duration is required');
+        setIsSubmitting(false);
+        return;
+    }
+    
+    if (!formData.discountPrice) {
+        toast.error('Discount price is required');
+        setIsSubmitting(false);
+        return;
+    }
+    
+    try {
+        // Create a clean copy of form data
         const cleanedData = { ...formData };
         
-        // Filter empty strings from array fields
-        if (cleanedData.whatsIncluded) {
-            cleanedData.whatsIncluded = cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '');
-        }
-        if (cleanedData.whatsNotIncluded) {
-            cleanedData.whatsNotIncluded = cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '');
-        }
-        if (cleanedData.faqs) {
-            cleanedData.faqs = cleanedData.faqs.filter((faq: any) => faq.question.trim() !== '' && faq.answer.trim() !== '');
-        }
-        if (cleanedData.bookingOptions) {
-            cleanedData.bookingOptions = cleanedData.bookingOptions.filter((option: any) => option.label.trim() !== '');
-        }
-        if (cleanedData.addOns) {
-            cleanedData.addOns = cleanedData.addOns.filter((addon: any) => addon.name.trim() !== '');
-        }
+        // Ensure required fields are always included
+        const payload = {
+            // Required fields first
+            title: cleanedData.title.trim(),
+            slug: cleanedData.slug.trim(),
+            description: cleanedData.description.trim(),
+            duration: cleanedData.duration.trim(),
+            discountPrice: parseFloat(cleanedData.discountPrice) || 0,
+            
+            // Optional fields
+            longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
+            originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
+            destination: cleanedData.destination,
+            categories: cleanedData.categories,
+            difficulty: cleanedData.difficulty || 'Easy',
+            maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
+            isPublished: Boolean(cleanedData.isPublished),
+            isFeatured: Boolean(cleanedData.isFeatured),
+            
+            // Image fields (only include if they exist)
+            ...(cleanedData.image && cleanedData.image.trim() !== '' && { image: cleanedData.image }),
+            images: Array.isArray(cleanedData.images) ? cleanedData.images : [],
+            
+            // Arrays - filter out empty values
+            highlights: Array.isArray(cleanedData.highlights) ? cleanedData.highlights.filter((item: string) => item.trim() !== '') : [],
+            includes: Array.isArray(cleanedData.includes) ? cleanedData.includes.filter((item: string) => item.trim() !== '') : [],
+            whatsIncluded: Array.isArray(cleanedData.whatsIncluded) ? cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '') : [],
+            whatsNotIncluded: Array.isArray(cleanedData.whatsNotIncluded) ? cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '') : [],
+            
+            // Complex objects - filter out empty ones
+            itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: any) => item.title?.trim() && item.description?.trim()) : [],
+            faqs: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: any) => faq.question?.trim() && faq.answer?.trim()) : [],
+            bookingOptions: Array.isArray(cleanedData.bookingOptions) ? cleanedData.bookingOptions.filter((option: any) => option.label?.trim()) : [],
+            addOns: Array.isArray(cleanedData.addOns) ? cleanedData.addOns.filter((addon: any) => addon.name?.trim()) : [],
+            
+            // Tags processing
+            tags: typeof cleanedData.tags === 'string' 
+                ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) 
+                : Array.isArray(cleanedData.tags) ? cleanedData.tags : [],
+            
+            // Availability
+            availability: cleanedData.availability || {
+                type: 'daily',
+                availableDays: [0, 1, 2, 3, 4, 5, 6],
+                slots: [{ time: '10:00', capacity: 10 }]
+            }
+        };
+        
+        console.log('Final payload being sent:', payload); // Debug log
         
         const apiEndpoint = tourToEdit ? `/api/admin/tours/${tourToEdit._id}` : '/api/admin/tours';
         const method = tourToEdit ? 'PUT' : 'POST';
-        const payload = {
-            ...cleanedData,
-            tags: (cleanedData.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
-        };
         
-        try {
-            const res = await fetch(apiEndpoint, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (res.ok) {
-                toast.success('Tour saved successfully!');
-                router.push('/admin/tours');
-                router.refresh();
-            } else {
-                const errorData = await res.json();
-                toast.error(`Failed to save tour: ${errorData?.error || 'Unknown error'}`);
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('An unexpected error occurred.');
-        } finally {
-            setIsSubmitting(false);
+        const response = await fetch(apiEndpoint, {
+            method,
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+        
+        const responseData = await response.json();
+        console.log('Server response:', responseData); // Debug log
+        
+        if (response.ok) {
+            toast.success(`Tour ${tourToEdit ? 'updated' : 'created'} successfully!`);
+            router.push('/admin/tours');
+            router.refresh();
+        } else {
+            console.error('Server error:', responseData);
+            toast.error(`Failed to save tour: ${responseData?.error || 'Unknown error'}`);
         }
-    };
+        
+    } catch (error) {
+        console.error('Submit error:', error);
+        toast.error('An unexpected error occurred while saving the tour.');
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
     const tagList = formData.tags ? formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
 
@@ -491,30 +561,62 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                        <FormLabel>Title</FormLabel>
-                        <input name="title" value={formData.title} onChange={handleChange} className={`${inputBase} text-lg font-medium`} placeholder="e.g., 1-Hour Amsterdam Canal Cruise" required />
-                        <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
-                    </div>
-                    <div className="space-y-4">
-                        <FormLabel>URL Slug</FormLabel>
-                        <div className="relative">
-                            <input name="slug" value={formData.slug} onChange={handleChange} className={`${inputBase} pr-28`} placeholder="auto-generated-from-title" required />
-                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-3 py-1 rounded-md bg-slate-50 border border-slate-100">/{formData.slug || 'your-slug'}</span>
-                        </div>
-                        <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
-                    </div>
-                </div>
-                
-                <div className="space-y-2">
-                    <FormLabel>Short Description</FormLabel>
-                    <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className={`${inputBase} resize-none`} placeholder="Short summary that appears on the listing" />
-                </div>
-                <div className="space-y-2">
-                    <FormLabel>Long Description</FormLabel>
-                    <textarea name="longDescription" value={formData.longDescription} onChange={handleChange} rows={5} className={`${inputBase} resize-y`} placeholder="Full description shown on the tour detail page" />
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-4">
+        <FormLabel>Title *</FormLabel>
+        <input 
+            name="title" 
+            value={formData.title || ''} 
+            onChange={handleChange} 
+            className={`${inputBase} text-lg font-medium`} 
+            placeholder="e.g., 1-Hour Amsterdam Canal Cruise" 
+            required 
+        />
+        <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
+    </div>
+    <div className="space-y-4">
+        <FormLabel>URL Slug *</FormLabel>
+        <div className="relative">
+            <input 
+                name="slug" 
+                value={formData.slug || ''} 
+                onChange={handleChange} 
+                className={`${inputBase} pr-28`} 
+                placeholder="auto-generated-from-title" 
+                required 
+            />
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-3 py-1 rounded-md bg-slate-50 border border-slate-100">
+                /{formData.slug || 'your-slug'}
+            </span>
+        </div>
+        <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
+    </div>
+</div>
+
+<div className="space-y-2">
+    <FormLabel>Short Description *</FormLabel>
+    <textarea 
+        name="description" 
+        value={formData.description || ''} 
+        onChange={handleChange} 
+        rows={3} 
+        className={`${inputBase} resize-none`} 
+        placeholder="Short summary that appears on the listing" 
+        required
+    />
+</div>
+
+<div className="space-y-2">
+    <FormLabel>Long Description</FormLabel>
+    <textarea 
+        name="longDescription" 
+        value={formData.longDescription || ''} 
+        onChange={handleChange} 
+        rows={5} 
+        className={`${inputBase} resize-y`} 
+        placeholder="Full description shown on the tour detail page" 
+    />
+</div>
 
                 {/* Basic Tour Settings */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -852,25 +954,46 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <FormLabel>Main Image</FormLabel>
-                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, true)} className={inputBase} />
                         {formData.image && (
-                            <div className="mt-2">
-                                <img src={formData.image} alt="Main" className="w-20 h-20 object-cover rounded" />
+                            <div className="mt-2 mb-3">
+                                <img src={formData.image} alt="Main" className="w-20 h-20 object-cover rounded border" />
+                                <button 
+                                    type="button" 
+                                    onClick={() => setFormData(p => ({ ...p, image: '' }))}
+                                    className="mt-1 text-xs text-red-600 hover:text-red-800"
+                                >
+                                    Remove image
+                                </button>
                             </div>
                         )}
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handleImageUpload(e, true)} 
+                            className={inputBase}
+                            disabled={isUploading}
+                        />
+                        {isUploading && <SmallHint className="text-blue-600">Uploading image...</SmallHint>}
+                        <SmallHint>Upload a high-quality image for the main tour photo.</SmallHint>
                     </div>
                     <div>
                         <FormLabel>Gallery Images</FormLabel>
-                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, false)} className={inputBase} />
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handleImageUpload(e, false)} 
+                            className={inputBase}
+                            disabled={isUploading}
+                        />
                         {formData.images.length > 0 && (
                             <div className="mt-2 flex gap-2 flex-wrap">
                                 {formData.images.map((img: string, i: number) => (
                                     <div key={i} className="relative">
-                                        <img src={img} alt={`Gallery ${i}`} className="w-20 h-20 object-cover rounded" />
+                                        <img src={img} alt={`Gallery ${i}`} className="w-20 h-20 object-cover rounded border" />
                                         <button 
                                             type="button" 
                                             onClick={() => removeGalleryImage(img)}
-                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -878,6 +1001,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                                 ))}
                             </div>
                         )}
+                        <SmallHint>Add additional images to showcase your tour.</SmallHint>
                     </div>
                 </div>
 
