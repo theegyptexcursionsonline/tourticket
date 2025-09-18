@@ -1229,8 +1229,11 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
       
       {/* ADD THE STICKY BUTTON COMPONENT HERE */}
-      <StickyBookButton onClick={openBookingSidebar} />
-
+<StickyBookButton
+  price={tour.discountPrice}
+  currency={'$'} 
+  onClick={openBookingSidebar}
+/>
       <div className="sr-only" aria-live="polite">
         {liveMessage}
       </div>
