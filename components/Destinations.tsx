@@ -82,16 +82,18 @@ export default function Destinations() {
                 onClick={(e) => handleDestinationClick(e, destination)}
                 className="text-center group"
               >
-                <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl">
-                  <Image
-                    src={destination.image}
-                    alt={destination.name}
-                    width={160}
-                    height={160}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors"></div>
-                </div>
+             <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl bg-slate-200">
+  {destination.image && destination.image !== 'UPLOAD_IMAGE_URL_HERE' && (
+    <Image
+      src={destination.image}
+      alt={destination.name}
+      width={160}
+      height={160}
+      className="w-full h-full object-cover"
+    />
+  )}
+  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors"></div>
+</div>
                 <h3 className="mt-4 font-bold text-lg text-slate-800 group-hover:text-red-500 transition-colors">
                   {destination.name}
                 </h3>
