@@ -18,6 +18,7 @@ import {
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BookingSidebar from '@/components/BookingSidebar';
+import StickyBookButton from '@/components/StickyBookButton'; // <-- ADD THIS IMPORT
 
 // Hooks and Types
 import { useSettings } from '@/hooks/useSettings';
@@ -193,10 +194,10 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
   const scrollTabs = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const scrollAmount = 200;
-      const newScrollLeft = direction === 'left' 
+      const newScrollLeft = direction === 'left'
         ? scrollContainerRef.current.scrollLeft - scrollAmount
         : scrollContainerRef.current.scrollLeft + scrollAmount;
-      
+
       scrollContainerRef.current.scrollTo({
         left: newScrollLeft,
         behavior: 'smooth'
@@ -208,10 +209,10 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
     checkScrollButtons();
     const handleResize = () => checkScrollButtons();
     window.addEventListener('resize', handleResize);
-    
+
     return () => window.removeEventListener('resize', handleResize);
   }, [tabs]);
-  
+
   // Dynamic top position based on header visibility
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
 
@@ -221,18 +222,17 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
         {/* Left Arrow */}
         <button
           onClick={() => scrollTabs('left')}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${
-            showLeftArrow 
-              ? 'opacity-100 visible hover:bg-slate-50' 
+          className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${showLeftArrow
+              ? 'opacity-100 visible hover:bg-slate-50'
               : 'opacity-0 invisible'
-          }`}
+            }`}
           aria-label="Scroll tabs left"
         >
           <ChevronLeft size={16} className="text-slate-600" />
         </button>
 
         {/* Scrollable Tab Container */}
-        <div 
+        <div
           ref={scrollContainerRef}
           className="overflow-x-auto scrollbar-hide px-8"
           onScroll={checkScrollButtons}
@@ -247,11 +247,10 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
                   e.preventDefault();
                   scrollToSection(tab.id);
                 }}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                  activeTab === tab.id
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${activeTab === tab.id
                     ? 'bg-red-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-red-600'
-                }`}
+                  }`}
               >
                 <tab.icon size={18} />
                 {tab.label}
@@ -263,23 +262,20 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
         {/* Right Arrow */}
         <button
           onClick={() => scrollTabs('right')}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${
-            showRightArrow 
-              ? 'opacity-100 visible hover:bg-slate-50' 
+          className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${showRightArrow
+              ? 'opacity-100 visible hover:bg-slate-50'
               : 'opacity-0 invisible'
-          }`}
+            }`}
           aria-label="Scroll tabs right"
         >
           <ChevronRight size={16} className="text-slate-600" />
         </button>
 
         {/* Fade gradients */}
-        <div className={`absolute left-8 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none transition-opacity duration-200 ${
-          showLeftArrow ? 'opacity-100' : 'opacity-0'
-        }`} />
-        <div className={`absolute right-8 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none transition-opacity duration-200 ${
-          showRightArrow ? 'opacity-100' : 'opacity-0'
-        }`} />
+        <div className={`absolute left-8 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none transition-opacity duration-200 ${showLeftArrow ? 'opacity-100' : 'opacity-0'
+          }`} />
+        <div className={`absolute right-8 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none transition-opacity duration-200 ${showRightArrow ? 'opacity-100' : 'opacity-0'
+          }`} />
       </div>
     </div>
   );
@@ -420,7 +416,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
       <Accessibility size={24} className="text-purple-600" />
       Accessibility & Special Requirements
     </h3>
-    
+
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Accessibility Info */}
       <div className="bg-purple-50 p-6 rounded-xl">
@@ -565,7 +561,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 // Enhanced FAQ Component
 const EnhancedFAQ = ({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  
+
   const faqs = [
     {
       question: "What happens if I'm late for the departure?",
@@ -758,7 +754,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
 
   // Add this line to track header visibility
   const { isVisible: isHeaderVisible } = useScrollDirection();
-  
+
   const overviewRef = useRef<HTMLDivElement>(null);
   const itineraryRef = useRef<HTMLDivElement>(null);
   const practicalRef = useRef<HTMLDivElement>(null);
@@ -767,7 +763,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
   const culturalRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLDivElement>(null);
-  
+
   const inViewOptions = { threshold: 0.1 };
   const isOverviewInView = useInView(overviewRef, inViewOptions);
   const isItineraryInView = useInView(itineraryRef, inViewOptions);
@@ -791,7 +787,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     isOverviewInView, isItineraryInView, isPracticalInView, isAccessibilityInView,
     isPoliciesInView, isCulturalInView, isReviewsInView, isFaqInView
   ]);
-  
+
   const scrollToSection = (id: string) => {
     let ref;
     switch (id) {
@@ -909,13 +905,12 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                   {tour.tags?.map((tag, index) => (
                     <span
                       key={index}
-                      className={`px-3 py-1 text-xs font-semibold uppercase rounded-full tracking-wide leading-none ${
-                        tag.includes('%') || tag === 'Online only deal'
+                      className={`px-3 py-1 text-xs font-semibold uppercase rounded-full tracking-wide leading-none ${tag.includes('%') || tag === 'Online only deal'
                           ? 'bg-red-600 text-white'
                           : tag === 'Staff favourite'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-800'
-                      }`}
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 text-slate-800'
+                        }`}
                     >
                       {tag}
                     </span>
@@ -933,11 +928,10 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button
                       onClick={() => setIsWishlisted(!isWishlisted)}
-                      className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${
-                        isWishlisted
+                      className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${isWishlisted
                           ? 'bg-red-600 text-white'
                           : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
-                      }`}
+                        }`}
                       aria-pressed={isWishlisted}
                       aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                     >
@@ -958,11 +952,10 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                       <button
                         key={index}
                         onClick={() => setSelectedImageIndex(index)}
-                        className={`relative w-20 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all transform ${
-                          selectedImageIndex === index
+                        className={`relative w-20 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all transform ${selectedImageIndex === index
                             ? 'border-red-600 scale-105 shadow'
                             : 'border-slate-200 hover:border-slate-300'
-                        }`}
+                          }`}
                         aria-label={`View image ${index + 1}`}
                       >
                         <Image
@@ -1014,10 +1007,9 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
               </div>
 
               {/* Tab Navigation with dynamic header visibility */}
-              <TabNavigation 
-                activeTab={activeTab} 
-                setActiveTab={setActiveTab} 
-                tabs={tabs} 
+              <TabNavigation
+                activeTab={activeTab}
+                tabs={tabs}
                 scrollToSection={scrollToSection}
                 isHeaderVisible={isHeaderVisible}
               />
@@ -1031,7 +1023,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
               <CulturalSection enhancement={enhancement} sectionRef={culturalRef} />
               <ReviewsSection tour={tour} reviewsData={reviewsData} sectionRef={reviewsRef} />
               <EnhancedFAQ sectionRef={faqRef} />
-              
+
               {/* Meeting Point */}
               {tour.meetingPoint && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -1066,9 +1058,8 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                             {relatedTour.tags?.map((tag, index) => (
                               <span
                                 key={index}
-                                className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                                  tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
-                                }`}
+                                className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${tag.includes('%') ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
+                                  }`}
                               >
                                 {tag}
                               </span>
@@ -1143,11 +1134,10 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     <button
                       onClick={handleQuickAdd}
                       disabled={isAdding}
-                      className={`w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${
-                        added
+                      className={`w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${added
                           ? 'bg-green-600 text-white border-green-600 shadow-lg scale-105'
                           : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
-                      }`}
+                        }`}
                       aria-live="polite"
                       aria-disabled={isAdding}
                     >
@@ -1237,6 +1227,9 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
       <Footer />
 
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
+      
+      {/* ADD THE STICKY BUTTON COMPONENT HERE */}
+      <StickyBookButton onClick={openBookingSidebar} />
 
       <div className="sr-only" aria-live="polite">
         {liveMessage}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -1028,6 +1028,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const { addToCart } = useCart();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
+  
+  // 1. Add a new ref for the scrollable area
+  const datePickerRef = useRef<HTMLDivElement>(null);
+  const scrollableContentRef = useRef<HTMLDivElement>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(false);
@@ -1088,7 +1093,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
   // MODIFIED: Generate time slots from tour availability or create default ones
  // Updated time slots generation to support different pricing and premium options
-const generateTimeSlotsFromAvailability = useCallback((tourData: Tour, price: number, isPremium: boolean = false): TimeSlot[] => {
+ const generateTimeSlotsFromAvailability = useCallback((tourData: Tour, price: number, isPremium: boolean = false): TimeSlot[] => {
   if (tourData.availability && tourData.availability.slots) {
     return tourData.availability.slots.map((slot, index) => ({
       id: `slot-${isPremium ? 'premium-' : ''}${index}`,
@@ -1128,132 +1133,132 @@ const generateTimeSlotsFromAvailability = useCallback((tourData: Tour, price: nu
   }));
 }, []);
 
- // Generate multiple tour options dynamically from the tour data
-const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] => {
-  const options: TourOption[] = [];
-
-  // If tour has bookingOptions, use those
-  if (tourData.bookingOptions && tourData.bookingOptions.length > 0) {
-    tourData.bookingOptions.forEach((bookingOption, index) => {
-      options.push({
-        id: `tour-option-${index}`,
-        title: bookingOption.label || `${tourData.title} - Option ${index + 1}`,
-        price: bookingOption.price || tourData.discountPrice,
-        originalPrice: tourData.originalPrice,
-        duration: tourData.duration || '60 minutes',
-        languages: tourData.languages || ['English'],
-        description: tourData.description || 'Experience this amazing tour',
-        timeSlots: generateTimeSlotsFromAvailability(tourData, bookingOption.price || tourData.discountPrice),
-        highlights: tourData.highlights || [],
-        included: tourData.whatsIncluded || tourData.includes || [],
-        groupSize: `Max ${tourData.maxGroupSize || 15} people`,
-        difficulty: tourData.difficulty || 'Easy',
-        badge: index === 0 ? 'Most Popular' : bookingOption.type,
-        discount: tourData.originalPrice ? Math.round(((tourData.originalPrice - (bookingOption.price || tourData.discountPrice)) / tourData.originalPrice) * 100) : undefined,
-        isRecommended: index === 0,
-      });
-    });
-  } else {
-    // Generate multiple default options if no bookingOptions exist
-    const basePrice = tourData.discountPrice;
-    const originalPrice = tourData.originalPrice;
-
-    // Standard Option
-    options.push({
-      id: 'standard-option',
-      title: `${tourData.title} - Standard Experience`,
-      price: basePrice,
-      originalPrice: originalPrice,
-      duration: tourData.duration || '75 minutes',
-      languages: tourData.languages || ['English', 'Dutch'],
-      description: tourData.description || 'Experience this amazing tour with our standard package including all essential features.',
-      timeSlots: generateTimeSlotsFromAvailability(tourData, basePrice),
-      highlights: tourData.highlights?.slice(0, 4) || [
-        'Professional guide',
-        'Safety equipment included',
-        'Basic refreshments',
-        'Group experience'
-      ],
-      included: tourData.whatsIncluded?.slice(0, 4) || tourData.includes?.slice(0, 4) || [
-        'Tour guide',
-        'Safety briefing',
-        'Basic amenities',
-        'Group photos'
-      ],
-      groupSize: `Max ${tourData.maxGroupSize || 15} people`,
-      difficulty: tourData.difficulty || 'Easy',
-      badge: 'Most Popular',
-      discount: originalPrice ? Math.round(((originalPrice - basePrice) / originalPrice) * 100) : 15,
-      isRecommended: true,
-    });
-
-    // Premium Option (if tour price allows)
-    if (basePrice > 20) {
-      const premiumPrice = Math.round(basePrice * 1.6);
-      options.push({
-        id: 'premium-option',
-        title: `${tourData.title} - Premium Experience`,
-        price: premiumPrice,
-        originalPrice: originalPrice ? Math.round(originalPrice * 1.6) : Math.round(premiumPrice * 1.2),
-        duration: tourData.duration || '90 minutes',
-        languages: tourData.languages || ['English', 'Dutch', 'German'],
-        description: 'Enhanced experience with premium amenities, smaller groups, and additional features for a more exclusive adventure.',
-        timeSlots: generateTimeSlotsFromAvailability(tourData, premiumPrice, true), // Premium slots
-        highlights: [
-          ...(tourData.highlights?.slice(0, 3) || ['Professional guide', 'Safety equipment', 'Premium service']),
-          'Small group experience',
-          'Premium refreshments',
-          'Priority boarding',
-          'Complimentary photos'
-        ],
-        included: [
-          ...(tourData.whatsIncluded?.slice(0, 3) || tourData.includes?.slice(0, 3) || ['Tour guide', 'Safety briefing', 'Basic amenities']),
-          'Premium refreshments',
-          'Professional photos',
-          'Priority access',
-          'Small group (max 8)'
-        ],
-        groupSize: `Max 8 people`,
-        difficulty: tourData.difficulty || 'Easy',
-        badge: 'Premium',
-        discount: 20,
-        isRecommended: false,
-      });
-    }
-
-    // Budget Option (if applicable)
-    if (basePrice > 15) {
-      const budgetPrice = Math.round(basePrice * 0.75);
-      options.push({
-        id: 'budget-option',
-        title: `${tourData.title} - Essential Experience`,
-        price: budgetPrice,
-        originalPrice: basePrice,
-        duration: tourData.duration?.replace(/\d+/, (match) => Math.max(45, parseInt(match) - 15).toString()) || '60 minutes',
-        languages: ['English'],
-        description: 'Great value option covering all the essentials with a focus on the main highlights of the tour.',
-        timeSlots: generateTimeSlotsFromAvailability(tourData, budgetPrice),
-        highlights: tourData.highlights?.slice(0, 3) || [
-          'Professional guide',
-          'Essential highlights',
-          'Safety included'
-        ],
-        included: tourData.includes?.slice(0, 3) || [
-          'Tour guide',
-          'Safety briefing',
-          'Essential amenities'
-        ],
-        groupSize: `Max ${tourData.maxGroupSize || 15} people`,
-        difficulty: tourData.difficulty || 'Easy',
-        badge: 'Best Value',
-        discount: Math.round(((basePrice - budgetPrice) / basePrice) * 100),
-        isRecommended: false,
-      });
-    }
-  }
-
-  return options;
-}, [generateTimeSlotsFromAvailability]);
+  // Generate multiple tour options dynamically from the tour data
+ const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] => {
+   const options: TourOption[] = [];
+ 
+   // If tour has bookingOptions, use those
+   if (tourData.bookingOptions && tourData.bookingOptions.length > 0) {
+     tourData.bookingOptions.forEach((bookingOption, index) => {
+       options.push({
+         id: `tour-option-${index}`,
+         title: bookingOption.label || `${tourData.title} - Option ${index + 1}`,
+         price: bookingOption.price || tourData.discountPrice,
+         originalPrice: tourData.originalPrice,
+         duration: tourData.duration || '60 minutes',
+         languages: tourData.languages || ['English'],
+         description: tourData.description || 'Experience this amazing tour',
+         timeSlots: generateTimeSlotsFromAvailability(tourData, bookingOption.price || tourData.discountPrice),
+         highlights: tourData.highlights || [],
+         included: tourData.whatsIncluded || tourData.includes || [],
+         groupSize: `Max ${tourData.maxGroupSize || 15} people`,
+         difficulty: tourData.difficulty || 'Easy',
+         badge: index === 0 ? 'Most Popular' : bookingOption.type,
+         discount: tourData.originalPrice ? Math.round(((tourData.originalPrice - (bookingOption.price || tourData.discountPrice)) / tourData.originalPrice) * 100) : undefined,
+         isRecommended: index === 0,
+       });
+     });
+   } else {
+     // Generate multiple default options if no bookingOptions exist
+     const basePrice = tourData.discountPrice;
+     const originalPrice = tourData.originalPrice;
+ 
+     // Standard Option
+     options.push({
+       id: 'standard-option',
+       title: `${tourData.title} - Standard Experience`,
+       price: basePrice,
+       originalPrice: originalPrice,
+       duration: tourData.duration || '75 minutes',
+       languages: tourData.languages || ['English', 'Dutch'],
+       description: tourData.description || 'Experience this amazing tour with our standard package including all essential features.',
+       timeSlots: generateTimeSlotsFromAvailability(tourData, basePrice),
+       highlights: tourData.highlights?.slice(0, 4) || [
+         'Professional guide',
+         'Safety equipment included',
+         'Basic refreshments',
+         'Group experience'
+       ],
+       included: tourData.whatsIncluded?.slice(0, 4) || tourData.includes?.slice(0, 4) || [
+         'Tour guide',
+         'Safety briefing',
+         'Basic amenities',
+         'Group photos'
+       ],
+       groupSize: `Max ${tourData.maxGroupSize || 15} people`,
+       difficulty: tourData.difficulty || 'Easy',
+       badge: 'Most Popular',
+       discount: originalPrice ? Math.round(((originalPrice - basePrice) / originalPrice) * 100) : 15,
+       isRecommended: true,
+     });
+ 
+     // Premium Option (if tour price allows)
+     if (basePrice > 20) {
+       const premiumPrice = Math.round(basePrice * 1.6);
+       options.push({
+         id: 'premium-option',
+         title: `${tourData.title} - Premium Experience`,
+         price: premiumPrice,
+         originalPrice: originalPrice ? Math.round(originalPrice * 1.6) : Math.round(premiumPrice * 1.2),
+         duration: tourData.duration || '90 minutes',
+         languages: tourData.languages || ['English', 'Dutch', 'German'],
+         description: 'Enhanced experience with premium amenities, smaller groups, and additional features for a more exclusive adventure.',
+         timeSlots: generateTimeSlotsFromAvailability(tourData, premiumPrice, true), // Premium slots
+         highlights: [
+           ...(tourData.highlights?.slice(0, 3) || ['Professional guide', 'Safety equipment', 'Premium service']),
+           'Small group experience',
+           'Premium refreshments',
+           'Priority boarding',
+           'Complimentary photos'
+         ],
+         included: [
+           ...(tourData.whatsIncluded?.slice(0, 3) || tourData.includes?.slice(0, 3) || ['Tour guide', 'Safety briefing', 'Basic amenities']),
+           'Premium refreshments',
+           'Professional photos',
+           'Priority access',
+           'Small group (max 8)'
+         ],
+         groupSize: `Max 8 people`,
+         difficulty: tourData.difficulty || 'Easy',
+         badge: 'Premium',
+         discount: 20,
+         isRecommended: false,
+       });
+     }
+ 
+     // Budget Option (if applicable)
+     if (basePrice > 15) {
+       const budgetPrice = Math.round(basePrice * 0.75);
+       options.push({
+         id: 'budget-option',
+         title: `${tourData.title} - Essential Experience`,
+         price: budgetPrice,
+         originalPrice: basePrice,
+         duration: tourData.duration?.replace(/\d+/, (match) => Math.max(45, parseInt(match) - 15).toString()) || '60 minutes',
+         languages: ['English'],
+         description: 'Great value option covering all the essentials with a focus on the main highlights of the tour.',
+         timeSlots: generateTimeSlotsFromAvailability(tourData, budgetPrice),
+         highlights: tourData.highlights?.slice(0, 3) || [
+           'Professional guide',
+           'Essential highlights',
+           'Safety included'
+         ],
+         included: tourData.includes?.slice(0, 3) || [
+           'Tour guide',
+           'Safety briefing',
+           'Essential amenities'
+         ],
+         groupSize: `Max ${tourData.maxGroupSize || 15} people`,
+         difficulty: tourData.difficulty || 'Easy',
+         badge: 'Best Value',
+         discount: Math.round(((basePrice - budgetPrice) / basePrice) * 100),
+         isRecommended: false,
+       });
+     }
+   }
+ 
+   return options;
+ }, [generateTimeSlotsFromAvailability]);
   
   // MODIFIED: Generate add-ons from tour data or use defaults
   const generateAddOnsFromTour = useCallback((tourData: Tour): AddOnTour[] => {
@@ -1632,6 +1637,27 @@ const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] =
     setAnimationKey(prev => prev + 1);
   }, []);
 
+
+  // 3. Replace the scrolling logic with this new, precise version
+  useEffect(() => {
+    if (showDatePicker && datePickerRef.current && scrollableContentRef.current) {
+      // A short delay allows the animation to start before scrolling
+      setTimeout(() => {
+        const scrollContainer = scrollableContentRef.current;
+        const elementToScrollTo = datePickerRef.current;
+
+        // Calculate the position of the date picker relative to the scrollable container
+        const topPosition = elementToScrollTo.offsetTop;
+
+        // Scroll the container to bring the top of the element into view
+        scrollContainer.scrollTo({
+          top: topPosition,
+          behavior: 'smooth'
+        });
+      }, 150);
+    }
+  }, [showDatePicker]);
+
   // Enhanced click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1739,8 +1765,7 @@ const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] =
             </div>
 
             {/* Date Picker */}
-            <div className="date-picker-dropdown">
-              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. Select your date</h3>
+            <div ref={datePickerRef} className="date-picker-dropdown">              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. Select your date</h3>
               <div className="relative">
                 <motion.button
                   onClick={() => setShowDatePicker(!showDatePicker)}
@@ -2115,8 +2140,8 @@ const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] =
               isClickable={currentStep >= 2}
             />
 
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto">
+            {/* 2. Attach the new ref to the scrollable container */}
+            <div ref={scrollableContentRef} className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 {renderStepContent()}
               </AnimatePresence>
