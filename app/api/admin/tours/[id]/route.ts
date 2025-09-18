@@ -158,8 +158,8 @@ export async function PUT(
             }
         };
 
-        console.log('Update data prepared:', JSON.stringify(updateData, null, 2));
-
+console.log('Update data prepared:', JSON.stringify(updateData, null, 2));
+console.log('Image field being saved:', image); // Add this line
         let updatedTour;
         const options = { 
             new: true, 

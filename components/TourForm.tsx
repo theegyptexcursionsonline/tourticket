@@ -21,7 +21,7 @@ import {
     Users,
 } from 'lucide-react';
 
-// --- Interface Definitions (from your original file) ---
+// --- Interface Definitions ---
 interface Category {
     _id: string;
     name: string;
@@ -32,7 +32,7 @@ interface Destination {
     name: string;
 }
 
-// --- Helper Components (from your original file) ---
+// --- Helper Components ---
 const FormLabel = ({ children }: { children: React.ReactNode }) => (
     <label className="block text-sm font-semibold text-slate-700 mb-1.5">{children}</label>
 );
@@ -44,7 +44,7 @@ const SmallHint = ({ children, className = "" }: { children: React.ReactNode; cl
 const inputBase = "block w-full px-3 py-2 border border-slate-200 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed";
 
 
-// --- NEW: Availability Manager Sub-Component ---
+// --- Availability Manager Sub-Component ---
 const AvailabilityManager = ({ availability, setAvailability }: { availability: any, setAvailability: (data: any) => void }) => {
     
     const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -122,7 +122,7 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
 };
 
 
-// --- Main Tour Form Component (MODIFIED) ---
+// --- Main Tour Form Component ---
 export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const router = useRouter();
     
@@ -149,7 +149,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         whatsIncluded: [''],
         whatsNotIncluded: [''],
         itinerary: [{ day: 1, title: '', description: '' }],
-        // NEW: Add missing fields
+        // Add missing fields
         faqs: [{ question: '', answer: '' }],
         bookingOptions: [{ type: 'Per Person', label: '', price: 0 }],
         addOns: [{ name: '', description: '', price: 0 }],
@@ -186,7 +186,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
                 category: tourToEdit.category?._id?.toString() || tourToEdit.category || '',
                 categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
-                image: tourToEdit.image || '',
+                // MODIFIED: This line now checks for `featuredImage` as a fallback
+                image: tourToEdit.image || tourToEdit.featuredImage || '',
                 images: tourToEdit.images || [],
                 highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
                 includes: tourToEdit.includes?.length > 0 ? tourToEdit.includes : [''],
@@ -443,7 +444,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         const method = tourToEdit ? 'PUT' : 'POST';
         const payload = {
             ...cleanedData,
-        tags: (cleanedData.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),         };
+            tags: (cleanedData.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+        };
         
         try {
             const res = await fetch(apiEndpoint, {
@@ -474,18 +476,18 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             <div className="space-y-6">
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900">Tour Content</h3>
-                      <p className="text-sm text-slate-500">Edit core tour fields below. Changes are saved when you click <strong>Save Tour</strong>.</p>
+                        <h3 className="text-lg font-semibold text-slate-900">Tour Content</h3>
+                        <p className="text-sm text-slate-500">Edit core tour fields below. Changes are saved when you click <strong>Save Tour</strong>.</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="hidden sm:flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <ImageIcon className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-600">{formData.images?.length || 0} images</span>
-                      </div>
-                      <button type="submit" disabled={isSubmitting || isUploading} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-semibold shadow hover:opacity-95 disabled:opacity-60">
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        <span>{isSubmitting ? 'Saving...' : 'Save Tour'}</span>
-                      </button>
+                        <div className="hidden sm:flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+                            <ImageIcon className="w-4 h-4 text-slate-500" />
+                            <span className="text-sm text-slate-600">{formData.images?.length || 0} images</span>
+                        </div>
+                        <button type="submit" disabled={isSubmitting || isUploading} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-semibold shadow hover:opacity-95 disabled:opacity-60">
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                            <span>{isSubmitting ? 'Saving...' : 'Save Tour'}</span>
+                        </button>
                     </div>
                 </div>
 
@@ -514,7 +516,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     <textarea name="longDescription" value={formData.longDescription} onChange={handleChange} rows={5} className={`${inputBase} resize-y`} placeholder="Full description shown on the tour detail page" />
                 </div>
 
-                {/* NEW: Basic Tour Settings */}
+                {/* Basic Tour Settings */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                         <FormLabel>Duration</FormLabel>
@@ -541,7 +543,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                     <div>
                         <FormLabel>Original Price (€) (Optional)</FormLabel>
-<input name="originalPrice" type="number" step="0.01" value={formData.originalPrice || ''} onChange={handleChange} className={inputBase} placeholder="20.00" />                    </div>
+                        <input name="originalPrice" type="number" step="0.01" value={formData.originalPrice || ''} onChange={handleChange} className={inputBase} placeholder="20.00" />
+                    </div>
                     <div>
                         <FormLabel>Tags (comma separated)</FormLabel>
                         <input name="tags" value={formData.tags} onChange={handleChange} className={inputBase} placeholder="e.g., Staff Favourite, -25%, New" />
@@ -676,7 +679,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* NEW: FAQ section */}
+                {/* FAQ section */}
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <HelpCircle className="h-5 w-5"/>
@@ -723,7 +726,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* NEW: Booking Options section */}
+                {/* Booking Options section */}
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <Settings className="h-5 w-5"/>
@@ -781,7 +784,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                     </div>
                 </div>
 
-                {/* NEW: Add-ons section */}
+                {/* Add-ons section */}
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <Plus className="h-5 w-5"/>
@@ -880,15 +883,15 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
 
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-slate-100 pt-6 mt-6">
                     <div className="flex items-center gap-3">
-                      <input id="isFeatured" name="isFeatured" type="checkbox" checked={formData.isFeatured} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
-                      <label htmlFor="isFeatured" className="text-sm font-medium text-slate-900">Featured tour</label>
-                      <SmallHint>Show this tour in homepage featured carousel.</SmallHint>
+                        <input id="isFeatured" name="isFeatured" type="checkbox" checked={formData.isFeatured} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
+                        <label htmlFor="isFeatured" className="text-sm font-medium text-slate-900">Featured tour</label>
+                        <SmallHint>Show this tour in homepage featured carousel.</SmallHint>
                     </div>
                     <div className="flex items-center gap-3">
-                      <button type="submit" disabled={isSubmitting || isUploading} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-semibold shadow">
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        <span>{isSubmitting ? 'Saving...' : 'Save Tour'}</span>
-                      </button>
+                        <button type="submit" disabled={isSubmitting || isUploading} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-semibold shadow">
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                            <span>{isSubmitting ? 'Saving...' : 'Save Tour'}</span>
+                        </button>
                     </div>
                 </div>
             </div>
