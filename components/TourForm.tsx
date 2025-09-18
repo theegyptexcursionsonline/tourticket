@@ -162,73 +162,78 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
-    useEffect(() => {
-        if (tourToEdit) {
-            setIsSlugManuallyEdited(true);
-            
-            const initialData: any = {
-                title: tourToEdit.title || '',
-                slug: tourToEdit.slug || '',
-                description: tourToEdit.description || '',
-                longDescription: tourToEdit.longDescription || '',
-                duration: tourToEdit.duration || '',
-                discountPrice: tourToEdit.discountPrice || '',
-                originalPrice: tourToEdit.originalPrice || '',
-                destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
-                categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
-                image: tourToEdit.image || tourToEdit.featuredImage || '',
-                images: tourToEdit.images || [],
-                highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
-                includes: tourToEdit.includes?.length > 0 ? tourToEdit.includes : [''],
-                tags: Array.isArray(tourToEdit.tags) ? tourToEdit.tags.join(', ') : (tourToEdit.tags || ''),
-                isFeatured: tourToEdit.isFeatured || false,
-                whatsIncluded: tourToEdit.whatsIncluded?.length > 0 ? tourToEdit.whatsIncluded : [''],
-                whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
-                itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
-                faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-                bookingOptions: tourToEdit.bookingOptions?.length > 0 ? tourToEdit.bookingOptions : [{ type: 'Per Person', label: '', price: 0 }],
-                addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
-                isPublished: tourToEdit.isPublished || false,
-                difficulty: tourToEdit.difficulty || '',
-                maxGroupSize: tourToEdit.maxGroupSize || 10,
-            };
-            
-            if (tourToEdit.availability && tourToEdit.availability.slots) {
-                initialData.availability = {
-                    type: tourToEdit.availability.type || 'daily',
-                    availableDays: tourToEdit.availability.availableDays || [0, 1, 2, 3, 4, 5, 6],
-                    slots: tourToEdit.availability.slots?.length > 0 ? tourToEdit.availability.slots : [{ time: '10:00', capacity: 10 }]
-                };
-            } else {
-                initialData.availability = {
-                    type: 'daily',
-                    availableDays: [0, 1, 2, 3, 4, 5, 6],
-                    slots: [{ time: '10:00', capacity: 10 }]
-                };
-            }
-            
-            setFormData(initialData);
-        }
+  // components/TourForm.tsx
 
-        const fetchData = async () => {
-          try {
-            const [destRes, catRes] = await Promise.all([
-              fetch('/api/admin/tours/destinations'),
-              fetch('/api/categories')
-            ]);
-            if (!destRes.ok) throw new Error(`Failed to fetch destinations: ${destRes.statusText}`);
-            if (!catRes.ok) throw new Error(`Failed to fetch categories: ${catRes.statusText}`);
-            const destData = await destRes.json();
-            const catData = await catRes.json();
-            if (destData?.success) setDestinations(destData.data);
-            if (catData?.success) setCategories(catData.data);
-          } catch (err) {
-            console.error(err);
-            toast.error('Failed to load destinations or categories.');
-          }
+useEffect(() => {
+    if (tourToEdit) {
+        setIsSlugManuallyEdited(true);
+        
+        const initialData: any = {
+            title: tourToEdit.title || '',
+            slug: tourToEdit.slug || '',
+            description: tourToEdit.description || '',
+            longDescription: tourToEdit.longDescription || '',
+            duration: tourToEdit.duration || '',
+            discountPrice: tourToEdit.discountPrice || '',
+            originalPrice: tourToEdit.originalPrice || '',
+            destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
+            categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
+            
+            // --- FIX: Use only tourToEdit.image and remove tourToEdit.featuredImage ---
+            image: tourToEdit.image || '', 
+            
+            images: tourToEdit.images || [],
+            highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
+            includes: tourToEdit.includes?.length > 0 ? tourToEdit.includes : [''],
+            tags: Array.isArray(tourToEdit.tags) ? tourToEdit.tags.join(', ') : (tourToEdit.tags || ''),
+            isFeatured: tourToEdit.isFeatured || false,
+            whatsIncluded: tourToEdit.whatsIncluded?.length > 0 ? tourToEdit.whatsIncluded : [''],
+            whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
+            itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
+            faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
+            bookingOptions: tourToEdit.bookingOptions?.length > 0 ? tourToEdit.bookingOptions : [{ type: 'Per Person', label: '', price: 0 }],
+            addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
+            isPublished: tourToEdit.isPublished || false,
+            difficulty: tourToEdit.difficulty || '',
+            maxGroupSize: tourToEdit.maxGroupSize || 10,
         };
-        fetchData();
-    }, [tourToEdit]);
+        
+        if (tourToEdit.availability && tourToEdit.availability.slots) {
+            initialData.availability = {
+                type: tourToEdit.availability.type || 'daily',
+                availableDays: tourToEdit.availability.availableDays || [0, 1, 2, 3, 4, 5, 6],
+                slots: tourToEdit.availability.slots?.length > 0 ? tourToEdit.availability.slots : [{ time: '10:00', capacity: 10 }]
+            };
+        } else {
+            initialData.availability = {
+                type: 'daily',
+                availableDays: [0, 1, 2, 3, 4, 5, 6],
+                slots: [{ time: '10:00', capacity: 10 }]
+            };
+        }
+        
+        setFormData(initialData);
+    }
+
+    const fetchData = async () => {
+      try {
+        const [destRes, catRes] = await Promise.all([
+          fetch('/api/admin/tours/destinations'),
+          fetch('/api/categories')
+        ]);
+        if (!destRes.ok) throw new Error(`Failed to fetch destinations: ${destRes.statusText}`);
+        if (!catRes.ok) throw new Error(`Failed to fetch categories: ${catRes.statusText}`);
+        const destData = await destRes.json();
+        const catData = await catRes.json();
+        if (destData?.success) setDestinations(destData.data);
+        if (catData?.success) setCategories(catData.data);
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to load destinations or categories.');
+      }
+    };
+    fetchData();
+}, [tourToEdit]);
 
     const setAvailability = (availabilityData: any) => {
         setFormData((prev: any) => ({ ...prev, availability: availabilityData }));
@@ -401,29 +406,41 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setFormData((p: any) => ({ ...p, images: p.images.filter((u: string) => u !== imageUrl) }));
     };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+// components/TourForm.tsx
+
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    if (!formData.title?.trim() || !formData.description?.trim() || !formData.duration?.trim() || !formData.discountPrice) {
-        toast.error('Please fill all required fields: Title, Description, Duration, and Discount Price.');
+
+    // --- FIX: Added validation for destination and category ---
+    if (
+        !formData.title?.trim() ||
+        !formData.description?.trim() ||
+        !formData.duration?.trim() ||
+        !formData.discountPrice ||
+        !formData.destination ||
+        !formData.categories?.length
+    ) {
+        toast.error('Please fill all required fields: Title, Description, Duration, Discount Price, Destination, and Category.');
         setIsSubmitting(false);
         return;
     }
-    
+
     try {
         const cleanedData = { ...formData };
-        
+
+        // --- FIX: Payload is now perfectly aligned with the Tour schema ---
         const payload = {
             title: cleanedData.title.trim(),
             slug: cleanedData.slug.trim(),
             description: cleanedData.description.trim(),
             duration: cleanedData.duration.trim(),
+            price: parseFloat(cleanedData.discountPrice) || 0,
             discountPrice: parseFloat(cleanedData.discountPrice) || 0,
             longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
             originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
             destination: cleanedData.destination,
-            categories: cleanedData.categories,
+            category: cleanedData.categories[0], // Use the first selected category
             difficulty: cleanedData.difficulty || 'Easy',
             maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
             isPublished: Boolean(cleanedData.isPublished),
@@ -435,11 +452,11 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
             whatsIncluded: Array.isArray(cleanedData.whatsIncluded) ? cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '') : [],
             whatsNotIncluded: Array.isArray(cleanedData.whatsNotIncluded) ? cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '') : [],
             itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: any) => item.title?.trim() && item.description?.trim()) : [],
-            faqs: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: any) => faq.question?.trim() && faq.answer?.trim()) : [],
+            faq: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: any) => faq.question?.trim() && faq.answer?.trim()) : [], // Map faqs to faq
             bookingOptions: Array.isArray(cleanedData.bookingOptions) ? cleanedData.bookingOptions.filter((option: any) => option.label?.trim()) : [],
             addOns: Array.isArray(cleanedData.addOns) ? cleanedData.addOns.filter((addon: any) => addon.name?.trim()) : [],
-            tags: typeof cleanedData.tags === 'string' 
-                ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) 
+            tags: typeof cleanedData.tags === 'string'
+                ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
                 : Array.isArray(cleanedData.tags) ? cleanedData.tags : [],
             availability: cleanedData.availability || {
                 type: 'daily',
@@ -447,20 +464,20 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 slots: [{ time: '10:00', capacity: 10 }]
             }
         };
-        
+
         const apiEndpoint = tourToEdit ? `/api/admin/tours/${tourToEdit._id}` : '/api/admin/tours';
         const method = tourToEdit ? 'PUT' : 'POST';
-        
+
         const response = await fetch(apiEndpoint, {
             method,
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
         });
-        
+
         const responseData = await response.json();
-        
+
         if (response.ok) {
             toast.success(`Tour ${tourToEdit ? 'updated' : 'created'} successfully!`);
             router.push('/admin/tours');
@@ -468,7 +485,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         } else {
             toast.error(`Failed to save tour: ${responseData?.error || 'Unknown error'}`);
         }
-        
+
     } catch (error) {
         console.error('Submit error:', error);
         toast.error('An unexpected error occurred while saving the tour.');

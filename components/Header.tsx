@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 import AuthModal from '@/components/AuthModal';
 import { Destination, Category } from '@/types';
+import { useWishlist } from '@/contexts/WishlistContext'; 
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -322,6 +323,7 @@ const UserMenu: FC<{ user: any; onLogout: () => void; }> = ({ user, onLogout }) 
 const MobileMenu: FC<{ isOpen: boolean; onClose: () => void; onOpenSearch: () => void; onOpenAuth: (state: 'login' | 'signup') => void; destinations: Destination[]; categories: Category[]; }> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth, destinations, categories }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+
   useOnClickOutside(menuRef, onClose);
   
   useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : 'auto'; }, [isOpen]);
@@ -525,6 +527,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
 
   const { openCart, totalItems } = useCart();
   const { user, logout } = useAuth();
+const { openWishlistSidebar, wishlist } = useWishlist();
+
   const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
 
@@ -591,7 +595,15 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
                       headerLinkClasses={`${headerText} ${linkHoverColor}`}
                       isTransparent={isTransparent}
                     />
-
+ {/* --- REPLACE THIS --- */}
+    <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
+        <Star size={24} className={`${headerText} ${linkHoverColor}`} />
+        {wishlist.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
+                {wishlist.length}
+            </span>
+        )}
+    </button>
                     <button onClick={openCart} className="relative group p-2">
                         <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
                         {totalItems > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{totalItems}</span>}

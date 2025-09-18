@@ -1,5 +1,8 @@
+// app/tour/[slug]/TourPageClient.tsx
 'use client';
-
+// Add these lines to your existing imports
+import { useWishlist } from '@/contexts/WishlistContext';
+import toast from 'react-hot-toast';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,14 +14,15 @@ import {
   Languages, CreditCard, Phone, Mail, AlertCircle, Car, Plane,
   Navigation, Backpack, Sun, CloudRain, Snowflake, Eye, Gift,
   Accessibility, Baby, PawPrint, Smartphone, Wifi, Headphones,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, X, ZoomIn
 } from 'lucide-react';
+
 
 // Components
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BookingSidebar from '@/components/BookingSidebar';
-import StickyBookButton from '@/components/StickyBookButton'; // <-- ADD THIS IMPORT
+import StickyBookButton from '@/components/StickyBookButton';
 
 // Hooks and Types
 import { useSettings } from '@/hooks/useSettings';
@@ -58,6 +62,96 @@ interface TourPageClientProps {
   tour: Tour;
   relatedTours: Tour[];
 }
+
+// -----------------------------------------------------------------------------
+// NEW: Lightbox Component
+// -----------------------------------------------------------------------------
+const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], selectedIndex: number, onClose: () => void }) => {
+  const [currentIndex, setCurrentIndex] = useState(selectedIndex);
+
+  const nextImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+  };
+
+  const prevImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') nextImage();
+      if (e.key === 'ArrowLeft') prevImage();
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+    >
+      {/* Close Button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white hover:text-red-500 transition-colors z-50"
+        aria-label="Close lightbox"
+      >
+        <X size={32} />
+      </button>
+
+      {/* Main Image Display */}
+      <div className="relative w-full h-full max-w-5xl max-h-screen flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentIndex}
+            src={images[currentIndex]}
+            alt={`Tour image ${currentIndex + 1}`}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        </AnimatePresence>
+      </div>
+
+      {/* Previous Button */}
+      <button
+        onClick={prevImage}
+        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors"
+        aria-label="Previous image"
+      >
+        <ChevronLeft size={28} />
+      </button>
+
+      {/* Next Button */}
+      <button
+        onClick={nextImage}
+        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors"
+        aria-label="Next image"
+      >
+        <ChevronRight size={28} />
+      </button>
+       {/* Image Counter */}
+       <div 
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm px-3 py-1 rounded-full"
+        onClick={(e) => e.stopPropagation()}
+       >
+        {currentIndex + 1} / {images.length}
+      </div>
+    </motion.div>
+  );
+};
+
 
 // -----------------------------------------------------------------------------
 // NEW: useScrollDirection hook
@@ -175,111 +269,37 @@ const getEnhancedTourData = (tourId: string): TourEnhancement => {
 };
 
 // Enhanced Components
-// -----------------------------------------------------------------------------
-// NEW: TabNavigation receives isHeaderVisible prop
-// -----------------------------------------------------------------------------
 const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: any) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(false);
-
-  const checkScrollButtons = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setShowLeftArrow(scrollLeft > 0);
-      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
-    }
-  };
-
-  const scrollTabs = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 200;
-      const newScrollLeft = direction === 'left'
-        ? scrollContainerRef.current.scrollLeft - scrollAmount
-        : scrollContainerRef.current.scrollLeft + scrollAmount;
-
-      scrollContainerRef.current.scrollTo({
-        left: newScrollLeft,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  useEffect(() => {
-    checkScrollButtons();
-    const handleResize = () => checkScrollButtons();
-    window.addEventListener('resize', handleResize);
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, [tabs]);
-
-  // Dynamic top position based on header visibility
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
 
   return (
     <div className={`sticky ${stickyTop} z-10 bg-white shadow-sm -mx-4 sm:mx-0 transition-all duration-300`}>
-      <div className="relative">
-        {/* Left Arrow */}
-        <button
-          onClick={() => scrollTabs('left')}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${showLeftArrow
-              ? 'opacity-100 visible hover:bg-slate-50'
-              : 'opacity-0 invisible'
-            }`}
-          aria-label="Scroll tabs left"
-        >
-          <ChevronLeft size={16} className="text-slate-600" />
-        </button>
-
-        {/* Scrollable Tab Container */}
-        <div
-          ref={scrollContainerRef}
-          className="overflow-x-auto scrollbar-hide px-8"
-          onScroll={checkScrollButtons}
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <nav className="flex space-x-1 p-1 min-w-max">
-            {tabs.map((tab: any) => (
-              <a
-                key={tab.id}
-                href={`#${tab.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollToSection(tab.id);
-                }}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${activeTab === tab.id
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-red-600'
-                  }`}
-              >
-                <tab.icon size={18} />
-                {tab.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-
-        {/* Right Arrow */}
-        <button
-          onClick={() => scrollTabs('right')}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white shadow-lg border border-slate-200 rounded-full flex items-center justify-center transition-all duration-200 ${showRightArrow
-              ? 'opacity-100 visible hover:bg-slate-50'
-              : 'opacity-0 invisible'
-            }`}
-          aria-label="Scroll tabs right"
-        >
-          <ChevronRight size={16} className="text-slate-600" />
-        </button>
-
-        {/* Fade gradients */}
-        <div className={`absolute left-8 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none transition-opacity duration-200 ${showLeftArrow ? 'opacity-100' : 'opacity-0'
-          }`} />
-        <div className={`absolute right-8 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none transition-opacity duration-200 ${showRightArrow ? 'opacity-100' : 'opacity-0'
-          }`} />
+      <div className="container mx-auto px-2 sm:px-4">
+        <nav className="flex flex-wrap justify-center gap-1 sm:gap-2 p-2">
+          {tabs.map((tab: any) => (
+            <a
+              key={tab.id}
+              href={`#${tab.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToSection(tab.id);
+              }}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-red-600'
+              }`}
+            >
+              <tab.icon size={18} />
+              {tab.label}
+            </a>
+          ))}
+        </nav>
       </div>
     </div>
   );
 };
+
 
 const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
@@ -739,20 +759,63 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
 );
 
 // -----------------------------------------------------------------------------
-// NEW: TourPageClient component updated
+// TourPageClient component updated
 // -----------------------------------------------------------------------------
 export default function TourPageClient({ tour, relatedTours }: TourPageClientProps) {
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+
+  const tourIsWishlisted = isWishlisted(tour._id!);
+
+
+  // --- NEW HANDLER for the Wishlist button ---
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents the lightbox from opening
+    if (tourIsWishlisted) {
+      removeFromWishlist(tour._id!);
+      toast.success('Removed from wishlist');
+    } else {
+      addToWishlist(tour);
+      toast.success('Added to wishlist!');
+    }
+  };
+
+  // --- NEW HANDLER for the Share button ---
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents the lightbox from opening
+    const shareData = {
+      title: tour.title,
+      text: `Check out this amazing tour: ${tour.title}`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      // Fallback for desktop browsers that don't support the native Share API
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success('Tour link copied to clipboard!');
+      } catch (err) {
+        toast.error('Could not copy link.');
+      }
+    }
+  };
   const [isAdding, setIsAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [liveMessage, setLiveMessage] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // --- STATE FOR LIGHTBOX ---
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  // Add this line to track header visibility
   const { isVisible: isHeaderVisible } = useScrollDirection();
 
   const overviewRef = useRef<HTMLDivElement>(null);
@@ -816,7 +879,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     { id: 2, name: 'Marco P.', rating: 4, date: '1 week ago', title: 'Great experience', text: 'Perfect way to see the city. Only wish it was a bit longer.', verified: true, helpful: 8 }
   ];
 
-  const tourImages = tour.images && tour.images.length > 0 ? tour.images : [tour.image];
+  const tourImages = [tour.image, ...(tour.images || [])].filter(Boolean);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Eye },
@@ -867,10 +930,25 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     setBookingSidebarOpen(true);
   };
 
+  const openLightbox = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsLightboxOpen(true);
+  };
+
 
   return (
     <>
       <Header startSolid={true} />
+
+      <AnimatePresence>
+        {isLightboxOpen && (
+          <Lightbox
+            images={tourImages}
+            selectedIndex={selectedImageIndex}
+            onClose={() => setIsLightboxOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <main className="bg-white pt-20">
         <div className="bg-slate-50 py-4">
@@ -917,7 +995,10 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                   ))}
                 </div>
 
-                <div className="relative rounded-xl overflow-hidden shadow-lg mb-6">
+                <div 
+                  className="relative rounded-xl overflow-hidden shadow-lg mb-6 group cursor-pointer"
+                  onClick={() => openLightbox(selectedImageIndex)}
+                >
                   <Image
                     src={tourImages[selectedImageIndex]}
                     alt={tour.title}
@@ -925,37 +1006,45 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     height={700}
                     className="w-full h-[420px] md:h-[500px] object-cover"
                   />
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <button
-                      onClick={() => setIsWishlisted(!isWishlisted)}
-                      className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${isWishlisted
-                          ? 'bg-red-600 text-white'
-                          : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
-                        }`}
-                      aria-pressed={isWishlisted}
-                      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                    >
-                      <Heart size={20} fill={isWishlisted ? 'currentColor' : 'none'} />
-                    </button>
-                    <button
-                      className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
-                      aria-label="Share"
-                    >
-                      <Share2 size={20} />
-                    </button>
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <ZoomIn className="text-white w-16 h-16" />
                   </div>
+                 <div className="absolute top-4 right-4 flex gap-2">
+  {/* --- UPDATED WISHLIST BUTTON --- */}
+  <button
+    onClick={handleWishlistToggle}
+    className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${
+      tourIsWishlisted
+        ? 'bg-red-600 text-white'
+        : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
+    }`}
+    aria-pressed={tourIsWishlisted}
+    aria-label={tourIsWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+  >
+    <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
+  </button>
+  {/* --- UPDATED SHARE BUTTON --- */}
+  <button
+    onClick={handleShare}
+    className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
+    aria-label="Share"
+  >
+    <Share2 size={20} />
+  </button>
+</div>
                 </div>
 
                 {tourImages.length > 1 && (
-                  <div className="flex gap-2 mb-6 overflow-x-auto">
+                  <div className="flex flex-wrap gap-2 mb-6">
                     {tourImages.map((image, index) => (
                       <button
                         key={index}
                         onClick={() => setSelectedImageIndex(index)}
-                        className={`relative w-20 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all transform ${selectedImageIndex === index
-                            ? 'border-red-600 scale-105 shadow'
-                            : 'border-slate-200 hover:border-slate-300'
-                          }`}
+                        className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-all transform ${
+                            selectedImageIndex === index
+                                ? 'border-red-600 scale-105 shadow'
+                                : 'border-slate-200 hover:border-slate-300'
+                        }`}
                         aria-label={`View image ${index + 1}`}
                       >
                         <Image
@@ -969,6 +1058,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     ))}
                   </div>
                 )}
+
 
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1 pr-6">
@@ -1122,57 +1212,57 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     )}
                   </div>
 
-                <div className="space-y-3">
-  <button
-    onClick={openBookingSidebar}
-    className="shimmer-effect w-full bg-red-600 text-white font-bold py-4 px-6 rounded-full hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
-  >
-    <span className="shimmer-line"></span>
-    <Calendar size={20} />
-    <span>Select Date & Time</span>
-  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={openBookingSidebar}
+                      className="shimmer-effect w-full bg-red-600 text-white font-bold py-4 px-6 rounded-full hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      <span className="shimmer-line"></span>
+                      <Calendar size={20} />
+                      <span>Select Date & Time</span>
+                    </button>
 
-  <button
-    onClick={handleQuickAdd}
-    disabled={isAdding}
-    className={`shimmer-effect w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${added
-      ? 'bg-green-600 text-white border-green-600 shadow-lg scale-105'
-      : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
-      }`}
-    aria-live="polite"
-    aria-disabled={isAdding}
-  >
-    <span className="shimmer-line"></span>
-    {isAdding && (
-      <svg
-        className="animate-spin -ml-1 mr-2 h-5 w-5 text-current"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v8z"
-        ></path>
-      </svg>
-    )}
+                    <button
+                      onClick={handleQuickAdd}
+                      disabled={isAdding}
+                      className={`shimmer-effect w-full relative overflow-hidden py-3 px-6 rounded-full border-2 font-bold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none ${added
+                          ? 'bg-green-600 text-white border-green-600 shadow-lg scale-105'
+                          : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
+                        }`}
+                      aria-live="polite"
+                      aria-disabled={isAdding}
+                    >
+                      <span className="shimmer-line"></span>
+                      {isAdding && (
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-5 w-5 text-current"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v8z"
+                          ></path>
+                        </svg>
+                      )}
 
-    {added ? (
-      <>
-        <CheckCircle size={18} />
-        <span>Added</span>
-      </>
-    ) : (
-      <>
-        <ShoppingCart size={18} />
-        <span>Quick Add to Cart</span>
-      </>
-    )}
-  </button>
-</div>
+                      {added ? (
+                        <>
+                          <CheckCircle size={18} />
+                          <span>Added</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart size={18} />
+                          <span>Quick Add to Cart</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
 
                   <div className="mt-6 pt-6 border-t border-slate-200">
                     <div className="grid grid-cols-2 gap-4 text-sm text-slate-500">
@@ -1231,16 +1321,16 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
       
       {/* ADD THE STICKY BUTTON COMPONENT HERE */}
-<StickyBookButton
-  price={tour.discountPrice}
-  currency={'$'} 
-  onClick={openBookingSidebar}
-/>
+      <StickyBookButton
+        price={tour.discountPrice}
+        currency={'$'} 
+        onClick={openBookingSidebar}
+      />
       <div className="sr-only" aria-live="polite">
         {liveMessage}
       </div>
 
-   <style jsx>{`
+    <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
