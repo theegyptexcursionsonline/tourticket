@@ -1,4 +1,3 @@
-// app/checkout/page.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -125,7 +124,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
 
 // -------------------------------
 // Booking Summary (right column)
-const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing }: any) => {
+const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage }: any) => {
   const { formatPrice } = useSettings();
   const { cart } = useCart();
 
@@ -162,13 +161,24 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
             type="text"
             placeholder="Promotional code"
             value={promoCode}
-            onChange={(e) => setPromoCode(e.target.value)}
-            className="flex-1 px-4 py-2 border border-slate-300 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-200 transition"
+            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+            disabled={isApplyingCoupon || pricing.discount > 0}
+            className="flex-1 px-4 py-2 border border-slate-300 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-200 transition disabled:bg-slate-100"
           />
-          <button onClick={applyPromoCode} type="button" className="px-4 py-2 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
-            Apply
+          <button
+            onClick={applyPromoCode}
+            type="button"
+            disabled={isApplyingCoupon || pricing.discount > 0}
+            className="px-4 py-2 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition disabled:bg-slate-400 flex items-center justify-center w-24"
+          >
+            {isApplyingCoupon ? <Loader2 className="animate-spin" size={20} /> : 'Apply'}
           </button>
         </div>
+        {couponMessage && (
+          <p className={`mt-2 text-sm ${pricing.discount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {couponMessage}
+          </p>
+        )}
       </div>
 
       <div className="mt-6 hidden lg:block">
@@ -245,23 +255,23 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-<div className="h-10 flex items-center">
-  <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
-</div>
+            <div className="h-10 flex items-center">
+              <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
+            </div>
             <span className="text-sm font-medium text-slate-700">Card</span>
           </button>
 
           <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-<div className="h-10 flex items-center">
-  <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
-</div>
+            <div className="h-10 flex items-center">
+              <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
+            </div>
             <span className="text-sm font-medium text-slate-700">PayPal</span>
           </button>
 
           <button type="button" onClick={() => setPaymentMethod('bank')} aria-pressed={paymentMethod === 'bank'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-<div className="h-10 flex items-center">
-  <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
-</div>
+            <div className="h-10 flex items-center">
+              <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
+            </div>
             <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
           </button>
         </div>
@@ -490,6 +500,10 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
   const [lastOrderId, setLastOrderId] = useState<string | undefined>(undefined);
 
+  // New states for coupon logic
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponMessage, setCouponMessage] = useState('');
+
   const [formData, setFormData] = useState<FormDataShape>({
     firstName: '',
     lastName: '',
@@ -519,13 +533,46 @@ export default function CheckoutPage() {
     };
   }, [cart, discount, selectedCurrency]);
 
-  const applyPromoCode = () => {
-    if (promoCode.trim().toUpperCase() === 'SALE10') {
-      setDiscount(Math.round(pricing.subtotal * 0.10 * 100) / 100);
-    } else {
+  const handleApplyCoupon = async () => {
+    if (!promoCode) {
+      setCouponMessage('Please enter a coupon code.');
+      return;
+    }
+    setIsApplyingCoupon(true);
+    setCouponMessage('');
+
+    try {
+      const response = await fetch(`/api/discounts/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const discountData = data.data;
+        let calculatedDiscount = 0;
+        if (discountData.type === 'percentage') {
+          calculatedDiscount = (pricing.subtotal * discountData.value) / 100;
+        } else {
+          calculatedDiscount = discountData.value;
+        }
+        setDiscount(calculatedDiscount);
+        setCouponMessage(`Success! A discount of ${formatPrice(calculatedDiscount)} has been applied.`);
+      } else {
+        setDiscount(0);
+        setCouponMessage(data.error || 'Invalid or expired coupon code.');
+      }
+    } catch (error) {
+      console.error('Failed to apply coupon:', error);
       setDiscount(0);
+      setCouponMessage('An error occurred. Please try again.');
+    } finally {
+      setIsApplyingCoupon(false);
     }
   };
+
 
   const handlePaymentProcess = async () => {
     setIsProcessing(true);
@@ -586,7 +633,15 @@ export default function CheckoutPage() {
                     <CheckoutFormStep onPaymentProcess={handlePaymentProcess} isProcessing={isProcessing} formData={formData} setFormData={setFormData} />
                   </div>
                   <div className="lg:col-span-1">
-                    <BookingSummary pricing={pricing} promoCode={promoCode} setPromoCode={setPromoCode} applyPromoCode={applyPromoCode} isProcessing={isProcessing} />
+                    <BookingSummary
+                      pricing={pricing}
+                      promoCode={promoCode}
+                      setPromoCode={setPromoCode}
+                      applyPromoCode={handleApplyCoupon}
+                      isProcessing={isProcessing}
+                      isApplyingCoupon={isApplyingCoupon}
+                      couponMessage={couponMessage}
+                    />
                   </div>
                 </div>
               )}

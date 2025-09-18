@@ -1,44 +1,37 @@
-// app/api/admin/discounts/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
+// import { isAdmin } from '@/lib/auth'; // Hypothetical auth check
 
-// GET all discounts
-export async function GET() {
+export async function GET(request: Request) {
+  // if (!isAdmin(request)) {
+  //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  // }
+  
   await dbConnect();
+
   try {
     const discounts = await Discount.find({}).sort({ createdAt: -1 });
-    return NextResponse.json(discounts);
+    return NextResponse.json({ success: true, data: discounts });
   } catch (error) {
-    return NextResponse.json({ message: 'Failed to fetch discounts', error: (error as Error).message }, { status: 500 });
+    console.error('Failed to fetch discounts:', error);
+    return NextResponse.json({ success: false, error: 'Server Error' }, { status: 500 });
   }
 }
 
-// POST a new discount
 export async function POST(request: Request) {
+  // if (!isAdmin(request)) {
+  //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  // }
+
   await dbConnect();
+
   try {
     const body = await request.json();
-    
-    // Check if a discount with the same code already exists
-    const existingDiscount = await Discount.findOne({ code: body.code.toUpperCase() });
-    if (existingDiscount) {
-        return NextResponse.json({ message: `Discount code '${body.code}' already exists.` }, { status: 409 });
-    }
-
-    const newDiscount = new Discount(body);
-    await newDiscount.save();
-    
-    return NextResponse.json(newDiscount, { status: 201 });
-  } catch (error: any) {
-    // Handle validation errors specifically
-    if (error.name === 'ValidationError') {
-        let errors: { [key: string]: string } = {};
-        for (const field in error.errors) {
-            errors[field] = error.errors[field].message;
-        }
-        return NextResponse.json({ message: 'Validation failed', errors }, { status: 400 });
-    }
-    return NextResponse.json({ message: 'Failed to create discount', error: error.message }, { status: 500 });
+    const newDiscount = await Discount.create(body);
+    return NextResponse.json({ success: true, data: newDiscount }, { status: 201 });
+  } catch (error) {
+    console.error('Failed to create discount:', error);
+    return NextResponse.json({ success: false, error: 'Server Error' }, { status: 500 });
   }
 }
