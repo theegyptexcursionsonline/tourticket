@@ -166,7 +166,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
 
 useEffect(() => {
     if (tourToEdit) {
-        setIsSlugManuallyEdited(true);
+        // --- FIX: Only mark slug as manually edited if a slug exists ---
+        setIsSlugManuallyEdited(Boolean(tourToEdit.slug));
         
         const initialData: any = {
             title: tourToEdit.title || '',
@@ -179,7 +180,7 @@ useEffect(() => {
             destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
             categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
             
-            // --- FIX: Use only tourToEdit.image and remove tourToEdit.featuredImage ---
+            // Use only tourToEdit.image and remove tourToEdit.featuredImage
             image: tourToEdit.image || '', 
             
             images: tourToEdit.images || [],
@@ -412,7 +413,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // --- FIX: Added validation for destination and category ---
+    // --- Added validation for destination and category ---
     if (
         !formData.title?.trim() ||
         !formData.description?.trim() ||
@@ -435,7 +436,8 @@ const handleSubmit = async (e: React.FormEvent) => {
             slug: cleanedData.slug.trim(),
             description: cleanedData.description.trim(),
             duration: cleanedData.duration.trim(),
-            price: parseFloat(cleanedData.discountPrice) || 0,
+            // --- FIX: price is now originalPrice, and discountPrice is the sale price ---
+            price: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
             discountPrice: parseFloat(cleanedData.discountPrice) || 0,
             longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
             originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
