@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Smile, Users, Bus, Ship, Moon, Camera } from 'lucide-react';
 
 // --- Reusable Icons Component ---
@@ -31,8 +32,8 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
   const IconComponent = icons[interest.icon] ?? icons[DEFAULT_ICON];
 
   return (
-    <a
-      href="#"
+    <Link
+      href={`/search?query=${encodeURIComponent(interest.name)}`}
       className="relative block bg-slate-900 border-2 border-slate-800 transform transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-red-500 overflow-hidden group"
     >
       <div
@@ -48,7 +49,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
           <p className="text-sm text-slate-400 mt-2">{interest.products} products</p>
         </div>
       </div>
-    </a>
+    </Link>
   );
 };
 
@@ -127,11 +128,14 @@ export default function PopularInterests() {
         <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 text-center mb-12 tracking-tight">
           Activities based on popular interests
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-          {interests.map((interest) => (
-            <InterestCard key={interest.name} interest={interest} />
-          ))}
-        </div>
+       {/* Replace this entire block in your code */}
+<div className="flex flex-wrap justify-center gap-6 md:gap-8">
+  {interests.map((interest) => (
+    <div key={interest.name} className="basis-80">
+      <InterestCard interest={interest} />
+    </div>
+  ))}
+</div>
       </div>
     </section>
   );

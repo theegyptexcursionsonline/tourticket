@@ -8,36 +8,19 @@ import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 import AuthModal from '@/components/AuthModal';
-import { Destination, Category, Tour } from '@/types';
+import { Destination, Category } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext'; 
+import SearchModal from '@/components/SearchModel';
+import { useRecentSearches } from '@/hooks/useSearch';
 
-// =================================================================
-// --- HELPER HOOKS & DATA ---
-// =================================================================
-const useRecentSearches = (storageKey = 'recentTravelSearches') => {
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+const useSlidingText = (texts: string[], interval = 3000) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
   useEffect(() => {
-    try {
-      const storedItems = window.localStorage.getItem(storageKey);
-      if (storedItems) setRecentSearches(JSON.parse(storedItems));
-    } catch (error) { console.error("Failed to load recent searches", error); }
-  }, [storageKey]);
-  const addSearchTerm = (term: string) => {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    const newSearches = [trimmed, ...recentSearches.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
-    setRecentSearches(newSearches);
-    try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); } catch (error) { console.error("Failed to save recent searches", error); }
-  };
-  const removeSearchTerm = (term: string) => {
-    const newSearches = recentSearches.filter(s => s.toLowerCase() !== term.toLowerCase());
-    setRecentSearches(newSearches);
-    try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); } catch (error) { console.error("Failed to save recent searches", error); }
-  };
-  return { recentSearches, addSearchTerm, removeSearchTerm };
+    const timer = setInterval(() => setCurrentIndex(prev => (prev + 1) % texts.length), interval);
+    return () => clearInterval(timer);
+  }, [texts.length, interval]);
+  return texts[currentIndex];
 };
-
-const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'CANAL CRUISE'], []);
 
 const SEARCH_SUGGESTIONS = [
   'Where are you going?', 'Find museums near you', 'Discover food tours', 'Book canal cruises',
@@ -77,177 +60,6 @@ function useScrollDirection() {
   }, []);
   return { scrollY, isVisible };
 }
-
-const useSlidingText = (texts: string[], interval = 3000) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentIndex(prev => (prev + 1) % texts.length), interval);
-    return () => clearInterval(timer);
-  }, [texts.length, interval]);
-  return texts[currentIndex];
-};
-
-// =================================================================
-// --- SUB-COMPONENTS ---
-// =================================================================
-const SearchSuggestion: FC<{ term: string; icon: React.ElementType; onSelect: (term: string) => void; onRemove?: (term: string) => void; }> = React.memo(({ term, icon: Icon, onSelect, onRemove }) => (
-    <div className="group relative">
-        <button onClick={() => onSelect(term)} className="flex items-center gap-3 pl-4 pr-5 py-2 bg-slate-100 text-slate-700 rounded-full transition-all hover:bg-slate-200 hover:shadow-md group-hover:pr-10">
-            <Icon className="h-5 w-5 text-slate-500 group-hover:text-red-500 transition-colors" />
-            <span className="font-medium">{term}</span>
-        </button>
-        {onRemove && (
-            <button onClick={(e) => { e.stopPropagation(); onRemove(term); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-slate-300" aria-label={`Remove ${term}`}>
-                <X size={14} />
-            </button>
-        )}
-    </div>
-));
-
-const TourResultSkeleton = () => (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-        <div className="w-full h-32 bg-slate-200"></div>
-        <div className="p-4">
-            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-slate-200 rounded w-1/2"></div>
-        </div>
-    </div>
-);
-
-const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }> = ({ onClose, onSearch }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState<Tour[]>([]);
-    const [loading, setLoading] = useState(false);
-    const popularSearches = usePopularSearches();
-    const { recentSearches, removeSearchTerm } = useRecentSearches();
-    const modalRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const fetchSearch = async () => {
-            if (searchTerm.trim().length > 2) {
-                setLoading(true);
-                const res = await fetch(`/api/search/live?q=${encodeURIComponent(searchTerm)}`);
-                const data = await res.json();
-                if (data.success) {
-                    setSearchResults(data.data);
-                }
-                setLoading(false);
-            } else {
-                setSearchResults([]);
-            }
-        };
-
-        const debounce = setTimeout(() => {
-            fetchSearch();
-        }, 300);
-
-        return () => clearTimeout(debounce);
-    }, [searchTerm]);
-
-
-    const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
-        e?.preventDefault();
-        if (searchTerm.trim()) {
-          window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-          onSearch(searchTerm);
-          setSearchTerm('');
-          onClose();
-        }
-    }, [searchTerm, onSearch, onClose]);
-
-    const handlePopularSearch = useCallback((term: string) => {
-      window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term);
-      onClose();
-    }, [onSearch, onClose]);
-
-    const handleRecentSearch = useCallback((term: string) => {
-      window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term);
-      onClose();
-    }, [onSearch, onClose]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        document.body.style.overflow = 'hidden';
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'auto';
-        };
-    }, [onClose]);
-
-    useOnClickOutside(modalRef, onClose);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-lg flex items-start justify-center p-4 sm:p-6 lg:p-8"
-            role="dialog"
-            aria-modal="true"
-        >
-            <motion.div
-                ref={modalRef}
-                initial={{ y: -30, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -30, opacity: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="relative w-full max-w-5xl bg-white shadow-2xl rounded-lg p-6 sm:p-8 mt-16"
-            >
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100" aria-label="Close search"><X size={28} /></button>
-                <form onSubmit={handleSearchSubmit} className="mb-8">
-                    <div className="relative"><Search className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-400" /><input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="What are you looking for?" autoFocus className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500" /></div>
-                </form>
-
-                {loading && (
-                     <div className="mb-8">
-                        <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Searching...</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <TourResultSkeleton key={i} />)}
-                        </div>
-                    </div>
-                )}
-
-                {!loading && searchResults.length > 0 && (
-                    <div className="mb-8">
-                        <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Tours</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {searchResults.map(tour => (
-                                <a key={tour._id} href={`/tour/${tour.slug}`} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
-                                    <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden relative">
-                                        <Image src={tour.image} alt={tour.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
-                                    </div>
-                                    <div className="p-4">
-                                        <h4 className="font-bold text-gray-900 group-hover:text-red-500 truncate">{tour.title}</h4>
-                                        <p className="text-sm text-gray-500">{tour.destination?.name}</p>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {!loading && searchTerm.length > 2 && searchResults.length === 0 && (
-                    <div className="text-center py-8 text-slate-500">
-                        <p>No tours found for "{searchTerm}". Try a different search.</p>
-                    </div>
-                )}
-
-
-                <div className="space-y-8">
-                    <div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Most popular</h3><div className="flex flex-wrap gap-3">{popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />)}</div></div>
-                    {recentSearches.length > 0 && (<div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Your recent searches</h3><div className="flex flex-wrap gap-3">{recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />)}</div></div>)}
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
 
 const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destination[]; categories: Category[]; }> = React.memo(({ isOpen, onClose, destinations, categories }) => {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -599,7 +411,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean; }
 
   const { openCart, totalItems } = useCart();
   const { user, logout } = useAuth();
-const { openWishlistSidebar, wishlist } = useWishlist();
+  const { openWishlistSidebar, wishlist } = useWishlist();
 
   const { scrollY, isVisible } = useScrollDirection();
   const { addSearchTerm } = useRecentSearches();
@@ -638,12 +450,14 @@ const { openWishlistSidebar, wishlist } = useWishlist();
     addSearchTerm(term);
   }, [addSearchTerm]);
 
-  const headerBg = isTransparent ? 'bg-transparent' : 'bg-white shadow-lg';
-  const headerText = isTransparent ? 'text-white' : 'text-gray-800';
-  const linkHoverColor = isTransparent ? 'hover:text-gray-200' : 'hover:text-red-500';
+const headerBg = isTransparent ? 'bg-transparent' : 'bg-white shadow-lg';
+const headerText = 'text-gray-800';
+const linkHoverColor = 'hover:text-red-500';
+
 
   return (
     <>
+      {/* Fixed header (keeps hide-on-scroll behavior) */}
       <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full'} ${headerBg} ${headerText}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 md:h-20">
@@ -667,15 +481,14 @@ const { openWishlistSidebar, wishlist } = useWishlist();
                       headerLinkClasses={`${headerText} ${linkHoverColor}`}
                       isTransparent={isTransparent}
                     />
- {/* --- REPLACE THIS --- */}
-    <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
-        <Star size={24} className={`${headerText} ${linkHoverColor}`} />
-        {wishlist.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
-                {wishlist.length}
-            </span>
-        )}
-    </button>
+                    <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
+                        <Star size={24} className={`${headerText} ${linkHoverColor}`} />
+                        {wishlist.length > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
+                                {wishlist.length}
+                            </span>
+                        )}
+                    </button>
                     <button onClick={openCart} className="relative group p-2">
                         <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
                         {totalItems > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">{totalItems}</span>}
@@ -685,26 +498,24 @@ const { openWishlistSidebar, wishlist } = useWishlist();
                         <Search size={22} className="group-hover:text-red-500" />
                     </button>
 
-               {user ? (
-  <UserMenu user={user} onLogout={logout} />
-) : (
-  <div className="hidden md:flex items-center gap-3">
-    <a
-      href="/login"
-      className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
-    >
-      Log In
-    </a>
-    <a
-      href="/signup"
-      className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
-    >
-      Sign Up
-    </a>
-  </div>
-)}
-
-
+                   {user ? (
+                      <UserMenu user={user} onLogout={logout} />
+                    ) : (
+                      <div className="hidden md:flex items-center gap-3">
+                        <a
+                          href="/login"
+                          className={`${headerText} ${linkHoverColor} font-semibold text-sm`}
+                        >
+                          Log In
+                        </a>
+                        <a
+                          href="/signup"
+                          className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors"
+                        >
+                          Sign Up
+                        </a>
+                      </div>
+                    )}
 
                     <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
                         <Menu size={24} className={`${headerText} ${linkHoverColor}`} />
@@ -714,6 +525,9 @@ const { openWishlistSidebar, wishlist } = useWishlist();
         </div>
         <MegaMenu isOpen={isMegaMenuOpen} onClose={() => setMegaMenuOpen(false)} destinations={destinations} categories={categories} />
       </header>
+
+      {/* Spacer to prevent content overlap with fixed header */}
+      <div className="h-16 md:h-20 lg:h-20" aria-hidden="true" />
 
       <MobileMenu
         isOpen={isMobileMenuOpen}
