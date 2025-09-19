@@ -66,7 +66,7 @@ const BookingCard = ({ booking }: { booking: PopulatedBooking }) => {
           
           {/* Destination badge */}
           <div className="absolute left-3 top-3 px-2 py-1 sm:px-3 rounded-lg bg-black/70 text-white text-xs font-semibold backdrop-blur-sm">
-            {booking.tour.destination?.name || 'Tour'}
+            {(booking.tour.destination as any)?.name || 'Tour'}
           </div>
           
           {/* Past booking overlay */}
@@ -155,6 +155,9 @@ const DashboardContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get user name properly
+  const userName = user?.name || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || 'Traveler');
+
   useEffect(() => {
     if (!token) {
       setIsLoading(false);
@@ -175,13 +178,19 @@ const DashboardContent = () => {
         }
 
         const data = await response.json();
+        console.log('📊 Bookings API Response:', data); // Debug log
+        
         if (data.success) {
-          setBookings(data.data);
+          // Handle empty bookings array as success, not error
+          setBookings(data.data || []);
+          setError(null); // Clear any previous errors
         } else {
           throw new Error(data.error || 'Could not load bookings.');
         }
       } catch (err) {
+        console.error('❌ Booking fetch error:', err);
         setError((err as Error).message);
+        setBookings([]); // Set empty array on error
       } finally {
         setIsLoading(false);
       }
@@ -190,6 +199,7 @@ const DashboardContent = () => {
     fetchBookings();
   }, [token]);
 
+  // Rest of your component logic stays the same...
   const { upcomingBookings } = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -209,32 +219,29 @@ const DashboardContent = () => {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 sm:bg-transparent">
-      {/* HERO / SUMMARY - mobile-first layout */}
+      {/* Hero section with stats */}
       <div className="bg-white rounded-xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-100 mb-6 sm:mb-8 mx-4 sm:mx-0">
-        {/* Mobile: Stack vertically, Desktop: Side by side */}
         <div className="space-y-6 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-8">
-          
-          {/* Avatar + Greeting */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-slate-100">
               {user?.picture ? (
                 <Image 
                   src={user.picture} 
-                  alt={user.name || 'User avatar'} 
+                  alt={userName || 'User avatar'} 
                   fill 
                   className="object-cover" 
                   sizes="80px"
                 />
               ) : (
                 <div className="flex items-center justify-center w-full h-full text-white text-lg sm:text-xl font-bold bg-rose-500">
-                  {user?.name?.[0] ?? 'U'}
+                  {userName?.[0]?.toUpperCase() ?? 'U'}
                 </div>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight">
-                Welcome back, {user?.name?.split(' ')[0] || 'Traveler'}!
+                Welcome back, {userName.split(' ')[0] || 'Traveler'}!
               </h1>
               <p className="text-sm text-slate-500 mt-1 leading-relaxed">
                 Here's a summary of your adventures.
@@ -242,7 +249,6 @@ const DashboardContent = () => {
             </div>
           </div>
 
-          {/* Stats - horizontal on mobile, right-aligned on desktop */}
           <div className="flex gap-3 sm:gap-4 sm:flex-shrink-0">
             <StatCard title="Total" value={totalBookings} icon={Ticket} />
             <StatCard title="Upcoming" value={upcomingCount} icon={Calendar} />
@@ -251,7 +257,7 @@ const DashboardContent = () => {
         </div>
       </div>
 
-      {/* CONTENT */}
+      {/* Content */}
       <div className="px-4 sm:px-0">
         <AnimatePresence>
           {isLoading ? (
@@ -261,8 +267,15 @@ const DashboardContent = () => {
               <SkeletonCard />
             </div>
           ) : error ? (
+            // Only show error if it's a real error, not empty bookings
             <div className="text-center py-8 sm:py-12 bg-red-50 text-red-700 p-4 sm:p-6 rounded-xl mx-4 sm:mx-0">
-              <p className="font-medium">{error}</p>
+              <p className="font-medium">Error: {error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Try Again
+              </button>
             </div>
           ) : (
             <div className="space-y-8 sm:space-y-12">

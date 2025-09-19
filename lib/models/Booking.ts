@@ -4,11 +4,11 @@ import mongoose, { Document, Schema, Model } from 'mongoose';
 export interface IBooking extends Document {
   tour: mongoose.Schema.Types.ObjectId;
   user: mongoose.Schema.Types.ObjectId;
-  date: Date;
-  time: string;
-  guests: number;
+  date: Date; // Keep as 'date' for database
+  time: string; // Keep as 'time' for database
+  guests: number; // Keep as 'guests' for database
   totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled'; // Added status field
+  status: 'Confirmed' | 'Pending' | 'Cancelled';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,7 +43,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
   status: {
     type: String,
     enum: ['Confirmed', 'Pending', 'Cancelled'],
-    default: 'Confirmed', // Set a default status for new bookings
+    default: 'Confirmed',
   },
 }, { timestamps: true });
 

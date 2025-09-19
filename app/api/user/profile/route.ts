@@ -107,16 +107,22 @@ export async function GET(request: NextRequest) {
 
     const userId = decodedPayload.sub as string;
 
-    // Find user
+    // Find user and add full name
     const user = await User.findById(userId).select('-password');
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Add computed name field
+    const userWithName = {
+      ...user.toObject(),
+      name: `${user.firstName} ${user.lastName}`
+    };
+
     return NextResponse.json({ 
       success: true, 
-      data: user 
+      data: userWithName 
     });
 
   } catch (error) {
