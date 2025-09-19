@@ -88,7 +88,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-sm text-slate-600 leading-relaxed max-w-xs">
-              Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt.
+              Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt Excursions Online.
             </p>
           </div>
 
