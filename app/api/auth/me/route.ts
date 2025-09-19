@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticationClient } from '@/lib/auth0';
+import { verifyToken } from '@/lib/jwt';
+import dbConnect from '@/lib/dbConnect';
+import User from '@/lib/models/user';
 
 export async function GET(request: NextRequest) {
   try {
-    const accessToken = request.cookies.get('auth0_access_token')?.value;
+    await dbConnect();
 
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'No authentication token found' },
-        { status: 401 }
-      );
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'No authentication token found' }, { status: 401 });
     }
 
-    // Get user profile from Auth0
-    const userProfile = await authenticationClient.users.getInfo(accessToken);
+    const token = authHeader.split(' ')[1];
+    const decodedPayload = await verifyToken(token);
 
-    // Prepare user data
+    if (!decodedPayload || !decodedPayload.sub) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    const userId = decodedPayload.sub as string;
+    const user = await User.findById(userId).select('-password');
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const userData = {
-      id: userProfile.sub,
-      email: userProfile.email,
-      name: userProfile.name,
-      firstName: userProfile.given_name || userProfile.name?.split(' ')[0] || '',
-      lastName: userProfile.family_name || userProfile.name?.split(' ').slice(1).join(' ') || '',
-      picture: userProfile.picture,
-      emailVerified: userProfile.email_verified,
-      createdAt: userProfile.updated_at,
+      id: user._id,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      firstName: user.firstName,
+      lastName: user.lastName,
     };
 
     return NextResponse.json({
@@ -35,16 +42,10 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get user error:', error);
     
-    if (error.statusCode === 401) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to get user information' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to get user information' }, { status: 500 });
   }
 }

@@ -2,24 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    // For stateless JWT, server-side logout is primarily about clearing cookies if they are used.
+    // If tokens are stored in localStorage, the client handles their removal.
+    // This endpoint can be used for any server-side cleanup if necessary.
+
     const response = NextResponse.json({
       success: true,
       message: 'Logged out successfully',
-      logoutUrl: `${process.env.AUTH0_ISSUER_BASE_URL}/v2/logout?client_id=${process.env.AUTH0_CLIENT_ID}&returnTo=${encodeURIComponent(process.env.AUTH0_BASE_URL!)}`
     });
 
-    // Clear all Auth0 cookies
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: 0,
-      path: '/',
-    };
-
-    response.cookies.set('auth0_access_token', '', cookieOptions);
-    response.cookies.set('auth0_id_token', '', cookieOptions);
-    response.cookies.set('auth0_refresh_token', '', cookieOptions);
+    // Example of clearing a cookie if you were to use them
+    // response.cookies.set('token', '', {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   expires: new Date(0),
+    //   path: '/',
+    // });
 
     return response;
 
