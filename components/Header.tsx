@@ -10,34 +10,17 @@ import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitch
 import AuthModal from '@/components/AuthModal';
 import { Destination, Category } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext'; 
+import SearchModal from '@/components/SearchModel';
+import { useRecentSearches } from '@/hooks/useSearch';
 
-// =================================================================
-// --- HELPER HOOKS & DATA ---
-// =================================================================
-const useRecentSearches = (storageKey = 'recentTravelSearches') => {
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+const useSlidingText = (texts: string[], interval = 3000) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
   useEffect(() => {
-    try {
-      const storedItems = window.localStorage.getItem(storageKey);
-      if (storedItems) setRecentSearches(JSON.parse(storedItems));
-    } catch (error) { console.error("Failed to load recent searches", error); }
-  }, [storageKey]);
-  const addSearchTerm = (term: string) => {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    const newSearches = [trimmed, ...recentSearches.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
-    setRecentSearches(newSearches);
-    try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); } catch (error) { console.error("Failed to save recent searches", error); }
-  };
-  const removeSearchTerm = (term: string) => {
-    const newSearches = recentSearches.filter(s => s.toLowerCase() !== term.toLowerCase());
-    setRecentSearches(newSearches);
-    try { window.localStorage.setItem(storageKey, JSON.stringify(newSearches)); } catch (error) { console.error("Failed to save recent searches", error); }
-  };
-  return { recentSearches, addSearchTerm, removeSearchTerm };
+    const timer = setInterval(() => setCurrentIndex(prev => (prev + 1) % texts.length), interval);
+    return () => clearInterval(timer);
+  }, [texts.length, interval]);
+  return texts[currentIndex];
 };
-
-const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'CANAL CRUISE'], []);
 
 const SEARCH_SUGGESTIONS = [
   'Where are you going?', 'Find museums near you', 'Discover food tours', 'Book canal cruises',
@@ -77,105 +60,6 @@ function useScrollDirection() {
   }, []);
   return { scrollY, isVisible };
 }
-
-const useSlidingText = (texts: string[], interval = 3000) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentIndex(prev => (prev + 1) % texts.length), interval);
-    return () => clearInterval(timer);
-  }, [texts.length, interval]);
-  return texts[currentIndex];
-};
-
-// =================================================================
-// --- SUB-COMPONENTS ---
-// =================================================================
-const SearchSuggestion: FC<{ term: string; icon: React.ElementType; onSelect: (term: string) => void; onRemove?: (term: string) => void; }> = React.memo(({ term, icon: Icon, onSelect, onRemove }) => (
-    <div className="group relative">
-        <button onClick={() => onSelect(term)} className="flex items-center gap-3 pl-4 pr-5 py-2 bg-slate-100 text-slate-700 rounded-full transition-all hover:bg-slate-200 hover:shadow-md group-hover:pr-10">
-            <Icon className="h-5 w-5 text-slate-500 group-hover:text-red-500 transition-colors" />
-            <span className="font-medium">{term}</span>
-        </button>
-        {onRemove && (
-            <button onClick={(e) => { e.stopPropagation(); onRemove(term); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-slate-300" aria-label={`Remove ${term}`}>
-                <X size={14} />
-            </button>
-        )}
-    </div>
-));
-
-const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }> = ({ onClose, onSearch }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const popularSearches = usePopularSearches();
-    const { recentSearches, removeSearchTerm } = useRecentSearches();
-    const modalRef = useRef<HTMLDivElement>(null);
-
-    const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
-        e?.preventDefault();
-        if (searchTerm.trim()) {
-          window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-          onSearch(searchTerm);
-          setSearchTerm('');
-          onClose();
-        }
-    }, [searchTerm, onSearch, onClose]);
-
-    const handlePopularSearch = useCallback((term: string) => {
-      window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term);
-      onClose();
-    }, [onSearch, onClose]);
-
-    const handleRecentSearch = useCallback((term: string) => {
-      window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term);
-      onClose();
-    }, [onSearch, onClose]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        document.body.style.overflow = 'hidden';
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'auto';
-        };
-    }, [onClose]);
-
-    useOnClickOutside(modalRef, onClose);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-lg flex items-start justify-center p-4 sm:p-6 lg:p-8"
-            role="dialog"
-            aria-modal="true"
-        >
-            <motion.div
-                ref={modalRef}
-                initial={{ y: -30, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -30, opacity: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="relative w-full max-w-5xl bg-white shadow-2xl rounded-lg p-6 sm:p-8 mt-16"
-            >
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100" aria-label="Close search"><X size={28} /></button>
-                <form onSubmit={handleSearchSubmit} className="mb-8">
-                    <div className="relative"><Search className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-400" /><input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="What are you looking for?" autoFocus className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500" /></div>
-                </form>
-                <div className="space-y-8">
-                    <div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Most popular</h3><div className="flex flex-wrap gap-3">{popularSearches.map(item => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />)}</div></div>
-                    {recentSearches.length > 0 && (<div><h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Your recent searches</h3><div className="flex flex-wrap gap-3">{recentSearches.map(item => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />)}</div></div>)}
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
 
 const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destination[]; categories: Category[]; }> = React.memo(({ isOpen, onClose, destinations, categories }) => {
     const menuRef = useRef<HTMLDivElement>(null);

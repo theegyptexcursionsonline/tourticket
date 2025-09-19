@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, X, Clock, Zap } from "lucide-react";
+import { Search } from "lucide-react";
+import Image from "next/image";
+import { useRecentSearches } from "@/hooks/useSearch";
+import SearchModal from "@/components/SearchModel";
 
 // --- Type Definitions ---
 type Tag = {
@@ -74,54 +77,7 @@ const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
   { top: "90%", left: "35%" },
 ];
 
-// --- Other Data ---
-const usePopularSearches = () =>
-  useMemo(
-    () => [
-      "CANAL CRUISE",
-      "MUSEUM",
-      "FOOD TOUR",
-    ],
-    []
-  );
-
 // --- Custom Hooks ---
-const useRecentSearches = (storageKey = "recentTravelSearches") => {
-  const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const storedItems = window.localStorage.getItem(storageKey);
-      if (storedItems) setRecentSearches(JSON.parse(storedItems));
-    } catch (error) {
-      console.error("Failed to load recent searches", error);
-    }
-  }, [storageKey]);
-
-  const addSearchTerm = (term: string) => {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    const newSearches = [trimmed, ...recentSearches.filter((s) => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
-    setRecentSearches(newSearches);
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(newSearches));
-    } catch (error) {
-      console.error("Failed to save recent searches", error);
-    }
-  };
-
-  const removeSearchTerm = (term: string) => {
-    const newSearches = recentSearches.filter((s) => s.toLowerCase() !== term.toLowerCase());
-    setRecentSearches(newSearches);
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(newSearches));
-    } catch (error) {
-      console.error("Failed to save recent searches", error);
-    }
-  };
-
-  return { recentSearches, addSearchTerm, removeSearchTerm };
-};
-
 const useIsMobile = (breakpoint = 768) => {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -186,107 +142,6 @@ const FloatingTag = ({ tag }: { tag: Tag }) => (
   </button>
 );
 
-const SearchSuggestion = ({ term, icon: Icon, onSelect, onRemove }: { term: string; icon: React.ElementType; onSelect: (term: string) => void; onRemove?: (term: string) => void }) => (
-  <div className="group relative">
-    <button onClick={() => onSelect(term)} className="flex w-full items-center gap-3 pl-4 pr-5 py-3 bg-slate-100 text-slate-700 rounded-3xl transition-all duration-300 ease-in-out hover:bg-slate-200 hover:shadow-md hover:text-slate-900 group-hover:pr-10">
-      <Icon className="h-5 w-5 text-slate-500 group-hover:text-red-500 transition-colors" />
-      <span className="font-medium text-sm sm:text-base text-left">{term}</span>
-    </button>
-    {onRemove && (
-      <button onClick={(e) => { e.stopPropagation(); onRemove(term); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-slate-200 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-300 hover:text-slate-800" aria-label={`Remove ${term}`}>
-        <X size={14} />
-      </button>
-    )}
-  </div>
-);
-
-const SearchModal = ({ isOpen, onClose, onSearch }: { isOpen: boolean; onClose: () => void; onSearch: (term: string) => void }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const popularSearches = usePopularSearches();
-  const { recentSearches, removeSearchTerm } = useRecentSearches();
-
-  const handleSearchSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (searchTerm.trim()) {
-      onSearch(searchTerm);
-      // Navigate to search page
-      window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-      setSearchTerm("");
-      onClose();
-    }
-  };
-
-  const handlePopularSearch = (term: string) => {
-    onSearch(term);
-    window.location.href = `/search?q=${encodeURIComponent(term)}`;
-    onClose();
-  };
-
-  const handleRecentSearch = (term: string) => {
-    onSearch(term);
-    window.location.href = `/search?q=${encodeURIComponent(term)}`;
-    onClose();
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "auto";
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-lg animate-fade-in flex flex-col items-center justify-start p-4" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="relative w-full max-w-6xl mt-16 lg:mt-24 p-6 sm:p-8 animate-slide-from-top" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" aria-label="Close search">
-          <X className="h-7 w-7" />
-        </button>
-
-        <form onSubmit={handleSearchSubmit} className="mb-8">
-          <div className="relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="What are you looking for?"
-              autoFocus
-              className="w-full text-2xl md:text-3xl pl-16 pr-6 py-6 border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-red-500 transition-colors"
-            />
-          </div>
-        </form>
-
-        <div className="space-y-12">
-          <div>
-            <h3 className="text-slate-500 font-bold text-sm tracking-widest uppercase mb-4">Most popular</h3>
-            <div className="flex flex-wrap gap-4">
-              {popularSearches.map((item) => <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />)}
-            </div>
-          </div>
-          {recentSearches.length > 0 && (
-            <div>
-              <h3 className="text-slate-500 font-bold text-sm tracking-widest uppercase mb-4">Your recent searches</h3>
-              <div className="flex flex-wrap gap-4">
-                {recentSearches.map((item) => <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />)}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
   const currentSuggestion = useSlidingText(HERO_SEARCH_SUGGESTIONS, 3000);
   return (
@@ -315,7 +170,7 @@ const BackgroundSlideshow = ({
 
   // Preload the single image
   useEffect(() => {
-    const img = new Image();
+    const img = new (window as any).Image();
     img.src = src;
   }, [src]);
 
@@ -377,7 +232,8 @@ export default function HeroSection() {
         </div>
       </section>
 
-      <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} onSearch={handleSearch} />
+      {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} onSearch={handleSearch} />}
+
 
       <style jsx global>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
