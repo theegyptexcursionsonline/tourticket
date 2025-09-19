@@ -1,8 +1,9 @@
 'use client';
 
-import React from "react";
-import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, ChevronDown, Menu, Search } from "lucide-react";
+import React, { useState } from "react";
+import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, Loader2 } from "lucide-react";
 import Image from "next/image";
+import toast, { Toaster } from 'react-hot-toast';
 
 // Reusable Header and Footer components
 import Header from "@/components/Header";
@@ -10,7 +11,6 @@ import Footer from "@/components/Footer";
 
 // =================================================================
 // --- DARK HERO SECTION COMPONENT ---
-// This is the new component to be added above the Header.
 // =================================================================
 function DarkHero() {
   return (
@@ -18,7 +18,7 @@ function DarkHero() {
       {/* Background Image/Overlay for Visuals */}
       <div className="absolute inset-0 z-0 opacity-20">
         <Image
-          src="/about.png" // Placeholder for a dark, stylish background image
+          src="/about.png" // Using the about.png as specified
           alt="Abstract dark background"
           layout="fill"
           objectFit="cover"
@@ -41,20 +41,64 @@ function DarkHero() {
 // --- CONTACT US PAGE COMPONENT ---
 // =================================================================
 export default function ContactUsPage() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
   const socialLinks = [
     { icon: Facebook, href: "#" },
     { icon: Instagram, href: "#" },
     { icon: Twitter, href: "#" },
     { icon: Youtube, href: "#" },
   ];
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error('Please fill out all fields.');
+      return;
+    }
+    
+    setIsLoading(true);
+    const toastId = toast.loading('Sending your message...');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Something went wrong');
+      }
+      
+      toast.success('Message sent successfully!', { id: toastId });
+      setFormData({ name: '', email: '', message: '' }); // Reset form
+
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send message.', { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="bg-white text-slate-800">
-      {/* 1. Add the new DarkHero component before the Header. 
-        Note: The Header component from your files needs to be updated 
-        to be transparent and absolute to sit on top of this hero section.
-        I will assume you can make this change in your `components/Header.js` file.
-      */}
+      <Toaster position="top-center" />
       <DarkHero />
       <Header />
 
@@ -84,8 +128,8 @@ export default function ContactUsPage() {
                   <li className="flex gap-4 items-start">
                     <Mail size={24} className="text-red-600 flex-shrink-0" />
                     <div>
-                      <a 
-                        href="mailto:hello@egyptexcursionsonline.com" 
+                      <a
+                        href="mailto:hello@egyptexcursionsonline.com"
                         className="font-semibold text-blue-600 hover:underline break-all"
                       >
                         hello@egyptexcursionsonline.com
@@ -101,16 +145,16 @@ export default function ContactUsPage() {
                   </li>
                 </ul>
               </div>
-              
+
               {/* Social Media Links */}
               <div>
                 <h3 className="font-bold text-lg text-slate-900 mb-4">Follow us on social media</h3>
                 <div className="flex gap-3">
                   {socialLinks.map(({ icon: Icon, href }, i) => (
-                    <a 
-                      key={i} 
-                      href={href} 
-                      className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors" 
+                    <a
+                      key={i}
+                      href={href}
+                      className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       aria-label={`Follow us on ${Icon.displayName || 'social media'}`}
                     >
                       <Icon size={18} />
@@ -123,42 +167,52 @@ export default function ContactUsPage() {
             {/* Contact Form Column */}
             <div className="bg-slate-50 p-6 sm:p-8 rounded-lg shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 mb-6">Send us a message</h2>
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
                     Your Name
                   </label>
-                  <input 
-                    type="text" 
-                    id="name" 
+                  <input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
+                    required
                   />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
                     Your Email
                   </label>
-                  <input 
-                    type="email" 
-                    id="email" 
+                  <input
+                    type="email"
+                    id="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
+                    required
                   />
                 </div>
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-1">
                     Message
                   </label>
-                  <textarea 
-                    id="message" 
-                    rows="4" 
+                  <textarea
+                    id="message"
+                    rows={4}
+                    value={formData.message}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
+                    required
                   ></textarea>
                 </div>
                 <button
-                  type="submit" 
-                  className="w-full h-12 px-6 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors font-semibold shadow-md"
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 px-6 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors font-semibold shadow-md flex items-center justify-center disabled:bg-red-400 disabled:cursor-not-allowed"
                 >
-                  Send Message
+                  {isLoading ? <Loader2 className="animate-spin" /> : 'Send Message'}
                 </button>
               </form>
             </div>
@@ -166,7 +220,6 @@ export default function ContactUsPage() {
         </div>
       </main>
 
-      {/* Reusable Footer */}
       <Footer />
     </div>
   );
