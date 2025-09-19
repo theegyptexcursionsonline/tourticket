@@ -11,6 +11,7 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.4.0",
     "@auth0/nextjs-auth0": "^4.9.0",
+    "@stripe/stripe-js": "^7.9.0",
     "auth0": "^4.29.0",
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
@@ -38,6 +39,7 @@
     "react-dom": "19.0.0",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.2.0",
+    "stripe": "^18.5.0",
     "swiper": "^11.2.10",
     "tailwind-scrollbar-hide": "^4.0.0"
   },
