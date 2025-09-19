@@ -1,7 +1,7 @@
-// app/admin/tours/ToursListClient.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSettings } from '@/hooks/useSettings';
 import { 
   Search, 
   Grid, 
@@ -13,6 +13,7 @@ import {
   MapPin,
   Star,
   Euro,
+  DollarSign,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal
@@ -53,11 +54,6 @@ function Badge({ children, className = '', icon: Icon }: {
   );
 }
 
-function formatPrice(p?: number) {
-  if (p === undefined || p === null) return '—';
-  return `€${Number(p).toFixed(2)}`;
-}
-
 function PlaceholderImg() {
   return (
     <div className="flex items-center justify-center h-full w-full bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg">
@@ -69,11 +65,19 @@ function PlaceholderImg() {
 }
 
 export function ToursListClient({ tours }: { tours: TourType[] }) {
+  const { selectedCurrency } = useSettings();
+  const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
+
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'table' | 'cards'>('cards');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [perPage, setPerPage] = useState(12);
   const [page, setPage] = useState(1);
+
+  const formatPrice = (p?: number) => {
+    if (p === undefined || p === null) return '—';
+    return `${selectedCurrency.symbol}${Number(p).toFixed(2)}`;
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -238,7 +242,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
-                      <Euro className="h-3 w-3" />
+                      <CurrencyIcon className="h-3 w-3" />
                       Price
                     </div>
                   </th>

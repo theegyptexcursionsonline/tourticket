@@ -1,26 +1,38 @@
-// components/admin/Header.tsx
 "use client";
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, Home, ChevronRight, User, Shield } from 'lucide-react';
+import { LogOut, Home, ChevronRight, User, Shield, DollarSign, Euro } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSettings } from '@/hooks/useSettings';
+import { currencies } from '@/utils/localization';
 
 const AdminHeader = () => {
     const pathname = usePathname();
     const router = useRouter();
     const pathSegments = pathname.split('/').filter(i => i);
+    
+    // Settings context for currency
+    const { selectedCurrency, setSelectedCurrency } = useSettings();
 
     const handleLogout = () => {
         // Remove the token from local storage
         localStorage.removeItem('admin-auth-token');
-       
+        
         // Show a confirmation toast
         toast.success('You have been logged out.');
-       
+        
         // Redirect to the homepage and refresh the page state
         router.push('/');
         router.refresh();
+    };
+    
+    const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCurrencyCode = event.target.value;
+        const currency = currencies.find(c => c.code === newCurrencyCode);
+        if (currency) {
+            setSelectedCurrency(currency);
+        }
     };
 
     // Function to format segment names
@@ -42,6 +54,8 @@ const AdminHeader = () => {
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
     };
+
+    const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
 
     return (
         <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
@@ -99,6 +113,23 @@ const AdminHeader = () => {
 
                     {/* Enhanced User Menu and Logout */}
                     <div className="flex items-center gap-4">
+                        {/* DYNAMIC CURRENCY SWITCHER */}
+                        <div className="relative">
+                           <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                           <select
+                                value={selectedCurrency.code}
+                                onChange={handleCurrencyChange}
+                                className="appearance-none w-full bg-white border border-gray-300 rounded-xl py-2 pl-9 pr-8 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+                           >
+                               {currencies.map((currency) => (
+                                   <option key={currency.code} value={currency.code}>
+                                       {currency.code}
+                                   </option>
+                               ))}
+                           </select>
+                           <ChevronRight className="h-4 w-4 text-slate-400 absolute right-3 top-1/2 transform -translate-y-1/2 -rotate-90 pointer-events-none" />
+                        </div>
+
                         {/* User Info */}
                         <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl border border-slate-200/60">
                             <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-sm">
