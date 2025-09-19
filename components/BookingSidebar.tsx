@@ -1091,179 +1091,36 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     };
   }, [tour]);
 
-  // MODIFIED: Generate time slots from tour availability or create default ones
- // Updated time slots generation to support different pricing and premium options
- const generateTimeSlotsFromAvailability = useCallback((tourData: Tour, price: number, isPremium: boolean = false): TimeSlot[] => {
-  if (tourData.availability && tourData.availability.slots) {
-    return tourData.availability.slots.map((slot, index) => ({
-      id: `slot-${isPremium ? 'premium-' : ''}${index}`,
-      time: slot.time,
-      available: isPremium ? Math.min(slot.capacity || 15, 8) : (slot.capacity || 15),
-      originalAvailable: isPremium ? 8 : (slot.capacity || 15),
-      price: price,
-      isPopular: index === 0 && !isPremium,
-    }));
-  }
 
-  // Generate different time slots based on option type
-  const baseSlots = [
-    { time: '09:00', capacity: 15 },
-    { time: '11:00', capacity: 15 },
-    { time: '14:00', capacity: 15 },
-    { time: '16:00', capacity: 15 },
-    { time: '18:00', capacity: 12 },
-  ];
 
-  if (isPremium) {
-    // Premium slots with limited capacity
-    return [
-      { id: 'premium-slot-1', time: '10:00', available: 6, originalAvailable: 8, price: price },
-      { id: 'premium-slot-2', time: '15:00', available: 4, originalAvailable: 8, price: price, isPopular: true },
-      { id: 'premium-slot-3', time: '17:00', available: 8, originalAvailable: 8, price: price },
-    ];
-  }
 
-  return baseSlots.map((slot, index) => ({
-    id: `slot-${index}`,
-    time: slot.time,
-    available: Math.floor(Math.random() * slot.capacity) + Math.floor(slot.capacity * 0.3), // Random availability
-    originalAvailable: slot.capacity,
-    price: price,
-    isPopular: index === 1, // Make second slot popular
-  }));
-}, []);
-
-  // Generate multiple tour options dynamically from the tour data
- const generateTourOptionsFromTour = useCallback((tourData: Tour): TourOption[] => {
-   const options: TourOption[] = [];
- 
-   // If tour has bookingOptions, use those
-   if (tourData.bookingOptions && tourData.bookingOptions.length > 0) {
-     tourData.bookingOptions.forEach((bookingOption, index) => {
-       options.push({
-         id: `tour-option-${index}`,
-         title: bookingOption.label || `${tourData.title} - Option ${index + 1}`,
-         price: bookingOption.price || tourData.discountPrice,
-         originalPrice: tourData.originalPrice,
-         duration: tourData.duration || '60 minutes',
-         languages: tourData.languages || ['English'],
-         description: tourData.description || 'Experience this amazing tour',
-         timeSlots: generateTimeSlotsFromAvailability(tourData, bookingOption.price || tourData.discountPrice),
-         highlights: tourData.highlights || [],
-         included: tourData.whatsIncluded || tourData.includes || [],
-         groupSize: `Max ${tourData.maxGroupSize || 15} people`,
-         difficulty: tourData.difficulty || 'Easy',
-         badge: index === 0 ? 'Most Popular' : bookingOption.type,
-         discount: tourData.originalPrice ? Math.round(((tourData.originalPrice - (bookingOption.price || tourData.discountPrice)) / tourData.originalPrice) * 100) : undefined,
-         isRecommended: index === 0,
-       });
-     });
-   } else {
-     // Generate multiple default options if no bookingOptions exist
-     const basePrice = tourData.discountPrice;
-     const originalPrice = tourData.originalPrice;
- 
-     // Standard Option
-     options.push({
-       id: 'standard-option',
-       title: `${tourData.title} - Standard Experience`,
-       price: basePrice,
-       originalPrice: originalPrice,
-       duration: tourData.duration || '75 minutes',
-       languages: tourData.languages || ['English', 'Dutch'],
-       description: tourData.description || 'Experience this amazing tour with our standard package including all essential features.',
-       timeSlots: generateTimeSlotsFromAvailability(tourData, basePrice),
-       highlights: tourData.highlights?.slice(0, 4) || [
-         'Professional guide',
-         'Safety equipment included',
-         'Basic refreshments',
-         'Group experience'
-       ],
-       included: tourData.whatsIncluded?.slice(0, 4) || tourData.includes?.slice(0, 4) || [
-         'Tour guide',
-         'Safety briefing',
-         'Basic amenities',
-         'Group photos'
-       ],
-       groupSize: `Max ${tourData.maxGroupSize || 15} people`,
-       difficulty: tourData.difficulty || 'Easy',
-       badge: 'Most Popular',
-       discount: originalPrice ? Math.round(((originalPrice - basePrice) / originalPrice) * 100) : 15,
-       isRecommended: true,
-     });
- 
-     // Premium Option (if tour price allows)
-     if (basePrice > 20) {
-       const premiumPrice = Math.round(basePrice * 1.6);
-       options.push({
-         id: 'premium-option',
-         title: `${tourData.title} - Premium Experience`,
-         price: premiumPrice,
-         originalPrice: originalPrice ? Math.round(originalPrice * 1.6) : Math.round(premiumPrice * 1.2),
-         duration: tourData.duration || '90 minutes',
-         languages: tourData.languages || ['English', 'Dutch', 'German'],
-         description: 'Enhanced experience with premium amenities, smaller groups, and additional features for a more exclusive adventure.',
-         timeSlots: generateTimeSlotsFromAvailability(tourData, premiumPrice, true), // Premium slots
-         highlights: [
-           ...(tourData.highlights?.slice(0, 3) || ['Professional guide', 'Safety equipment', 'Premium service']),
-           'Small group experience',
-           'Premium refreshments',
-           'Priority boarding',
-           'Complimentary photos'
-         ],
-         included: [
-           ...(tourData.whatsIncluded?.slice(0, 3) || tourData.includes?.slice(0, 3) || ['Tour guide', 'Safety briefing', 'Basic amenities']),
-           'Premium refreshments',
-           'Professional photos',
-           'Priority access',
-           'Small group (max 8)'
-         ],
-         groupSize: `Max 8 people`,
-         difficulty: tourData.difficulty || 'Easy',
-         badge: 'Premium',
-         discount: 20,
-         isRecommended: false,
-       });
-     }
- 
-     // Budget Option (if applicable)
-     if (basePrice > 15) {
-       const budgetPrice = Math.round(basePrice * 0.75);
-       options.push({
-         id: 'budget-option',
-         title: `${tourData.title} - Essential Experience`,
-         price: budgetPrice,
-         originalPrice: basePrice,
-         duration: tourData.duration?.replace(/\d+/, (match) => Math.max(45, parseInt(match) - 15).toString()) || '60 minutes',
-         languages: ['English'],
-         description: 'Great value option covering all the essentials with a focus on the main highlights of the tour.',
-         timeSlots: generateTimeSlotsFromAvailability(tourData, budgetPrice),
-         highlights: tourData.highlights?.slice(0, 3) || [
-           'Professional guide',
-           'Essential highlights',
-           'Safety included'
-         ],
-         included: tourData.includes?.slice(0, 3) || [
-           'Tour guide',
-           'Safety briefing',
-           'Essential amenities'
-         ],
-         groupSize: `Max ${tourData.maxGroupSize || 15} people`,
-         difficulty: tourData.difficulty || 'Easy',
-         badge: 'Best Value',
-         discount: Math.round(((basePrice - budgetPrice) / basePrice) * 100),
-         isRecommended: false,
-       });
-     }
-   }
- 
-   return options;
- }, [generateTimeSlotsFromAvailability]);
   
-  // MODIFIED: Generate add-ons from tour data or use defaults
-  const generateAddOnsFromTour = useCallback((tourData: Tour): AddOnTour[] => {
-    if (tourData.addOns && tourData.addOns.length > 0) {
-      return tourData.addOns.map((addon, index) => ({
+ 
+
+// MODIFIED: Fetches availability and options from the backend API
+const fetchAvailability = async (date: Date, totalGuests: number) => {
+  setIsLoading(true);
+  setError('');
+
+  try {
+    const tourId = tour._id || tour.id;
+    if (!tourId) {
+        throw new Error("Tour ID is missing");
+    }
+
+    // Fetch tour options from our API route
+    const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
+    if (!optionsResponse.ok) {
+      const errorData = await optionsResponse.json();
+      throw new Error(errorData.message || 'Failed to fetch tour options');
+    }
+    const tourOptions: TourOption[] = await optionsResponse.json();
+
+    // Create the availability object with the fetched options
+    const newAvailabilityData: AvailabilityData = {
+      date: date.toISOString().split('T')[0],
+      timeSlots: [], // Empty since timeSlots are now part of each tourOption
+      addOns: tour.addOns?.map((addon, index) => ({
         id: addon.id || `addon-${index}`,
         title: addon.name || 'Tour Enhancement',
         description: addon.description || 'Enhance your tour experience',
@@ -1276,40 +1133,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         icon: Gift,
         savings: addon.price ? Math.round(addon.price * 0.3) : 5,
         perGuest: false,
-      }));
-    }
-
-    // Return default add-ons if none in tour data
-    return addOnData;
-  }, []);
-
- // MODIFIED: Fetches availability and options from the backend API
-const fetchAvailability = async (date: Date, totalGuests: number) => {
-  setIsLoading(true);
-  setError('');
-
-  try {
-    const tourId = tour._id || tour.id;
-    if (!tourId) {
-        throw new Error("Tour ID is missing");
-    }
-
-    // Fetch tour options from our new API route
-    const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
-    if (!optionsResponse.ok) {
-      const errorData = await optionsResponse.json();
-      throw new Error(errorData.message || 'Failed to fetch tour options');
-    }
-    const tourOptions: TourOption[] = await optionsResponse.json();
-
-    // You could create another endpoint for other availability details like weather
-    // For now, we'll create the availability object with the fetched options
-    const newAvailabilityData: AvailabilityData = {
-      date: date.toISOString().split('T')[0],
-      timeSlots: [], // This is now part of each tourOption, so the parent array can be empty
-      addOns: generateAddOnsFromTour(tour), // This could also be moved to the backend
+      })) || [], // Use tour's add-ons or empty array
       tourOptions: tourOptions, // Use the options fetched from the API
-      weatherInfo: { // Example static data
+      weatherInfo: {
         condition: 'Sunny',
         temperature: '25°C',
         icon: '☀️'

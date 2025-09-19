@@ -3,8 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { Tour as TourType, BookingOption as BookingOptionType, TimeSlot, TourOption } from '@/types/index';
 
-// Helper function to generate time slots.
-// You can move this to a shared utility file if needed elsewhere.
+// Helper function to generate time slots from availability
 const generateTimeSlotsFromAvailability = (tourData: TourType, price: number, isPremium: boolean = false): TimeSlot[] => {
   if (tourData.availability && tourData.availability.slots) {
     return tourData.availability.slots.map((slot, index) => ({
@@ -17,6 +16,7 @@ const generateTimeSlotsFromAvailability = (tourData: TourType, price: number, is
     }));
   }
 
+  // Default slots if no availability data
   const baseSlots = [
     { time: '09:00', capacity: 15 },
     { time: '11:00', capacity: 15 },
@@ -39,7 +39,6 @@ const generateTimeSlotsFromAvailability = (tourData: TourType, price: number, is
     isPopular: index === 1,
   }));
 };
-
 
 export async function GET(
   request: Request,
@@ -79,27 +78,79 @@ export async function GET(
         badge: opt.badge || (index === 0 ? 'Most Popular' : 'Standard'),
         isRecommended: opt.isRecommended || index === 0,
       }));
-    } else {
-      // If no booking options, generate fallback options based on the tour itself
-      const basePrice = tour.discountPrice;
+   } else {
+  // Generate 3 fallback options when no booking options are configured
+  const basePrice = tour.discountPrice;
+  const originalPrice = tour.originalPrice;
 
-      // Fallback Standard Option
-      tourOptions.push({
-        id: 'standard-fallback',
-        title: `${tour.title} - Standard Experience`,
-        price: basePrice,
-        originalPrice: tour.originalPrice,
-        duration: tour.duration || '75 minutes',
-        languages: tour.languages || ['English'],
-        description: tour.description || 'Experience this amazing tour with our standard package.',
-        timeSlots: generateTimeSlotsFromAvailability(tour, basePrice),
-        highlights: tour.highlights?.slice(0, 4) || [],
-        groupSize: `Max ${tour.maxGroupSize || 15} people`,
-        difficulty: tour.difficulty || 'Easy',
-        badge: 'Most Popular',
-        isRecommended: true,
-      });
-    }
+  // 1. Budget Option
+  const budgetPrice = Math.round(basePrice * 0.8);
+  tourOptions.push({
+    id: 'budget-fallback',
+    title: `${tour.title} - Essential Experience`,
+    price: budgetPrice,
+    originalPrice: basePrice,
+    duration: tour.duration || '60 minutes',
+    languages: ['English'],
+    description: 'Great value option covering all the main highlights with professional guidance.',
+    timeSlots: generateTimeSlotsFromAvailability(tour, budgetPrice),
+    highlights: tour.highlights?.slice(0, 3) || [
+      'Professional guide',
+      'Main attractions',
+      'Safety equipment'
+    ],
+    groupSize: `Max ${tour.maxGroupSize || 20} people`,
+    difficulty: tour.difficulty || 'Easy',
+    badge: 'Best Value',
+    isRecommended: false,
+  });
+
+  // 2. Standard Option (Most Popular)
+  tourOptions.push({
+    id: 'standard-fallback',
+    title: `${tour.title} - Standard Experience`,
+    price: basePrice,
+    originalPrice: originalPrice,
+    duration: tour.duration || '75 minutes',
+    languages: tour.languages || ['English'],
+    description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
+    timeSlots: generateTimeSlotsFromAvailability(tour, basePrice),
+    highlights: tour.highlights?.slice(0, 4) || [
+      'Professional guide',
+      'All main attractions',
+      'Safety equipment',
+      'Small group experience'
+    ],
+    groupSize: `Max ${tour.maxGroupSize || 15} people`,
+    difficulty: tour.difficulty || 'Easy',
+    badge: 'Most Popular',
+    isRecommended: true,
+  });
+
+  // 3. Premium Option
+  const premiumPrice = Math.round(basePrice * 1.4);
+  tourOptions.push({
+    id: 'premium-fallback',
+    title: `${tour.title} - Premium Experience`,
+    price: premiumPrice,
+    originalPrice: originalPrice ? Math.round(originalPrice * 1.4) : Math.round(premiumPrice * 1.2),
+    duration: tour.duration?.replace(/\d+/, (match) => (parseInt(match) + 30).toString()) || '90 minutes',
+    languages: tour.languages || ['English', 'Spanish'],
+    description: 'Enhanced experience with premium amenities, smaller groups, and exclusive access for a luxury adventure.',
+    timeSlots: generateTimeSlotsFromAvailability(tour, premiumPrice, true),
+    highlights: [
+      ...(tour.highlights?.slice(0, 3) || ['Professional guide', 'Premium service', 'Exclusive access']),
+      'Small group (max 8)',
+      'Premium refreshments',
+      'Priority access',
+      'Professional photos'
+    ],
+    groupSize: `Max 8 people`,
+    difficulty: tour.difficulty || 'Easy',
+    badge: 'Premium',
+    isRecommended: false,
+  });
+}
 
     return NextResponse.json(tourOptions);
 
