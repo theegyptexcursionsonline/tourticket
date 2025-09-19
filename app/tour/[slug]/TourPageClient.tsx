@@ -331,7 +331,7 @@ if (!activeEl) {
             aria-label="Tour sections"
           >
             {tabs.map((tab: any) => (
-              
+              <a
                 key={tab.id}
                 href={`#${tab.id}`}
                 data-tab-id={tab.id}
