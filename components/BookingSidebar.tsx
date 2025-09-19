@@ -1283,38 +1283,51 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     return addOnData;
   }, []);
 
-  // MODIFIED: Enhanced availability fetching with real tour data
-  const fetchAvailability = async (date: Date, totalGuests: number) => {
-    setIsLoading(true);
-    setError('');
+ // MODIFIED: Fetches availability and options from the backend API
+const fetchAvailability = async (date: Date, totalGuests: number) => {
+  setIsLoading(true);
+  setError('');
 
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const mockAvailability: AvailabilityData = {
-        date: date.toISOString().split('T')[0],
-        timeSlots: [],
-        addOns: generateAddOnsFromTour(tour), // Use real tour data
-        tourOptions: generateTourOptionsFromTour(tour), // Use real tour data
-        weatherInfo: {
-          condition: 'Sunny',
-          temperature: '22°C',
-          icon: '☀️'
-        },
-        specialOffers: []
-      };
-
-      setAvailability(mockAvailability);
-      setCurrentStep(2);
-      setAnimationKey(prev => prev + 1);
-    } catch (err) {
-      setError('Unable to check availability. Please try again.');
-      toast.error('Connection error. Please check your internet connection.');
-    } finally {
-      setIsLoading(false);
+  try {
+    const tourId = tour._id || tour.id;
+    if (!tourId) {
+        throw new Error("Tour ID is missing");
     }
-  };
+
+    // Fetch tour options from our new API route
+    const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
+    if (!optionsResponse.ok) {
+      const errorData = await optionsResponse.json();
+      throw new Error(errorData.message || 'Failed to fetch tour options');
+    }
+    const tourOptions: TourOption[] = await optionsResponse.json();
+
+    // You could create another endpoint for other availability details like weather
+    // For now, we'll create the availability object with the fetched options
+    const newAvailabilityData: AvailabilityData = {
+      date: date.toISOString().split('T')[0],
+      timeSlots: [], // This is now part of each tourOption, so the parent array can be empty
+      addOns: generateAddOnsFromTour(tour), // This could also be moved to the backend
+      tourOptions: tourOptions, // Use the options fetched from the API
+      weatherInfo: { // Example static data
+        condition: 'Sunny',
+        temperature: '25°C',
+        icon: '☀️'
+      },
+      specialOffers: []
+    };
+
+    setAvailability(newAvailabilityData);
+    setCurrentStep(2);
+    setAnimationKey(prev => prev + 1);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unable to check availability.';
+    setError(errorMessage);
+    toast.error(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
   // Enhanced price calculations with savings
