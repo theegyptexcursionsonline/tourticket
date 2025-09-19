@@ -24,8 +24,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/types';
 
-// -------------------------------
-// Small payment SVG icons (kept inline to avoid external imports)
+// Small payment SVG icons
 const VisaIcon = ({ className = '', width = 48, height = 28 }: { className?: string; width?: number; height?: number }) => (
   <svg width={width} height={height} viewBox="0 0 48 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className={className}>
     <rect width="48" height="28" rx="4" fill="#1A1F71" />
@@ -65,8 +64,6 @@ const PayPalIcon = ({ className = '', width = 36, height = 24 }: { className?: s
   </svg>
 );
 
-// -------------------------------
-// Small form input component
 const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false }: any) => (
   <div>
     <label htmlFor={name} className="block text-sm font-medium text-slate-700 mb-2">
@@ -87,8 +84,6 @@ const FormInput = ({ label, name, type = 'text', placeholder, required = true, v
   </div>
 );
 
-// -------------------------------
-// Summary Item (single cart item within BookingSummary)
 const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const { formatPrice } = useSettings();
   const { removeFromCart } = useCart();
@@ -122,8 +117,6 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   );
 };
 
-// -------------------------------
-// Booking Summary (right column)
 const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage }: any) => {
   const { formatPrice } = useSettings();
   const { cart } = useCart();
@@ -198,8 +191,6 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
   );
 };
 
-// -------------------------------
-// Checkout Form Step
 type FormDataShape = {
   firstName: string;
   lastName: string;
@@ -307,8 +298,6 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
   );
 };
 
-// -------------------------------
-// Thank You page (show after confirmation) - receives everything it needs from props
 const ThankYouPage = ({
   orderedItems,
   pricing,
@@ -332,7 +321,6 @@ const ThankYouPage = ({
     try {
       const orderId = lastOrderId ?? `ORD-${Date.now()}`;
 
-      // Normalize ordered items for the PDF payload
       const orderedItemsForPdf = orderedItems.map((it) => {
         const qty = Number(it.quantity ?? 1);
         const price = Number(it.price ?? 0);
@@ -369,14 +357,12 @@ const ThankYouPage = ({
         symbol: pricing?.symbol ?? '$',
       };
 
-      // Build customer
       const customerForPdf = {
         name: customer ? `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() : 'Guest',
         email: customer?.email,
         phone: customer?.phone,
       };
 
-      // Minimal booking details (you can expand if you pass booking-related props)
       const bookingForPdf = {
         date: (customer as any)?.expiryDate ?? undefined,
         guests: orderedItemsForPdf.reduce((s, it) => s + (it.quantity || 1), 0),
@@ -474,8 +460,6 @@ const ThankYouPage = ({
   );
 };
 
-// -------------------------------
-// Trust Indicators
 const TrustIndicators = () => (
   <div className="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-12 py-8 mt-12 border-t border-slate-200">
     <div className="flex items-center gap-2 text-slate-600"><Shield size={20} className="text-emerald-600" /><span>Easy and secure booking</span></div>
@@ -484,8 +468,6 @@ const TrustIndicators = () => (
   </div>
 );
 
-// -------------------------------
-// Main Checkout Page Component (default export)
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const { formatPrice, selectedCurrency } = useSettings();
@@ -500,7 +482,6 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
   const [lastOrderId, setLastOrderId] = useState<string | undefined>(undefined);
 
-  // New states for coupon logic
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState('');
 
@@ -577,22 +558,19 @@ export default function CheckoutPage() {
   const handlePaymentProcess = async () => {
     setIsProcessing(true);
     try {
-      // Mock processing delay — replace with your real payment flow
+      // Mock processing delay
       await new Promise((res) => setTimeout(res, 2000));
       const createdOrderId = `ORD-${Date.now()}`;
 
-      // Save final state used by ThankYouPage
       setOrderedItems([...(cart || [])]);
       setFinalPricing(pricing);
       setFinalCustomer(formData);
       setLastOrderId(createdOrderId);
 
-      // Clear cart and show confirmation
       clearCart();
       setIsConfirmed(true);
     } catch (err) {
       console.error('Payment flow error:', err);
-      // Consider showing a toast / notification to the user here
     } finally {
       setIsProcessing(false);
     }

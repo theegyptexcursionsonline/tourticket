@@ -1,9 +1,13 @@
+// app/tour/[slug]/page.tsx
+
 import { notFound } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
 import TourModel from '@/lib/models/Tour';
 import DestinationModel from '@/lib/models/Destination';
 import CategoryModel from '@/lib/models/Category';
-import { Tour } from '@/types';
+import ReviewModel from '@/lib/models/Review';
+import UserModel from '@/lib/models/user';
+import { Tour, Review } from '@/types';
 import TourPageClient from './TourPageClient';
 
 // Generate static params for pre-building
@@ -20,8 +24,8 @@ export async function generateStaticParams() {
   }
 }
 
-// Fetch tour data from database
-async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTours: Tour[] }> {
+// Fetch tour data and reviews from database
+async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTours: Tour[]; reviews: Review[] }> {
   try {
     await dbConnect();
 
@@ -40,8 +44,18 @@ async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTo
       .lean();
 
     if (!tour) {
-      return { tour: null, relatedTours: [] };
+      return { tour: null, relatedTours: [], reviews: [] };
     }
+
+    // Find reviews for this tour
+    const reviews = await ReviewModel.find({ tour: tour._id })
+        .populate({
+            path: 'user',
+            model: UserModel,
+            select: 'name picture'
+        })
+        .sort({ createdAt: -1 })
+        .lean();
 
     // Find related tours from the same destination
     const relatedTours = await TourModel.find({
@@ -60,22 +74,24 @@ async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTo
     // Serialize the data for client component
     const serializedTour = JSON.parse(JSON.stringify(tour));
     const serializedRelatedTours = JSON.parse(JSON.stringify(relatedTours));
+    const serializedReviews = JSON.parse(JSON.stringify(reviews));
 
-    return { tour: serializedTour, relatedTours: serializedRelatedTours };
+
+    return { tour: serializedTour, relatedTours: serializedRelatedTours, reviews: serializedReviews };
   } catch (error) {
     console.error('Error fetching tour data:', error);
-    return { tour: null, relatedTours: [] };
+    return { tour: null, relatedTours: [], reviews: [] };
   }
 }
 
 // Main page component
 export default async function TourPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
-  const { tour, relatedTours } = await getTourData(slug);
+  const { tour, relatedTours, reviews } = await getTourData(slug);
 
   if (!tour) {
     notFound();
   }
 
-  return <TourPageClient tour={tour} relatedTours={relatedTours} />;
+  return <TourPageClient tour={tour} relatedTours={relatedTours} initialReviews={reviews} />;
 }

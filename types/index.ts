@@ -1,27 +1,34 @@
 // types/index.ts
-export interface Currency {
-  code: string;
-  name: string;
-  symbol: string;
-}
 
-export interface Language {
-  code: string;
+// =================================================================
+// CORE ENTITIES
+// =================================================================
+
+export interface User {
+  _id: string;
+  id: string; // Often included for client-side consistency
+  email: string;
   name: string;
-  nativeName: string;
+  firstName?: string;
+  lastName?: string;
+  picture?: string;
+  favorites?: string[]; // Array of Tour IDs
+  bookings?: Booking[]; // Populated bookings
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Destination {
   _id: string;
-  id: string;
+  id?: string;
   name: string;
   slug: string;
-  country: string;
+  country?: string;
   image: string;
   description: string;
   longDescription?: string;
-  featured: boolean;
-  tourCount: number;
+  featured?: boolean;
+  tourCount?: number;
   coordinates?: {
     lat: number;
     lng: number;
@@ -35,23 +42,19 @@ export interface Destination {
 
 export interface Category {
   _id: string;
-  id: string;
+  id?: string;
   name: string;
   slug: string;
-  icon: string;
-  description: string;
-  color: string;
-  tourCount: number;
+  icon?: string;
+  description?: string;
+  color?: string;
+  tourCount?: number;
 }
 
-export interface AddOn {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-}
+// =================================================================
+// TOUR-SPECIFIC SUB-INTERFACES
+// =================================================================
 
-// NEW: Availability interfaces to match our Tour model
 export interface AvailabilitySlot {
   time: string;
   capacity: number;
@@ -67,52 +70,62 @@ export interface Availability {
   blockedDates?: string[];
 }
 
-// NEW: Itinerary item interface
 export interface ItineraryItem {
-  day: number;
+  time?: string;
   title: string;
   description: string;
+  duration?: string;
+  location?: string;
 }
 
-// NEW: FAQ interface
 export interface FAQ {
   question: string;
   answer: string;
 }
 
-// NEW: Booking Option interface
 export interface BookingOption {
   type: string;
   label: string;
   price: number;
 }
 
+export interface AddOn {
+  name: string;
+  description: string;
+  price: number;
+}
+
+
+// =================================================================
+// TOUR & REVIEW INTERFACES
+// =================================================================
+
 export interface Tour {
   _id: string;
-  id: number | string;
+  id?: string | number; // For client-side mapping if needed
   title: string;
   slug: string;
   image: string;
   images?: string[];
   discountPrice: number;
   originalPrice?: number;
-  duration?: string;
+  price?: number; // Can be used as an alias for discountPrice
+  duration: string;
   rating?: number;
   bookings?: number;
   tags?: string[];
-  description?: string;
+  description: string;
   longDescription?: string;
   highlights?: string[];
   includes?: string[];
-  excludes?: string[];
-  // NEW: Added missing fields from our enhanced model
   whatsIncluded?: string[];
   whatsNotIncluded?: string[];
   itinerary?: ItineraryItem[];
-  faqs?: FAQ[];
+  faq?: FAQ[]; // Note: schema has 'faq' not 'faqs'
   bookingOptions?: BookingOption[];
   addOns?: AddOn[];
   isPublished?: boolean;
+  isFeatured?: boolean;
   difficulty?: string;
   maxGroupSize?: number;
   meetingPoint?: string;
@@ -120,84 +133,79 @@ export interface Tour {
   ageRestriction?: string;
   cancellationPolicy?: string;
   operatedBy?: string;
-  location?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  destination?: Destination;
-  category?: Category;
-  destinationId: string;
-  categoryIds: string[];
+  destination: Destination | string; // Can be populated or just ID
+  category: Category | string;     // Can be populated or just ID
   availability?: Availability;
-  featured?: boolean;
-  quantity?: number;
+  reviews?: Review[]; // Can be populated
   createdAt?: string;
   updatedAt?: string;
 }
 
-// NEW: PopulatedTour interface for server-side data fetching
-export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | 'destinationId' | 'categoryIds'> {
+export interface Review {
+  _id: string;
+  tour: string; // Tour ID
+  user: User;   // Should be populated with User object
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// A more specific type for tours when destination and category are guaranteed to be populated
+export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | 'reviews'> {
   destination: Destination;
   category: Category;
   reviews?: Review[];
 }
 
+
+// =================================================================
+// CONTEXT & CLIENT-SIDE INTERFACES
+// =================================================================
+
 export interface CartItem extends Tour {
-  uniqueId?: string;
-  quantity: number; // This will represent the number of adults
+  uniqueId: string; // Unique identifier for this specific cart item instance
+  quantity: number;   // Represents the number of adults
   childQuantity: number;
+  infantQuantity: number;
   selectedDate: string;
   selectedTime: string;
-  selectedLanguage?: string;
-  selectedAddOns?: AddOn[];
-  details?: string;
-  totalPrice?: number;
+  selectedAddOns: { [key: string]: number }; // Maps AddOn ID to quantity
+  totalPrice: number;
 }
 
-// FIXED: Updated to match our actual backend structure
+
 export interface Booking {
   _id: string;
-  tour: Tour | string; // Can be populated or just ID
-  user: User | string; // Can be populated or just ID
-  date: string;
-  time: string;
-  guests: number;
+  tour: Tour | string;
+  user: User | string;
+  bookingDate: string; // Renamed from 'date' for clarity
+  bookingTime: string; // Renamed from 'time' for clarity
+  adults: number;
+  children: number;
+  infants: number;
   totalPrice: number;
   status: 'Confirmed' | 'Pending' | 'Cancelled';
+  paymentId?: string;
+  specialRequests?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface User {
-  _id: string;
-  id: string;
-  email: string;
+// =================================================================
+// UTILITY & OTHER INTERFACES
+// =================================================================
+
+export interface Currency {
+  code: string;
   name: string;
-  firstName?: string; // Added to match our User model
-  lastName?: string;   // Added to match our User model
-  picture?: string;
-  favorites: string[];
-  bookings: Booking[];
-  createdAt: string;
-  updatedAt: string;
+  symbol: string;
 }
 
-export interface Review {
-  _id: string; // FIXED: Changed from id to _id to match MongoDB
-  id: string;
-  tourId: string;
-  userId: string;
-  userName: string;
-  userAvatar?: string;
-  rating: number;
-  title: string;
-  comment: string;
-  date: string;
-  verified: boolean;
-  helpful: number;
-  tour?: Tour; // For populated reviews
-  user?: User; // For populated reviews
+export interface Language {
+  code: string;
+  name: string;
+  nativeName: string;
 }
 
 export interface BlogPost {
@@ -227,15 +235,10 @@ export interface SearchFilters {
   dateRange?: [string, string];
 }
 
-export interface SearchResult {
-  tours: Tour[];
-  destinations: Destination[];
-  total: number;
-  page: number;
-  limit: number;
-}
+// =================================================================
+// ADMIN-SPECIFIC INTERFACES
+// =================================================================
 
-// NEW: Admin-specific interfaces
 export interface AdminStats {
   totalTours: number;
   totalBookings: number;
@@ -248,7 +251,6 @@ export interface AdminStats {
   }>;
 }
 
-// NEW: Form data interface for tour editing
 export interface TourFormData {
   title: string;
   slug: string;
@@ -258,7 +260,7 @@ export interface TourFormData {
   discountPrice: string | number;
   originalPrice: string | number;
   destination: string;
-  categories: string[];
+  category: string; // Tour model uses 'category', not 'categories'
   image: string;
   images: string[];
   highlights: string[];
@@ -266,7 +268,7 @@ export interface TourFormData {
   whatsIncluded: string[];
   whatsNotIncluded: string[];
   itinerary: ItineraryItem[];
-  faqs: FAQ[];
+  faqs: FAQ[]; // Mapped from 'faq' in the form
   bookingOptions: BookingOption[];
   addOns: AddOn[];
   isPublished: boolean;
