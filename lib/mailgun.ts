@@ -211,3 +211,49 @@ export async function sendBookingNotificationToAdmin(data: BookingConfirmationDa
     // Don't throw error for admin notification failures
   }
 }
+
+// --- ADD THIS FUNCTION ---
+export async function sendPasswordResetEmail(email: string, resetUrl: string) {
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Password Reset Request</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; background: #f9fafb; }
+            .cta-button { background: #dc2626; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Password Reset Request</h1>
+            </div>
+            <div class="content">
+                <p>You are receiving this email because a password reset request was made for your account.</p>
+                <p>Click the link below to reset your password. This link will expire in 15 minutes.</p>
+                <a href="${resetUrl}" class="cta-button">Reset Your Password</a>
+                <p>If you did not request a password reset, please ignore this email.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    const result = await mg.messages.create(DOMAIN, {
+      from: `Egypt Excursions Online <${FROM_EMAIL}>`,
+      to: [email],
+      subject: 'Your Password Reset Link for Egypt Excursions Online',
+      html: htmlContent,
+    });
+    console.log('Password reset email sent:', result);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    throw new Error('Failed to send password reset email');
+  }
+}
