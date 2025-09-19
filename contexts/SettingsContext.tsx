@@ -1,4 +1,3 @@
-// contexts/SettingsContext.tsx
 'use client';
 
 import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -290,7 +289,7 @@ const fetchExchangeRates = async (): Promise<{ [key: string]: number }> => {
 };
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [selectedCurrency, setSelectedCurrency] = usePersistentState<Currency>('selectedCurrency', currencies[0]); // Default to EUR
+  const [selectedCurrency, setSelectedCurrency] = usePersistentState<Currency>('selectedCurrency', currencies[1]); // Default to USD
   const [selectedLanguage, setSelectedLanguage] = usePersistentState<Language>('selectedLanguage', languages[0]); // Default to English
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({});
   const [isLoading, setIsLoading] = useState(true);

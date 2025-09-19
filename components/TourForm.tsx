@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useSettings } from '@/hooks/useSettings';
 import {
     Loader2,
     XCircle,
@@ -20,6 +21,7 @@ import {
     Tag,
     Star,
     Euro,
+    DollarSign,
     Users,
     Timer,
     Mountain,
@@ -42,10 +44,10 @@ interface Destination {
 }
 
 // --- Helper Components ---
-const FormLabel = ({ children, icon: Icon, required = false }: { 
-    children: React.ReactNode; 
-    icon?: any; 
-    required?: boolean; 
+const FormLabel = ({ children, icon: Icon, required = false }: {
+    children: React.ReactNode;
+    icon?: any;
+    required?: boolean;
 }) => (
     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
         {Icon && <Icon className="h-4 w-4 text-indigo-500" />}
@@ -231,6 +233,8 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
 // --- Main Tour Form Component ---
 export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const router = useRouter();
+    const { selectedCurrency } = useSettings();
+    const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
     
     const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
@@ -295,15 +299,15 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
                 itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
                 faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-// In the useEffect where you initialize formData for editing
-bookingOptions: tourToEdit.bookingOptions?.length > 0 
-    ? tourToEdit.bookingOptions.map((option: any) => ({
-        type: option.type || 'Per Person',
-        label: option.label || '',
-        price: option.price || 0,
-        description: option.description || ''
-    }))
-    : [{ type: 'Per Person', label: '', price: 0, description: '' }],                addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
+                bookingOptions: tourToEdit.bookingOptions?.length > 0 
+                    ? tourToEdit.bookingOptions.map((option: any) => ({
+                        type: option.type || 'Per Person',
+                        label: option.label || '',
+                        price: option.price || 0,
+                        description: option.description || ''
+                    }))
+                    : [{ type: 'Per Person', label: '', price: 0, description: '' }],
+                addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
                 isPublished: tourToEdit.isPublished || false,
                 difficulty: tourToEdit.difficulty || '',
                 maxGroupSize: tourToEdit.maxGroupSize || 10,
@@ -423,11 +427,11 @@ bookingOptions: tourToEdit.bookingOptions?.length > 0
         setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
     };
 
- const handleBookingOptionChange = (index: number, field: string, value: string | number) => {
-    const updatedOptions = [...formData.bookingOptions];
-    updatedOptions[index] = { ...updatedOptions[index], [field]: value };
-    setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
-};
+    const handleBookingOptionChange = (index: number, field: string, value: string | number) => {
+        const updatedOptions = [...formData.bookingOptions];
+        updatedOptions[index] = { ...updatedOptions[index], [field]: value };
+        setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
+    };
 
     const addBookingOption = () => {
         setFormData((p: any) => ({ 
@@ -766,12 +770,12 @@ bookingOptions: tourToEdit.bookingOptions?.length > 0
                 </SectionCard>
 
                 {/* Pricing */}
-                <SectionCard title="Pricing & Tags" subtitle="Set your tour pricing and tags" icon={Euro}>
+                <SectionCard title="Pricing & Tags" subtitle="Set your tour pricing and tags" icon={CurrencyIcon}>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-3">
-                            <FormLabel icon={Euro} required>Discount Price (€)</FormLabel>
+                            <FormLabel icon={CurrencyIcon} required>Discount Price ({selectedCurrency.symbol})</FormLabel>
                             <div className="relative">
-                                <Euro className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input 
                                     name="discountPrice" 
                                     type="number" 
@@ -785,9 +789,9 @@ bookingOptions: tourToEdit.bookingOptions?.length > 0
                             </div>
                         </div>
                         <div className="space-y-3">
-                            <FormLabel icon={Euro}>Original Price (€) (Optional)</FormLabel>
+                            <FormLabel icon={CurrencyIcon}>Original Price ({selectedCurrency.symbol}) (Optional)</FormLabel>
                             <div className="relative">
-                                <Euro className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input 
                                     name="originalPrice" 
                                     type="number" 
@@ -1134,301 +1138,229 @@ bookingOptions: tourToEdit.bookingOptions?.length > 0
                 </SectionCard>
 
                 {/* Booking Options */}
-                <SectionCard title="Booking Options" subtitle="Different pricing tiers and options" icon={Settings}>
+                <SectionCard title="Booking Options" subtitle="Different pricing tiers and booking choices" icon={Settings}>
                     <div className="space-y-6">
-                        {formData.bookingOptions.map((option: any, i: number) => (
-                            <div key={i} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-indigo-300 transition-all duration-200">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-lg font-bold text-sm">
-                                            {i + 1}
-                                        </div>
-                                        <h4 className="font-semibold text-slate-900">Option {i + 1}</h4>
-                                    </div>
-                                    <button 
-                                        type="button" 
-                                        disabled={formData.bookingOptions.length <= 1}
-                                        onClick={() => removeBookingOption(i)} 
-                                        className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-200 disabled:opacity-30"
-                                    >
-                                        <XCircle className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500">Type</label>
-                                        <div className="relative">
-                                            <select 
-                                                value={option.type} 
-                                                onChange={(e) => handleBookingOptionChange(i, 'type', e.target.value)}
-                                                className={`${inputBase} appearance-none cursor-pointer`}
-                                            >
-                                                <option value="Per Person">Per Person</option>
-                                                <option value="Per Group">Per Group</option>
-                                            </select>
-                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500">Label</label>
-                                        <input 
-                                            value={option.label} 
-                                            onChange={(e) => handleBookingOptionChange(i, 'label', e.target.value)}
-                                            className={inputBase} 
-                                            placeholder="Option label" 
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500">Price</label>
-                                        <div className="relative">
-                                            <Euro className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                            <input 
-                                                type="number" 
-                                                step="0.01"
-                                                value={option.price} 
-                                                onChange={(e) => handleBookingOptionChange(i, 'price', parseFloat(e.target.value))}
-                                                className={`${inputBase} pl-10`} 
-                                                placeholder="Price" 
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        <button 
-                            type="button" 
-                            onClick={addBookingOption} 
-                            className="w-full flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
-                        >
-                            <Plus className="w-4 h-4" /> Add Booking Option
-                        </button>
-                    </div>
-                </SectionCard>
-
-
-{/* Enhanced Booking Options Section */}
-<SectionCard title="Booking Options" subtitle="Different pricing tiers and booking choices" icon={Settings}>
-    <div className="space-y-6">
-        {/* Booking Options Preview */}
-        {formData.bookingOptions.length > 0 && (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-blue-500" />
-                    Preview - How customers see booking options
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {formData.bookingOptions.map((option: any, index: number) => (
-                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200">
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="flex-1">
-                                    <h5 className="font-semibold text-slate-900 mb-1">
-                                        {option.label || `Option ${index + 1}`}
-                                    </h5>
-                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                        <Users className="h-4 w-4" />
-                                        <span>{option.type}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-lg font-bold text-slate-900">
-                                        €{option.price?.toFixed(2) || '0.00'}
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                        {option.type === 'Per Person' ? 'per person' : 'per group'}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="pt-2 border-t border-slate-100">
-                                <div className="flex items-center justify-center w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium">
-                                    Select Option
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        {/* Booking Options Editor */}
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-indigo-500" />
-                    <h4 className="text-lg font-semibold text-slate-800">Configure Booking Options</h4>
-                </div>
-                <div className="text-sm text-slate-500">
-                    {formData.bookingOptions.length} option{formData.bookingOptions.length !== 1 ? 's' : ''}
-                </div>
-            </div>
-
-            {formData.bookingOptions.map((option: any, index: number) => (
-                <div key={index} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 transition-all duration-200">
-                    {/* Option Header */}
-                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
-                                    {index + 1}
-                                </div>
-                                <div>
-                                    <h5 className="font-semibold text-slate-900">
-                                        {option.label || `Booking Option ${index + 1}`}
-                                    </h5>
-                                    <p className="text-sm text-slate-500">
-                                        {option.type} - €{option.price?.toFixed(2) || '0.00'}
-                                    </p>
-                                </div>
-                            </div>
-                            <button 
-                                type="button" 
-                                disabled={formData.bookingOptions.length <= 1}
-                                onClick={() => removeBookingOption(index)} 
-                                className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
-                            >
-                                <XCircle className="h-5 w-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Option Configuration */}
-                    <div className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Option Label */}
-                            <div className="md:col-span-1 space-y-2">
-                                <label className="block text-sm font-medium text-slate-700">
-                                    Option Name *
-                                </label>
-                                <input 
-                                    value={option.label || ''} 
-                                    onChange={(e) => handleBookingOptionChange(index, 'label', e.target.value)}
-                                    className={inputBase}
-                                    placeholder="e.g., Standard Tour, Premium Experience"
-                                    required
-                                />
-                                <SmallHint>This is the main name customers will see</SmallHint>
-                            </div>
-
-                            {/* Pricing Type */}
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-slate-700">
-                                    Pricing Type *
-                                </label>
-                                <div className="relative">
-                                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                    <select 
-                                        value={option.type || 'Per Person'} 
-                                        onChange={(e) => handleBookingOptionChange(index, 'type', e.target.value)}
-                                        className={`${inputBase} pl-10 appearance-none cursor-pointer`}
-                                    >
-                                        <option value="Per Person">Per Person</option>
-                                        <option value="Per Group">Per Group</option>
-                                        <option value="Per Couple">Per Couple</option>
-                                        <option value="Per Family">Per Family (up to 4)</option>
-                                    </select>
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                                </div>
-                                <SmallHint>How the price is calculated</SmallHint>
-                            </div>
-
-                            {/* Price */}
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-slate-700">
-                                    Price (€) *
-                                </label>
-                                <div className="relative">
-                                    <Euro className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                    <input 
-                                        type="number" 
-                                        step="0.01"
-                                        value={option.price || ''} 
-                                        onChange={(e) => handleBookingOptionChange(index, 'price', parseFloat(e.target.value) || 0)}
-                                        className={`${inputBase} pl-10`}
-                                        placeholder="0.00"
-                                        min="0"
-                                        required
-                                    />
-                                </div>
-                                <SmallHint>Base price for this option</SmallHint>
-                            </div>
-                        </div>
-
-                        {/* Option Description (Optional) */}
-                        <div className="mt-6 space-y-2">
-                            <label className="block text-sm font-medium text-slate-700">
-                                Description (Optional)
-                            </label>
-                            <textarea
-                                value={option.description || ''}
-                                onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
-                                rows={2}
-                                className={`${inputBase} resize-none`}
-                                placeholder="Brief description of what's included in this option..."
-                            />
-                            <SmallHint>Explain what makes this option special or different</SmallHint>
-                        </div>
-
-                        {/* Quick Price Calculator Preview */}
-                        {option.price && (
-                            <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-                                <h6 className="font-medium text-slate-700 mb-2">Price Examples:</h6>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                    <div className="text-center p-2 bg-white rounded border">
-                                        <div className="font-semibold">1 {option.type === 'Per Person' ? 'Person' : 'Group'}</div>
-                                        <div className="text-indigo-600 font-bold">€{option.price?.toFixed(2)}</div>
-                                    </div>
-                                    {option.type === 'Per Person' && (
-                                        <>
-                                            <div className="text-center p-2 bg-white rounded border">
-                                                <div className="font-semibold">2 People</div>
-                                                <div className="text-indigo-600 font-bold">€{(option.price * 2)?.toFixed(2)}</div>
+                        {/* Booking Options Preview */}
+                        {formData.bookingOptions.length > 0 && (
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                    <Eye className="h-5 w-5 text-blue-500" />
+                                    Preview - How customers see booking options
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {formData.bookingOptions.map((option: any, index: number) => (
+                                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <h5 className="font-semibold text-slate-900 mb-1">
+                                                        {option.label || `Option ${index + 1}`}
+                                                    </h5>
+                                                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                                                        <Users className="h-4 w-4" />
+                                                        <span>{option.type}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-lg font-bold text-slate-900">
+                                                        {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500">
+                                                        {option.type === 'Per Person' ? 'per person' : 'per group'}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="text-center p-2 bg-white rounded border">
-                                                <div className="font-semibold">4 People</div>
-                                                <div className="text-indigo-600 font-bold">€{(option.price * 4)?.toFixed(2)}</div>
+                                            <div className="pt-2 border-t border-slate-100">
+                                                <div className="flex items-center justify-center w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium">
+                                                    Select Option
+                                                </div>
                                             </div>
-                                            <div className="text-center p-2 bg-white rounded border">
-                                                <div className="font-semibold">6 People</div>
-                                                <div className="text-indigo-600 font-bold">€{(option.price * 6)?.toFixed(2)}</div>
-                                            </div>
-                                        </>
-                                    )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
+
+                        {/* Booking Options Editor */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Settings className="h-5 w-5 text-indigo-500" />
+                                    <h4 className="text-lg font-semibold text-slate-800">Configure Booking Options</h4>
+                                </div>
+                                <div className="text-sm text-slate-500">
+                                    {formData.bookingOptions.length} option{formData.bookingOptions.length !== 1 ? 's' : ''}
+                                </div>
+                            </div>
+
+                            {formData.bookingOptions.map((option: any, index: number) => (
+                                <div key={index} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 transition-all duration-200">
+                                    {/* Option Header */}
+                                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
+                                                    {index + 1}
+                                                </div>
+                                                <div>
+                                                    <h5 className="font-semibold text-slate-900">
+                                                        {option.label || `Booking Option ${index + 1}`}
+                                                    </h5>
+                                                    <p className="text-sm text-slate-500">
+                                                        {option.type} - {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                disabled={formData.bookingOptions.length <= 1}
+                                                onClick={() => removeBookingOption(index)} 
+                                                className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
+                                            >
+                                                <XCircle className="h-5 w-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Option Configuration */}
+                                    <div className="p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            {/* Option Label */}
+                                            <div className="md:col-span-1 space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">
+                                                    Option Name *
+                                                </label>
+                                                <input 
+                                                    value={option.label || ''} 
+                                                    onChange={(e) => handleBookingOptionChange(index, 'label', e.target.value)}
+                                                    className={inputBase}
+                                                    placeholder="e.g., Standard Tour, Premium Experience"
+                                                    required
+                                                />
+                                                <SmallHint>This is the main name customers will see</SmallHint>
+                                            </div>
+
+                                            {/* Pricing Type */}
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">
+                                                    Pricing Type *
+                                                </label>
+                                                <div className="relative">
+                                                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <select 
+                                                        value={option.type || 'Per Person'} 
+                                                        onChange={(e) => handleBookingOptionChange(index, 'type', e.target.value)}
+                                                        className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                                    >
+                                                        <option value="Per Person">Per Person</option>
+                                                        <option value="Per Group">Per Group</option>
+                                                        <option value="Per Couple">Per Couple</option>
+                                                        <option value="Per Family">Per Family (up to 4)</option>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                </div>
+                                                <SmallHint>How the price is calculated</SmallHint>
+                                            </div>
+
+                                            {/* Price */}
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">
+                                                    Price ({selectedCurrency.symbol}) *
+                                                </label>
+                                                <div className="relative">
+                                                    <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.01"
+                                                        value={option.price || ''} 
+                                                        onChange={(e) => handleBookingOptionChange(index, 'price', parseFloat(e.target.value) || 0)}
+                                                        className={`${inputBase} pl-10`}
+                                                        placeholder="0.00"
+                                                        min="0"
+                                                        required
+                                                    />
+                                                </div>
+                                                <SmallHint>Base price for this option</SmallHint>
+                                            </div>
+                                        </div>
+
+                                        {/* Option Description (Optional) */}
+                                        <div className="mt-6 space-y-2">
+                                            <label className="block text-sm font-medium text-slate-700">
+                                                Description (Optional)
+                                            </label>
+                                            <textarea
+                                                value={option.description || ''}
+                                                onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
+                                                rows={2}
+                                                className={`${inputBase} resize-none`}
+                                                placeholder="Brief description of what's included in this option..."
+                                            />
+                                            <SmallHint>Explain what makes this option special or different</SmallHint>
+                                        </div>
+
+                                        {/* Quick Price Calculator Preview */}
+                                        {option.price && (
+                                            <div className="mt-6 p-4 bg-slate-50 rounded-lg">
+                                                <h6 className="font-medium text-slate-700 mb-2">Price Examples:</h6>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                                    <div className="text-center p-2 bg-white rounded border">
+                                                        <div className="font-semibold">1 {option.type === 'Per Person' ? 'Person' : 'Group'}</div>
+                                                        <div className="text-indigo-600 font-bold">{selectedCurrency.symbol}{option.price?.toFixed(2)}</div>
+                                                    </div>
+                                                    {option.type === 'Per Person' && (
+                                                        <>
+                                                            <div className="text-center p-2 bg-white rounded border">
+                                                                <div className="font-semibold">2 People</div>
+                                                                <div className="text-indigo-600 font-bold">{selectedCurrency.symbol}{(option.price * 2)?.toFixed(2)}</div>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded border">
+                                                                <div className="font-semibold">4 People</div>
+                                                                <div className="text-indigo-600 font-bold">{selectedCurrency.symbol}{(option.price * 4)?.toFixed(2)}</div>
+                                                            </div>
+                                                            <div className="text-center p-2 bg-white rounded border">
+                                                                <div className="font-semibold">6 People</div>
+                                                                <div className="text-indigo-600 font-bold">{selectedCurrency.symbol}{(option.price * 6)?.toFixed(2)}</div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Add New Booking Option Button */}
+                        <button 
+                            type="button" 
+                            onClick={addBookingOption} 
+                            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200 group"
+                        >
+                            <Plus className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" /> 
+                            Add Booking Option
+                        </button>
+
+                        {/* Best Practices Help */}
+                        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                            <div className="flex items-start gap-3">
+                                <HelpCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h6 className="font-semibold text-amber-800 mb-1">Booking Options Best Practices:</h6>
+                                    <ul className="text-sm text-amber-700 space-y-1">
+                                        <li>• Create 2-3 clear options (Standard, Premium, VIP)</li>
+                                        <li>• Use descriptive names that highlight value</li>
+                                        <li>• Price differences should be meaningful (not just {selectedCurrency.symbol}1-2)</li>
+                                        <li>• Consider group discounts for "Per Group" pricing</li>
+                                        <li>• Test your options from a customer's perspective</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            ))}
-        </div>
+                </SectionCard>
 
-        {/* Add New Booking Option Button */}
-        <button 
-            type="button" 
-            onClick={addBookingOption} 
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200 group"
-        >
-            <Plus className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" /> 
-            Add Booking Option
-        </button>
-
-        {/* Best Practices Help */}
-        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <div className="flex items-start gap-3">
-                <HelpCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                    <h6 className="font-semibold text-amber-800 mb-1">Booking Options Best Practices:</h6>
-                    <ul className="text-sm text-amber-700 space-y-1">
-                        <li>• Create 2-3 clear options (Standard, Premium, VIP)</li>
-                        <li>• Use descriptive names that highlight value</li>
-                        <li>• Price differences should be meaningful (not just €1-2)</li>
-                        <li>• Consider group discounts for "Per Group" pricing</li>
-                        <li>• Test your options from a customer's perspective</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</SectionCard>
 
                 {/* Availability */}
                 {formData.availability && (
