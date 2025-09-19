@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 // --- Interfaces ---
 interface User {
   id: string;
+  _id?: string; // MongoDB ID compatibility
   email: string;
   name: string;
   firstName: string;
@@ -28,6 +29,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 // --- Context Creation ---
@@ -53,29 +55,95 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // --- Effect to check for stored token on initial load ---
-  useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem('authToken');
-      const storedUser = localStorage.getItem('authUser');
-
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error("Failed to parse auth data from localStorage", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   // --- Helper to handle successful authentication ---
   const handleAuthSuccess = (newToken: string, newUser: User) => {
+    // Ensure user has both id and _id for compatibility
+    const normalizedUser = {
+      ...newUser,
+      id: newUser.id || newUser._id || '',
+      _id: newUser._id || newUser.id || '',
+    };
+
     localStorage.setItem('authToken', newToken);
-    localStorage.setItem('authUser', JSON.stringify(newUser));
+    localStorage.setItem('authUser', JSON.stringify(normalizedUser));
     setToken(newToken);
-    setUser(newUser);
+    setUser(normalizedUser);
+  };
+
+  // --- Effect to check for stored token on initial load ---
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const storedToken = localStorage.getItem('authToken');
+        const storedUser = localStorage.getItem('authUser');
+
+        if (storedToken && storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          
+          // Verify token is still valid by attempting to refresh user data
+          try {
+            const response = await fetch('/api/user/profile', {
+              headers: {
+                'Authorization': `Bearer ${storedToken}`,
+              },
+            });
+
+            if (response.ok) {
+              const { data: currentUser } = await response.json();
+              handleAuthSuccess(storedToken, currentUser);
+            } else {
+              // Token is invalid, clear storage
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('authUser');
+            }
+          } catch (error) {
+            // If profile fetch fails, still use stored data but mark for refresh
+            const normalizedUser = {
+              ...parsedUser,
+              id: parsedUser.id || parsedUser._id || '',
+              _id: parsedUser._id || parsedUser.id || '',
+            };
+            setToken(storedToken);
+            setUser(normalizedUser);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initialize auth from localStorage", error);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authUser');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
+  // --- Refresh user data ---
+  const refreshUser = async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const { data: currentUser } = await response.json();
+        const normalizedUser = {
+          ...currentUser,
+          id: currentUser.id || currentUser._id || '',
+          _id: currentUser._id || currentUser.id || '',
+        };
+        
+        setUser(normalizedUser);
+        localStorage.setItem('authUser', JSON.stringify(normalizedUser));
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
   };
 
   // --- Login Function ---
@@ -88,10 +156,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Login failed');
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
       
       handleAuthSuccess(data.token, data.user);
-      router.push('/');
     } catch (error: any) {
       console.error('Login error:', error);
       throw new Error(error.message || 'Failed to log in. Please check your credentials.');
@@ -110,10 +180,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify(data),
       });
       const responseData = await response.json();
-      if (!response.ok) throw new Error(responseData.error || 'Signup failed');
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Signup failed');
+      }
 
       handleAuthSuccess(responseData.token, responseData.user);
-      router.push('/'); // Redirect home after successful signup and login
     } catch (error: any) {
       console.error('Signup error:', error);
       throw new Error(error.message || 'Failed to create account. Please try again.');
@@ -128,7 +200,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('authUser');
     setUser(null);
     setToken(null);
-    router.push('/login');
+    
+    // Optional: Call logout API endpoint for server-side cleanup
+    fetch('/api/auth/logout', { method: 'POST' }).catch(console.error);
   };
 
   // --- Context Value ---
@@ -140,6 +214,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     signup,
     logout,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

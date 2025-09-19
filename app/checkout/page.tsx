@@ -17,14 +17,22 @@ import {
   Loader2,
   Download,
   Printer,
+  UserPlus,
+  LogIn,
+  Mail,
+  Phone,
+  UserCheck,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import AuthModal from '@/components/AuthModal';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
+import { useAuth } from '@/contexts/AuthContext';
 import { CartItem } from '@/types';
+import toast from 'react-hot-toast';
 
-// Small payment SVG icons
+// Small payment SVG icons (keeping existing ones)
 const VisaIcon = ({ className = '', width = 48, height = 28 }: { className?: string; width?: number; height?: number }) => (
   <svg width={width} height={height} viewBox="0 0 48 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className={className}>
     <rect width="48" height="28" rx="4" fill="#1A1F71" />
@@ -83,6 +91,104 @@ const FormInput = ({ label, name, type = 'text', placeholder, required = true, v
     />
   </div>
 );
+
+// Customer Type Selection Component
+const CustomerTypeSelector = ({ 
+  customerType, 
+  setCustomerType, 
+  onLoginClick, 
+  onSignupClick 
+}: {
+  customerType: 'guest' | 'login' | 'signup';
+  setCustomerType: (type: 'guest' | 'login' | 'signup') => void;
+  onLoginClick: () => void;
+  onSignupClick: () => void;
+}) => {
+  return (
+    <div className="bg-white p-6 shadow-xl space-y-4 border-t border-b border-r border-slate-200">
+      <h2 className="text-xl font-bold text-slate-900 mb-4">How would you like to checkout?</h2>
+      
+      <div className="space-y-3">
+        {/* Continue as Guest */}
+        <motion.button
+          type="button"
+          onClick={() => setCustomerType('guest')}
+          className={`w-full p-4 border-2 rounded-xl text-left transition-all ${
+            customerType === 'guest'
+              ? 'border-red-500 bg-red-50'
+              : 'border-slate-200 hover:border-red-300 hover:bg-red-50'
+          }`}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className={`w-4 h-4 rounded-full border-2 ${
+                customerType === 'guest' 
+                  ? 'border-red-500 bg-red-500' 
+                  : 'border-slate-300'
+              }`}>
+                {customerType === 'guest' && (
+                  <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                )}
+              </div>
+              <div>
+                <div className="font-semibold text-slate-800">Continue as Guest</div>
+                <div className="text-sm text-slate-600">Quick checkout without creating an account</div>
+              </div>
+            </div>
+            <User size={24} className={customerType === 'guest' ? 'text-red-500' : 'text-slate-400'} />
+          </div>
+        </motion.button>
+
+        {/* Sign In */}
+        <motion.button
+          type="button"
+          onClick={onLoginClick}
+          className="w-full p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-blue-300 hover:bg-blue-50"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <LogIn size={20} className="text-blue-500" />
+              <div>
+                <div className="font-semibold text-slate-800">Sign In</div>
+                <div className="text-sm text-slate-600">Access your account for faster checkout</div>
+              </div>
+            </div>
+            <div className="text-blue-500 text-sm font-medium">Sign In →</div>
+          </div>
+        </motion.button>
+
+        {/* Create Account */}
+        <motion.button
+          type="button"
+          onClick={onSignupClick}
+          className="w-full p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-green-300 hover:bg-green-50"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <UserPlus size={20} className="text-green-500" />
+              <div>
+                <div className="font-semibold text-slate-800">Create Account</div>
+                <div className="text-sm text-slate-600">Save your details for future bookings</div>
+              </div>
+            </div>
+            <div className="text-green-500 text-sm font-medium">Sign Up →</div>
+          </div>
+        </motion.button>
+      </div>
+
+      <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
+        <Shield size={14} className="text-green-500" />
+        <span>Your personal information is always secure and protected</span>
+      </div>
+    </div>
+  );
+};
 
 const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const { formatPrice } = useSettings();
@@ -204,7 +310,25 @@ type FormDataShape = {
   cvv: string;
 };
 
-const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormData }: { onPaymentProcess: () => void; isProcessing: boolean; formData: FormDataShape; setFormData: (v: FormDataShape) => void }) => {
+const CheckoutFormStep = ({ 
+  onPaymentProcess, 
+  isProcessing, 
+  formData, 
+  setFormData,
+  customerType,
+  setCustomerType,
+  onAuthModalOpen,
+  user,
+}: { 
+  onPaymentProcess: () => void; 
+  isProcessing: boolean; 
+  formData: FormDataShape; 
+  setFormData: (v: FormDataShape) => void;
+  customerType: 'guest' | 'login' | 'signup';
+  setCustomerType: (type: 'guest' | 'login' | 'signup') => void;
+  onAuthModalOpen: (mode: 'login' | 'signup') => void;
+  user: any;
+}) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -217,83 +341,225 @@ const CheckoutFormStep = ({ onPaymentProcess, isProcessing, formData, setFormDat
 
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'bank'>('card');
 
+  // Auto-fill form if user is logged in
+  useEffect(() => {
+    if (user && customerType !== 'guest') {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
+        email: user.email || prev.email,
+        cardholderName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || prev.cardholderName,
+      }));
+    }
+  }, [user, customerType, setFormData]);
+
   return (
     <form onSubmit={handleSubmit} id="checkout-form" className="bg-white p-8 shadow-xl space-y-8 border-t border-b border-r border-slate-200">
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-extrabold text-slate-900">Contact Information</h2>
-          <div className="flex items-center gap-2 text-sm text-slate-500"><Shield size={14} className="text-emerald-500" /> <span>Secure &amp; encrypted</span></div>
-        </div>
+      {/* Customer Type Selection (only show if not authenticated) */}
+      {!user && (
+        <section>
+          <CustomerTypeSelector
+            customerType={customerType}
+            setCustomerType={setCustomerType}
+            onLoginClick={() => onAuthModalOpen('login')}
+            onSignupClick={() => onAuthModalOpen('signup')}
+          />
+        </section>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="First Name" name="firstName" placeholder="Enter your first name" value={formData.firstName} onChange={handleInputChange} disabled={isProcessing} />
-          <FormInput label="Last Name" name="lastName" placeholder="Enter your last name" value={formData.lastName} onChange={handleInputChange} disabled={isProcessing} />
-          <FormInput label="Email Address" name="email" type="email" placeholder="Enter your email address" value={formData.email} onChange={handleInputChange} disabled={isProcessing} />
-          <FormInput label="Phone Number" name="phone" type="tel" placeholder="Enter your phone number" value={formData.phone} onChange={handleInputChange} disabled={isProcessing} />
-          <div className="md:col-span-2">
-            <FormInput label="Emergency Contact (optional)" name="emergencyContact" placeholder="Name and phone number" required={false} value={formData.emergencyContact} onChange={handleInputChange} disabled={isProcessing} />
+      {/* Welcome message for authenticated users */}
+      {user && (
+        <section className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <UserCheck size={24} className="text-green-600" />
+            <div>
+              <h3 className="font-semibold text-green-800">Welcome back, {user.firstName}!</h3>
+              <p className="text-sm text-green-600">Your account details have been pre-filled for faster checkout.</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Contact Information (show for guest or authenticated users) */}
+      {(customerType === 'guest' || user) && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-extrabold text-slate-900">Contact Information</h2>
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Shield size={14} className="text-emerald-500" /> 
+              <span>Secure &amp; encrypted</span>
+            </div>
           </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label>
-            <textarea name="specialRequests" value={formData.specialRequests} onChange={handleInputChange} placeholder="Any special requirements, dietary restrictions, etc..." rows={4} className="w-full px-4 py-3 border border-slate-300 focus-visible:ring-2 focus-visible:ring-red-500" disabled={isProcessing} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormInput 
+              label="First Name" 
+              name="firstName" 
+              placeholder="Enter your first name" 
+              value={formData.firstName} 
+              onChange={handleInputChange} 
+              disabled={isProcessing} 
+            />
+            <FormInput 
+              label="Last Name" 
+              name="lastName" 
+              placeholder="Enter your last name" 
+              value={formData.lastName} 
+              onChange={handleInputChange} 
+              disabled={isProcessing} 
+            />
+            <FormInput 
+              label="Email Address" 
+              name="email" 
+              type="email" 
+              placeholder="Enter your email address" 
+              value={formData.email} 
+              onChange={handleInputChange} 
+              disabled={isProcessing || !!user} 
+            />
+            <FormInput 
+              label="Phone Number" 
+              name="phone" 
+              type="tel" 
+              placeholder="Enter your phone number" 
+              value={formData.phone} 
+              onChange={handleInputChange} 
+              disabled={isProcessing} 
+            />
+            <div className="md:col-span-2">
+              <FormInput 
+                label="Emergency Contact (optional)" 
+                name="emergencyContact" 
+                placeholder="Name and phone number" 
+                required={false} 
+                value={formData.emergencyContact} 
+                onChange={handleInputChange} 
+                disabled={isProcessing} 
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label>
+              <textarea 
+                name="specialRequests" 
+                value={formData.specialRequests} 
+                onChange={handleInputChange} 
+                placeholder="Any special requirements, dietary restrictions, etc..." 
+                rows={4} 
+                className="w-full px-4 py-3 border border-slate-300 focus-visible:ring-2 focus-visible:ring-red-500" 
+                disabled={isProcessing} 
+              />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section>
-        <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
+      {/* Payment Information (show for guest or authenticated users) */}
+      {(customerType === 'guest' || user) && (
+        <section>
+          <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <button type="button" onClick={() => setPaymentMethod('card')} aria-pressed={paymentMethod === 'card'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10 flex items-center">
-              <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">Card</span>
-          </button>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <button 
+              type="button" 
+              onClick={() => setPaymentMethod('card')} 
+              aria-pressed={paymentMethod === 'card'} 
+              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+            >
+              <div className="h-10 flex items-center">
+                <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">Card</span>
+            </button>
 
-          <button type="button" onClick={() => setPaymentMethod('paypal')} aria-pressed={paymentMethod === 'paypal'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10 flex items-center">
-              <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">PayPal</span>
-          </button>
+            <button 
+              type="button" 
+              onClick={() => setPaymentMethod('paypal')} 
+              aria-pressed={paymentMethod === 'paypal'} 
+              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+            >
+              <div className="h-10 flex items-center">
+                <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">PayPal</span>
+            </button>
 
-          <button type="button" onClick={() => setPaymentMethod('bank')} aria-pressed={paymentMethod === 'bank'} className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}>
-            <div className="h-10 flex items-center">
-              <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
-          </button>
-        </div>
+            <button 
+              type="button" 
+              onClick={() => setPaymentMethod('bank')} 
+              aria-pressed={paymentMethod === 'bank'} 
+              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+            >
+              <div className="h-10 flex items-center">
+                <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
+            </button>
+          </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div key={paymentMethod} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
-            {paymentMethod === 'card' && (
-              <div className="space-y-4 p-6 bg-slate-50 border border-slate-200">
-                <div className="grid grid-cols-1 gap-4">
-                  <FormInput label="Cardholder Name" name="cardholderName" placeholder="John M. Doe" value={formData.cardholderName} onChange={handleInputChange} disabled={isProcessing} />
-                  <FormInput label="Card Number" name="cardNumber" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={handleInputChange} disabled={isProcessing} />
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={paymentMethod} 
+              initial={{ opacity: 0, y: 8 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -8 }} 
+              transition={{ duration: 0.25 }}
+            >
+              {paymentMethod === 'card' && (
+                <div className="space-y-4 p-6 bg-slate-50 border border-slate-200">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormInput 
+                      label="Cardholder Name" 
+                      name="cardholderName" 
+                      placeholder="John M. Doe" 
+                      value={formData.cardholderName} 
+                      onChange={handleInputChange} 
+                      disabled={isProcessing} 
+                    />
+                    <FormInput 
+                      label="Card Number" 
+                      name="cardNumber" 
+                      placeholder="1234 5678 9012 3456" 
+                      value={formData.cardNumber} 
+                      onChange={handleInputChange} 
+                      disabled={isProcessing} 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormInput 
+                      label="Expiry Date" 
+                      name="expiryDate" 
+                      placeholder="MM / YY" 
+                      value={formData.expiryDate} 
+                      onChange={handleInputChange} 
+                      disabled={isProcessing} 
+                    />
+                    <FormInput 
+                      label="CVV" 
+                      name="cvv" 
+                      placeholder="123" 
+                      value={formData.cvv} 
+                      onChange={handleInputChange} 
+                      disabled={isProcessing} 
+                    />
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormInput label="Expiry Date" name="expiryDate" placeholder="MM / YY" value={formData.expiryDate} onChange={handleInputChange} disabled={isProcessing} />
-                  <FormInput label="CVV" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} disabled={isProcessing} />
+              )}
+              {paymentMethod === 'paypal' && (
+                <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
+                  <p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p>
                 </div>
-              </div>
-            )}
-            {paymentMethod === 'paypal' && (
-              <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
-                <p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p>
-              </div>
-            )}
-            {paymentMethod === 'bank' && (
-              <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
-                <p className="font-medium">Please follow the instructions in the confirmation email to complete your bank transfer.</p>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </section>
+              )}
+              {paymentMethod === 'bank' && (
+                <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
+                  <p className="font-medium">Please follow the instructions in the confirmation email to complete your bank transfer.</p>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </section>
+      )}
     </form>
   );
 };
@@ -412,7 +678,11 @@ const ThankYouPage = ({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200">
+    <motion.div 
+      initial={{ opacity: 0, y: 8 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      className="bg-white p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200"
+    >
       <div className="mx-auto w-fit mb-6 p-4 bg-emerald-100 rounded-full">
         <CheckCircle size={48} className="text-emerald-600" />
       </div>
@@ -447,12 +717,24 @@ const ThankYouPage = ({
       </div>
 
       <div className="flex justify-center gap-3">
-        <button onClick={() => window.location.assign('/')} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg">Go to homepage</button>
-        <button onClick={handleDownloadReceipt} disabled={isDownloading} className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2">
+        <button 
+          onClick={() => window.location.assign('/')} 
+          className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg"
+        >
+          Go to homepage
+        </button>
+        <button 
+          onClick={handleDownloadReceipt} 
+          disabled={isDownloading} 
+          className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2"
+        >
           {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
           Download PDF
         </button>
-        <button onClick={() => window.print()} className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg flex items-center gap-2">
+        <button 
+          onClick={() => window.print()} 
+          className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg flex items-center gap-2"
+        >
           <Printer size={18} /> Print
         </button>
       </div>
@@ -471,6 +753,7 @@ const TrustIndicators = () => (
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const { formatPrice, selectedCurrency } = useSettings();
+  const { user } = useAuth();
   const router = useRouter();
 
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -484,6 +767,11 @@ export default function CheckoutPage() {
 
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState('');
+
+  // Customer type and auth modal states
+  const [customerType, setCustomerType] = useState<'guest' | 'login' | 'signup'>('guest');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
   const [formData, setFormData] = useState<FormDataShape>({
     firstName: '',
@@ -513,6 +801,13 @@ export default function CheckoutPage() {
       symbol: selectedCurrency?.symbol ?? '$',
     };
   }, [cart, discount, selectedCurrency]);
+
+  // Set customer type based on authentication status
+  useEffect(() => {
+    if (user) {
+      setCustomerType('login'); // Will show authenticated flow
+    }
+  }, [user]);
 
   const handleApplyCoupon = async () => {
     if (!promoCode) {
@@ -554,23 +849,84 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleAuthModalOpen = (mode: 'login' | 'signup') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleAuthModalClose = () => {
+    setIsAuthModalOpen(false);
+  };
+
+  const handleAuthSuccess = () => {
+    setCustomerType('login'); // User is now authenticated
+    toast.success('Great! You can now complete your booking.');
+  };
 
   const handlePaymentProcess = async () => {
     setIsProcessing(true);
+
     try {
-      // Mock processing delay
-      await new Promise((res) => setTimeout(res, 2000));
-      const createdOrderId = `ORD-${Date.now()}`;
+      // Validate required fields
+      if (customerType === 'guest' || user) {
+        if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.phone.trim()) {
+          toast.error('Please fill in all required contact information');
+          setIsProcessing(false);
+          return;
+        }
+      } else {
+        toast.error('Please select a checkout option');
+        setIsProcessing(false);
+        return;
+      }
 
-      setOrderedItems([...(cart || [])]);
-      setFinalPricing(pricing);
-      setFinalCustomer(formData);
-      setLastOrderId(createdOrderId);
+      // Prepare booking data
+      const bookingPayload = {
+        customer: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          emergencyContact: formData.emergencyContact,
+          specialRequests: formData.specialRequests,
+        },
+        cart: cart || [],
+        pricing,
+        paymentMethod: 'card', // Default to card for mock
+        paymentDetails: {
+          cardholderName: formData.cardholderName,
+          cardNumber: formData.cardNumber ? `****-****-****-${formData.cardNumber.slice(-4)}` : undefined,
+        },
+        userId: user?._id || user?.id,
+        isGuest: !user,
+      };
 
-      clearCart();
-      setIsConfirmed(true);
-    } catch (err) {
-      console.error('Payment flow error:', err);
+      // Call the checkout API
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingPayload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Success - show thank you page
+        setOrderedItems([...(cart || [])]);
+        setFinalPricing(pricing);
+        setFinalCustomer(formData);
+        setLastOrderId(result.bookingId || `ORD-${Date.now()}`);
+
+        clearCart();
+        setIsConfirmed(true);
+
+        toast.success('Booking confirmed! Check your email for details.', { duration: 5000 });
+      } else {
+        toast.error(result.message || 'Booking failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Payment process error:', error);
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -602,13 +958,34 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-24 pb-40 lg:pb-16">
         <div className="container mx-auto px-6 max-w-7xl">
           <AnimatePresence mode="wait">
-            <motion.div key={isConfirmed ? 'thankyou' : 'checkout'} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.45 }}>
+            <motion.div 
+              key={isConfirmed ? 'thankyou' : 'checkout'} 
+              initial={{ opacity: 0, y: 12 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -12 }} 
+              transition={{ duration: 0.45 }}
+            >
               {isConfirmed ? (
-                <ThankYouPage orderedItems={orderedItems} pricing={finalPricing} customer={finalCustomer} lastOrderId={lastOrderId} discount={discount} />
+                <ThankYouPage 
+                  orderedItems={orderedItems} 
+                  pricing={finalPricing} 
+                  customer={finalCustomer} 
+                  lastOrderId={lastOrderId} 
+                  discount={discount} 
+                />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-start">
                   <div className="lg:col-span-2">
-                    <CheckoutFormStep onPaymentProcess={handlePaymentProcess} isProcessing={isProcessing} formData={formData} setFormData={setFormData} />
+                    <CheckoutFormStep 
+                      onPaymentProcess={handlePaymentProcess} 
+                      isProcessing={isProcessing} 
+                      formData={formData} 
+                      setFormData={setFormData}
+                      customerType={customerType}
+                      setCustomerType={setCustomerType}
+                      onAuthModalOpen={handleAuthModalOpen}
+                      user={user}
+                    />
                   </div>
                   <div className="lg:col-span-1">
                     <BookingSummary
@@ -630,17 +1007,30 @@ export default function CheckoutPage() {
         </div>
       </main>
 
-      {!isConfirmed && cart && cart.length > 0 && (
+      {!isConfirmed && cart && cart.length > 0 && (customerType === 'guest' || user) && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
           <div className="flex justify-between items-center mb-3">
             <span className="text-slate-600">Total price:</span>
             <span className="font-bold text-xl text-rose-600">{formatPrice(pricing.total)}</span>
           </div>
-          <button type="submit" form="checkout-form" disabled={isProcessing} className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center">
+          <button 
+            type="submit" 
+            form="checkout-form" 
+            disabled={isProcessing} 
+            className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
+          >
             {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Complete Booking & Pay</span>}
           </button>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={handleAuthModalClose}
+        initialMode={authModalMode}
+        onSuccess={handleAuthSuccess}
+      />
 
       <Footer />
     </>
