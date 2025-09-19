@@ -1,4 +1,3 @@
-Of course, I can help with that. Here is a complete README file based on the analysis of your project:
 
 # Egypt Excursions Online
 
