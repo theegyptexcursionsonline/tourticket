@@ -3,7 +3,7 @@ import React from 'react';
 import UserSidebar from '@/components/user/UserSidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import ProtectedRoute from '@/components/Protectedpage';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function UserLayout({
   children,

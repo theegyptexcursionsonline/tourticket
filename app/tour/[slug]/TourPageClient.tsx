@@ -17,17 +17,18 @@ import {
   ChevronLeft, ChevronRight, X, ZoomIn
 } from 'lucide-react';
 
-
 // Components
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
+import ReviewList from '@/components/reviews/ReviewList';
+import ReviewForm from '@/components/reviews/ReviewForm';
 
 // Hooks and Types
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
-import { Tour, CartItem } from '@/types';
+import { Tour, CartItem, Review as ReviewType } from '@/types';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -61,6 +62,7 @@ interface TourEnhancement {
 interface TourPageClientProps {
   tour: Tour;
   relatedTours: Tour[];
+  initialReviews: ReviewType[];
 }
 
 // Extract enhancement data from the actual tour object with GENERIC fallbacks
@@ -207,7 +209,6 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
   );
 };
 
-
 // -----------------------------------------------------------------------------
 // useScrollDirection hook
 // -----------------------------------------------------------------------------
@@ -264,7 +265,6 @@ if (!activeEl) {
   if (!fallback) return;
   activeEl = fallback;
 }
-
 
     // element bounding rects relative to container
     const elRect = activeEl.getBoundingClientRect();
@@ -331,7 +331,7 @@ if (!activeEl) {
             aria-label="Tour sections"
           >
             {tabs.map((tab: any) => (
-              <a
+              
                 key={tab.id}
                 href={`#${tab.id}`}
                 data-tab-id={tab.id}
@@ -368,8 +368,6 @@ if (!activeEl) {
     </div>
   );
 };
-
-
 
 const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
@@ -647,7 +645,6 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   </div>
 );
 
-
 // Enhanced FAQ Component - Updated to accept faqs as props
 const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -718,57 +715,40 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefO
   );
 };
 
-// Reviews Section Component
-const ReviewsSection = ({ tour, reviewsData, sectionRef }: { tour: Tour, reviewsData: any[], sectionRef: React.RefObject<HTMLDivElement> }) => (
-  <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-24">
-    <div className="flex items-center justify-between">
-      <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Star size={18} className="text-yellow-500 fill-current" />
-          <span className="font-bold text-lg">{tour.rating}</span>
+// Enhanced Reviews Section Component with integrated review management
+const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: { 
+  tour: Tour, 
+  reviews: ReviewType[], 
+  onReviewSubmitted: (review: ReviewType) => void,
+  sectionRef: React.RefObject<HTMLDivElement> 
+}) => {
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1)
+    : tour.rating?.toFixed(1) || 'N/A';
+
+  return (
+    <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-24">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Star size={18} className="text-yellow-500 fill-current" />
+            <span className="font-bold text-lg">{averageRating}</span>
+          </div>
+          <span className="text-slate-500">({reviews.length} reviews)</span>
         </div>
-        <span className="text-slate-500">({tour.bookings?.toLocaleString()} reviews)</span>
+      </div>
+      
+      {/* Integrated Review List and Form */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <ReviewList reviews={reviews} />
+        <div className="border-t border-slate-200 p-6">
+          <ReviewForm tourId={tour._id!} onReviewSubmitted={onReviewSubmitted} />
+        </div>
       </div>
     </div>
-    <div className="space-y-4">
-      {reviewsData.map((review) => (
-        <div key={review.id} className="border-b border-slate-200 pb-4 last:border-b-0">
-          <div className="flex items-start justify-between mb-2">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-bold text-slate-800">{review.name}</span>
-                {review.verified && (
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                    Verified
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      className={`${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-slate-500">{review.date}</span>
-              </div>
-            </div>
-          </div>
-          <h4 className="font-semibold text-slate-800 mb-1">{review.title}</h4>
-          <p className="text-slate-600 text-sm mb-2">{review.text}</p>
-          <button className="text-slate-500 hover:text-slate-700 text-xs">Helpful ({review.helpful})</button>
-        </div>
-      ))}
-    </div>
-    <button className="w-full mt-6 py-3 border-2 border-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
-      View all reviews
-    </button>
-  </div>
-);
+  );
+};
 
 // Overview Section Component
 const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.RefObject<HTMLDivElement> }) => (
@@ -830,17 +810,25 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
 );
 
 // -----------------------------------------------------------------------------
-// TourPageClient component updated to use REAL database data
+// TourPageClient component - Enhanced with review management
 // -----------------------------------------------------------------------------
-export default function TourPageClient({ tour, relatedTours }: TourPageClientProps) {
+export default function TourPageClient({ tour, relatedTours, initialReviews }: TourPageClientProps) {
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+  
+  // Enhanced review state management
+  const [reviews, setReviews] = useState<ReviewType[]>(initialReviews);
 
   const tourIsWishlisted = isWishlisted(tour._id!);
 
+  // Review handlers
+  const handleReviewSubmitted = (newReview: ReviewType) => {
+    setReviews(prevReviews => [newReview, ...prevReviews]);
+    toast.success('Review submitted successfully!');
+  };
 
   // --- Wishlist button handler ---
   const handleWishlistToggle = (e: React.MouseEvent) => {
@@ -879,6 +867,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
       }
     }
   };
+
   const [isAdding, setIsAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [liveMessage, setLiveMessage] = useState('');
@@ -940,15 +929,8 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     }
   };
 
-
   // CHANGED: Use real database data instead of mock data
   const enhancement = extractEnhancementData(tour);
-
-  // Mock reviews data, as there is no reviews API
-  const reviewsData = [
-    { id: 1, name: 'Sarah M.', rating: 5, date: '2 days ago', title: 'Amazing experience!', text: 'The tour was incredible and our guide was very knowledgeable and entertaining. Highly recommend!', verified: true, helpful: 12 },
-    { id: 2, name: 'Marco P.', rating: 4, date: '1 week ago', title: 'Great experience', text: 'Perfect way to see the city. Only wish it was a bit longer.', verified: true, helpful: 8 }
-  ];
 
   const tourImages = [tour.image, ...(tour.images || [])].filter(Boolean);
 
@@ -1005,7 +987,6 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     setSelectedImageIndex(index);
     setIsLightboxOpen(true);
   };
-
 
   return (
     <>
@@ -1130,7 +1111,6 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                   </div>
                 )}
 
-
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1 pr-6">
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-3">
@@ -1142,7 +1122,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                           <Star size={16} className="text-yellow-500 fill-current" />
                           <span className="font-semibold text-slate-800">{tour.rating}</span>
                         </div>
-                        <span className="text-slate-500">({tour.bookings?.toLocaleString()} reviews)</span>
+                        <span className="text-slate-500">({reviews.length} reviews)</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
@@ -1187,7 +1167,14 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
               <AccessibilitySection enhancement={enhancement} sectionRef={accessibilityRef} />
               <PoliciesSection enhancement={enhancement} sectionRef={policiesRef} />
               <CulturalSection enhancement={enhancement} sectionRef={culturalRef} />
-              <ReviewsSection tour={tour} reviewsData={reviewsData} sectionRef={reviewsRef} />
+              
+              {/* Enhanced Reviews Section with integrated review management */}
+              <ReviewsSection 
+                tour={tour} 
+                reviews={reviews} 
+                onReviewSubmitted={handleReviewSubmitted} 
+                sectionRef={reviewsRef} 
+              />
               
               {/* Use real FAQ data from the tour */}
               <EnhancedFAQ faqs={tour.faq || []} sectionRef={faqRef} />
@@ -1276,7 +1263,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     </div>
                     <div className="flex items-center gap-3 text-slate-600">
                       <Star size={20} className="text-yellow-500" />
-                      <span>Rating: {tour.rating} ({tour.bookings?.toLocaleString()} reviews)</span>
+                      <span>Rating: {tour.rating} ({reviews.length} reviews)</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-600">
                       <Users size={20} className="text-blue-500" />

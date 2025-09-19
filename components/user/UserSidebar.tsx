@@ -25,10 +25,10 @@ const UserSidebar = () => {
         <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
           {navItems.map(({ href, label }) => (
             <Link href={href} key={href}>
-              <span className={`block whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium ${
+              <span className={`block whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   pathname === href 
-                  ? 'bg-red-600 text-white shadow' 
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/25' 
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 hover:border-slate-300'
               }`}>
                 {label}
               </span>
@@ -38,15 +38,15 @@ const UserSidebar = () => {
       </div>
 
       {/* Desktop view: Vertical list */}
-      <nav className="hidden lg:block bg-white p-4 rounded-lg shadow-md">
+      <nav className="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-100 p-2">
         <ul>
           {navItems.map(({ href, label, icon: Icon }) => (
             <li key={href} className="mb-1">
               <Link href={href}>
-                <span className={`flex items-center gap-3 p-3 rounded-md transition-colors ${
+                <span className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
                     pathname === href 
-                    ? 'font-bold bg-red-50 text-red-600' 
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? 'font-semibold bg-red-50 text-red-600 shadow-sm border border-red-100' 
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}>
                   <Icon size={20} />
                   <span>{label}</span>
@@ -54,10 +54,10 @@ const UserSidebar = () => {
               </Link>
             </li>
           ))}
-           <li className="mt-4 border-t pt-2">
+           <li className="mt-4 pt-2 border-t border-slate-100">
               <button 
                 onClick={() => logout()}
-                className="flex items-center gap-3 w-full p-3 rounded-md text-slate-600 hover:bg-slate-100 transition-colors"
+                className="flex items-center gap-3 w-full p-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
               >
                 <LogOut size={20} />
                 <span>Sign Out</span>
