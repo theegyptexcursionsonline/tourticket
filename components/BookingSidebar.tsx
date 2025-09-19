@@ -11,7 +11,7 @@ import {
   ChevronUp, Info, Zap, Award, Heart, Eye, Camera, Car,
   Gift, Sparkles, TrendingUp, CheckCircle, AlertCircle,
   Phone, Mail, MessageCircle, Globe, Wifi, Coffee, Calculator,
-  BadgeDollarSign, Edit, Edit3, Settings, RefreshCw
+  BadgeDollarSign, Edit, Edit3, Settings, RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
@@ -172,8 +172,18 @@ interface BookingData {
 }
 
 // Default Add-on data (used as a fallback)
-const addOnData: AddOnTour[] = [
-  {
+// Import icons for add-ons
+const getAddOnIcon = (category: string) => {
+  switch (category) {
+    case 'Photography': return Camera;
+    case 'Transport': return Car;
+    case 'Food': return Coffee;
+    default: return Gift;
+  }
+};
+
+// Default Add-on data (used as a fallback)
+const addOnData: AddOnTour[] = [  {
     id: 'photo-package',
     title: 'Professional Photography Package',
     description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
@@ -849,12 +859,12 @@ const AddOnCard: React.FC<{
   );
 };
 
-// Enhanced Booking Summary Card
 const BookingSummaryCard: React.FC<{
   bookingData: BookingData;
   tour: Tour | null;
+  availability: AvailabilityData | null; // Add this line
   onEditClick: (section: 'date' | 'guests' | 'language') => void;
-}> = ({ bookingData, tour, onEditClick }) => {
+}> = ({ bookingData, tour, availability, onEditClick }) => { // Add availability to destructuring
   const { formatPrice } = useSettings();
 
   const formatDate = (date: Date) => {
@@ -981,6 +991,54 @@ const BookingSummaryCard: React.FC<{
             <Edit size={16} />
           </motion.button>
         </motion.div>
+
+
+        {/* Selected Tour Option */}
+{(() => {
+  const selectedOption = availability?.tourOptions.find(option =>
+    option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+  );
+  
+  if (selectedOption) {
+    return (
+      <motion.div 
+        className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+        whileHover={{ scale: 1.01 }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+            <Star size={20} className="text-orange-600" />
+          </div>
+          <div>
+            <div className="font-semibold text-slate-800 text-sm sm:text-base">
+              {selectedOption.title}
+            </div>
+            <div className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
+              <span>{selectedOption.duration}</span>
+              <span>•</span>
+              <span>{selectedOption.languages.slice(0, 2).join(', ')}</span>
+              {selectedOption.badge && (
+                <>
+                  <span>•</span>
+                  <span className="text-orange-600 font-medium">{selectedOption.badge}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <motion.button
+          onClick={() => onEditClick('date')} // This will take them back to step 2
+          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Edit size={16} />
+        </motion.button>
+      </motion.div>
+    );
+  }
+  return null;
+})()}
 
         {/* Tour Information */}
         {tourDisplayData && (
@@ -1116,24 +1174,69 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
     }
     const tourOptions: TourOption[] = await optionsResponse.json();
 
-    // Create the availability object with the fetched options
+// Create the availability object with the fetched options
+    const addOnsToUse = tour.addOns && tour.addOns.length > 0 
+      ? tour.addOns.map((addon, index) => ({
+          id: addon.id || `addon-${index}`,
+          title: addon.name || 'Tour Enhancement',
+          description: addon.description || 'Enhance your tour experience',
+          price: addon.price || 15,
+          originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
+          required: false,
+          maxQuantity: 1,
+          popular: index === 0,
+          category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
+          icon: Gift,
+          savings: addon.price ? Math.round(addon.price * 0.3) : 5,
+          perGuest: addon.category === 'Food',
+        }))
+      : [
+          {
+            id: 'photo-package',
+            title: 'Professional Photography Package',
+            description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
+            price: 35.00,
+            originalPrice: 50.00,
+            required: false,
+            maxQuantity: 1,
+            popular: true,
+            category: 'Photography' as const,
+            icon: Camera,
+            savings: 15,
+            perGuest: false,
+          },
+          {
+            id: 'transport-premium',
+            title: 'Premium Hotel Transfer Service',
+            description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
+            price: 15.00,
+            originalPrice: 25.00,
+            required: false,
+            maxQuantity: 1,
+            category: 'Transport' as const,
+            icon: Car,
+            savings: 10,
+            perGuest: false,
+          },
+          {
+            id: 'refreshment-upgrade',
+            title: 'Gourmet Refreshment Package',
+            description: 'Premium snacks, fresh juices, and traditional treats',
+            price: 12.00,
+            originalPrice: 18.00,
+            required: false,
+            maxQuantity: 1,
+            category: 'Food' as const,
+            icon: Coffee,
+            savings: 6,
+            perGuest: true,
+          },
+        ];
+
     const newAvailabilityData: AvailabilityData = {
       date: date.toISOString().split('T')[0],
       timeSlots: [], // Empty since timeSlots are now part of each tourOption
-      addOns: tour.addOns?.map((addon, index) => ({
-        id: addon.id || `addon-${index}`,
-        title: addon.name || 'Tour Enhancement',
-        description: addon.description || 'Enhance your tour experience',
-        price: addon.price || 15,
-        originalPrice: addon.price ? addon.price * 1.3 : 20,
-        required: false,
-        maxQuantity: 1,
-        popular: index === 0,
-        category: 'Experience' as const,
-        icon: Gift,
-        savings: addon.price ? Math.round(addon.price * 0.3) : 5,
-        perGuest: false,
-      })) || [], // Use tour's add-ons or empty array
+      addOns: addOnsToUse,
       tourOptions: tourOptions, // Use the options fetched from the API
       weatherInfo: {
         condition: 'Sunny',
@@ -1161,17 +1264,20 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
     let basePrice = 0;
     let originalBasePrice = 0;
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
-
-    if (bookingData.selectedTimeSlot) {
-      const selectedOption = availability?.tourOptions.find(option =>
-        option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
-      );
-
-      if (selectedOption) {
-        basePrice = selectedOption.price;
-        originalBasePrice = selectedOption.originalPrice || selectedOption.price;
-      }
-    } else if (tourDisplayData) {
+if (bookingData.selectedTimeSlot) {
+  // Use the specific time slot price instead of the general option price
+  basePrice = bookingData.selectedTimeSlot.price;
+  
+  // Find the selected option for original pricing fallback
+  const selectedOption = availability?.tourOptions.find(option =>
+    option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+  );
+  
+  // Use time slot's original price if available, otherwise fall back to option's pricing
+  originalBasePrice = bookingData.selectedTimeSlot.originalPrice || 
+                     selectedOption?.originalPrice || 
+                     bookingData.selectedTimeSlot.price;
+} else if (tourDisplayData) {
       // Use tour price as fallback
       basePrice = tourDisplayData.discountPrice;
       originalBasePrice = tourDisplayData.originalPrice || tourDisplayData.discountPrice;
@@ -1180,9 +1286,8 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
     const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * basePrice * 0.5);
     const originalSubtotal = (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
 
-    const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
-      const addOn = addOnData.find(a => a.id === addOnId);
-      if (addOn) {
+  const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
+const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) {
         const itemQuantity = addOn.perGuest ? totalGuests : 1;
         return acc + (addOn.price * itemQuantity);
       }
@@ -1190,7 +1295,7 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
     }, 0);
 
     const addOnsSavings = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
-      const addOn = addOnData.find(a => a.id === addOnId);
+      const addOn = availability?.addOns.find(a => a.id === addOnId);
       if (addOn && addOn.savings) {
         const itemQuantity = addOn.perGuest ? totalGuests : 1;
         return acc + (addOn.savings * itemQuantity);
@@ -1400,6 +1505,30 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
       if (!bookingData.selectedDate || !bookingData.selectedTimeSlot) {
         throw new Error('Incomplete booking data.');
       }
+// Prepare add-on details for cart storage
+      const selectedAddOnDetails: { [key: string]: any } = {};
+      Object.keys(bookingData.selectedAddOns).forEach(addOnId => {
+        const addOnData = availability?.addOns.find(a => a.id === addOnId);
+        if (addOnData) {
+          selectedAddOnDetails[addOnId] = {
+            id: addOnData.id,
+            title: addOnData.title,
+            price: addOnData.price,
+            category: addOnData.category,
+            perGuest: addOnData.perGuest || false,
+          };
+        }
+      });
+
+      // Prepare selected booking option details
+      const selectedBookingOptionDetails = selectedOption ? {
+        id: selectedOption.id,
+        title: selectedOption.title,
+        price: selectedOption.price,
+        originalPrice: selectedOption.originalPrice,
+        duration: selectedOption.duration,
+        badge: selectedOption.badge,
+      } : undefined;
 
       // Prepare the cart item with all necessary data
       const newCartItem = {
@@ -1412,10 +1541,12 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
         selectedDate: bookingData.selectedDate.toISOString(),
         selectedTime: bookingData.selectedTimeSlot.time,
         selectedAddOns: bookingData.selectedAddOns,
+        selectedAddOnDetails,
+        selectedBookingOption: selectedBookingOptionDetails,
         price: selectedOption?.price || tourDisplayData.discountPrice,
-        originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
+      originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
         discountPrice: selectedOption?.price || tourDisplayData.discountPrice,
-        totalPrice: total,
+        totalPrice: 0, // Don't set total initially as requested
       };
 
       addToCart(newCartItem, false); // Add item to cart but don't open the sidebar yet
@@ -1816,12 +1947,12 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Review & Book</h2>
             <p className="text-gray-600 mb-6">Your adventure is ready! Review the details and complete your booking.</p>
 
-            {/* Booking Summary Card */}
-            <BookingSummaryCard
-              bookingData={bookingData}
-              tour={tourDisplayData}
-              onEditClick={handleEditClick}
-            />
+        <BookingSummaryCard
+  bookingData={bookingData}
+  tour={tourDisplayData}
+  availability={availability} // Add this line
+  onEditClick={handleEditClick}
+/>
 
             {/* Add-ons Summary */}
             {Object.keys(bookingData.selectedAddOns).length > 0 && (

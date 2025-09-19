@@ -172,7 +172,6 @@ export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | '
 // =================================================================
 // CONTEXT & CLIENT-SIDE INTERFACES
 // =================================================================
-
 export interface CartItem extends Tour {
   uniqueId: string; // Unique identifier for this specific cart item instance
   quantity: number;   // Represents the number of adults
@@ -181,6 +180,23 @@ export interface CartItem extends Tour {
   selectedDate: string;
   selectedTime: string;
   selectedAddOns: { [key: string]: number }; // Maps AddOn ID to quantity
+  selectedAddOnDetails?: { // Store full add-on details for cart display
+    [key: string]: {
+      id: string;
+      title: string;
+      price: number;
+      category: string;
+      perGuest: boolean;
+    }
+  };
+  selectedBookingOption?: { // Store selected booking option details
+    id: string;
+    title: string;
+    price: number;
+    originalPrice?: number;
+    duration?: string;
+    badge?: string;
+  };
   totalPrice: number;
 }
 

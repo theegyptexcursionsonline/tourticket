@@ -193,6 +193,31 @@ const CustomerTypeSelector = ({
 const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const { formatPrice } = useSettings();
   const { removeFromCart } = useCart();
+  
+  // Use the same calculation logic as in BookingSidebar and CartSidebar
+  const getItemTotal = (item: CartItem) => {
+    const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
+    const adultPrice = basePrice * (item.quantity || 1);
+    const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+    let tourTotal = adultPrice + childPrice;
+
+    let addOnsTotal = 0;
+    if (item.selectedAddOns && item.selectedAddOnDetails) {
+      Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+        const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+        if (addOnDetail && quantity > 0) {
+          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+          const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+          addOnsTotal += addOnDetail.price * addOnQuantity;
+        }
+      });
+    }
+
+    return tourTotal + addOnsTotal;
+  };
+
+  const itemTotal = getItemTotal(item);
+
   return (
     <div className="flex gap-4 py-4">
       <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded">
@@ -204,18 +229,59 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
       </div>
       <div className="flex-1">
         <h4 className="font-bold text-md text-slate-800 leading-tight">{item.title}</h4>
-        <p className="text-sm text-slate-500">{item.details}</p>
-        <p className="text-sm text-slate-500">{item.quantity} x adult(s)</p>
-        {item.childQuantity > 0 && <p className="text-sm text-slate-500">{item.childQuantity} x child(ren)</p>}
-        {item.selectedAddOns && Object.keys(item.selectedAddOns).length > 0 && (
-          <div className="text-xs text-slate-500 mt-1 pl-4 border-l-2">
-            <strong>Add-ons:</strong> {Object.keys(item.selectedAddOns).join(', ')}
+        
+       {/* This line should show the selected booking option */}
+  {item.selectedBookingOption && (
+    <p className="text-sm text-blue-600 font-medium mb-1">{item.selectedBookingOption.title}</p>
+  )}
+        
+        {/* Show booking details */}
+        {item.selectedDate && (
+          <p className="text-xs text-slate-500">
+            {new Date(item.selectedDate).toLocaleDateString()} at {item.selectedTime}
+          </p>
+        )}
+        
+        {/* Show participant counts */}
+        <div className="text-sm text-slate-500">
+          {item.quantity > 0 && `${item.quantity} Adult${item.quantity > 1 ? 's' : ''}`}
+          {item.childQuantity > 0 && item.quantity > 0 && ', '}
+          {item.childQuantity > 0 && `${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
+          {item.infantQuantity > 0 && (item.quantity > 0 || item.childQuantity > 0) && ', '}
+          {item.infantQuantity > 0 && `${item.infantQuantity} Infant${item.infantQuantity > 1 ? 's' : ''}`}
+        </div>
+        
+        {/* Show selected add-ons */}
+        {item.selectedAddOns && item.selectedAddOnDetails && Object.keys(item.selectedAddOns).length > 0 && (
+          <div className="text-xs text-slate-500 mt-1 pl-4 border-l-2 border-slate-200">
+            <strong>Add-ons:</strong>
+            <div className="mt-1 space-y-1">
+              {Object.entries(item.selectedAddOns).map(([addOnId, quantity]) => {
+                const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+                if (!addOnDetail || quantity === 0) return null;
+
+                const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+                const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+                const addOnTotal = addOnDetail.price * addOnQuantity;
+
+                return (
+                  <div key={addOnId} className="flex justify-between">
+                    <span>• {addOnDetail.title}{addOnDetail.perGuest && ` (${totalGuests}x)`}</span>
+                    <span>{formatPrice(addOnTotal)}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
       <div className="text-right flex flex-col justify-between items-end">
-        <p className="font-bold text-lg text-slate-800">{formatPrice(Number(item.totalPrice ?? (item.discountPrice ?? 0) * (item.quantity ?? 1)))}</p>
-        <button onClick={() => removeFromCart(item.uniqueId!)} className="text-slate-400 hover:text-red-500 transition-colors" aria-label="Remove item">
+        <p className="font-bold text-lg text-slate-800">{formatPrice(itemTotal)}</p>
+        <button 
+          onClick={() => removeFromCart(item.uniqueId!)} 
+          className="text-slate-400 hover:text-red-500 transition-colors" 
+          aria-label="Remove item"
+        >
           <Trash2 size={16} />
         </button>
       </div>
@@ -691,22 +757,63 @@ const ThankYouPage = ({
 
       <div className="text-left bg-slate-50 p-6 border border-slate-200 mb-6">
         <h3 className="font-bold text-lg text-slate-800 mb-4">Your Receipt</h3>
-        <div className="space-y-3 mb-4 divide-y divide-slate-200">
-          {orderedItems.map((item, index) => (
-            <div key={`${item._id ?? index}-${index}`} className="flex items-center justify-between pt-3 first:pt-0">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 overflow-hidden rounded">
-                  {item.image ? <Image src={item.image} alt={item.title} width={48} height={48} className="object-cover" /> : <div className="w-12 h-12 bg-slate-100" />}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">{item.title}</p>
-                  <p className="text-sm text-slate-500">{item.quantity} Adult{item.quantity > 1 ? 's' : ''}</p>
-                </div>
+      <div className="space-y-3 mb-4 divide-y divide-slate-200">
+  {orderedItems.map((item, index) => {
+    // Use the same calculation logic
+    const getItemTotal = (item: CartItem) => {
+      const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
+      const adultPrice = basePrice * (item.quantity || 1);
+      const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+      let tourTotal = adultPrice + childPrice;
+
+      let addOnsTotal = 0;
+      if (item.selectedAddOns && item.selectedAddOnDetails) {
+        Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+          const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+          if (addOnDetail && quantity > 0) {
+            const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+            const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+            addOnsTotal += addOnDetail.price * addOnQuantity;
+          }
+        });
+      }
+
+      return tourTotal + addOnsTotal;
+    };
+
+    const itemTotal = getItemTotal(item);
+
+    return (
+      <div key={`${item._id ?? index}-${index}`} className="flex items-center justify-between pt-3 first:pt-0">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 overflow-hidden rounded">
+            {item.image ? <Image src={item.image} alt={item.title} width={48} height={48} className="object-cover" /> : <div className="w-12 h-12 bg-slate-100" />}
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800">{item.title}</p>
+            {item.selectedBookingOption && (
+              <p className="text-xs text-blue-600 font-medium">{item.selectedBookingOption.title}</p>
+            )}
+            <p className="text-sm text-slate-500">
+              {item.quantity} Adult{item.quantity > 1 ? 's' : ''}
+              {item.childQuantity > 0 && `, ${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
+            </p>
+            {/* Show add-ons in receipt */}
+            {item.selectedAddOns && item.selectedAddOnDetails && Object.keys(item.selectedAddOns).length > 0 && (
+              <div className="text-xs text-slate-500 mt-1">
+                Add-ons: {Object.entries(item.selectedAddOns).map(([addOnId]) => {
+                  const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+                  return addOnDetail?.title;
+                }).filter(Boolean).join(', ')}
               </div>
-              <div className="text-slate-700 font-medium">{formatPrice(Number((item.discountPrice ?? item.totalPrice ?? 0)))}</div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
+        <div className="text-slate-700 font-medium">{formatPrice(itemTotal)}</div>
+      </div>
+    );
+  })}
+</div>
 
         <div className="border-t border-slate-200 pt-3 space-y-1">
           <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
@@ -786,21 +893,44 @@ export default function CheckoutPage() {
     cvv: '',
   });
 
-  const pricing = useMemo(() => {
-    const subtotal = Number(((cart || []).reduce((acc, item) => acc + Number(item.totalPrice ?? (Number(item.discountPrice ?? 0) * Number(item.quantity ?? 1))), 0)).toFixed(2));
-    const serviceFee = Number((subtotal * 0.03).toFixed(2));
-    const tax = Number((subtotal * 0.05).toFixed(2));
-    const total = Number((subtotal + serviceFee + tax - Number(discount || 0)).toFixed(2));
-    return {
-      subtotal,
-      serviceFee,
-      tax,
-      total,
-      discount,
-      currency: selectedCurrency?.code ?? 'USD',
-      symbol: selectedCurrency?.symbol ?? '$',
-    };
-  }, [cart, discount, selectedCurrency]);
+ const pricing = useMemo(() => {
+  // Use the same calculation logic as in other components
+  const getItemTotal = (item: CartItem) => {
+    const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
+    const adultPrice = basePrice * (item.quantity || 1);
+    const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+    let tourTotal = adultPrice + childPrice;
+
+    let addOnsTotal = 0;
+    if (item.selectedAddOns && item.selectedAddOnDetails) {
+      Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+        const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+        if (addOnDetail && quantity > 0) {
+          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+          const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+          addOnsTotal += addOnDetail.price * addOnQuantity;
+        }
+      });
+    }
+
+    return tourTotal + addOnsTotal;
+  };
+
+  const subtotal = Number(((cart || []).reduce((acc, item) => acc + getItemTotal(item), 0)).toFixed(2));
+  const serviceFee = Number((subtotal * 0.03).toFixed(2));
+  const tax = Number((subtotal * 0.05).toFixed(2));
+  const total = Number((subtotal + serviceFee + tax - Number(discount || 0)).toFixed(2));
+  
+  return {
+    subtotal,
+    serviceFee,
+    tax,
+    total,
+    discount,
+    currency: selectedCurrency?.code ?? 'USD',
+    symbol: selectedCurrency?.symbol ?? '$',
+  };
+}, [cart, discount, selectedCurrency]);
 
   // Set customer type based on authentication status
   useEffect(() => {
