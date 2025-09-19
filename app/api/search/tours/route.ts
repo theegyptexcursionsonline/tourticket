@@ -1,5 +1,3 @@
-// app/api/search/tours/route.ts
-
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
@@ -10,69 +8,111 @@ export async function GET(request: Request) {
         await dbConnect();
         const { searchParams } = new URL(request.url);
 
-        const query: any = {};
+        const pipeline: any[] = [];
 
+        // --- Text Search Stage ---
         const searchQuery = searchParams.get('q');
         if (searchQuery) {
-            query.title = { $regex: searchQuery, $options: 'i' };
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { title: { $regex: searchQuery, $options: 'i' } },
+                        { description: { $regex: searchQuery, $options: 'i' } },
+                        { location: { $regex: searchQuery, $options: 'i' } }
+                    ]
+                }
+            });
         }
 
+        const matchStage: any = {};
+
+        // --- Categories Filter ---
         const categories = searchParams.get('categories');
         if (categories) {
             try {
-                query.category = { $in: categories.split(',').map(id => new mongoose.Types.ObjectId(id)) };
+                matchStage.category = { $in: categories.split(',').map(id => new mongoose.Types.ObjectId(id)) };
             } catch (error) {
                 console.warn("Invalid category ID format", error);
             }
         }
 
+        // --- Destinations Filter ---
         const destinations = searchParams.get('destinations');
         if (destinations) {
             try {
-                query.destination = { $in: destinations.split(',').map(id => new mongoose.Types.ObjectId(id)) };
+                matchStage.destination = { $in: destinations.split(',').map(id => new mongoose.Types.ObjectId(id)) };
             } catch (error) {
                 console.warn("Invalid destination ID format", error);
             }
         }
 
+        // --- Price Filter ---
         const minPrice = searchParams.get('minPrice');
         const maxPrice = searchParams.get('maxPrice');
         if (minPrice || maxPrice) {
-            query.discountPrice = {};
-            if (minPrice) query.discountPrice.$gte = Number(minPrice);
-            if (maxPrice) query.discountPrice.$lte = Number(maxPrice);
+            const priceQuery: any = {};
+            if (minPrice) priceQuery.$gte = Number(minPrice);
+            if (maxPrice) priceQuery.$lte = Number(maxPrice);
+            // Check against either discountPrice or the regular price
+            matchStage.$or = [
+                { discountPrice: priceQuery },
+                { price: priceQuery }
+            ];
         }
 
+        // --- Duration Filter ---
         const durations = searchParams.get('durations');
         if (durations) {
-            // Backend filtering for duration strings is complex and has been omitted for now.
-            // This can be implemented later with more advanced data structures.
-        }
+            const durationConditions = durations.split(',').map(range => {
+                const [min, max] = range.split('-').map(Number);
+                if (!isNaN(min) && !isNaN(max)) {
+                    return { duration: { $gte: min, $lte: max } };
+                }
+                return null;
+            }).filter(Boolean);
 
-        const ratings = searchParams.get('ratings');
-        if (ratings) {
-            const ratingValues = ratings.split(',').map(Number).filter(n => !isNaN(n) && n > 0);
-            if(ratingValues.length > 0) {
-              query.rating = { $gte: Math.min(...ratingValues) };
+            if (durationConditions.length > 0) {
+                matchStage.duration = { $or: durationConditions.map(c => c!.duration) };
             }
         }
 
-        let sortOption: any = { bookings: -1, rating: -1 }; // Default sort by popularity/rating
+        // --- Ratings Filter ---
+        const ratings = searchParams.get('ratings');
+        if (ratings) {
+            const ratingValues = ratings.split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+            if (ratingValues.length > 0) {
+                // Find the minimum rating selected (e.g., if '3 stars & up' and '4 stars & up' are chosen, filter by >= 3)
+                matchStage.rating = { $gte: Math.min(...ratingValues) };
+            }
+        }
+
+        if (Object.keys(matchStage).length > 0) {
+            pipeline.push({ $match: matchStage });
+        }
+
+        // --- Sorting ---
+        let sortOption: any = { bookings: -1, rating: -1 }; // Default: popularity
         const sortBy = searchParams.get('sortBy');
         if (sortBy === 'price-asc') {
-            sortOption = { discountPrice: 1 };
+            sortOption = { discountPrice: 1, price: 1 };
         } else if (sortBy === 'price-desc') {
-            sortOption = { discountPrice: -1 };
+            sortOption = { discountPrice: -1, price: -1 };
         } else if (sortBy === 'rating') {
             sortOption = { rating: -1 };
         }
+        
+        pipeline.push({ $sort: sortOption });
+        
+        // --- Populate and Limit ---
+        pipeline.push({ $limit: 50 });
 
-        const tours = await Tour.find(query)
-            .populate('category', 'name')
-            .populate('destination', 'name')
-            .sort(sortOption)
-            .limit(50) // Add a limit to prevent excessively large responses
-            .lean();
+        const tours = await Tour.aggregate(pipeline).exec();
+        
+        // Mongoose aggregate doesn't run populate, so we do it manually after
+        await Tour.populate(tours, [
+            { path: 'category', select: 'name' },
+            { path: 'destination', select: 'name' }
+        ]);
 
         return NextResponse.json(tours);
     } catch (error) {
