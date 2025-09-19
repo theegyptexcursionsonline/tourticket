@@ -255,14 +255,16 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
     const container = navRef.current;
     if (!container || !activeTab) return;
 
-    const selector = `a[data-tab-id="${activeTab}"]`;
-    const activeEl = container.querySelector(selector) as HTMLElement | null;
-    if (!activeEl) {
-      // try fallback selector (href)
-      const fallback = container.querySelector(`a[href="#${activeTab}"]`) as HTMLElement | null;
-      if (!fallback) return;
-      activeEl = fallback;
-    }
+   const selector = `a[data-tab-id="${activeTab}"]`;
+let activeEl = container.querySelector(selector) as HTMLElement | null;
+
+if (!activeEl) {
+  // try fallback selector (href)
+  const fallback = container.querySelector(`a[href="#${activeTab}"]`) as HTMLElement | null;
+  if (!fallback) return;
+  activeEl = fallback;
+}
+
 
     // element bounding rects relative to container
     const elRect = activeEl.getBoundingClientRect();
@@ -304,7 +306,10 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
   }, []);
 
   return (
-    <div className={`sticky ${stickyTop} z-10 bg-white shadow-sm -mx-4 sm:mx-0 transition-all duration-300`}>
+<div
+  className={`sticky ${stickyTop} z-20 -mx-4 sm:mx-0 transition-all duration-300 
+    bg-white/30 backdrop-blur-md border-b border-white/20 shadow-lg`}
+>
       <div className="container mx-auto px-2 sm:px-4">
         <div className="relative">
           {/* Left arrow button */}
