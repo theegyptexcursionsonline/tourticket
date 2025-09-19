@@ -295,8 +295,15 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
                 itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
                 faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-                bookingOptions: tourToEdit.bookingOptions?.length > 0 ? tourToEdit.bookingOptions : [{ type: 'Per Person', label: '', price: 0 }],
-                addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
+// In the useEffect where you initialize formData for editing
+bookingOptions: tourToEdit.bookingOptions?.length > 0 
+    ? tourToEdit.bookingOptions.map((option: any) => ({
+        type: option.type || 'Per Person',
+        label: option.label || '',
+        price: option.price || 0,
+        description: option.description || ''
+    }))
+    : [{ type: 'Per Person', label: '', price: 0, description: '' }],                addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [{ name: '', description: '', price: 0 }],
                 isPublished: tourToEdit.isPublished || false,
                 difficulty: tourToEdit.difficulty || '',
                 maxGroupSize: tourToEdit.maxGroupSize || 10,
@@ -416,15 +423,11 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
     };
 
- // In the useEffect where you initialize formData for editing
-bookingOptions: tourToEdit.bookingOptions?.length > 0 
-    ? tourToEdit.bookingOptions.map((option: any) => ({
-        type: option.type || 'Per Person',
-        label: option.label || '',
-        price: option.price || 0,
-        description: option.description || ''
-    }))
-    : [{ type: 'Per Person', label: '', price: 0, description: '' }],
+ const handleBookingOptionChange = (index: number, field: string, value: string | number) => {
+    const updatedOptions = [...formData.bookingOptions];
+    updatedOptions[index] = { ...updatedOptions[index], [field]: value };
+    setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
+};
 
     const addBookingOption = () => {
         setFormData((p: any) => ({ 
