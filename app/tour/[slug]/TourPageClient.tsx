@@ -63,8 +63,63 @@ interface TourPageClientProps {
   relatedTours: Tour[];
 }
 
+// Extract enhancement data from the actual tour object with GENERIC fallbacks
+const extractEnhancementData = (tour: Tour): TourEnhancement => {
+  return {
+    itinerary: tour.itinerary || [],
+    whatToBring: tour.whatToBring || [
+      "Camera for photos",
+      "Comfortable walking shoes",
+      "Valid ID or passport",
+      "Weather-appropriate clothing",
+      "Water bottle"
+    ],
+    whatToWear: tour.whatToWear || [
+      "Comfortable walking shoes",
+      "Weather-appropriate clothing", 
+      "Modest attire for religious sites",
+      "Layers for varying temperatures"
+    ],
+    physicalRequirements: tour.physicalRequirements || "Moderate walking required. Tour involves stairs and uneven surfaces. Please inform us of any mobility concerns.",
+    accessibilityInfo: tour.accessibilityInfo || [
+      "Limited wheelchair accessibility - please contact us in advance",
+      "Audio guides available for hearing impaired visitors",
+      "Service animals are welcome",
+      "Please inform us of any special requirements when booking"
+    ],
+    groupSize: tour.groupSize || { min: 1, max: 20 },
+    transportationDetails: tour.transportationDetails || "Meeting point instructions will be provided upon booking confirmation.",
+    mealInfo: tour.mealInfo || "No meals included unless specified. Local restaurant recommendations available from your guide.",
+    weatherPolicy: tour.weatherPolicy || "Tours operate rain or shine. In case of severe weather, tours may be rescheduled or refunded.",
+    photoPolicy: tour.photoPolicy || "Photography is encouraged. Please respect photography restrictions at certain venues and other guests' privacy.",
+    tipPolicy: tour.tipPolicy || "Gratuities are not included but are appreciated for exceptional service.",
+    healthSafety: tour.healthSafety || [
+      "Enhanced safety protocols in place",
+      "Hand sanitizer available",
+      "First aid trained guides",
+      "Emergency procedures established",
+      "Local health guidelines followed"
+    ],
+    culturalInfo: tour.culturalInfo || [
+      "Learn about local history and culture",
+      "Discover architectural highlights", 
+      "Understand local traditions and customs",
+      "Experience authentic local atmosphere",
+      "Professional guide commentary"
+    ],
+    seasonalVariations: tour.seasonalVariations || "Tour experience may vary by season. Check specific seasonal considerations when booking.",
+    localCustoms: tour.localCustoms || [
+      "Arrive at meeting point 15 minutes early",
+      "Respect local customs and dress codes",
+      "Follow guide instructions at all times",
+      "Be respectful of other tour participants",
+      "Ask questions - guides love sharing knowledge!"
+    ]
+  };
+};
+
 // -----------------------------------------------------------------------------
-// NEW: Lightbox Component
+// Lightbox Component
 // -----------------------------------------------------------------------------
 const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], selectedIndex: number, onClose: () => void }) => {
   const [currentIndex, setCurrentIndex] = useState(selectedIndex);
@@ -154,7 +209,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
 
 
 // -----------------------------------------------------------------------------
-// NEW: useScrollDirection hook
+// useScrollDirection hook
 // -----------------------------------------------------------------------------
 function useScrollDirection() {
   const [isVisible, setIsVisible] = useState(true);
@@ -174,131 +229,141 @@ function useScrollDirection() {
   return { scrollY, isVisible };
 }
 
-// Mock enhanced data - in real app this would come from your database
-const getEnhancedTourData = (tourId: string): TourEnhancement => {
-  return {
-    itinerary: [
-      {
-        time: "17:15",
-        title: "Meet at Central Meeting Point",
-        description: "Check-in and welcome aboard our comfortable glass-topped canal boat. Meet your friendly crew and fellow travelers.",
-        duration: "15 minutes",
-        location: "Prins Hendrikkade 25",
-        includes: ["Welcome drink", "Life jacket fitting", "Safety briefing"]
-      },
-      {
-        time: "17:30",
-        title: "Departure & Canal Ring Tour",
-        description: "Begin your journey through Amsterdam's UNESCO World Heritage canal ring. Pass by the historic merchant houses dating back to the Golden Age.",
-        duration: "25 minutes",
-        location: "Historic Canal District",
-        includes: ["Audio commentary", "Photo opportunities"]
-      },
-      {
-        time: "17:55",
-        title: "Pizza Service Begins",
-        description: "Enjoy freshly baked New York-style pizza while cruising past iconic Amsterdam landmarks including Anne Frank House and Westerkerk.",
-        duration: "20 minutes",
-        includes: ["NY Pizza per person", "Beverage selection"]
-      },
-      {
-        time: "18:15",
-        title: "Seven Bridges & Skinny Bridge",
-        description: "Navigate through the famous Seven Bridges area and pass under the romantic Skinny Bridge (Magere Brug), perfect for photos.",
-        duration: "15 minutes"
-      },
-      {
-        time: "18:30",
-        title: "Return Journey & Dessert",
-        description: "Enjoy your Cookie Dough Ice Cream while taking in the final views of Amsterdam's beautiful canal houses and bridges as we return to the starting point.",
-        duration: "15 minutes",
-        includes: ["Cookie Dough Ice Cream", "Final photo opportunities"]
-      }
-    ],
-    whatToBring: [
-      "Camera or smartphone for photos",
-      "Light jacket (boat can be breezy)",
-      "Comfortable seating clothes",
-      "Valid ID for alcohol service",
-      "Cash for optional gratuities"
-    ],
-    whatToWear: [
-      "Comfortable, weather-appropriate clothing",
-      "Flat, non-slip shoes (boat deck can be wet)",
-      "Layers - inside is heated but deck can be cool",
-      "Avoid high heels or loose clothing near the water"
-    ],
-    physicalRequirements: "Low physical activity required. Guests must be able to board the boat independently (2-3 steps). Suitable for most fitness levels.",
-    accessibilityInfo: [
-      "Wheelchair accessibility is limited - please contact us in advance",
-      "Restroom facilities available onboard",
-      "Indoor seating available if weather is poor",
-      "Visual impairments: audio commentary provided",
-      "Hearing impairments: visual landmarks and written information available"
-    ],
-    groupSize: { min: 1, max: 40 },
-    transportationDetails: "Climate-controlled glass-topped boat with panoramic windows. Indoor and outdoor seating available. Onboard restroom facilities.",
-    mealInfo: "Fresh NY-style pizza (vegetarian options available), selection of beverages (Heineken beer, wine, soft drinks, water), Cookie Dough Ice Cream dessert. Dietary restrictions can be accommodated with advance notice.",
-    weatherPolicy: "Tours operate in light rain (covered boat). Tours may be cancelled or rescheduled in severe weather conditions. Full refund provided for weather cancellations.",
-    photoPolicy: "Photography encouraged! Professional photos available for purchase. Please respect other guests' privacy and ask before including them in photos.",
-    tipPolicy: "Gratuities not included but appreciated for excellent service. Suggested 10-15% for exceptional experiences.",
-    healthSafety: [
-      "Enhanced cleaning protocols between tours",
-      "Hand sanitizer stations available onboard",
-      "First aid kit and trained crew onboard",
-      "Life jackets provided and safety briefing given",
-      "Emergency procedures clearly posted",
-      "COVID-19 protocols as per government guidelines"
-    ],
-    culturalInfo: [
-      "Learn about Amsterdam's Golden Age history (1600s)",
-      "Discover the engineering marvel of the canal system",
-      "Understand Dutch maritime heritage and trading history",
-      "Appreciate the architectural styles of canal houses",
-      "Experience modern Dutch hospitality and cuisine"
-    ],
-    seasonalVariations: "Spring/Summer: Extended daylight hours, outdoor seating popular. Fall/Winter: Cozy indoor atmosphere, shorter daylight, possible holiday decorations.",
-    localCustoms: [
-      "Dutch punctuality is highly valued - arrive 15 minutes early",
-      "Tipping is appreciated but not mandatory in the Netherlands",
-      "English is widely spoken by crew and guides",
-      "Respect for the environment and waterways is important",
-      "Photography of private residences should be respectful"
-    ]
-  };
-};
-
-// Enhanced Components
 const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: any) => {
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
+  const navRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Update arrow visibility based on scroll position
+  const updateScrollButtons = () => {
+    const container = navRef.current;
+    if (!container) return;
+    setCanScrollLeft(container.scrollLeft > 8);
+    setCanScrollRight(container.scrollLeft + container.clientWidth < container.scrollWidth - 8);
+  };
+
+  // Scroll container by delta (positive = right, negative = left)
+  const scrollBy = (delta: number) => {
+    const container = navRef.current;
+    if (!container) return;
+    container.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  // Ensure active tab is fully visible; called when activeTab changes
+  useEffect(() => {
+    const container = navRef.current;
+    if (!container || !activeTab) return;
+
+    const selector = `a[data-tab-id="${activeTab}"]`;
+    const activeEl = container.querySelector(selector) as HTMLElement | null;
+    if (!activeEl) {
+      // try fallback selector (href)
+      const fallback = container.querySelector(`a[href="#${activeTab}"]`) as HTMLElement | null;
+      if (!fallback) return;
+      activeEl = fallback;
+    }
+
+    // element bounding rects relative to container
+    const elRect = activeEl.getBoundingClientRect();
+    const contRect = container.getBoundingClientRect();
+
+    const elLeft = elRect.left - contRect.left + container.scrollLeft;
+    const elRight = elLeft + elRect.width;
+    const visibleLeft = container.scrollLeft;
+    const visibleRight = container.scrollLeft + container.clientWidth;
+
+    // If element is left of visible area, scroll so it becomes visible (with small padding)
+    if (elLeft < visibleLeft + 12) {
+      container.scrollTo({ left: Math.max(0, elLeft - 12), behavior: 'smooth' });
+    }
+    // If element is right of visible area, scroll so it becomes visible
+    else if (elRight > visibleRight - 12) {
+      const delta = elRight - visibleRight + 12;
+      container.scrollTo({ left: container.scrollLeft + delta, behavior: 'smooth' });
+    }
+
+    // update arrows after scrolling
+    // small timeout to allow smooth scroll to update values (also runs immediately)
+    setTimeout(updateScrollButtons, 250);
+    updateScrollButtons();
+  }, [activeTab]);
+
+  // Add scroll listener to toggle arrow states
+  useEffect(() => {
+    const container = navRef.current;
+    if (!container) return;
+    updateScrollButtons();
+    const onScroll = () => updateScrollButtons();
+    container.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updateScrollButtons);
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateScrollButtons);
+    };
+  }, []);
 
   return (
     <div className={`sticky ${stickyTop} z-10 bg-white shadow-sm -mx-4 sm:mx-0 transition-all duration-300`}>
       <div className="container mx-auto px-2 sm:px-4">
-        <nav className="flex flex-wrap justify-center gap-1 sm:gap-2 p-2">
-          {tabs.map((tab: any) => (
-            <a
-              key={tab.id}
-              href={`#${tab.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                scrollToSection(tab.id);
-              }}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-red-600'
-              }`}
-            >
-              <tab.icon size={18} />
-              {tab.label}
-            </a>
-          ))}
-        </nav>
+        <div className="relative">
+          {/* Left arrow button */}
+          <button
+            aria-hidden={!canScrollLeft}
+            aria-label="Scroll tabs left"
+            onClick={() => scrollBy(-160)}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full bg-white shadow-sm transition-opacity ${canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            type="button"
+          >
+            <ChevronLeft size={18} />
+          </button>
+
+          {/* Scrollable tab strip */}
+          <div
+            ref={navRef}
+            className="flex gap-2 overflow-x-auto scrollbar-hide px-8 py-2 scroll-smooth"
+            role="tablist"
+            aria-label="Tour sections"
+          >
+            {tabs.map((tab: any) => (
+              <a
+                key={tab.id}
+                href={`#${tab.id}`}
+                data-tab-id={tab.id}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  scrollToSection(tab.id);
+                }}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-red-600'
+                }`}
+              >
+                <tab.icon size={18} />
+                {tab.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Right arrow button */}
+          <button
+            aria-hidden={!canScrollRight}
+            aria-label="Scroll tabs right"
+            onClick={() => scrollBy(160)}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full bg-white shadow-sm transition-opacity ${canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            type="button"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
 };
+
 
 
 const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
@@ -578,11 +643,12 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 );
 
 
-// Enhanced FAQ Component
-const EnhancedFAQ = ({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement> }) => {
+// Enhanced FAQ Component - Updated to accept faqs as props
+const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const faqs = [
+  // Use provided faqs or fallback to default ones
+  const faqsToShow = faqs && faqs.length > 0 ? faqs : [
     {
       question: "What happens if I'm late for the departure?",
       answer: "Please arrive 15 minutes before departure. Late arrivals cannot be accommodated due to strict departure schedules. No refunds are provided for missed departures due to tardiness."
@@ -623,7 +689,7 @@ const EnhancedFAQ = ({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElemen
         <MessageCircle size={24} className="text-orange-600" />
         Frequently Asked Questions
       </h3>
-      {faqs.map((faq, index) => (
+      {faqsToShow.map((faq, index) => (
         <div key={index} className="border border-slate-200 rounded-lg">
           <button
             onClick={() => setOpenFaq(openFaq === index ? null : index)}
@@ -759,7 +825,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
 );
 
 // -----------------------------------------------------------------------------
-// TourPageClient component updated
+// TourPageClient component updated to use REAL database data
 // -----------------------------------------------------------------------------
 export default function TourPageClient({ tour, relatedTours }: TourPageClientProps) {
   const { formatPrice } = useSettings();
@@ -771,7 +837,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
   const tourIsWishlisted = isWishlisted(tour._id!);
 
 
-  // --- NEW HANDLER for the Wishlist button ---
+  // --- Wishlist button handler ---
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the lightbox from opening
     if (tourIsWishlisted) {
@@ -783,7 +849,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
     }
   };
 
-  // --- NEW HANDLER for the Share button ---
+  // --- Share button handler ---
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents the lightbox from opening
     const shareData = {
@@ -870,8 +936,8 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
   };
 
 
-  // Get enhanced tour data
-  const enhancement = getEnhancedTourData(tour.id!);
+  // CHANGED: Use real database data instead of mock data
+  const enhancement = extractEnhancementData(tour);
 
   // Mock reviews data, as there is no reviews API
   const reviewsData = [
@@ -1010,7 +1076,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                     <ZoomIn className="text-white w-16 h-16" />
                   </div>
                  <div className="absolute top-4 right-4 flex gap-2">
-  {/* --- UPDATED WISHLIST BUTTON --- */}
+  {/* Wishlist button */}
   <button
     onClick={handleWishlistToggle}
     className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${
@@ -1023,7 +1089,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
   >
     <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
   </button>
-  {/* --- UPDATED SHARE BUTTON --- */}
+  {/* Share button */}
   <button
     onClick={handleShare}
     className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
@@ -1104,15 +1170,22 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
                 isHeaderVisible={isHeaderVisible}
               />
 
-              {/* All Sections */}
+              {/* All Sections - Using REAL database data */}
               <OverviewSection tour={tour} sectionRef={overviewRef} />
-              {enhancement.itinerary && <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />}
+              
+              {/* Only show itinerary if we have real data */}
+              {enhancement.itinerary && enhancement.itinerary.length > 0 && (
+                <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />
+              )}
+              
               <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />
               <AccessibilitySection enhancement={enhancement} sectionRef={accessibilityRef} />
               <PoliciesSection enhancement={enhancement} sectionRef={policiesRef} />
               <CulturalSection enhancement={enhancement} sectionRef={culturalRef} />
               <ReviewsSection tour={tour} reviewsData={reviewsData} sectionRef={reviewsRef} />
-              <EnhancedFAQ sectionRef={faqRef} />
+              
+              {/* Use real FAQ data from the tour */}
+              <EnhancedFAQ faqs={tour.faq || []} sectionRef={faqRef} />
 
               {/* Meeting Point */}
               {tour.meetingPoint && (
@@ -1320,7 +1393,7 @@ export default function TourPageClient({ tour, relatedTours }: TourPageClientPro
 
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
       
-      {/* ADD THE STICKY BUTTON COMPONENT HERE */}
+      {/* Sticky Button */}
       <StickyBookButton
         price={tour.discountPrice}
         currency={'$'} 
