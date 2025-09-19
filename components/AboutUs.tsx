@@ -54,7 +54,7 @@ export default function WhyBookWithUs() {
           <div className="order-1 lg:order-2 flex justify-center items-center">
             <div className="relative w-full aspect-square max-w-md lg:max-w-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
               <Image
-                src="/12.png" // <-- Replace this with your image path
+                src="/about.png" // <-- Replace this with your image path
                 alt="A scenic view of a popular travel destination"
                 fill
                 className="object-cover"
