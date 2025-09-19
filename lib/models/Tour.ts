@@ -35,6 +35,16 @@ export interface IBookingOption {
   type: string;
   label: string;
   price: number;
+  originalPrice?: number;
+  description?: string;
+  duration?: string;
+  languages?: string[];
+  highlights?: string[];
+  groupSize?: string;
+  difficulty?: string;
+  badge?: string;
+  discount?: number;
+  isRecommended?: boolean;
 }
 
 export interface IAddOn {
@@ -158,6 +168,16 @@ const BookingOptionSchema = new Schema<IBookingOption>({
   type: { type: String, required: true },
   label: { type: String, required: true },
   price: { type: Number, required: true },
+  originalPrice: { type: Number },
+  description: { type: String },
+  duration: { type: String },
+  languages: [{ type: String }],
+  highlights: [{ type: String }],
+  groupSize: { type: String },
+  difficulty: { type: String },
+  badge: { type: String },
+  discount: { type: Number },
+  isRecommended: { type: Boolean, default: false },
 }, { _id: false });
 
 const AddOnSchema = new Schema<IAddOn>({

@@ -427,11 +427,11 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
     };
 
-    const handleBookingOptionChange = (index: number, field: string, value: string | number) => {
-        const updatedOptions = [...formData.bookingOptions];
-        updatedOptions[index] = { ...updatedOptions[index], [field]: value };
-        setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
-    };
+const handleBookingOptionChange = (index: number, field: string, value: string | number | boolean | string[]) => {
+  const updatedOptions = [...formData.bookingOptions];
+  updatedOptions[index] = { ...updatedOptions[index], [field]: value };
+  setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
+};
 
     const addBookingOption = () => {
         setFormData((p: any) => ({ 
@@ -1283,8 +1283,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                                 <SmallHint>Base price for this option</SmallHint>
                             </div>
                         </div>
-
-                        {/* Additional Fields */}
+{/* Additional Fields */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                             {/* Duration Override */}
                             <div className="space-y-2">
@@ -1318,6 +1317,64 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                                     />
                                 </div>
                                 <SmallHint>Show crossed-out price for discounts</SmallHint>
+                            </div>
+                        </div>
+
+                        {/* Languages */}
+                        <div className="mt-6 space-y-2">
+                            <label className="block text-sm font-medium text-slate-700">
+                                Languages (Optional)
+                            </label>
+                            <input 
+                                value={option.languages?.join(', ') || ''} 
+                                onChange={(e) => handleBookingOptionChange(index, 'languages', e.target.value.split(',').map(lang => lang.trim()).filter(Boolean))}
+                                className={inputBase}
+                                placeholder="e.g., English, Spanish, French"
+                            />
+                            <SmallHint>Comma-separated list of languages</SmallHint>
+                        </div>
+
+                        {/* Highlights */}
+                        <div className="mt-6 space-y-2">
+                            <label className="block text-sm font-medium text-slate-700">
+                                Highlights (Optional)
+                            </label>
+                            <textarea
+                                value={option.highlights?.join('\n') || ''}
+                                onChange={(e) => handleBookingOptionChange(index, 'highlights', e.target.value.split('\n').filter(Boolean))}
+                                rows={4}
+                                className={`${inputBase} resize-none`}
+                                placeholder="Enter each highlight on a new line"
+                            />
+                            <SmallHint>Each line will be a separate highlight</SmallHint>
+                        </div>
+
+                        {/* Group Size and Difficulty */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Group Size (Optional)
+                                </label>
+                                <input 
+                                    value={option.groupSize || ''} 
+                                    onChange={(e) => handleBookingOptionChange(index, 'groupSize', e.target.value)}
+                                    className={inputBase}
+                                    placeholder="e.g., Max 8 people"
+                                />
+                                <SmallHint>Override default group size</SmallHint>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Difficulty (Optional)
+                                </label>
+                                <input 
+                                    value={option.difficulty || ''} 
+                                    onChange={(e) => handleBookingOptionChange(index, 'difficulty', e.target.value)}
+                                    className={inputBase}
+                                    placeholder="e.g., Easy, Moderate, Challenging"
+                                />
+                                <SmallHint>Override default difficulty level</SmallHint>
                             </div>
                         </div>
 

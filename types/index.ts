@@ -87,6 +87,16 @@ export interface BookingOption {
   type: string;
   label: string;
   price: number;
+  originalPrice?: number;
+  description?: string;
+  duration?: string;
+  languages?: string[];
+  highlights?: string[];
+  groupSize?: string;
+  difficulty?: string;
+  badge?: string;
+  discount?: number;
+  isRecommended?: boolean;
 }
 
 export interface AddOn {

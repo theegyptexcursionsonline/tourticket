@@ -61,10 +61,10 @@ export async function GET(
 
     let tourOptions: TourOption[] = [];
 
-    // Check for booking options defined in the admin panel
+ // Check for booking options defined in the admin panel
     if (tour.bookingOptions && tour.bookingOptions.length > 0) {
-      tourOptions = tour.bookingOptions.map((opt: BookingOptionType, index: number) => ({
-        id: `bo-${opt.id || index}`,
+      tourOptions = tour.bookingOptions.map((opt: any, index: number) => ({
+        id: `bo-${opt._id || index}`,
         title: opt.label,
         price: opt.price,
         originalPrice: opt.originalPrice || tour.originalPrice,
@@ -76,6 +76,7 @@ export async function GET(
         groupSize: opt.groupSize || `Max ${tour.maxGroupSize || 15} people`,
         difficulty: opt.difficulty || tour.difficulty || 'Easy',
         badge: opt.badge || (index === 0 ? 'Most Popular' : 'Standard'),
+        discount: opt.discount,
         isRecommended: opt.isRecommended || index === 0,
       }));
    } else {
