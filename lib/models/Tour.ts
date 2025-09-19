@@ -1,4 +1,3 @@
-// lib/models/Tour.ts
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import './Review';
 
@@ -59,25 +58,25 @@ export interface ITour extends Document {
   duration: string;
   difficulty?: string;
   maxGroupSize?: number;
-  
+
   // Media
   image: string;
   images?: string[];
-  
+
   // Lists and highlights
   includes?: string[];
   highlights?: string[];
   whatsIncluded?: string[];
   whatsNotIncluded?: string[];
   tags?: string[];
-  
-  // Enhanced content - These are the missing fields!
+
+  // Enhanced content
   itinerary?: IItineraryItem[];
   faq?: IFAQ[];
   bookingOptions?: IBookingOption[];
   addOns?: IAddOn[];
-  
-  // Practical information - These are the missing fields!
+
+  // Practical information
   whatToBring?: string[];
   whatToWear?: string[];
   physicalRequirements?: string;
@@ -97,15 +96,15 @@ export interface ITour extends Document {
   ageRestriction?: string;
   cancellationPolicy?: string;
   operatedBy?: string;
-  
+
   // Status
   isFeatured?: boolean;
   isPublished?: boolean;
-  
+
   // Relationships
   reviews?: mongoose.Schema.Types.ObjectId[];
   availability: IAvailability;
-  
+
   // Meta
   rating?: number;
   bookings?: number;
@@ -182,25 +181,25 @@ const TourSchema: Schema<ITour> = new Schema({
   duration: { type: String, required: true },
   difficulty: { type: String, default: 'Easy' },
   maxGroupSize: { type: Number, default: 10 },
-  
+
   // Media
   image: { type: String, required: true },
   images: [{ type: String }],
-  
+
   // Lists
   includes: [{ type: String }],
   highlights: [{ type: String }],
   whatsIncluded: [{ type: String }],
   whatsNotIncluded: [{ type: String }],
   tags: [{ type: String }],
-  
-  // Enhanced content - NOW INCLUDED IN SCHEMA
+
+  // Enhanced content
   itinerary: [ItineraryItemSchema],
   faq: { type: [FAQSchema], default: [] },
   bookingOptions: [BookingOptionSchema],
   addOns: [AddOnSchema],
-  
-  // Practical information - NOW INCLUDED IN SCHEMA
+
+  // Practical information
   whatToBring: [{ type: String }],
   whatToWear: [{ type: String }],
   physicalRequirements: { type: String },
@@ -223,19 +222,28 @@ const TourSchema: Schema<ITour> = new Schema({
   ageRestriction: { type: String },
   cancellationPolicy: { type: String },
   operatedBy: { type: String },
-  
+
   // Status
   isFeatured: { type: Boolean, default: false },
   isPublished: { type: Boolean, default: true },
-  
+
   // Meta
   rating: { type: Number, default: 4.5 },
   bookings: { type: Number, default: 0 },
-  
+
   // Relationships
   reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review' }],
   availability: { type: AvailabilitySchema, required: true, default: () => ({}) },
 }, { timestamps: true });
+
+// Add this virtual property right before the model export
+TourSchema.virtual('reviewDetails', {
+  ref: 'Review',
+  localField: '_id',
+  foreignField: 'tourId',
+  justOne: false
+});
+
 
 const Tour: Model<ITour> = mongoose.models.Tour || mongoose.model<ITour>('Tour', TourSchema);
 
