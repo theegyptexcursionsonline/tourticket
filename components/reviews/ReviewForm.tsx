@@ -12,7 +12,8 @@ interface ReviewFormProps {
 }
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) => {
-  const { user, isAuthenticated } = useAuth();
+  // Destructure isLoading and token from the authentication context
+  const { user, isAuthenticated, token, isLoading } = useAuth();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -24,13 +25,19 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
       toast.error('Please provide a rating and a comment.');
       return;
     }
+    // Ensure there is a token before submitting
+    if (!token) {
+        toast.error('Authentication error. Please log in again.');
+        return;
+    }
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/tours/${tourId}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // You might need to include an auth token if your API is protected
+          // The Authorization header is now reliably included
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ rating, comment }),
       });
@@ -39,7 +46,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
         throw new Error(newReview.error || 'Failed to submit review.');
       }
       toast.success('Thank you for your review!');
-      onReviewSubmitted(newReview); // Pass the new review up to the parent
+      onReviewSubmitted(newReview);
       setRating(0);
       setComment('');
     } catch (error: any) {
@@ -49,15 +56,26 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
     }
   };
 
-  if (!isAuthenticated) {
+  // While the auth state is loading, show a disabled placeholder.
+  if (isLoading) {
     return (
-      <div className="p-4 bg-gray-100 rounded-lg text-center">
-        <p className="text-gray-600">Please log in to leave a review.</p>
-        {/* Optionally, add a login button here */}
+      <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100 opacity-50">
+        <h3 className="text-2xl font-bold text-gray-800 mb-4">Leave a Review</h3>
+        <p className="text-center text-gray-500">Loading...</p>
       </div>
     );
   }
 
+  // If not authenticated after loading, prompt the user to log in.
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 bg-gray-100 rounded-lg text-center">
+        <p className="text-gray-600">Please log in to leave a review.</p>
+      </div>
+    );
+  }
+
+  // Once loaded and authenticated, display the form.
   return (
     <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100">
         <h3 className="text-2xl font-bold text-gray-800 mb-4">Leave a Review</h3>
@@ -96,6 +114,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
             <div>
                 <button
                     type="submit"
+                    // Disable the button if a submission is already in progress
                     disabled={isSubmitting}
                     className="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                 >
