@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare } from "lucide-react";
+import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Destination } from '@/types';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -43,6 +44,8 @@ const paymentMethods = [
 // =================================================================
 export default function Footer() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchDestinations = async () => {
@@ -61,7 +64,39 @@ export default function Footer() {
     fetchDestinations();
   }, []);
 
-  // Dispatch a custom event to open the chatbot (Chatbot listens for 'open-chatbot')
+  const handleSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading('Subscribing...');
+
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Subscription failed.');
+      }
+      
+      toast.success('Thank you for subscribing!', { id: toastId });
+      setEmail(''); // Reset email input
+
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const openChatbot = (e?: React.MouseEvent) => {
     e?.preventDefault();
     if (typeof window !== 'undefined') {
@@ -71,6 +106,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-[#E9ECEE] text-slate-700">
+      <Toaster position="top-center" />
       <div className="container mx-auto px-4 py-8">
         
         {/* Main Footer Content */}
@@ -88,7 +124,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-sm text-slate-600 leading-relaxed max-w-xs">
-              Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt Excursions Online.
+              Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey.
             </p>
           </div>
 
@@ -109,156 +145,78 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Destinations & Company Links */}
+          {/* Column 3: Company Links */}
           <div>
-            <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Destinations</h3>
+            <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Company</h3>
             <ul className="space-y-2 text-sm">
-              {destinations.slice(0, 5).map((destination) => (
-                <li key={destination._id}>
-                  <Link 
-                    className="hover:text-red-600 transition-colors" 
-                    href={`/destinations/${destination.slug}`}
-                  >
-                    {destination.name}
-                  </Link>
-                </li>
-              ))}
+              <li><Link className="hover:text-red-600 transition-colors" href="/about">About Us</Link></li>
+              <li><Link className="hover:text-red-600 transition-colors" href="/contact">Contact</Link></li>
+              <li><Link className="hover:text-red-600 transition-colors" href="/faqs">FAQ</Link></li>
+              <li><Link className="hover:text-red-600 transition-colors" href="/careers">Careers</Link></li>
             </ul>
-            
-            <div className="mt-6">
-              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Tours &amp; Tickets</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link className="hover:text-red-600 transition-colors" href="/contact">Contact</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/about">About us</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/faqs">FAQ</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/careers">Careers</Link></li>
-              </ul>
-            </div>
           </div>
 
-          {/* Column 4: Contact, Newsletter & Social Media */}
+          {/* Column 4: Contact & Newsletter */}
           <div className="space-y-6">
             <div>
-              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Contact information</h3>
+              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Contact Us</h3>
               <ul className="space-y-3 text-sm">
                 <li className="flex gap-3">
-                  <Phone size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <a href="tel:+201142222920" className="font-medium hover:text-red-600">+201142222920</a>
-                    <div className="text-xs text-slate-500">From 8.30 - 17.00 EET</div>
-                  </div>
+                  <Phone size={18} className="text-red-600 mt-0.5" />
+                  <a href="tel:+201142222920" className="hover:text-red-600">+201142222920</a>
                 </li>
                 <li className="flex gap-3">
-                  <Mail size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <a href="mailto:hello@egyptexcursionsonline.com" className="text-blue-600 hover:underline break-all">
-                      hello@egyptexcursionsonline.com
-                    </a>
-                    <div className="text-xs text-slate-500">Replies within 2 working days</div>
-                  </div>
-                </li>
-                <li className="flex gap-3 items-center">
-                  <MessageSquare size={18} className="text-red-600 flex-shrink-0" />
-                  <button
-                    onClick={openChatbot}
-                    className="text-sm font-medium underline hover:text-red-600 transition-colors"
-                    aria-label="Open chat"
-                  >
-                    Chat with us
-                  </button>
+                  <Mail size={18} className="text-red-600 mt-0.5" />
+                  <a href="mailto:hello@egyptexcursionsonline.com" className="text-blue-600 hover:underline">hello@egyptexcursionsonline.com</a>
                 </li>
               </ul>
             </div>
-
             {/* Newsletter */}
             <div>
               <h4 className="font-bold text-sm mb-3 text-slate-900">Sign up for our newsletter</h4>
-              <form className="flex flex-col sm:flex-row gap-2">
+              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
                 <input 
                   type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your email address" 
-                  className="flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
+                  className="flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" 
+                  disabled={isLoading}
                 />
                 <button 
                   type="submit" 
-                  className="h-11 px-4 sm:px-5 rounded-md text-white bg-slate-800 hover:bg-red-600 transition-colors text-sm font-semibold whitespace-nowrap"
+                  className="h-11 px-4 sm:px-5 rounded-md text-white bg-slate-800 hover:bg-red-600 transition-colors text-sm font-semibold flex items-center justify-center disabled:bg-slate-500"
+                  disabled={isLoading}
                 >
-                  SUBSCRIBE
+                  {isLoading ? <Loader2 className="animate-spin" /> : 'SUBSCRIBE'}
                 </button>
               </form>
             </div>
-            
-            {/* Social Media */}
-            <div>
-              <h4 className="font-bold text-sm mb-3 text-slate-900">Follow us on social media</h4>
-              <div className="flex gap-3">
-                {socialLinks.map(({ icon: Icon, href }, i) => (
-                  <a 
-                    key={i} 
-                    href={href} 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors" 
-                    aria-label={`Follow us on social media`}
-                  >
-                    <Icon size={18} />
-                  </a>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Reviews & Payment Methods */}
-        <div className="border-t border-slate-300 pt-6 mb-6">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-            
-            {/* Trusted by clients */}
-            <div className="flex-shrink-0">
-              <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
-              <div className="flex text-xl leading-none text-red-500">
-                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-              </div>
-            </div>
-              <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
-            </div>
-
-            {/* Payment Methods */}
-            <div className="w-full lg:w-auto lg:max-w-md">
-              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Ways you can pay</h3>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-                {paymentMethods.map((method, idx) => (
-                  <div 
-                    key={idx} 
-                    title={method.name} 
-                    className="flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 hover:shadow-sm transition-shadow aspect-[5/3]"
-                  >
-                    <method.component />
-                  </div>
-                ))}
-              </div>
+        {/* Bottom Bar */}
+        <div className="border-t border-slate-300 pt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-slate-500 text-center sm:text-left">
+              © {new Date().getFullYear()} Egypt Excursions Online. All rights reserved.
+            </p>
+            <div className="flex gap-3">
+              {socialLinks.map(({ icon: Icon, href }, i) => (
+                <a 
+                  key={i} 
+                  href={href} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600" 
+                >
+                  <Icon size={16} />
+                </a>
+              ))}
             </div>
           </div>
-        </div>
-        
-        {/* Currency/Language Switcher */}
-        <div className="border-t border-slate-300 pt-4 mb-4">
-          <CurrencyLanguageSwitcher variant="footer" />
-        </div>
-
-        {/* Legal Footer */}
-        <div className="border-t border-slate-300 pt-4 text-xs text-slate-500 text-center">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-3">
-            <Link className="underline hover:text-slate-700 transition-colors" href="/privacy">Privacy policy</Link>
-            <span className="hidden sm:inline">·</span>
-            <Link className="underline hover:text-slate-700 transition-colors" href="/terms">Terms and conditions</Link>
-          </div>
-          <p>© {new Date().getFullYear()} Egypt Excursions Online. All rights reserved.</p>
         </div>
       </div>
     </footer>
   );
 }
-

@@ -5,36 +5,38 @@ import { Mail, Lock, User, AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import toast, { Toaster } from 'react-hot-toast';
 
 const SignupPage: React.FC = () => {
   const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName]   = useState('');
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
-  const [error, setError]         = useState<string | null>(null);
-  const { signup, isLoading }     = useAuth();
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { signup, isLoading } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+      toast.error('Password must be at least 8 characters long.');
       return;
     }
 
+    const toastId = toast.loading('Creating your account...');
+
     try {
       await signup({ firstName, lastName, email, password });
+      toast.success('Account created successfully! Redirecting...', { id: toastId });
       router.push('/'); // Redirect on success
     } catch (err: any) {
-      setError(err.message || 'An error occurred during signup.');
+      toast.error(err.message || 'An error occurred during signup.', { id: toastId });
     }
   };
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-
+      <Toaster position="top-center" />
       <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[#E9ECEE]">
         <div className="w-full max-w-lg bg-white p-8 sm:p-12 rounded-lg shadow-lg">
           <h1 className="text-3xl sm:text-4xl font-bold text-center text-slate-900 mb-2">
@@ -46,13 +48,6 @@ const SignupPage: React.FC = () => {
               Log in
             </Link>
           </p>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-              <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* First + Last Name */}
@@ -167,7 +162,6 @@ const SignupPage: React.FC = () => {
           </div>
         </div>
       </main>
-
     </div>
   );
 };
