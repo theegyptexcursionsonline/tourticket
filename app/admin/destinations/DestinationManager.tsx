@@ -261,7 +261,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     if (!formData.country.trim()) errors.push('Country is required');
     if (!formData.description.trim()) errors.push('Description is required');
     if (!formData.image.trim()) errors.push('Main image is required');
-    if (!formData.coordinates.lat || !formData.coordinates.lng) errors.push('Coordinates are required');
     if (!formData.currency.trim()) errors.push('Currency is required');
     if (!formData.timezone.trim()) errors.push('Timezone is required');
     if (!formData.bestTimeToVisit.trim()) errors.push('Best time to visit is required');
@@ -795,7 +794,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="coordinates.lat" className="text-sm font-bold text-slate-700">Latitude</label>
-                          <span className="text-red-500 text-sm">*</span>
                         </div>
                         <input 
                           type="number" 
