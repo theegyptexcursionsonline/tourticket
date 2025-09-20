@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,6 +21,12 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = decodedPayload.sub as string;
+
+    // Validate MongoDB ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
     const user = await User.findById(userId).select('-password');
 
     if (!user) {
@@ -27,7 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = {
-      id: user._id,
+      id: user._id.toString(),
+      _id: user._id.toString(),
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,

@@ -82,22 +82,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Verify token is still valid by attempting to refresh user data
           try {
-            const response = await fetch('/api/user/profile', {
+            const response = await fetch('/api/auth/me', {
               headers: {
                 'Authorization': `Bearer ${storedToken}`,
               },
             });
 
             if (response.ok) {
-              const { data: currentUser } = await response.json();
-              handleAuthSuccess(storedToken, currentUser);
+              const { user: currentUser } = await response.json();
+              const normalizedUser = {
+                ...currentUser,
+                id: currentUser.id || currentUser._id || '',
+                _id: currentUser._id || currentUser.id || '',
+              };
+              handleAuthSuccess(storedToken, normalizedUser);
             } else {
               // Token is invalid, clear storage
+              console.log('Token validation failed, clearing storage');
               localStorage.removeItem('authToken');
               localStorage.removeItem('authUser');
             }
           } catch (error) {
-            // If profile fetch fails, still use stored data but mark for refresh
+            console.error('Token validation error:', error);
+            // If validation fails, still try to use stored data
             const normalizedUser = {
               ...parsedUser,
               id: parsedUser.id || parsedUser._id || '',
@@ -124,14 +131,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!token) return;
 
     try {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
       if (response.ok) {
-        const { data: currentUser } = await response.json();
+        const { user: currentUser } = await response.json();
         const normalizedUser = {
           ...currentUser,
           id: currentUser.id || currentUser._id || '',
@@ -140,9 +147,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         setUser(normalizedUser);
         localStorage.setItem('authUser', JSON.stringify(normalizedUser));
+      } else {
+        // If refresh fails, logout user
+        logout();
       }
     } catch (error) {
       console.error('Failed to refresh user data:', error);
+      // Don't logout on network errors, just log the error
     }
   };
 
@@ -203,6 +214,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Optional: Call logout API endpoint for server-side cleanup
     fetch('/api/auth/logout', { method: 'POST' }).catch(console.error);
+    
+    // Redirect to login page
+    router.push('/login');
   };
 
   // --- Context Value ---

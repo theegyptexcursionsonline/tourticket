@@ -1,4 +1,3 @@
-// app/user/layout.tsx
 import React from 'react';
 import UserSidebar from '@/components/user/UserSidebar';
 import Header from '@/components/Header';
@@ -12,9 +11,9 @@ export default function UserLayout({
 }) {
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen bg-slate-50">
         <Header startSolid />
-        <main className="flex-grow bg-slate-50 pt-20 pb-24">
+        <main className="flex-grow pt-20 pb-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col lg:flex-row lg:gap-8">
               <UserSidebar />

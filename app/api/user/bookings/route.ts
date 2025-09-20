@@ -4,6 +4,7 @@ import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
 import { verifyToken } from '@/lib/jwt';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +38,13 @@ export async function GET(request: NextRequest) {
     const userId = decodedPayload.sub as string;
     console.log('👤 User ID from token:', userId);
 
-    // 4. Find the user in database
+    // 4. Validate MongoDB ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.log('❌ Invalid MongoDB ObjectId format:', userId);
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
+    // 5. Find the user in database
     const user = await User.findById(userId);
     console.log('👤 User found:', user ? `${user.firstName} ${user.lastName}` : 'Not found');
     
@@ -46,16 +53,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // 5. Check if Booking model is available
+    // 6. Check if Booking model is available
     console.log('📚 Booking model:', Booking.modelName);
 
-    // 6. Fetch bookings count first
-    const bookingCount = await Booking.countDocuments({ user: user._id });
+    // 7. Fetch bookings count first
+    const bookingCount = await Booking.countDocuments({ user: userId });
     console.log('📊 Total bookings for user:', bookingCount);
 
-    // 7. Fetch bookings with detailed logging
+    // 8. Fetch bookings with detailed logging
     console.log('🔍 Fetching bookings...');
-    const bookings = await Booking.find({ user: user._id })
+    const bookings = await Booking.find({ user: userId })
       .populate({
         path: 'tour',
         model: Tour,
@@ -66,7 +73,7 @@ export async function GET(request: NextRequest) {
           select: 'name slug'
         }
       })
-      .sort({ date: 'desc' })
+      .sort({ createdAt: -1 })
       .lean(); // Use lean() for better performance
 
     console.log('📦 Raw bookings fetched:', bookings.length);
@@ -78,10 +85,23 @@ export async function GET(request: NextRequest) {
       guests: bookings[0].guests
     } : 'No bookings');
 
-    // 8. Return the data - no transformation needed since field names match
+    // 9. Transform bookings for frontend consistency
+    const transformedBookings = bookings.map(booking => ({
+      ...booking,
+      id: booking._id?.toString() || '',
+      bookingDate: booking.date,
+      bookingTime: booking.time,
+      participants: booking.guests,
+      tour: booking.tour ? {
+        ...booking.tour,
+        id: booking.tour._id?.toString() || '',
+      } : null,
+    }));
+
+    // 10. Return the data
     return NextResponse.json({ 
       success: true, 
-      data: bookings,
+      data: transformedBookings,
       meta: {
         total: bookings.length,
         userId: userId,

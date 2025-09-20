@@ -3,9 +3,10 @@ import { SignJWT, jwtVerify } from 'jose';
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const issuer = 'urn:tourticket:issuer';
 const audience = 'urn:tourticket:audience';
-const expiresAt = '2h';
 
-export async function signToken(payload: any) {
+export async function signToken(payload: any, options?: { expiresIn?: string }) {
+  const expiresAt = options?.expiresIn || '2h';
+  
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -24,6 +25,7 @@ export async function verifyToken(token: string) {
     });
     return payload;
   } catch (error) {
+    console.error('JWT verification error:', error);
     return null;
   }
 }

@@ -32,15 +32,17 @@ export async function POST(request: NextRequest) {
     
     // --- Prepare User Data for Token and Response ---
     const userPayload = {
-      id: user._id,
+      id: user._id.toString(),
+      _id: user._id.toString(),
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      name: `${user.firstName} ${user.lastName}`,
     };
 
     // --- Generate JWT ---
     const token = await signToken({
-      sub: user._id,
+      sub: user._id.toString(), // Convert ObjectId to string
       email: user.email,
       given_name: user.firstName,
       family_name: user.lastName,

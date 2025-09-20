@@ -20,7 +20,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated: Invalid token' }, { status: 401 });
     }
 
-    const userId = decodedPayload.sub as string;
+    // Ensure userId is a string (convert from buffer if needed)
+    const userId = typeof decodedPayload.sub === 'string' 
+      ? decodedPayload.sub 
+      : decodedPayload.sub.toString();
 
     // Parse request body
     const body = await request.json();
@@ -105,7 +108,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated: Invalid token' }, { status: 401 });
     }
 
-    const userId = decodedPayload.sub as string;
+    // More robust userId extraction and conversion
+    let userId;
+    try {
+      const rawUserId = decodedPayload.sub;
+      
+      // Handle different possible formats
+      if (typeof rawUserId === 'string') {
+        userId = rawUserId;
+      } else if (rawUserId && typeof rawUserId === 'object') {
+        // Handle buffer objects
+        if (rawUserId.type === 'Buffer' && Array.isArray(rawUserId.data)) {
+          userId = Buffer.from(rawUserId.data).toString('hex');
+        } else if (rawUserId.buffer) {
+          userId = Buffer.from(rawUserId.buffer).toString('hex');
+        } else {
+          userId = String(rawUserId);
+        }
+      } else {
+        userId = String(rawUserId);
+      }
+
+      console.log('Extracted userId:', userId, 'Type:', typeof userId); // Debug log
+      
+      // Validate that userId looks like a valid MongoDB ObjectId (24 hex characters)
+      if (!/^[0-9a-fA-F]{24}$/.test(userId)) {
+        console.error('Invalid userId format:', userId);
+        return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+      }
+      
+    } catch (conversionError) {
+      console.error('Error converting userId:', conversionError);
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
+    console.log('Looking up user with ID:', userId); // Debug log
 
     // Find user and add full name
     const user = await User.findById(userId).select('-password');
@@ -127,6 +164,16 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Profile fetch error:', error);
+    
+    if (error instanceof Error) {
+      if (error.name === 'CastError') {
+        return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+      }
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+      }
+    }
+    
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

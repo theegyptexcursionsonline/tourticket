@@ -28,11 +28,23 @@ const BookingSchema: Schema<IBooking> = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
     required: true,
+    validate: {
+      validator: function(v: any) {
+        return mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid tour ID format'
+    }
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+    validate: {
+      validator: function(v: any) {
+        return mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid user ID format'
+    }
   },
   date: {
     type: Date,

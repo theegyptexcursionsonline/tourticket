@@ -1,3 +1,5 @@
+// app/login/page.tsx
+
 'use client';
 
 import React, { useState, useEffect } from "react";
@@ -22,25 +24,29 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, user, isLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please enter both email and password.');
-      return;
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!email || !password) {
+    toast.error('Please enter both email and password.');
+    return;
+  }
 
-    const toastId = toast.loading('Signing in...');
+  const toastId = toast.loading('Signing in...');
 
-    try {
-      await login(email, password);
-      toast.success('Login successful! Redirecting...', { id: toastId });
+  try {
+    await login(email, password);
+    toast.success('Login successful! Redirecting...', { id: toastId });
+    
+    // Add a small delay to ensure auth state is updated before redirect
+    setTimeout(() => {
       router.push('/user/dashboard');
-    } catch (error: any) {
-      toast.error(error.message || 'Login failed. Please check your credentials.', { id: toastId });
-    }
-  };
+    }, 100);
+  } catch (error: any) {
+    toast.error(error.message || 'Login failed. Please check your credentials.', { id: toastId });
+  }
+};
 
-  // Shows a loader while the auth state is being determined
+  // Shows a loader while the auth state is being determined or during redirection
   if (isLoading || (isAuthenticated && user)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
