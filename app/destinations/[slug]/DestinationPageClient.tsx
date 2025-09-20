@@ -12,7 +12,6 @@ import { Destination, Tour, Category, CartItem } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import BookingSidebar from '@/components/BookingSidebar';
-import ComingSoonModal from '@/components/ComingSoonModal';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -132,18 +131,10 @@ const CombiDealCard = ({ tour }: { tour: Tour }) => {
   );
 };
 
-
 export default function DestinationPageClient({ destination, destinationTours, allCategories }: DestinationPageClientProps) {
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
-  const [showComingSoon, setShowComingSoon] = useState(false);
   const combiScrollContainer = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (destinationTours.length === 0) {
-      setShowComingSoon(true);
-    }
-  }, [destinationTours]);
 
   const scroll = (container: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
     if (container.current) {
@@ -158,10 +149,12 @@ export default function DestinationPageClient({ destination, destinationTours, a
   };
   
   const top10Tours = destinationTours.slice(0, 10);
-  const featuredTours = destinationTours.filter(tour => tour.featured).slice(0, 5);
+  const featuredTours = destinationTours.filter(tour => tour.isFeatured).slice(0, 5);
   const destinationCategories = allCategories.map(category => ({
     ...category,
-    tourCount: destinationTours.filter(tour => tour.categoryIds?.includes(category._id)).length
+    tourCount: destinationTours.filter(tour => 
+      typeof tour.category === 'object' ? tour.category._id === category._id : tour.category === category._id
+    ).length
   })).filter(category => category.tourCount > 0);
 
   return (
@@ -172,7 +165,7 @@ export default function DestinationPageClient({ destination, destinationTours, a
         {/* Hero Section */}
         <section className="relative h-[85vh] w-full flex items-center justify-center text-white overflow-hidden">
           <Image
-            src={destination.image}
+            src={destination.image || 'https://images.unsplash.com/photo-1539650116574-75c0c6d73c6e?w=1200&h=800&fit=crop'}
             alt={`${destination.name} cityscape`}
             fill
             priority
@@ -188,11 +181,11 @@ export default function DestinationPageClient({ destination, destinationTours, a
             <div className="mt-6 flex items-center justify-center gap-4 text-lg">
               <div className="flex items-center gap-2">
                 <MapPin size={20} />
-                <span>{destination.country}</span>
+                <span>{destination.country || 'Amazing Destination'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Tag size={20} />
-                <span>{destination.tourCount} tours available</span>
+                <span>{destinationTours.length} tours available</span>
               </div>
             </div>
           </div>
@@ -204,19 +197,19 @@ export default function DestinationPageClient({ destination, destinationTours, a
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
               <div className="text-center">
                 <h3 className="font-bold text-slate-800 mb-2">Best Time to Visit</h3>
-                <p className="text-slate-600">{destination.bestTimeToVisit}</p>
+                <p className="text-slate-600">{destination.bestTimeToVisit || 'Year-round'}</p>
               </div>
               <div className="text-center">
                 <h3 className="font-bold text-slate-800 mb-2">Currency</h3>
-                <p className="text-slate-600">{destination.currency}</p>
+                <p className="text-slate-600">{destination.currency || 'EUR'}</p>
               </div>
               <div className="text-center">
                 <h3 className="font-bold text-slate-800 mb-2">Time Zone</h3>
-                <p className="text-slate-600">{destination.timezone}</p>
+                <p className="text-slate-600">{destination.timezone || 'Central European Time'}</p>
               </div>
               <div className="text-center">
                 <h3 className="font-bold text-slate-800 mb-2">Available Tours</h3>
-                <p className="text-slate-600">{destination.tourCount} experiences</p>
+                <p className="text-slate-600">{destinationTours.length} experiences</p>
               </div>
             </div>
           </div>
@@ -229,7 +222,7 @@ export default function DestinationPageClient({ destination, destinationTours, a
               <div className="col-span-1 md:col-span-1 lg:col-span-1">
                 <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Your Local Guide In {destination.name}</h2>
                 <p className="text-lg text-slate-600 mb-6">
-                  {destination.longDescription}
+                  {destination.longDescription || `Discover the best of ${destination.name} with our expert local guides. We'll show you hidden gems, share fascinating stories, and create unforgettable memories that will last a lifetime.`}
                 </p>
                 <a href="/about" className="inline-flex items-center gap-2 text-red-600 font-bold hover:text-red-700 transition-colors">
                   <span>Learn more about us</span>
@@ -336,19 +329,17 @@ export default function DestinationPageClient({ destination, destinationTours, a
           </section>
         )}
 
-        {/* Coming Soon Section for destinations without tours */}
-        {destinationTours.length === 0 && (
-          <section className="bg-white py-20">
-            <div className="container mx-auto px-4 text-center max-w-2xl">
-              <h2 className="text-4xl font-extrabold text-slate-900 mb-6">Coming Soon!</h2>
-              <p className="text-lg text-slate-600 mb-8">
-                We're working hard to bring you exciting tours and experiences in {destination.name}. 
-                Check back soon for amazing deals and unforgettable adventures!
-              </p>
-              <a href="/" className="inline-flex items-center gap-2 bg-red-600 text-white font-bold py-3 px-8 rounded-full hover:bg-red-700 transition-colors">
-                <span>Explore Other Destinations</span>
-                <ArrowRight size={20} />
-              </a>
+        {/* Show message for mock data */}
+        {destinationTours.some(tour => tour._id.toString().startsWith('mock-')) && (
+          <section className="bg-blue-50 py-8">
+            <div className="container mx-auto px-4 text-center">
+              <div className="bg-blue-100 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">Sample Tours</h3>
+                <p className="text-blue-700">
+                  These are example tours to show how {destination.name} would look with available experiences. 
+                  Actual tours will be available soon!
+                </p>
+              </div>
             </div>
           </section>
         )}
@@ -360,12 +351,6 @@ export default function DestinationPageClient({ destination, destinationTours, a
         isOpen={isBookingSidebarOpen} 
         onClose={() => setBookingSidebarOpen(false)} 
         tour={selectedTour} 
-      />
-
-      <ComingSoonModal
-        isOpen={showComingSoon}
-        onClose={() => setShowComingSoon(false)}
-        destination={destination.name}
       />
     </>
   );
