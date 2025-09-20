@@ -1411,31 +1411,36 @@ const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) 
     fetchAvailability(bookingData.selectedDate, totalGuests);
   }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability]);
 
-  // Enhanced date selection with availability feedback
-  const handleDateSelect = useCallback((date: Date) => {
-    setBookingData(prev => ({ ...prev, selectedDate: date, selectedTimeSlot: null }));
-    setShowDatePicker(false);
-    setAvailability(null);
-    setCurrentStep(1);
+ // Enhanced date selection with availability feedback
+const handleDateSelect = useCallback((date: Date) => {
+  setBookingData(prev => ({ ...prev, selectedDate: date, selectedTimeSlot: null }));
+  setShowDatePicker(false);
+  setAvailability(null);
+  setCurrentStep(1);
 
-    // Provide immediate feedback about availability
-    const dateKey = date.toISOString().split('T')[0];
-    const dayAvailability = mockAvailabilityData[dateKey];
+  const dateKey = date.toISOString().split('T')[0];
+  const dayAvailability = mockAvailabilityData[dateKey];
 
-    if (dayAvailability === 'full') {
-      toast.error('This date is fully booked. Please select another date.', {
-        duration: 4000,
-        icon: '😞'
-      });
-    } else if (dayAvailability === 'low') {
-      toast('Limited availability on this date! Book soon.', {
-        icon: '⚡',
-        style: { background: '#FEF3C7', color: '#D97706' }
-      });
-    } else if (dayAvailability === 'high') {
-      toast.success('Great choice! Plenty of availability.', { icon: '✨' });
-    }
-  }, [mockAvailabilityData]);
+  if (dayAvailability === 'full') {
+    toast.error('This date is fully booked. Please select another date.', {
+      id: 'availability-toast',   // prevents duplicate
+      duration: 4000,
+      icon: '😞'
+    });
+  } else if (dayAvailability === 'low') {
+    toast('Limited availability on this date! Book soon.', {
+      id: 'availability-toast',
+      icon: '⚡',
+      style: { background: '#FEF3C7', color: '#D97706' }
+    });
+  } else if (dayAvailability === 'high') {
+    toast.success('Great choice! Plenty of availability.', {
+      id: 'availability-toast',
+      icon: '✨'
+    });
+  }
+}, [mockAvailabilityData]);
+
 
   const handleTimeSlotSelect = useCallback((timeSlot: TimeSlot) => {
     if (timeSlot.available === 0) {
