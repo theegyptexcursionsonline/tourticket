@@ -88,17 +88,36 @@ export async function PUT(
         const body = await request.json();
 
         console.log('Updating tour with ID:', id);
+        console.log('Request body:', body);
 
-        // Ensure category is correctly assigned from categories array if it exists
-        if (body.categories && body.categories.length > 0) {
-            body.category = body.categories[0];
-            delete body.categories; // Remove to avoid confusion
-        }
-
+        // FIX: Remove categories mapping since we're sending category directly
         // Map 'faqs' from form to 'faq' in the database model
         if (body.faqs) {
             body.faq = body.faqs;
             delete body.faqs;
+        }
+
+        // Validate required fields
+        if (!body.title || !body.description || !body.duration || !body.discountPrice || !body.destination || !body.category) {
+            return NextResponse.json({ 
+                success: false, 
+                error: 'Missing required fields: title, description, duration, discountPrice, destination, category' 
+            }, { status: 400 });
+        }
+
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(body.destination)) {
+            return NextResponse.json({ 
+                success: false, 
+                error: 'Invalid destination ID format' 
+            }, { status: 400 });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(body.category)) {
+            return NextResponse.json({ 
+                success: false, 
+                error: 'Invalid category ID format' 
+            }, { status: 400 });
         }
 
         // Ensure availability has proper structure
@@ -153,6 +172,13 @@ export async function PUT(
             return NextResponse.json({ 
                 success: false, 
                 error: `Validation failed: ${validationErrors.join(', ')}` 
+            }, { status: 400 });
+        }
+
+        if (error.name === 'CastError') {
+            return NextResponse.json({ 
+                success: false, 
+                error: `Invalid ${error.path}: ${error.value}` 
             }, { status: 400 });
         }
 

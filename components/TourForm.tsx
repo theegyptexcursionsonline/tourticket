@@ -131,7 +131,6 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
                             className={`${inputBase} appearance-none cursor-pointer`}
                         >
                             <option value="daily">🔄 Daily (Repeats Weekly)</option>
-                            {/* Add other types when ready */}
                         </select>
                         <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
                             <ChevronDown className="h-5 w-5 text-slate-400" />
@@ -242,7 +241,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
     const [expandedItineraryIndex, setExpandedItineraryIndex] = useState<number | null>(0);
     const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
 
-   const [formData, setFormData] = useState<any>({
+    const [formData, setFormData] = useState<any>({
         title: '',
         slug: '',
         description: '',
@@ -251,7 +250,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         discountPrice: '',
         originalPrice: '',
         destination: '',
-        categories: [],
+        category: '', // Changed from categories to category
         image: '',
         images: [],
         highlights: [''],
@@ -289,10 +288,10 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 description: tourToEdit.description || '',
                 longDescription: tourToEdit.longDescription || '',
                 duration: tourToEdit.duration || '',
-             discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
-originalPrice: tourToEdit.originalPrice || '',
+                discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
+                originalPrice: tourToEdit.originalPrice || '',
                 destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
-                categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
+                category: tourToEdit.category?._id?.toString() || tourToEdit.category || '', // Fixed: single category field
                 image: tourToEdit.image || '', 
                 images: tourToEdit.images || [],
                 highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
@@ -303,37 +302,37 @@ originalPrice: tourToEdit.originalPrice || '',
                 whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
                 itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
                 faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-          bookingOptions: tourToEdit.bookingOptions?.length > 0 
-    ? tourToEdit.bookingOptions.map((option: any) => ({
-        type: option.type || 'Per Person',
-        label: option.label || '',
-        price: option.price || 0,
-        description: option.description || '',
-        originalPrice: option.originalPrice || undefined,
-        duration: option.duration || '',
-        languages: option.languages || [],
-        highlights: option.highlights || [],
-        groupSize: option.groupSize || '',
-        difficulty: option.difficulty || '',
-        badge: option.badge || '',
-        discount: option.discount || 0,
-        isRecommended: option.isRecommended || false
-    }))
-    : [{ 
-        type: 'Per Person', 
-        label: '', 
-        price: 0, 
-        description: '',
-        originalPrice: undefined,
-        duration: '',
-        languages: [],
-        highlights: [],
-        groupSize: '',
-        difficulty: '',
-        badge: '',
-        discount: 0,
-        isRecommended: false
-    }],
+                bookingOptions: tourToEdit.bookingOptions?.length > 0 
+                    ? tourToEdit.bookingOptions.map((option: any) => ({
+                        type: option.type || 'Per Person',
+                        label: option.label || '',
+                        price: option.price || 0,
+                        description: option.description || '',
+                        originalPrice: option.originalPrice || undefined,
+                        duration: option.duration || '',
+                        languages: option.languages || [],
+                        highlights: option.highlights || [],
+                        groupSize: option.groupSize || '',
+                        difficulty: option.difficulty || '',
+                        badge: option.badge || '',
+                        discount: option.discount || 0,
+                        isRecommended: option.isRecommended || false
+                    }))
+                    : [{ 
+                        type: 'Per Person', 
+                        label: '', 
+                        price: 0, 
+                        description: '',
+                        originalPrice: undefined,
+                        duration: '',
+                        languages: [],
+                        highlights: [],
+                        groupSize: '',
+                        difficulty: '',
+                        badge: '',
+                        discount: 0,
+                        isRecommended: false
+                    }],
                 addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [],
                 isPublished: tourToEdit.isPublished || false,
                 difficulty: tourToEdit.difficulty || '',
@@ -355,6 +354,7 @@ originalPrice: tourToEdit.originalPrice || '',
             }
             
             setFormData(initialData);
+            
             // On edit, expand the first item in each collapsible section if they exist
             if (initialData.bookingOptions.length > 0) setExpandedOptionIndex(0);
             if (initialData.itinerary.length > 0) setExpandedItineraryIndex(0);
@@ -367,14 +367,17 @@ originalPrice: tourToEdit.originalPrice || '',
                     fetch('/api/admin/tours/destinations'),
                     fetch('/api/categories')
                 ]);
+                
                 if (!destRes.ok) throw new Error(`Failed to fetch destinations: ${destRes.statusText}`);
                 if (!catRes.ok) throw new Error(`Failed to fetch categories: ${catRes.statusText}`);
+                
                 const destData = await destRes.json();
                 const catData = await catRes.json();
+                
                 if (destData?.success) setDestinations(destData.data);
                 if (catData?.success) setCategories(catData.data);
             } catch (err) {
-                console.error(err);
+                console.error('Error fetching data:', err);
                 toast.error('Failed to load destinations or categories.');
             }
         };
@@ -394,11 +397,7 @@ originalPrice: tourToEdit.originalPrice || '',
             return;
         }
         
-        if (name === 'categories') {
-            setFormData((p: any) => ({ ...p, [name]: [value] }));
-        } else {
-            setFormData((p: any) => ({ ...p, [name]: value }));
-        }
+        setFormData((p: any) => ({ ...p, [name]: value }));
         
         if (name === 'title' && !isSlugManuallyEdited) {
             const newSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -432,7 +431,6 @@ originalPrice: tourToEdit.originalPrice || '',
             ...p, 
             itinerary: [...p.itinerary, { day: newDay, title: '', description: '' }] 
         }));
-        // Collapse previous and expand new item
         setExpandedItineraryIndex(formData.itinerary.length);
     };
 
@@ -443,7 +441,7 @@ originalPrice: tourToEdit.originalPrice || '',
             item.day = i + 1;
         });
         setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
-        setExpandedItineraryIndex(null); // Collapse after removal
+        setExpandedItineraryIndex(null);
     };
 
     const toggleFaqItem = (index: number) => {
@@ -461,7 +459,6 @@ originalPrice: tourToEdit.originalPrice || '',
             ...p, 
             faqs: [...p.faqs, { question: '', answer: '' }] 
         }));
-        // Collapse previous and expand new item
         setExpandedFaqIndex(formData.faqs.length);
     };
 
@@ -469,7 +466,7 @@ originalPrice: tourToEdit.originalPrice || '',
         if (formData.faqs.length <= 1) return;
         const updatedFAQs = formData.faqs.filter((_: any, i: number) => i !== index);
         setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
-        setExpandedFaqIndex(null); // Collapse after removal
+        setExpandedFaqIndex(null);
     };
 
     const toggleBookingOption = (index: number) => {
@@ -477,9 +474,9 @@ originalPrice: tourToEdit.originalPrice || '',
     };
 
     const handleBookingOptionChange = (index: number, field: string, value: string | number | boolean | string[]) => {
-      const updatedOptions = [...formData.bookingOptions];
-      updatedOptions[index] = { ...updatedOptions[index], [field]: value };
-      setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
+        const updatedOptions = [...formData.bookingOptions];
+        updatedOptions[index] = { ...updatedOptions[index], [field]: value };
+        setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
     };
 
     const addBookingOption = () => {
@@ -487,7 +484,6 @@ originalPrice: tourToEdit.originalPrice || '',
             ...p, 
             bookingOptions: [...p.bookingOptions, { type: 'Per Person', label: '', price: 0 }] 
         }));
-        // When a new option is added, collapse others and expand the new one
         setExpandedOptionIndex(formData.bookingOptions.length);
     };
 
@@ -495,48 +491,46 @@ originalPrice: tourToEdit.originalPrice || '',
         if (formData.bookingOptions.length <= 1) return;
         const updatedOptions = formData.bookingOptions.filter((_: any, i: number) => i !== index);
         setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
-        // Collapse the removed option's slot
         setExpandedOptionIndex(null);
     };
 
-
     const saveIndividualBookingOption = async (index: number) => {
-    if (!tourToEdit?._id) {
-        toast.error('Please save the tour first before updating individual options');
-        return;
-    }
-
-    const option = formData.bookingOptions[index];
-    if (!option.label?.trim()) {
-        toast.error('Option name is required');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/tours/${tourToEdit._id}/booking-options`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                index, 
-                option: {
-                    ...option,
-                    price: parseFloat(option.price) || 0,
-                    originalPrice: option.originalPrice ? parseFloat(option.originalPrice) : undefined,
-                }
-            }),
-        });
-
-        if (response.ok) {
-            toast.success('Booking option saved successfully!');
-        } else {
-            const errorData = await response.json();
-            toast.error(`Failed to save option: ${errorData.error || 'Unknown error'}`);
+        if (!tourToEdit?._id) {
+            toast.error('Please save the tour first before updating individual options');
+            return;
         }
-    } catch (error) {
-        console.error('Save option error:', error);
-        toast.error('Failed to save booking option');
-    }
-};
+
+        const option = formData.bookingOptions[index];
+        if (!option.label?.trim()) {
+            toast.error('Option name is required');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/tours/${tourToEdit._id}/booking-options`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    index, 
+                    option: {
+                        ...option,
+                        price: parseFloat(option.price) || 0,
+                        originalPrice: option.originalPrice ? parseFloat(option.originalPrice) : undefined,
+                    }
+                }),
+            });
+
+            if (response.ok) {
+                toast.success('Booking option saved successfully!');
+            } else {
+                const errorData = await response.json();
+                toast.error(`Failed to save option: ${errorData.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Save option error:', error);
+            toast.error('Failed to save booking option');
+        }
+    };
 
     const handleAddOnChange = (index: number, field: string, value: string | number) => {
         const updatedAddOns = [...formData.addOns];
@@ -617,13 +611,14 @@ originalPrice: tourToEdit.originalPrice || '',
         e.preventDefault();
         setIsSubmitting(true);
 
+        // Enhanced validation
         if (
             !formData.title?.trim() ||
             !formData.description?.trim() ||
             !formData.duration?.trim() ||
             !formData.discountPrice ||
             !formData.destination ||
-            !formData.categories?.length
+            !formData.category
         ) {
             toast.error('Please fill all required fields: Title, Description, Duration, Discount Price, Destination, and Category.');
             setIsSubmitting(false);
@@ -638,12 +633,12 @@ originalPrice: tourToEdit.originalPrice || '',
                 slug: cleanedData.slug.trim(),
                 description: cleanedData.description.trim(),
                 duration: cleanedData.duration.trim(),
-             price: parseFloat(cleanedData.discountPrice) || 0,
-discountPrice: parseFloat(cleanedData.discountPrice) || 0,
+                price: parseFloat(cleanedData.discountPrice) || 0,
+                discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                 longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
                 originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
                 destination: cleanedData.destination,
-                category: cleanedData.categories[0],
+                category: cleanedData.category, // Single category field
                 difficulty: cleanedData.difficulty || 'Easy',
                 maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
                 isPublished: Boolean(cleanedData.isPublished),
@@ -668,6 +663,8 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                 }
             };
 
+            console.log('Payload being sent:', payload);
+
             const apiEndpoint = tourToEdit ? `/api/admin/tours/${tourToEdit._id}` : '/api/admin/tours';
             const method = tourToEdit ? 'PUT' : 'POST';
 
@@ -680,13 +677,16 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
             });
 
             const responseData = await response.json();
+            console.log('API Response:', responseData);
 
             if (response.ok) {
                 toast.success(`Tour ${tourToEdit ? 'updated' : 'created'} successfully!`);
                 router.push('/admin/tours');
                 router.refresh();
             } else {
-                toast.error(`Failed to save tour: ${responseData?.error || 'Unknown error'}`);
+                const errorMessage = responseData?.error || responseData?.message || `HTTP ${response.status}: ${response.statusText}`;
+                console.error('API Error:', errorMessage);
+                toast.error(`Failed to save tour: ${errorMessage}`);
             }
 
         } catch (error) {
@@ -762,24 +762,24 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                             />
                             <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
                         </div>
-                      <div className="space-y-3">
-    <FormLabel icon={Tag} required>URL Slug</FormLabel>
-    <input 
-        name="slug" 
-        value={formData.slug || ''} 
-        onChange={handleChange} 
-        className={inputBase} 
-        placeholder="auto-generated-from-title" 
-        required 
-    />
-    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
-        <span className="text-xs font-medium text-slate-500">Preview:</span>
-        <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-            /{formData.slug || 'your-slug'}
-        </span>
-    </div>
-    <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
-</div>
+                        <div className="space-y-3">
+                            <FormLabel icon={Tag} required>URL Slug</FormLabel>
+                            <input 
+                                name="slug" 
+                                value={formData.slug || ''} 
+                                onChange={handleChange} 
+                                className={inputBase} 
+                                placeholder="auto-generated-from-title" 
+                                required 
+                            />
+                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                                <span className="text-xs font-medium text-slate-500">Preview:</span>
+                                <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
+                                    /{formData.slug || 'your-slug'}
+                                </span>
+                            </div>
+                            <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
+                        </div>
                     </div>
 
                     <div className="space-y-3 mb-6">
@@ -921,6 +921,7 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                                     value={formData.destination} 
                                     onChange={handleChange} 
                                     className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                    required
                                 >
                                     <option value="">Select a Destination</option>
                                     {destinations.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
@@ -933,10 +934,11 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                             <div className="relative">
                                 <Grid3x3 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <select 
-                                    name="categories" 
-                                    value={formData.categories[0] || ''} 
+                                    name="category" 
+                                    value={formData.category || ''} 
                                     onChange={handleChange} 
                                     className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                    required
                                 >
                                     <option value="">Select a Category</option>
                                     {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -1505,16 +1507,16 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
 
                                             {/* Option Description */}
                                             <div className="mt-6 space-y-2">
-                                              <label className="block text-sm font-medium text-slate-700">
-    Description (Optional)
-</label>
-<textarea
-    value={option.description || ''}
-    onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
-    rows={3}
-    className={`${inputBase} resize-none`}
-    placeholder="Describe what's included in this option and what makes it special..."
-/>
+                                                <label className="block text-sm font-medium text-slate-700">
+                                                    Description (Optional)
+                                                </label>
+                                                <textarea
+                                                    value={option.description || ''}
+                                                    onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
+                                                    rows={3}
+                                                    className={`${inputBase} resize-none`}
+                                                    placeholder="Describe what's included in this option and what makes it special..."
+                                                />
                                                 <SmallHint>Explain what makes this option unique or different</SmallHint>
                                             </div>
 
@@ -1549,27 +1551,27 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                                         </div>
                                     </div>
                                     
-                                 <div className={`p-4 border-t border-slate-200 flex items-center justify-between ${expandedOptionIndex !== index ? 'hidden' : ''}`}>
-    <button
-        type="button"
-        onClick={() => saveIndividualBookingOption(index)}
-        className="inline-flex items-center gap-2 text-indigo-600 font-medium px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
-    >
-        <Check className="h-5 w-5" />
-        <span>Save Option</span>
-    </button>
-    
-    <button
-        type="button"
-        disabled={formData.bookingOptions.length <= 1}
-        onClick={() => removeBookingOption(index)}
-        className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
-    >
-        <XCircle className="h-5 w-5" />
-        <span>Remove Option</span>
-    </button>
-</div>
+                                    <div className={`p-4 border-t border-slate-200 flex items-center justify-between ${expandedOptionIndex !== index ? 'hidden' : ''}`}>
+                                        <button
+                                            type="button"
+                                            onClick={() => saveIndividualBookingOption(index)}
+                                            className="inline-flex items-center gap-2 text-indigo-600 font-medium px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
+                                        >
+                                            <Check className="h-5 w-5" />
+                                            <span>Save Option</span>
+                                        </button>
+                                        
+                                        <button
+                                            type="button"
+                                            disabled={formData.bookingOptions.length <= 1}
+                                            onClick={() => removeBookingOption(index)}
+                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                            title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
+                                        >
+                                            <XCircle className="h-5 w-5" />
+                                            <span>Remove Option</span>
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -1603,8 +1605,7 @@ discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                     </div>
                 </SectionCard>
 
-
-             {/* Add-ons */}
+                {/* Add-ons */}
                 <SectionCard title="Tour Add-ons" subtitle="Optional extras customers can purchase" icon={Sparkles}>
                     <div className="space-y-6">
                         {formData.addOns.length > 0 && (
