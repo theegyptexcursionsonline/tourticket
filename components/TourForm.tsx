@@ -513,7 +513,7 @@ originalPrice: tourToEdit.originalPrice || '',
     }
 
     try {
-        const response = await fetch(`/api/admin/tours/${tourToEdit._id}/booking-options`, {
+        const response = await fetch(`/api/tours/${tourToEdit._id}/booking-options`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

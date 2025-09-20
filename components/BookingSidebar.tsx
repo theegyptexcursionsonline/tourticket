@@ -1174,64 +1174,81 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
     }
     const tourOptions: TourOption[] = await optionsResponse.json();
 
-// Create the availability object with the fetched options
-    const addOnsToUse = tour.addOns && tour.addOns.length > 0 
-      ? tour.addOns.map((addon, index) => ({
-          id: addon.id || `addon-${index}`,
-          title: addon.name || 'Tour Enhancement',
-          description: addon.description || 'Enhance your tour experience',
-          price: addon.price || 15,
-          originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
+// Fetch add-ons with fallbacks from API
+let addOnsToUse;
+try {
+  const addOnsResponse = await fetch(`/api/tours/${tourId}/addons`);
+  if (addOnsResponse.ok) {
+    addOnsToUse = await addOnsResponse.json();
+    // Add icons to the add-ons since API doesn't include them
+    addOnsToUse = addOnsToUse.map((addon: any) => ({
+      ...addon,
+      icon: getAddOnIcon(addon.category),
+    }));
+  } else {
+    throw new Error('Failed to fetch add-ons');
+  }
+} catch (error) {
+  console.error('Error fetching add-ons, using fallback:', error);
+  // Fallback to existing logic if API fails
+  addOnsToUse = tour.addOns && tour.addOns.length > 0 
+    ? tour.addOns.map((addon: any, index: number) => ({
+        id: addon.id || `addon-${index}`,
+        title: addon.name || 'Tour Enhancement',
+        description: addon.description || 'Enhance your tour experience',
+        price: addon.price || 15,
+        originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
+        required: false,
+        maxQuantity: 1,
+        popular: index === 0,
+        category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
+        icon: getAddOnIcon(addon.category || 'Experience'),
+        savings: addon.price ? Math.round(addon.price * 0.3) : 5,
+        perGuest: addon.category === 'Food',
+      }))
+    : [
+        {
+          id: 'photo-package',
+          title: 'Professional Photography Package',
+          description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
+          price: 35.00,
+          originalPrice: 50.00,
           required: false,
           maxQuantity: 1,
-          popular: index === 0,
-          category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
-          icon: Gift,
-          savings: addon.price ? Math.round(addon.price * 0.3) : 5,
-          perGuest: addon.category === 'Food',
-        }))
-      : [
-          {
-            id: 'photo-package',
-            title: 'Professional Photography Package',
-            description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
-            price: 35.00,
-            originalPrice: 50.00,
-            required: false,
-            maxQuantity: 1,
-            popular: true,
-            category: 'Photography' as const,
-            icon: Camera,
-            savings: 15,
-            perGuest: false,
-          },
-          {
-            id: 'transport-premium',
-            title: 'Premium Hotel Transfer Service',
-            description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
-            price: 15.00,
-            originalPrice: 25.00,
-            required: false,
-            maxQuantity: 1,
-            category: 'Transport' as const,
-            icon: Car,
-            savings: 10,
-            perGuest: false,
-          },
-          {
-            id: 'refreshment-upgrade',
-            title: 'Gourmet Refreshment Package',
-            description: 'Premium snacks, fresh juices, and traditional treats',
-            price: 12.00,
-            originalPrice: 18.00,
-            required: false,
-            maxQuantity: 1,
-            category: 'Food' as const,
-            icon: Coffee,
-            savings: 6,
-            perGuest: true,
-          },
-        ];
+          popular: true,
+          category: 'Photography' as const,
+          icon: Camera,
+          savings: 15,
+          perGuest: false,
+        },
+        {
+          id: 'transport-premium',
+          title: 'Premium Hotel Transfer Service',
+          description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
+          price: 15.00,
+          originalPrice: 25.00,
+          required: false,
+          maxQuantity: 1,
+          category: 'Transport' as const,
+          icon: Car,
+          savings: 10,
+          perGuest: false,
+        },
+        {
+          id: 'refreshment-upgrade',
+          title: 'Gourmet Refreshment Package',
+          description: 'Premium snacks, fresh juices, and traditional treats',
+          price: 12.00,
+          originalPrice: 18.00,
+          required: false,
+          maxQuantity: 1,
+          category: 'Food' as const,
+          icon: Coffee,
+          savings: 6,
+          perGuest: true,
+        },
+      ];
+}
 
     const newAvailabilityData: AvailabilityData = {
       date: date.toISOString().split('T')[0],
