@@ -709,23 +709,24 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                             />
                             <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
                         </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={Tag} required>URL Slug</FormLabel>
-                            <div className="relative">
-                                <input 
-                                    name="slug" 
-                                    value={formData.slug || ''} 
-                                    onChange={handleChange} 
-                                    className={`${inputBase} pr-32`} 
-                                    placeholder="auto-generated-from-title" 
-                                    required 
-                                />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-3 py-1 rounded-lg bg-slate-100 border border-slate-200">
-                                    /{formData.slug || 'your-slug'}
-                                </div>
-                            </div>
-                            <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
-                        </div>
+                      <div className="space-y-3">
+    <FormLabel icon={Tag} required>URL Slug</FormLabel>
+    <input 
+        name="slug" 
+        value={formData.slug || ''} 
+        onChange={handleChange} 
+        className={inputBase} 
+        placeholder="auto-generated-from-title" 
+        required 
+    />
+    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+        <span className="text-xs font-medium text-slate-500">Preview:</span>
+        <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
+            /{formData.slug || 'your-slug'}
+        </span>
+    </div>
+    <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
+</div>
                     </div>
 
                     <div className="space-y-3 mb-6">
