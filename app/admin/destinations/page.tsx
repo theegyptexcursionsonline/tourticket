@@ -1,4 +1,6 @@
 // app/admin/destinations/page.tsx
+// Add this line at the top of the file after the imports
+export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import { IDestination } from '@/lib/models/Destination';
@@ -7,7 +9,26 @@ import DestinationManager from './DestinationManager';
 async function getDestinations(): Promise<IDestination[]> {
   await dbConnect();
   const destinations = await Destination.find({}).sort({ name: 1 });
-  return JSON.parse(JSON.stringify(destinations));
+  
+  // Sanitize all destinations by providing defaults for missing coordinates
+  const sanitizedDestinations = destinations.map(dest => {
+    const destObj = dest.toObject();
+    return {
+      ...destObj,
+      coordinates: {
+        lat: destObj.coordinates?.lat ?? 0,
+        lng: destObj.coordinates?.lng ?? 0
+      },
+      name: destObj.name || '',
+      country: destObj.country || '',
+      description: destObj.description || '',
+      image: destObj.image || '',
+      slug: destObj.slug || '',
+      tourCount: destObj.tourCount || 0
+    };
+  });
+
+  return JSON.parse(JSON.stringify(sanitizedDestinations));
 }
 
 export default async function DestinationsPage() {
