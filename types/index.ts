@@ -153,12 +153,18 @@ export interface Tour {
 
 export interface Review {
   _id: string;
-  tour: string; // Tour ID
-  user: User;   // Should be populated with User object
+  tourId: string; // Changed from 'tour'
+  userId: string; // Changed from 'user'
+  userName: string;
+  userAvatar?: string;
   rating: number;
+  title: string;
   comment: string;
-  createdAt: string;
-  updatedAt: string;
+  date: string;
+  verified: boolean;
+  helpful: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // A more specific type for tours when destination and category are guaranteed to be populated

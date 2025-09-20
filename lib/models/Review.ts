@@ -1,29 +1,55 @@
 import mongoose, { Document, Schema, models } from 'mongoose';
 
 export interface IReview extends Document {
-  tourId: mongoose.Schema.Types.ObjectId;
-  userId: mongoose.Schema.Types.ObjectId;
-  userName: string;
-  userAvatar?: string;
+  tour: mongoose.Schema.Types.ObjectId;  // Changed from tourId
+  user: mongoose.Schema.Types.ObjectId;  // Changed from userId
   rating: number;
-  title: string;
   comment: string;
-  date: Date;
-  verified: boolean;
-  helpful: number;
+  isApproved: boolean;  // Added approval system
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const ReviewSchema: Schema = new Schema({
-  tourId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tour', required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  userName: { type: String, required: true },
-  userAvatar: { type: String },
-  rating: { type: Number, required: true, min: 1, max: 5 },
-  title: { type: String, required: true, maxlength: 100 },
-  comment: { type: String, required: true, maxlength: 500 },
-  date: { type: Date, default: Date.now },
-  verified: { type: Boolean, default: false },
-  helpful: { type: Number, default: 0 }
-}, { timestamps: true });
+  tour: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Tour', 
+    required: true,
+    index: true 
+  },
+  user: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true,
+    index: true 
+  },
+  rating: { 
+    type: Number, 
+    required: true, 
+    min: 1, 
+    max: 5 
+  },
+  comment: { 
+    type: String, 
+    required: true, 
+    maxlength: 1000,
+    trim: true 
+  },
+  isApproved: { 
+    type: Boolean, 
+    default: false,
+    index: true 
+  },
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Compound index to prevent duplicate reviews from same user for same tour
+ReviewSchema.index({ tour: 1, user: 1 }, { unique: true });
+
+// Index for finding approved reviews
+ReviewSchema.index({ tour: 1, isApproved: 1, createdAt: -1 });
 
 export default models.Review || mongoose.model<IReview>('Review', ReviewSchema);

@@ -45,11 +45,14 @@ const verifyJwt = async (token: string) => {
 export async function GET(request: NextRequest, { params }: { params: { tourId: string } }) {
   await dbConnect();
   try {
-    const reviews = await Review.find({ tour: params.tourId }).populate({
-      path: 'user',
-      model: User,
-      select: 'name picture',
-    });
+    // Use the correct field names from your existing model
+    const reviews = await Review.find({ tourId: params.tourId })
+      .populate({
+        path: 'userId',
+        model: User,
+        select: 'firstName lastName name picture',
+      })
+      .sort({ date: -1 });
     return NextResponse.json(reviews);
   } catch (error) {
     console.error('Failed to fetch reviews:', error);
@@ -74,8 +77,7 @@ export async function POST(request: NextRequest, { params }: { params: { tourId:
     return NextResponse.json({ message: 'Unauthorized: invalid token' }, { status: 401 });
   }
 
-  // Correctly extract the userId from the token payload
-  const userId = String(payload.userId || '');
+  const userId = String(payload.sub || '');
   if (!userId) {
     return NextResponse.json({ message: 'Unauthorized: token missing user id' }, { status: 401 });
   }
@@ -91,46 +93,65 @@ export async function POST(request: NextRequest, { params }: { params: { tourId:
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
       return NextResponse.json({ error: 'Invalid Tour ID' }, { status: 400 });
     }
-    const tourObjectId = new mongoose.Types.ObjectId(tourId);
 
     const body = await request.json();
-    const { rating, comment } = body;
+    const { rating, comment, title } = body;
 
     if (!rating || !comment) {
       return NextResponse.json({ error: 'Rating and comment are required' }, { status: 400 });
     }
 
+    // Check if user has already reviewed this tour
+    const existingReview = await Review.findOne({ tourId: tourId, userId: userId });
+    if (existingReview) {
+      return NextResponse.json({ error: 'You have already reviewed this tour' }, { status: 400 });
+    }
+
+    // Create review with fields that match your existing model
     const newReview = new Review({
-      tourId: tourObjectId,
-      userId: user._id,
-      userName: user.name,
-      title: 'A great experience!', // You might want to get this from the request body as well
+      tourId: new mongoose.Types.ObjectId(tourId),
+      userId: new mongoose.Types.ObjectId(userId),
+      userName: `${user.firstName} ${user.lastName}`,
+      userAvatar: user.picture || '',
       rating,
+      title: title || 'Great experience!', // Default title if not provided
       comment,
+      date: new Date(),
+      verified: false,
+      helpful: 0,
     });
 
     await newReview.save();
 
+    // Update tour's average rating
     const stats = await Review.aggregate([
-      { $match: { tour: tourObjectId } },
-      { $group: { _id: '$tour', avgRating: { $avg: '$rating' } } }
+      { $match: { tourId: new mongoose.Types.ObjectId(tourId) } },
+      { $group: { _id: '$tourId', avgRating: { $avg: '$rating' }, totalReviews: { $sum: 1 } } }
     ]);
 
     if (stats.length > 0) {
-      await Tour.findByIdAndUpdate(tourObjectId, {
-        rating: Number(stats[0].avgRating).toFixed(1),
+      await Tour.findByIdAndUpdate(tourId, {
+        rating: Number(stats[0].avgRating.toFixed(1)),
       });
     }
 
+    // Populate the review before returning
     const populatedReview = await Review.findById(newReview._id).populate({
       path: 'userId',
       model: User,
-      select: 'name picture',
+      select: 'firstName lastName name picture',
     });
 
-    return NextResponse.json(populatedReview, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      message: 'Review submitted successfully!',
+      data: populatedReview
+    }, { status: 201 });
   } catch (error: any) {
     console.error('Review submission error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'An unexpected error occurred.',
+      details: error.message 
+    }, { status: 500 });
   }
 }

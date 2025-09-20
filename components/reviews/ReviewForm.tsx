@@ -3,8 +3,9 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Star, Loader2 } from 'lucide-react';
+import { Star, Loader2, User } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 interface ReviewFormProps {
   tourId: string;
@@ -12,123 +13,279 @@ interface ReviewFormProps {
 }
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) => {
-  // Destructure isLoading and token from the authentication context
   const { user, isAuthenticated, token, isLoading } = useAuth();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (rating === 0 || !comment.trim()) {
-      toast.error('Please provide a rating and a comment.');
+    
+    // Validation
+    if (rating === 0) {
+      toast.error('Please select a rating.');
       return;
     }
+    
+    if (!comment.trim()) {
+      toast.error('Please write a review comment.');
+      return;
+    }
+    
+    if (comment.trim().length < 10) {
+      toast.error('Review comment must be at least 10 characters long.');
+      return;
+    }
+
     // Ensure there is a token before submitting
     if (!token) {
-        toast.error('Authentication error. Please log in again.');
-        return;
+      toast.error('Authentication error. Please log in again.');
+      return;
     }
+
     setIsSubmitting(true);
+
     try {
       const response = await fetch(`/api/tours/${tourId}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // The Authorization header is now reliably included
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ rating, comment }),
+        body: JSON.stringify({ 
+          rating, 
+          comment: comment.trim(),
+          title: title.trim() || 'Great experience!' // Default title if none provided
+        }),
       });
-      const newReview = await response.json();
+
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(newReview.error || 'Failed to submit review.');
+        throw new Error(data.error || data.message || 'Failed to submit review.');
       }
-      toast.success('Thank you for your review!');
-      onReviewSubmitted(newReview);
+
+      // Success
+      toast.success(data.message || 'Thank you for your review!');
+      
+      // Call the callback with the new review data
+      if (data.data) {
+        onReviewSubmitted(data.data);
+      }
+      
+      // Reset form
       setRating(0);
+      setHoverRating(0);
       setComment('');
+      setTitle('');
+
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred.');
+      console.error('Review submission error:', error);
+      toast.error(error.message || 'An error occurred while submitting your review.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // While the auth state is loading, show a disabled placeholder.
+  // While the auth state is loading, show a loading placeholder
   if (isLoading) {
     return (
-      <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100 opacity-50">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">Leave a Review</h3>
-        <p className="text-center text-gray-500">Loading...</p>
+      <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-8 w-8 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-24 bg-gray-200 rounded"></div>
+            <div className="h-12 bg-gray-200 rounded"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // If not authenticated after loading, prompt the user to log in.
+  // If not authenticated after loading, prompt the user to log in
   if (!isAuthenticated) {
     return (
-      <div className="p-4 bg-gray-100 rounded-lg text-center">
-        <p className="text-gray-600">Please log in to leave a review.</p>
+      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-blue-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Share Your Experience</h3>
+          <p className="text-gray-600 mb-4">
+            Please log in to leave a review and help other travelers.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Link
+              href="/login"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex items-center px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg border border-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Once loaded and authenticated, display the form.
+  // Authenticated user review form
   return (
     <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">Leave a Review</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Rating</label>
-                <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                            key={star}
-                            className={`h-8 w-8 cursor-pointer transition-colors ${
-                                (hoverRating || rating) >= star ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                            }`}
-                            onMouseEnter={() => setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            onClick={() => setRating(star)}
-                        />
-                    ))}
-                </div>
-            </div>
-            <div>
-                <label htmlFor="comment" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Your Review
-                </label>
-                <textarea
-                    id="comment"
-                    name="comment"
-                    rows={4}
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-                    placeholder={`Tell us about your experience with the tour...`}
-                    required
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+          {user?.picture ? (
+            <img 
+              src={user.picture} 
+              alt={user.name || 'User'} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <User className="w-6 h-6 text-gray-400" />
+          )}
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-gray-800">Share Your Experience</h3>
+          <p className="text-sm text-gray-500">
+            Writing as {user?.name || `${user?.firstName} ${user?.lastName}`}
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Rating Section */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Your Rating *
+          </label>
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                className={`p-1 transition-all duration-200 ${
+                  (hoverRating || rating) >= star 
+                    ? 'text-yellow-400 scale-110' 
+                    : 'text-gray-300 hover:text-yellow-300'
+                }`}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => setRating(star)}
+                disabled={isSubmitting}
+              >
+                <Star
+                  className={`h-8 w-8 transition-all ${
+                    (hoverRating || rating) >= star ? 'fill-current' : ''
+                  }`}
                 />
-            </div>
-            <div>
-                <button
-                    type="submit"
-                    // Disable the button if a submission is already in progress
-                    disabled={isSubmitting}
-                    className="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-                >
-                    {isSubmitting ? (
-                        <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Submitting...
-                        </>
-                    ) : (
-                        'Submit Review'
-                    )}
-                </button>
-            </div>
-        </form>
+              </button>
+            ))}
+            {rating > 0 && (
+              <span className="ml-3 text-sm font-medium text-gray-600">
+                {rating === 1 && "Poor"}
+                {rating === 2 && "Fair"}
+                {rating === 3 && "Good"}
+                {rating === 4 && "Very Good"}
+                {rating === 5 && "Excellent"}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Title Section (Optional) */}
+        <div>
+          <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+            Review Title (Optional)
+          </label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            placeholder="Summarize your experience..."
+            maxLength={100}
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            {title.length}/100 characters
+          </p>
+        </div>
+
+        {/* Comment Section */}
+        <div>
+          <label htmlFor="comment" className="block text-sm font-semibold text-gray-700 mb-2">
+            Your Review *
+          </label>
+          <textarea
+            id="comment"
+            name="comment"
+            rows={4}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+            placeholder="Tell us about your experience with this tour. What did you enjoy most? Any tips for future travelers?"
+            required
+            minLength={10}
+            maxLength={1000}
+            disabled={isSubmitting}
+          />
+          <div className="mt-1 flex justify-between items-center">
+            <p className="text-xs text-gray-500">
+              Minimum 10 characters
+            </p>
+            <p className="text-xs text-gray-500">
+              {comment.length}/1000 characters
+            </p>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div>
+          <button
+            type="submit"
+            disabled={isSubmitting || rating === 0 || comment.trim().length < 10}
+            className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Submitting Review...
+              </>
+            ) : (
+              'Submit Review'
+            )}
+          </button>
+        </div>
+
+        {/* Terms Notice */}
+        <div className="text-center">
+          <p className="text-xs text-gray-500">
+            By submitting a review, you agree to our{' '}
+            <Link href="/terms" className="text-blue-600 hover:underline">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-blue-600 hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
+        </div>
+      </form>
     </div>
   );
 };
