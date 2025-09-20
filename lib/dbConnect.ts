@@ -7,6 +7,7 @@ import './models/Tour';
 import './models/Destination';
 import './models/Category';
 import './models/user';
+import './models/Blog';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 

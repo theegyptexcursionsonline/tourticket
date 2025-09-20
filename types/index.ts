@@ -200,7 +200,36 @@ export interface CartItem extends Tour {
   totalPrice: number;
 }
 
+// Add this to your existing types/index.ts file
 
+export interface BlogPost {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  featuredImage: string;
+  images?: string[];
+  category: string;
+  tags: string[];
+  author: string;
+  authorAvatar?: string;
+  authorBio?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  readTime: number;
+  status: 'draft' | 'published' | 'scheduled';
+  publishedAt?: string;
+  scheduledFor?: string;
+  featured: boolean;
+  allowComments: boolean;
+  views: number;
+  likes: number;
+  relatedDestinations?: Destination[];
+  relatedTours?: Tour[];
+  createdAt?: string;
+  updatedAt?: string;
+}
 export interface Booking {
   _id: string;
   tour: Tour | string;
