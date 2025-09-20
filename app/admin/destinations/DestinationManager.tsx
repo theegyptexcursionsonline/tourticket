@@ -141,6 +141,11 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   };
 
   const openPanelForEdit = (dest: IDestination) => {
+     // Add this safety check at the very beginning
+  if (!dest) {
+    console.error('Destination object is undefined');
+    return;
+  }
     setEditingDestination(dest);
     setFormData({
       name: dest.name || '',
@@ -150,10 +155,10 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       images: dest.images || [],
       description: dest.description || '',
       longDescription: dest.longDescription || '',
-      coordinates: {
-        lat: dest.coordinates?.lat?.toString() || '',
-        lng: dest.coordinates?.lng?.toString() || ''
-      },
+     coordinates: {
+  lat: (dest.coordinates && typeof dest.coordinates.lat === 'number') ? dest.coordinates.lat.toString() : '',
+  lng: (dest.coordinates && typeof dest.coordinates.lng === 'number') ? dest.coordinates.lng.toString() : ''
+},
       currency: dest.currency || '',
       timezone: dest.timezone || '',
       bestTimeToVisit: dest.bestTimeToVisit || '',
