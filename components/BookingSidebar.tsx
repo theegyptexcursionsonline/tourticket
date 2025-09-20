@@ -1574,11 +1574,11 @@ const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) 
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (action === 'checkout') {
-        toast.success('Redirecting to secure checkout...', {
-          icon: '🔒',
-          duration: 3000,
-          style: { background: '#10B981', color: 'white' }
-        });
+      toast.success('Redirecting to secure checkout...', {
+  icon: '🔒',
+  duration: 1500,
+  style: { background: '#10B981', color: 'white' }
+});
         router.push('/checkout');
       } else {
         toast.success('🎉 Added to Cart! Ready for more adventures?', {

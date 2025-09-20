@@ -65,40 +65,39 @@ export default function Footer() {
     fetchDestinations();
   }, []);
 
+// components/Footer.tsx
+
   const handleSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  if (!email) {
-    toast.error('Please enter your email address.');
-    return;
-  }
-
-  setIsLoading(true);
-  const toastId = toast.loading('Subscribing...');
-
-  try {
-    const response = await fetch('/api/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Subscription failed.');
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Please enter a valid email address.");
+      return;
     }
-    
-    // Remove the toast.success line and just set the state
-    toast.dismiss(toastId); // Dismiss the loading toast
-    setIsSubscribed(true);  // Show thank you message in place
-    setEmail(''); // Reset email input
+    setLoading(true);
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-  } catch (error: any) {
-    toast.error(error.message, { id: toastId });
-  } finally {
-    setIsLoading(false);
-  }
-};
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || "Thank you for subscribing!");
+        setEmail('');
+      } else {
+        toast.error(data.message || "Subscription failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast.error("An error occurred. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openChatbot = (e?: React.MouseEvent) => {
     e?.preventDefault();
