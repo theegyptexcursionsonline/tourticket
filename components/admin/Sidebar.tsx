@@ -26,14 +26,15 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/tours", label: "Tours", icon: Compass },
     { href: "/admin/destinations", label: "Destinations", icon: Map },
+      { href: "/admin/blog", label: "Blog", icon: PenSquare },
+  { href: "/admin/discounts", label: "Discounts", icon: Percent },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+  { href: "/admin/users", label: "Users", icon: Users },
+
   { href: "/admin/categories", label: "Categories", icon: Tag },
 
   { href: "/admin/bookings", label: "Bookings", icon: FileText },
   { href: "/admin/manifests", label: "Manifests", icon: ListPlus },
-  { href: "/admin/blog", label: "Blog", icon: PenSquare },
-  { href: "/admin/discounts", label: "Discounts", icon: Percent },
-  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
-  { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/reports", label: "Reports", icon: TrendingUp },
 ];
 

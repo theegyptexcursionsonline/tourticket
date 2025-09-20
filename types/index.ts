@@ -167,6 +167,31 @@ export interface Review {
   updatedAt?: string;
 }
 
+
+// types/index.ts
+export interface Destination {
+  _id: string;
+  name: string;
+  slug: string;
+  country: string;
+  image: string;
+  description: string;
+  isActive?: boolean;
+  cloudinaryPublicId?: string;
+}
+
+export interface DestinationWithTourCount extends Destination {
+  tourCount: number;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
+}
+
+
+
 // A more specific type for tours when destination and category are guaranteed to be populated
 export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | 'reviews'> {
   destination: Destination;
