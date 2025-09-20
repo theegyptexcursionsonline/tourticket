@@ -722,8 +722,29 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
   onReviewSubmitted: (review: ReviewType) => void,
   sectionRef: React.RefObject<HTMLDivElement> 
 }) => {
-  const averageRating = reviews.length > 0
-    ? (reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1)
+  const [currentReviews, setCurrentReviews] = useState<ReviewType[]>(reviews);
+
+  const handleReviewUpdated = (updatedReview: ReviewType) => {
+    setCurrentReviews(prevReviews => 
+      prevReviews.map(review => 
+        review._id === updatedReview._id ? updatedReview : review
+      )
+    );
+  };
+
+  const handleReviewDeleted = (reviewId: string) => {
+    setCurrentReviews(prevReviews => 
+      prevReviews.filter(review => review._id !== reviewId)
+    );
+  };
+
+  const handleNewReview = (newReview: ReviewType) => {
+    setCurrentReviews(prevReviews => [newReview, ...prevReviews]);
+    onReviewSubmitted(newReview);
+  };
+
+  const averageRating = currentReviews.length > 0
+    ? (currentReviews.reduce((acc, review) => acc + review.rating, 0) / currentReviews.length).toFixed(1)
     : tour.rating?.toFixed(1) || 'N/A';
 
   return (
@@ -735,15 +756,19 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
             <Star size={18} className="text-yellow-500 fill-current" />
             <span className="font-bold text-lg">{averageRating}</span>
           </div>
-          <span className="text-slate-500">({reviews.length} reviews)</span>
+          <span className="text-slate-500">({currentReviews.length} reviews)</span>
         </div>
       </div>
       
       {/* Integrated Review List and Form */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <ReviewList reviews={reviews} />
+        <ReviewList 
+          reviews={currentReviews} 
+          onReviewUpdated={handleReviewUpdated}
+          onReviewDeleted={handleReviewDeleted}
+        />
         <div className="border-t border-slate-200 p-6">
-          <ReviewForm tourId={tour._id!} onReviewSubmitted={onReviewSubmitted} />
+          <ReviewForm tourId={tour._id!} onReviewSubmitted={handleNewReview} />
         </div>
       </div>
     </div>

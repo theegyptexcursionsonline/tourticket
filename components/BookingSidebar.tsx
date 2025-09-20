@@ -230,8 +230,7 @@ const STEPS = [
   { id: 3, title: 'Enhance Tour', shortTitle: 'Enhance', icon: Sparkles },
   { id: 4, title: 'Review & Book', shortTitle: 'Review', icon: CheckCircle },
 ];
-
-// Steps Progress Indicator Component
+// Replace the entire StepsIndicator component with this
 const StepsIndicator: React.FC<{
   currentStep: number;
   onStepClick?: (step: number) => void;
@@ -239,93 +238,96 @@ const StepsIndicator: React.FC<{
 }> = ({ currentStep, onStepClick, isClickable = false }) => {
   return (
     <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-      {/* Mobile View - Horizontal scrollable */}
+      {/* Mobile: horizontal scrollable pills with compact progress */}
       <div className="sm:hidden">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-slate-600">Step {currentStep} of {STEPS.length}</span>
-          <span className="text-xs text-slate-500">{Math.round((currentStep / STEPS.length) * 100)}% Complete</span>
+          <span className="text-xs text-slate-500">{Math.round((currentStep / STEPS.length) * 100)}%</span>
         </div>
-        <div className="w-full bg-slate-200 rounded-full h-2">
-          <motion.div
-            className="bg-red-600 h-2 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${(currentStep / STEPS.length) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-        <div className="mt-2 text-sm font-medium text-slate-800">
-          {STEPS.find(s => s.id === currentStep)?.title}
+
+        <div className="relative">
+          {/* Progress bar background */}
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-2 bg-red-600 rounded-full transition-all"
+              style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Scrollable pills */}
+          <div className="mt-3 overflow-x-auto no-scrollbar">
+            <div className="flex gap-3 items-center">
+              {STEPS.map((step) => {
+                const isCompleted = step.id < currentStep;
+                const isActive = step.id === currentStep;
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => isClickable && onStepClick?.(step.id)}
+                    aria-current={isActive ? 'step' : undefined}
+                    className={`flex items-center gap-2 min-w-[84px] px-3 py-2 rounded-full text-xs font-medium transition
+                      ${isCompleted ? 'bg-green-100 text-green-700' : isActive ? 'bg-red-100 text-red-700 shadow' : 'bg-white text-gray-600'}
+                      ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <div className={`w-6 h-6 flex items-center justify-center rounded-full text-sm font-semibold
+                      ${isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      {isCompleted ? '✓' : step.id}
+                    </div>
+                    <span className="whitespace-nowrap">{step.shortTitle ?? step.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Desktop View - Full steps */}
+      {/* Desktop: full step pills with connectors */}
       <div className="hidden sm:block">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
           {STEPS.map((step, index) => {
             const isCompleted = step.id < currentStep;
-            const isCurrent = step.id === currentStep;
-            const isUpcoming = step.id > currentStep;
-            
+            const isActive = step.id === currentStep;
+
             return (
               <React.Fragment key={step.id}>
-                <motion.div
-                  onClick={() => isClickable && onStepClick?.(step.id)}
-                  className={`flex items-center gap-2 ${isClickable ? 'cursor-pointer' : 'cursor-default'} group`}
-                  whileHover={isClickable ? { scale: 1.02 } : {}}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                      isCompleted
-                        ? 'bg-green-600 text-white'
-                        : isCurrent
-                        ? 'bg-red-600 text-white shadow-lg'
-                        : 'bg-slate-200 text-slate-500'
-                    }`}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => isClickable && onStepClick?.(step.id)}
+                    aria-current={isActive ? 'step' : undefined}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all text-sm font-medium min-w-[160px]
+                      ${isCompleted ? 'bg-white border border-green-200 shadow-sm' : isActive ? 'bg-red-50 border border-red-200 shadow' : 'bg-white border border-gray-100'}
+                      ${isClickable ? 'hover:scale-[1.02] cursor-pointer' : 'cursor-default'}`}
                   >
-                    {isCompleted ? (
-                      <Check size={16} />
-                    ) : (
-                      <step.icon size={16} />
-                    )}
-                  </div>
-                  <div className="hidden lg:block">
-                    <div
-                      className={`text-sm font-medium ${
-                        isCompleted || isCurrent
-                          ? 'text-slate-800'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      {step.title}
+                    <div className={`w-9 h-9 flex items-center justify-center rounded-full text-base font-bold flex-shrink-0
+                      ${isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-red-600 text-white' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                      {isCompleted ? <Check size={16} /> : <step.icon size={16} />}
                     </div>
-                  </div>
-                  <div className="lg:hidden">
-                    <div
-                      className={`text-xs font-medium ${
-                        isCompleted || isCurrent
-                          ? 'text-slate-800'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      {step.shortTitle}
+
+                    <div className="text-left">
+                      <div className={`leading-tight ${isActive || isCompleted ? 'text-slate-900' : 'text-slate-500'} text-sm`}>
+                        {step.title}
+                      </div>
+                      <div className="text-xs text-slate-400 truncate">
+                        {isActive ? 'Current step' : isCompleted ? 'Completed' : 'Upcoming'}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-                
-                {index < STEPS.length - 1 && (
-                  <div className="flex-1 mx-2">
-                    <div className="w-full bg-slate-200 rounded-full h-1">
-                      <motion.div
-                        className="bg-red-600 h-1 rounded-full"
-                        initial={{ width: '0%' }}
-                        animate={{ 
-                          width: step.id < currentStep ? '100%' : '0%'
-                        }}
-                        transition={{ duration: 0.3, delay: 0.1 }}
-                      />
+                  </button>
+
+                  {/* Connector between steps */}
+                  {index < STEPS.length - 1 && (
+                    <div className="flex-1">
+                      <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-1 bg-red-600 rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: isCompleted ? '100%' : '0%' }}
+                          transition={{ duration: 0.35 }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </React.Fragment>
             );
           })}
