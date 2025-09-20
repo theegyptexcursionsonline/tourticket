@@ -45,14 +45,14 @@ const verifyJwt = async (token: string) => {
 export async function GET(request: NextRequest, { params }: { params: { tourId: string } }) {
   await dbConnect();
   try {
-    // Use the correct field names from your existing model
-    const reviews = await Review.find({ tourId: params.tourId })
+    // Use the correct field name 'tour' instead of 'tourId'
+    const reviews = await Review.find({ tour: params.tourId, isApproved: true })
       .populate({
-        path: 'userId',
+        path: 'user',
         model: User,
         select: 'firstName lastName name picture',
       })
-      .sort({ date: -1 });
+      .sort({ createdAt: -1 });
     return NextResponse.json(reviews);
   } catch (error) {
     console.error('Failed to fetch reviews:', error);
@@ -101,32 +101,27 @@ export async function POST(request: NextRequest, { params }: { params: { tourId:
       return NextResponse.json({ error: 'Rating and comment are required' }, { status: 400 });
     }
 
-    // Check if user has already reviewed this tour
-    const existingReview = await Review.findOne({ tourId: tourId, userId: userId });
+    // Check if user has already reviewed this tour - using correct field names
+    const existingReview = await Review.findOne({ tour: tourId, user: userId });
     if (existingReview) {
       return NextResponse.json({ error: 'You have already reviewed this tour' }, { status: 400 });
     }
 
-    // Create review with fields that match your existing model
+    // Create review with correct field names matching the model
     const newReview = new Review({
-      tourId: new mongoose.Types.ObjectId(tourId),
-      userId: new mongoose.Types.ObjectId(userId),
-      userName: `${user.firstName} ${user.lastName}`,
-      userAvatar: user.picture || '',
+      tour: new mongoose.Types.ObjectId(tourId),
+      user: new mongoose.Types.ObjectId(userId),
       rating,
-      title: title || 'Great experience!', // Default title if not provided
       comment,
-      date: new Date(),
-      verified: false,
-      helpful: 0,
+      isApproved: false, // Reviews need approval
     });
 
     await newReview.save();
 
     // Update tour's average rating
     const stats = await Review.aggregate([
-      { $match: { tourId: new mongoose.Types.ObjectId(tourId) } },
-      { $group: { _id: '$tourId', avgRating: { $avg: '$rating' }, totalReviews: { $sum: 1 } } }
+      { $match: { tour: new mongoose.Types.ObjectId(tourId) } },
+      { $group: { _id: '$tour', avgRating: { $avg: '$rating' }, totalReviews: { $sum: 1 } } }
     ]);
 
     if (stats.length > 0) {
@@ -137,7 +132,7 @@ export async function POST(request: NextRequest, { params }: { params: { tourId:
 
     // Populate the review before returning
     const populatedReview = await Review.findById(newReview._id).populate({
-      path: 'userId',
+      path: 'user',
       model: User,
       select: 'firstName lastName name picture',
     });
