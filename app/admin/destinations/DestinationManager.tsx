@@ -1,4 +1,3 @@
-// app/admin/destinations/DestinationManager.tsx
 'use client';
 
 import { useState } from 'react';
@@ -18,9 +17,52 @@ import {
   Camera,
   Sparkles,
   Check,
-  AlertCircle
+  AlertCircle,
+  Star,
+  Calendar,
+  Thermometer,
+  Users,
+  Eye,
+  EyeOff,
+  Info,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
+
+interface FormData {
+  name: string;
+  slug: string;
+  country: string;
+  image: string;
+  images: string[];
+  description: string;
+  longDescription: string;
+  coordinates: {
+    lat: string;
+    lng: string;
+  };
+  currency: string;
+  timezone: string;
+  bestTimeToVisit: string;
+  highlights: string[];
+  thingsToDo: string[];
+  localCustoms: string[];
+  visaRequirements: string;
+  languagesSpoken: string[];
+  emergencyNumber: string;
+  averageTemperature: {
+    summer: string;
+    winter: string;
+  };
+  climate: string;
+  weatherWarnings: string[];
+  featured: boolean;
+  isPublished: boolean;
+  metaTitle: string;
+  metaDescription: string;
+  tags: string[];
+}
 
 const generateSlug = (name: string) =>
   name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -31,26 +73,152 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [editingDestination, setEditingDestination] = useState<IDestination | null>(null);
-  const [formData, setFormData] = useState({ name: '', slug: '', image: '' });
+  const [activeTab, setActiveTab] = useState('basic');
+  
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    slug: '',
+    country: '',
+    image: '',
+    images: [],
+    description: '',
+    longDescription: '',
+    coordinates: { lat: '', lng: '' },
+    currency: '',
+    timezone: '',
+    bestTimeToVisit: '',
+    highlights: [],
+    thingsToDo: [],
+    localCustoms: [],
+    visaRequirements: '',
+    languagesSpoken: [],
+    emergencyNumber: '',
+    averageTemperature: { summer: '', winter: '' },
+    climate: '',
+    weatherWarnings: [],
+    featured: false,
+    isPublished: true,
+    metaTitle: '',
+    metaDescription: '',
+    tags: []
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      slug: '',
+      country: '',
+      image: '',
+      images: [],
+      description: '',
+      longDescription: '',
+      coordinates: { lat: '', lng: '' },
+      currency: '',
+      timezone: '',
+      bestTimeToVisit: '',
+      highlights: [],
+      thingsToDo: [],
+      localCustoms: [],
+      visaRequirements: '',
+      languagesSpoken: [],
+      emergencyNumber: '',
+      averageTemperature: { summer: '', winter: '' },
+      climate: '',
+      weatherWarnings: [],
+      featured: false,
+      isPublished: true,
+      metaTitle: '',
+      metaDescription: '',
+      tags: []
+    });
+  };
 
   const openPanelForCreate = () => {
     setEditingDestination(null);
-    setFormData({ name: '', slug: '', image: '' });
+    resetForm();
+    setActiveTab('basic');
     setIsPanelOpen(true);
   };
 
   const openPanelForEdit = (dest: IDestination) => {
     setEditingDestination(dest);
-    setFormData({ name: dest.name, slug: dest.slug, image: dest.image });
+    setFormData({
+      name: dest.name || '',
+      slug: dest.slug || '',
+      country: dest.country || '',
+      image: dest.image || '',
+      images: dest.images || [],
+      description: dest.description || '',
+      longDescription: dest.longDescription || '',
+      coordinates: {
+        lat: dest.coordinates?.lat?.toString() || '',
+        lng: dest.coordinates?.lng?.toString() || ''
+      },
+      currency: dest.currency || '',
+      timezone: dest.timezone || '',
+      bestTimeToVisit: dest.bestTimeToVisit || '',
+      highlights: dest.highlights || [],
+      thingsToDo: dest.thingsToDo || [],
+      localCustoms: dest.localCustoms || [],
+      visaRequirements: dest.visaRequirements || '',
+      languagesSpoken: dest.languagesSpoken || [],
+      emergencyNumber: dest.emergencyNumber || '',
+      averageTemperature: {
+        summer: dest.averageTemperature?.summer || '',
+        winter: dest.averageTemperature?.winter || ''
+      },
+      climate: dest.climate || '',
+      weatherWarnings: dest.weatherWarnings || [],
+      featured: dest.featured || false,
+      isPublished: dest.isPublished ?? true,
+      metaTitle: dest.metaTitle || '',
+      metaDescription: dest.metaDescription || '',
+      tags: dest.tags || []
+    });
+    setActiveTab('basic');
     setIsPanelOpen(true);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: { ...prev[parent as keyof FormData], [child]: value }
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value 
+      }));
+    }
+    
     if (name === 'name') {
       setFormData(prev => ({ ...prev, slug: generateSlug(value) }));
     }
+  };
+
+  const handleArrayChange = (field: keyof FormData, index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: (prev[field] as string[]).map((item, i) => i === index ? value : item)
+    }));
+  };
+
+  const addArrayItem = (field: keyof FormData) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: [...(prev[field] as string[]), '']
+    }));
+  };
+
+  const removeArrayItem = (field: keyof FormData, index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: (prev[field] as string[]).filter((_, i) => i !== index)
+    }));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,13 +249,46 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     });
   };
 
+  const validateForm = () => {
+    const errors: string[] = [];
+    
+    if (!formData.name.trim()) errors.push('Name is required');
+    if (!formData.country.trim()) errors.push('Country is required');
+    if (!formData.description.trim()) errors.push('Description is required');
+    if (!formData.image.trim()) errors.push('Main image is required');
+    if (!formData.coordinates.lat || !formData.coordinates.lng) errors.push('Coordinates are required');
+    if (!formData.currency.trim()) errors.push('Currency is required');
+    if (!formData.timezone.trim()) errors.push('Timezone is required');
+    if (!formData.bestTimeToVisit.trim()) errors.push('Best time to visit is required');
+    
+    return errors;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.image) {
-      toast.error('Please upload an image for the destination.');
+    
+    const errors = validateForm();
+    if (errors.length > 0) {
+      toast.error(`Please fix the following errors:\n${errors.join('\n')}`);
       return;
     }
+    
     setIsSubmitting(true);
+
+    // Prepare data for submission
+    const submitData = {
+      ...formData,
+      coordinates: {
+        lat: parseFloat(formData.coordinates.lat),
+        lng: parseFloat(formData.coordinates.lng)
+      },
+      highlights: formData.highlights.filter(h => h.trim()),
+      thingsToDo: formData.thingsToDo.filter(t => t.trim()),
+      localCustoms: formData.localCustoms.filter(c => c.trim()),
+      languagesSpoken: formData.languagesSpoken.filter(l => l.trim()),
+      weatherWarnings: formData.weatherWarnings.filter(w => w.trim()),
+      tags: formData.tags.filter(t => t.trim())
+    };
 
     const apiEndpoint = editingDestination
       ? `/api/admin/tours/destinations/${editingDestination._id}`
@@ -95,7 +296,11 @@ export default function DestinationManager({ initialDestinations }: { initialDes
 
     const method = editingDestination ? 'PUT' : 'POST';
 
-    const promise = fetch(apiEndpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)})
+    const promise = fetch(apiEndpoint, { 
+      method, 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(submitData)
+    })
       .then(async res => {
         if (!res.ok) {
             const errorData = await res.json();
@@ -135,6 +340,15 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   };
 
   const inputStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
+  const textareaStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
+
+  const tabs = [
+    { id: 'basic', label: 'Basic Info', icon: Info },
+    { id: 'location', label: 'Location', icon: MapPin },
+    { id: 'content', label: 'Content', icon: Sparkles },
+    { id: 'travel', label: 'Travel Info', icon: Globe },
+    { id: 'seo', label: 'SEO', icon: Eye }
+  ];
 
   return (
     <div className="space-y-8">
@@ -213,11 +427,19 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                 </button>
               </div>
 
-              {/* Status Badge */}
-              <div className="absolute top-3 left-3">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/90 backdrop-blur-sm rounded-full text-white text-xs font-semibold shadow-lg">
+              {/* Status Badges */}
+              <div className="absolute top-3 left-3 flex flex-col gap-2">
+                {dest.featured && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500/90 backdrop-blur-sm rounded-full text-white text-xs font-semibold shadow-lg">
+                    <Star className="w-3 h-3 fill-current" />
+                    Featured
+                  </div>
+                )}
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 backdrop-blur-sm rounded-full text-white text-xs font-semibold shadow-lg ${
+                  dest.isPublished ? 'bg-green-500/90' : 'bg-red-500/90'
+                }`}>
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  Active
+                  {dest.isPublished ? 'Published' : 'Draft'}
                 </div>
               </div>
             </div>
@@ -229,9 +451,14 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                   <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-indigo-600 transition-colors duration-200">
                     {dest.name}
                   </h3>
-                  <div className="flex items-center gap-2 mt-2">
+                  <p className="text-slate-500 text-sm mb-2">{dest.country}</p>
+                  <div className="flex items-center gap-2 mb-2">
                     <Globe className="h-4 w-4 text-slate-400" />
                     <p className="text-slate-500 text-sm font-mono truncate">/{dest.slug}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-slate-400" />
+                    <p className="text-slate-500 text-sm">{dest.tourCount} tours</p>
                   </div>
                 </div>
                 
@@ -291,7 +518,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed top-0 right-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 h-full w-full max-w-4xl bg-white z-50 shadow-2xl flex flex-col"
           >
             {/* Panel Header */}
             <div className="flex items-center justify-between p-8 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
@@ -316,119 +543,721 @@ export default function DestinationManager({ initialDestinations }: { initialDes
               </button>
             </div>
 
+            {/* Tab Navigation */}
+            <div className="flex border-b border-slate-200 bg-slate-50 px-8">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-all duration-200 ${
+                      activeTab === tab.id
+                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-white'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Form Content */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
               <div className="p-8 space-y-8">
-                {/* Image Upload Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Camera className="h-5 w-5 text-indigo-500" />
-                    <label className="text-sm font-bold text-slate-700">Destination Image</label>
-                    <span className="text-red-500 text-sm">*</span>
-                  </div>
-                  
-                  <div className="relative">
-                    {formData.image ? (
-                      <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
-                        <img 
-                          src={formData.image} 
-                          alt="Preview" 
-                          className="w-full h-64 object-cover" 
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                          <button 
-                            type="button" 
-                            onClick={() => setFormData(p => ({...p, image: ''}))} 
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200"
-                          >
-                            <Trash2 size={16} />
-                            Remove Image
-                          </button>
-                        </div>
+                
+                {/* Basic Info Tab */}
+                {activeTab === 'basic' && (
+                  <div className="space-y-6">
+                    {/* Image Upload Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Camera className="h-5 w-5 text-indigo-500" />
+                        <label className="text-sm font-bold text-slate-700">Destination Image</label>
+                        <span className="text-red-500 text-sm">*</span>
                       </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-200">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl">
-                            <UploadCloud className="h-8 w-8 text-indigo-600" />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex justify-center">
-                              <label 
-                                htmlFor="file-upload" 
-                                className="relative cursor-pointer bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                      
+                      <div className="relative">
+                        {formData.image ? (
+                          <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
+                            <img 
+                              src={formData.image} 
+                              alt="Preview" 
+                              className="w-full h-64 object-cover" 
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                              <button 
+                                type="button" 
+                                onClick={() => setFormData(p => ({...p, image: ''}))} 
+                                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200"
                               >
-                                <span>Upload Image</span>
-                                <input 
-                                  id="file-upload" 
-                                  name="file-upload" 
-                                  type="file" 
-                                  className="sr-only" 
-                                  onChange={handleImageUpload} 
-                                  accept="image/*" 
-                                  disabled={isUploading} 
-                                />
-                              </label>
+                                <Trash2 size={16} />
+                                Remove Image
+                              </button>
                             </div>
-                            <p className="text-xs text-slate-500">PNG, JPG, GIF up to 10MB</p>
-                            {isUploading && (
-                              <div className="flex items-center justify-center gap-2 text-indigo-600">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="text-sm font-medium">Uploading...</span>
-                              </div>
-                            )}
                           </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-200">
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl">
+                                <UploadCloud className="h-8 w-8 text-indigo-600" />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <div className="flex justify-center">
+                                  <label 
+                                    htmlFor="file-upload" 
+                                    className="relative cursor-pointer bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                                  >
+                                    <span>Upload Image</span>
+                                    <input 
+                                      id="file-upload" 
+                                      name="file-upload" 
+                                      type="file" 
+                                      className="sr-only" 
+                                      onChange={handleImageUpload} 
+                                      accept="image/*" 
+                                      disabled={isUploading} 
+                                    />
+                                  </label>
+                                </div>
+                                <p className="text-xs text-slate-500">PNG, JPG, GIF up to 10MB</p>
+                                {isUploading && (
+                                  <div className="flex items-center justify-center gap-2 text-indigo-600">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="text-sm font-medium">Uploading...</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Name Field */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="name" className="text-sm font-bold text-slate-700">Destination Name</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <input 
+                          type="text" 
+                          name="name" 
+                          id="name" 
+                          value={formData.name} 
+                          onChange={handleInputChange} 
+                          placeholder="e.g., Amsterdam, Paris, Tokyo"
+                          required 
+                          className={inputStyles} 
+                        />
+                      </div>
+
+                      {/* Country Field */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="country" className="text-sm font-bold text-slate-700">Country</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <input 
+                          type="text" 
+                          name="country" 
+                          id="country" 
+                          value={formData.country} 
+                          onChange={handleInputChange} 
+                          placeholder="e.g., Netherlands, France, Japan"
+                          required 
+                          className={inputStyles} 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Slug Field */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="slug" className="text-sm font-bold text-slate-700">URL Slug</label>
+                        <span className="text-red-500 text-sm">*</span>
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          name="slug" 
+                          id="slug" 
+                          value={formData.slug} 
+                          onChange={handleInputChange} 
+                          placeholder="auto-generated-from-name"
+                          required 
+                          className={`${inputStyles} pr-20`} 
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200">
+                          /{formData.slug || 'slug'}
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Name Field */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-500" />
-                    <label htmlFor="name" className="text-sm font-bold text-slate-700">Destination Name</label>
-                    <span className="text-red-500 text-sm">*</span>
-                  </div>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    id="name" 
-                    value={formData.name} 
-                    onChange={handleInputChange} 
-                    placeholder="e.g., Amsterdam, Paris, Tokyo"
-                    required 
-                    className={inputStyles} 
-                  />
-                  <p className="text-xs text-slate-500">Enter the full name of the destination</p>
-                </div>
+                    {/* Description Fields */}
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Info className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="description" className="text-sm font-bold text-slate-700">Short Description</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <textarea 
+                          name="description" 
+                          id="description" 
+                          value={formData.description} 
+                          onChange={handleInputChange} 
+                          placeholder="Brief description for cards and previews (max 500 characters)"
+                          required 
+                          maxLength={500}
+                          className={textareaStyles}
+                          rows={3}
+                        />
+                        <div className="text-xs text-slate-500 text-right">
+                          {formData.description.length}/500 characters
+                        </div>
+                      </div>
 
-                {/* Slug Field */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-indigo-500" />
-                    <label htmlFor="slug" className="text-sm font-bold text-slate-700">URL Slug</label>
-                    <span className="text-red-500 text-sm">*</span>
-                  </div>
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      name="slug" 
-                      id="slug" 
-                      value={formData.slug} 
-                      onChange={handleInputChange} 
-                      placeholder="auto-generated-from-name"
-                      required 
-                      className={`${inputStyles} pr-20`} 
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200">
-                      /{formData.slug || 'slug'}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Info className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="longDescription" className="text-sm font-bold text-slate-700">Long Description</label>
+                        </div>
+                        <textarea 
+                          name="longDescription" 
+                          id="longDescription" 
+                          value={formData.longDescription} 
+                          onChange={handleInputChange} 
+                          placeholder="Detailed description for destination pages (max 2000 characters)"
+                          maxLength={2000}
+                          className={textareaStyles}
+                          rows={5}
+                        />
+                        <div className="text-xs text-slate-500 text-right">
+                          {formData.longDescription.length}/2000 characters
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Toggles */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="featured"
+                          name="featured"
+                          checked={formData.featured}
+                          onChange={handleInputChange}
+                          className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          <label htmlFor="featured" className="text-sm font-medium text-slate-700">Featured Destination</label>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="isPublished"
+                          name="isPublished"
+                          checked={formData.isPublished}
+                          onChange={handleInputChange}
+                          className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          {formData.isPublished ? <Eye className="h-4 w-4 text-green-500" /> : <EyeOff className="h-4 w-4 text-red-500" />}
+                          <label htmlFor="isPublished" className="text-sm font-medium text-slate-700">Published</label>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500">Auto-generated URL-friendly version (lowercase, hyphens)</p>
-                </div>
+                )}
+
+                {/* Location Tab */}
+                {activeTab === 'location' && (
+                  <div className="space-y-6">
+                    {/* Coordinates */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="coordinates.lat" className="text-sm font-bold text-slate-700">Latitude</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <input 
+                          type="number" 
+                          name="coordinates.lat" 
+                          step="any"
+                          value={formData.coordinates.lat} 
+                          onChange={handleInputChange} 
+                          placeholder="e.g., 52.3676"
+                          required 
+                          className={inputStyles} 
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="coordinates.lng" className="text-sm font-bold text-slate-700">Longitude</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <input 
+                          type="number" 
+                          name="coordinates.lng" 
+                          step="any"
+                          value={formData.coordinates.lng} 
+                          onChange={handleInputChange} 
+                          placeholder="e.g., 4.9041"
+                          required 
+                          className={inputStyles} 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Currency and Timezone */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="currency" className="text-sm font-bold text-slate-700">Currency</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <input 
+                          type="text" 
+                          name="currency" 
+                          value={formData.currency} 
+                          onChange={handleInputChange} 
+                          placeholder="e.g., EUR, USD"
+                          maxLength={3}
+                          required 
+                          className={inputStyles} 
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="timezone" className="text-sm font-bold text-slate-700">Timezone</label>
+                          <span className="text-red-500 text-sm">*</span>
+                        </div>
+                        <input 
+                          type="text" 
+                          name="timezone" 
+                          value={formData.timezone} 
+                          onChange={handleInputChange} 
+                          placeholder="e.g., CET, America/New_York"
+                          required 
+                          className={inputStyles} 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Best Time to Visit */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="bestTimeToVisit" className="text-sm font-bold text-slate-700">Best Time to Visit</label>
+                        <span className="text-red-500 text-sm">*</span>
+                      </div>
+                      <input 
+                        type="text" 
+                        name="bestTimeToVisit" 
+                        value={formData.bestTimeToVisit} 
+                        onChange={handleInputChange} 
+                        placeholder="e.g., April to October, Year-round"
+                        required 
+                        className={inputStyles} 
+                      />
+                    </div>
+
+                    {/* Climate Section */}
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Thermometer className="h-4 w-4 text-indigo-500" />
+                          <label htmlFor="climate" className="text-sm font-bold text-slate-700">Climate Description</label>
+                        </div>
+                        <textarea 
+                          name="climate" 
+                          value={formData.climate} 
+                          onChange={handleInputChange} 
+                          placeholder="General climate description"
+                          className={textareaStyles}
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Average Temperature */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <label htmlFor="averageTemperature.summer" className="text-sm font-bold text-slate-700">Summer Temperature</label>
+                          <input 
+                            type="text" 
+                            name="averageTemperature.summer" 
+                            value={formData.averageTemperature.summer} 
+                            onChange={handleInputChange} 
+                            placeholder="e.g., 20-25°C"
+                            className={inputStyles} 
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <label htmlFor="averageTemperature.winter" className="text-sm font-bold text-slate-700">Winter Temperature</label>
+                          <input 
+                            type="text" 
+                            name="averageTemperature.winter" 
+                            value={formData.averageTemperature.winter} 
+                            onChange={handleInputChange} 
+                            placeholder="e.g., 0-5°C"
+                            className={inputStyles} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Content Tab */}
+                {activeTab === 'content' && (
+                  <div className="space-y-8">
+                    {/* Highlights Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4 text-indigo-500" />
+                          <label className="text-sm font-bold text-slate-700">Highlights</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addArrayItem('highlights')}
+                          className="flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.highlights.map((highlight, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={highlight}
+                              onChange={(e) => handleArrayChange('highlights', index, e.target.value)}
+                              placeholder="Enter a highlight"
+                              className={inputStyles}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeArrayItem('highlights', index)}
+                              className="flex items-center justify-center w-10 h-10 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.highlights.length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No highlights added yet. Click "Add" to create the first one.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Things to Do Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-indigo-500" />
+                          <label className="text-sm font-bold text-slate-700">Things to Do</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addArrayItem('thingsToDo')}
+                          className="flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.thingsToDo.map((thing, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={thing}
+                              onChange={(e) => handleArrayChange('thingsToDo', index, e.target.value)}
+                              placeholder="Enter an activity or attraction"
+                              className={inputStyles}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeArrayItem('thingsToDo', index)}
+                              className="flex items-center justify-center w-10 h-10 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.thingsToDo.length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No activities added yet. Click "Add" to create the first one.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Local Customs Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-indigo-500" />
+                          <label className="text-sm font-bold text-slate-700">Local Customs</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addArrayItem('localCustoms')}
+                          className="flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.localCustoms.map((custom, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={custom}
+                              onChange={(e) => handleArrayChange('localCustoms', index, e.target.value)}
+                              placeholder="Enter a local custom or cultural tip"
+                              className={inputStyles}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeArrayItem('localCustoms', index)}
+                              className="flex items-center justify-center w-10 h-10 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.localCustoms.length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No customs added yet. Click "Add" to create the first one.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Weather Warnings Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-indigo-500" />
+                          <label className="text-sm font-bold text-slate-700">Weather Warnings</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addArrayItem('weatherWarnings')}
+                          className="flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.weatherWarnings.map((warning, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={warning}
+                              onChange={(e) => handleArrayChange('weatherWarnings', index, e.target.value)}
+                              placeholder="Enter a weather warning or seasonal advice"
+                              className={inputStyles}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeArrayItem('weatherWarnings', index)}
+                              className="flex items-center justify-center w-10 h-10 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.weatherWarnings.length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No warnings added yet. Click "Add" to create the first one.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Travel Info Tab */}
+                {activeTab === 'travel' && (
+                  <div className="space-y-6">
+                    {/* Visa Requirements */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="visaRequirements" className="text-sm font-bold text-slate-700">Visa Requirements</label>
+                      </div>
+                      <textarea 
+                        name="visaRequirements" 
+                        value={formData.visaRequirements} 
+                        onChange={handleInputChange} 
+                        placeholder="Describe visa requirements for visitors"
+                        className={textareaStyles}
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Languages Spoken */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-indigo-500" />
+                          <label className="text-sm font-bold text-slate-700">Languages Spoken</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addArrayItem('languagesSpoken')}
+                          className="flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.languagesSpoken.map((language, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={language}
+                              onChange={(e) => handleArrayChange('languagesSpoken', index, e.target.value)}
+                              placeholder="Enter a language"
+                              className={inputStyles}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeArrayItem('languagesSpoken', index)}
+                              className="flex items-center justify-center w-10 h-10 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.languagesSpoken.length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No languages added yet. Click "Add" to create the first one.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Emergency Number */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="emergencyNumber" className="text-sm font-bold text-slate-700">Emergency Number</label>
+                      </div>
+                      <input 
+                        type="text" 
+                        name="emergencyNumber" 
+                        value={formData.emergencyNumber} 
+                        onChange={handleInputChange} 
+                        placeholder="e.g., 112, 911"
+                        className={inputStyles} 
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* SEO Tab */}
+                {activeTab === 'seo' && (
+                  <div className="space-y-6">
+                    {/* Meta Title */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="metaTitle" className="text-sm font-bold text-slate-700">Meta Title</label>
+                      </div>
+                      <input 
+                        type="text" 
+                        name="metaTitle" 
+                        value={formData.metaTitle} 
+                        onChange={handleInputChange} 
+                        placeholder="SEO title for search engines (max 60 characters)"
+                        maxLength={60}
+                        className={inputStyles} 
+                      />
+                      <div className="text-xs text-slate-500 text-right">
+                        {formData.metaTitle.length}/60 characters
+                      </div>
+                    </div>
+
+                    {/* Meta Description */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="metaDescription" className="text-sm font-bold text-slate-700">Meta Description</label>
+                      </div>
+                      <textarea 
+                        name="metaDescription" 
+                        value={formData.metaDescription} 
+                        onChange={handleInputChange} 
+                        placeholder="SEO description for search engines (max 160 characters)"
+                        maxLength={160}
+                        className={textareaStyles}
+                        rows={3}
+                      />
+                      <div className="text-xs text-slate-500 text-right">
+                        {formData.metaDescription.length}/160 characters
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-indigo-500" />
+                          <label className="text-sm font-bold text-slate-700">SEO Tags</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addArrayItem('tags')}
+                          className="flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.tags.map((tag, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={tag}
+                              onChange={(e) => handleArrayChange('tags', index, e.target.value)}
+                              placeholder="Enter a tag or keyword"
+                              className={inputStyles}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeArrayItem('tags', index)}
+                              className="flex items-center justify-center w-10 h-10 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.tags.length === 0 && (
+                          <p className="text-sm text-slate-500 italic">No tags added yet. Click "Add" to create the first one.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
 
@@ -463,7 +1292,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
               </div>
               
               {/* Validation Message */}
-              {(!formData.name || !formData.image) && (
+              {(!formData.name || !formData.image || !formData.country || !formData.description) && (
                 <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <p className="text-xs text-amber-700">
