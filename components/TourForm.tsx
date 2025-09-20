@@ -289,8 +289,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 description: tourToEdit.description || '',
                 longDescription: tourToEdit.longDescription || '',
                 duration: tourToEdit.duration || '',
-                discountPrice: tourToEdit.discountPrice || '',
-                originalPrice: tourToEdit.originalPrice || '',
+             discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
+originalPrice: tourToEdit.originalPrice || '',
                 destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
                 categories: tourToEdit.category?._id ? [tourToEdit.category._id.toString()] : (tourToEdit.categories || []),
                 image: tourToEdit.image || '', 
@@ -303,23 +303,37 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
                 itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
                 faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-             bookingOptions: tourToEdit.bookingOptions?.length > 0 
-                    ? tourToEdit.bookingOptions.map((option: any) => ({
-                        type: option.type || 'Per Person',
-                        label: option.label || '',
-                        price: option.price || 0,
-                        description: option.description || '',
-                        originalPrice: option.originalPrice || 0,
-                        duration: option.duration || '',
-                        languages: option.languages || [],
-                        highlights: option.highlights || [],
-                        groupSize: option.groupSize || '',
-                        difficulty: option.difficulty || '',
-                        badge: option.badge || '',
-                        discount: option.discount || 0,
-                        isRecommended: option.isRecommended || false
-                    }))
-                    : [],
+          bookingOptions: tourToEdit.bookingOptions?.length > 0 
+    ? tourToEdit.bookingOptions.map((option: any) => ({
+        type: option.type || 'Per Person',
+        label: option.label || '',
+        price: option.price || 0,
+        description: option.description || '',
+        originalPrice: option.originalPrice || undefined,
+        duration: option.duration || '',
+        languages: option.languages || [],
+        highlights: option.highlights || [],
+        groupSize: option.groupSize || '',
+        difficulty: option.difficulty || '',
+        badge: option.badge || '',
+        discount: option.discount || 0,
+        isRecommended: option.isRecommended || false
+    }))
+    : [{ 
+        type: 'Per Person', 
+        label: '', 
+        price: 0, 
+        description: '',
+        originalPrice: undefined,
+        duration: '',
+        languages: [],
+        highlights: [],
+        groupSize: '',
+        difficulty: '',
+        badge: '',
+        discount: 0,
+        isRecommended: false
+    }],
                 addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [],
                 isPublished: tourToEdit.isPublished || false,
                 difficulty: tourToEdit.difficulty || '',
@@ -485,6 +499,45 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         setExpandedOptionIndex(null);
     };
 
+
+    const saveIndividualBookingOption = async (index: number) => {
+    if (!tourToEdit?._id) {
+        toast.error('Please save the tour first before updating individual options');
+        return;
+    }
+
+    const option = formData.bookingOptions[index];
+    if (!option.label?.trim()) {
+        toast.error('Option name is required');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/tours/${tourToEdit._id}/booking-options`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                index, 
+                option: {
+                    ...option,
+                    price: parseFloat(option.price) || 0,
+                    originalPrice: option.originalPrice ? parseFloat(option.originalPrice) : undefined,
+                }
+            }),
+        });
+
+        if (response.ok) {
+            toast.success('Booking option saved successfully!');
+        } else {
+            const errorData = await response.json();
+            toast.error(`Failed to save option: ${errorData.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Save option error:', error);
+        toast.error('Failed to save booking option');
+    }
+};
+
     const handleAddOnChange = (index: number, field: string, value: string | number) => {
         const updatedAddOns = [...formData.addOns];
         updatedAddOns[index] = { ...updatedAddOns[index], [field]: value };
@@ -585,8 +638,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 slug: cleanedData.slug.trim(),
                 description: cleanedData.description.trim(),
                 duration: cleanedData.duration.trim(),
-                price: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
-                discountPrice: parseFloat(cleanedData.discountPrice) || 0,
+             price: parseFloat(cleanedData.discountPrice) || 0,
+discountPrice: parseFloat(cleanedData.discountPrice) || 0,
                 longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
                 originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
                 destination: cleanedData.destination,
@@ -1452,17 +1505,16 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
 
                                             {/* Option Description */}
                                             <div className="mt-6 space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">
-                                                    Description *
-                                                </label>
-                                                <textarea
-                                                    value={option.description || ''}
-                                                    onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
-                                                    rows={3}
-                                                    className={`${inputBase} resize-none`}
-                                                    placeholder="Describe what's included in this option and what makes it special..."
-                                                    required
-                                                />
+                                              <label className="block text-sm font-medium text-slate-700">
+    Description (Optional)
+</label>
+<textarea
+    value={option.description || ''}
+    onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
+    rows={3}
+    className={`${inputBase} resize-none`}
+    placeholder="Describe what's included in this option and what makes it special..."
+/>
                                                 <SmallHint>Explain what makes this option unique or different</SmallHint>
                                             </div>
 
@@ -1497,19 +1549,27 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                                         </div>
                                     </div>
                                     
-                                    {/* Remove button moved to a more logical location */}
-                                    <div className={`p-4 border-t border-slate-200 text-right ${expandedOptionIndex !== index ? 'hidden' : ''}`}>
-                                        <button
-                                            type="button"
-                                            disabled={formData.bookingOptions.length <= 1}
-                                            onClick={() => removeBookingOption(index)}
-                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                            title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
-                                        >
-                                            <XCircle className="h-5 w-5" />
-                                            <span>Remove Option</span>
-                                        </button>
-                                    </div>
+                                 <div className={`p-4 border-t border-slate-200 flex items-center justify-between ${expandedOptionIndex !== index ? 'hidden' : ''}`}>
+    <button
+        type="button"
+        onClick={() => saveIndividualBookingOption(index)}
+        className="inline-flex items-center gap-2 text-indigo-600 font-medium px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
+    >
+        <Check className="h-5 w-5" />
+        <span>Save Option</span>
+    </button>
+    
+    <button
+        type="button"
+        disabled={formData.bookingOptions.length <= 1}
+        onClick={() => removeBookingOption(index)}
+        className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
+    >
+        <XCircle className="h-5 w-5" />
+        <span>Remove Option</span>
+    </button>
+</div>
                                 </div>
                             ))}
                         </div>
