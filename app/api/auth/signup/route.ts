@@ -1,8 +1,10 @@
+// app/api/auth/signup/route.ts (Updated)
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { signToken } from '@/lib/jwt';
 import bcrypt from 'bcryptjs';
+import { EmailService } from '@/lib/email/emailService'; // 🆕 Add this import
 
 export async function POST(request: NextRequest) {
   await dbConnect();
@@ -10,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const { firstName, lastName, email, password } = await request.json();
 
-    // --- Validation ---
+    // Validation (keep existing)
     if (!firstName || !lastName || !email || !password) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
     }
@@ -18,7 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
     }
 
-    // --- Check if User Exists in Local DB ---
+    // Check if user exists (keep existing)
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
@@ -27,11 +29,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // --- Hash Password ---
+    // Hash password and create user (keep existing)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // --- Create New User in DB ---
     const newUser = await User.create({
       firstName,
       lastName,
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
     });
 
-    // --- Prepare User Data for Token and Response (excluding password) ---
+    // Prepare user data (keep existing)
     const userPayload = {
       id: newUser._id.toString(),
       _id: newUser._id.toString(),
@@ -49,16 +50,48 @@ export async function POST(request: NextRequest) {
       name: `${newUser.firstName} ${newUser.lastName}`,
     };
 
-    // --- Generate JWT ---
+    // Generate JWT (keep existing)
     const token = await signToken({
-      sub: newUser._id.toString(), // Convert ObjectId to string
+      sub: newUser._id.toString(),
       email: newUser.email,
       given_name: newUser.firstName,
       family_name: newUser.lastName,
       iat: Math.floor(Date.now() / 1000),
     });
 
-    // --- Success Response ---
+    // 🆕 Send Welcome Email
+    try {
+      await EmailService.sendWelcomeEmail({
+        customerName: `${firstName} ${lastName}`,
+        customerEmail: email,
+        dashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
+        recommendedTours: [
+          {
+            title: "Pyramids of Giza Day Tour",
+            image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/pyramids.jpg`,
+            price: "$49",
+            link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/pyramids-giza`
+          },
+          {
+            title: "Luxor Temple & Valley of Kings",
+            image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/luxor.jpg`,
+            price: "$89",
+            link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/luxor-temples`
+          },
+          {
+            title: "Nile River Dinner Cruise",
+            image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/nile-cruise.jpg`,
+            price: "$65",
+            link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/nile-dinner-cruise`
+          }
+        ]
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail signup if email fails
+    }
+
+    // Success response (keep existing)
     return NextResponse.json({
       success: true,
       message: 'Account created successfully!',

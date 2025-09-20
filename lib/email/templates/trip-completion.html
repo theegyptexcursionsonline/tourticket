@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Completion</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 30px 20px; text-align: center; }
+        .logo { max-width: 120px; height: auto; margin-bottom: 15px; }
+        .header h1 { font-size: 28px; margin: 0; font-weight: 700; }
+        .header p { font-size: 16px; margin: 10px 0 0; opacity: 0.9; }
+        .content { padding: 40px 30px; }
+        .thank-you-box { background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border: 2px solid #8b5cf6; border-radius: 12px; padding: 30px; text-align: center; margin: 25px 0; }
+        .thank-you-box h2 { color: #6b21a8; font-size: 24px; margin-bottom: 15px; }
+        .thank-you-box p { color: #7c2d92; font-size: 16px; }
+        .review-section { background: #fef7ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 25px; text-align: center; margin: 25px 0; }
+        .review-section h3 { color: #6b21a8; margin-bottom: 15px; }
+        .review-button { display: inline-block; background: #8b5cf6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px; }
+        .review-button:hover { background: #7c3aed; }
+        .recommendations { margin: 30px 0; }
+        .recommendations h3 { color: #2d3748; margin-bottom: 20px; text-align: center; }
+        .tour-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .tour-card { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s; }
+        .tour-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .tour-image { width: 100%; height: 150px; object-fit: cover; }
+        .tour-info { padding: 15px; }
+        .tour-title { font-weight: 600; color: #2d3748; margin-bottom: 8px; }
+        .tour-price { color: #dc2626; font-weight: 700; }
+        .footer { background: #2d3748; color: white; padding: 30px 20px; text-align: center; }
+        .footer-logo { max-width: 80px; height: auto; margin-bottom: 15px; opacity: 0.8; }
+        @media (max-width: 600px) {
+            .content { padding: 25px 20px; }
+            .tour-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="{{baseUrl}}/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+            <h1>🌟 Thank You!</h1>
+            <p>Hope you had an amazing Egyptian adventure</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="thank-you-box">
+                <h2>🎉 Trip Complete!</h2>
+                <p>We hope you had an incredible time exploring <strong>{{tourTitle}}</strong> on {{bookingDate}}.</p>
+            </div>
+
+            <p>Dear {{customerName}},</p>
+
+            <p>Thank you for choosing Egypt Excursions Online for your Egyptian adventure! We hope you created wonderful memories and experienced the magic of our beautiful country.</p>
+
+            <!-- Review Request -->
+            <div class="review-section">
+                <h3>📝 Share Your Experience</h3>
+                <p>Your feedback helps us improve and helps other travelers discover amazing tours!</p>
+                <a href="{{reviewLink}}" class="review-button">⭐ Write a Review</a>
+                {{#if photoSharingLink}}
+                <a href="{{photoSharingLink}}" class="review-button">📸 Share Photos</a>
+                {{/if}}
+            </div>
+
+            <!-- Recommendations -->
+            {{#if recommendedTours}}
+            <div class="recommendations">
+                <h3>🗺️ Your Next Egyptian Adventure Awaits</h3>
+                <div class="tour-grid">
+                    {{#each recommendedTours}}
+                    <a href="{{link}}" class="tour-card">
+                        <img src="{{image}}" alt="{{title}}" class="tour-image">
+                        <div class="tour-info">
+                            <div class="tour-title">{{title}}</div>
+                            <div class="tour-price">From {{price}}</div>
+                        </div>
+                    </a>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
+
+            <p>We would love to welcome you back for another Egyptian adventure soon. There's always more to discover in the land of the pharaohs!</p>
+
+            <p style="margin-top: 30px;">
+                With warm regards,<br>
+                <strong>The Egypt Excursions Online Family</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <img src="{{baseUrl}}/EEO-logo.png" alt="EEO" class="footer-logo">
+            <p><strong>Egypt Excursions Online</strong></p>
+            <p>📧 reviews@egyptexcursions.com | 📞 +20 123 456 7890</p>
+            <p>Follow us: Facebook | Instagram | TripAdvisor</p>
+        </div>
+    </div>
+</body>
+</html>

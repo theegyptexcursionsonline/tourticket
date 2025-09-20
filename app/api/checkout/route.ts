@@ -1,10 +1,10 @@
-// app/api/checkout/route.ts
+// app/api/checkout/route.ts (Updated)
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
-import { sendBookingConfirmation, sendBookingNotificationToAdmin } from '@/lib/mailgun';
+import { EmailService } from '@/lib/email/emailService';
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       isGuest = false
     } = body;
 
-    // Validate required data
+    // Validation (keep existing)
     if (!customer || !cart || cart.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required booking information' },
@@ -29,7 +29,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate customer information
     if (!customer.firstName || !customer.lastName || !customer.email) {
       return NextResponse.json(
         { success: false, message: 'Customer information is incomplete' },
@@ -39,25 +38,43 @@ export async function POST(request: Request) {
 
     let user = null;
 
-    // Handle user creation for guest checkout or find existing user
+    // Handle user creation (keep existing logic)
     if (isGuest) {
-      // Check if user with this email already exists
       const existingUser = await User.findOne({ email: customer.email });
       
       if (existingUser) {
         user = existingUser;
       } else {
-        // Create a new user account for guest (they can claim it later)
         try {
           user = await User.create({
             firstName: customer.firstName,
             lastName: customer.lastName,
             email: customer.email,
-            password: 'guest-' + Math.random().toString(36).substring(2, 15), // Temporary password
+            password: 'guest-' + Math.random().toString(36).substring(2, 15),
+          });
+          
+          // 🆕 Send Welcome Email for New Guest Users
+          await EmailService.sendWelcomeEmail({
+            customerName: `${customer.firstName} ${customer.lastName}`,
+            customerEmail: customer.email,
+            dashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
+            recommendedTours: [
+              {
+                title: "Pyramids of Giza Tour",
+                image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/pyramids.jpg`,
+                price: "$49",
+                link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/pyramids-giza`
+              },
+              {
+                title: "Nile River Cruise",
+                image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/nile.jpg`,
+                price: "$89",
+                link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/nile-cruise`
+              }
+            ]
           });
         } catch (userError: any) {
           if (userError.code === 11000) {
-            // Email already exists, find the user
             user = await User.findOne({ email: customer.email });
           } else {
             throw userError;
@@ -65,7 +82,6 @@ export async function POST(request: Request) {
         }
       }
     } else if (userId) {
-      // User is authenticated
       user = await User.findById(userId);
       if (!user) {
         return NextResponse.json(
@@ -82,12 +98,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Mock payment processing (replace with real payment provider)
+    // Mock payment processing (keep existing)
     const mockPaymentProcessing = async () => {
-      // Simulate payment processing time
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate 95% success rate for demo purposes
       const isPaymentSuccessful = Math.random() > 0.05;
       
       if (!isPaymentSuccessful) {
@@ -105,25 +118,32 @@ export async function POST(request: Request) {
     // Process payment
     const paymentResult = await mockPaymentProcessing();
 
-    // Create bookings for each cart item
+    // 🆕 Send Payment Confirmation
+    await EmailService.sendPaymentConfirmation({
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      customerEmail: customer.email,
+      paymentId: paymentResult.paymentId,
+      paymentMethod: paymentMethod,
+      amount: `$${pricing.total.toFixed(2)}`,
+      currency: paymentResult.currency,
+      bookingId: `BOOKING-${Date.now()}`,
+      tourTitle: cart.length === 1 ? cart[0].title : `${cart.length} Tours`
+    });
+
+    // Create bookings (keep existing logic)
     const createdBookings = [];
     
     for (const cartItem of cart) {
       try {
-        // Verify tour exists
         const tour = await Tour.findById(cartItem._id || cartItem.id);
         if (!tour) {
           throw new Error(`Tour not found: ${cartItem.title}`);
         }
 
-        // Parse booking date and time
         const bookingDate = new Date(cartItem.selectedDate);
         const bookingTime = cartItem.selectedTime || '10:00';
-
-        // Calculate total guests
         const totalGuests = (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0);
 
-        // Create booking
         const booking = await Booking.create({
           tour: tour._id,
           user: user._id,
@@ -136,7 +156,6 @@ export async function POST(request: Request) {
           paymentMethod,
           specialRequests: customer.specialRequests,
           emergencyContact: customer.emergencyContact,
-          // Store additional cart item details
           adultGuests: cartItem.quantity || 1,
           childGuests: cartItem.childQuantity || 0,
           infantGuests: cartItem.infantQuantity || 0,
@@ -153,8 +172,10 @@ export async function POST(request: Request) {
     // Generate booking confirmation data
     const mainBooking = createdBookings[0];
     const mainTour = await Tour.findById(mainBooking.tour);
+    const bookingId = createdBookings.length === 1 ? mainBooking._id.toString() : `MULTI-${Date.now()}`;
     
-    const bookingConfirmationData = {
+    // 🆕 Send Enhanced Booking Confirmation
+    await EmailService.sendBookingConfirmation({
       customerName: `${customer.firstName} ${customer.lastName}`,
       customerEmail: customer.email,
       tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
@@ -167,36 +188,36 @@ export async function POST(request: Request) {
       bookingTime: mainBooking.time,
       participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
       totalPrice: `$${pricing.total.toFixed(2)}`,
-      bookingId: createdBookings.length === 1 ? mainBooking._id.toString() : `MULTI-${Date.now()}`,
+      bookingId: bookingId,
       specialRequests: customer.specialRequests,
-    };
+      meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
+      contactNumber: "+20 123 456 7890",
+      tourImage: mainTour?.image
+    });
 
-    // Send confirmation email to customer
-    try {
-      await sendBookingConfirmation(bookingConfirmationData);
-    } catch (emailError) {
-      console.error('Failed to send confirmation email:', emailError);
-      // Don't fail the booking if email fails
-    }
-
-    // Send notification to admin
-    try {
-      await sendBookingNotificationToAdmin(bookingConfirmationData);
-    } catch (emailError) {
-      console.error('Failed to send admin notification:', emailError);
-      // Don't fail the booking if admin notification fails
-    }
+    // 🆕 Send Admin Alert
+    await EmailService.sendAdminBookingAlert({
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      customerEmail: customer.email,
+      tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
+      bookingId: bookingId,
+      bookingDate: mainBooking.date.toLocaleDateString('en-US'),
+      totalPrice: `$${pricing.total.toFixed(2)}`,
+      paymentMethod: paymentMethod,
+      specialRequests: customer.specialRequests,
+      adminDashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/bookings/${bookingId}`
+    });
 
     // Return success response
     return NextResponse.json({
       success: true,
       message: 'Booking completed successfully!',
-      bookingId: bookingConfirmationData.bookingId,
+      bookingId: bookingId,
       bookings: createdBookings.map(booking => booking._id),
       paymentId: paymentResult.paymentId,
       customer: {
-        name: bookingConfirmationData.customerName,
-        email: bookingConfirmationData.customerEmail,
+        name: `${customer.firstName} ${customer.lastName}`,
+        email: customer.email,
       },
       ...(isGuest && { 
         guestAccount: true,
@@ -207,7 +228,6 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Checkout error:', error);
     
-    // Handle specific error types
     if (error.message.includes('Payment processing failed')) {
       return NextResponse.json(
         { success: false, message: error.message },
@@ -222,7 +242,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generic server error
     return NextResponse.json(
       { 
         success: false, 
@@ -233,6 +252,8 @@ export async function POST(request: Request) {
     );
   }
 }
+
+
 
 // GET method for retrieving checkout session (optional)
 export async function GET(request: Request) {

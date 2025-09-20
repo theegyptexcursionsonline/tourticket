@@ -1,7 +1,11 @@
-// lib/models/Booking.ts
+// lib/models/Booking.ts (Updated)
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IBooking extends Document {
+  // Add this new field
+  bookingReference: string;
+  
+  // Existing fields
   tour: mongoose.Schema.Types.ObjectId;
   user: mongoose.Schema.Types.ObjectId;
   date: Date;
@@ -13,17 +17,33 @@ export interface IBooking extends Document {
   paymentMethod?: string;
   specialRequests?: string;
   emergencyContact?: string;
-  // Additional guest breakdown
   adultGuests?: number;
   childGuests?: number;
   infantGuests?: number;
-  // Selected add-ons
   selectedAddOns?: { [key: string]: number };
   createdAt: Date;
   updatedAt: Date;
 }
 
+// Function to generate unique booking reference
+function generateBookingReference(): string {
+  const prefix = 'EEO';
+  const timestamp = Date.now().toString().slice(-8); // Last 8 digits of timestamp
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase(); // 4 random chars
+  return `${prefix}-${timestamp}-${random}`;
+}
+
 const BookingSchema: Schema<IBooking> = new Schema({
+  // Add the new booking reference field
+  bookingReference: {
+    type: String,
+    required: true,
+    unique: true,
+    default: generateBookingReference,
+    index: true
+  },
+  
+  // Existing fields (keep all as they are)
   tour: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
@@ -85,7 +105,6 @@ const BookingSchema: Schema<IBooking> = new Schema({
     type: String,
     maxlength: 200,
   },
-  // Guest breakdown
   adultGuests: {
     type: Number,
     min: 0,
@@ -101,7 +120,6 @@ const BookingSchema: Schema<IBooking> = new Schema({
     min: 0,
     default: 0,
   },
-  // Selected add-ons as key-value pairs (addOnId: quantity)
   selectedAddOns: {
     type: Map,
     of: Number,
@@ -109,12 +127,42 @@ const BookingSchema: Schema<IBooking> = new Schema({
   },
 }, { 
   timestamps: true,
-  // Enable virtuals when converting to JSON
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
 });
 
-// Virtual for guest breakdown text
+// Ensure booking reference is unique (pre-save hook)
+BookingSchema.pre('save', async function(next) {
+  if (this.isNew && !this.bookingReference) {
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (!isUnique && attempts < maxAttempts) {
+      this.bookingReference = generateBookingReference();
+      
+      try {
+        const existingBooking = await mongoose.model('Booking').findOne({ 
+          bookingReference: this.bookingReference 
+        });
+        
+        if (!existingBooking) {
+          isUnique = true;
+        }
+        attempts++;
+      } catch (error) {
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      return next(new Error('Could not generate unique booking reference'));
+    }
+  }
+  next();
+});
+
+// Virtual for guest breakdown text (keep existing)
 BookingSchema.virtual('guestBreakdown').get(function() {
   const parts = [];
   if (this.adultGuests > 0) parts.push(`${this.adultGuests} adult${this.adultGuests > 1 ? 's' : ''}`);
@@ -123,7 +171,7 @@ BookingSchema.virtual('guestBreakdown').get(function() {
   return parts.join(', ');
 });
 
-// Index for efficient queries
+// Indexes for efficient queries (keep existing)
 BookingSchema.index({ user: 1, createdAt: -1 });
 BookingSchema.index({ tour: 1, date: 1 });
 BookingSchema.index({ status: 1 });

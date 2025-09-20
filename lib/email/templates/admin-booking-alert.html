@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Booking Alert</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: white; padding: 30px 20px; text-align: center; }
+        .logo { max-width: 100px; height: auto; margin-bottom: 15px; }
+        .header h1 { font-size: 26px; margin: 0; font-weight: 700; }
+        .header p { font-size: 16px; margin: 10px 0 0; opacity: 0.9; }
+        .content { padding: 30px; }
+        .alert-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+        .alert-box h2 { color: #92400e; font-size: 20px; margin-bottom: 10px; }
+        .booking-details { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 20px 0; }
+        .detail-header { background: #e5e7eb; padding: 15px 20px; border-bottom: 1px solid #d1d5db; }
+        .detail-header h3 { color: #374151; margin: 0; font-size: 16px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #f3f4f6; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #4b5563; font-size: 14px; }
+        .detail-value { color: #1f2937; font-size: 14px; text-align: right; }
+        .amount-row { background: #f0fdf4; font-weight: 700; }
+        .cta-section { text-align: center; margin: 25px 0; }
+        .cta-button { display: inline-block; background: #374151; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; }
+        .cta-button:hover { background: #1f2937; }
+        .footer { background: #374151; color: white; padding: 20px; text-align: center; font-size: 13px; }
+        .footer-logo { max-width: 60px; height: auto; margin-bottom: 10px; opacity: 0.8; }
+        @media (max-width: 600px) {
+            .content { padding: 20px; }
+            .detail-row { flex-direction: column; align-items: flex-start; }
+            .detail-value { margin-top: 5px; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="{{baseUrl}}/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+            <h1>🎯 New Booking Alert</h1>
+            <p>Admin Notification System</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="alert-box">
+                <h2>📋 New Booking Received!</h2>
+                <p>A customer has just completed a booking on your platform.</p>
+            </div>
+
+            <!-- Booking Details -->
+            <div class="booking-details">
+                <div class="detail-header">
+                    <h3>Customer & Booking Information</h3>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Customer Name:</span>
+                    <span class="detail-value"><strong>{{customerName}}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">{{customerEmail}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Booking ID:</span>
+                    <span class="detail-value"><strong>{{bookingId}}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Tour:</span>
+                    <span class="detail-value">{{tourTitle}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date:</span>
+                    <span class="detail-value">{{bookingDate}}</span>
+                </div>
+                {{#if paymentMethod}}
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method:</span>
+                    <span class="detail-value">{{paymentMethod}}</span>
+                </div>
+                {{/if}}
+                <div class="detail-row amount-row">
+                    <span class="detail-label">Total Amount:</span>
+                    <span class="detail-value"><strong>{{totalPrice}}</strong></span>
+                </div>
+            </div>
+
+            {{#if specialRequests}}
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                <h4 style="color: #dc2626; margin-bottom: 8px; font-size: 14px;">⚠️ Special Requests:</h4>
+                <p style="color: #991b1b; font-size: 14px;">{{specialRequests}}</p>
+            </div>
+            {{/if}}
+
+            <!-- Admin Actions -->
+            <div class="cta-section">
+                {{#if adminDashboardLink}}
+                <a href="{{adminDashboardLink}}" class="cta-button">🔗 View in Admin Dashboard</a>
+                {{/if}}
+                <a href="mailto:{{customerEmail}}" class="cta-button">📧 Contact Customer</a>
+            </div>
+
+            <p style="font-size: 14px; color: #6b7280; text-align: center;">
+                <strong>Next Steps:</strong> Review the booking details, confirm tour availability, and contact the customer if needed.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <img src="{{baseUrl}}/EEO-logo.png" alt="EEO" class="footer-logo">
+            <p><strong>Egypt Excursions Online - Admin System</strong></p>
+            <p>This is an automated notification. Do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
