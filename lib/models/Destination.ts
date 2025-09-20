@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema, models } from 'mongoose';
 
+// Interface defining the Destination document structure
 export interface IDestination extends Document {
   // Basic Info
   name: string;
@@ -58,6 +59,7 @@ export interface IDestination extends Document {
   updatedAt: Date;
 }
 
+// Sub-schema for coordinates to ensure structure and validation
 const CoordinatesSchema = new Schema({
   lat: {
     type: Number,
@@ -73,6 +75,7 @@ const CoordinatesSchema = new Schema({
   }
 }, { _id: false });
 
+// Sub-schema for average temperature
 const AverageTemperatureSchema = new Schema({
   summer: {
     type: String,
@@ -84,6 +87,7 @@ const AverageTemperatureSchema = new Schema({
   }
 }, { _id: false });
 
+// Main Destination Schema
 const DestinationSchema: Schema<IDestination> = new Schema({
   // Basic Info
   name: {
@@ -117,21 +121,9 @@ const DestinationSchema: Schema<IDestination> = new Schema({
   image: {
     type: String,
     required: [true, 'Main image is required'],
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Image must be a valid URL with image extension'
-    }
   },
   images: [{
     type: String,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Each image must be a valid URL with image extension'
-    }
   }],
   
   // Descriptions
@@ -168,13 +160,6 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     type: String,
     required: [true, 'Timezone is required'],
     trim: true,
-    validate: {
-      validator: function(v: string) {
-        // Basic timezone validation
-        return /^[A-Z]{3,4}([+-]\d{1,2})?$/.test(v) || /^[A-Za-z]+\/[A-Za-z_]+$/.test(v);
-      },
-      message: 'Timezone must be a valid timezone (e.g., CET, America/New_York)'
-    }
   },
   bestTimeToVisit: {
     type: String,
@@ -184,153 +169,69 @@ const DestinationSchema: Schema<IDestination> = new Schema({
   },
   
   // Content Arrays
-  highlights: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(arr: string[]) {
-        return arr.every(item => item.trim().length > 0 && item.length <= 200);
-      },
-      message: 'Each highlight must be non-empty and not exceed 200 characters'
-    }
-  },
-  thingsToDo: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(arr: string[]) {
-        return arr.every(item => item.trim().length > 0 && item.length <= 300);
-      },
-      message: 'Each thing to do must be non-empty and not exceed 300 characters'
-    }
-  },
-  localCustoms: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(arr: string[]) {
-        return arr.every(item => item.trim().length > 0 && item.length <= 500);
-      },
-      message: 'Each custom must be non-empty and not exceed 500 characters'
-    }
-  },
+  highlights: { type: [String], default: [] },
+  thingsToDo: { type: [String], default: [] },
+  localCustoms: { type: [String], default: [] },
   
   // Travel Information
-  visaRequirements: {
-    type: String,
-    trim: true,
-    maxlength: [1000, 'Visa requirements cannot exceed 1000 characters'],
-  },
-  languagesSpoken: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(arr: string[]) {
-        return arr.every(lang => lang.trim().length > 0 && lang.length <= 50);
-      },
-      message: 'Each language must be non-empty and not exceed 50 characters'
-    }
-  },
-  emergencyNumber: {
-    type: String,
-    trim: true,
-    validate: {
-      validator: function(v: string) {
-        return !v || /^[\d\s\-\+\(\)]+$/.test(v);
-      },
-      message: 'Emergency number must contain only numbers, spaces, and phone characters'
-    }
-  },
+  visaRequirements: { type: String, trim: true, maxlength: 1000 },
+  languagesSpoken: { type: [String], default: [] },
+  emergencyNumber: { type: String, trim: true },
   
   // Climate & Weather
-  averageTemperature: {
-    type: AverageTemperatureSchema,
-  },
-  climate: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Climate description cannot exceed 500 characters'],
-  },
-  weatherWarnings: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(arr: string[]) {
-        return arr.every(warning => warning.trim().length > 0 && warning.length <= 300);
-      },
-      message: 'Each weather warning must be non-empty and not exceed 300 characters'
-    }
-  },
+  averageTemperature: { type: AverageTemperatureSchema },
+  climate: { type: String, trim: true, maxlength: 500 },
+  weatherWarnings: { type: [String], default: [] },
   
   // Status & Meta
-  featured: {
-    type: Boolean,
-    default: false,
-    index: true,
-  },
-  isPublished: {
-    type: Boolean,
-    default: true,
-    index: true,
-  },
-  tourCount: {
-    type: Number,
-    default: 0,
-    min: [0, 'Tour count cannot be negative'],
-    index: true,
-  },
+  featured: { type: Boolean, default: false, index: true },
+  isPublished: { type: Boolean, default: true, index: true },
+  tourCount: { type: Number, default: 0, min: 0, index: true },
   
   // SEO & Meta
-  metaTitle: {
-    type: String,
-    trim: true,
-    maxlength: [60, 'Meta title cannot exceed 60 characters'],
-  },
-  metaDescription: {
-    type: String,
-    trim: true,
-    maxlength: [160, 'Meta description cannot exceed 160 characters'],
-  },
-  tags: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(arr: string[]) {
-        return arr.every(tag => tag.trim().length > 0 && tag.length <= 50);
-      },
-      message: 'Each tag must be non-empty and not exceed 50 characters'
-    }
-  },
+  metaTitle: { type: String, trim: true, maxlength: 60 },
+  metaDescription: { type: String, trim: true, maxlength: 160 },
+  tags: { type: [String], default: [] },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
 });
 
-// Indexes for performance
+// --- INDEXES FOR PERFORMANCE ---
 DestinationSchema.index({ name: 'text', description: 'text', country: 'text' });
 DestinationSchema.index({ featured: 1, isPublished: 1 });
 DestinationSchema.index({ country: 1, featured: 1 });
 DestinationSchema.index({ tourCount: -1 });
+
+// --- VIRTUAL PROPERTIES ---
 
 // Virtual for full name with country
 DestinationSchema.virtual('fullName').get(function() {
   return `${this.name}, ${this.country}`;
 });
 
-// Virtual for coordinate string
+// Virtual for a safe coordinate string (prevents server crashes)
 DestinationSchema.virtual('coordinateString').get(function() {
-  return `${this.coordinates.lat}, ${this.coordinates.lng}`;
+  // Check if coordinates and its properties exist before creating the string
+  if (this.coordinates && typeof this.coordinates.lat === 'number' && typeof this.coordinates.lng === 'number') {
+    return `${this.coordinates.lat}, ${this.coordinates.lng}`;
+  }
+  // Return an empty string if data is missing to avoid errors
+  return '';
 });
 
-// Pre-save middleware to ensure slug is generated
+// --- MIDDLEWARE ---
+
+// Pre-save middleware to automatically generate a slug from the name
 DestinationSchema.pre('save', function(next) {
   if (this.isModified('name') && !this.isModified('slug')) {
     this.slug = this.name
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
+      .replace(/&/g, 'and') // Replace '&' with 'and'
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Remove consecutive hyphens
       .trim();
   }
   next();

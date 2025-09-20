@@ -2,13 +2,6 @@
 
 import mongoose from 'mongoose';
 
-// Import all your models here
-import './models/Tour';
-import './models/Destination';
-import './models/Category';
-import './models/user';
-import './models/Blog';
-
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -39,14 +32,37 @@ async function dbConnect() {
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+      console.log('Database connected successfully');
       return mongoose;
     });
   }
 
   try {
     cached.conn = await cached.promise;
+    
+    // Ensure models are loaded
+    if (!mongoose.models.Tour) {
+      require('./models/Tour');
+    }
+    if (!mongoose.models.Destination) {
+      require('./models/Destination');
+    }
+    if (!mongoose.models.Category) {
+      require('./models/Category');
+    }
+    if (!mongoose.models.User) {
+      require('./models/user');
+    }
+    if (!mongoose.models.Review) {
+      require('./models/Review');
+    }
+    if (!mongoose.models.Blog) {
+      require('./models/Blog');
+    }
+    
   } catch (e) {
     cached.promise = null;
+    console.error('Database connection error:', e);
     throw e;
   }
 
