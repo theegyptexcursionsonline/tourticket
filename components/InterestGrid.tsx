@@ -15,8 +15,7 @@ interface Interest {
 const InterestCard = ({ interest }: { interest: Interest }) => {
   return (
     <Link
-      href={`/search?query=${encodeURIComponent(interest.name)}`}
-      className="block text-left bg-white p-5 shadow-lg border-2 border-transparent hover:border-red-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ease-in-out rounded-lg group"
+href={`/search?q=${encodeURIComponent(interest.name)}`}      className="block text-left bg-white p-5 shadow-lg border-2 border-transparent hover:border-red-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ease-in-out rounded-lg group"
       aria-label={`Search for ${interest.products} tours related to ${interest.name}`}
     >
       <h4 className="font-extrabold text-slate-800 text-lg uppercase tracking-wide group-hover:text-red-600 transition-colors duration-300">

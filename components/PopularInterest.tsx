@@ -33,8 +33,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
 
   return (
     <Link
-      href={`/search?query=${encodeURIComponent(interest.name)}`}
-      className="relative block bg-slate-900 border-2 border-slate-800 transform transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-red-500 overflow-hidden group"
+href={`/search?q=${encodeURIComponent(interest.name)}`}      className="relative block bg-slate-900 border-2 border-slate-800 transform transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-red-500 overflow-hidden group"
     >
       <div
         className={`absolute -bottom-10 -right-10 w-40 h-40 bg-gradient-to-tr ${interest.color} rounded-full opacity-20 group-hover:scale-125 transition-transform duration-500`}
