@@ -646,102 +646,118 @@ const ThankYouPage = ({
   const { formatPrice } = useSettings();
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleDownloadReceipt = async () => {
-    if (isDownloading) return;
-    setIsDownloading(true);
+const handleDownloadReceipt = async () => {
+  if (isDownloading) return;
+  setIsDownloading(true);
 
-    try {
-      const orderId = lastOrderId ?? `ORD-${Date.now()}`;
+  try {
+    const orderId = lastOrderId ?? `ORD-${Date.now()}`;
 
-      const orderedItemsForPdf = orderedItems.map((it) => {
-        const qty = Number(it.quantity ?? 1);
-        const price = Number(it.price ?? 0);
-        const discountPrice = it.discountPrice != null ? Number(it.discountPrice) : undefined;
-        const finalPrice = it.finalPrice != null ? Number(it.finalPrice) : (discountPrice ?? price);
-        const totalPrice = Number((finalPrice * qty).toFixed(2));
-        return {
-          _id: it._id,
-          title: it.title,
-          image: it.image,
-          price,
-          discountPrice: discountPrice ?? 0,
-          finalPrice,
-          quantity: qty,
-          totalPrice,
-          details: it.details ?? '',
-          addOns: it.addOns ?? [],
-        };
-      });
+    // DON'T recalculate - use the exact pricing from the thank you page
+    const pricingForPdf = {
+      subtotal: pricing.subtotal,
+      serviceFee: pricing.serviceFee,
+      tax: pricing.tax,
+      discount: pricing.discount,
+      total: pricing.total,
+      currency: pricing.currency,
+      symbol: pricing.symbol,
+    };
 
-      const subtotal = Number(orderedItemsForPdf.reduce((s, it) => s + it.totalPrice, 0).toFixed(2));
-      const serviceFee = Number((subtotal * 0.03).toFixed(2));
-      const tax = Number((subtotal * 0.05).toFixed(2));
-      const discountAmount = Number((discount || 0).toFixed(2));
-      const total = Number((subtotal + serviceFee + tax - discountAmount).toFixed(2));
+    // DON'T recalculate item totals - use them as they are displayed
+    const orderedItemsForPdf = orderedItems.map((item) => {
+      // Calculate the same way as shown on thank you page
+      const getItemTotal = (item: CartItem) => {
+        const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
+        const adultPrice = basePrice * (item.quantity || 1);
+        const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+        let tourTotal = adultPrice + childPrice;
 
-      const pricingForPdf = {
-        subtotal,
-        serviceFee,
-        tax,
-        discount: discountAmount,
-        total,
-        currency: pricing?.currency ?? 'USD',
-        symbol: pricing?.symbol ?? '$',
+        let addOnsTotal = 0;
+        if (item.selectedAddOns && item.selectedAddOnDetails) {
+          Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+            const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+            if (addOnDetail && quantity > 0) {
+              const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+              const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+              addOnsTotal += addOnDetail.price * addOnQuantity;
+            }
+          });
+        }
+
+        return tourTotal + addOnsTotal;
       };
 
-      const customerForPdf = {
-        name: customer ? `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() : 'Guest',
-        email: customer?.email,
-        phone: customer?.phone,
+      return {
+        ...item,
+        // Keep the item total as calculated for display consistency
+        totalPrice: getItemTotal(item),
+        finalPrice: getItemTotal(item),
       };
+    });
 
-      const bookingForPdf = {
-        date: (customer as any)?.expiryDate ?? undefined,
-        guests: orderedItemsForPdf.reduce((s, it) => s + (it.quantity || 1), 0),
-        specialRequests: (customer as any)?.specialRequests ?? '',
-      };
+    const customerForPdf = {
+      name: customer ? `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() : 'Guest',
+      email: customer?.email,
+      phone: customer?.phone,
+    };
 
-      const qrData = `https://your-site.example.com/booking/${orderId}`;
+    const firstItem = orderedItems[0];
+    const bookingForPdf = {
+      date: firstItem?.selectedDate ? new Date(firstItem.selectedDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }) : undefined,
+      time: firstItem?.selectedTime,
+      guests: orderedItems.reduce((sum, item) => 
+        sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0), 0
+      ),
+      specialRequests: customer?.specialRequests ?? '',
+    };
 
-      const payload = {
-        orderId,
-        customer: customerForPdf,
-        orderedItems: orderedItemsForPdf,
-        pricing: pricingForPdf,
-        booking: bookingForPdf,
-        qrData,
-        notes: (customer as any)?.specialRequests || 'Receipt requested from Thank You page',
-      };
+    const qrData = `https://your-site.example.com/booking/${orderId}`;
 
-      const res = await fetch('/api/checkout/receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const payload = {
+      orderId,
+      customer: customerForPdf,
+      orderedItems: orderedItemsForPdf,
+      pricing: pricingForPdf, // Use exact pricing - no recalculation
+      booking: bookingForPdf,
+      qrData,
+      notes: customer?.specialRequests || 'Receipt requested from Thank You page',
+    };
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => '<no body>');
-        console.error('Failed to get receipt:', res.status, text);
-        alert('Failed to generate receipt. Please try again later.');
-        return;
-      }
+    const res = await fetch('/api/checkout/receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt-${orderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Download receipt error:', err);
-      alert('An error occurred while downloading the receipt.');
-    } finally {
-      setIsDownloading(false);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '<no body>');
+      console.error('Failed to get receipt:', res.status, text);
+      alert('Failed to generate receipt. Please try again later.');
+      return;
     }
-  };
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt-${orderId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Download receipt error:', err);
+    alert('An error occurred while downloading the receipt.');
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   return (
     <motion.div 
