@@ -1,3 +1,4 @@
+// app/api/admin/destinations/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
@@ -30,7 +31,25 @@ export async function PUT(
       }, { status: 404 });
     }
     
-    // Only update fields that are provided in the request
+    // Validate required fields - only name and description are required
+    const requiredFields = ['name', 'description'];
+    const missingFields = requiredFields.filter(field => {
+      // Check if field is being updated and is empty
+      if (data[field] !== undefined) {
+        return !data[field]?.trim?.();
+      }
+      // If field is not being updated, check existing value
+      return !existingDestination[field]?.trim?.();
+    });
+   
+    if (missingFields.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: `Missing required fields: ${missingFields.join(', ')}`
+      }, { status: 400 });
+    }
+    
+    // Prepare update data - only update fields that are provided
     const updateData: any = {};
     
     // Basic fields
@@ -44,28 +63,57 @@ export async function PUT(
     if (data.image !== undefined) updateData.image = data.image;
     if (data.images !== undefined) updateData.images = data.images;
     
-    // Location data
-    if (data.coordinates !== undefined) updateData.coordinates = data.coordinates;
+    // Location data - Handle coordinates specially
+    if (data.coordinates !== undefined) {
+      if (data.coordinates && typeof data.coordinates === 'object') {
+        const coords: any = {};
+        
+        // Only include lat if it's provided and not empty
+        if (data.coordinates.lat !== undefined && data.coordinates.lat !== '') {
+          coords.lat = parseFloat(data.coordinates.lat);
+        }
+        
+        // Only include lng if it's provided and not empty
+        if (data.coordinates.lng !== undefined && data.coordinates.lng !== '') {
+          coords.lng = parseFloat(data.coordinates.lng);
+        }
+        
+        // Only set coordinates if we have at least one valid coordinate
+        if (coords.lat !== undefined || coords.lng !== undefined) {
+          updateData.coordinates = coords;
+        } else {
+          // If both are empty, remove coordinates
+          updateData.coordinates = undefined;
+        }
+      } else {
+        updateData.coordinates = data.coordinates;
+      }
+    }
     
     // Practical information
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.timezone !== undefined) updateData.timezone = data.timezone;
     if (data.bestTimeToVisit !== undefined) updateData.bestTimeToVisit = data.bestTimeToVisit;
     
-    // Content arrays
-    if (data.highlights !== undefined) updateData.highlights = data.highlights;
-    if (data.thingsToDo !== undefined) updateData.thingsToDo = data.thingsToDo;
-    if (data.localCustoms !== undefined) updateData.localCustoms = data.localCustoms;
+    // Content arrays - Filter out empty items
+    const arrayFields = ['highlights', 'thingsToDo', 'localCustoms', 'languagesSpoken', 'weatherWarnings', 'tags'];
+    arrayFields.forEach(field => {
+      if (data[field] !== undefined) {
+        if (Array.isArray(data[field])) {
+          updateData[field] = data[field].filter((item: string) => item && item.trim());
+        } else {
+          updateData[field] = data[field];
+        }
+      }
+    });
     
     // Travel information
     if (data.visaRequirements !== undefined) updateData.visaRequirements = data.visaRequirements;
-    if (data.languagesSpoken !== undefined) updateData.languagesSpoken = data.languagesSpoken;
     if (data.emergencyNumber !== undefined) updateData.emergencyNumber = data.emergencyNumber;
     
     // Climate & weather
     if (data.averageTemperature !== undefined) updateData.averageTemperature = data.averageTemperature;
     if (data.climate !== undefined) updateData.climate = data.climate;
-    if (data.weatherWarnings !== undefined) updateData.weatherWarnings = data.weatherWarnings;
     
     // Status & meta
     if (data.featured !== undefined) updateData.featured = data.featured;
@@ -75,7 +123,6 @@ export async function PUT(
     // SEO & meta
     if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;
     if (data.metaDescription !== undefined) updateData.metaDescription = data.metaDescription;
-    if (data.tags !== undefined) updateData.tags = data.tags;
     
     // Auto-generate slug if name is updated but slug is not provided
     if (data.name && !data.slug) {
@@ -93,7 +140,6 @@ export async function PUT(
       { 
         new: true, 
         runValidators: true,
-        // This is key - it only validates modified fields
         context: 'query'
       }
     );

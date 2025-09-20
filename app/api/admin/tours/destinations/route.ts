@@ -1,84 +1,81 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/admin/destinations/route.ts
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
-import Tour from '@/lib/models/Tour';
+import { NextResponse } from 'next/server';
+import { MongoError } from 'mongodb';
 
 export async function GET() {
+  await dbConnect();
   try {
-    await dbConnect();
-    
-    // Get all destinations with tour counts
-    const destinations = await Destination.aggregate([
-      {
-        $lookup: {
-          from: 'tours',
-          localField: '_id',
-          foreignField: 'destination',
-          as: 'tours'
-        }
-      },
-      {
-        $addFields: {
-          tourCount: { $size: '$tours' }
-        }
-      },
-      {
-        $project: {
-          tours: 0 // Remove the tours array, we only want the count
-        }
-      },
-      {
-        $sort: { name: 1 }
-      }
-    ]);
-
+    const destinations = await Destination.find({}).sort({ name: 1 });
     return NextResponse.json({ success: true, data: destinations });
   } catch (error) {
-    console.error('Error fetching destinations:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to fetch destinations' 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  await dbConnect();
   try {
-    await dbConnect();
-    
-    const data = await request.json();
-    
-    // Create new destination
-    const destination = new Destination(data);
-    await destination.save();
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: destination,
-      message: 'Destination created successfully' 
+    const body = await request.json();
+   
+    // Only name and description are required
+    const requiredFields = ['name', 'description'];
+    const missingFields = requiredFields.filter(field => !body[field]?.trim?.());
+   
+    if (missingFields.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: `Missing required fields: ${missingFields.join(', ')}`
+      }, { status: 400 });
+    }
+   
+    // Auto-generate slug if not provided
+    if (!body.slug && body.name) {
+      body.slug = body.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+    }
+   
+    // Clean up coordinates if they're empty strings
+    if (body.coordinates) {
+      if (!body.coordinates.lat || body.coordinates.lat === '') {
+        delete body.coordinates.lat;
+      } else {
+        body.coordinates.lat = parseFloat(body.coordinates.lat);
+      }
+      
+      if (!body.coordinates.lng || body.coordinates.lng === '') {
+        delete body.coordinates.lng;
+      } else {
+        body.coordinates.lng = parseFloat(body.coordinates.lng);
+      }
+      
+      // Remove coordinates object if both lat and lng are missing
+      if (!body.coordinates.lat && !body.coordinates.lng) {
+        delete body.coordinates;
+      }
+    }
+   
+    // Filter out empty array items and empty strings
+    const arrayFields = ['highlights', 'thingsToDo', 'localCustoms', 'languagesSpoken', 'weatherWarnings', 'tags'];
+    arrayFields.forEach(field => {
+      if (body[field]) {
+        body[field] = body[field].filter((item: string) => item && item.trim());
+      }
     });
-  } catch (error: any) {
-    console.error('Error creating destination:', error);
-    
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue)[0];
-      return NextResponse.json({ 
-        success: false, 
-        error: `${field} already exists` 
-      }, { status: 400 });
+   
+    const destination = await Destination.create(body);
+    return NextResponse.json({ success: true, data: destination }, { status: 201 });
+   
+  } catch (error) {
+    if ((error as MongoError).code === 11000) {
+      const field = Object.keys((error as any).keyValue)[0];
+      return NextResponse.json({ success: false, error: `Destination with this ${field} already exists.` }, { status: 409 });
     }
-    
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((e: any) => e.message);
-      return NextResponse.json({ 
-        success: false, 
-        error: messages.join(', ') 
-      }, { status: 400 });
-    }
-    
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to create destination' 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });
   }
 }

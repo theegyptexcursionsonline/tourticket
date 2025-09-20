@@ -1,13 +1,14 @@
+// lib/models/Destination.ts
 import mongoose, { Document, Schema, models } from 'mongoose';
 
 export interface IDestination extends Document {
   // Basic Info
   name: string;
   slug: string;
-  country: string;
+  country?: string;
   
   // Media
-  image: string;
+  image?: string;
   images?: string[];
   
   // Descriptions
@@ -61,13 +62,11 @@ export interface IDestination extends Document {
 const CoordinatesSchema = new Schema({
   lat: {
     type: Number,
-    min: [-90, 'Latitude must be between -90 and 90'],
-    max: [90, 'Latitude must be between -90 and 90'],
+    required: false,
   },
   lng: {
     type: Number,
-    min: [-180, 'Longitude must be between -180 and 180'],
-    max: [180, 'Longitude must be between -180 and 180'],
+    required: false,
   }
 }, { _id: false });
 
@@ -83,7 +82,7 @@ const AverageTemperatureSchema = new Schema({
 }, { _id: false });
 
 const DestinationSchema: Schema<IDestination> = new Schema({
-  // Basic Info - Only name, country, description, and image are truly required
+  // Basic Info - Only name and description are required
   name: {
     type: String,
     required: [true, 'Destination name is required'],
@@ -104,7 +103,7 @@ const DestinationSchema: Schema<IDestination> = new Schema({
   },
   country: {
     type: String,
-    required: [true, 'Country is required'],
+    required: false,
     trim: true,
     minlength: [2, 'Country must be at least 2 characters'],
     maxlength: [100, 'Country cannot exceed 100 characters'],
@@ -114,10 +113,10 @@ const DestinationSchema: Schema<IDestination> = new Schema({
   // Media
   image: {
     type: String,
-    required: [true, 'Main image is required'],
+    required: false,
     validate: {
       validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
+        return !v || /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
       },
       message: 'Image must be a valid URL with image extension'
     }
@@ -132,12 +131,10 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     }
   }],
   
-  // Descriptions
   description: {
     type: String,
     required: [true, 'Description is required'],
     trim: true,
-    minlength: [10, 'Description must be at least 10 characters'],
     maxlength: [500, 'Description cannot exceed 500 characters'],
   },
   longDescription: {
@@ -146,12 +143,12 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     maxlength: [2000, 'Long description cannot exceed 2000 characters'],
   },
   
-coordinates: {
-  type: CoordinatesSchema,
-  required: false,
-},
+  coordinates: {
+    type: CoordinatesSchema,
+    required: false,
+  },
   
-  // Practical Information - Made optional with defaults
+  // Practical Information - All optional
   currency: {
     type: String,
     uppercase: true,
@@ -159,18 +156,15 @@ coordinates: {
     minlength: [3, 'Currency code must be 3 characters'],
     maxlength: [3, 'Currency code must be 3 characters'],
     match: [/^[A-Z]{3}$/, 'Currency must be a valid 3-letter code (e.g., USD, EUR)'],
-    default: 'USD', // Default value
   },
   timezone: {
     type: String,
     trim: true,
-    default: 'UTC', // Default value
   },
   bestTimeToVisit: {
     type: String,
     trim: true,
     maxlength: [200, 'Best time to visit cannot exceed 200 characters'],
-    default: 'Year-round', // Default value
   },
   
   // Content Arrays
@@ -305,18 +299,18 @@ DestinationSchema.index({ tourCount: -1 });
 
 // Virtual for full name with country
 DestinationSchema.virtual('fullName').get(function() {
-  return `${this.name}, ${this.country}`;
+  return this.country ? `${this.name}, ${this.country}` : this.name;
 });
 
 // Virtual for coordinate string
 DestinationSchema.virtual('coordinateString').get(function() {
-  if (this.coordinates) {
+  if (this.coordinates && this.coordinates.lat && this.coordinates.lng) {
     return `${this.coordinates.lat}, ${this.coordinates.lng}`;
   }
   return 'Not specified';
 });
 
-// Pre-save middleware to ensure slug is generated and set defaults
+// Pre-save middleware to ensure slug is generated
 DestinationSchema.pre('save', function(next) {
   // Auto-generate slug from name if not provided
   if (this.isModified('name') && !this.isModified('slug')) {
@@ -326,11 +320,6 @@ DestinationSchema.pre('save', function(next) {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
-  }
-  
-  // Set default coordinates if not provided
-  if (!this.coordinates) {
-    this.coordinates = { lat: 0, lng: 0 };
   }
   
   next();

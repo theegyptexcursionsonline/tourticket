@@ -141,11 +141,10 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   };
 
   const openPanelForEdit = (dest: IDestination) => {
-     // Add this safety check at the very beginning
-  if (!dest) {
-    console.error('Destination object is undefined');
-    return;
-  }
+    if (!dest) {
+      console.error('Destination object is undefined');
+      return;
+    }
     setEditingDestination(dest);
     setFormData({
       name: dest.name || '',
@@ -155,10 +154,10 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       images: dest.images || [],
       description: dest.description || '',
       longDescription: dest.longDescription || '',
-     coordinates: {
-  lat: (dest.coordinates && typeof dest.coordinates.lat === 'number') ? dest.coordinates.lat.toString() : '',
-  lng: (dest.coordinates && typeof dest.coordinates.lng === 'number') ? dest.coordinates.lng.toString() : ''
-},
+      coordinates: {
+        lat: (dest.coordinates && typeof dest.coordinates.lat === 'number') ? dest.coordinates.lat.toString() : '',
+        lng: (dest.coordinates && typeof dest.coordinates.lng === 'number') ? dest.coordinates.lng.toString() : ''
+      },
       currency: dest.currency || '',
       timezone: dest.timezone || '',
       bestTimeToVisit: dest.bestTimeToVisit || '',
@@ -257,13 +256,9 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const validateForm = () => {
     const errors: string[] = [];
     
+    // Only name and description are required
     if (!formData.name.trim()) errors.push('Name is required');
-    if (!formData.country.trim()) errors.push('Country is required');
     if (!formData.description.trim()) errors.push('Description is required');
-    if (!formData.image.trim()) errors.push('Main image is required');
-    if (!formData.currency.trim()) errors.push('Currency is required');
-    if (!formData.timezone.trim()) errors.push('Timezone is required');
-    if (!formData.bestTimeToVisit.trim()) errors.push('Best time to visit is required');
     
     return errors;
   };
@@ -282,10 +277,13 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     // Prepare data for submission
     const submitData = {
       ...formData,
-      coordinates: {
-        lat: parseFloat(formData.coordinates.lat),
-        lng: parseFloat(formData.coordinates.lng)
-      },
+      // Only include coordinates if both lat and lng are provided
+      ...(formData.coordinates.lat && formData.coordinates.lng ? {
+        coordinates: {
+          lat: parseFloat(formData.coordinates.lat),
+          lng: parseFloat(formData.coordinates.lng)
+        }
+      } : {}),
       highlights: formData.highlights.filter(h => h.trim()),
       thingsToDo: formData.thingsToDo.filter(t => t.trim()),
       localCustoms: formData.localCustoms.filter(c => c.trim()),
@@ -404,11 +402,17 @@ export default function DestinationManager({ initialDestinations }: { initialDes
           >
             {/* Image Container */}
             <div className="relative h-56 overflow-hidden">
-              <img 
-                src={dest.image} 
-                alt={dest.name} 
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
-              />
+              {dest.image ? (
+                <img 
+                  src={dest.image} 
+                  alt={dest.name} 
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-slate-400" />
+                </div>
+              )}
               
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
@@ -455,14 +459,16 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                   <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-indigo-600 transition-colors duration-200">
                     {dest.name}
                   </h3>
-                  <p className="text-slate-500 text-sm mb-2">{dest.country}</p>
+                  {dest.country && (
+                    <p className="text-slate-500 text-sm mb-2">{dest.country}</p>
+                  )}
                   <div className="flex items-center gap-2 mb-2">
                     <Globe className="h-4 w-4 text-slate-400" />
                     <p className="text-slate-500 text-sm font-mono truncate">/{dest.slug}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-slate-400" />
-                    <p className="text-slate-500 text-sm">{dest.tourCount} tours</p>
+                    <p className="text-slate-500 text-sm">{dest.tourCount || 0} tours</p>
                   </div>
                 </div>
                 
@@ -580,7 +586,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <Camera className="h-5 w-5 text-indigo-500" />
                         <label className="text-sm font-bold text-slate-700">Destination Image</label>
-                        <span className="text-red-500 text-sm">*</span>
+                        <span className="text-slate-400 text-sm">(optional)</span>
                       </div>
                       
                       <div className="relative">
@@ -666,7 +672,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="country" className="text-sm font-bold text-slate-700">Country</label>
-                          <span className="text-red-500 text-sm">*</span>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <input 
                           type="text" 
@@ -675,7 +681,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                           value={formData.country} 
                           onChange={handleInputChange} 
                           placeholder="e.g., Netherlands, France, Japan"
-                          required 
                           className={inputStyles} 
                         />
                       </div>
@@ -686,7 +691,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="slug" className="text-sm font-bold text-slate-700">URL Slug</label>
-                        <span className="text-red-500 text-sm">*</span>
+                        <span className="text-slate-400 text-sm">(auto-generated)</span>
                       </div>
                       <div className="relative">
                         <input 
@@ -696,7 +701,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                           value={formData.slug} 
                           onChange={handleInputChange} 
                           placeholder="auto-generated-from-name"
-                          required 
                           className={`${inputStyles} pr-20`} 
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200">
@@ -733,6 +737,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Info className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="longDescription" className="text-sm font-bold text-slate-700">Long Description</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <textarea 
                           name="longDescription" 
@@ -794,6 +799,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="coordinates.lat" className="text-sm font-bold text-slate-700">Latitude</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <input 
                           type="number" 
@@ -802,7 +808,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                           value={formData.coordinates.lat} 
                           onChange={handleInputChange} 
                           placeholder="e.g., 52.3676"
-                          required 
                           className={inputStyles} 
                         />
                       </div>
@@ -811,7 +816,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="coordinates.lng" className="text-sm font-bold text-slate-700">Longitude</label>
-                          <span className="text-red-500 text-sm">*</span>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <input 
                           type="number" 
@@ -820,7 +825,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                           value={formData.coordinates.lng} 
                           onChange={handleInputChange} 
                           placeholder="e.g., 4.9041"
-                          required 
                           className={inputStyles} 
                         />
                       </div>
@@ -832,7 +836,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="currency" className="text-sm font-bold text-slate-700">Currency</label>
-                          <span className="text-red-500 text-sm">*</span>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <input 
                           type="text" 
@@ -841,7 +845,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                           onChange={handleInputChange} 
                           placeholder="e.g., EUR, USD"
                           maxLength={3}
-                          required 
                           className={inputStyles} 
                         />
                       </div>
@@ -850,7 +853,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="timezone" className="text-sm font-bold text-slate-700">Timezone</label>
-                          <span className="text-red-500 text-sm">*</span>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <input 
                           type="text" 
@@ -858,7 +861,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                           value={formData.timezone} 
                           onChange={handleInputChange} 
                           placeholder="e.g., CET, America/New_York"
-                          required 
                           className={inputStyles} 
                         />
                       </div>
@@ -869,7 +871,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="bestTimeToVisit" className="text-sm font-bold text-slate-700">Best Time to Visit</label>
-                        <span className="text-red-500 text-sm">*</span>
+                        <span className="text-slate-400 text-sm">(optional)</span>
                       </div>
                       <input 
                         type="text" 
@@ -877,7 +879,6 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         value={formData.bestTimeToVisit} 
                         onChange={handleInputChange} 
                         placeholder="e.g., April to October, Year-round"
-                        required 
                         className={inputStyles} 
                       />
                     </div>
@@ -888,6 +889,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Thermometer className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="climate" className="text-sm font-bold text-slate-700">Climate Description</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <textarea 
                           name="climate" 
@@ -938,6 +940,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Star className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">Highlights</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <button
                           type="button"
@@ -979,6 +982,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">Things to Do</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <button
                           type="button"
@@ -1020,6 +1024,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">Local Customs</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <button
                           type="button"
@@ -1061,6 +1066,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">Weather Warnings</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <button
                           type="button"
@@ -1106,6 +1112,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="visaRequirements" className="text-sm font-bold text-slate-700">Visa Requirements</label>
+                        <span className="text-slate-400 text-sm">(optional)</span>
                       </div>
                       <textarea 
                         name="visaRequirements" 
@@ -1123,6 +1130,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">Languages Spoken</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <button
                           type="button"
@@ -1163,6 +1171,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="emergencyNumber" className="text-sm font-bold text-slate-700">Emergency Number</label>
+                        <span className="text-slate-400 text-sm">(optional)</span>
                       </div>
                       <input 
                         type="text" 
@@ -1184,6 +1193,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <Eye className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="metaTitle" className="text-sm font-bold text-slate-700">Meta Title</label>
+                        <span className="text-slate-400 text-sm">(optional)</span>
                       </div>
                       <input 
                         type="text" 
@@ -1204,6 +1214,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                       <div className="flex items-center gap-2">
                         <Eye className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="metaDescription" className="text-sm font-bold text-slate-700">Meta Description</label>
+                        <span className="text-slate-400 text-sm">(optional)</span>
                       </div>
                       <textarea 
                         name="metaDescription" 
@@ -1225,6 +1236,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">SEO Tags</label>
+                          <span className="text-slate-400 text-sm">(optional)</span>
                         </div>
                         <button
                           type="button"
@@ -1277,7 +1289,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
                 <button 
                   type="submit" 
                   onClick={handleSubmit} 
-                  disabled={isSubmitting || isUploading || !formData.name || !formData.image} 
+                  disabled={isSubmitting || isUploading || !formData.name || !formData.description} 
                   className="flex-1 inline-flex justify-center items-center gap-3 px-6 py-3 text-white font-bold bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 disabled:transform-none"
                 >
                   {isSubmitting ? (
@@ -1295,11 +1307,11 @@ export default function DestinationManager({ initialDestinations }: { initialDes
               </div>
               
               {/* Validation Message */}
-              {(!formData.name || !formData.image || !formData.country || !formData.description) && (
+              {(!formData.name || !formData.description) && (
                 <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <p className="text-xs text-amber-700">
-                    Please fill in all required fields and upload an image.
+                    Please fill in the required fields: name and description.
                   </p>
                 </div>
               )}
