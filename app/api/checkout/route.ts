@@ -1,4 +1,4 @@
-// app/api/checkout/route.ts (Updated)
+// app/api/checkout/route.ts (Updated with better error handling)
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
             password: 'guest-' + Math.random().toString(36).substring(2, 15),
           });
           
-          // 🆕 Send Welcome Email for New Guest Users
+          // Send Welcome Email for New Guest Users
           await EmailService.sendWelcomeEmail({
             customerName: `${customer.firstName} ${customer.lastName}`,
             customerEmail: customer.email,
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     // Process payment
     const paymentResult = await mockPaymentProcessing();
 
-    // 🆕 Send Payment Confirmation
+    // Send Payment Confirmation
     await EmailService.sendPaymentConfirmation({
       customerName: `${customer.firstName} ${customer.lastName}`,
       customerEmail: customer.email,
@@ -130,10 +130,11 @@ export async function POST(request: Request) {
       tourTitle: cart.length === 1 ? cart[0].title : `${cart.length} Tours`
     });
 
-    // Create bookings (keep existing logic)
+    // Create bookings with improved error handling
     const createdBookings = [];
     
-    for (const cartItem of cart) {
+    for (let i = 0; i < cart.length; i++) {
+      const cartItem = cart[i];
       try {
         const tour = await Tour.findById(cartItem._id || cartItem.id);
         if (!tour) {
@@ -144,7 +145,11 @@ export async function POST(request: Request) {
         const bookingTime = cartItem.selectedTime || '10:00';
         const totalGuests = (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0);
 
+        // Generate a unique booking reference before creating
+        const bookingReference = await Booking.generateUniqueReference();
+
         const booking = await Booking.create({
+          bookingReference, // Explicitly set the booking reference
           tour: tour._id,
           user: user._id,
           date: bookingDate,
@@ -163,18 +168,56 @@ export async function POST(request: Request) {
         });
 
         createdBookings.push(booking);
+        
+        // Add a small delay between bookings to avoid rapid succession issues
+        if (i < cart.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
       } catch (bookingError: any) {
         console.error('Error creating booking:', bookingError);
-        throw new Error(`Failed to create booking for ${cartItem.title}: ${bookingError.message}`);
+        
+        // If it's a duplicate key error, try once more with a different approach
+        if (bookingError.code === 11000 && bookingError.message.includes('bookingReference')) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            const fallbackReference = `EEO-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            
+            const booking = await Booking.create({
+              bookingReference: fallbackReference,
+              tour: (await Tour.findById(cartItem._id || cartItem.id))?._id,
+              user: user._id,
+              date: new Date(cartItem.selectedDate),
+              time: cartItem.selectedTime || '10:00',
+              guests: (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0),
+              totalPrice: cartItem.totalPrice || cartItem.discountPrice || cartItem.price || 0,
+              status: 'Confirmed',
+              paymentId: paymentResult.paymentId,
+              paymentMethod,
+              specialRequests: customer.specialRequests,
+              emergencyContact: customer.emergencyContact,
+              adultGuests: cartItem.quantity || 1,
+              childGuests: cartItem.childQuantity || 0,
+              infantGuests: cartItem.infantQuantity || 0,
+              selectedAddOns: cartItem.selectedAddOns || {},
+            });
+            
+            createdBookings.push(booking);
+          } catch (retryError: any) {
+            throw new Error(`Failed to create booking for ${cartItem.title} after retry: ${retryError.message}`);
+          }
+        } else {
+          throw new Error(`Failed to create booking for ${cartItem.title}: ${bookingError.message}`);
+        }
       }
     }
 
     // Generate booking confirmation data
     const mainBooking = createdBookings[0];
     const mainTour = await Tour.findById(mainBooking.tour);
-    const bookingId = createdBookings.length === 1 ? mainBooking._id.toString() : `MULTI-${Date.now()}`;
+    const bookingId = createdBookings.length === 1 ? mainBooking.bookingReference : `MULTI-${Date.now()}`;
     
-    // 🆕 Send Enhanced Booking Confirmation
+    // Send Enhanced Booking Confirmation
     await EmailService.sendBookingConfirmation({
       customerName: `${customer.firstName} ${customer.lastName}`,
       customerEmail: customer.email,
@@ -195,7 +238,7 @@ export async function POST(request: Request) {
       tourImage: mainTour?.image
     });
 
-    // 🆕 Send Admin Alert
+    // Send Admin Alert
     await EmailService.sendAdminBookingAlert({
       customerName: `${customer.firstName} ${customer.lastName}`,
       customerEmail: customer.email,
@@ -252,8 +295,6 @@ export async function POST(request: Request) {
     );
   }
 }
-
-
 
 // GET method for retrieving checkout session (optional)
 export async function GET(request: Request) {
