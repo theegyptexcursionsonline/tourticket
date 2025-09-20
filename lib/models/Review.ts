@@ -2,8 +2,8 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IReview extends Document {
-  tourId: mongoose.Schema.Types.ObjectId;
-  userId: mongoose.Schema.Types.ObjectId;
+  tour: mongoose.Schema.Types.ObjectId;  // Changed from tourId
+  user: mongoose.Schema.Types.ObjectId;  // Changed from userId
   userName: string;
   userEmail: string;
   rating: number;
@@ -17,17 +17,15 @@ export interface IReview extends Document {
 }
 
 const ReviewSchema: Schema<IReview> = new Schema({
-  tourId: {
+  tour: {  // Changed from tourId
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
     required: true,
-    index: true
   },
-  userId: {
+  user: {  // Changed from userId
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'User', 
     required: true,
-    index: true
   },
   userName: {
     type: String,
@@ -75,13 +73,13 @@ const ReviewSchema: Schema<IReview> = new Schema({
 });
 
 // Compound index to prevent duplicate reviews
-ReviewSchema.index({ tourId: 1, userId: 1 }, { unique: true });
+ReviewSchema.index({ tour: 1, user: 1 }, { unique: true });
 
 // Index for sorting by date
 ReviewSchema.index({ createdAt: -1 });
 
 // Index for verified reviews
-ReviewSchema.index({ tourId: 1, verified: 1 });
+ReviewSchema.index({ tour: 1, verified: 1 });
 
 const Review: Model<IReview> = mongoose.models.Review || mongoose.model<IReview>('Review', ReviewSchema);
 

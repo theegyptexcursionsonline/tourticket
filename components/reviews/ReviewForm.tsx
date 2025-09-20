@@ -1,9 +1,9 @@
 // components/reviews/ReviewForm.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Star, Loader2, User, AlertCircle } from 'lucide-react';
+import { Star, Loader2, User, AlertCircle, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -19,6 +19,39 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
   const [comment, setComment] = useState('');
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasExistingReview, setHasExistingReview] = useState<any>(null);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(true);
+
+  // Check if user has already reviewed this tour
+  useEffect(() => {
+    const checkExistingReview = async () => {
+      if (!isAuthenticated || !user || !token) {
+        setIsCheckingExisting(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/tours/${tourId}/reviews/check`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasReview) {
+            setHasExistingReview(data.review);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking existing review:', error);
+      } finally {
+        setIsCheckingExisting(false);
+      }
+    };
+
+    checkExistingReview();
+  }, [isAuthenticated, user, token, tourId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +72,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
       return;
     }
 
-    // Ensure there is a token before submitting
     if (!token) {
       toast.error('Authentication error. Please log in again.');
       return;
@@ -48,19 +80,11 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
     setIsSubmitting(true);
 
     try {
-      console.log('Submitting review:', {
-        tourId,
-        rating,
-        comment: comment.trim(),
-        title: title.trim() || 'Great experience!'
-      });
-
       const response = await fetch(`/api/tours/${tourId}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-        
         },
         body: JSON.stringify({ 
           rating, 
@@ -69,42 +93,46 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
         }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
       let data;
       try {
         const responseText = await response.text();
-        console.log('Raw response:', responseText);
-        
         if (!responseText) {
           throw new Error('Empty response from server');
         }
-        
         data = JSON.parse(responseText);
-        console.log('Parsed response data:', data);
       } catch (parseError) {
         console.error('Failed to parse response:', parseError);
         throw new Error('Server returned an invalid response. Please try again.');
       }
 
       if (!response.ok) {
-        const errorMessage = data?.error || `Server error (${response.status}: ${response.statusText})`;
-        console.error('API Error Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: data
-        });
-        throw new Error(errorMessage);
+        if (response.status === 409) {
+          // User already has a review - this shouldn't happen with our check, but just in case
+          setIsCheckingExisting(true);
+          // Re-check for existing review
+          const checkResponse = await fetch(`/api/tours/${tourId}/reviews/check`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            if (checkData.hasReview) {
+              setHasExistingReview(checkData.review);
+            }
+          }
+          setIsCheckingExisting(false);
+          throw new Error('You have already reviewed this tour. Please edit your existing review above.');
+        } else if (response.status === 401) {
+          throw new Error('Please log in to submit a review.');
+        } else if (response.status === 404) {
+          throw new Error('Tour not found.');
+        } else {
+          throw new Error(data?.error || `Server error (${response.status})`);
+        }
       }
 
-      // Success
-      console.log('Review submitted successfully:', data);
-      
       if (data.success) {
         toast.success(data.message || 'Thank you for your review!');
         
-        // Call the callback with the new review data
         if (data.data) {
           onReviewSubmitted(data.data);
         }
@@ -120,30 +148,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
 
     } catch (error: any) {
       console.error('Review submission error:', error);
-      
-      // Handle different types of errors with user-friendly messages
-      if (error.message.includes('Authentication') || error.message.includes('authentication')) {
-        toast.error('Please log in to submit a review.');
-      } else if (error.message.includes('already reviewed')) {
-        toast.error('You have already reviewed this tour.');
-      } else if (error.message.includes('Tour not found')) {
-        toast.error('This tour is no longer available.');
-      } else if (error.message.includes('Invalid tour ID')) {
-        toast.error('Invalid tour. Please refresh the page and try again.');
-      } else if (error.message.includes('Network') || error.name === 'TypeError') {
-        toast.error('Network error. Please check your connection and try again.');
-      } else if (error.message.includes('Empty response')) {
-        toast.error('Server communication error. Please try again.');
-      } else {
-        toast.error(error.message || 'An unexpected error occurred. Please try again.');
-      }
+      toast.error(error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // While the auth state is loading, show a loading placeholder
-  if (isLoading) {
+  // While checking for existing review or auth state
+  if (isLoading || isCheckingExisting) {
     return (
       <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100">
         <div className="animate-pulse">
@@ -164,7 +176,47 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
     );
   }
 
-  // If not authenticated after loading, prompt the user to log in
+  // If user already has a review, show a message pointing to the existing review
+  if (hasExistingReview) {
+    return (
+      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Edit2 className="w-8 h-8 text-blue-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">You've Already Reviewed This Tour</h3>
+          <p className="text-gray-600 mb-4">
+            You submitted a review on {new Date(hasExistingReview.createdAt).toLocaleDateString()}.
+          </p>
+          <div className="bg-white p-4 rounded-lg border border-blue-200 mb-4">
+            <div className="flex items-center gap-1 justify-center mb-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-5 w-5 ${
+                    star <= hasExistingReview.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                  }`}
+                />
+              ))}
+              <span className="ml-2 font-semibold text-gray-700">{hasExistingReview.rating}/5</span>
+            </div>
+            {hasExistingReview.title && (
+              <h4 className="font-semibold text-gray-800 mb-1">{hasExistingReview.title}</h4>
+            )}
+            <p className="text-sm text-gray-700 italic">"{hasExistingReview.comment}"</p>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-blue-600">
+            <Edit2 size={16} />
+            <p className="text-sm font-medium">
+              To edit or delete your review, use the edit button next to your review above.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show login prompt
   if (!isAuthenticated) {
     return (
       <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
@@ -195,7 +247,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
     );
   }
 
-  // Authenticated user review form
+  // Show the review form for new reviews
   return (
     <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-100">
       <div className="flex items-center gap-3 mb-6">
@@ -258,7 +310,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
           </div>
         </div>
 
-        {/* Title Section (Optional) */}
+        {/* Title Section */}
         <div>
           <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
             Review Title (Optional)
@@ -298,12 +350,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
             disabled={isSubmitting}
           />
           <div className="mt-1 flex justify-between items-center">
-            <p className="text-xs text-gray-500">
-              Minimum 10 characters
-            </p>
-            <p className="text-xs text-gray-500">
-              {comment.length}/1000 characters
-            </p>
+            <p className="text-xs text-gray-500">Minimum 10 characters</p>
+            <p className="text-xs text-gray-500">{comment.length}/1000 characters</p>
           </div>
         </div>
 

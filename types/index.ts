@@ -153,8 +153,8 @@ export interface Tour {
 
 export interface Review {
   _id: string;
-  tourId: string; // Changed from 'tour'
-  userId: string; // Changed from 'user'
+  tour: string; // Changed from tourId
+  user: string; // Changed from userId  
   userName: string;
   userAvatar?: string;
   rating: number;

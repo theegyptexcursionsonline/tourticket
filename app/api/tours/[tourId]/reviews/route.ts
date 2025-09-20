@@ -1,152 +1,221 @@
 // app/api/tours/[tourId]/reviews/route.ts
-import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
-import { jwtVerify, JWTPayload } from 'jose';
+import { NextResponse, NextRequest } from 'next/server';
+import { verifyToken } from '@/lib/jwt';
 import mongoose from 'mongoose';
 
-const getTokenFromRequest = (request: NextRequest): string | null => {
-  const auth = request.headers.get('authorization') || '';
-  if (auth.toLowerCase().startsWith('bearer ')) {
-    return auth.split(' ')[1];
-  }
-  try {
-    const cookieCandidates = [
-      'token', 'jwt', 'next-auth.session-token',
-      '__Secure-next-auth.session-token', 'session', 'sessionToken',
-    ];
-    for (const name of cookieCandidates) {
-      // @ts-ignore
-      const c1 = typeof request.cookies?.get === 'function' ? request.cookies.get(name) : undefined;
-      if (c1 && typeof c1.value === 'string') return c1.value;
-      // @ts-ignore
-      const c2 = request.cookies?.[name];
-      if (c2 && typeof c2 === 'string') return c2;
-    }
-  } catch (err) {
-    // Ignore cookie parsing differences
-  }
-  return null;
-};
-
-const verifyJwt = async (token: string) => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET not configured in environment');
-  }
-  const key = new TextEncoder().encode(secret);
-  const verified = await jwtVerify(token, key);
-  return verified.payload as JWTPayload;
-};
-
-// GET reviews for a tour
-export async function GET(request: NextRequest, { params }: { params: { tourId: string } }) {
-  await dbConnect();
-  try {
-    // Use the correct field name 'tour' instead of 'tourId'
-    const reviews = await Review.find({ tour: params.tourId, isApproved: true })
-      .populate({
-        path: 'user',
-        model: User,
-        select: 'firstName lastName name picture',
-      })
-      .sort({ createdAt: -1 });
-    return NextResponse.json(reviews);
-  } catch (error) {
-    console.error('Failed to fetch reviews:', error);
-    return NextResponse.json({ message: 'Failed to fetch reviews' }, { status: 500 });
-  }
+interface Params {
+  tourId: string;
 }
 
-// POST a new review for a tour
-export async function POST(request: NextRequest, { params }: { params: { tourId: string } }) {
+// POST - Create a new review
+export async function POST(
+  request: NextRequest, 
+  { params }: { params: Promise<Params> }
+) {
   await dbConnect();
-
-  const token = getTokenFromRequest(request);
-  if (!token) {
-    return NextResponse.json({ message: 'Unauthorized: no token provided' }, { status: 401 });
-  }
-
-  let payload: JWTPayload;
+  
   try {
-    payload = await verifyJwt(token);
-  } catch (err: any) {
-    console.error('JWT verification failed:', err?.message || err);
-    return NextResponse.json({ message: 'Unauthorized: invalid token' }, { status: 401 });
-  }
-
-  const userId = String(payload.sub || '');
-  if (!userId) {
-    return NextResponse.json({ message: 'Unauthorized: token missing user id' }, { status: 401 });
-  }
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-        return NextResponse.json({ message: 'User not found' }, { status: 404 });
-    }
-
-    const { tourId } = params;
-
+    // Await params in NextJS 15
+    const { tourId } = await params;
+    
+    // Validate tourId
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
       return NextResponse.json({ error: 'Invalid Tour ID' }, { status: 400 });
     }
 
+    // Get auth token
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify token
+    const payload = await verifyToken(token);
+    if (!payload || !payload.sub) {
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+    }
+
+    const userId = payload.sub as string;
+
+    // Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return NextResponse.json({ error: 'Invalid User ID' }, { status: 400 });
+    }
+
+    // Check if tour exists
+    const tour = await Tour.findById(tourId);
+    if (!tour) {
+      return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
+    }
+
+    // Get user info
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Parse request body
     const body = await request.json();
     const { rating, comment, title } = body;
 
-    if (!rating || !comment) {
-      return NextResponse.json({ error: 'Rating and comment are required' }, { status: 400 });
+    // Validate required fields
+    if (!rating || rating < 1 || rating > 5) {
+      return NextResponse.json({ error: 'Valid rating (1-5) is required' }, { status: 400 });
     }
 
-    // Check if user has already reviewed this tour - using correct field names
-    const existingReview = await Review.findOne({ tour: tourId, user: userId });
+    if (!comment || !comment.trim()) {
+      return NextResponse.json({ error: 'Review comment is required' }, { status: 400 });
+    }
+
+    if (comment.trim().length < 10) {
+      return NextResponse.json({ error: 'Review comment must be at least 10 characters' }, { status: 400 });
+    }
+
+    // Check if user already reviewed this tour
+    const existingReview = await Review.findOne({ 
+      tour: new mongoose.Types.ObjectId(tourId), 
+      user: new mongoose.Types.ObjectId(userId) 
+    });
+
     if (existingReview) {
-      return NextResponse.json({ error: 'You have already reviewed this tour' }, { status: 400 });
+      return NextResponse.json({ error: 'You have already reviewed this tour' }, { status: 409 });
     }
 
-    // Create review with correct field names matching the model
-    const newReview = new Review({
+    // Create the review
+    const review = await Review.create({
       tour: new mongoose.Types.ObjectId(tourId),
       user: new mongoose.Types.ObjectId(userId),
-      rating,
-      comment,
-      isApproved: false, // Reviews need approval
+      userName: `${user.firstName} ${user.lastName}`,
+      userEmail: user.email,
+      rating: Number(rating),
+      title: title?.trim() || 'Great experience!',
+      comment: comment.trim(),
+      verified: false,
+      helpful: 0
     });
 
-    await newReview.save();
-
-    // Update tour's average rating
-    const stats = await Review.aggregate([
-      { $match: { tour: new mongoose.Types.ObjectId(tourId) } },
-      { $group: { _id: '$tour', avgRating: { $avg: '$rating' }, totalReviews: { $sum: 1 } } }
-    ]);
-
-    if (stats.length > 0) {
-      await Tour.findByIdAndUpdate(tourId, {
-        rating: Number(stats[0].avgRating.toFixed(1)),
+    // Populate user data for response
+    const populatedReview = await Review.findById(review._id)
+      .populate({
+        path: 'user',
+        model: 'User',
+        select: 'firstName lastName email'
       });
-    }
 
-    // Populate the review before returning
-    const populatedReview = await Review.findById(newReview._id).populate({
-      path: 'user',
-      model: User,
-      select: 'firstName lastName name picture',
-    });
+    // Update tour's average rating (optional - you might want to do this in background)
+    try {
+      const reviewStats = await Review.aggregate([
+        { $match: { tour: new mongoose.Types.ObjectId(tourId) } },
+        { $group: { 
+          _id: null, 
+          avgRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 }
+        }}
+      ]);
+
+      if (reviewStats.length > 0) {
+        await Tour.findByIdAndUpdate(tourId, {
+          rating: Math.round(reviewStats[0].avgRating * 10) / 10
+        });
+      }
+    } catch (updateError) {
+      console.error('Error updating tour rating:', updateError);
+      // Don't fail the review creation if rating update fails
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Review submitted successfully!',
-      data: populatedReview
+      data: {
+        _id: populatedReview._id,
+        rating: populatedReview.rating,
+        title: populatedReview.title,
+        comment: populatedReview.comment,
+        createdAt: populatedReview.createdAt,
+        user: {
+          _id: populatedReview.user._id,
+          name: populatedReview.userName,
+          email: populatedReview.userEmail
+        }
+      }
     }, { status: 201 });
+
   } catch (error: any) {
     console.error('Review submission error:', error);
+    
+    // Handle duplicate key error specifically
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        error: 'You have already reviewed this tour' 
+      }, { status: 409 });
+    }
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err: any) => err.message);
+      return NextResponse.json({ 
+        error: `Validation failed: ${messages.join(', ')}` 
+      }, { status: 400 });
+    }
+
     return NextResponse.json({ 
-      error: 'An unexpected error occurred.',
-      details: error.message 
+      error: 'Failed to submit review. Please try again.' 
+    }, { status: 500 });
+  }
+}
+
+// GET - Get reviews for a specific tour
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<Params> }
+) {
+  await dbConnect();
+  
+  try {
+    const { tourId } = await params;
+    
+    if (!mongoose.Types.ObjectId.isValid(tourId)) {
+      return NextResponse.json({ error: 'Invalid Tour ID' }, { status: 400 });
+    }
+
+    const reviews = await Review.find({ tour: tourId })
+      .populate({
+        path: 'user',
+        model: 'User',
+        select: 'firstName lastName email'
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Transform the data for frontend consumption
+    const transformedReviews = reviews.map(review => ({
+      _id: review._id,
+      rating: review.rating,
+      title: review.title,
+      comment: review.comment,
+      createdAt: review.createdAt,
+      user: {
+        _id: review.user._id,
+        name: review.userName,
+        email: review.userEmail
+      }
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: transformedReviews
+    });
+
+  } catch (error: any) {
+    console.error('Get reviews error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to fetch reviews' 
     }, { status: 500 });
   }
 }
