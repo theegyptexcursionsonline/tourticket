@@ -852,7 +852,7 @@ const handleDownloadReceipt = async () => {
           className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2"
         >
           {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-          Download PDF
+          Download Receipt
         </button>
         <button 
           onClick={() => window.print()} 
