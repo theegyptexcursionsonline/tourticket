@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import {
@@ -29,6 +30,16 @@ import {
     Sparkles,
     Camera,
     Grid3x3,
+    Info,
+    Globe,
+    UploadCloud,
+    Trash2,
+    CreditCard,
+    Zap,
+    Map,
+    Edit,
+    PlusCircle,
+    Minus
 } from 'lucide-react';
 
 // --- Interface Definitions ---
@@ -48,11 +59,13 @@ const FormLabel = ({ children, icon: Icon, required = false }: {
     icon?: any;
     required?: boolean;
 }) => (
-    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+    <div className="flex items-center gap-2 mb-3">
         {Icon && <Icon className="h-4 w-4 text-indigo-500" />}
-        {children}
-        {required && <span className="text-red-500 text-xs">*</span>}
-    </label>
+        <label className="text-sm font-semibold text-slate-700">
+            {children}
+            {required && <span className="text-red-500 text-xs ml-1">*</span>}
+        </label>
+    </div>
 );
 
 const SmallHint = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -60,30 +73,7 @@ const SmallHint = ({ children, className = "" }: { children: React.ReactNode; cl
 );
 
 const inputBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
-
-const SectionCard = ({ children, title, subtitle, icon: Icon }: {
-    children: React.ReactNode;
-    title: string;
-    subtitle?: string;
-    icon?: any;
-}) => (
-    <div className="bg-gradient-to-br from-white to-slate-50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 p-8 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/60">
-        <div className="flex items-center gap-3 mb-6">
-            {Icon && (
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-                    <Icon className="h-5 w-5 text-white" />
-                </div>
-            )}
-            <div>
-                <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                    {title}
-                </h3>
-                {subtitle && <p className="text-slate-500 text-sm mt-1">{subtitle}</p>}
-            </div>
-        </div>
-        {children}
-    </div>
-);
+const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
 // --- Availability Manager Sub-Component ---
 const AvailabilityManager = ({ availability, setAvailability }: { availability: any, setAvailability: (data: any) => void }) => {
@@ -119,29 +109,27 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
     };
 
     return (
-        <SectionCard title="Availability & Scheduling" subtitle="Configure when your tour is available" icon={Calendar}>
+        <div className="space-y-6">
             {/* Availability Type Selection */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div className="space-y-3">
-                    <FormLabel icon={Clock}>Availability Type</FormLabel>
-                    <div className="relative">
-                        <select 
-                            value={availability?.type || 'daily'} 
-                            onChange={handleTypeChange} 
-                            className={`${inputBase} appearance-none cursor-pointer`}
-                        >
-                            <option value="daily">🔄 Daily (Repeats Weekly)</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
-                            <ChevronDown className="h-5 w-5 text-slate-400" />
-                        </div>
+            <div className="space-y-3">
+                <FormLabel icon={Clock}>Availability Type</FormLabel>
+                <div className="relative">
+                    <select 
+                        value={availability?.type || 'daily'} 
+                        onChange={handleTypeChange} 
+                        className={`${inputBase} appearance-none cursor-pointer`}
+                    >
+                        <option value="daily">🔄 Daily (Repeats Weekly)</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
+                        <ChevronDown className="h-5 w-5 text-slate-400" />
                     </div>
                 </div>
             </div>
 
             {/* Available Days Selection */}
             {availability?.type === 'daily' && (
-                <div className="mb-8">
+                <div>
                     <FormLabel icon={Calendar}>Available Days</FormLabel>
                     <div className="flex flex-wrap gap-3">
                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
@@ -224,17 +212,19 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
                     Add Time Slot
                 </button>
             </div>
-        </SectionCard>
+        </div>
     );
 };
 
 // --- Main Tour Form Component ---
-export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
+export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onSave?: () => void }) {
     const router = useRouter();
     const { selectedCurrency } = useSettings();
     const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
     
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+    const [activeTab, setActiveTab] = useState('basic');
 
     // Add state for managing collapsible items
     const [expandedOptionIndex, setExpandedOptionIndex] = useState<number | null>(0);
@@ -250,7 +240,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         discountPrice: '',
         originalPrice: '',
         destination: '',
-        category: '', // Changed from categories to category
+        category: '',
         image: '',
         images: [],
         highlights: [''],
@@ -291,7 +281,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
                 originalPrice: tourToEdit.originalPrice || '',
                 destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
-                category: tourToEdit.category?._id?.toString() || tourToEdit.category || '', // Fixed: single category field
+                category: tourToEdit.category?._id?.toString() || tourToEdit.category || '',
                 image: tourToEdit.image || '', 
                 images: tourToEdit.images || [],
                 highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
@@ -383,6 +373,51 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         };
         fetchData();
     }, [tourToEdit]);
+
+    const resetForm = () => {
+        setFormData({
+            title: '',
+            slug: '',
+            description: '',
+            longDescription: '',
+            duration: '',
+            discountPrice: '',
+            originalPrice: '',
+            destination: '',
+            category: '',
+            image: '',
+            images: [],
+            highlights: [''],
+            includes: [''],
+            tags: '',
+            isFeatured: false,
+            whatsIncluded: [''],
+            whatsNotIncluded: [''],
+            itinerary: [{ day: 1, title: '', description: '' }],
+            faqs: [{ question: '', answer: '' }],
+            bookingOptions: [{ type: 'Per Person', label: '', price: 0 }],
+            addOns: [],
+            isPublished: false,
+            difficulty: '',
+            maxGroupSize: 10,
+            availability: { 
+                type: 'daily', 
+                availableDays: [0, 1, 2, 3, 4, 5, 6], 
+                slots: [{ time: '10:00', capacity: 10 }] 
+            },
+        });
+    };
+
+    const openPanelForCreate = () => {
+        resetForm();
+        setActiveTab('basic');
+        setIsPanelOpen(true);
+    };
+
+    const openPanelForEdit = () => {
+        setActiveTab('basic');
+        setIsPanelOpen(true);
+    };
 
     const setAvailability = (availabilityData: any) => {
         setFormData((prev: any) => ({ ...prev, availability: availabilityData }));
@@ -638,7 +673,7 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                 longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
                 originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
                 destination: cleanedData.destination,
-                category: cleanedData.category, // Single category field
+                category: cleanedData.category,
                 difficulty: cleanedData.difficulty || 'Easy',
                 maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
                 isPublished: Boolean(cleanedData.isPublished),
@@ -681,6 +716,8 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
 
             if (response.ok) {
                 toast.success(`Tour ${tourToEdit ? 'updated' : 'created'} successfully!`);
+                setIsPanelOpen(false);
+                if (onSave) onSave();
                 router.push('/admin/tours');
                 router.refresh();
             } else {
@@ -697,9 +734,21 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
         }
     };
 
-    return (
-        <div className="max-w-7xl mx-auto space-y-8">
-            {/* Header Card */}
+    const tabs = [
+        { id: 'basic', label: 'Basic Info', icon: Info },
+        { id: 'pricing', label: 'Pricing & Details', icon: CreditCard },
+        { id: 'media', label: 'Media', icon: Camera },
+        { id: 'content', label: 'Content', icon: Sparkles },
+        { id: 'itinerary', label: 'Itinerary', icon: Map },
+        { id: 'booking', label: 'Booking Options', icon: Settings },
+        { id: 'addons', label: 'Add-ons', icon: Zap },
+        { id: 'availability', label: 'Availability', icon: Calendar },
+        { id: 'settings', label: 'Settings', icon: Eye }
+    ];
+
+    // Component for tour to show when no panel is open
+    const TourOverview = () => (
+        <div className="max-w-4xl mx-auto">
             <div className="bg-gradient-to-br from-white to-slate-50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 p-8">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
@@ -711,1099 +760,1182 @@ export default function TourForm({ tourToEdit }: { tourToEdit?: any }) {
                                 {tourToEdit ? 'Edit Tour' : 'Create New Tour'}
                             </h1>
                             <p className="text-slate-500 mt-1">
-                                {tourToEdit ? `Editing: ${tourToEdit.title}` : 'Fill out the form below to create your tour'}
+                                {tourToEdit ? `Editing: ${tourToEdit.title}` : 'Fill out the form to create your tour'}
                             </p>
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                        <div className="hidden lg:flex items-center gap-3 px-4 py-3 rounded-xl bg-white/80 border border-slate-200 shadow-sm">
-                            <Camera className="w-5 h-5 text-slate-500" />
-                            <span className="text-sm font-medium text-slate-600">
-                                {formData.images?.length || 0} images uploaded
-                            </span>
-                        </div>
-                        
-                        <button 
-                            form="tour-form"
-                            type="submit" 
-                            disabled={isSubmitting || isUploading} 
-                            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                    <span>Saving...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Check className="h-5 w-5" />
-                                    <span>Save Tour</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
+                    <button 
+                        onClick={tourToEdit ? openPanelForEdit : openPanelForCreate}
+                        className="group inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+                    >
+                        {tourToEdit ? (
+                            <>
+                                <Edit className="h-5 w-5 group-hover:rotate-12 transition-transform duration-200" />
+                                Edit Tour
+                            </>
+                        ) : (
+                            <>
+                                <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-200" />
+                                Create Tour
+                            </>
+                        )}
+                    </button>
                 </div>
+
+                {tourToEdit && (
+                    <div className="mt-6 pt-6 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Calendar className="h-4 w-4 text-indigo-500" />
+                            <span className="font-medium">{tourToEdit.duration || 'No duration'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <CurrencyIcon className="h-4 w-4 text-green-500" />
+                            <span className="font-medium">{selectedCurrency.symbol}{tourToEdit.discountPrice || tourToEdit.price || '0'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Users className="h-4 w-4 text-blue-500" />
+                            <span className="font-medium">Max {tourToEdit.maxGroupSize || 10}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                            {tourToEdit.isPublished ? (
+                                <Eye className="h-4 w-4 text-green-500" />
+                            ) : (
+                                <X className="h-4 w-4 text-red-500" />
+                            )}
+                            <span className="font-medium">{tourToEdit.isPublished ? 'Published' : 'Draft'}</span>
+                        </div>
+                    </div>
+                )}
             </div>
+        </div>
+    );
 
-            <form id="tour-form" onSubmit={handleSubmit} className="space-y-8">
-                {/* Basic Information */}
-                <SectionCard title="Basic Information" subtitle="Core details about your tour" icon={FileText}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        <div className="space-y-3">
-                            <FormLabel icon={Sparkles} required>Title</FormLabel>
-                            <input 
-                                name="title" 
-                                value={formData.title || ''} 
-                                onChange={handleChange} 
-                                className={`${inputBase} text-lg font-medium`} 
-                                placeholder="e.g., 1-Hour Amsterdam Canal Cruise" 
-                                required 
-                            />
-                            <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={Tag} required>URL Slug</FormLabel>
-                            <input 
-                                name="slug" 
-                                value={formData.slug || ''} 
-                                onChange={handleChange} 
-                                className={inputBase} 
-                                placeholder="auto-generated-from-title" 
-                                required 
-                            />
-                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
-                                <span className="text-xs font-medium text-slate-500">Preview:</span>
-                                <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                    /{formData.slug || 'your-slug'}
-                                </span>
-                            </div>
-                            <SmallHint>If you edit the slug, ensure it stays URL-safe (lowercase, hyphens).</SmallHint>
-                        </div>
-                    </div>
+    return (
+        <div className="space-y-8">
+            {!isPanelOpen && <TourOverview />}
+            
+            {/* Backdrop Overlay */}
+            <AnimatePresence>
+                {isPanelOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setIsPanelOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
 
-                    <div className="space-y-3 mb-6">
-                        <FormLabel icon={FileText} required>Short Description</FormLabel>
-                        <textarea 
-                            name="description" 
-                            value={formData.description || ''} 
-                            onChange={handleChange} 
-                            rows={3} 
-                            className={`${inputBase} resize-none`} 
-                            placeholder="Short summary that appears on the listing" 
-                            required
-                        />
-                    </div>
-
-                    <div className="space-y-3">
-                        <FormLabel icon={FileText}>Long Description</FormLabel>
-                        <textarea 
-                            name="longDescription" 
-                            value={formData.longDescription || ''} 
-                            onChange={handleChange} 
-                            rows={5} 
-                            className={`${inputBase} resize-y`} 
-                            placeholder="Full description shown on the tour detail page" 
-                        />
-                    </div>
-                </SectionCard>
-
-                {/* Tour Details */}
-                <SectionCard title="Tour Details" subtitle="Duration, difficulty, and capacity information" icon={Settings}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="space-y-3">
-                            <FormLabel icon={Timer} required>Duration</FormLabel>
-                            <input 
-                                name="duration" 
-                                value={formData.duration} 
-                                onChange={handleChange} 
-                                className={inputBase} 
-                                placeholder="e.g., 6 hours" 
-                                required 
-                            />
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={Mountain}>Difficulty</FormLabel>
-                            <input 
-                                name="difficulty" 
-                                value={formData.difficulty} 
-                                onChange={handleChange} 
-                                className={inputBase} 
-                                placeholder="e.g., Easy, Moderate" 
-                            />
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={Users}>Max Group Size</FormLabel>
-                            <input 
-                                name="maxGroupSize" 
-                                type="number" 
-                                value={formData.maxGroupSize} 
-                                onChange={handleChange} 
-                                className={inputBase} 
-                                placeholder="10" 
-                            />
-                        </div>
-                        <div className="flex items-center justify-center">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input 
-                                    id="isPublished" 
-                                    name="isPublished" 
-                                    type="checkbox" 
-                                    checked={formData.isPublished} 
-                                    onChange={handleChange} 
-                                    className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2" 
-                                />
-                                <div className="flex items-center gap-2">
-                                    <Eye className="h-4 w-4 text-slate-500" />
-                                    <span className="text-sm font-semibold text-slate-700">Published</span>
+            {/* Enhanced Slide Panel */}
+            <AnimatePresence>
+                {isPanelOpen && (
+                    <motion.div
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        className="fixed top-0 right-0 h-full w-full max-w-5xl bg-white z-50 shadow-2xl flex flex-col"
+                    >
+                        {/* Panel Header */}
+                        <div className="flex items-center justify-between p-8 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-sm">
+                                    {tourToEdit ? <Edit className="h-5 w-5 text-white" /> : <PlusCircle className="h-5 w-5 text-white" />}
                                 </div>
-                            </label>
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Pricing */}
-                <SectionCard title="Pricing & Tags" subtitle="Set your tour pricing and tags" icon={CurrencyIcon}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-3">
-                            <FormLabel icon={CurrencyIcon} required>Discount Price ({selectedCurrency.symbol})</FormLabel>
-                            <div className="relative">
-                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <input 
-                                    name="discountPrice" 
-                                    type="number" 
-                                    step="0.01" 
-                                    value={formData.discountPrice} 
-                                    onChange={handleChange} 
-                                    className={`${inputBase} pl-10`} 
-                                    placeholder="15.50" 
-                                    required 
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={CurrencyIcon}>Original Price ({selectedCurrency.symbol}) (Optional)</FormLabel>
-                            <div className="relative">
-                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <input 
-                                    name="originalPrice" 
-                                    type="number" 
-                                    step="0.01" 
-                                    value={formData.originalPrice || ''} 
-                                    onChange={handleChange} 
-                                    className={`${inputBase} pl-10`} 
-                                    placeholder="20.00" 
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={Tag}>Tags (comma separated)</FormLabel>
-                            <input 
-                                name="tags" 
-                                value={formData.tags} 
-                                onChange={handleChange} 
-                                className={inputBase} 
-                                placeholder="e.g., Staff Favourite, -25%, New" 
-                            />
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Location & Category */}
-                <SectionCard title="Location & Category" subtitle="Choose destination and category" icon={MapPin}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                            <FormLabel icon={MapPin} required>Destination</FormLabel>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <select 
-                                    name="destination" 
-                                    value={formData.destination} 
-                                    onChange={handleChange} 
-                                    className={`${inputBase} pl-10 appearance-none cursor-pointer`}
-                                    required
-                                >
-                                    <option value="">Select a Destination</option>
-                                    {destinations.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={Grid3x3} required>Category</FormLabel>
-                            <div className="relative">
-                                <Grid3x3 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <select 
-                                    name="category" 
-                                    value={formData.category || ''} 
-                                    onChange={handleChange} 
-                                    className={`${inputBase} pl-10 appearance-none cursor-pointer`}
-                                    required
-                                >
-                                    <option value="">Select a Category</option>
-                                    {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                            </div>
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Images */}
-                <SectionCard title="Images" subtitle="Upload your tour photos" icon={Camera}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <FormLabel icon={ImageIcon}>Main Image</FormLabel>
-                            {formData.image && (
-                                <div className="relative w-full h-48 mb-4">
-                                    <img 
-                                        src={formData.image} 
-                                        alt="Main tour preview" 
-                                        className="w-full h-full object-cover rounded-xl border-2 border-slate-200 shadow-md" 
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData((p: any) => ({ ...p, image: '' }))}
-                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold hover:bg-red-600 transition-all shadow-lg"
-                                        aria-label="Remove main image"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                            
-                            <div className="relative">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => handleImageUpload(e, true)}
-                                    className={`${inputBase} file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100`}
-                                    disabled={isUploading}
-                                />
-                            </div>
-                            
-                            {isUploading && (
-                                <div className="flex items-center gap-2 text-indigo-600">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Uploading image...</span>
-                                </div>
-                            )}
-                            <SmallHint>Upload a high-quality image for the main tour photo.</SmallHint>
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <FormLabel icon={Grid3x3}>Gallery Images</FormLabel>
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={(e) => handleImageUpload(e, false)} 
-                                className={`${inputBase} file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100`}
-                                disabled={isUploading}
-                            />
-                            {formData.images.length > 0 && (
-                                <div className="grid grid-cols-3 gap-3">
-                                    {formData.images.map((img: string, i: number) => (
-                                        <div key={i} className="relative group">
-                                            <img 
-                                                src={img} 
-                                                alt={`Gallery ${i}`} 
-                                                className="w-full h-24 object-cover rounded-xl border-2 border-slate-200 shadow-sm group-hover:shadow-md transition-all" 
-                                            />
-                                            <button 
-                                                type="button" 
-                                                onClick={() => removeGalleryImage(img)}
-                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-all shadow-lg opacity-0 group-hover:opacity-100"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <SmallHint>Add additional images to showcase your tour.</SmallHint>
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Highlights & Includes */}
-                <SectionCard title="Highlights & What's Included" subtitle="Key selling points and inclusions" icon={Star}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <FormLabel icon={Star}>Highlights</FormLabel>
-                            <div className="space-y-3">
-                                {formData.highlights.map((h: string, i: number) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="flex-1 relative">
-                                            <input 
-                                                value={h} 
-                                                onChange={(e) => handleListChange(i, e.target.value, 'highlights')} 
-                                                className={inputBase} 
-                                                placeholder={`Highlight ${i + 1}`} 
-                                            />
-                                        </div>
-                                        <button 
-                                            type="button" 
-                                            disabled={formData.highlights.length <= 1} 
-                                            onClick={() => removeListItem(i, 'highlights')} 
-                                            className="flex items-center justify-center w-10 h-10 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 disabled:opacity-30"
-                                        >
-                                            <XCircle className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button 
-                                    type="button" 
-                                    onClick={() => addListItem('highlights')} 
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
-                                >
-                                    <Plus className="w-4 h-4" /> Add Highlight
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <FormLabel icon={Check}>What's Included</FormLabel>
-                            <div className="space-y-3">
-                                {formData.includes.map((it: string, i: number) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="flex-1">
-                                            <input 
-                                                value={it} 
-                                                onChange={(e) => handleListChange(i, e.target.value, 'includes')} 
-                                                className={inputBase} 
-                                                placeholder={`Included item ${i + 1}`} 
-                                            />
-                                        </div>
-                                        <button 
-                                            type="button" 
-                                            disabled={formData.includes.length <= 1} 
-                                            onClick={() => removeListItem(i, 'includes')} 
-                                            className="flex items-center justify-center w-10 h-10 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 disabled:opacity-30"
-                                        >
-                                            <XCircle className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button 
-                                    type="button" 
-                                    onClick={() => addListItem('includes')} 
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
-                                >
-                                    <Plus className="w-4 h-4" /> Add Item
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Detailed Inclusions */}
-                <SectionCard title="Detailed Inclusions" subtitle="Comprehensive lists of what's included and excluded" icon={Check}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                            <FormLabel icon={Check}>What's Included (List)</FormLabel>
-                            <textarea 
-                                value={formData.whatsIncluded.join('\n')} 
-                                onChange={(e) => handleTextAreaArrayChange('whatsIncluded', e)}
-                                rows={6} 
-                                className={`${inputBase} resize-y`} 
-                                placeholder="Enter each item on a new line"
-                            />
-                            <SmallHint>Each line will be a separate item in the list.</SmallHint>
-                        </div>
-                        <div className="space-y-3">
-                            <FormLabel icon={X}>What's Not Included (List)</FormLabel>
-                            <textarea 
-                                value={formData.whatsNotIncluded.join('\n')} 
-                                onChange={(e) => handleTextAreaArrayChange('whatsNotIncluded', e)}
-                                rows={6} 
-                                className={`${inputBase} resize-y`} 
-                                placeholder="Enter each item on a new line"
-                            />
-                            <SmallHint>Each line will be a separate item in the list.</SmallHint>
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Itinerary */}
-                <SectionCard title="Itinerary" subtitle="Day-by-day breakdown of your tour" icon={Calendar}>
-                    <div className="space-y-6">
-                        {formData.itinerary.map((day: any, i: number) => (
-                            <div 
-                                key={i} 
-                                className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
-                                    expandedItineraryIndex === i ? 'border-indigo-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
-                                }`}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => toggleItineraryItem(i)}
-                                    className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
-                                            {day.day}
-                                        </div>
-                                        <h4 className="font-semibold text-slate-900">Day {day.day}</h4>
-                                    </div>
-                                    <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
-                                </button>
-                                <div className={`overflow-hidden transition-all duration-300 ${expandedItineraryIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-500">Day Title</label>
-                                            <input 
-                                                value={day.title} 
-                                                onChange={(e) => handleItineraryChange(i, 'title', e.target.value)}
-                                                className={inputBase} 
-                                                placeholder="Day title" 
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-500">Description</label>
-                                            <textarea 
-                                                value={day.description} 
-                                                onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
-                                                className={`${inputBase} resize-none`} 
-                                                rows={2}
-                                                placeholder="Day description" 
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 text-right">
-                                        <button
-                                            type="button"
-                                            disabled={formData.itinerary.length <= 1}
-                                            onClick={() => removeItineraryItem(i)}
-                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                            title={formData.itinerary.length <= 1 ? "At least one itinerary item is required" : "Remove this day"}
-                                        >
-                                            <XCircle className="w-5 h-5" />
-                                            <span>Remove Day</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        <button 
-                            type="button" 
-                            onClick={addItineraryItem} 
-                            className="w-full flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
-                        >
-                            <Plus className="w-4 h-4" /> Add Day
-                        </button>
-                    </div>
-                </SectionCard>
-
-                {/* FAQs */}
-                <SectionCard title="Frequently Asked Questions" subtitle="Common questions and answers" icon={HelpCircle}>
-                    <div className="space-y-6">
-                        {formData.faqs.map((faq: any, i: number) => (
-                            <div 
-                                key={i} 
-                                className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
-                                    expandedFaqIndex === i ? 'border-purple-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
-                                }`}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => toggleFaqItem(i)}
-                                    className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-lg font-bold text-sm">
-                                            {i + 1}
-                                        </div>
-                                        <h4 className="font-semibold text-slate-900">FAQ {i + 1}</h4>
-                                    </div>
-                                    <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedFaqIndex === i ? 'rotate-180' : ''}`} />
-                                </button>
-                                <div className={`overflow-hidden transition-all duration-300 ${expandedFaqIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-500">Question</label>
-                                            <input 
-                                                value={faq.question} 
-                                                onChange={(e) => handleFAQChange(i, 'question', e.target.value)}
-                                                className={inputBase} 
-                                                placeholder="Question" 
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-500">Answer</label>
-                                            <textarea 
-                                                value={faq.answer} 
-                                                onChange={(e) => handleFAQChange(i, 'answer', e.target.value)}
-                                                className={`${inputBase} resize-none`} 
-                                                rows={3}
-                                                placeholder="Answer" 
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 text-right">
-                                        <button
-                                            type="button"
-                                            disabled={formData.faqs.length <= 1}
-                                            onClick={() => removeFAQ(i)}
-                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                            title={formData.faqs.length <= 1 ? "At least one FAQ is required" : "Remove this FAQ"}
-                                        >
-                                            <XCircle className="w-5 h-5" />
-                                            <span>Remove FAQ</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        <button 
-                            type="button" 
-                            onClick={addFAQ} 
-                            className="w-full flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
-                        >
-                            <Plus className="w-4 h-4" /> Add FAQ
-                        </button>
-                    </div>
-                </SectionCard>
-
-                {/* Booking Options */}
-                <SectionCard title="Booking Options" subtitle="Different pricing tiers and booking choices" icon={Settings}>
-                    <div className="space-y-6">
-                        {/* Booking Options Preview */}
-                        {formData.bookingOptions.length > 0 && (
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-                                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                                    <Eye className="h-5 w-5 text-blue-500" />
-                                    Preview - How customers see booking options
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {formData.bookingOptions.map((option: any, index: number) => (
-                                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex-1">
-                                                    <h5 className="font-semibold text-slate-900 mb-1">
-                                                        {option.label || `Option ${index + 1}`}
-                                                    </h5>
-                                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                                        <Users className="h-4 w-4" />
-                                                        <span>{option.type}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-lg font-bold text-slate-900">
-                                                        {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500">
-                                                        {option.type === 'Per Person' ? 'per person' : 'per group'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="pt-2 border-t border-slate-100">
-                                                <div className="flex items-center justify-center w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium">
-                                                    Select Option
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Booking Options Editor */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Settings className="h-5 w-5 text-indigo-500" />
-                                    <h4 className="text-lg font-semibold text-slate-800">Configure Booking Options</h4>
-                                </div>
-                                <div className="text-sm text-slate-500">
-                                    {formData.bookingOptions.length} option{formData.bookingOptions.length !== 1 ? 's' : ''}
-                                </div>
-                            </div>
-
-                            {formData.bookingOptions.map((option: any, index: number) => (
-                                <div 
-                                    key={index} 
-                                    className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
-                                        expandedOptionIndex === index ? 'border-indigo-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
-                                    }`}
-                                >
-                                    {/* Option Header */}
-                                    <button 
-                                        type="button" 
-                                        onClick={() => toggleBookingOption(index)} 
-                                        className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
-                                                {index + 1}
-                                            </div>
-                                            <div>
-                                                <h5 className="font-semibold text-slate-900">
-                                                    {option.label || `Booking Option ${index + 1}`}
-                                                </h5>
-                                                <p className="text-sm text-slate-500">
-                                                    {option.type} - {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedOptionIndex === index ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    
-                                    {/* Option Configuration - Collapsible Content */}
-                                    <div className={`overflow-hidden transition-all duration-300 ${expandedOptionIndex === index ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="p-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                {/* Option Label */}
-                                                <div className="md:col-span-1 space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Option Name *
-                                                    </label>
-                                                    <input 
-                                                        value={option.label || ''} 
-                                                        onChange={(e) => handleBookingOptionChange(index, 'label', e.target.value)}
-                                                        className={inputBase}
-                                                        placeholder="e.g., Standard Tour, Premium Experience"
-                                                        required
-                                                    />
-                                                    <SmallHint>This is the main name customers will see</SmallHint>
-                                                </div>
-
-                                                {/* Pricing Type */}
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Pricing Type *
-                                                    </label>
-                                                    <div className="relative">
-                                                        <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                        <select 
-                                                            value={option.type || 'Per Person'} 
-                                                            onChange={(e) => handleBookingOptionChange(index, 'type', e.target.value)}
-                                                            className={`${inputBase} pl-10 appearance-none cursor-pointer`}
-                                                        >
-                                                            <option value="Per Person">Per Person</option>
-                                                            <option value="Per Group">Per Group</option>
-                                                            <option value="Per Couple">Per Couple</option>
-                                                            <option value="Per Family">Per Family (up to 4)</option>
-                                                        </select>
-                                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                                                    </div>
-                                                    <SmallHint>How the price is calculated</SmallHint>
-                                                </div>
-
-                                                {/* Price */}
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Price ({selectedCurrency.symbol}) *
-                                                    </label>
-                                                    <div className="relative">
-                                                        <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                        <input 
-                                                            type="number" 
-                                                            step="0.01"
-                                                            value={option.price || ''} 
-                                                            onChange={(e) => handleBookingOptionChange(index, 'price', parseFloat(e.target.value) || 0)}
-                                                            className={`${inputBase} pl-10`}
-                                                            placeholder="0.00"
-                                                            min="0"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <SmallHint>Base price for this option</SmallHint>
-                                                </div>
-                                            </div>
-                                            {/* Additional Fields */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                                                {/* Duration Override */}
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Duration Override (Optional)
-                                                    </label>
-                                                    <input 
-                                                        value={option.duration || ''} 
-                                                        onChange={(e) => handleBookingOptionChange(index, 'duration', e.target.value)}
-                                                        className={inputBase}
-                                                        placeholder="e.g., 90 minutes"
-                                                    />
-                                                    <SmallHint>Leave empty to use tour's default duration</SmallHint>
-                                                </div>
-
-                                                {/* Original Price */}
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Original Price ({selectedCurrency.symbol}) (Optional)
-                                                    </label>
-                                                    <div className="relative">
-                                                        <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                        <input 
-                                                            type="number" 
-                                                            step="0.01"
-                                                            value={option.originalPrice || ''} 
-                                                            onChange={(e) => handleBookingOptionChange(index, 'originalPrice', parseFloat(e.target.value) || 0)}
-                                                            className={`${inputBase} pl-10`}
-                                                            placeholder="0.00"
-                                                            min="0"
-                                                        />
-                                                    </div>
-                                                    <SmallHint>Show crossed-out price for discounts</SmallHint>
-                                                </div>
-                                            </div>
-
-                                            {/* Languages */}
-                                            <div className="mt-6 space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">
-                                                    Languages (Optional)
-                                                </label>
-                                                <input 
-                                                    value={option.languages?.join(', ') || ''} 
-                                                    onChange={(e) => handleBookingOptionChange(index, 'languages', e.target.value.split(',').map(lang => lang.trim()).filter(Boolean))}
-                                                    className={inputBase}
-                                                    placeholder="e.g., English, Spanish, French"
-                                                />
-                                                <SmallHint>Comma-separated list of languages</SmallHint>
-                                            </div>
-
-                                            {/* Highlights */}
-                                            <div className="mt-6 space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">
-                                                    Highlights (Optional)
-                                                </label>
-                                                <textarea
-                                                    value={option.highlights?.join('\n') || ''}
-                                                    onChange={(e) => handleBookingOptionChange(index, 'highlights', e.target.value.split('\n').filter(Boolean))}
-                                                    rows={4}
-                                                    className={`${inputBase} resize-none`}
-                                                    placeholder="Enter each highlight on a new line"
-                                                />
-                                                <SmallHint>Each line will be a separate highlight</SmallHint>
-                                            </div>
-
-                                            {/* Group Size and Difficulty */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Group Size (Optional)
-                                                    </label>
-                                                    <input 
-                                                        value={option.groupSize || ''} 
-                                                        onChange={(e) => handleBookingOptionChange(index, 'groupSize', e.target.value)}
-                                                        className={inputBase}
-                                                        placeholder="e.g., Max 8 people"
-                                                    />
-                                                    <SmallHint>Override default group size</SmallHint>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Difficulty (Optional)
-                                                    </label>
-                                                    <input 
-                                                        value={option.difficulty || ''} 
-                                                        onChange={(e) => handleBookingOptionChange(index, 'difficulty', e.target.value)}
-                                                        className={inputBase}
-                                                        placeholder="e.g., Easy, Moderate, Challenging"
-                                                    />
-                                                    <SmallHint>Override default difficulty level</SmallHint>
-                                                </div>
-                                            </div>
-
-                                            {/* Option Description */}
-                                            <div className="mt-6 space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">
-                                                    Description (Optional)
-                                                </label>
-                                                <textarea
-                                                    value={option.description || ''}
-                                                    onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
-                                                    rows={3}
-                                                    className={`${inputBase} resize-none`}
-                                                    placeholder="Describe what's included in this option and what makes it special..."
-                                                />
-                                                <SmallHint>Explain what makes this option unique or different</SmallHint>
-                                            </div>
-
-                                            {/* Badge and Recommendation */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                                                <div className="space-y-2">
-                                                    <label className="block text-sm font-medium text-slate-700">
-                                                        Badge Text (Optional)
-                                                    </label>
-                                                    <input 
-                                                        value={option.badge || ''} 
-                                                        onChange={(e) => handleBookingOptionChange(index, 'badge', e.target.value)}
-                                                        className={inputBase}
-                                                        placeholder="e.g., Most Popular, Best Value"
-                                                    />
-                                                    <SmallHint>Highlight this option with a badge</SmallHint>
-                                                </div>
-
-                                                <div className="flex items-center space-x-3 mt-8">
-                                                    <input
-                                                        type="checkbox"
-                                                        id={`recommended-${index}`}
-                                                        checked={option.isRecommended || false}
-                                                        onChange={(e) => handleBookingOptionChange(index, 'isRecommended', e.target.checked)}
-                                                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                                                    />
-                                                    <label htmlFor={`recommended-${index}`} className="text-sm font-medium text-slate-700">
-                                                        Mark as recommended option
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className={`p-4 border-t border-slate-200 flex items-center justify-between ${expandedOptionIndex !== index ? 'hidden' : ''}`}>
-                                        <button
-                                            type="button"
-                                            onClick={() => saveIndividualBookingOption(index)}
-                                            className="inline-flex items-center gap-2 text-indigo-600 font-medium px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
-                                        >
-                                            <Check className="h-5 w-5" />
-                                            <span>Save Option</span>
-                                        </button>
-                                        
-                                        <button
-                                            type="button"
-                                            disabled={formData.bookingOptions.length <= 1}
-                                            onClick={() => removeBookingOption(index)}
-                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                            title={formData.bookingOptions.length <= 1 ? "At least one booking option is required" : "Remove this option"}
-                                        >
-                                            <XCircle className="h-5 w-5" />
-                                            <span>Remove Option</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Add New Booking Option Button */}
-                        <button 
-                            type="button" 
-                            onClick={addBookingOption} 
-                            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200 group"
-                        >
-                            <Plus className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" /> 
-                            Add Booking Option
-                        </button>
-
-                        {/* Best Practices Help */}
-                        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                            <div className="flex items-start gap-3">
-                                <HelpCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <h6 className="font-semibold text-amber-800 mb-1">Booking Options Best Practices:</h6>
-                                    <ul className="text-sm text-amber-700 space-y-1">
-                                        <li>• Create 2-3 clear options (Standard, Premium, VIP)</li>
-                                        <li>• Use descriptive names that highlight value</li>
-                                        <li>• Price differences should be meaningful (not just {selectedCurrency.symbol}1-2)</li>
-                                        <li>• Consider group discounts for "Per Group" pricing</li>
-                                        <li>• Test your options from a customer's perspective</li>
-                                    </ul>
+                                    <h2 className="text-xl font-bold text-slate-800">
+                                        {tourToEdit ? 'Edit Tour' : 'Create New Tour'}
+                                    </h2>
+                                    <p className="text-sm text-slate-500">
+                                        {tourToEdit ? `Editing: ${tourToEdit.title}` : 'Fill out the form to create your tour'}
+                                    </p>
                                 </div>
                             </div>
+                            <button 
+                                onClick={() => setIsPanelOpen(false)} 
+                                className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
+                            >
+                                <X size={20} />
+                            </button>
                         </div>
-                    </div>
-                </SectionCard>
 
-                {/* Add-ons */}
-                <SectionCard title="Tour Add-ons" subtitle="Optional extras customers can purchase" icon={Sparkles}>
-                    <div className="space-y-6">
-                        {formData.addOns.length > 0 && (
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
-                                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                                    <Eye className="h-5 w-5 text-green-500" />
-                                    Preview - How customers see add-ons
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {formData.addOns.map((addon: any, index: number) => (
-                                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-green-300 transition-all duration-200">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex-1">
-                                                    <h5 className="font-semibold text-slate-900 mb-1">
-                                                        {addon.name || `Add-on ${index + 1}`}
-                                                    </h5>
-                                                    <p className="text-sm text-slate-600 line-clamp-2">
-                                                        {addon.description || 'No description provided'}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-lg font-bold text-slate-900">
-                                                        {selectedCurrency.symbol}{addon.price?.toFixed(2) || '0.00'}
-                                                    </div>
-                                                </div>
+                        {/* Tab Navigation */}
+                        <div className="flex border-b border-slate-200 bg-slate-50 px-8 overflow-x-auto">
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                                            activeTab === tab.id
+                                                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-white'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                        }`}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Form Content */}
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+                            <div className="p-8 space-y-8">
+                                
+                                {/* Basic Info Tab */}
+                                {activeTab === 'basic' && (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Sparkles} required>Title</FormLabel>
+                                                <input 
+                                                    name="title" 
+                                                    value={formData.title || ''} 
+                                                    onChange={handleChange} 
+                                                    className={`${inputBase} text-lg font-medium`} 
+                                                    placeholder="e.g., 1-Hour Amsterdam Canal Cruise" 
+                                                    required 
+                                                />
+                                                <SmallHint>Make the title descriptive — it will appear on listing pages and search results.</SmallHint>
                                             </div>
-                                            <div className="pt-2 border-t border-slate-100">
-                                                <div className="flex items-center justify-center w-full py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium">
-                                                    Add to Tour
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Tag} required>URL Slug</FormLabel>
+                                                <input 
+                                                    name="slug" 
+                                                    value={formData.slug || ''} 
+                                                    onChange={handleChange} 
+                                                    className={inputBase} 
+                                                    placeholder="auto-generated-from-title" 
+                                                    required 
+                                                />
+                                                <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                                                    <span className="text-xs font-medium text-slate-500">Preview:</span>
+                                                    <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
+                                                        /{formData.slug || 'your-slug'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-green-500" />
-                                    <h4 className="text-lg font-semibold text-slate-800">Configure Add-ons</h4>
-                                </div>
-                                <div className="text-sm text-slate-500">
-                                    {formData.addOns.length} add-on{formData.addOns.length !== 1 ? 's' : ''}
-                                </div>
-                            </div>
-
-                            {formData.addOns.map((addon: any, index: number) => (
-                                <div key={index} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-green-300 transition-all duration-200">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-lg font-bold text-sm">
-                                                {index + 1}
-                                            </div>
-                                            <h5 className="font-semibold text-slate-900">Add-on {index + 1}</h5>
-                                        </div>
-                                        <button 
-                                            type="button" 
-                                            disabled={formData.addOns.length <= 1}
-                                            onClick={() => removeAddOn(index)} 
-                                            className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-200 disabled:opacity-30"
-                                        >
-                                            <XCircle className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-medium text-slate-700">Add-on Name *</label>
-                                            <input 
-                                                value={addon.name || ''} 
-                                                onChange={(e) => handleAddOnChange(index, 'name', e.target.value)}
-                                                className={inputBase} 
-                                                placeholder="e.g., Professional Photography" 
+                                        <div className="space-y-3">
+                                            <FormLabel icon={FileText} required>Short Description</FormLabel>
+                                            <textarea 
+                                                name="description" 
+                                                value={formData.description || ''} 
+                                                onChange={handleChange} 
+                                                rows={3} 
+                                                className={`${textareaBase} resize-none`} 
+                                                placeholder="Short summary that appears on the listing" 
                                                 required
                                             />
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-medium text-slate-700">Price ({selectedCurrency.symbol}) *</label>
-                                            <div className="relative">
-                                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+
+                                        <div className="space-y-3">
+                                            <FormLabel icon={FileText}>Long Description</FormLabel>
+                                            <textarea 
+                                                name="longDescription" 
+                                                value={formData.longDescription || ''} 
+                                                onChange={handleChange} 
+                                                rows={5} 
+                                                className={textareaBase} 
+                                                placeholder="Full description shown on the tour detail page" 
+                                            />
+                                        </div>
+
+                                        {/* Location & Category */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-3">
+                                                <FormLabel icon={MapPin} required>Destination</FormLabel>
+                                                <div className="relative">
+                                                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <select 
+                                                        name="destination" 
+                                                        value={formData.destination} 
+                                                        onChange={handleChange} 
+                                                        className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                                        required
+                                                    >
+                                                        <option value="">Select a Destination</option>
+                                                        {destinations.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Grid3x3} required>Category</FormLabel>
+                                                <div className="relative">
+                                                    <Grid3x3 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <select 
+                                                        name="category" 
+                                                        value={formData.category || ''} 
+                                                        onChange={handleChange} 
+                                                        className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                                        required
+                                                    >
+                                                        <option value="">Select a Category</option>
+                                                        {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pricing & Details Tab */}
+                                {activeTab === 'pricing' && (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="space-y-3">
+                                                <FormLabel icon={CurrencyIcon} required>Discount Price ({selectedCurrency.symbol})</FormLabel>
+                                                <div className="relative">
+                                                    <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <input 
+                                                        name="discountPrice" 
+                                                        type="number" 
+                                                        step="0.01" 
+                                                        value={formData.discountPrice} 
+                                                        onChange={handleChange} 
+                                                        className={`${inputBase} pl-10`} 
+                                                        placeholder="15.50" 
+                                                        required 
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={CurrencyIcon}>Original Price ({selectedCurrency.symbol})</FormLabel>
+                                                <div className="relative">
+                                                    <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <input 
+                                                        name="originalPrice" 
+                                                        type="number" 
+                                                        step="0.01" 
+                                                        value={formData.originalPrice || ''} 
+                                                        onChange={handleChange} 
+                                                        className={`${inputBase} pl-10`} 
+                                                        placeholder="20.00" 
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Tag}>Tags (comma separated)</FormLabel>
                                                 <input 
-                                                    type="number" 
-                                                    step="0.01"
-                                                    value={addon.price || ''} 
-                                                    onChange={(e) => handleAddOnChange(index, 'price', parseFloat(e.target.value) || 0)}
-                                                    className={`${inputBase} pl-10`}
-                                                    placeholder="0.00"
-                                                    min="0"
-                                                    required
+                                                    name="tags" 
+                                                    value={formData.tags} 
+                                                    onChange={handleChange} 
+                                                    className={inputBase} 
+                                                    placeholder="e.g., Staff Favourite, -25%, New" 
                                                 />
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-medium text-slate-700">Category</label>
-                                            <select 
-                                                value={addon.category || 'Experience'} 
-                                                onChange={(e) => handleAddOnChange(index, 'category', e.target.value)}
-                                                className={`${inputBase} appearance-none cursor-pointer`}
-                                            >
-                                                <option value="Experience">Experience</option>
-                                                <option value="Photography">Photography</option>
-                                                <option value="Transport">Transport</option>
-                                                <option value="Food">Food & Drink</option>
-                                            </select>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Timer} required>Duration</FormLabel>
+                                                <input 
+                                                    name="duration" 
+                                                    value={formData.duration} 
+                                                    onChange={handleChange} 
+                                                    className={inputBase} 
+                                                    placeholder="e.g., 6 hours" 
+                                                    required 
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Mountain}>Difficulty</FormLabel>
+                                                <input 
+                                                    name="difficulty" 
+                                                    value={formData.difficulty} 
+                                                    onChange={handleChange} 
+                                                    className={inputBase} 
+                                                    placeholder="e.g., Easy, Moderate" 
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Users}>Max Group Size</FormLabel>
+                                                <input 
+                                                    name="maxGroupSize" 
+                                                    type="number" 
+                                                    value={formData.maxGroupSize} 
+                                                    onChange={handleChange} 
+                                                    className={inputBase} 
+                                                    placeholder="10" 
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input 
+                                                        id="isPublished" 
+                                                        name="isPublished" 
+                                                        type="checkbox" 
+                                                        checked={formData.isPublished} 
+                                                        onChange={handleChange} 
+                                                        className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2" 
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <Eye className="h-4 w-4 text-slate-500" />
+                                                        <span className="text-sm font-semibold text-slate-700">Published</span>
+                                                    </div>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="mt-6 space-y-2">
-                                        <label className="block text-sm font-medium text-slate-700">Description *</label>
-                                        <textarea 
-                                            value={addon.description || ''} 
-                                            onChange={(e) => handleAddOnChange(index, 'description', e.target.value)}
-                                            className={`${inputBase} resize-none`} 
-                                            rows={3}
-                                            placeholder="Describe what this add-on includes and why customers would want it..."
-                                            required
-                                        />
+                                )}
+
+                                {/* Media Tab */}
+                                {activeTab === 'media' && (
+                                    <div className="space-y-8">
+                                        {/* Main Image */}
+                                        <div className="space-y-4">
+                                            <FormLabel icon={ImageIcon}>Main Image</FormLabel>
+                                            
+                                            {formData.image ? (
+                                                <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
+                                                    <img 
+                                                        src={formData.image} 
+                                                        alt="Main tour preview" 
+                                                        className="w-full h-64 object-cover" 
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setFormData((p: any) => ({ ...p, image: '' }))} 
+                                                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                            Remove Image
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-200">
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl">
+                                                            <UploadCloud className="h-8 w-8 text-indigo-600" />
+                                                        </div>
+                                                        
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-center">
+                                                                <label 
+                                                                    htmlFor="main-image-upload" 
+                                                                    className="relative cursor-pointer bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                                                                >
+                                                                    <span>Upload Main Image</span>
+                                                                    <input 
+                                                                        id="main-image-upload" 
+                                                                        name="main-image-upload" 
+                                                                        type="file" 
+                                                                        className="sr-only" 
+                                                                        onChange={(e) => handleImageUpload(e, true)} 
+                                                                        accept="image/*" 
+                                                                        disabled={isUploading} 
+                                                                    />
+                                                                </label>
+                                                            </div>
+                                                            <p className="text-xs text-slate-500">PNG, JPG, GIF up to 10MB</p>
+                                                            {isUploading && (
+                                                                <div className="flex items-center justify-center gap-2 text-indigo-600">
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    <span className="text-sm font-medium">Uploading...</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Gallery Images */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <FormLabel icon={Grid3x3}>Gallery Images</FormLabel>
+                                                <label 
+                                                    htmlFor="gallery-upload" 
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    Add Image
+                                                    <input 
+                                                        id="gallery-upload" 
+                                                        type="file" 
+                                                        accept="image/*" 
+                                                        onChange={(e) => handleImageUpload(e, false)} 
+                                                        className="sr-only"
+                                                        disabled={isUploading}
+                                                    />
+                                                </label>
+                                            </div>
+                                            
+                                            {formData.images.length > 0 ? (
+                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                    {formData.images.map((img: string, i: number) => (
+                                                        <div key={i} className="relative group">
+                                                            <img 
+                                                                src={img} 
+                                                                alt={`Gallery ${i}`} 
+                                                                className="w-full h-32 object-cover rounded-xl border-2 border-slate-200 shadow-sm group-hover:shadow-md transition-all" 
+                                                            />
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => removeGalleryImage(img)}
+                                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-all shadow-lg opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 text-slate-500">
+                                                    <Grid3x3 className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                                                    <p>No gallery images yet. Click "Add Image" to upload photos.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Content Tab */}
+                                {activeTab === 'content' && (
+                                    <div className="space-y-8">
+                                        {/* Highlights & Includes */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            <div className="space-y-4">
+                                                <FormLabel icon={Star}>Highlights</FormLabel>
+                                                <div className="space-y-3">
+                                                    {formData.highlights.map((h: string, i: number) => (
+                                                        <div key={i} className="flex items-center gap-3">
+                                                            <div className="flex-1 relative">
+                                                                <input 
+                                                                    value={h} 
+                                                                    onChange={(e) => handleListChange(i, e.target.value, 'highlights')} 
+                                                                    className={inputBase} 
+                                                                    placeholder={`Highlight ${i + 1}`} 
+                                                                />
+                                                            </div>
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={formData.highlights.length <= 1} 
+                                                                onClick={() => removeListItem(i, 'highlights')} 
+                                                                className="flex items-center justify-center w-10 h-10 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 disabled:opacity-30"
+                                                            >
+                                                                <Minus className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => addListItem('highlights')} 
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
+                                                    >
+                                                        <Plus className="w-4 h-4" /> Add Highlight
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                <FormLabel icon={Check}>What's Included</FormLabel>
+                                                <div className="space-y-3">
+                                                    {formData.includes.map((it: string, i: number) => (
+                                                        <div key={i} className="flex items-center gap-3">
+                                                            <div className="flex-1">
+                                                                <input 
+                                                                    value={it} 
+                                                                    onChange={(e) => handleListChange(i, e.target.value, 'includes')} 
+                                                                    className={inputBase} 
+                                                                    placeholder={`Included item ${i + 1}`} 
+                                                                />
+                                                            </div>
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={formData.includes.length <= 1} 
+                                                                onClick={() => removeListItem(i, 'includes')} 
+                                                                className="flex items-center justify-center w-10 h-10 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 disabled:opacity-30"
+                                                            >
+                                                                <Minus className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => addListItem('includes')} 
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
+                                                    >
+                                                        <Plus className="w-4 h-4" /> Add Item
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Detailed Inclusions */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Check}>What's Included (List)</FormLabel>
+                                                <textarea 
+                                                    value={formData.whatsIncluded.join('\n')} 
+                                                    onChange={(e) => handleTextAreaArrayChange('whatsIncluded', e)}
+                                                    rows={6} 
+                                                    className={textareaBase} 
+                                                    placeholder="Enter each item on a new line"
+                                                />
+                                                <SmallHint>Each line will be a separate item in the list.</SmallHint>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={X}>What's Not Included (List)</FormLabel>
+                                                <textarea 
+                                                    value={formData.whatsNotIncluded.join('\n')} 
+                                                    onChange={(e) => handleTextAreaArrayChange('whatsNotIncluded', e)}
+                                                    rows={6} 
+                                                    className={textareaBase} 
+                                                    placeholder="Enter each item on a new line"
+                                                />
+                                                <SmallHint>Each line will be a separate item in the list.</SmallHint>
+                                            </div>
+                                        </div>
+
+                                        {/* FAQs */}
+                                        <div className="space-y-6">
+                                            <FormLabel icon={HelpCircle}>Frequently Asked Questions</FormLabel>
+                                            {formData.faqs.map((faq: any, i: number) => (
+                                                <div 
+                                                    key={i} 
+                                                    className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
+                                                        expandedFaqIndex === i ? 'border-purple-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
+                                                    }`}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleFaqItem(i)}
+                                                        className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-lg font-bold text-sm">
+                                                                {i + 1}
+                                                            </div>
+                                                            <h4 className="font-semibold text-slate-900">FAQ {i + 1}</h4>
+                                                        </div>
+                                                        <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedFaqIndex === i ? 'rotate-180' : ''}`} />
+                                                    </button>
+                                                    <div className={`overflow-hidden transition-all duration-300 ${expandedFaqIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
+                                                        <div className="space-y-4">
+                                                            <div className="space-y-2">
+                                                                <label className="text-xs font-medium text-slate-500">Question</label>
+                                                                <input 
+                                                                    value={faq.question} 
+                                                                    onChange={(e) => handleFAQChange(i, 'question', e.target.value)}
+                                                                    className={inputBase} 
+                                                                    placeholder="Question" 
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <label className="text-xs font-medium text-slate-500">Answer</label>
+                                                                <textarea 
+                                                                    value={faq.answer} 
+                                                                    onChange={(e) => handleFAQChange(i, 'answer', e.target.value)}
+                                                                    className={`${textareaBase} resize-none`} 
+                                                                    rows={3}
+                                                                    placeholder="Answer" 
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-4 text-right">
+                                                            <button
+                                                                type="button"
+                                                                disabled={formData.faqs.length <= 1}
+                                                                onClick={() => removeFAQ(i)}
+                                                                className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            >
+                                                                <XCircle className="w-5 h-5" />
+                                                                <span>Remove FAQ</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <button 
+                                                type="button" 
+                                                onClick={addFAQ} 
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
+                                            >
+                                                <Plus className="w-4 h-4" /> Add FAQ
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Itinerary Tab */}
+                                {activeTab === 'itinerary' && (
+                                    <div className="space-y-6">
+                                        <FormLabel icon={Map}>Day-by-day Itinerary</FormLabel>
+                                        {formData.itinerary.map((day: any, i: number) => (
+                                            <div 
+                                                key={i} 
+                                                className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
+                                                    expandedItineraryIndex === i ? 'border-indigo-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
+                                                }`}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleItineraryItem(i)}
+                                                    className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
+                                                            {day.day}
+                                                        </div>
+                                                        <h4 className="font-semibold text-slate-900">Day {day.day}</h4>
+                                                    </div>
+                                                    <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                <div className={`overflow-hidden transition-all duration-300 ${expandedItineraryIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
+                                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-medium text-slate-500">Day Title</label>
+                                                            <input 
+                                                                value={day.title} 
+                                                                onChange={(e) => handleItineraryChange(i, 'title', e.target.value)}
+                                                                className={inputBase} 
+                                                                placeholder="Day title" 
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-medium text-slate-500">Description</label>
+                                                            <textarea 
+                                                                value={day.description} 
+                                                                onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
+                                                                className={`${textareaBase} resize-none`} 
+                                                                rows={2}
+                                                                placeholder="Day description" 
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 text-right">
+                                                        <button
+                                                            type="button"
+                                                            disabled={formData.itinerary.length <= 1}
+                                                            onClick={() => removeItineraryItem(i)}
+                                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        >
+                                                            <XCircle className="w-5 h-5" />
+                                                            <span>Remove Day</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button 
+                                            type="button" 
+                                            onClick={addItineraryItem} 
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
+                                        >
+                                            <Plus className="w-4 h-4" /> Add Day
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Booking Options Tab */}
+                                {activeTab === 'booking' && (
+                                    <div className="space-y-6">
+                                        <FormLabel icon={Settings}>Booking Options</FormLabel>
+                                        
+                                        {/* Booking Options Preview */}
+                                        {formData.bookingOptions.length > 0 && (
+                                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                                                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                                    <Eye className="h-5 w-5 text-blue-500" />
+                                                    Preview - How customers see booking options
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {formData.bookingOptions.map((option: any, index: number) => (
+                                                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200">
+                                                            <div className="flex items-start justify-between mb-3">
+                                                                <div className="flex-1">
+                                                                    <h5 className="font-semibold text-slate-900 mb-1">
+                                                                        {option.label || `Option ${index + 1}`}
+                                                                    </h5>
+                                                                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                                                                        <Users className="h-4 w-4" />
+                                                                        <span>{option.type}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <div className="text-lg font-bold text-slate-900">
+                                                                        {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
+                                                                    </div>
+                                                                    <div className="text-xs text-slate-500">
+                                                                        {option.type === 'Per Person' ? 'per person' : 'per group'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="pt-2 border-t border-slate-100">
+                                                                <div className="flex items-center justify-center w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium">
+                                                                    Select Option
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Booking Options Editor */}
+                                        <div className="space-y-4">
+                                            {formData.bookingOptions.map((option: any, index: number) => (
+                                                <div 
+                                                    key={index} 
+                                                    className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
+                                                        expandedOptionIndex === index ? 'border-indigo-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
+                                                    }`}
+                                                >
+                                                    {/* Option Header */}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => toggleBookingOption(index)} 
+                                                        className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
+                                                                {index + 1}
+                                                            </div>
+                                                            <div>
+                                                                <h5 className="font-semibold text-slate-900">
+                                                                    {option.label || `Booking Option ${index + 1}`}
+                                                                </h5>
+                                                                <p className="text-sm text-slate-500">
+                                                                    {option.type} - {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedOptionIndex === index ? 'rotate-180' : ''}`} />
+                                                    </button>
+                                                    
+                                                    {/* Option Configuration */}
+                                                    <div className={`overflow-hidden transition-all duration-300 ${expandedOptionIndex === index ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                        <div className="p-6 space-y-6">
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Option Name *</label>
+                                                                    <input 
+                                                                        value={option.label || ''} 
+                                                                        onChange={(e) => handleBookingOptionChange(index, 'label', e.target.value)}
+                                                                        className={inputBase}
+                                                                        placeholder="e.g., Standard Tour"
+                                                                        required
+                                                                    />
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Pricing Type *</label>
+                                                                    <div className="relative">
+                                                                        <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                                        <select 
+                                                                            value={option.type || 'Per Person'} 
+                                                                            onChange={(e) => handleBookingOptionChange(index, 'type', e.target.value)}
+                                                                            className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                                                        >
+                                                                            <option value="Per Person">Per Person</option>
+                                                                            <option value="Per Group">Per Group</option>
+                                                                            <option value="Per Couple">Per Couple</option>
+                                                                            <option value="Per Family">Per Family (up to 4)</option>
+                                                                        </select>
+                                                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Price ({selectedCurrency.symbol}) *</label>
+                                                                    <div className="relative">
+                                                                        <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                                        <input 
+                                                                            type="number" 
+                                                                            step="0.01"
+                                                                            value={option.price || ''} 
+                                                                            onChange={(e) => handleBookingOptionChange(index, 'price', parseFloat(e.target.value) || 0)}
+                                                                            className={`${inputBase} pl-10`}
+                                                                            placeholder="0.00"
+                                                                            min="0"
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                <label className="block text-sm font-medium text-slate-700">Description</label>
+                                                                <textarea
+                                                                    value={option.description || ''}
+                                                                    onChange={(e) => handleBookingOptionChange(index, 'description', e.target.value)}
+                                                                    rows={3}
+                                                                    className={textareaBase}
+                                                                    placeholder="Describe what's included in this option..."
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className={`p-4 border-t border-slate-200 flex items-center justify-between ${expandedOptionIndex !== index ? 'hidden' : ''}`}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => saveIndividualBookingOption(index)}
+                                                            className="inline-flex items-center gap-2 text-indigo-600 font-medium px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
+                                                        >
+                                                            <Check className="h-5 w-5" />
+                                                            <span>Save Option</span>
+                                                        </button>
+                                                        
+                                                        <button
+                                                            type="button"
+                                                            disabled={formData.bookingOptions.length <= 1}
+                                                            onClick={() => removeBookingOption(index)}
+                                                            className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        >
+                                                            <XCircle className="h-5 w-5" />
+                                                            <span>Remove Option</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <button 
+                                            type="button" 
+                                            onClick={addBookingOption} 
+                                            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
+                                        >
+                                            <Plus className="h-5 w-5" /> 
+                                            Add Booking Option
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Add-ons Tab */}
+                                {activeTab === 'addons' && (
+                                    <div className="space-y-6">
+                                        <FormLabel icon={Zap}>Tour Add-ons</FormLabel>
+                                        
+                                        {formData.addOns.length > 0 && (
+                                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+                                                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                                    <Eye className="h-5 w-5 text-green-500" />
+                                                    Preview - How customers see add-ons
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {formData.addOns.map((addon: any, index: number) => (
+                                                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-green-300 transition-all duration-200">
+                                                            <div className="flex items-start justify-between mb-3">
+                                                                <div className="flex-1">
+                                                                    <h5 className="font-semibold text-slate-900 mb-1">
+                                                                        {addon.name || `Add-on ${index + 1}`}
+                                                                    </h5>
+                                                                    <p className="text-sm text-slate-600 line-clamp-2">
+                                                                        {addon.description || 'No description provided'}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <div className="text-lg font-bold text-slate-900">
+                                                                        {selectedCurrency.symbol}{addon.price?.toFixed(2) || '0.00'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="pt-2 border-t border-slate-100">
+                                                                <div className="flex items-center justify-center w-full py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium">
+                                                                    Add to Tour
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-4">
+                                            {formData.addOns.map((addon: any, index: number) => (
+                                                <div key={index} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-green-300 transition-all duration-200">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-lg font-bold text-sm">
+                                                                {index + 1}
+                                                            </div>
+                                                            <h5 className="font-semibold text-slate-900">Add-on {index + 1}</h5>
+                                                        </div>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => removeAddOn(index)} 
+                                                            className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-200"
+                                                        >
+                                                            <XCircle className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                        <div className="space-y-2">
+                                                            <label className="block text-sm font-medium text-slate-700">Add-on Name *</label>
+                                                            <input 
+                                                                value={addon.name || ''} 
+                                                                onChange={(e) => handleAddOnChange(index, 'name', e.target.value)}
+                                                                className={inputBase} 
+                                                                placeholder="e.g., Professional Photography" 
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="block text-sm font-medium text-slate-700">Price ({selectedCurrency.symbol}) *</label>
+                                                            <div className="relative">
+                                                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                                <input 
+                                                                    type="number" 
+                                                                    step="0.01"
+                                                                    value={addon.price || ''} 
+                                                                    onChange={(e) => handleAddOnChange(index, 'price', parseFloat(e.target.value) || 0)}
+                                                                    className={`${inputBase} pl-10`}placeholder="0.00"
+                                                                    min="0"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="block text-sm font-medium text-slate-700">Category</label>
+                                                            <select 
+                                                                value={addon.category || 'Experience'} 
+                                                                onChange={(e) => handleAddOnChange(index, 'category', e.target.value)}
+                                                                className={`${inputBase} appearance-none cursor-pointer`}
+                                                            >
+                                                                <option value="Experience">Experience</option>
+                                                                <option value="Photography">Photography</option>
+                                                                <option value="Transport">Transport</option>
+                                                                <option value="Food">Food & Drink</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-6 space-y-2">
+                                                        <label className="block text-sm font-medium text-slate-700">Description *</label>
+                                                        <textarea 
+                                                            value={addon.description || ''} 
+                                                            onChange={(e) => handleAddOnChange(index, 'description', e.target.value)}
+                                                            className={textareaBase} 
+                                                            rows={3}
+                                                            placeholder="Describe what this add-on includes and why customers would want it..."
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <button 
+                                            type="button" 
+                                            onClick={addAddOn} 
+                                            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-green-600 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-xl hover:from-green-100 hover:to-emerald-100 hover:border-green-400 transition-all duration-200"
+                                        >
+                                            <Plus className="h-5 w-5" /> 
+                                            Add Tour Enhancement
+                                        </button>
+
+                                        {formData.addOns.length === 0 && (
+                                            <div className="text-center py-8 text-slate-500">
+                                                <Zap className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                                                <p>No add-ons yet. Click "Add Tour Enhancement" to create optional extras.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Availability Tab */}
+                                {activeTab === 'availability' && (
+                                    <div className="space-y-6">
+                                        <FormLabel icon={Calendar}>Availability & Scheduling</FormLabel>
+                                        {formData.availability && (
+                                            <AvailabilityManager
+                                                availability={formData.availability}
+                                                setAvailability={setAvailability}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Settings Tab */}
+                                {activeTab === 'settings' && (
+                                    <div className="space-y-6">
+                                        <FormLabel icon={Settings}>Tour Settings</FormLabel>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="isFeatured"
+                                                        name="isFeatured"
+                                                        checked={formData.isFeatured}
+                                                        onChange={handleChange}
+                                                        className="w-5 h-5 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500"
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <Star className="h-5 w-5 text-yellow-500" />
+                                                        <div>
+                                                            <label htmlFor="isFeatured" className="text-sm font-semibold text-slate-700">Featured Tour</label>
+                                                            <p className="text-xs text-slate-500">Show this tour in homepage featured carousel</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="isPublished"
+                                                        name="isPublished"
+                                                        checked={formData.isPublished}
+                                                        onChange={handleChange}
+                                                        className="w-5 h-5 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        {formData.isPublished ? (
+                                                            <Eye className="h-5 w-5 text-green-500" />
+                                                        ) : (
+                                                            <Eye className="h-5 w-5 text-red-500" />
+                                                        )}
+                                                        <div>
+                                                            <label htmlFor="isPublished" className="text-sm font-semibold text-slate-700">Published</label>
+                                                            <p className="text-xs text-slate-500">Make this tour visible to customers</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Tour Status Summary */}
+                                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200">
+                                            <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                                <Info className="h-5 w-5 text-slate-500" />
+                                                Tour Summary
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4 text-indigo-500" />
+                                                    <span className="text-slate-600">Duration:</span>
+                                                    <span className="font-medium text-slate-900">{formData.duration || 'Not set'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <CurrencyIcon className="h-4 w-4 text-green-500" />
+                                                    <span className="text-slate-600">Price:</span>
+                                                    <span className="font-medium text-slate-900">
+                                                        {selectedCurrency.symbol}{formData.discountPrice || '0.00'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="h-4 w-4 text-blue-500" />
+                                                    <span className="text-slate-600">Max Group:</span>
+                                                    <span className="font-medium text-slate-900">{formData.maxGroupSize || 10}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Camera className="h-4 w-4 text-purple-500" />
+                                                    <span className="text-slate-600">Images:</span>
+                                                    <span className="font-medium text-slate-900">
+                                                        {(formData.image ? 1 : 0) + (formData.images?.length || 0)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Validation Status */}
+                                        <div className="space-y-3">
+                                            <h5 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                                <HelpCircle className="h-4 w-4 text-indigo-500" />
+                                                Form Validation
+                                            </h5>
+                                            <div className="space-y-2">
+                                                {[
+                                                    { field: 'title', label: 'Title', value: formData.title },
+                                                    { field: 'description', label: 'Description', value: formData.description },
+                                                    { field: 'duration', label: 'Duration', value: formData.duration },
+                                                    { field: 'discountPrice', label: 'Price', value: formData.discountPrice },
+                                                    { field: 'destination', label: 'Destination', value: formData.destination },
+                                                    { field: 'category', label: 'Category', value: formData.category },
+                                                ].map((item) => (
+                                                    <div key={item.field} className="flex items-center gap-2 text-sm">
+                                                        {item.value ? (
+                                                            <Check className="h-4 w-4 text-green-500" />
+                                                        ) : (
+                                                            <X className="h-4 w-4 text-red-500" />
+                                                        )}
+                                                        <span className={`${item.value ? 'text-slate-600' : 'text-red-600'}`}>
+                                                            {item.label} {item.value ? '✓' : '(required)'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </form>
+
+                        {/* Panel Footer */}
+                        <div className="p-8 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPanelOpen(false)}
+                                    className="flex-1 px-6 py-3 text-slate-700 font-semibold border border-slate-300 rounded-xl hover:bg-slate-50 transition-all duration-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    onClick={handleSubmit} 
+                                    disabled={
+                                        isSubmitting || 
+                                        isUploading || 
+                                        !formData.title?.trim() ||
+                                        !formData.description?.trim() ||
+                                        !formData.duration?.trim() ||
+                                        !formData.discountPrice ||
+                                        !formData.destination ||
+                                        !formData.category
+                                    } 
+                                    className="flex-1 inline-flex justify-center items-center gap-3 px-6 py-3 text-white font-bold bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 disabled:transform-none"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="h-5 w-5 animate-spin" />
+                                            <span>Saving...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="h-5 w-5" />
+                                            <span>{tourToEdit ? 'Update Tour' : 'Create Tour'}</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            
+                            {/* Validation Message */}
+                            {(!formData.title?.trim() || !formData.description?.trim() || !formData.duration?.trim() || !formData.discountPrice || !formData.destination || !formData.category) && (
+                                <div className="flex items-start gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                    <HelpCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-xs text-amber-700 font-medium">Missing required fields:</p>
+                                        <p className="text-xs text-amber-600 mt-1">
+                                            Please fill in all required fields marked with (*) before saving.
+                                        </p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-
-                        <button 
-                            type="button" 
-                            onClick={addAddOn} 
-                            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-green-600 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-xl hover:from-green-100 hover:to-emerald-100 hover:border-green-400 transition-all duration-200 group"
-                        >
-                            <Plus className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" /> 
-                            Add Tour Enhancement
-                        </button>
-
-                        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                            <div className="flex items-start gap-3">
-                                <HelpCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <h6 className="font-semibold text-blue-800 mb-1">Add-ons Best Practices:</h6>
-                                    <ul className="text-sm text-blue-700 space-y-1">
-                                        <li>• Price add-ons to provide clear value (not just small amounts)</li>
-                                        <li>• Use compelling descriptions that explain the benefit</li>
-                                        <li>• Consider popular requests from past customers</li>
-                                        <li>• Group related add-ons by category for better organization</li>
-                                        <li>• Test pricing to find the sweet spot for uptake</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </SectionCard>
-
-                {/* Availability */}
-                {formData.availability && (
-                    <AvailabilityManager
-                        availability={formData.availability}
-                        setAvailability={setAvailability}
-                    />
-                )}
-
-                {/* Final Settings */}
-                <div className="bg-gradient-to-br from-white to-slate-50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 p-8">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <input 
-                                    id="isFeatured" 
-                                    name="isFeatured" 
-                                    type="checkbox" 
-                                    checked={formData.isFeatured} 
-                                    onChange={handleChange} 
-                                    className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2" 
-                                />
-                                <div className="flex items-center gap-2">
-                                    <Star className="h-5 w-5 text-yellow-500 group-hover:text-yellow-600 transition-colors" />
-                                    <span className="text-sm font-semibold text-slate-700">Featured tour</span>
-                                </div>
-                            </label>
-                            <SmallHint className="mt-0">Show this tour in homepage featured carousel.</SmallHint>
-                        </div>
-                        
-                        <button 
-                            type="submit" 
-                            disabled={isSubmitting || isUploading} 
-                            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                    <span>Saving...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Check className="h-5 w-5" />
-                                    <span>Save Tour</span>
-                                </>
                             )}
-                        </button>
-                    </div>
-                </div>
-            </form>
+
+                            {/* Save Progress Indicator */}
+                            {tourToEdit && (
+                                <div className="mt-4 text-center text-xs text-slate-500">
+                                    Changes are automatically saved when you click "Update Tour"
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

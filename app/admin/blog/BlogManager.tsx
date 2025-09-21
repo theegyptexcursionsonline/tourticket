@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { 
-  PlusCircle, 
-  Edit, 
-  Trash2, 
-  Loader2, 
-  X, 
-  UploadCloud, 
+import {
+  PlusCircle,
+  Edit,
+  Trash2,
+  Loader2,
+  X,
+  UploadCloud,
   Image as ImageIcon,
   FileText,
   Calendar,
@@ -36,7 +36,7 @@ interface FormData {
   title: string;
   slug: string;
   excerpt: string;
-  content: string;
+  content: string; // HTML from editor
   featuredImage: string;
   images: string[];
   category: string;
@@ -75,6 +75,139 @@ const categories = [
 const generateSlug = (title: string) =>
   title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
 
+/* -------------------- RichTextEditor (small, dependency-free) -------------------- */
+/**
+ * Props:
+ * - value (HTML)
+ * - onChange(html)
+ * - onUpload(file) => Promise<string> returns uploaded URL (we'll forward to your /api/upload)
+ */
+function RichTextEditor({
+  value,
+  onChange,
+  onUpload,
+  placeholder = 'Write your blog content here...'
+}: {
+  value: string;
+  onChange: (html: string) => void;
+  onUpload: (file: File) => Promise<string>;
+  placeholder?: string;
+}) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editorRef.current && value !== editorRef.current.innerHTML) {
+      editorRef.current.innerHTML = value || '';
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  // Generic exec for most formatting
+  const exec = (command: string, valueParam?: string) => {
+    document.execCommand(command, false, valueParam);
+    emitChange();
+    editorRef.current?.focus();
+  };
+
+  const formatBlock = (tag: 'H1' | 'H2' | 'P' | 'BLOCKQUOTE' | 'PRE') => {
+    document.execCommand('formatBlock', false, tag);
+    emitChange();
+    editorRef.current?.focus();
+  };
+
+  const insertHTML = (html: string) => {
+    // insertHTML execCommand falls back well
+    document.execCommand('insertHTML', false, html);
+    emitChange();
+    editorRef.current?.focus();
+  };
+
+  const emitChange = () => {
+    if (!editorRef.current) return;
+    onChange(editorRef.current.innerHTML);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    // allow paste but strip scripts - simple approach: paste as text then reformat
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    const safeText = text
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n|\r|\n/g, '<br/>');
+    insertHTML(safeText);
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await onUpload(file);
+      // Insert responsive image with figure wrapper
+      const html = `<figure class="editor-image"><img src="${url}" alt="Image" /><figcaption contenteditable="true">Caption (optional)</figcaption></figure><p><br/></p>`;
+      insertHTML(html);
+      toast.success('Image inserted');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err) {
+      console.error(err);
+      toast.error('Image upload failed');
+    }
+  };
+
+  const handleInsertLink = () => {
+    const url = prompt('Enter URL (https://...)');
+    if (!url) return;
+    exec('createLink', url);
+  };
+
+  const handleClearFormat = () => {
+    exec('removeFormat');
+    // additional cleanup for lists/headings: wrap selection in <p>
+    emitChange();
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* toolbar */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <button type="button" onClick={() => formatBlock('H1')} className="px-2 py-1 rounded-md border text-sm">H1</button>
+        <button type="button" onClick={() => formatBlock('H2')} className="px-2 py-1 rounded-md border text-sm">H2</button>
+        <button type="button" onClick={() => exec('bold')} className="px-2 py-1 rounded-md border text-sm">B</button>
+        <button type="button" onClick={() => exec('italic')} className="px-2 py-1 rounded-md border text-sm">I</button>
+        <button type="button" onClick={() => exec('underline')} className="px-2 py-1 rounded-md border text-sm">U</button>
+        <button type="button" onClick={() => exec('insertUnorderedList')} className="px-2 py-1 rounded-md border text-sm">• List</button>
+        <button type="button" onClick={() => exec('insertOrderedList')} className="px-2 py-1 rounded-md border text-sm">1. List</button>
+        <button type="button" onClick={() => formatBlock('BLOCKQUOTE')} className="px-2 py-1 rounded-md border text-sm">Quote</button>
+        <button type="button" onClick={() => formatBlock('PRE')} className="px-2 py-1 rounded-md border text-sm">Code</button>
+        <button type="button" onClick={handleInsertLink} className="px-2 py-1 rounded-md border text-sm">Link</button>
+        <label className="cursor-pointer px-2 py-1 rounded-md border text-sm flex items-center gap-2">
+          Insert Image
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+        </label>
+        <button type="button" onClick={handleClearFormat} className="px-2 py-1 rounded-md border text-sm">Clear</button>
+      </div>
+
+      {/* editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={emitChange}
+        onBlur={emitChange}
+        onPaste={handlePaste}
+        suppressContentEditableWarning
+        className="min-h-[300px] p-4 border border-slate-300 rounded-xl bg-white prose prose-slate max-w-none focus:outline-none"
+        data-placeholder={placeholder}
+        style={{ whiteSpace: 'pre-wrap' }}
+        // initial content set via useEffect
+      />
+      {/* small helper */}
+      <div className="text-xs text-slate-500">Tip: Use the toolbar to add headings, lists, images and links. Content is saved as HTML.</div>
+    </div>
+  );
+}
+
+/* -------------------- Main BlogManager (full file) -------------------- */
 export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] }) {
   const router = useRouter();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -85,7 +218,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  
+
   const [formData, setFormData] = useState<FormData>({
     title: '',
     slug: '',
@@ -162,8 +295,8 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       scheduledFor: blog.scheduledFor ? new Date(blog.scheduledFor).toISOString().slice(0, 16) : '',
       featured: blog.featured || false,
       allowComments: blog.allowComments ?? true,
-      relatedDestinations: blog.relatedDestinations?.map(d => d.toString()) || [],
-      relatedTours: blog.relatedTours?.map(t => t.toString()) || []
+      relatedDestinations: blog.relatedDestinations?.map((d:any) => d.toString()) || [],
+      relatedTours: blog.relatedTours?.map((t:any) => t.toString()) || []
     });
     setActiveTab('content');
     setIsPanelOpen(true);
@@ -171,22 +304,32 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value 
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
-    
+
     if (name === 'title') {
       setFormData(prev => ({ ...prev, slug: generateSlug(value) }));
     }
-    
-    // Auto-calculate read time based on content
+
+    // Auto-calculate read time when content changes via textarea/normal input (editor handles separately)
     if (name === 'content') {
       const wordCount = value.split(/\s+/).filter(word => word.length > 0).length;
       const readTime = Math.max(1, Math.ceil(wordCount / 200));
       setFormData(prev => ({ ...prev, readTime }));
     }
+  };
+
+  // handle content HTML change from rich editor
+  const handleEditorChange = (html: string) => {
+    setFormData(prev => ({ ...prev, content: html }));
+    // crude read-time: strip tags then count
+    const textOnly = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const wordCount = textOnly ? textOnly.split(' ').length : 0;
+    const readTime = Math.max(1, Math.ceil(wordCount / 200));
+    setFormData(prev => ({ ...prev, readTime }));
   };
 
   const handleArrayChange = (field: keyof FormData, index: number, value: string) => {
@@ -210,6 +353,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
     }));
   };
 
+  // keep for non-editor uploads (featured image + additional images)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'featuredImage' | 'images') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -238,31 +382,47 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       success: (message) => message as string,
       error: 'Upload failed. Please try again.',
     }).finally(() => {
-        setIsUploading(false)
+      setIsUploading(false)
     });
+  };
+
+  // a small helper used by RichTextEditor to upload and return url
+  const uploadImageAndReturnUrl = async (file: File) => {
+    setIsUploading(true);
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
+      const data = await res.json();
+      if (!data.success) throw new Error('Upload failed');
+      return data.url as string;
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const validateForm = () => {
     const errors: string[] = [];
-    
+
     if (!formData.title.trim()) errors.push('Title is required');
     if (!formData.excerpt.trim()) errors.push('Excerpt is required');
     if (!formData.content.trim()) errors.push('Content is required');
     if (!formData.featuredImage.trim()) errors.push('Featured image is required');
     if (!formData.author.trim()) errors.push('Author is required');
-    
+
     return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent, action: 'save' | 'publish' = 'save') => {
     e.preventDefault();
-    
+
     const errors = validateForm();
     if (errors.length > 0) {
       toast.error(`Please fix the following errors:\n${errors.join('\n')}`);
       return;
     }
-    
+
     setIsSubmitting(true);
 
     // Prepare data for submission
@@ -282,15 +442,15 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
 
     const method = editingBlog ? 'PUT' : 'POST';
 
-    const promise = fetch(apiEndpoint, { 
-      method, 
-      headers: { 'Content-Type': 'application/json' }, 
+    const promise = fetch(apiEndpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(submitData)
     })
       .then(async res => {
         if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || 'Failed to save.');
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to save.');
         }
         return res.json();
       });
@@ -302,9 +462,9 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
         router.refresh();
         return action === 'publish' ? 'Blog post published successfully!' : 'Blog post saved successfully!';
       },
-      error: (err) => err.message || 'Failed to save blog post.',
+      error: (err) => (err as any).message || 'Failed to save blog post.',
     }).finally(() => {
-        setIsSubmitting(false)
+      setIsSubmitting(false)
     });
   };
 
@@ -316,23 +476,23 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       });
 
     toast.promise(promise, {
-        loading: `Deleting ${blogTitle}...`,
-        success: () => {
-            router.refresh();
-            return `${blogTitle} deleted successfully.`;
-        },
-        error: `Failed to delete ${blogTitle}.`
+      loading: `Deleting ${blogTitle}...`,
+      success: () => {
+        router.refresh();
+        return `${blogTitle} deleted successfully.`;
+      },
+      error: `Failed to delete ${blogTitle}.`
     });
   };
 
   // Filter blogs
   const filteredBlogs = initialBlogs.filter(blog => {
     const matchesSearch = blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         blog.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         blog.author.toLowerCase().includes(searchTerm.toLowerCase());
+      blog.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      blog.author.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !filterCategory || blog.category === filterCategory;
     const matchesStatus = !filterStatus || blog.status === filterStatus;
-    
+
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -364,9 +524,9 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
               </p>
             </div>
           </div>
-          
-          <button 
-            onClick={openPanelForCreate} 
+
+          <button
+            onClick={openPanelForCreate}
             className="group inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
           >
             <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-200" />
@@ -382,7 +542,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
               <span className="font-medium">{filteredBlogs.length}</span>
               <span>blog post{filteredBlogs.length !== 1 ? 's' : ''}</span>
             </div>
-            
+
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative">
@@ -395,7 +555,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
@@ -406,7 +566,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   <option key={cat.value} value={cat.value}>{cat.label}</option>
                 ))}
               </select>
-              
+
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -425,7 +585,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       {/* Blog Posts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredBlogs.map((blog, index) => (
-          <motion.div 
+          <motion.div
             key={blog._id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -434,26 +594,26 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
           >
             {/* Image Container */}
             <div className="relative h-48 overflow-hidden">
-              <img 
-                src={blog.featuredImage} 
-                alt={blog.title} 
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              <img
+                src={blog.featuredImage}
+                alt={blog.title}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
-              
+
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              
+
               {/* Action Buttons */}
               <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                <button 
-                  onClick={() => openPanelForEdit(blog)} 
+                <button
+                  onClick={() => openPanelForEdit(blog)}
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-indigo-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Edit blog post"
                 >
                   <Edit size={16} />
                 </button>
-                <button 
-                  onClick={() => handleDelete(blog._id, blog.title)} 
+                <button
+                  onClick={() => handleDelete(blog._id, blog.title)}
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Delete blog post"
                 >
@@ -470,7 +630,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   </div>
                 )}
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 backdrop-blur-sm rounded-full text-white text-xs font-semibold shadow-lg ${
-                  blog.status === 'published' ? 'bg-green-500/90' : 
+                  blog.status === 'published' ? 'bg-green-500/90' :
                   blog.status === 'scheduled' ? 'bg-blue-500/90' : 'bg-gray-500/90'
                 }`}>
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
@@ -492,11 +652,11 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2">
                   {blog.title}
                 </h3>
-                
+
                 <p className="text-slate-600 text-sm line-clamp-2">
                   {blog.excerpt}
                 </p>
-                
+
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <div className="flex items-center gap-2">
                     <User className="h-3 w-3" />
@@ -507,7 +667,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                     <span>{blog.readTime} min read</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
@@ -542,7 +702,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
               <p className="text-slate-500 max-w-md mx-auto mb-6">
                 Start creating engaging content for your travel blog.
               </p>
-              <button 
+              <button
                 onClick={openPanelForCreate}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
               >
@@ -592,8 +752,8 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsPanelOpen(false)} 
+              <button
+                onClick={() => setIsPanelOpen(false)}
                 className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
               >
                 <X size={20} />
@@ -624,7 +784,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
             {/* Form Content */}
             <form onSubmit={(e) => handleSubmit(e, 'save')} className="flex-1 overflow-y-auto">
               <div className="p-8 space-y-8">
-                
+
                 {/* Content Tab */}
                 {activeTab === 'content' && (
                   <div className="space-y-6">
@@ -636,15 +796,15 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                           <label htmlFor="title" className="text-sm font-bold text-slate-700">Title</label>
                           <span className="text-red-500 text-sm">*</span>
                         </div>
-                        <input 
-                          type="text" 
-                          name="title" 
-                          id="title" 
-                          value={formData.title} 
-                          onChange={handleInputChange} 
+                        <input
+                          type="text"
+                          name="title"
+                          id="title"
+                          value={formData.title}
+                          onChange={handleInputChange}
                           placeholder="Enter an engaging blog title"
-                          required 
-                          className={inputStyles} 
+                          required
+                          className={inputStyles}
                         />
                       </div>
 
@@ -655,15 +815,15 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                           <span className="text-red-500 text-sm">*</span>
                         </div>
                         <div className="relative">
-                          <input 
-                            type="text" 
-                            name="slug" 
-                            id="slug" 
-                            value={formData.slug} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="text"
+                            name="slug"
+                            id="slug"
+                            value={formData.slug}
+                            onChange={handleInputChange}
                             placeholder="auto-generated-from-title"
-                            required 
-                            className={`${inputStyles} pr-20`} 
+                            required
+                            className={`${inputStyles} pr-20`}
                           />
                           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200">
                             /{formData.slug || 'slug'}
@@ -679,13 +839,13 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                         <label htmlFor="excerpt" className="text-sm font-bold text-slate-700">Excerpt</label>
                         <span className="text-red-500 text-sm">*</span>
                       </div>
-                      <textarea 
-                        name="excerpt" 
-                        id="excerpt" 
-                        value={formData.excerpt} 
-                        onChange={handleInputChange} 
+                      <textarea
+                        name="excerpt"
+                        id="excerpt"
+                        value={formData.excerpt}
+                        onChange={handleInputChange}
                         placeholder="Brief summary for blog cards and previews (max 300 characters)"
-                        required 
+                        required
                         maxLength={300}
                         className={textareaStyles}
                         rows={3}
@@ -695,25 +855,23 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                       </div>
                     </div>
 
-                    {/* Content */}
+                    {/* Rich Content Editor */}
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-indigo-500" />
-                        <label htmlFor="content" className="text-sm font-bold text-slate-700">Content</label>
+                        <label className="text-sm font-bold text-slate-700">Content</label>
                         <span className="text-red-500 text-sm">*</span>
                       </div>
-                      <textarea 
-                        name="content" 
-                        id="content" 
-                        value={formData.content} 
-                        onChange={handleInputChange} 
-                        placeholder="Write your blog content here..."
-                        required 
-                        className={`${textareaStyles} min-h-[400px]`}
-                        rows={20}
+
+                      <RichTextEditor
+                        value={formData.content}
+                        onChange={handleEditorChange}
+                        onUpload={uploadImageAndReturnUrl}
+                        placeholder="Write your blog content here — use toolbar to add headings, bullets, images..."
                       />
+
                       <div className="flex justify-between text-xs text-slate-500">
-                        <span>{formData.content.split(/\s+/).filter(word => word.length > 0).length} words</span>
+                        <span>{(formData.content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean)).length} words</span>
                         <span>Estimated read time: {formData.readTime} minutes</span>
                       </div>
                     </div>
@@ -745,15 +903,15 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                           <Clock className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="readTime" className="text-sm font-bold text-slate-700">Read Time (minutes)</label>
                         </div>
-                        <input 
-                          type="number" 
-                          name="readTime" 
-                          id="readTime" 
+                        <input
+                          type="number"
+                          name="readTime"
+                          id="readTime"
                           min="1"
                           max="60"
-                          value={formData.readTime} 
-                          onChange={handleInputChange} 
-                          className={inputStyles} 
+                          value={formData.readTime}
+                          onChange={handleInputChange}
+                          className={inputStyles}
                         />
                       </div>
                     </div>
@@ -811,19 +969,19 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                         <label className="text-sm font-bold text-slate-700">Featured Image</label>
                         <span className="text-red-500 text-sm">*</span>
                       </div>
-                      
+
                       <div className="relative">
                         {formData.featuredImage ? (
                           <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
-                            <img 
-                              src={formData.featuredImage} 
-                              alt="Featured image preview" 
-                              className="w-full h-64 object-cover" 
+                            <img
+                              src={formData.featuredImage}
+                              alt="Featured image preview"
+                              className="w-full h-64 object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                              <button 
-                                type="button" 
-                                onClick={() => setFormData(p => ({...p, featuredImage: ''}))} 
+                              <button
+                                type="button"
+                                onClick={() => setFormData(p => ({ ...p, featuredImage: '' }))}
                                 className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200"
                               >
                                 <Trash2 size={16} />
@@ -837,22 +995,22 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                               <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl">
                                 <UploadCloud className="h-8 w-8 text-indigo-600" />
                               </div>
-                              
+
                               <div className="space-y-2">
                                 <div className="flex justify-center">
-                                  <label 
-                                    htmlFor="featured-image-upload" 
+                                  <label
+                                    htmlFor="featured-image-upload"
                                     className="relative cursor-pointer bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
                                   >
                                     <span>Upload Featured Image</span>
-                                    <input 
-                                      id="featured-image-upload" 
-                                      name="featured-image-upload" 
-                                      type="file" 
-                                      className="sr-only" 
-                                      onChange={(e) => handleImageUpload(e, 'featuredImage')} 
-                                      accept="image/*" 
-                                      disabled={isUploading} 
+                                    <input
+                                      id="featured-image-upload"
+                                      name="featured-image-upload"
+                                      type="file"
+                                      className="sr-only"
+                                      onChange={(e) => handleImageUpload(e, 'featuredImage')}
+                                      accept="image/*"
+                                      disabled={isUploading}
                                     />
                                   </label>
                                 </div>
@@ -877,36 +1035,36 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                           <ImageIcon className="h-4 w-4 text-indigo-500" />
                           <label className="text-sm font-bold text-slate-700">Additional Images</label>
                         </div>
-                        <label 
-                          htmlFor="additional-images-upload" 
+                        <label
+                          htmlFor="additional-images-upload"
                           className="cursor-pointer flex items-center gap-1 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         >
                           <Plus className="h-3 w-3" />
                           Add Image
-                          <input 
-                            id="additional-images-upload" 
-                            name="additional-images-upload" 
-                            type="file" 
-                            className="sr-only" 
-                            onChange={(e) => handleImageUpload(e, 'images')} 
-                            accept="image/*" 
-                            disabled={isUploading} 
+                          <input
+                            id="additional-images-upload"
+                            name="additional-images-upload"
+                            type="file"
+                            className="sr-only"
+                            onChange={(e) => handleImageUpload(e, 'images')}
+                            accept="image/*"
+                            disabled={isUploading}
                           />
                         </label>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {formData.images.map((image, index) => (
                           <div key={index} className="group relative overflow-hidden rounded-xl border-2 border-slate-200">
-                            <img 
-                              src={image} 
-                              alt={`Additional image ${index + 1}`} 
-                              className="w-full h-32 object-cover" 
+                            <img
+                              src={image}
+                              alt={`Additional image ${index + 1}`}
+                              className="w-full h-32 object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                              <button 
-                                type="button" 
-                                onClick={() => removeArrayItem('images', index)} 
+                              <button
+                                type="button"
+                                onClick={() => removeArrayItem('images', index)}
                                 className="flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
                               >
                                 <Trash2 size={14} />
@@ -930,7 +1088,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                       <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
                         Author Information
                       </h3>
-                      
+
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
@@ -938,15 +1096,15 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                             <label htmlFor="author" className="text-sm font-bold text-slate-700">Author Name</label>
                             <span className="text-red-500 text-sm">*</span>
                           </div>
-                          <input 
-                            type="text" 
-                            name="author" 
-                            id="author" 
-                            value={formData.author} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="text"
+                            name="author"
+                            id="author"
+                            value={formData.author}
+                            onChange={handleInputChange}
                             placeholder="Enter author name"
-                            required 
-                            className={inputStyles} 
+                            required
+                            className={inputStyles}
                           />
                         </div>
 
@@ -955,14 +1113,14 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                             <ImageIcon className="h-4 w-4 text-indigo-500" />
                             <label htmlFor="authorAvatar" className="text-sm font-bold text-slate-700">Author Avatar URL</label>
                           </div>
-                          <input 
-                            type="url" 
-                            name="authorAvatar" 
-                            id="authorAvatar" 
-                            value={formData.authorAvatar} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="url"
+                            name="authorAvatar"
+                            id="authorAvatar"
+                            value={formData.authorAvatar}
+                            onChange={handleInputChange}
                             placeholder="https://example.com/avatar.jpg"
-                            className={inputStyles} 
+                            className={inputStyles}
                           />
                         </div>
                       </div>
@@ -972,11 +1130,11 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                           <User className="h-4 w-4 text-indigo-500" />
                           <label htmlFor="authorBio" className="text-sm font-bold text-slate-700">Author Bio</label>
                         </div>
-                        <textarea 
-                          name="authorBio" 
-                          id="authorBio" 
-                          value={formData.authorBio} 
-                          onChange={handleInputChange} 
+                        <textarea
+                          name="authorBio"
+                          id="authorBio"
+                          value={formData.authorBio}
+                          onChange={handleInputChange}
                           placeholder="Brief author biography (max 500 characters)"
                           maxLength={500}
                           className={textareaStyles}
@@ -993,7 +1151,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                       <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
                         Publishing Settings
                       </h3>
-                      
+
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
@@ -1019,13 +1177,13 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                               <Calendar className="h-4 w-4 text-indigo-500" />
                               <label htmlFor="scheduledFor" className="text-sm font-bold text-slate-700">Schedule For</label>
                             </div>
-                            <input 
-                              type="datetime-local" 
-                              name="scheduledFor" 
-                              id="scheduledFor" 
-                              value={formData.scheduledFor} 
-                              onChange={handleInputChange} 
-                              className={inputStyles} 
+                            <input
+                              type="datetime-local"
+                              name="scheduledFor"
+                              id="scheduledFor"
+                              value={formData.scheduledFor}
+                              onChange={handleInputChange}
+                              className={inputStyles}
                             />
                           </div>
                         )}
@@ -1075,15 +1233,15 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                         <BarChart3 className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="metaTitle" className="text-sm font-bold text-slate-700">Meta Title</label>
                       </div>
-                      <input 
-                        type="text" 
-                        name="metaTitle" 
-                        id="metaTitle" 
-                        value={formData.metaTitle} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="text"
+                        name="metaTitle"
+                        id="metaTitle"
+                        value={formData.metaTitle}
+                        onChange={handleInputChange}
                         placeholder="SEO title for search engines (max 60 characters)"
                         maxLength={60}
-                        className={inputStyles} 
+                        className={inputStyles}
                       />
                       <div className="text-xs text-slate-500 text-right">
                         {formData.metaTitle.length}/60 characters
@@ -1096,11 +1254,11 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                         <BarChart3 className="h-4 w-4 text-indigo-500" />
                         <label htmlFor="metaDescription" className="text-sm font-bold text-slate-700">Meta Description</label>
                       </div>
-                      <textarea 
-                        name="metaDescription" 
-                        id="metaDescription" 
-                        value={formData.metaDescription} 
-                        onChange={handleInputChange} 
+                      <textarea
+                        name="metaDescription"
+                        id="metaDescription"
+                        value={formData.metaDescription}
+                        onChange={handleInputChange}
                         placeholder="SEO description for search engines (max 160 characters)"
                         maxLength={160}
                         className={textareaStyles}
@@ -1141,11 +1299,11 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                 >
                   Cancel
                 </button>
-                
-                <button 
-                  type="button" 
-                  onClick={(e) => handleSubmit(e, 'save')} 
-                  disabled={isSubmitting || isUploading} 
+
+                <button
+                  type="button"
+                  onClick={(e) => handleSubmit(e as any, 'save')}
+                  disabled={isSubmitting || isUploading}
                   className="inline-flex items-center gap-3 px-6 py-3 text-white font-bold bg-slate-600 rounded-xl hover:bg-slate-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
@@ -1161,10 +1319,10 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   )}
                 </button>
 
-                <button 
-                  type="button" 
-                  onClick={(e) => handleSubmit(e, 'publish')} 
-                  disabled={isSubmitting || isUploading || !formData.title || !formData.content || !formData.featuredImage || !formData.author} 
+                <button
+                  type="button"
+                  onClick={(e) => handleSubmit(e as any, 'publish')}
+                  disabled={isSubmitting || isUploading || !formData.title || !formData.content || !formData.featuredImage || !formData.author}
                   className="flex-1 inline-flex justify-center items-center gap-3 px-6 py-3 text-white font-bold bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 disabled:transform-none"
                 >
                   {isSubmitting ? (
@@ -1180,7 +1338,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   )}
                 </button>
               </div>
-              
+
               {/* Validation Message */}
               {(!formData.title || !formData.content || !formData.featuredImage || !formData.author) && (
                 <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">

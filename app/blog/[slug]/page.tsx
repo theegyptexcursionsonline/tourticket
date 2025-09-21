@@ -1,52 +1,51 @@
+// app/blog/[slug]/page.tsx
 import { notFound } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogPostClient from './BlogPostClient';
-import { IBlog } from '@/lib/models/Blog';
+import type { IBlog } from '@/lib/models/Blog';
 
-// This function tells Next.js which blog pages to pre-build
+type Params = { slug: string };
+
 export async function generateStaticParams() {
   await dbConnect();
   const blogs = await Blog.find({ status: 'published' }).select('slug').lean();
-  return blogs.map((blog) => ({
-    slug: blog.slug,
-  }));
+  return blogs.map((b: any) => ({ slug: b.slug }));
 }
 
-// Generate metadata for SEO
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  await dbConnect();
-  const blog = await Blog.findOne({ slug: params.slug, status: 'published' }).lean();
-  
-  if (!blog) {
+export async function generateMetadata({ params }: { params: Params }) {
+  try {
+    await dbConnect();
+    const blog = await Blog.findOne({ slug: params.slug, status: 'published' }).lean();
+
+    if (!blog) return { title: 'Blog Post Not Found' };
+
     return {
-      title: 'Blog Post Not Found',
+      title: blog.metaTitle || blog.title,
+      description: blog.metaDescription || blog.excerpt,
+      openGraph: {
+        title: blog.metaTitle || blog.title,
+        description: blog.metaDescription || blog.excerpt,
+        images: blog.featuredImage ? [blog.featuredImage] : undefined,
+        type: 'article',
+        publishedTime: blog.publishedAt?.toISOString(),
+        authors: blog.author ? [blog.author] : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: blog.metaTitle || blog.title,
+        description: blog.metaDescription || blog.excerpt,
+        images: blog.featuredImage ? [blog.featuredImage] : undefined,
+      },
     };
+  } catch (err) {
+    console.error('generateMetadata error:', err);
+    return { title: 'Blog' };
   }
-
-  return {
-    title: blog.metaTitle || blog.title,
-    description: blog.metaDescription || blog.excerpt,
-    openGraph: {
-      title: blog.metaTitle || blog.title,
-      description: blog.metaDescription || blog.excerpt,
-      images: [blog.featuredImage],
-      type: 'article',
-      publishedTime: blog.publishedAt?.toISOString(),
-      authors: [blog.author],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: blog.metaTitle || blog.title,
-      description: blog.metaDescription || blog.excerpt,
-      images: [blog.featuredImage],
-    },
-  };
 }
 
-// Fetch blog post data
 async function getBlogPost(slug: string) {
   await dbConnect();
 
@@ -59,27 +58,28 @@ async function getBlogPost(slug: string) {
     return { blog: null, relatedPosts: [] };
   }
 
-  // Increment view count
-  await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
+  // increment views (fire-and-forget style)
+  Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } }).catch(e => {
+    console.error('increment view error:', e);
+  });
 
-  // Get related posts (same category, excluding current post)
   const relatedPosts = await Blog.find({
     status: 'published',
     category: blog.category,
     _id: { $ne: blog._id }
   })
-  .limit(3)
-  .sort({ publishedAt: -1 })
-  .select('title slug excerpt featuredImage author publishedAt readTime')
-  .lean();
+    .limit(3)
+    .sort({ publishedAt: -1 })
+    .select('title slug excerpt featuredImage author publishedAt readTime')
+    .lean();
 
-  return { 
-    blog: JSON.parse(JSON.stringify(blog)), 
-    relatedPosts: JSON.parse(JSON.stringify(relatedPosts))
+  return {
+    blog: JSON.parse(JSON.stringify(blog)) as IBlog,
+    relatedPosts: JSON.parse(JSON.stringify(relatedPosts)) as IBlog[],
   };
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage({ params }: { params: Params }) {
   const { blog, relatedPosts } = await getBlogPost(params.slug);
 
   if (!blog) {

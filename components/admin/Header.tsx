@@ -66,7 +66,7 @@ const AdminHeader = () => {
                         <nav className="flex items-center space-x-1 text-sm">
                             {/* Home/Admin Root */}
                             <Link 
-                                href="/admin/dashboard" 
+                                href="/admin" 
                                 className="group flex items-center gap-2 px-3 py-2 rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/80 transition-all duration-200 font-medium"
                             >
                                 <Home className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />

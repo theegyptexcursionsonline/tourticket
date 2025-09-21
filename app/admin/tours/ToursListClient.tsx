@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { TourActions } from './TourActions';
-import Link from 'next/link';
+import TourForm from '@/components/TourForm';
 
 type TourType = {
   _id: string;
@@ -73,6 +73,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [perPage, setPerPage] = useState(12);
   const [page, setPage] = useState(1);
+  const [editingTour, setEditingTour] = useState<TourType | null>(null);
 
   const formatPrice = (p?: number) => {
     if (p === undefined || p === null) return '—';
@@ -273,13 +274,13 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                           )}
                         </div>
                         <div className="min-w-0 flex-1 space-y-2">
-                          <Link 
-                            href={`/admin/tours/edit/${t._id}`} 
-                            className="block text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600"
+                          <button
+                            onClick={() => setEditingTour(t)}
+                            className="block text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600 text-left"
                             title={t.title || t.name}
                           >
                             {t.title || t.name}
-                          </Link>
+                          </button>
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <Calendar className="h-3 w-3" />
                             <span>{t.duration}</span>
@@ -304,9 +305,9 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <TourActions tourId={t._id} />
-                    </td>
+                   <div className="flex-shrink-0">
+  <TourActions tourId={t._id} onEdit={() => setEditingTour(t)} />
+</div>
                   </tr>
                 ))}
               </tbody>
@@ -372,13 +373,13 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                 {/* Title and Actions */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <Link 
-                      href={`/admin/tours/edit/${t._id}`} 
-                      className="block text-lg font-bold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600 mb-2"
+                    <button
+                      onClick={() => setEditingTour(t)}
+                      className="block text-lg font-bold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600 mb-2 text-left"
                       title={t.title || t.name}
                     >
                       {t.title || t.name}
-                    </Link>
+                    </button>
                     
                     {/* Location and Category */}
                     <div className="space-y-1">
@@ -393,9 +394,9 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                     </div>
                   </div>
                   
-                  <div className="flex-shrink-0">
-                    <TourActions tourId={t._id} />
-                  </div>
+              <div className="flex-shrink-0">
+  <TourActions tourId={t._id} onEdit={() => setEditingTour(t)} />
+</div>
                 </div>
 
                 {/* Duration and Date */}
@@ -490,6 +491,18 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tour Edit Form */}
+      {editingTour && (
+        <TourForm
+          tourToEdit={editingTour}
+          onSave={() => {
+            setEditingTour(null);
+            // Optionally refresh the page or refetch data
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );

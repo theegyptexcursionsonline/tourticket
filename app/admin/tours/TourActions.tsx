@@ -2,12 +2,17 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Edit, Trash2, MoreVertical, X, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
-export const TourActions = ({ tourId }: { tourId: string }) => {
+export const TourActions = ({ 
+  tourId, 
+  onEdit 
+}: { 
+  tourId: string;
+  onEdit?: () => void;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -41,7 +46,7 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
     if (isOpen) {
       // small delay to allow rendering
       setTimeout(() => {
-        const first = menuRef.current?.querySelector<HTMLElement>("a,button");
+        const first = menuRef.current?.querySelector<HTMLElement>("button");
         first?.focus();
       }, 50);
     }
@@ -49,6 +54,13 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
 
   const openMenu = () => setIsOpen(true);
   const toggleMenu = () => setIsOpen(v => !v);
+
+  const handleEdit = () => {
+    setIsOpen(false);
+    if (onEdit) {
+      onEdit();
+    }
+  };
 
   const handleDelete = async () => {
     setShowConfirm(true);
@@ -105,16 +117,15 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
           aria-labelledby="options-menu"
         >
           <div className="py-1">
-            {/* FIXED: Ensure consistent URL structure */}
-            <Link
-              href={`/admin/tours/edit/${tourId}`}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
               role="menuitem"
-              onClick={() => setIsOpen(false)} // Close menu when clicking edit
             >
               <Edit className="w-4 h-4 text-slate-500" />
               <span>Edit</span>
-            </Link>
+            </button>
 
             <button
               type="button"
