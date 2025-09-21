@@ -369,6 +369,60 @@ if (!activeEl) {
   );
 };
 
+
+const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType: string, className?: string }) => {
+  const icons: { [key: string]: JSX.Element } = {
+    location: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+    ),
+    camera: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 15.2c-2.07 0-3.75-1.68-3.75-3.75S9.93 7.7 12 7.7s3.75 1.68 3.75 3.75S14.07 15.2 12 15.2zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9z"/>
+      </svg>
+    ),
+    food: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8.1 13.34l2.83-2.83L3.91 3.5c-1.56 1.56-1.56 4.09 0 5.66l4.19 4.18zm6.78-1.81c1.53.71 3.68.21 5.27-1.38 1.91-1.91 2.28-4.65.81-6.12-1.46-1.46-4.20-1.10-6.12.81-1.59 1.59-2.09 3.74-1.38 5.27L3.7 19.87l1.41 1.41L12 14.41l6.88 6.88 1.41-1.41L13.41 13l1.47-1.47z"/>
+      </svg>
+    ),
+    monument: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M6.5 10h-2v7h2v-7zm6 0h-2v7h2v-7zm6 0h-2v7h2v-7zm.5 9H5v2h14v-2zm-6.5-9V8.5c0-.83-.67-1.5-1.5-1.5S9.5 7.67 9.5 8.5V10h3zm2.5 0V8.5C14.5 6.57 12.93 5 11 5S7.5 6.57 7.5 8.5V10H5v2h14v-2h-2.5z"/>
+      </svg>
+    ),
+    transport: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+      </svg>
+    ),
+    activity: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63c-.34-1.02-1.31-1.73-2.39-1.73-.85 0-1.66.5-2.02 1.33L14 11.6V22h2zm-7.5-.5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3-7.5l1.5-3.6L15.5 8H13l-1.8 2.4L7 7v4.5h2v5H3V2h18v3.5L12.5 14z"/>
+      </svg>
+    ),
+    time: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+      </svg>
+    ),
+    info: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+      </svg>
+    ),
+    shopping: (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+      </svg>
+    )
+  };
+  
+  return icons[iconType] || icons.location;
+};
+
+
 const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -380,8 +434,7 @@ const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[
       {itinerary.map((item, index) => (
         <div key={index} className="relative flex items-start gap-4 pb-8">
           <div className="flex-shrink-0 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm relative z-10">
-            {index + 1}
-          </div>
+<ItineraryIcon iconType={item.icon || 'location'} /></div>
           <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
@@ -1122,11 +1175,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                                 ? 'border-red-600 scale-105 shadow'
                                 : 'border-slate-200 hover:border-slate-300'
                         }`}
-                        aria-label={`View image ${index + 1}`}
+                        aria-label={`View image $<ItineraryIcon iconType={item.icon || 'location'} />`}
                       >
                         <Image
                           src={image}
-                          alt={`${tour.title} ${index + 1}`}
+                          alt={`${tour.title} $<ItineraryIcon iconType={item.icon || 'location'} />`}
                           width={80}
                           height={64}
                           className="w-full h-full object-cover"
@@ -1162,11 +1215,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
 
                   <div className="text-right flex-shrink-0">
                     {tour.originalPrice && (
-                      <p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>
-                    )}
-                    <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
-                      {formatPrice(tour.discountPrice)}
-                    </p>
+<p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>                    )}
+                  <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
+{formatPrice(tour.discountPrice)}</p>
                     <p className="text-sm text-slate-500">per person</p>
                   </div>
                 </div>
@@ -1256,7 +1307,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                                 <Star size={12} className="text-yellow-500 fill-current" />
                                 <span className="text-xs font-bold">{relatedTour.rating}</span>
                               </div>
-                              <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
+                              <span className="font-bold text-red-600">{formatPrice(tour.discountPrice)}</span>
                             </div>
                           </div>
                         </div>
@@ -1274,10 +1325,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                   <div className="text-center mb-6">
                     <div className="flex items-baseline justify-center gap-2 mb-2">
                       {tour.originalPrice && (
-                        <span className="text-slate-500 line-through text-lg">{formatPrice(tour.originalPrice)}</span>
-                      )}
-                      <span className="text-4xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
-                    </div>
+<span className="text-slate-500 line-through text-lg">{formatPrice(tour.originalPrice)}</span>                      )}
+<span className="text-4xl font-extrabold text-red-600">{formatPrice(tour.discountPrice || tour.price)}</span>                    </div>
                     <p className="text-sm text-slate-500">per person</p>
                   </div>
 

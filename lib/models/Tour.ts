@@ -2,7 +2,6 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import './Review';
 
-// Enhanced interfaces
 export interface IItineraryItem {
   time?: string;
   title: string;
@@ -10,6 +9,7 @@ export interface IItineraryItem {
   duration?: string;
   location?: string;
   includes?: string[];
+  icon?: string;
 }
 
 export interface IAvailabilitySlot {
@@ -127,7 +127,6 @@ export interface ITour extends Document {
   reviewDetails?: any[];
 }
 
-// Schemas
 const ItineraryItemSchema = new Schema<IItineraryItem>({
   time: { type: String },
   title: { type: String, required: true },
@@ -135,6 +134,7 @@ const ItineraryItemSchema = new Schema<IItineraryItem>({
   duration: { type: String },
   location: { type: String },
   includes: [{ type: String }],
+  icon: { type: String, default: 'location' },
 }, { _id: false });
 
 const AvailabilitySlotSchema = new Schema<IAvailabilitySlot>({

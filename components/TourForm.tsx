@@ -460,14 +460,14 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
         setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
     };
 
-    const addItineraryItem = () => {
-        const newDay = formData.itinerary.length + 1;
-        setFormData((p: any) => ({ 
-            ...p, 
-            itinerary: [...p.itinerary, { day: newDay, title: '', description: '' }] 
-        }));
-        setExpandedItineraryIndex(formData.itinerary.length);
-    };
+   const addItineraryItem = () => {
+    const newDay = formData.itinerary.length + 1;
+    setFormData((p: any) => ({ 
+        ...p, 
+        itinerary: [...p.itinerary, { day: newDay, title: '', description: '', icon: 'location' }] 
+    }));
+    setExpandedItineraryIndex(formData.itinerary.length);
+};
 
     const removeItineraryItem = (index: number) => {
         if (formData.itinerary.length <= 1) return;
@@ -1391,27 +1391,42 @@ console.error('API Error:', errorMessage, responseData);
                                                     <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
                                                 </button>
                                                 <div className={`overflow-hidden transition-all duration-300 ${expandedItineraryIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
-                                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <label className="text-xs font-medium text-slate-500">Day Title</label>
-                                                            <input 
-                                                                value={day.title} 
-                                                                onChange={(e) => handleItineraryChange(i, 'title', e.target.value)}
-                                                                className={inputBase} 
-                                                                placeholder="Day title" 
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-xs font-medium text-slate-500">Description</label>
-                                                            <textarea 
-                                                                value={day.description} 
-                                                                onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
-                                                                className={`${textareaBase} resize-none`} 
-                                                                rows={2}
-                                                                placeholder="Day description" 
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div className="space-y-2">
+    <label className="text-xs font-medium text-slate-500">Day Title</label>
+    <input 
+      value={day.title} 
+      onChange={(e) => handleItineraryChange(i, 'title', e.target.value)}
+      className={inputBase} 
+      placeholder="Day title" 
+    />
+  </div>
+  <div className="space-y-2">
+    <label className="text-xs font-medium text-slate-500">Icon</label>
+    <select 
+      value={day.icon || 'location'} 
+      onChange={(e) => handleItineraryChange(i, 'icon', e.target.value)}
+      className={`${inputBase} appearance-none cursor-pointer`}
+    >
+      <option value="location">Location</option>
+      <option value="transport">Transport</option>
+      <option value="monument">Monument</option>
+      <option value="camera">Photo Stop</option>
+      <option value="food">Food</option>
+      <option value="time">Time</option>
+    </select>
+  </div>
+  <div className="space-y-2">
+    <label className="text-xs font-medium text-slate-500">Description</label>
+    <textarea 
+      value={day.description} 
+      onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
+      className={`${textareaBase} resize-none`} 
+      rows={2}
+      placeholder="Day description" 
+    />
+  </div>
+</div>
                                                     <div className="mt-4 text-right">
                                                         <button
                                                             type="button"
