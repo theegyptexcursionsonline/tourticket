@@ -101,14 +101,20 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
     index: true,
   },
-  country: {
-    type: String,
-    required: false,
-    trim: true,
-    minlength: [2, 'Country must be at least 2 characters'],
-    maxlength: [100, 'Country cannot exceed 100 characters'],
-    index: true,
-  },
+country: {
+  type: String,
+  required: false,
+  trim: true,
+  maxlength: [100, 'Country cannot exceed 100 characters'],
+  index: true,
+  validate: {
+    validator: function(v: string) {
+      // Only validate length if country is provided and not empty
+      return !v || v.length >= 2;
+    },
+    message: 'Country must be at least 2 characters when provided'
+  }
+},
   
   // Media
   image: {
@@ -148,19 +154,24 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     required: false,
   },
   
-  // Practical Information - All optional
-  currency: {
-    type: String,
-    uppercase: true,
-    trim: true,
-    minlength: [3, 'Currency code must be 3 characters'],
-    maxlength: [3, 'Currency code must be 3 characters'],
-    match: [/^[A-Z]{3}$/, 'Currency must be a valid 3-letter code (e.g., USD, EUR)'],
-  },
-  timezone: {
-    type: String,
-    trim: true,
-  },
+currency: {
+  type: String,
+  uppercase: true,
+  trim: true,
+  required: false,
+  // No validation - completely optional
+},
+ timezone: {
+  type: String,
+  trim: true,
+  validate: {
+    validator: function(v: string) {
+      // Only validate if timezone is provided and not empty
+      return !v || v.length > 0; // Allow empty or any non-empty string
+    },
+    message: 'Timezone must not be empty when provided'
+  }
+},
   bestTimeToVisit: {
     type: String,
     trim: true,

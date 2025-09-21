@@ -262,18 +262,22 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     
     return errors;
   };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  console.log('Form submission started');
+  console.log('Form data:', formData);
+  
+  const errors = validateForm();
+  if (errors.length > 0) {
+    console.log('Validation errors:', errors);
+    toast.error(`Please fix the following errors:\n${errors.join('\n')}`);
+    return;
+  }
+  
+  setIsSubmitting(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const errors = validateForm();
-    if (errors.length > 0) {
-      toast.error(`Please fix the following errors:\n${errors.join('\n')}`);
-      return;
-    }
-    
-    setIsSubmitting(true);
-
+  try {
     // Prepare data for submission
     const submitData = {
       ...formData,
@@ -292,38 +296,90 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       tags: formData.tags.filter(t => t.trim())
     };
 
+    console.log('Submit data prepared:', submitData);
+
     const apiEndpoint = editingDestination
       ? `/api/admin/tours/destinations/${editingDestination._id}`
       : '/api/admin/tours/destinations';
 
     const method = editingDestination ? 'PUT' : 'POST';
 
-    const promise = fetch(apiEndpoint, { 
+    console.log(`Making ${method} request to:`, apiEndpoint);
+
+    // Show loading toast
+    const loadingToast = toast.loading('Saving destination...');
+
+    const response = await fetch(apiEndpoint, { 
       method, 
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify(submitData)
-    })
-      .then(async res => {
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || 'Failed to save.');
-        }
-        return res.json();
-      });
-
-    toast.promise(promise, {
-      loading: 'Saving destination...',
-      success: () => {
-        setIsPanelOpen(false);
-        router.refresh();
-        return `Destination saved successfully!`;
-      },
-      error: (err) => err.message || 'Failed to save destination.',
-    }).finally(() => {
-        setIsSubmitting(false)
     });
-  };
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    // Dismiss loading toast
+    toast.dismiss(loadingToast);
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to save destination';
+      let errorDetails = '';
+      
+      try {
+        const errorData = await response.json();
+        console.log('Error response data:', errorData);
+        errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
+        errorDetails = errorData.details || '';
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      
+      // Show detailed error toast
+      toast.error(`${errorMessage}${errorDetails ? '\n' + errorDetails : ''}`, {
+        duration: 6000 // Show longer for error messages
+      });
+      
+      console.error('API Error:', errorMessage, errorDetails);
+      return;
+    }
+
+    let data;
+    try {
+      data = await response.json();
+      console.log('Success response data:', data);
+    } catch (parseError) {
+      console.error('Error parsing success response:', parseError);
+      toast.error('Response parsing error, but destination may have been saved');
+    }
+    
+    // Show success toast
+    toast.success(`Destination ${editingDestination ? 'updated' : 'created'} successfully!`);
+    
+    // Close panel and refresh
+    setIsPanelOpen(false);
+    router.refresh();
+
+  } catch (error: any) {
+    console.error('Submit error:', error);
+    
+    // Handle network or other unexpected errors
+    let errorMessage = 'An unexpected error occurred';
+    
+    if (error.name === 'TypeError' && error.message?.includes('fetch')) {
+      errorMessage = 'Network error. Please check your connection and try again.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    toast.error(errorMessage, {
+      duration: 6000
+    });
+  } finally {
+    setIsSubmitting(false);
+    console.log('Form submission ended');
+  }
+};
   const handleDelete = (destId: string, destName: string) => {
     const promise = fetch(`/api/admin/tours/destinations/${destId}`, { method: 'DELETE' })
       .then(res => {
