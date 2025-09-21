@@ -19,6 +19,7 @@ import {
   Phone,
   MapPin,
   Star,
+  Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,11 +34,11 @@ interface Props {
 
 /**
  * BlogPostClient.tsx
- * Improved, travel-focused sidebar and structured layout for tour/travel site.
+ * Full file including AuthorCard and CommentsSection integrated.
  *
- * Notes:
- * - Ensure blog.content is sanitized server-side (we render with dangerouslySetInnerHTML).
- * - Ensure next.config.js allows external image domains used by featuredImage / destinations / tours.
+ * NOTES:
+ * - Keep server-side sanitization for blog.content.
+ * - Ensure next.config.js includes allowed image domains for featuredImage / avatars.
  */
 
 function formatDate(date?: string | Date) {
@@ -78,7 +79,7 @@ function ShareAndLike({ blog }: { blog: IBlog }) {
   const handleLike = async () => {
     if (liked) return;
     try {
-      await fetch(`/api/blog/${blog.slug}/like`, { method: 'POST' });
+      await fetch(`/api/blog/${encodeURIComponent(blog.slug)}/like`, { method: 'POST' });
       setLikes((s) => s + 1);
       setLiked(true);
       toast.success('Thanks for liking!');
@@ -148,6 +149,191 @@ function MiniTourCard({ tour }: { tour: ITour }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+/* ---------- Author Card ---------- */
+function AuthorCard({ author }: { author: any }) {
+  if (!author) return null;
+
+  const avatar = author.avatar || `/api/avatars/${encodeURIComponent(author.name || 'author')}`;
+
+  return (
+    <div className="bg-white rounded-2xl shadow p-6 flex gap-4 items-start">
+      <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
+        <Image src={avatar} alt={author.name} width={80} height={80} className="object-cover" />
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-lg font-semibold text-slate-900">{author.name}</h4>
+            {author.role && <div className="text-xs text-slate-500 mt-1">{author.role}</div>}
+          </div>
+          <div className="text-xs text-slate-400">{author.postsCount ? `${author.postsCount} posts` : ''}</div>
+        </div>
+
+        {author.bio && <p className="mt-3 text-sm text-slate-600 leading-relaxed">{author.bio}</p>}
+
+        <div className="mt-4 flex items-center gap-3">
+          {author.twitter && (
+            <a href={author.twitter} target="_blank" rel="noreferrer" className="text-sm font-medium text-sky-600 hover:underline inline-flex items-center gap-2">
+              <Twitter className="h-4 w-4" /> Twitter
+            </a>
+          )}
+          {author.facebook && (
+            <a href={author.facebook} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-600 hover:underline inline-flex items-center gap-2">
+              <Facebook className="h-4 w-4" /> Facebook
+            </a>
+          )}
+          {author.website && (
+            <a href={author.website} target="_blank" rel="noreferrer" className="ml-auto text-sm text-indigo-600 font-medium hover:underline inline-flex items-center gap-2">
+              Visit site <ArrowRight className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+
+        <div className="mt-4 flex gap-3">
+          <Link href={`/author/${encodeURIComponent(author.slug || author.name)}`} className="px-3 py-2 border rounded-lg text-sm text-slate-700 hover:bg-slate-50">More articles</Link>
+          <a href={`mailto:${author.email || ''}`} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Contact author</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Comments Section ---------- */
+function CommentsSection({ slug }: { slug: string }) {
+  const [comments, setComments] = useState<any[]>([]);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [body, setBody] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!slug) return;
+    fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  const fetchComments = async () => {
+    try {
+      setRefreshing(true);
+      const res = await fetch(`/api/blog/${encodeURIComponent(slug)}/comments`);
+      if (!res.ok) throw new Error('Failed to load comments');
+      const data = await res.json();
+      setComments(Array.isArray(data) ? data : data.comments || []);
+    } catch (e) {
+      console.error(e);
+      toast.error('Unable to load comments');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!body.trim()) {
+      toast.error('Please write a comment');
+      return;
+    }
+    if (!name.trim()) {
+      toast.error('Please enter your name');
+      return;
+    }
+    setLoading(true);
+
+    const newComment = {
+      _id: `tmp-${Date.now()}`,
+      name,
+      email,
+      body,
+      createdAt: new Date().toISOString(),
+      avatar: `/api/avatars/${encodeURIComponent(name)}`,
+      pending: true,
+    };
+
+    // optimistic add
+    setComments((s) => [newComment, ...s]);
+    setBody('');
+
+    try {
+      const res = await fetch(`/api/blog/${encodeURIComponent(slug)}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, body }),
+      });
+
+      if (!res.ok) throw new Error('Failed to post comment');
+
+      const saved = await res.json();
+      // replace optimistic comment with server response (if provided)
+      setComments((s) => s.map(c => c._id === newComment._id ? (saved.comment || saved || c) : c));
+      toast.success('Comment submitted — will appear after moderation');
+      setName(''); setEmail('');
+    } catch (err) {
+      // remove optimistic comment on error
+      setComments((s) => s.filter(c => c._id !== newComment._id));
+      toast.error('Unable to post comment right now');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-lg">Comments</h3>
+        <div className="text-sm text-slate-500">{comments.length} discussion{comments.length !== 1 ? 's' : ''}</div>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name*" className="w-full px-3 py-2 rounded border text-sm" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" className="w-full px-3 py-2 rounded border text-sm" />
+        </div>
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your comment..." rows={4} className="w-full px-3 py-2 rounded border text-sm" />
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+            {loading ? 'Posting...' : 'Post comment'}
+          </button>
+          <button type="button" onClick={() => { setBody(''); setName(''); setEmail(''); }} className="px-3 py-2 text-sm rounded border hover:bg-slate-50">Clear</button>
+          <button type="button" onClick={fetchComments} disabled={refreshing} className="ml-auto px-3 py-2 text-sm rounded border hover:bg-slate-50">
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+        <div className="text-xs text-slate-400">By posting you agree to our comment policy. Comments may be moderated.</div>
+      </form>
+
+      {/* Comments list */}
+      <div className="space-y-4">
+        {comments.length === 0 && <div className="text-sm text-slate-500">No comments yet — start the conversation.</div>}
+        {comments.map((c) => (
+          <div key={c._id} className={`flex gap-3 p-3 rounded-lg ${c.pending ? 'opacity-80 bg-slate-50' : 'bg-white'} border`}>
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
+              <Image src={c.avatar || `/api/avatars/${encodeURIComponent(c.name || 'guest')}`} alt={c.name} width={40} height={40} className="object-cover" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-medium text-slate-900">{c.name}</div>
+                <div className="text-xs text-slate-400">{new Date(c.createdAt).toLocaleString()}</div>
+                {c.pending && <div className="ml-2 text-xs text-amber-600">Pending</div>}
+              </div>
+              <div className="text-sm text-slate-700 mt-2">{c.body}</div>
+
+              {/* simple reply / actions */}
+              <div className="mt-3 flex items-center gap-3 text-xs">
+                <button className="text-slate-500 hover:text-slate-700">Like</button>
+                <button className="text-slate-500 hover:text-slate-700">Reply</button>
+                <button className="text-slate-500 hover:text-slate-700">Report</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -320,6 +506,26 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
                 </div>
               </div>
             )}
+
+            {/* Author */}
+            <div className="bg-white rounded-2xl shadow p-6">
+              <AuthorCard author={blog.authorObject ?? {
+                name: blog.author || 'Author',
+                role: blog.authorRole,
+                bio: blog.authorBio,
+                avatar: blog.authorAvatar,
+                twitter: blog.authorTwitter,
+                facebook: blog.authorFacebook,
+                website: blog.authorWebsite,
+                slug: blog.authorSlug,
+                postsCount: blog.authorPostsCount
+              }} />
+            </div>
+
+            {/* Comments */}
+            <div className="mt-6">
+              <CommentsSection slug={blog.slug ?? blog._id ?? blog.id} />
+            </div>
 
             {/* Related posts (inline) */}
             {relatedPosts && relatedPosts.length > 0 && (
