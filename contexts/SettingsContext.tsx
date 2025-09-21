@@ -4,12 +4,13 @@ import { createContext, useState, useEffect, ReactNode, useCallback } from 'reac
 import { Currency, Language } from '@/types';
 import { currencies, languages } from '@/utils/localization';
 
+// --- Interface Definitions ---
 interface SettingsContextType {
   selectedCurrency: Currency;
   setSelectedCurrency: (currency: Currency) => void;
   selectedLanguage: Language;
   setSelectedLanguage: (language: Language) => void;
-  formatPrice: (priceInEur: number) => string;
+  formatPrice: (priceInUsd: number) => string;
   formatNumber: (number: number) => string;
   formatDate: (date: Date | string) => string;
   exchangeRates: { [key: string]: number };
@@ -20,7 +21,7 @@ interface SettingsContextType {
   formatDiscount: (originalPrice: number, discountedPrice: number) => string;
   formatSavings: (savings: number) => string;
   getCurrencySymbol: () => string;
-  convertPrice: (priceInEur: number) => number;
+  convertPrice: (priceInUsd: number) => number;
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -311,50 +312,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  const convertPrice = useCallback((priceInEur: number): number => {
-    const rate = exchangeRates[selectedCurrency.code] || 1;
-    return priceInEur * rate;
+  const convertPrice = useCallback((priceInUsd: number): number => {
+    // If USD is selected, return as-is (no conversion needed)
+    if (selectedCurrency.code === 'USD') {
+      return priceInUsd;
+    }
+    
+    // Get exchange rates (these are EUR-based from the API)
+    const usdRate = exchangeRates['USD'] || 1.08; // USD rate against EUR
+    const targetRate = exchangeRates[selectedCurrency.code] || 1; // Target currency rate against EUR
+    
+    // Convert USD to target currency via EUR
+    // Formula: USD -> EUR -> Target Currency
+    const eurValue = priceInUsd / usdRate; // Convert USD to EUR first
+    const targetValue = eurValue * targetRate; // Convert EUR to target currency
+    
+    return targetValue;
   }, [exchangeRates, selectedCurrency.code]);
 
-  const formatPrice = useCallback((priceInEur: number): string => {
-    const convertedPrice = convertPrice(priceInEur);
+  const formatPrice = useCallback((priceInUsd: number): string => {
+    const convertedPrice = convertPrice(priceInUsd);
     
-    // Get locale based on currency for proper formatting
     const getLocale = (currencyCode: string): string => {
       const localeMap: { [key: string]: string } = {
-        USD: 'en-US',
-        EUR: 'de-DE',
-        GBP: 'en-GB',
-        JPY: 'ja-JP',
-        INR: 'en-IN',
-        AUD: 'en-AU',
-        CAD: 'en-CA',
-        CHF: 'de-CH',
-        CNY: 'zh-CN',
-        SEK: 'sv-SE',
-        NZD: 'en-NZ',
-        MXN: 'es-MX',
-        SGD: 'en-SG',
-        HKD: 'en-HK',
-        NOK: 'no-NO',
-        KRW: 'ko-KR',
-        TRY: 'tr-TR',
-        RUB: 'ru-RU',
-        BRL: 'pt-BR',
-        ZAR: 'en-ZA',
-        DKK: 'da-DK',
-        PLN: 'pl-PL',
-        CZK: 'cs-CZ',
-        HUF: 'hu-HU',
-        RON: 'ro-RO',
-        BGN: 'bg-BG',
-        HRK: 'hr-HR',
-        ISK: 'is-IS',
-        THB: 'th-TH',
-        MYR: 'ms-MY',
-        PHP: 'en-PH',
-        IDR: 'id-ID',
-        VND: 'vi-VN',
+        USD: 'en-US', EUR: 'de-DE', GBP: 'en-GB', JPY: 'ja-JP', INR: 'en-IN',
+        AUD: 'en-AU', CAD: 'en-CA', CHF: 'de-CH', CNY: 'zh-CN', SEK: 'sv-SE',
+        NZD: 'en-NZ', MXN: 'es-MX', SGD: 'en-SG', HKD: 'en-HK', NOK: 'no-NO',
+        KRW: 'ko-KR', TRY: 'tr-TR', RUB: 'ru-RU', BRL: 'pt-BR', ZAR: 'en-ZA',
+        DKK: 'da-DK', PLN: 'pl-PL', CZK: 'cs-CZ', HUF: 'hu-HU', RON: 'ro-RO',
+        BGN: 'bg-BG', HRK: 'hr-HR', ISK: 'is-IS', THB: 'th-TH', MYR: 'ms-MY',
+        PHP: 'en-PH', IDR: 'id-ID', VND: 'vi-VN',
       };
       return localeMap[currencyCode] || 'en-US';
     };
@@ -369,7 +356,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       return formatter.format(convertedPrice);
     } catch (error) {
-      // Enhanced fallback formatting if Intl.NumberFormat fails
       const decimals = ['JPY', 'KRW', 'VND', 'IDR'].includes(selectedCurrency.code) ? 0 : 2;
       const formattedNumber = convertedPrice.toLocaleString('en-US', { 
         minimumFractionDigits: decimals, 
@@ -379,7 +365,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedCurrency, convertPrice]);
 
-  // Enhanced method for formatting price ranges
   const formatPriceRange = useCallback((minPrice: number, maxPrice: number): string => {
     if (minPrice === maxPrice) {
       return formatPrice(minPrice);
@@ -387,19 +372,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
   }, [formatPrice]);
 
-  // Method for formatting discount percentages
   const formatDiscount = useCallback((originalPrice: number, discountedPrice: number): string => {
     if (originalPrice <= discountedPrice) return '';
     const discountPercent = Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
     return `-${discountPercent}%`;
   }, []);
 
-  // Method for formatting savings amounts
-  const formatSavings = useCallback((savings: number): string => {
-    return `${t('booking.save')} ${formatPrice(savings)}`;
-  }, [formatPrice]);
-
-  // Method to get currency symbol
   const getCurrencySymbol = useCallback((): string => {
     return selectedCurrency.symbol;
   }, [selectedCurrency.symbol]);
@@ -407,26 +385,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const formatNumber = useCallback((number: number): string => {
     const getLocale = (): string => {
       const localeMap: { [key: string]: string } = {
-        en: 'en-US',
-        es: 'es-ES',
-        fr: 'fr-FR',
-        de: 'de-DE',
-        it: 'it-IT',
-        pt: 'pt-PT',
-        nl: 'nl-NL',
-        da: 'da-DK',
-        sv: 'sv-SE',
-        no: 'no-NO',
-        fi: 'fi-FI',
-        ru: 'ru-RU',
-        ja: 'ja-JP',
-        ko: 'ko-KR',
-        zh: 'zh-CN',
-        ar: 'ar-SA',
-        hi: 'hi-IN',
-        pl: 'pl-PL',
-        tr: 'tr-TR',
-        he: 'he-IL',
+        en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
+        pt: 'pt-PT', nl: 'nl-NL', da: 'da-DK', sv: 'sv-SE', no: 'no-NO',
+        fi: 'fi-FI', ru: 'ru-RU', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN',
+        ar: 'ar-SA', hi: 'hi-IN', pl: 'pl-PL', tr: 'tr-TR', he: 'he-IL',
       };
       return localeMap[selectedLanguage.code] || 'en-US';
     };
@@ -443,26 +405,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     
     const getLocale = (): string => {
       const localeMap: { [key: string]: string } = {
-        en: 'en-US',
-        es: 'es-ES',
-        fr: 'fr-FR',
-        de: 'de-DE',
-        it: 'it-IT',
-        pt: 'pt-PT',
-        nl: 'nl-NL',
-        da: 'da-DK',
-        sv: 'sv-SE',
-        no: 'no-NO',
-        fi: 'fi-FI',
-        ru: 'ru-RU',
-        ja: 'ja-JP',
-        ko: 'ko-KR',
-        zh: 'zh-CN',
-        ar: 'ar-SA',
-        hi: 'hi-IN',
-        pl: 'pl-PL',
-        tr: 'tr-TR',
-        he: 'he-IL',
+        en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
+        pt: 'pt-PT', nl: 'nl-NL', da: 'da-DK', sv: 'sv-SE', no: 'no-NO',
+        fi: 'fi-FI', ru: 'ru-RU', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN',
+        ar: 'ar-SA', hi: 'hi-IN', pl: 'pl-PL', tr: 'tr-TR', he: 'he-IL',
       };
       return localeMap[selectedLanguage.code] || 'en-US';
     };
@@ -477,7 +423,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       return dateObj.toLocaleDateString('en-US');
     }
   }, [selectedLanguage]);
-
+  
+  // FIXED: Moved the 't' function definition before it is used by other functions.
   const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     const translation = translations[selectedLanguage.code]?.[key] || translations['en'][key] || key;
     
@@ -489,6 +436,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     
     return translation;
   }, [selectedLanguage]);
+
+  // This function now correctly accesses 't' as it is defined above.
+  const formatSavings = useCallback((savings: number): string => {
+    return `${t('booking.save')} ${formatPrice(savings)}`;
+  }, [formatPrice, t]);
 
   return (
     <SettingsContext.Provider value={{ 

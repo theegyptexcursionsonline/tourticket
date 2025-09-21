@@ -1,4 +1,3 @@
-// app/tour/[slug]/TourPageClient.tsx
 'use client';
 // Add these lines to your existing imports
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -38,6 +37,7 @@ interface ItineraryItem {
   duration?: string;
   location?: string;
   includes?: string[];
+  icon?: string; // Add icon field
 }
 
 interface TourEnhancement {
@@ -65,64 +65,76 @@ interface TourPageClientProps {
   initialReviews: ReviewType[];
 }
 
-// Extract enhancement data from the actual tour object with GENERIC fallbacks
+// Extract enhancement data from the actual tour object with SMART fallbacks
 const extractEnhancementData = (tour: Tour): TourEnhancement => {
   return {
-    itinerary: tour.itinerary || [],
-    whatToBring: tour.whatToBring || [
+    // Use database itinerary with proper icon handling, only fallback if completely empty
+    itinerary: tour.itinerary && tour.itinerary.length > 0 ? tour.itinerary.map(item => ({
+      ...item,
+      icon: item.icon || 'location' // Ensure icon is properly set
+    })) : [],
+    
+    // Use database data first, only fallback if not available
+    whatToBring: tour.whatToBring && tour.whatToBring.length > 0 ? tour.whatToBring : [
       "Camera for photos",
-      "Comfortable walking shoes",
+      "Comfortable walking shoes", 
       "Valid ID or passport",
       "Weather-appropriate clothing",
       "Water bottle"
     ],
-    whatToWear: tour.whatToWear || [
+    
+    whatToWear: tour.whatToWear && tour.whatToWear.length > 0 ? tour.whatToWear : [
       "Comfortable walking shoes",
       "Weather-appropriate clothing", 
       "Modest attire for religious sites",
       "Layers for varying temperatures"
     ],
+    
     physicalRequirements: tour.physicalRequirements || "Moderate walking required. Tour involves stairs and uneven surfaces. Please inform us of any mobility concerns.",
-    accessibilityInfo: tour.accessibilityInfo || [
+    
+    accessibilityInfo: tour.accessibilityInfo && tour.accessibilityInfo.length > 0 ? tour.accessibilityInfo : [
       "Limited wheelchair accessibility - please contact us in advance",
-      "Audio guides available for hearing impaired visitors",
+      "Audio guides available for hearing impaired visitors", 
       "Service animals are welcome",
       "Please inform us of any special requirements when booking"
     ],
-    groupSize: tour.groupSize || { min: 1, max: 20 },
+    
+    groupSize: tour.groupSize || { min: 1, max: tour.maxGroupSize || 20 },
     transportationDetails: tour.transportationDetails || "Meeting point instructions will be provided upon booking confirmation.",
     mealInfo: tour.mealInfo || "No meals included unless specified. Local restaurant recommendations available from your guide.",
     weatherPolicy: tour.weatherPolicy || "Tours operate rain or shine. In case of severe weather, tours may be rescheduled or refunded.",
     photoPolicy: tour.photoPolicy || "Photography is encouraged. Please respect photography restrictions at certain venues and other guests' privacy.",
     tipPolicy: tour.tipPolicy || "Gratuities are not included but are appreciated for exceptional service.",
-    healthSafety: tour.healthSafety || [
+    
+    healthSafety: tour.healthSafety && tour.healthSafety.length > 0 ? tour.healthSafety : [
       "Enhanced safety protocols in place",
-      "Hand sanitizer available",
+      "Hand sanitizer available", 
       "First aid trained guides",
       "Emergency procedures established",
       "Local health guidelines followed"
     ],
-    culturalInfo: tour.culturalInfo || [
+    
+    culturalInfo: tour.culturalInfo && tour.culturalInfo.length > 0 ? tour.culturalInfo : [
       "Learn about local history and culture",
       "Discover architectural highlights", 
       "Understand local traditions and customs",
       "Experience authentic local atmosphere",
       "Professional guide commentary"
     ],
+    
     seasonalVariations: tour.seasonalVariations || "Tour experience may vary by season. Check specific seasonal considerations when booking.",
-    localCustoms: tour.localCustoms || [
+    
+    localCustoms: tour.localCustoms && tour.localCustoms.length > 0 ? tour.localCustoms : [
       "Arrive at meeting point 15 minutes early",
       "Respect local customs and dress codes",
-      "Follow guide instructions at all times",
+      "Follow guide instructions at all times", 
       "Be respectful of other tour participants",
       "Ask questions - guides love sharing knowledge!"
     ]
   };
 };
 
-// -----------------------------------------------------------------------------
-// Lightbox Component
-// -----------------------------------------------------------------------------
+// Enhanced Lightbox Component
 const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], selectedIndex: number, onClose: () => void }) => {
   const [currentIndex, setCurrentIndex] = useState(selectedIndex);
 
@@ -155,7 +167,6 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
       onClick={onClose}
       className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
     >
-      {/* Close Button */}
       <button
         onClick={onClose}
         className="absolute top-4 right-4 text-white hover:text-red-500 transition-colors z-50"
@@ -164,7 +175,6 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
         <X size={32} />
       </button>
 
-      {/* Main Image Display */}
       <div className="relative w-full h-full max-w-5xl max-h-screen flex items-center justify-center">
         <AnimatePresence mode="wait">
           <motion.img
@@ -181,7 +191,6 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
         </AnimatePresence>
       </div>
 
-      {/* Previous Button */}
       <button
         onClick={prevImage}
         className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors"
@@ -190,7 +199,6 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
         <ChevronLeft size={28} />
       </button>
 
-      {/* Next Button */}
       <button
         onClick={nextImage}
         className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors"
@@ -198,7 +206,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
       >
         <ChevronRight size={28} />
       </button>
-       {/* Image Counter */}
+       
        <div 
         className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm px-3 py-1 rounded-full"
         onClick={(e) => e.stopPropagation()}
@@ -209,9 +217,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
   );
 };
 
-// -----------------------------------------------------------------------------
 // useScrollDirection hook
-// -----------------------------------------------------------------------------
 function useScrollDirection() {
   const [isVisible, setIsVisible] = useState(true);
   const [scrollY, setScrollY] = useState(0);
@@ -219,7 +225,6 @@ function useScrollDirection() {
     let lastScrollY = typeof window !== 'undefined' ? window.pageYOffset : 0;
     const updateScroll = () => {
       const currentScrollY = window.pageYOffset;
-      // Header is visible if scrolling up or near the top
       setIsVisible(lastScrollY > currentScrollY || currentScrollY < 100);
       setScrollY(currentScrollY);
       lastScrollY = currentScrollY;
@@ -236,7 +241,6 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Update arrow visibility based on scroll position
   const updateScrollButtons = () => {
     const container = navRef.current;
     if (!container) return;
@@ -244,29 +248,25 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
     setCanScrollRight(container.scrollLeft + container.clientWidth < container.scrollWidth - 8);
   };
 
-  // Scroll container by delta (positive = right, negative = left)
   const scrollBy = (delta: number) => {
     const container = navRef.current;
     if (!container) return;
     container.scrollBy({ left: delta, behavior: 'smooth' });
   };
 
-  // Ensure active tab is fully visible; called when activeTab changes
   useEffect(() => {
     const container = navRef.current;
     if (!container || !activeTab) return;
 
-   const selector = `a[data-tab-id="${activeTab}"]`;
-let activeEl = container.querySelector(selector) as HTMLElement | null;
+    const selector = `a[data-tab-id="${activeTab}"]`;
+    let activeEl = container.querySelector(selector) as HTMLElement | null;
 
-if (!activeEl) {
-  // try fallback selector (href)
-  const fallback = container.querySelector(`a[href="#${activeTab}"]`) as HTMLElement | null;
-  if (!fallback) return;
-  activeEl = fallback;
-}
+    if (!activeEl) {
+      const fallback = container.querySelector(`a[href="#${activeTab}"]`) as HTMLElement | null;
+      if (!fallback) return;
+      activeEl = fallback;
+    }
 
-    // element bounding rects relative to container
     const elRect = activeEl.getBoundingClientRect();
     const contRect = container.getBoundingClientRect();
 
@@ -275,23 +275,18 @@ if (!activeEl) {
     const visibleLeft = container.scrollLeft;
     const visibleRight = container.scrollLeft + container.clientWidth;
 
-    // If element is left of visible area, scroll so it becomes visible (with small padding)
     if (elLeft < visibleLeft + 12) {
       container.scrollTo({ left: Math.max(0, elLeft - 12), behavior: 'smooth' });
     }
-    // If element is right of visible area, scroll so it becomes visible
     else if (elRight > visibleRight - 12) {
       const delta = elRight - visibleRight + 12;
       container.scrollTo({ left: container.scrollLeft + delta, behavior: 'smooth' });
     }
 
-    // update arrows after scrolling
-    // small timeout to allow smooth scroll to update values (also runs immediately)
     setTimeout(updateScrollButtons, 250);
     updateScrollButtons();
   }, [activeTab]);
 
-  // Add scroll listener to toggle arrow states
   useEffect(() => {
     const container = navRef.current;
     if (!container) return;
@@ -306,13 +301,12 @@ if (!activeEl) {
   }, []);
 
   return (
-<div
-  className={`sticky ${stickyTop} z-20 -mx-4 sm:mx-0 transition-all duration-300 
-    bg-white/30 backdrop-blur-md border-b border-white/20 shadow-lg`}
->
+    <div
+      className={`sticky ${stickyTop} z-20 -mx-4 sm:mx-0 transition-all duration-300 
+        bg-white/30 backdrop-blur-md border-b border-white/20 shadow-lg`}
+    >
       <div className="container mx-auto px-2 sm:px-4">
         <div className="relative">
-          {/* Left arrow button */}
           <button
             aria-hidden={!canScrollLeft}
             aria-label="Scroll tabs left"
@@ -323,7 +317,6 @@ if (!activeEl) {
             <ChevronLeft size={18} />
           </button>
 
-          {/* Scrollable tab strip */}
           <div
             ref={navRef}
             className="flex gap-2 overflow-x-auto scrollbar-hide px-8 py-2 scroll-smooth"
@@ -353,7 +346,6 @@ if (!activeEl) {
             ))}
           </div>
 
-          {/* Right arrow button */}
           <button
             aria-hidden={!canScrollRight}
             aria-label="Scroll tabs right"
@@ -369,60 +361,25 @@ if (!activeEl) {
   );
 };
 
-
-const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType: string, className?: string }) => {
+// FIXED ItineraryIcon Component - Now properly handles all icon types
+const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string, className?: string }) => {
   const icons: { [key: string]: JSX.Element } = {
-    location: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-      </svg>
-    ),
-    camera: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 15.2c-2.07 0-3.75-1.68-3.75-3.75S9.93 7.7 12 7.7s3.75 1.68 3.75 3.75S14.07 15.2 12 15.2zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9z"/>
-      </svg>
-    ),
-    food: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M8.1 13.34l2.83-2.83L3.91 3.5c-1.56 1.56-1.56 4.09 0 5.66l4.19 4.18zm6.78-1.81c1.53.71 3.68.21 5.27-1.38 1.91-1.91 2.28-4.65.81-6.12-1.46-1.46-4.20-1.10-6.12.81-1.59 1.59-2.09 3.74-1.38 5.27L3.7 19.87l1.41 1.41L12 14.41l6.88 6.88 1.41-1.41L13.41 13l1.47-1.47z"/>
-      </svg>
-    ),
-    monument: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M6.5 10h-2v7h2v-7zm6 0h-2v7h2v-7zm6 0h-2v7h2v-7zm.5 9H5v2h14v-2zm-6.5-9V8.5c0-.83-.67-1.5-1.5-1.5S9.5 7.67 9.5 8.5V10h3zm2.5 0V8.5C14.5 6.57 12.93 5 11 5S7.5 6.57 7.5 8.5V10H5v2h14v-2h-2.5z"/>
-      </svg>
-    ),
-    transport: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-      </svg>
-    ),
-    activity: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63c-.34-1.02-1.31-1.73-2.39-1.73-.85 0-1.66.5-2.02 1.33L14 11.6V22h2zm-7.5-.5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3-7.5l1.5-3.6L15.5 8H13l-1.8 2.4L7 7v4.5h2v5H3V2h18v3.5L12.5 14z"/>
-      </svg>
-    ),
-    time: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-      </svg>
-    ),
-    info: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-      </svg>
-    ),
-    shopping: (
-      <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-      </svg>
-    )
+    location: <MapPin className={className} />,
+    transport: <Bus className={className} />,
+    monument: <Mountain className={className} />,
+    camera: <Camera className={className} />,
+    food: <Utensils className={className} />,
+    time: <Clock className={className} />,
+    info: <Info className={className} />,
+    activity: <Users className={className} />,
+    shopping: <ShoppingCart className={className} />,
   };
   
-  return icons[iconType] || icons.location;
+  // Return the specific icon or default to location
+  return icons[iconType || 'location'] || icons.location;
 };
 
-
+// FIXED ItinerarySection - Now properly displays the correct icons
 const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -434,7 +391,8 @@ const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[
       {itinerary.map((item, index) => (
         <div key={index} className="relative flex items-start gap-4 pb-8">
           <div className="flex-shrink-0 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm relative z-10">
-<ItineraryIcon iconType={item.icon || 'location'} /></div>
+            <ItineraryIcon iconType={item.icon} className="w-6 h-6" />
+          </div>
           <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
@@ -482,7 +440,6 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       Practical Information
     </h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {/* What to Bring */}
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Backpack size={20} className="text-blue-600" />
@@ -498,7 +455,6 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
         </ul>
       </div>
 
-      {/* What to Wear */}
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Sun size={20} className="text-yellow-600" />
@@ -515,7 +471,6 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       </div>
     </div>
 
-    {/* Physical Requirements */}
     {enhancement.physicalRequirements && (
       <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
         <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
@@ -526,7 +481,6 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       </div>
     )}
 
-    {/* Group Size */}
     {enhancement.groupSize && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
@@ -559,7 +513,6 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
     </h3>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Accessibility Info */}
       <div className="bg-purple-50 p-6 rounded-xl">
         <h4 className="font-bold text-purple-900 mb-4">Accessibility Information</h4>
         <ul className="space-y-3">
@@ -572,7 +525,6 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
         </ul>
       </div>
 
-      {/* Health & Safety */}
       <div className="bg-green-50 p-6 rounded-xl">
         <h4 className="font-bold text-green-900 mb-4">Health & Safety Measures</h4>
         <ul className="space-y-3">
@@ -586,7 +538,6 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
       </div>
     </div>
 
-    {/* Transportation Details */}
     {enhancement.transportationDetails && (
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -606,7 +557,6 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       Policies
     </h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Weather Policy */}
       <div className="bg-sky-50 p-6 rounded-xl">
         <h4 className="font-bold text-sky-900 mb-3 flex items-center gap-2">
           <Umbrella size={20} className="text-sky-600" />
@@ -615,7 +565,6 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
         <p className="text-sky-800 text-sm leading-relaxed">{enhancement.weatherPolicy}</p>
       </div>
 
-      {/* Photo Policy */}
       <div className="bg-pink-50 p-6 rounded-xl">
         <h4 className="font-bold text-pink-900 mb-3 flex items-center gap-2">
           <Camera size={20} className="text-pink-600" />
@@ -624,7 +573,6 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
         <p className="text-pink-800 text-sm leading-relaxed">{enhancement.photoPolicy}</p>
       </div>
 
-      {/* Tip Policy */}
       <div className="bg-yellow-50 p-6 rounded-xl">
         <h4 className="font-bold text-yellow-900 mb-3 flex items-center gap-2">
           <CreditCard size={20} className="text-yellow-600" />
@@ -633,7 +581,6 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
         <p className="text-yellow-800 text-sm leading-relaxed">{enhancement.tipPolicy}</p>
       </div>
 
-      {/* Meal Info */}
       <div className="bg-orange-50 p-6 rounded-xl">
         <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2">
           <Utensils size={20} className="text-orange-600" />
@@ -652,7 +599,6 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       Cultural Information
     </h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Cultural Information */}
       <div className="bg-indigo-50 p-6 rounded-xl">
         <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
           <Eye size={20} className="text-indigo-600" />
@@ -668,7 +614,6 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
         </ul>
       </div>
 
-      {/* Local Customs */}
       <div className="bg-teal-50 p-6 rounded-xl">
         <h4 className="font-bold text-teal-900 mb-4 flex items-center gap-2">
           <Heart size={20} className="text-teal-600" />
@@ -685,7 +630,6 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       </div>
     </div>
 
-    {/* Seasonal Information */}
     {enhancement.seasonalVariations && (
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -702,7 +646,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // Use provided faqs or fallback to default ones
+  // Use provided faqs if available, otherwise use fallback
   const faqsToShow = faqs && faqs.length > 0 ? faqs : [
     {
       question: "What happens if I'm late for the departure?",
@@ -710,27 +654,27 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefO
     },
     {
       question: "Can dietary restrictions be accommodated?",
-      answer: "Yes! We offer vegetarian pizza options and can accommodate most dietary restrictions with advance notice. Please inform us at least 24 hours before your tour."
+      answer: "Yes! We offer vegetarian options and can accommodate most dietary restrictions with advance notice. Please inform us at least 24 hours before your tour."
     },
     {
       question: "Is this tour suitable for children?",
-      answer: "Absolutely! Children 4-13 receive discounted pricing, and children 0-3 travel free. The tour is family-friendly with indoor facilities and safety measures in place."
+      answer: "Absolutely! Children 4-13 receive discounted pricing, and children 0-3 travel free. The tour is family-friendly with safety measures in place."
     },
     {
       question: "What if the weather is bad?",
-      answer: "Our boats are climate-controlled with glass roofs, so tours operate in most weather conditions. Only severe weather will result in cancellation with full refund."
+      answer: "Tours operate in most weather conditions. Only severe weather will result in cancellation with full refund."
     },
     {
       question: "Can I bring my own food or drinks?",
-      answer: "Outside food and beverages are not permitted as meals and drinks are included in your tour. Special dietary needs can be accommodated with advance notice."
+      answer: "Outside food and beverages policies vary by tour. Special dietary needs can be accommodated with advance notice."
     },
     {
-      question: "Is the boat wheelchair accessible?",
-      answer: "Limited wheelchair accessibility is available. Please contact us in advance to discuss specific needs and ensure we can accommodate your requirements."
+      question: "Is the tour wheelchair accessible?",
+      answer: "Accessibility varies by tour. Please contact us in advance to discuss specific needs and ensure we can accommodate your requirements."
     },
     {
       question: "Can I reschedule my booking?",
-      answer: "Yes, bookings can be rescheduled up to 8 hours before departure subject to availability. Changes within 8 hours may incur additional fees."
+      answer: "Yes, bookings can be rescheduled up to 24 hours before departure subject to availability. Changes within 24 hours may incur additional fees."
     },
     {
       question: "Are professional photos available?",
@@ -813,7 +757,6 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
         </div>
       </div>
       
-      {/* Integrated Review List and Form */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <ReviewList 
           reviews={currentReviews} 
@@ -866,7 +809,6 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
         )}
       </div>
     </div>
-    {/* Quick Info Cards */}
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
         <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
@@ -887,9 +829,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
   </div>
 );
 
-// -----------------------------------------------------------------------------
-// TourPageClient component - Enhanced with review management
-// -----------------------------------------------------------------------------
+// Main TourPageClient component - Enhanced with review management and fixed pricing
 export default function TourPageClient({ tour, relatedTours, initialReviews }: TourPageClientProps) {
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
@@ -897,20 +837,17 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   
-  // Enhanced review state management
   const [reviews, setReviews] = useState<ReviewType[]>(initialReviews);
 
   const tourIsWishlisted = isWishlisted(tour._id!);
 
-  // Review handlers
   const handleReviewSubmitted = (newReview: ReviewType) => {
     setReviews(prevReviews => [newReview, ...prevReviews]);
     toast.success('Review submitted successfully!');
   };
 
-  // --- Wishlist button handler ---
   const handleWishlistToggle = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevents the lightbox from opening
+    e.stopPropagation();
     if (tourIsWishlisted) {
       removeFromWishlist(tour._id!);
       toast.success('Removed from wishlist');
@@ -920,9 +857,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
     }
   };
 
-  // --- Share button handler ---
   const handleShare = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevents the lightbox from opening
+    e.stopPropagation();
     const shareData = {
       title: tour.title,
       text: `Check out this amazing tour: ${tour.title}`,
@@ -936,7 +872,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
         console.error('Error sharing:', err);
       }
     } else {
-      // Fallback for desktop browsers that don't support the native Share API
       try {
         await navigator.clipboard.writeText(window.location.href);
         toast.success('Tour link copied to clipboard!');
@@ -951,7 +886,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
   const [liveMessage, setLiveMessage] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   
-  // --- STATE FOR LIGHTBOX ---
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const { isVisible: isHeaderVisible } = useScrollDirection();
@@ -1007,7 +941,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
     }
   };
 
-  // CHANGED: Use real database data instead of mock data
+  // FIXED: Use real database data instead of mock data
   const enhancement = extractEnhancementData(tour);
 
   const tourImages = [tour.image, ...(tour.images || [])].filter(Boolean);
@@ -1031,7 +965,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
     try {
       const quickAddCartItem = {
         ...tour,
-        uniqueId: `${tour.id}-quick-add-${Date.now()}`,
+        uniqueId: `${tour._id}-quick-add-${Date.now()}`,
         quantity: 1,
         childQuantity: 0,
         selectedDate: new Date().toISOString(),
@@ -1139,29 +1073,27 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <ZoomIn className="text-white w-16 h-16" />
                   </div>
-                 <div className="absolute top-4 right-4 flex gap-2">
-  {/* Wishlist button */}
-  <button
-    onClick={handleWishlistToggle}
-    className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${
-      tourIsWishlisted
-        ? 'bg-red-600 text-white'
-        : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
-    }`}
-    aria-pressed={tourIsWishlisted}
-    aria-label={tourIsWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-  >
-    <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
-  </button>
-  {/* Share button */}
-  <button
-    onClick={handleShare}
-    className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
-    aria-label="Share"
-  >
-    <Share2 size={20} />
-  </button>
-</div>
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <button
+                      onClick={handleWishlistToggle}
+                      className={`p-3 rounded-full backdrop-blur-sm transition-colors shadow-sm ${
+                        tourIsWishlisted
+                          ? 'bg-red-600 text-white'
+                          : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
+                      }`}
+                      aria-pressed={tourIsWishlisted}
+                      aria-label={tourIsWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                      <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
+                      aria-label="Share"
+                    >
+                      <Share2 size={20} />
+                    </button>
+                  </div>
                 </div>
 
                 {tourImages.length > 1 && (
@@ -1175,11 +1107,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                                 ? 'border-red-600 scale-105 shadow'
                                 : 'border-slate-200 hover:border-slate-300'
                         }`}
-                        aria-label={`View image $<ItineraryIcon iconType={item.icon || 'location'} />`}
+                        aria-label={`View image ${index + 1}`}
                       >
                         <Image
                           src={image}
-                          alt={`${tour.title} $<ItineraryIcon iconType={item.icon || 'location'} />`}
+                          alt={`${tour.title} image ${index + 1}`}
                           width={80}
                           height={64}
                           className="w-full h-full object-cover"
@@ -1208,22 +1140,23 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
-                        <span>{tour.destination?.name || 'Amsterdam'}</span>
+                        <span>{typeof tour.destination === 'string' ? tour.destination : tour.destination?.name || 'Destination'}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="text-right flex-shrink-0">
                     {tour.originalPrice && (
-<p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>                    )}
-                  <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
-{formatPrice(tour.discountPrice)}</p>
+                      <p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>
+                    )}
+                    <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
+                      {formatPrice(tour.discountPrice)}
+                    </p>
                     <p className="text-sm text-slate-500">per person</p>
                   </div>
                 </div>
               </div>
 
-              {/* Tab Navigation with dynamic header visibility */}
               <TabNavigation
                 activeTab={activeTab}
                 tabs={tabs}
@@ -1231,7 +1164,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                 isHeaderVisible={isHeaderVisible}
               />
 
-              {/* All Sections - Using REAL database data */}
               <OverviewSection tour={tour} sectionRef={overviewRef} />
               
               {/* Only show itinerary if we have real data */}
@@ -1244,7 +1176,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
               <PoliciesSection enhancement={enhancement} sectionRef={policiesRef} />
               <CulturalSection enhancement={enhancement} sectionRef={culturalRef} />
               
-              {/* Enhanced Reviews Section with integrated review management */}
               <ReviewsSection 
                 tour={tour} 
                 reviews={reviews} 
@@ -1252,10 +1183,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                 sectionRef={reviewsRef} 
               />
               
-              {/* Use real FAQ data from the tour */}
               <EnhancedFAQ faqs={tour.faq || []} sectionRef={faqRef} />
 
-              {/* Meeting Point */}
               {tour.meetingPoint && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
@@ -1270,7 +1199,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                 </div>
               )}
 
-              {/* Related Tours */}
               {relatedTours.length > 0 && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
@@ -1307,7 +1235,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                                 <Star size={12} className="text-yellow-500 fill-current" />
                                 <span className="text-xs font-bold">{relatedTour.rating}</span>
                               </div>
-                              <span className="font-bold text-red-600">{formatPrice(tour.discountPrice)}</span>
+                              <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
                             </div>
                           </div>
                         </div>
@@ -1318,15 +1246,17 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
               )}
             </div>
 
-            {/* Sticky Sidebar */}
+            {/* Sticky Sidebar - FIXED pricing display */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 mb-6">
                   <div className="text-center mb-6">
                     <div className="flex items-baseline justify-center gap-2 mb-2">
                       {tour.originalPrice && (
-<span className="text-slate-500 line-through text-lg">{formatPrice(tour.originalPrice)}</span>                      )}
-<span className="text-4xl font-extrabold text-red-600">{formatPrice(tour.discountPrice || tour.price)}</span>                    </div>
+                        <span className="text-slate-500 line-through text-lg">{formatPrice(tour.originalPrice)}</span>
+                      )}
+                      <span className="text-4xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
+                    </div>
                     <p className="text-sm text-slate-500">per person</p>
                   </div>
 
@@ -1425,7 +1355,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                   </div>
                 </div>
 
-                {/* Help Section */}
                 <div className="bg-slate-50 rounded-xl p-6">
                   <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <Headphones size={20} className="text-blue-600" />
@@ -1459,7 +1388,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
 
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
       
-      {/* Sticky Button */}
       <StickyBookButton
         price={tour.discountPrice}
         currency={'$'} 
@@ -1469,7 +1397,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
         {liveMessage}
       </div>
 
-    <style jsx>{`
+      <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }

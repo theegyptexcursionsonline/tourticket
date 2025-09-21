@@ -454,19 +454,26 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
         setExpandedItineraryIndex(expandedItineraryIndex === index ? null : index);
     };
 
-    const handleItineraryChange = (index: number, field: string, value: string | number) => {
-        const updatedItinerary = [...formData.itinerary];
-        updatedItinerary[index] = { ...updatedItinerary[index], [field]: value };
-        setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
-    };
+   // Make sure the itinerary icon handling is correct in the form
+const handleItineraryChange = (index: number, field: string, value: string | number) => {
+  const updatedItinerary = [...formData.itinerary];
+  updatedItinerary[index] = { ...updatedItinerary[index], [field]: value };
+  setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
+};
 
-   const addItineraryItem = () => {
-    const newDay = formData.itinerary.length + 1;
-    setFormData((p: any) => ({ 
-        ...p, 
-        itinerary: [...p.itinerary, { day: newDay, title: '', description: '', icon: 'location' }] 
-    }));
-    setExpandedItineraryIndex(formData.itinerary.length);
+// Ensure icon is properly saved when adding new items
+const addItineraryItem = () => {
+  const newDay = formData.itinerary.length + 1;
+  setFormData((p: any) => ({ 
+    ...p, 
+    itinerary: [...p.itinerary, { 
+      day: newDay, 
+      title: '', 
+      description: '', 
+      icon: 'location' // Default icon
+    }] 
+  }));
+  setExpandedItineraryIndex(formData.itinerary.length);
 };
 
     const removeItineraryItem = (index: number) => {
