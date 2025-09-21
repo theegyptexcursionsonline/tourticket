@@ -352,15 +352,15 @@ const AdminDashboard = () => {
             description="Create, edit, and organize your tour offerings and itineraries."
             color="green"
           />
-          <QuickActionCard
-            href="/admin/blog"
-            icon={PenSquare}
-            title="Manage Blog"
-            description="Create engaging content and manage your travel blog posts."
-            color="purple"
-            badge="SOON"
-            disabled={true}
-          />
+         <QuickActionCard
+  href="/admin/blog"
+  icon={PenSquare}
+  title="Manage Blog"
+  description="Create engaging content and manage your travel blog posts."
+  color="purple"
+/>
+
+
         </div>
       </div>
 
