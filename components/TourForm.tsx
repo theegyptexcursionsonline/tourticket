@@ -678,8 +678,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
                 maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
                 isPublished: Boolean(cleanedData.isPublished),
                 isFeatured: Boolean(cleanedData.isFeatured),
-                ...(cleanedData.image && cleanedData.image.trim() !== '' && { image: cleanedData.image }),
-                images: Array.isArray(cleanedData.images) ? cleanedData.images : [],
+image: cleanedData.image || '/images/placeholder.png', // Provide fallback                images: Array.isArray(cleanedData.images) ? cleanedData.images : [],
                 highlights: Array.isArray(cleanedData.highlights) ? cleanedData.highlights.filter((item: string) => item.trim() !== '') : [],
                 includes: Array.isArray(cleanedData.includes) ? cleanedData.includes.filter((item: string) => item.trim() !== '') : [],
                 whatsIncluded: Array.isArray(cleanedData.whatsIncluded) ? cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '') : [],
@@ -722,7 +721,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
                 router.refresh();
             } else {
                 const errorMessage = responseData?.error || responseData?.message || `HTTP ${response.status}: ${response.statusText}`;
-                console.error('API Error:', errorMessage);
+console.error('API Error:', errorMessage, responseData);
                 toast.error(`Failed to save tour: ${errorMessage}`);
             }
 

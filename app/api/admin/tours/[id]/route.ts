@@ -46,6 +46,67 @@ async function findTour(identifier: string) {
     }
 }
 
+// Helper function to clean booking options
+function cleanBookingOptions(bookingOptions: any[]): any[] {
+    if (!Array.isArray(bookingOptions)) return [];
+    
+    return bookingOptions.map(option => {
+        const cleanedOption = { ...option };
+        
+        // Remove empty or invalid difficulty values
+        if (!cleanedOption.difficulty || cleanedOption.difficulty.trim() === '') {
+            delete cleanedOption.difficulty;
+        } else {
+            // Ensure difficulty is one of the valid enum values
+            const validDifficulties = ['Easy', 'Moderate', 'Challenging', 'Difficult'];
+            if (!validDifficulties.includes(cleanedOption.difficulty)) {
+                delete cleanedOption.difficulty;
+            }
+        }
+        
+        // Clean other optional fields
+        if (!cleanedOption.badge || cleanedOption.badge.trim() === '') {
+            delete cleanedOption.badge;
+        }
+        
+        if (!cleanedOption.description || cleanedOption.description.trim() === '') {
+            delete cleanedOption.description;
+        }
+        
+        if (!cleanedOption.duration || cleanedOption.duration.trim() === '') {
+            delete cleanedOption.duration;
+        }
+        
+        if (!cleanedOption.groupSize || cleanedOption.groupSize.trim() === '') {
+            delete cleanedOption.groupSize;
+        }
+        
+        // Ensure arrays are properly handled
+        if (!Array.isArray(cleanedOption.languages)) {
+            cleanedOption.languages = [];
+        }
+        
+        if (!Array.isArray(cleanedOption.highlights)) {
+            cleanedOption.highlights = [];
+        }
+        
+        // Ensure numeric fields are properly typed
+        if (cleanedOption.price) {
+            cleanedOption.price = Number(cleanedOption.price);
+        }
+        
+        if (cleanedOption.originalPrice) {
+            cleanedOption.originalPrice = Number(cleanedOption.originalPrice);
+        }
+        
+        if (cleanedOption.discount) {
+            cleanedOption.discount = Number(cleanedOption.discount);
+        }
+        
+        return cleanedOption;
+    });
+}
+
 // GET a single tour by ID or Slug
 export async function GET(
     request: NextRequest,
@@ -90,11 +151,15 @@ export async function PUT(
         console.log('Updating tour with ID:', id);
         console.log('Request body:', body);
 
-        // FIX: Remove categories mapping since we're sending category directly
         // Map 'faqs' from form to 'faq' in the database model
         if (body.faqs) {
             body.faq = body.faqs;
             delete body.faqs;
+        }
+
+        // Clean booking options to remove invalid enum values
+        if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
+            body.bookingOptions = cleanBookingOptions(body.bookingOptions);
         }
 
         // Validate required fields

@@ -25,8 +25,8 @@ export interface IBooking extends Document {
 // Function to generate unique booking reference
 function generateBookingReference(): string {
   const prefix = 'EEO';
-  const timestamp = Date.now().toString().slice(-6); // Last 6 digits for shorter ref
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase(); // 6 random chars
+  const timestamp = Date.now().toString().slice(-8);
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${prefix}-${timestamp}-${random}`;
 }
 
@@ -35,8 +35,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
     type: String,
     required: true,
     unique: true,
-    index: true,
-    // Remove the default function - we'll handle this in pre-save
+    index: true
   },
   
   tour: {
@@ -126,73 +125,44 @@ const BookingSchema: Schema<IBooking> = new Schema({
   toObject: { virtuals: true },
 });
 
-// Enhanced pre-save hook to generate unique booking reference
+// Pre-save hook to generate booking reference
 BookingSchema.pre('save', async function(next) {
-  // Only generate for new documents without a booking reference
   if (this.isNew && !this.bookingReference) {
-    let isUnique = false;
     let attempts = 0;
-    const maxAttempts = 10; // Increased attempts
-    let generatedReference = '';
-
-    while (!isUnique && attempts < maxAttempts) {
-      generatedReference = generateBookingReference();
-      attempts++;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      const newReference = generateBookingReference();
       
       try {
-        // Use the model constructor to avoid circular reference issues
-        const BookingModel = this.constructor as Model<IBooking>;
-        const existingBooking = await BookingModel.findOne({ 
-          bookingReference: generatedReference 
-        });
+        // Check if this reference already exists
+        const existingBooking = await this.constructor.findOne({ 
+          bookingReference: newReference 
+        }).lean();
         
         if (!existingBooking) {
-          isUnique = true;
-          this.bookingReference = generatedReference;
-        } else {
-          // Add a small delay to avoid rapid collisions
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
+          this.bookingReference = newReference;
+          break;
         }
       } catch (error) {
         console.error('Error checking booking reference uniqueness:', error);
-        // Continue with the loop to try again
+      }
+      
+      attempts++;
+      
+      // Add a small delay to prevent race conditions
+      if (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
       }
     }
 
-    if (!isUnique || !this.bookingReference) {
-      // Fallback: use timestamp + ObjectId to ensure uniqueness
-      const fallbackRef = `EEO-${Date.now()}-${new mongoose.Types.ObjectId().toString().slice(-6).toUpperCase()}`;
-      this.bookingReference = fallbackRef;
-      console.warn('Used fallback booking reference:', fallbackRef);
+    if (!this.bookingReference) {
+      const fallbackReference = `EEO-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      this.bookingReference = fallbackReference;
     }
   }
-  
   next();
 });
-
-// Add a static method to generate booking reference manually if needed
-BookingSchema.statics.generateUniqueReference = async function(): Promise<string> {
-  let isUnique = false;
-  let attempts = 0;
-  const maxAttempts = 10;
-  
-  while (!isUnique && attempts < maxAttempts) {
-    const reference = generateBookingReference();
-    attempts++;
-    
-    try {
-      const existing = await this.findOne({ bookingReference: reference });
-      if (!existing) {
-        return reference;
-      }
-    } catch (error) {
-      console.error('Error generating unique reference:', error);
-    }
-  }
-  
-  // Fallback
-  return `EEO-${Date.now()}-${new mongoose.Types.ObjectId().toString().slice(-6).toUpperCase()}`;
-};
 
 // Virtual for guest breakdown text
 BookingSchema.virtual('guestBreakdown').get(function() {
@@ -207,7 +177,6 @@ BookingSchema.virtual('guestBreakdown').get(function() {
 BookingSchema.index({ user: 1, createdAt: -1 });
 BookingSchema.index({ tour: 1, date: 1 });
 BookingSchema.index({ status: 1 });
-BookingSchema.index({ bookingReference: 1 }, { unique: true });
 
 const Booking: Model<IBooking> = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
 

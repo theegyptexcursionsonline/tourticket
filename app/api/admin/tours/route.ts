@@ -2,16 +2,75 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextResponse } from 'next/server';
 
+// Helper function to clean booking options
+function cleanBookingOptions(bookingOptions: any[]): any[] {
+    if (!Array.isArray(bookingOptions)) return [];
+    
+    return bookingOptions.map(option => {
+        const cleanedOption = { ...option };
+        
+        // Remove empty or invalid difficulty values
+        if (!cleanedOption.difficulty || cleanedOption.difficulty.trim() === '') {
+            delete cleanedOption.difficulty;
+        } else {
+            // Ensure difficulty is one of the valid enum values
+            const validDifficulties = ['Easy', 'Moderate', 'Challenging', 'Difficult'];
+            if (!validDifficulties.includes(cleanedOption.difficulty)) {
+                delete cleanedOption.difficulty;
+            }
+        }
+        
+        // Clean other optional fields
+        if (!cleanedOption.badge || cleanedOption.badge.trim() === '') {
+            delete cleanedOption.badge;
+        }
+        
+        if (!cleanedOption.description || cleanedOption.description.trim() === '') {
+            delete cleanedOption.description;
+        }
+        
+        if (!cleanedOption.duration || cleanedOption.duration.trim() === '') {
+            delete cleanedOption.duration;
+        }
+        
+        if (!cleanedOption.groupSize || cleanedOption.groupSize.trim() === '') {
+            delete cleanedOption.groupSize;
+        }
+        
+        // Ensure arrays are properly handled
+        if (!Array.isArray(cleanedOption.languages)) {
+            cleanedOption.languages = [];
+        }
+        
+        if (!Array.isArray(cleanedOption.highlights)) {
+            cleanedOption.highlights = [];
+        }
+        
+        // Ensure numeric fields are properly typed
+        if (cleanedOption.price) {
+            cleanedOption.price = Number(cleanedOption.price);
+        }
+        
+        if (cleanedOption.originalPrice) {
+            cleanedOption.originalPrice = Number(cleanedOption.originalPrice);
+        }
+        
+        if (cleanedOption.discount) {
+            cleanedOption.discount = Number(cleanedOption.discount);
+        }
+        
+        return cleanedOption;
+    });
+}
+
 async function fetchToursWithPopulate() {
-  // Try normal populate first (matches your schema: `category`, singular).
   try {
     return await Tour.find({})
-      .populate('category')      // singular as per your schema
+      .populate('category')
       .populate('destination')
-      .populate('reviews')       // optional: only if reviews ref exists
+      .populate('reviews')
       .lean();
   } catch (err) {
-    // If populate fails (e.g., different environments), retry with strictPopulate:false
     console.warn('Populate failed, retrying with strictPopulate:false', err);
     return await Tour.find({})
       .populate({ path: 'category', strictPopulate: false })
@@ -39,10 +98,20 @@ export async function POST(request: Request) {
   await dbConnect();
   try {
     const body = await request.json();
-    const tour = await Tour.create(body);
+    
+    // Map 'faqs' from form to 'faq' in the database model
+    if (body.faqs) {
+        body.faq = body.faqs;
+        delete body.faqs;
+    }
 
-    // After creating, you may want to return the created doc with populated refs.
-    // We'll populate the created tour similarly (best-effort).
+    // Clean booking options to remove invalid enum values
+    if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
+        body.bookingOptions = cleanBookingOptions(body.bookingOptions);
+    }
+    
+    const tour = await Tour.create(body);
+    
     let populated = tour;
     try {
       populated = await Tour.findById(tour._id)
@@ -53,7 +122,6 @@ export async function POST(request: Request) {
     } catch (popErr) {
       console.warn('Populate after create failed, returning raw tour', popErr);
     }
-
     return NextResponse.json({ success: true, data: populated ?? tour }, { status: 201 });
   } catch (error) {
     console.error('Error creating tour:', error);
