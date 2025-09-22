@@ -44,22 +44,25 @@ export default function WhyBookWithUs() {
               </li>
             </ul>
             
-            <a href="/about" className="inline-flex items-center gap-2 bg-red-600 text-white font-bold py-3.5 px-8 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl group">
+            {/* CTA - rounded full button */}
+            <a
+              href="/about"
+              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold shadow-xl hover:scale-[1.03] transition-all duration-300 group"
+            >
               <span>More about us</span>
               <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
             </a>
           </div>
 
           {/* Right Column: Image */}
-          <div className="order-1 lg:order-2 flex justify-center items-center">
-            <div className="relative w-full aspect-square max-w-md lg:max-w-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
-              <Image
-                src="/about.png" // <-- Replace this with your image path
-                alt="A scenic view of a popular travel destination"
-                fill
-                className="object-cover"
-              />
-            </div>
+          <div className="order-1 lg:order-2 relative w-full h-[500px] lg:h-full rounded-2xl overflow-hidden shadow-xl">
+            <Image
+              src="/about.png" // replace with Egypt/Nile related image
+              alt="A scenic view of a popular travel destination"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
         </div>
       </div>
