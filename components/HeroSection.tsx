@@ -1,12 +1,14 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Search } from "lucide-react";
-import Image from "next/image";
+// The Next.js Image component is imported but not used in this file.
+// It's kept here in case you plan to add it elsewhere, but it's the source of the naming conflict.
+import Image from "next/image"; 
 import { useRecentSearches } from "@/hooks/useSearch";
 import SearchModal from "@/components/SearchModel";
 
-// --- Type Definitions ---
+// --- Types and Constants ---
 type Tag = {
   id: string;
   name: string;
@@ -14,70 +16,39 @@ type Tag = {
   highlight?: boolean;
 };
 
-// --- Expanded Data for Dynamic Tags ---
 const ALL_TAG_NAMES = [
-  "FOOD TOURS",
-  "NIGHTLIFE",
-  "ART GALLERIES",
-  "HISTORICAL SITES",
-  "LIVE MUSIC",
-  "SHOPPING",
-  "BIKE RENTALS",
-  "PARKS & NATURE",
-  "ROOFTOP BARS",
-  "ARCHITECTURE",
-  "BOAT TRIPS",
-  "COOKING CLASS",
-  "WINE TASTING",
-  "BEACH DAY",
-  "HIKING TRAILS",
-  "STREET ART",
-  "KID FRIENDLY",
-  "LUXURY EXPERIENCES",
-  "ADVENTURE SPORTS",
-  "PHOTOGRAPHY SPOTS",
-  "LOCAL MARKETS",
-  "THEATRE & SHOWS",
-  "WELLNESS & SPA",
+  "FOOD TOURS", "NIGHTLIFE", "ART GALLERIES", "HISTORICAL SITES", "LIVE MUSIC",
+  "SHOPPING", "BIKE RENTALS", "PARKS & NATURE", "ROOFTOP BARS", "ARCHITECTURE",
+  "BOAT TRIPS", "COOKING CLASS", "WINE TASTING", "BEACH DAY", "HIKING TRAILS",
+  "STREET ART", "KID FRIENDLY", "LUXURY EXPERIENCES", "ADVENTURE SPORTS",
+  "PHOTOGRAPHY SPOTS", "LOCAL MARKETS", "THEATRE & SHOWS", "WELLNESS & SPA",
 ];
 
-// Sliding search suggestions for hero
 const HERO_SEARCH_SUGGESTIONS = [
-  "Where are you going?",
-  "Find your next adventure",
-  "Discover hidden gems",
-  "Book unique experiences",
-  "Explore new destinations",
-  "Create lasting memories",
+  "Where are you going?", "Find your next adventure", "Discover hidden gems",
+  "Book unique experiences", "Explore new destinations", "Create lasting memories",
 ];
 
-// --- RESPONSIVE TAG POSITIONS ---
 const TAG_POSITIONS_DESKTOP: React.CSSProperties[] = [
-  { top: "25%", left: "60%" },
-  { top: "20%", right: "15%" },
-  { top: "45%", left: "55%" },
-  { top: "35%", right: "20%" },
-  { top: "50%", right: "25%" },
-  { top: "55%", left: "50%" },
-  { top: "45%", right: "10%" },
-  { top: "65%", right: "20%" },
-  { top: "70%", left: "55%" },
-  { top: "80%", left: "65%" },
-  { top: "15%", left: "50%" },
-  { top: "85%", right: "15%" },
+  { top: "25%", left: "60%" }, { top: "20%", right: "15%" }, { top: "45%", left: "55%" },
+  { top: "35%", right: "20%" }, { top: "50%", right: "25%" }, { top: "55%", left: "50%" },
+  { top: "45%", right: "10%" }, { top: "65%", right: "20%" }, { top: "70%", left: "55%" },
+  { top: "80%", left: "65%" }, { top: "15%", left: "50%" }, { top: "85%", right: "15%" },
 ];
 
 const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
-  { top: "15%", left: "5%" },
-  { top: "25%", right: "8%" },
-  { top: "40%", left: "10%" },
-  { top: "55%", right: "5%" },
-  { top: "70%", left: "12%" },
-  { top: "85%", right: "10%" },
+  { top: "15%", left: "5%" }, { top: "25%", right: "8%" }, { top: "40%", left: "10%" },
+  { top: "55%", right: "5%" }, { top: "70%", left: "12%" }, { top: "85%", right: "10%" },
   { top: "90%", left: "35%" },
 ];
 
-// --- Custom Hooks ---
+const SLIDES = [
+  { src: '/pyramid3.png', alt: 'Pyramids of Giza at sunrise', caption: 'Pyramids of Giza' },
+  { src: '/pyramid2.png', alt: 'Felucca on the Nile at sunset', caption: 'Sunset on the Nile' },
+  { src: '/pyramid.png', alt: 'Luxor temple columns at golden hour', caption: 'Ancient Temples' }
+];
+
+// --- Helper Hooks ---
 const useIsMobile = (breakpoint = 768) => {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -126,12 +97,11 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex];
 };
 
-// --- Sub-components (Enhanced) ---
+// --- Reusable Components ---
 const FloatingTag = ({ tag }: { tag: Tag }) => (
   <button
     style={tag.position}
     onClick={() => {
-      // Navigate to search with the tag as query
       window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
     }}
     className={`absolute px-4 py-2 text-xs md:text-sm font-semibold rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in ${
@@ -156,43 +126,55 @@ const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
   );
 };
 
-// --- Background Slideshow Component (SINGLE SLIDE) ---
-const BackgroundSlideshow = ({
-  // Keep only the first image — default is a single image now.
-  images = ["/bg4.png"],
-  fadeDuration = 1000,
-}: {
-  images?: string[];
-  fadeDuration?: number;
-}) => {
-  // We intentionally do NOT cycle slides since we keep only the first slide.
-  const src = images && images.length > 0 ? images[0] : "/bg4.png";
+const BackgroundSlideshow = ({ slides = SLIDES, delay = 6000, fadeMs = 900 }: { slides?: typeof SLIDES, delay?: number, fadeMs?: number }) => {
+  const [index, setIndex] = useState(0);
+  const timeoutRef = useRef<number | null>(null);
 
-  // Preload the single image
   useEffect(() => {
-    const img = new (window as any).Image();
-    img.src = src;
-  }, [src]);
+    // Preload images
+    slides.forEach(s => {
+      // **FIX:** Use `window.Image` to access the native browser Image constructor
+      const img = new window.Image();
+      img.src = s.src;
+    });
+  }, [slides]);
+
+  useEffect(() => {
+    const next = () => setIndex((i) => (i + 1) % slides.length);
+    timeoutRef.current = window.setTimeout(next, delay);
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [index, slides.length, delay]);
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
-      <div
-        aria-hidden
-        className="absolute inset-0 w-full h-full transition-opacity duration-[1000ms] ease-in-out transform-gpu"
-        style={{
-          opacity: 1,
-          transitionDuration: `${fadeDuration}ms`,
-          transform: "scale(1.03)",
-        }}
-      >
-        <img src={src} alt="" className="w-full h-full object-cover will-change-transform" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none" />
-      </div>
+      {slides.map((s, i) => {
+        const visible = i === index;
+        return (
+          <div
+            key={s.src}
+            aria-hidden={!visible}
+            className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out"
+            style={{
+              opacity: visible ? 1 : 0,
+              transitionDuration: `${fadeMs}ms`,
+              transform: visible ? 'scale(1)' : 'scale(1.02)',
+            }}
+          >
+            <img src={s.src} alt={s.alt} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
+          </div>
+        );
+      })}
     </div>
   );
 };
 
-// --- Main Hero Component ---
+// --- Main HeroSection ---
 export default function HeroSection() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { addSearchTerm } = useRecentSearches();
@@ -200,14 +182,14 @@ export default function HeroSection() {
 
   const handleSearch = (term: string) => {
     addSearchTerm(term);
+    // You can redirect or perform other actions here
     console.log(`Searching for: ${term}`);
   };
 
   return (
     <>
-      <section className="relative h-screen min-h-[650px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
-        {/* Only the first slide/image is used now */}
-        <BackgroundSlideshow images={["/bg4.png"]} fadeDuration={1000} />
+      <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
+        <BackgroundSlideshow slides={SLIDES} delay={6000} fadeMs={900} />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
           <div className="max-w-xl">
@@ -222,7 +204,6 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* Floating tags */}
         <div className="absolute inset-0 z-10 pointer-events-none">
           {dynamicTags.map((tag) => (
             <div key={tag.id} style={tag.position} className="pointer-events-auto">
@@ -233,7 +214,6 @@ export default function HeroSection() {
       </section>
 
       {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} onSearch={handleSearch} />}
-
 
       <style jsx global>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -253,11 +233,11 @@ export default function HeroSection() {
         .font-sans { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
 
         img { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-      `}</style>
 
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        @media (prefers-reduced-motion: reduce) {
+          .animate-float { animation: none; }
+        }
+      `}</style>
     </>
   );
 }
