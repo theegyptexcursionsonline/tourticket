@@ -1,4 +1,6 @@
+// app/layout.tsx (replace existing RootLayout content with this)
 import type { Metadata } from "next";
+import Script from "next/script"; // <-- new
 import { Inter, Almarai } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext";
@@ -7,7 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
-import { Toaster } from 'react-hot-toast'; // Add this import
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -31,6 +33,9 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
+        {/* Load Elfsight platform once for the entire site */}
+        <Script src="https://elfsightcdn.com/platform.js" strategy="afterInteractive" />
+        
         <AuthProvider>
           <SettingsProvider>
             <CartProvider>
@@ -38,7 +43,6 @@ export default function RootLayout({
                 {children}
                 <CartSidebar />
                 <WishlistSidebar />
-                {/* Add Toaster component */}
                 <Toaster
                   position="top-right"
                   reverseOrder={false}
@@ -46,7 +50,6 @@ export default function RootLayout({
                   containerClassName=""
                   containerStyle={{}}
                   toastOptions={{
-                    // Default options for all toasts
                     duration: 4000,
                     style: {
                       background: '#fff',
@@ -57,7 +60,6 @@ export default function RootLayout({
                       fontSize: '14px',
                       maxWidth: '500px',
                     },
-                    // Success toasts
                     success: {
                       duration: 4000,
                       style: {
@@ -70,21 +72,19 @@ export default function RootLayout({
                         secondary: '#f0fdf4',
                       },
                     },
-                    // Error toasts
                     error: {
                       duration: 6000,
                       style: {
                         background: '#fef2f2',
                         color: '#b91c1c',
                         border: '1px solid #fecaca',
-                        whiteSpace: 'pre-line', // Allows line breaks
+                        whiteSpace: 'pre-line',
                       },
                       iconTheme: {
                         primary: '#ef4444',
                         secondary: '#fef2f2',
                       },
                     },
-                    // Loading toasts
                     loading: {
                       style: {
                         background: '#f8fafc',
