@@ -32,8 +32,6 @@ export default function EgyptPromo() {
     'Unveil the wonders of the Pharaohs — sail the Nile, explore the pyramids, and feel history come alive with curated luxury experiences.';
   const primaryHref = '/egypt';
   const primaryText = 'Explore Egypt';
-  const secondaryHref = '/egypt-video';
-  const secondaryText = 'Watch Video';
 
   const enableParallax = true;
   // -----------------------
@@ -151,14 +149,7 @@ export default function EgyptPromo() {
                 <ArrowRight size={18} />
               </Link>
 
-              <Link
-                href={secondaryHref}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-black/45 border border-white/10 text-white font-medium shadow backdrop-blur-sm hover:bg-black/30 transition"
-                aria-label={secondaryText}
-              >
-                <Play size={16} />
-                <span>{secondaryText}</span>
-              </Link>
+           
             </div>
           </div>
         </div>
