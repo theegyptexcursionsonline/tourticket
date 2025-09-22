@@ -324,9 +324,12 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
                         isRecommended: false
                     }],
                 addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [],
-                isPublished: tourToEdit.isPublished || false,
+             isPublished: tourToEdit.isPublished || false,
                 difficulty: tourToEdit.difficulty || '',
                 maxGroupSize: tourToEdit.maxGroupSize || 10,
+                metaTitle: tourToEdit.metaTitle || '',
+                metaDescription: tourToEdit.metaDescription || '',
+                keywords: Array.isArray(tourToEdit.keywords) ? tourToEdit.keywords.join(', ') : (tourToEdit.keywords || ''),
             };
             
             if (tourToEdit.availability && tourToEdit.availability.slots) {
@@ -396,16 +399,19 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
             itinerary: [{ day: 1, title: '', description: '' }],
             faqs: [{ question: '', answer: '' }],
             bookingOptions: [{ type: 'Per Person', label: '', price: 0 }],
-            addOns: [],
-            isPublished: false,
-            difficulty: '',
-            maxGroupSize: 10,
-            availability: { 
-                type: 'daily', 
-                availableDays: [0, 1, 2, 3, 4, 5, 6], 
-                slots: [{ time: '10:00', capacity: 10 }] 
-            },
-        });
+           addOns: [],
+        isPublished: false,
+        difficulty: '',
+        maxGroupSize: 10,
+        availability: { 
+            type: 'daily', 
+            availableDays: [0, 1, 2, 3, 4, 5, 6], 
+            slots: [{ time: '10:00', capacity: 10 }] 
+        },
+        metaTitle: '',
+        metaDescription: '',
+        keywords: '',
+    });
     };
 
     const openPanelForCreate = () => {
@@ -698,11 +704,16 @@ const addItineraryItem = () => {
                 tags: typeof cleanedData.tags === 'string'
                     ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
                     : Array.isArray(cleanedData.tags) ? cleanedData.tags : [],
-                availability: cleanedData.availability || {
+             availability: cleanedData.availability || {
                     type: 'daily',
                     availableDays: [0, 1, 2, 3, 4, 5, 6],
                     slots: [{ time: '10:00', capacity: 10 }]
-                }
+                },
+                metaTitle: cleanedData.metaTitle?.trim() || '',
+                metaDescription: cleanedData.metaDescription?.trim() || '',
+                keywords: typeof cleanedData.keywords === 'string'
+                    ? cleanedData.keywords.split(',').map((t: string) => t.trim()).filter(Boolean)
+                    : Array.isArray(cleanedData.keywords) ? cleanedData.keywords : [],
             };
 
             console.log('Payload being sent:', payload);
@@ -749,8 +760,9 @@ const addItineraryItem = () => {
         { id: 'itinerary', label: 'Itinerary', icon: Map },
         { id: 'booking', label: 'Booking Options', icon: Settings },
         { id: 'addons', label: 'Add-ons', icon: Zap },
-        { id: 'availability', label: 'Availability', icon: Calendar },
-        { id: 'settings', label: 'Settings', icon: Eye }
+     { id: 'availability', label: 'Availability', icon: Calendar },
+        { id: 'settings', label: 'Settings', icon: Eye },
+        { id: 'seo', label: 'SEO', icon: Globe }
     ];
 
     // Component for tour to show when no panel is open
@@ -1890,6 +1902,47 @@ const addItineraryItem = () => {
                                                     </div>
                                                 ))}
                                             </div>
+                                    </div>
+                                    </div>
+                                )}
+
+                                {/* SEO Tab */}
+                                {activeTab === 'seo' && (
+                                    <div className="space-y-6">
+                                        <FormLabel icon={Globe}>SEO Settings</FormLabel>
+                                        <div className="space-y-3">
+                                            <FormLabel icon={Tag}>Meta Title</FormLabel>
+                                            <input 
+                                                name="metaTitle" 
+                                                value={formData.metaTitle} 
+                                                onChange={handleChange} 
+                                                className={inputBase} 
+                                                placeholder="e.g., Unforgettable Amsterdam Canal Cruise | Book Now" 
+                                            />
+                                            <SmallHint>The meta title is crucial for SEO and appears in browser tabs and search results.</SmallHint>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <FormLabel icon={FileText}>Meta Description</FormLabel>
+                                            <textarea 
+                                                name="metaDescription" 
+                                                value={formData.metaDescription} 
+                                                onChange={handleChange} 
+                                                rows={3} 
+                                                className={textareaBase} 
+                                                placeholder="Briefly describe your tour for search engines." 
+                                            />
+                                            <SmallHint>A well-written meta description can significantly improve click-through rates from search results.</SmallHint>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <FormLabel icon={Tag}>Keywords (comma separated)</FormLabel>
+                                            <input 
+                                                name="keywords" 
+                                                value={formData.keywords} 
+                                                onChange={handleChange} 
+                                                className={inputBase} 
+                                                placeholder="e.g., amsterdam, canal cruise, sightseeing" 
+                                            />
+                                            <SmallHint>Keywords help search engines understand what your tour is about.</SmallHint>
                                         </div>
                                     </div>
                                 )}

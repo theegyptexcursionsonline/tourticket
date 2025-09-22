@@ -117,12 +117,17 @@ export interface ITour extends Document {
   reviews?: mongoose.Schema.Types.ObjectId[];
   availability: IAvailability;
 
-  // Meta
+// Meta
   rating?: number;
   bookings?: number;
   createdAt?: Date;
   updatedAt?: Date;
   
+  // SEO fields
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+
   // Virtual fields
   reviewDetails?: any[];
 }
@@ -428,8 +433,7 @@ const TourSchema: Schema<ITour> = new Schema({
     min: 0,
     index: true // For popularity-based sorting
   },
-
-  // Relationships
+// Relationships
   reviews: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Review' 
@@ -439,6 +443,9 @@ const TourSchema: Schema<ITour> = new Schema({
     required: true, 
     default: () => ({}) 
   },
+  metaTitle: { type: String, trim: true },
+  metaDescription: { type: String, trim: true },
+  keywords: [{ type: String, trim: true }],
 }, { 
   timestamps: true,
   // Enable text search on schema level

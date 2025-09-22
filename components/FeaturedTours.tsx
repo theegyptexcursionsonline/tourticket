@@ -2,12 +2,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Star, ShoppingCart, Clock, Users, Loader2, ImageIcon } from 'lucide-react';
+import { ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 import Link from 'next/link';
+
+/**
+ * Enhanced FeaturedTours - "10x better" UI
+ *
+ * Key improvements:
+ * - Larger, more elegant cards with rounded-3xl corners
+ * - Glassy & gradient accents, smooth hover lift + glow
+ * - Bigger "See all tours" pill button (prominent CTA)
+ * - Large circular Add-to-cart button with ring + subtle shadow
+ * - Prominent price badge + rating badge
+ * - Responsive improvements and accessible focus states
+ *
+ * Note: This file assumes Tailwind CSS is configured in your project.
+ */
 
 // --- Safe Image Component ---
 const SafeImage = ({ 
@@ -26,21 +40,21 @@ const SafeImage = ({
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Reset error state when src changes
   useEffect(() => {
     setImageError(false);
     setIsLoading(true);
   }, [src]);
 
-  // Check if src is valid
   if (!src || src.trim() === '' || imageError) {
     return (
       <div 
-        className={`bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center ${className}`}
+        className={`flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 ${className}`}
         style={{ width, height }}
+        role="img"
+        aria-label="No image available"
       >
-        <ImageIcon size={40} className="text-gray-400 mb-2" />
-        <span className="text-gray-500 text-sm font-medium">No Image</span>
+        <ImageIcon size={44} className="text-gray-300 mb-2" />
+        <span className="text-gray-400 text-sm font-medium">Image unavailable</span>
       </div>
     );
   }
@@ -51,6 +65,7 @@ const SafeImage = ({
         <div 
           className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
           style={{ width, height }}
+          aria-hidden
         />
       )}
       <Image
@@ -70,97 +85,114 @@ const SafeImage = ({
   );
 };
 
-// Reusable Tour Card Component
+// Small helpers
+const formatBookings = (num?: number) => {
+  if (!num) return '0';
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}m`;
+  if (num >= 1000) return `${Math.floor(num / 1000)}k`;
+  return num.toString();
+};
+
+const getTagColor = (tag: string) => {
+  if (tag.includes('%')) return 'bg-red-600 text-white';
+  if (tag === 'Staff favourite') return 'bg-indigo-600 text-white';
+  if (tag === 'Online only deal') return 'bg-emerald-600 text-white';
+  if (tag === 'New') return 'bg-purple-600 text-white';
+  if (tag === 'Best for Kids') return 'bg-yellow-400 text-black';
+  return 'bg-gray-100 text-gray-800';
+};
+
+// Reusable Tour Card Component (polished)
 const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
 
-  const formatBookings = (num?: number) => {
-    if (!num) return '0';
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}m`;
-    if (num >= 1000) return `${Math.floor(num / 1000)}k`;
-    return num.toString();
-  };
-
-  const getTagColor = (tag: string) => {
-    if (tag.includes('%')) return 'bg-red-600 text-white';
-    if (tag === 'Staff favourite') return 'bg-blue-600 text-white';
-    if (tag === 'Online only deal') return 'bg-emerald-600 text-white';
-    if (tag === 'New') return 'bg-purple-600 text-white';
-    if (tag === 'Best for Kids') return 'bg-yellow-500 text-black';
-    return 'bg-gray-200 text-gray-800';
-  };
-
   return (
-    <Link 
+    <Link
       href={`/tour/${tour.slug || '#'}`}
-      className="block flex-shrink-0 w-[340px] bg-white shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group"
+      className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white/60 backdrop-blur-sm border border-transparent rounded-3xl overflow-hidden transform transition-all duration-400 hover:-translate-y-3 hover:shadow-2xl hover:border-white/40 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
+      aria-label={`Open tour ${tour.title || 'tour'}`}
     >
       <div className="relative">
         <SafeImage
-          src={tour.image} 
-          alt={tour.title || 'Tour image'} 
-          width={340}
-          height={192}
-          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105" 
+          src={tour.image}
+          alt={tour.title || 'Tour image'}
+          width={400}
+          height={240}
+          className="w-full h-56 object-cover rounded-t-3xl transition-transform duration-500 group-hover:scale-105"
         />
-        
-        {/* Tags */}
+
+        {/* Top-left tags */}
         {tour.tags && tour.tags.length > 0 && (
-          <div className="absolute top-3 left-3 flex flex-wrap gap-2 z-10">
-            {tour.tags.slice(0, 2).map((tag, index) => (
-              <span key={index} className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shadow-sm ${getTagColor(tag)}`}>
+          <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20">
+            {tour.tags.slice(0, 2).map((tag, i) => (
+              <span
+                key={i}
+                className={`px-3 py-1 text-xs font-semibold uppercase tracking-wide rounded-full shadow-sm ${getTagColor(tag)}`}
+              >
                 {tag}
               </span>
             ))}
           </div>
         )}
-        
-        {/* Add to Cart Button */}
-        <button 
+
+        {/* Rating badge (top-right) */}
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <div className="bg-white/85 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
+            <Star size={16} className="text-yellow-500" />
+            <span className="text-sm font-bold text-gray-800">{tour.rating ? tour.rating.toFixed(1) : '0.0'}</span>
+          </div>
+        </div>
+
+        {/* Price pill (overlay bottom-left) */}
+        <div className="absolute left-4 bottom-4 z-20">
+          <div className="bg-gradient-to-r from-red-600 to-rose-500 text-white px-4 py-2 rounded-full font-extrabold shadow-lg text-lg">
+            {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
+            {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+              <span className="ml-3 text-sm font-medium line-through text-white/75">{formatPrice(tour.originalPrice)}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Add to cart (big circular) */}
+        <button
           onClick={(e) => {
-            e.preventDefault(); 
+            e.preventDefault();
             e.stopPropagation();
             onAddToCartClick(tour);
           }}
-          className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-sm text-gray-800 p-2.5 rounded-full transition-all duration-300 hover:bg-red-600 hover:text-white hover:scale-110 z-10"
-          aria-label="Add to cart"
+          className="absolute bottom-4 right-4 z-30 bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-2xl ring-0 ring-red-300/40 transition transform hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-red-300"
+          aria-label={`Add ${tour.title || 'tour'} to cart`}
+          title="Add to cart"
         >
           <ShoppingCart size={22} />
         </button>
       </div>
-      
-      <div className="p-5 flex flex-col h-[180px]">
-        <h3 className="text-xl font-bold text-gray-900 leading-snug flex-grow line-clamp-2">
+
+      <div className="p-6 md:p-7">
+        <h3 className="text-lg md:text-xl font-extrabold text-gray-900 leading-tight mb-2 line-clamp-2">
           {tour.title || 'Untitled Tour'}
         </h3>
-        
-        <div className="flex items-center gap-4 text-sm text-gray-500 my-3">
-          <div className="flex items-center gap-1.5">
-            <Clock size={16} className="text-gray-400"/>
-            <span className="font-medium">{tour.duration || 'Duration not specified'}</span>
+
+        <p className="text-sm text-gray-600 mb-4 max-w-[30rem]">
+          {tour.excerpt || tour.summary || 'A beautifully curated experience — enjoy local highlights, guided commentary, and flexible booking.'}
+        </p>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-gray-400" />
+              <span className="text-sm font-medium">{tour.duration || 'Duration not specified'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-gray-400" />
+              <span className="text-sm font-medium">{formatBookings(tour.bookings)} booked</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Users size={16} className="text-gray-400"/>
-            <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
-          </div>
-        </div>
-        
-        <div className="mt-auto flex items-end justify-between">
-          <div className="flex items-center gap-1.5 text-yellow-500">
-            <Star size={20} className="fill-current" />
-            <span className="font-bold text-lg text-gray-800">
-              {tour.rating ? tour.rating.toFixed(1) : '0.0'}
-            </span>
-          </div>
+
           <div className="text-right">
-            <span className="text-3xl font-extrabold text-red-600">
+            <span className="text-lg md:text-2xl font-extrabold text-gray-900">
               {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
             </span>
-            {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
-              <span className="ml-2 text-base font-normal text-gray-500 line-through">
-                {formatPrice(tour.originalPrice)}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -181,47 +213,24 @@ export default function FeaturedTours() {
       try {
         const response = await fetch('/api/admin/tours');
         const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || `HTTP ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         if (data.success) {
-          // Handle both isFeatured boolean field and fallback to first few tours
           let featured = (data.data || []).filter((t: Tour) => t.isFeatured === true);
-          
-          // If no tours are marked as featured, take the first 6 tours as fallback
-          if (featured.length === 0) {
-            console.log('No tours marked as featured, using first 6 tours as fallback');
-            featured = (data.data || []).slice(0, 6);
-          }
-          
-          // Validate and sanitize tour data
+          if (featured.length === 0) featured = (data.data || []).slice(0, 6);
           const validatedTours = featured.map((tour: Tour) => ({
             ...tour,
-            // Ensure image is either a valid string or null
             image: tour.image && tour.image.trim() !== '' ? tour.image : null,
-            // Ensure title exists
             title: tour.title || 'Untitled Tour',
-            // Ensure slug exists
             slug: tour.slug || '',
-            // Ensure prices are numbers
             originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
             discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : tour.originalPrice || 0,
-            // Ensure rating is a number
             rating: typeof tour.rating === 'number' ? tour.rating : 0,
-            // Ensure bookings is a number
             bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-            // Ensure duration exists
             duration: tour.duration || 'Duration not specified',
-            // Ensure tags is an array
             tags: Array.isArray(tour.tags) ? tour.tags : [],
           }));
-          
           setTours(validatedTours);
-        } else {
-          throw new Error(data.error || 'API returned success: false');
-        }
+        } else throw new Error(data.error || 'API returned success: false');
       } catch (error: any) {
         console.error('Failed to fetch tours:', error);
         setFetchError(error.message || 'Failed to fetch tours');
@@ -237,38 +246,37 @@ export default function FeaturedTours() {
     setSelectedTour(tour);
     setBookingSidebarOpen(true);
   };
-  
+
   const closeSidebar = () => {
     setBookingSidebarOpen(false);
     setTimeout(() => setSelectedTour(null), 300);
   };
-  
+
   const retryFetch = () => {
     setIsLoading(true);
     setFetchError(null);
-    // Trigger re-fetch by updating the effect dependency
     window.location.reload();
   };
-  
-  // Duplicate tours for seamless animation
+
   const duplicatedTours = tours.length > 0 ? [...tours, ...tours] : [];
 
-  // Loading state
+  // Loading skeleton
   if (isLoading) {
     return (
-      <section className="bg-white py-20 font-sans">
+      <section className="bg-white py-24">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12">
-            <div className="animate-pulse">
-              <div className="h-12 w-96 bg-slate-200 rounded-lg mb-2" />
-              <div className="h-6 w-80 bg-slate-200 rounded-lg" />
+          <div className="flex items-center justify-between mb-12">
+            <div className="space-y-3">
+              <div className="h-12 w-[420px] bg-slate-200 rounded-md animate-pulse" />
+              <div className="h-6 w-[360px] bg-slate-200 rounded-md animate-pulse" />
             </div>
-            <div className="h-12 w-32 bg-slate-200 rounded-lg animate-pulse" />
+            <div className="h-14 w-48 bg-slate-200 rounded-full animate-pulse" />
           </div>
-          <div className="flex gap-4 overflow-hidden py-8">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex-shrink-0 px-4">
-                <div className="w-[340px] h-[400px] bg-slate-200 rounded-xl animate-pulse" />
+
+          <div className="flex gap-6 overflow-hidden py-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex-shrink-0 px-3">
+                <div className="w-[360px] h-[420px] bg-slate-200 rounded-3xl animate-pulse" />
               </div>
             ))}
           </div>
@@ -277,24 +285,16 @@ export default function FeaturedTours() {
     );
   }
 
-  // Error state
+  // Error
   if (fetchError) {
     return (
-      <section className="bg-white py-20 font-sans">
+      <section className="bg-white py-24">
         <div className="container mx-auto px-4 md:px-8">
           <div className="text-center">
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
-              Featured Tours
-            </h2>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-              <p className="text-red-800 font-medium">Failed to load featured tours</p>
-              <p className="text-red-600 text-sm mt-2">{fetchError}</p>
-              <button 
-                onClick={retryFetch}
-                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-              >
-                Retry
-              </button>
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Featured Tours</h2>
+            <p className="text-gray-600 mb-6">We couldn't load featured tours right now.</p>
+            <div className="inline-flex gap-3">
+              <button onClick={retryFetch} className="px-6 py-3 rounded-full bg-red-600 text-white font-semibold shadow hover:bg-red-700 transition">Retry</button>
             </div>
           </div>
         </div>
@@ -302,17 +302,12 @@ export default function FeaturedTours() {
     );
   }
 
-  // Empty state
   if (tours.length === 0) {
     return (
-      <section className="bg-white py-20 font-sans">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="text-center">
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
-              Featured Tours
-            </h2>
-            <p className="text-gray-600">No featured tours available at the moment.</p>
-          </div>
+      <section className="bg-white py-24">
+        <div className="container mx-auto px-4 md:px-8 text-center">
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-3">Featured Tours</h2>
+          <p className="text-gray-600">No featured tours available right now.</p>
         </div>
       </section>
     );
@@ -320,64 +315,62 @@ export default function FeaturedTours() {
 
   return (
     <>
-      <section className="bg-white py-20 font-sans">
+      <section className="bg-gradient-to-b from-white to-gray-50 py-24">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
             <div>
-              <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
+              <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
                 Canal Cruises Perfect For You
               </h2>
-              <p className="mt-2 text-lg text-gray-600 max-w-2xl">
-                Discover top-rated experiences in Amsterdam, handpicked by our travel experts.
+              <p className="mt-3 text-lg text-gray-600 max-w-2xl">
+                Discover top-rated experiences in Amsterdam — handpicked by local experts for unforgettable memories.
               </p>
             </div>
-            <Link 
-              href="/tours"
-              className="flex-shrink-0 mt-6 sm:mt-0 flex items-center gap-2 bg-red-600 text-white font-semibold px-6 py-3 shadow-md hover:bg-red-700 transition-all duration-300"
-            >
-              <span>See all tours</span>
-              <ArrowRight size={20} />
-            </Link>
+
+            <div className="flex items-center gap-4">
+              <Link
+                href="/tours"
+                className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-red-600 to-rose-500 text-white text-lg font-bold shadow-2xl hover:scale-105 transform transition"
+                aria-label="See all tours"
+              >
+                <span>See all tours</span>
+                <ArrowRight size={20} />
+              </Link>
+
+            </div>
           </div>
 
-          <div className="relative w-full overflow-hidden group py-8">
-            {/* Gradient overlays */}
-            <div className="absolute top-0 left-0 w-24 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
-            
-            {duplicatedTours.length > 0 && (
-              <div className="flex animate-marquee group-hover:[animation-play-state:paused]">
-                {duplicatedTours.map((tour, index) => (
-                  <div key={`${(tour as any)._id || tour.slug}-${index}`} className="flex-shrink-0 px-4">
-                    <TourCard 
-                      tour={tour} 
-                      onAddToCartClick={handleAddToCartClick}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="relative w-full overflow-hidden group py-6">
+            {/* Soft gradient masks */}
+            <div className="absolute top-0 left-0 w-28 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-28 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+            <div className="flex gap-6 animate-marquee group-hover:[animation-play-state:paused]">
+              {duplicatedTours.map((tour, idx) => (
+                <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-2">
+                  <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
-      
-      <BookingSidebar 
-        isOpen={isBookingSidebarOpen} 
-        onClose={closeSidebar} 
-        tour={selectedTour} 
+
+      <BookingSidebar
+        isOpen={isBookingSidebarOpen}
+        onClose={closeSidebar}
+        tour={selectedTour}
       />
-      
+
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
-        
-        .font-sans {
-          font-family: 'Poppins', sans-serif;
-        }
+
+        .font-sans { font-family: 'Poppins', sans-serif; }
 
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;  
+          -webkit-box-orient: vertical;
           overflow: hidden;
         }
 
@@ -387,7 +380,20 @@ export default function FeaturedTours() {
         }
 
         .animate-marquee {
-          animation: marquee 40s linear infinite;
+          animation: marquee 36s linear infinite;
+        }
+
+        /* Slight neon-glow on hover for premium look */
+        .group:hover .glow {
+          box-shadow: 0 12px 30px rgba(236, 72, 153, 0.18), 0 6px 12px rgba(0,0,0,0.06);
+        }
+
+        /* Ensure marquee is smooth on high perf devices */
+        .animate-marquee { will-change: transform; }
+
+        /* Utility: clamp width for better presentation on very small screens */
+        @media (max-width: 640px) {
+          .animate-marquee { animation-duration: 28s; }
         }
       `}</style>
     </>

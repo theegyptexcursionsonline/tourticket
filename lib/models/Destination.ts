@@ -48,10 +48,10 @@ export interface IDestination extends Document {
   featured?: boolean;
   isPublished?: boolean;
   tourCount?: number;
-  
-  // SEO & Meta
+// SEO & Meta
   metaTitle?: string;
   metaDescription?: string;
+  keywords?: string[];
   tags?: string[];
   
   // Timestamps
@@ -281,11 +281,12 @@ currency: {
     trim: true,
     maxlength: [60, 'Meta title cannot exceed 60 characters'],
   },
-  metaDescription: {
+metaDescription: {
     type: String,
     trim: true,
     maxlength: [160, 'Meta description cannot exceed 160 characters'],
   },
+  keywords: [{ type: String, trim: true }],
   tags: {
     type: [String],
     default: [],
