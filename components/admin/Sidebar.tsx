@@ -32,6 +32,8 @@ const navItems = [
   { href: "/admin/reports", label: "Reports", icon: TrendingUp },
   { href: "/admin/tours", label: "Tours", icon: Compass },
   { href: "/admin/destinations", label: "Destination", icon: Map },
+  { href: "/admin/attraction-pages", label: "Attraction", icon: Layout },
+
   { href: "/admin/categories", label: "Category", icon: Tag },
   { href: "/admin/blog", label: "Blog", icon: PenSquare },
   { href: "/admin/users", label: "User", icon: Users },
