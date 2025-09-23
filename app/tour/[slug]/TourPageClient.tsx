@@ -23,6 +23,10 @@ import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
+// Add these new imports for reviews
+import ReviewsStructuredData from '@/components/ReviewsStructuredData';
+import Reviews from '@/components/Reviews';
+import ElfsightWidget from '@/components/ElfsightWidget';
 
 // Hooks and Types
 import { useSettings } from '@/hooks/useSettings';
@@ -756,6 +760,13 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
           <span className="text-slate-500">({currentReviews.length} reviews)</span>
         </div>
       </div>
+
+      {/* Server-side JSON-LD for reviews (important for Google) */}
+      <ReviewsStructuredData />
+
+      {/* Our own reviews UI (client) */}
+
+     
       
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <ReviewList 
@@ -763,9 +774,14 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
           onReviewUpdated={handleReviewUpdated}
           onReviewDeleted={handleReviewDeleted}
         />
+        
         <div className="border-t border-slate-200 p-6">
           <ReviewForm tourId={tour._id!} onReviewSubmitted={handleNewReview} />
         </div>
+         {/* Elfsight third-party reviews widget (client component) */}
+      <div className="container mx-auto px-4 my-8">
+        <ElfsightWidget />
+      </div>
       </div>
     </div>
   );
