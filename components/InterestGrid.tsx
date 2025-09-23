@@ -1,4 +1,3 @@
-// components/InterestGrid.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,13 +10,57 @@ interface Interest {
   products: number;
 }
 
-// --- InterestCard Component (Updated to link to the search page) ---
-const InterestCard = ({ interest }: { interest: Interest }) => {
+interface AttractionPage {
+  _id: string;
+  title: string;
+  slug: string;
+  pageType: 'attraction' | 'category';
+  categoryId?: {
+    _id: string;
+    name: string;
+    slug: string;
+  };
+  isPublished: boolean;
+}
+
+// --- InterestCard Component (Updated to link to attraction pages) ---
+const InterestCard = ({ 
+  interest, 
+  attractionPage 
+}: { 
+  interest: Interest; 
+  attractionPage?: AttractionPage;
+}) => {
+  // Determine the best link for this interest
+  const getLink = () => {
+    if (attractionPage && attractionPage.isPublished) {
+      // Use attraction page if available
+      if (attractionPage.pageType === 'attraction') {
+        return `/attraction/${attractionPage.slug}`;
+      } else {
+        return `/category/${attractionPage.slug}`;
+      }
+    }
+    // Fallback to search
+    return `/search?q=${encodeURIComponent(interest.name)}`;
+  };
+
+  const linkUrl = getLink();
+  const hasAttractionPage = attractionPage && attractionPage.isPublished;
+
   return (
     <Link
-href={`/search?q=${encodeURIComponent(interest.name)}`}      className="block text-left bg-white p-5 shadow-lg border-2 border-transparent hover:border-red-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ease-in-out rounded-lg group"
-      aria-label={`Search for ${interest.products} tours related to ${interest.name}`}
+      href={linkUrl}
+      className="block text-left bg-white p-5 shadow-lg border-2 border-transparent hover:border-red-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ease-in-out rounded-lg group relative overflow-hidden"
+      aria-label={`${hasAttractionPage ? 'Visit' : 'Search for'} ${interest.products} tours related to ${interest.name}`}
     >
+      {/* Featured badge for attraction pages */}
+      {hasAttractionPage && (
+        <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+          Page
+        </div>
+      )}
+
       <h4 className="font-extrabold text-slate-800 text-lg uppercase tracking-wide group-hover:text-red-600 transition-colors duration-300">
         {interest.name}
       </h4>
@@ -26,7 +69,7 @@ href={`/search?q=${encodeURIComponent(interest.name)}`}      className="block te
       </p>
       <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <span className="text-xs text-red-600 font-semibold flex items-center gap-1">
-          Explore tours
+          {hasAttractionPage ? 'Visit page' : 'Explore tours'}
           <ArrowRight className="w-3 h-3" />
         </span>
       </div>
@@ -94,31 +137,45 @@ const EmptyState = () => (
 // --- Main InterestGrid Component ---
 export default function InterestGrid() {
   const [interests, setInterests] = useState<Interest[]>([]);
+  const [attractionPages, setAttractionPages] = useState<AttractionPage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const fetchInterests = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('/api/interests');
+      // Fetch both interests and attraction pages in parallel
+      const [interestsResponse, attractionPagesResponse] = await Promise.all([
+        fetch('/api/interests'),
+        fetch('/api/attraction-pages')
+      ]);
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      if (!interestsResponse.ok) {
+        throw new Error(`Failed to fetch interests: ${interestsResponse.status} ${interestsResponse.statusText}`);
       }
       
-      const data = await response.json();
+      const interestsData = await interestsResponse.json();
       
-      if (data.success) {
+      if (interestsData.success) {
         // Filter out categories with 0 products
-        const availableInterests = data.data.filter((interest: Interest) => interest.products > 0);
+        const availableInterests = interestsData.data.filter((interest: Interest) => interest.products > 0);
         setInterests(availableInterests);
       } else {
-        throw new Error(data.error || 'Failed to fetch interests');
+        throw new Error(interestsData.error || 'Failed to fetch interests');
       }
+
+      // Fetch attraction pages (don't fail if this fails)
+      if (attractionPagesResponse.ok) {
+        const attractionPagesData = await attractionPagesResponse.json();
+        if (attractionPagesData.success) {
+          setAttractionPages(attractionPagesData.data || []);
+        }
+      }
+      
     } catch (err) {
-      console.error('Error fetching interests:', err);
+      console.error('Error fetching data:', err);
       setError((err as Error).message);
     } finally {
       setIsLoading(false);
@@ -126,11 +183,31 @@ export default function InterestGrid() {
   };
 
   useEffect(() => {
-    fetchInterests();
+    fetchData();
   }, []);
 
   const handleRetry = () => {
-    fetchInterests();
+    fetchData();
+  };
+
+  // Create a mapping between interests and attraction pages
+  const getAttractionPageForInterest = (interest: Interest): AttractionPage | undefined => {
+    return attractionPages.find(page => {
+      if (!page.isPublished) return false;
+      
+      // Try to match by category name or slug
+      if (page.categoryId) {
+        const categoryName = typeof page.categoryId === 'object' ? page.categoryId.name : '';
+        const categorySlug = typeof page.categoryId === 'object' ? page.categoryId.slug : '';
+        
+        return categoryName.toLowerCase() === interest.name.toLowerCase() ||
+               categorySlug.toLowerCase() === interest.slug.toLowerCase();
+      }
+      
+      // Try to match by page title or slug
+      return page.title.toLowerCase().includes(interest.name.toLowerCase()) ||
+             page.slug.toLowerCase() === interest.slug.toLowerCase();
+    });
   };
 
   const renderContent = () => {
@@ -148,12 +225,22 @@ export default function InterestGrid() {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-        {interests.map((interest) => (
-          <InterestCard key={interest.slug || interest.name} interest={interest} />
-        ))}
+        {interests.map((interest) => {
+          const attractionPage = getAttractionPageForInterest(interest);
+          return (
+            <InterestCard 
+              key={interest.slug || interest.name} 
+              interest={interest}
+              attractionPage={attractionPage}
+            />
+          );
+        })}
       </div>
     );
   };
+
+  // Calculate stats including attraction pages
+  const attractionPagesCount = attractionPages.filter(page => page.isPublished).length;
 
   return (
     <section className="bg-slate-50 py-20">
@@ -167,6 +254,15 @@ export default function InterestGrid() {
             Discover amazing tours and experiences across Egypt. Choose from our curated categories 
             to find the perfect adventure for you.
           </p>
+          
+          {/* Enhanced description if we have attraction pages */}
+          {attractionPagesCount > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-3xl mx-auto mb-6">
+              <p className="text-blue-800 text-sm">
+                ✨ <strong>{attractionPagesCount}</strong> categories now have dedicated landing pages with detailed information!
+              </p>
+            </div>
+          )}
           
           {/* Call-to-Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -193,10 +289,10 @@ export default function InterestGrid() {
         {/* Main Content */}
         {renderContent()}
 
-        {/* Stats Section (if interests loaded successfully) */}
+        {/* Enhanced Stats Section */}
         {!isLoading && !error && interests.length > 0 && (
           <div className="mt-16 text-center">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="text-3xl font-bold text-red-600 mb-2">
                   {interests.length}
@@ -214,9 +310,18 @@ export default function InterestGrid() {
                   Total Tours & Experiences
                 </div>
               </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="text-3xl font-bold text-blue-600 mb-2">
+                  {attractionPagesCount}
+                </div>
+                <div className="text-slate-600 font-medium">
+                  Dedicated Pages
+                </div>
+              </div>
               
               <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="text-3xl font-bold text-red-600 mb-2">
+                <div className="text-3xl font-bold text-green-600 mb-2">
                   24/7
                 </div>
                 <div className="text-slate-600 font-medium">

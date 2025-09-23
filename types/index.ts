@@ -191,6 +191,62 @@ export interface ApiResponse<T> {
 }
 
 
+// Add to existing types/index.ts file
+
+export interface AttractionPage {
+  _id: string;
+  title: string;
+  slug: string;
+  description: string;
+  longDescription?: string;
+  pageType: 'attraction' | 'category';
+  categoryId?: string | Category;
+  heroImage: string;
+  images?: string[];
+  highlights?: string[];
+  features?: string[];
+  gridTitle: string;
+  gridSubtitle?: string;
+  showStats?: boolean;
+  itemsPerRow: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  isPublished: boolean;
+  featured: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AttractionPageFormData {
+  title: string;
+  slug: string;
+  description: string;
+  longDescription: string;
+  pageType: 'attraction' | 'category';
+  categoryId: string;
+  heroImage: string;
+  images: string[];
+  highlights: string[];
+  features: string[];
+  gridTitle: string;
+  gridSubtitle: string;
+  showStats: boolean;
+  itemsPerRow: number;
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string[];
+  isPublished: boolean;
+  featured: boolean;
+}
+
+export interface CategoryPageData extends AttractionPage {
+  category?: Category;
+  tours: Tour[];
+  totalTours: number;
+}
+
+
 
 // A more specific type for tours when destination and category are guaranteed to be populated
 export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | 'reviews'> {

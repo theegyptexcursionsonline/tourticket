@@ -20,20 +20,21 @@ import {
   PenSquare,
   Sparkles,
   X,
+  Layout, // For Attraction Pages icon (kept for future if needed)
 } from "lucide-react";
 
+// ✅ Reordered navItems based on requested order
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/tours", label: "Tours", icon: Compass },
-  { href: "/admin/destinations", label: "Destinations", icon: Map },
-  { href: "/admin/blog", label: "Blog", icon: PenSquare },
+  { href: "/admin/bookings", label: "Bookings", icon: FileText },
+  { href: "/admin/manifests", label: "Manifest", icon: ListPlus },
   { href: "/admin/discounts", label: "Discounts", icon: Percent },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/categories", label: "Categories", icon: Tag },
-  { href: "/admin/bookings", label: "Bookings", icon: FileText },
-  { href: "/admin/manifests", label: "Manifests", icon: ListPlus },
   { href: "/admin/reports", label: "Reports", icon: TrendingUp },
+  { href: "/admin/tours", label: "Tours", icon: Compass },
+  { href: "/admin/destinations", label: "Destination", icon: Map },
+  { href: "/admin/categories", label: "Category", icon: Tag },
+  { href: "/admin/blog", label: "Blog", icon: PenSquare },
+  { href: "/admin/users", label: "User", icon: Users },
 ];
 
 const AdminSidebar = () => {
@@ -55,8 +56,8 @@ const AdminSidebar = () => {
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Close mobile menu when route changes
@@ -67,12 +68,12 @@ const AdminSidebar = () => {
   // Prevent scroll when mobile menu is open
   useEffect(() => {
     if (isMobileOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isMobileOpen]);
 
@@ -85,17 +86,17 @@ const AdminSidebar = () => {
   };
 
   const sidebarWidth = isOpen ? "w-72" : "w-20";
-  const mobileClass = isMobile 
+  const mobileClass = isMobile
     ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
-        isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`
-    : '';
+    : "";
 
   return (
     <>
       {/* Mobile Overlay */}
       {isMobile && isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
@@ -114,7 +115,7 @@ const AdminSidebar = () => {
       {/* Sidebar */}
       <aside
         className={`h-screen bg-white border-r border-slate-200/60 backdrop-blur-sm flex flex-col transition-all duration-300 ease-out shadow-lg overflow-hidden ${sidebarWidth} ${mobileClass} ${
-          isMobile ? 'w-72' : ''
+          isMobile ? "w-72" : ""
         }`}
       >
         {/* Header */}
@@ -137,13 +138,15 @@ const AdminSidebar = () => {
             {/* Title with gradient */}
             <div
               className={`transition-all duration-300 min-w-0 ${
-                (!isOpen && !isMobile) && "opacity-0 translate-x-2 overflow-hidden"
+                !isOpen && !isMobile && "opacity-0 translate-x-2 overflow-hidden"
               }`}
             >
               <h1 className="text-lg font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent truncate">
                 AdminPanel
               </h1>
-              <p className="text-xs text-slate-500 -mt-0.5 truncate">Egypt Excursions</p>
+              <p className="text-xs text-slate-500 -mt-0.5 truncate">
+                Egypt Excursions
+              </p>
             </div>
           </div>
 
@@ -162,23 +165,27 @@ const AdminSidebar = () => {
           )}
         </div>
 
-     {/* Nav */}
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-6 px-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
           <ul className="space-y-2">
             {navItems.map(({ href, label, icon: Icon }, index) => {
-              const active = pathname.startsWith(href) && (href !== '/admin' || pathname === '/admin');
-              
+              const active =
+                pathname.startsWith(href) &&
+                (href !== "/admin" || pathname === "/admin");
+
               return (
                 <li key={href}>
                   <Link
                     href={href}
                     className={`relative group flex items-center rounded-2xl transition-all duration-200 overflow-hidden ${
-                      showLabel ? 'gap-4 px-4 py-3.5' : 'justify-center p-3.5 mx-auto w-14'
+                      showLabel
+                        ? "gap-4 px-4 py-3.5"
+                        : "justify-center p-3.5 mx-auto w-14"
                     } ${
                       active
                         ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 shadow-sm border border-blue-100/50"
                         : "hover:bg-slate-50 text-slate-700 hover:text-slate-900"
-                    } ${!showLabel ? 'hover:scale-105' : 'hover:translate-x-1'}`}
+                    } ${!showLabel ? "hover:scale-105" : "hover:translate-x-1"}`}
                     style={{
                       animationDelay: `${index * 50}ms`,
                     }}
@@ -203,7 +210,9 @@ const AdminSidebar = () => {
                     {showLabel && (
                       <span
                         className={`font-medium transition-all duration-300 truncate min-w-0 ${
-                          active ? "text-slate-800" : "text-slate-600 group-hover:text-slate-800"
+                          active
+                            ? "text-slate-800"
+                            : "text-slate-600 group-hover:text-slate-800"
                         }`}
                       >
                         {label}
@@ -236,12 +245,20 @@ const AdminSidebar = () => {
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-slate-800 truncate">Pro Tip</h3>
-                  <p className="text-xs text-slate-500 truncate">Use keyboard shortcuts</p>
+                  <h3 className="text-sm font-semibold text-slate-800 truncate">
+                    Pro Tip
+                  </h3>
+                  <p className="text-xs text-slate-500 truncate">
+                    Use keyboard shortcuts
+                  </p>
                 </div>
               </div>
               <div className="text-xs text-slate-600 leading-relaxed">
-                Press <kbd className="px-2 py-1 bg-white rounded border text-slate-800 font-mono">Ctrl + /</kbd> to toggle sidebar
+                Press{" "}
+                <kbd className="px-2 py-1 bg-white rounded border text-slate-800 font-mono">
+                  Ctrl + /
+                </kbd>{" "}
+                to toggle sidebar
               </div>
             </div>
           )}
@@ -255,8 +272,12 @@ const AdminSidebar = () => {
                 <span className="text-white text-xs font-bold">EEO</span>
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-700 truncate">Egypt Excursions Online</p>
-                <p className="text-xs text-slate-500 truncate">© 2025 All rights reserved</p>
+                <p className="text-xs font-medium text-slate-700 truncate">
+                  Egypt Excursions Online
+                </p>
+                <p className="text-xs text-slate-500 truncate">
+                  © 2025 All rights reserved
+                </p>
               </div>
             </div>
           ) : (
