@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download } from 'lucide-react';
+import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // Define interfaces matching your enhanced booking model
 interface BookingUser {
@@ -164,6 +165,83 @@ const BookingsPage = () => {
       return `${booking.guests} (${parts.join(', ')})`;
     }
     return booking.guests.toString();
+  };
+
+  // Status Dropdown Component
+  const StatusDropdown = ({ booking, onStatusChange }: { 
+    booking: Booking; 
+    onStatusChange: (bookingId: string, newStatus: string) => void; 
+  }) => {
+    const [isUpdating, setIsUpdating] = useState(false);
+    
+    const handleChange = async (newStatus: string) => {
+      setIsUpdating(true);
+      await onStatusChange(booking._id, newStatus);
+      setIsUpdating(false);
+    };
+
+    return (
+      <div className="relative">
+        <select
+          value={booking.status}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={isUpdating}
+          className={`appearance-none text-xs font-semibold px-3 py-2 pr-8 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+            booking.status === 'Confirmed' 
+              ? 'bg-green-100 text-green-800' 
+              : booking.status === 'Pending'
+              ? 'bg-yellow-100 text-yellow-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
+          <option value="Confirmed">Confirmed</option>
+          <option value="Pending">Pending</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+          {isUpdating ? (
+            <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+          ) : (
+            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Status change handler
+  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update booking status');
+      }
+
+      const updatedBooking = await response.json();
+      
+      // Update the booking in the local state
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          booking._id === bookingId 
+            ? { ...booking, status: newStatus as 'Confirmed' | 'Pending' | 'Cancelled' }
+            : booking
+        )
+      );
+      
+      toast.success(`Booking status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      toast.error('Failed to update booking status');
+    }
   };
 
   if (loading) {
@@ -328,8 +406,7 @@ const BookingsPage = () => {
                 {filteredBookings.map((booking) => (
                   <tr
                     key={booking._id}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors"
-                    onClick={() => handleRowClick(booking._id)}
+                    className="hover:bg-slate-50 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div>
@@ -362,11 +439,12 @@ const BookingsPage = () => {
                         {formatGuestBreakdown(booking)}
                       </div>
                     </td>
+                    
+                    {/* Updated Status Column with Inline Editing */}
                     <td className="px-6 py-4">
-                      <span className={getStatusBadge(booking.status)}>
-                        {booking.status}
-                      </span>
+                      <StatusDropdown booking={booking} onStatusChange={handleStatusChange} />
                     </td>
+                    
                     <td className="px-6 py-4">
                       <div className="flex items-center text-sm font-semibold text-slate-900">
                         <DollarSign size={14} className="mr-1 text-green-600" />
@@ -380,10 +458,7 @@ const BookingsPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRowClick(booking._id);
-                        }}
+                        onClick={() => handleRowClick(booking._id)}
                         className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
                       >
                         <Eye size={12} />

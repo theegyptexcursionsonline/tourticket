@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AttractionPageTemplate from '@/components/AttractionPageTemplate';
-import { AttractionPage, CategoryPageData } from '@/types';
+import type { AttractionPage, CategoryPageData } from '@/types';
 
 interface AttractionPageProps {
   params: { slug: string };
@@ -11,9 +11,12 @@ interface AttractionPageProps {
 
 async function getAttractionPage(slug: string): Promise<CategoryPageData | null> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages/${slug}`, {
-      cache: 'no-store'
-    });
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages/${slug}`,
+      {
+        cache: 'no-store',
+      }
+    );
 
     if (!res.ok) {
       return null;
@@ -33,7 +36,7 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
   if (!page) {
     return {
       title: 'Page Not Found',
-      description: 'The requested page could not be found.'
+      description: 'The requested page could not be found.',
     };
   }
 
@@ -53,7 +56,8 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
   };
 }
 
-export default async function AttractionPage({ params }: AttractionPageProps) {
+// Renamed to Page to avoid name collisions and follow Next.js convention
+export default async function Page({ params }: AttractionPageProps) {
   const page = await getAttractionPage(params.slug);
 
   if (!page) {
@@ -63,7 +67,7 @@ export default async function AttractionPage({ params }: AttractionPageProps) {
   return (
     <>
       <Header />
-      <AttractionPageTemplate page={page} urlType="attraction" />
+      <AttractionPageTemplate page={page as AttractionPage} urlType="attraction" />
       <Footer />
     </>
   );
