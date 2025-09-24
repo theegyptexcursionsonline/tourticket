@@ -37,14 +37,7 @@ const reviewsData: Review[] = [
     rating: 5,
     datePublished: '2024-09-15',
   },
-  {
-    name: 'Omar',
-    country: 'UAE',
-    review:
-      'Great arrangement, professional guide and excellent hospitality.',
-    rating: 4,
-    datePublished: '2024-08-20',
-  },
+ 
 ];
 
 const initials = (name: string) =>
