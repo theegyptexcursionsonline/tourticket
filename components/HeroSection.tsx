@@ -17,12 +17,31 @@ type Tag = {
 };
 
 const ALL_TAG_NAMES = [
-  "FOOD TOURS", "NIGHTLIFE", "ART GALLERIES", "HISTORICAL SITES", "LIVE MUSIC",
-  "SHOPPING", "BIKE RENTALS", "PARKS & NATURE", "ROOFTOP BARS", "ARCHITECTURE",
-  "BOAT TRIPS", "COOKING CLASS", "WINE TASTING", "BEACH DAY", "HIKING TRAILS",
-  "STREET ART", "KID FRIENDLY", "LUXURY EXPERIENCES", "ADVENTURE SPORTS",
-  "PHOTOGRAPHY SPOTS", "LOCAL MARKETS", "THEATRE & SHOWS", "WELLNESS & SPA",
+  "PYRAMID TOURS",
+  "NILE CRUISES",
+  "LUXOR TEMPLES",
+  "SPHINX VISITS",
+  "SUNSET FELUCCA",
+  "ASWAN EXCURSIONS",
+  "VALLEY OF THE KINGS",
+  "CAMEL RIDES",
+  "DESERT SAFARI",
+  "RED SEA RESORTS",
+  "HURGHADA DIVING",
+  "ABU SIMBEL",
+  "EGYPTIAN MUSEUM",
+  "PHILAE TEMPLE",
+  "LUXURY CRUISES",
+  "CULTURAL TOURS",
+  "MARKET BAZAARS",
+  "NUBIAN VILLAGES",
+  "ANCIENT TEMPLES",
+  "HOT AIR BALLOON",
+  "LOCAL CUISINE",
+  "HISTORICAL SITES",
+  "ADVENTURE SPORTS"
 ];
+
 
 const HERO_SEARCH_SUGGESTIONS = [
   "Where are you going?", "Find your next adventure", "Discover hidden gems",
@@ -43,9 +62,9 @@ const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
 ];
 
 const SLIDES = [
-  { src: '/pyramid3.png', alt: 'Pyramids of Giza at sunrise', caption: 'Pyramids of Giza' },
-  { src: '/pyramid2.png', alt: 'Felucca on the Nile at sunset', caption: 'Sunset on the Nile' },
-  { src: '/pyramid.png', alt: 'Luxor temple columns at golden hour', caption: 'Ancient Temples' }
+  { src: '/hero2.png', alt: 'Pyramids of Giza at sunrise', caption: 'Pyramids of Giza' },
+  { src: '/hero1.jpg', alt: 'Felucca on the Nile at sunset', caption: 'Sunset on the Nile' },
+  { src: '/hero3.png', alt: 'Luxor temple columns at golden hour', caption: 'Ancient Temples' }
 ];
 
 // --- Helper Hooks ---
@@ -193,13 +212,12 @@ export default function HeroSection() {
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
           <div className="max-w-xl">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
-              <span className="md:hidden">Your Best<br />Travel Buddy</span>
-              <span className="hidden md:block">Your<br />Best<br />Travel<br />Buddy</span>
-            </h1>
-            <p className="mt-4 text-base sm:text-lg md:text-xl text-shadow font-light max-w-md mx-auto md:mx-0">
-              Your trip starts now. Let's find your next experience.
-            </p>
+           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
+  Explore Egypt’s Pyramids & Nile
+</h1>
+           <p className="mt-4 text-base sm:text-lg md:text-xl text-shadow font-light max-w-md mx-auto md:mx-0">
+  Unforgettable excursions — from sunrise at the pyramids to sailing the Nile.
+</p>
             <HeroSearchBar onOpenModal={() => setIsSearchModalOpen(true)} />
           </div>
         </div>

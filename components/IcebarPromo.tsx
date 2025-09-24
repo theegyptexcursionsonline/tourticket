@@ -19,10 +19,10 @@ export default function EgyptPromo() {
   // 🔧 CONTROL AREA - update image paths, text, links here
   // Put responsive images under /public/images/
   // -----------------------
-  const imgSmall = '/pyramid.png';   // for <= 640
-  const imgMedium = '/pyramid.png'; // for <= 1024
-  const imgLarge = '/pyramid.png';  // for >= 1024
-  const imgLQ = '/pyramid.png';       // tiny blurred placeholder (very small file)
+  const imgSmall = '/pyramid2.jpg';   // for <= 640
+  const imgMedium = '/pyramid2.jpg'; // for <= 1024
+  const imgLarge = '/pyramid2.jpg';  // for >= 1024
+  const imgLQ = '/pyramid2.jpg';       // tiny blurred placeholder (very small file)
 
 
 
