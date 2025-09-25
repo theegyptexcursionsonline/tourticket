@@ -45,8 +45,7 @@ export default function Footer() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-    const [isSubscribed, setIsSubscribed] = useState(false);  // ADD THIS LINE HERE
-
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     const fetchDestinations = async () => {
@@ -65,7 +64,36 @@ export default function Footer() {
     fetchDestinations();
   }, []);
 
-// components/Footer.tsx
+  // Listen for open-chatbot events (dispatched by openChatbot)
+  useEffect(() => {
+    const handler = () => {
+      // Prefer openIntercom helper if available, then window.Intercom("show"), then fallback
+      try {
+        if (typeof (window as any).openIntercom === 'function') {
+          (window as any).openIntercom();
+          return;
+        }
+        if (typeof (window as any).Intercom === 'function') {
+          (window as any).Intercom('show');
+          return;
+        }
+        // fallback: open Intercom inbox in new tab (rare)
+        const appId = 'o5up1xz3'; // keep in sync with your Intercom ID or read from env
+        window.open(`https://app.intercom.com/a/apps/${appId}/inbox`, '_blank', 'noopener,noreferrer');
+      } catch (err) {
+        console.error('Failed to open Intercom:', err);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('open-chatbot', handler as EventListener);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('open-chatbot', handler as EventListener);
+      }
+    };
+  }, []);
 
   const handleSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -73,7 +101,7 @@ export default function Footer() {
       toast.error("Please enter a valid email address.");
       return;
     }
-    setLoading(true);
+    setIsLoading(true);
     try {
       const response = await fetch('/api/subscribe', {
         method: 'POST',
@@ -88,6 +116,7 @@ export default function Footer() {
       if (response.ok) {
         toast.success(data.message || "Thank you for subscribing!");
         setEmail('');
+        setIsSubscribed(true);
       } else {
         toast.error(data.message || "Subscription failed. Please try again.");
       }
@@ -95,7 +124,7 @@ export default function Footer() {
       console.error("Subscription error:", error);
       toast.error("An error occurred. Please try again later.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -208,36 +237,36 @@ export default function Footer() {
               </ul>
             </div>
 
-          {/* Newsletter */}
-<div>
-  {!isSubscribed ? (
-    <>
-      <h4 className="font-bold text-sm mb-3 text-slate-900">Sign up for our newsletter</h4>
-      <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
-        <input 
-          type="email" 
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Your email address" 
-          className="flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
-          disabled={isLoading}
-        />
-        <button 
-          type="submit" 
-          className="h-11 px-4 sm:px-5 rounded-md text-white bg-slate-800 hover:bg-red-600 transition-colors text-sm font-semibold whitespace-nowrap flex items-center justify-center disabled:bg-slate-500"
-          disabled={isLoading}
-        >
-          {isLoading ? <Loader2 className="animate-spin" /> : 'SUBSCRIBE'}
-        </button>
-      </form>
-    </>
-  ) : (
-    <div className="text-center py-4">
-      <h4 className="font-bold text-sm mb-2 text-green-600">Thank you!</h4>
-      <p className="text-sm text-slate-600">You've successfully subscribed to our newsletter.</p>
-    </div>
-  )}
-</div>
+            {/* Newsletter */}
+            <div>
+              {!isSubscribed ? (
+                <>
+                  <h4 className="font-bold text-sm mb-3 text-slate-900">Sign up for our newsletter</h4>
+                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      type="email" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Your email address" 
+                      className="flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
+                      disabled={isLoading}
+                    />
+                    <button 
+                      type="submit" 
+                      className="h-11 px-4 sm:px-5 rounded-md text-white bg-slate-800 hover:bg-red-600 transition-colors text-sm font-semibold whitespace-nowrap flex items-center justify-center disabled:bg-slate-500"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <Loader2 className="animate-spin" /> : 'SUBSCRIBE'}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <h4 className="font-bold text-sm mb-2 text-green-600">Thank you!</h4>
+                  <p className="text-sm text-slate-600">You've successfully subscribed to our newsletter.</p>
+                </div>
+              )}
+            </div>
             
             {/* Social Media */}
             <div>

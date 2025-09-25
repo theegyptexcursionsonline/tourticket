@@ -1,6 +1,5 @@
-// app/layout.tsx (replace existing RootLayout content with this)
+// app/layout.tsx
 import type { Metadata } from "next";
-import Script from "next/script"; // <-- new
 import { Inter, Almarai } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext";
@@ -10,6 +9,9 @@ import { WishlistProvider } from "@/contexts/WishlistContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
+
+// Client-side Intercom initializer wrapper
+import IntercomClient from "@/components/IntercomClient";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -33,9 +35,9 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
-        {/* Load Elfsight platform once for the entire site */}
-        <Script src="https://elfsightcdn.com/platform.js" strategy="afterInteractive" />
-        
+        {/* Intercom client initializer (client component) */}
+        <IntercomClient />
+
         <AuthProvider>
           <SettingsProvider>
             <CartProvider>
@@ -47,8 +49,6 @@ export default function RootLayout({
                   position="top-right"
                   reverseOrder={false}
                   gutter={8}
-                  containerClassName=""
-                  containerStyle={{}}
                   toastOptions={{
                     duration: 4000,
                     style: {

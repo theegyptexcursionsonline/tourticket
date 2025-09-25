@@ -110,7 +110,7 @@ function EgyptHero() {
           aria-hidden
           style={{ transform: 'translate3d(0,0,0) scale(1.02)' }}
         >
-          <Image src="/pyramid.png" alt="Pyramids and Nile" fill className="object-cover object-center" priority sizes="(min-width:1024px) 1200px, 100vw" />
+          <Image src="/hero3.png" alt="Pyramids and Nile" fill className="object-cover object-center" priority sizes="(min-width:1024px) 1200px, 100vw" />
 
           {/* cinematic overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
@@ -149,7 +149,7 @@ function EgyptHero() {
 
       <noscript>
         <div className="absolute inset-0">
-          <Image src="/pyramid.png" alt="Pyramids of Egypt" fill className="object-cover" />
+          <Image src="/hero3.png" alt="Pyramids of Egypt" fill className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         </div>
       </noscript>
@@ -194,7 +194,7 @@ export default function AboutEgyptLanding(): JSX.Element {
             </motion.div>
 
             <motion.div className="w-full h-80 relative rounded-2xl overflow-hidden shadow-xl" initial={{ opacity: 0, scale: 0.98 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
-              <Image src="/pyramid.png" alt="Felucca on Nile" fill className="object-cover" />
+              <Image src="/hero2.png" alt="Felucca on Nile" fill className="object-cover" />
             </motion.div>
           </div>
         </section>
