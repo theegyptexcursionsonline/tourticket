@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Package, Star } from "lucide-react";
 
 interface Interest {
   name: string;
@@ -48,39 +48,70 @@ const InterestCard = ({
   return (
     <Link
       href={linkUrl}
-      className="block text-left bg-white p-5 shadow-lg border-2 border-transparent hover:border-red-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ease-in-out rounded-lg group relative overflow-hidden"
+      className="group block text-left bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:border-red-200 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 ease-out relative overflow-hidden backdrop-blur-sm"
       aria-label={`${hasAttractionPage ? 'Visit' : 'Search for'} ${interest.products} tours related to ${interest.name}`}
     >
+      {/* Background Gradient Effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+      
+      {/* Page Badge */}
       {hasAttractionPage && (
-        <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
-          Page
+        <div className="absolute -top-1 -right-1 z-10">
+          <div className="bg-gradient-to-r from-emerald-400 to-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg flex items-center gap-1">
+            <Star className="w-3 h-3 fill-current" />
+            Featured
+          </div>
         </div>
       )}
 
-      <h4 className="font-extrabold text-slate-800 text-lg uppercase tracking-wide group-hover:text-red-600 transition-colors duration-300">
-        {interest.name}
-      </h4>
-      <p className="text-sm text-slate-500 mt-1 group-hover:text-slate-700 transition-colors duration-300">
-        {interest.products} product{interest.products !== 1 ? 's' : ''}
-      </p>
-      <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <span className="text-xs text-red-600 font-semibold flex items-center gap-1">
-          {hasAttractionPage ? 'Visit page' : 'Explore tours'}
-          <ArrowRight className="w-3 h-3" />
-        </span>
+      {/* Content Container */}
+      <div className="relative z-10">
+        {/* Interest Name */}
+        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-red-600 transition-colors duration-300 line-clamp-2">
+          {interest.name}
+        </h4>
+
+        {/* Products Count */}
+        <div className="flex items-center gap-2 text-slate-500 mb-4">
+          <Package className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            {interest.products} {interest.products === 1 ? 'tour' : 'tours'} available
+          </span>
+        </div>
+
+        {/* Action Indicator */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-red-600 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+            {hasAttractionPage ? 'Visit page' : 'Explore tours'}
+          </span>
+          <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
+            <ArrowRight className="w-4 h-4 text-red-600 transform group-hover:translate-x-0.5 transition-transform duration-300" />
+          </div>
+        </div>
       </div>
+
+      {/* Hover Border Effect */}
+      <div className="absolute inset-0 rounded-2xl border-2 border-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
     </Link>
   );
 };
 
 // --- Loading Skeleton Component ---
 const LoadingSkeleton = () => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 animate-pulse">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 animate-pulse">
     {[...Array(18)].map((_, i) => (
-      <div key={i} className="bg-white p-5 rounded-lg shadow-lg">
-        <div className="h-6 w-3/4 bg-slate-200 rounded mb-2"></div>
-        <div className="h-4 w-1/2 bg-slate-200 rounded mb-3"></div>
-        <div className="h-3 w-1/3 bg-slate-200 rounded"></div>
+      <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="space-y-4">
+          <div className="h-5 w-3/4 bg-slate-200 rounded-lg"></div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-slate-200 rounded"></div>
+            <div className="h-4 w-20 bg-slate-200 rounded"></div>
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="h-3 w-16 bg-slate-200 rounded"></div>
+            <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+          </div>
+        </div>
       </div>
     ))}
   </div>
@@ -88,16 +119,19 @@ const LoadingSkeleton = () => (
 
 // --- Error Display Component ---
 const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="text-center py-12">
+  <div className="text-center py-16">
     <div className="max-w-md mx-auto">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-red-800 mb-2">
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-8 shadow-sm">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Package className="w-8 h-8 text-red-600" />
+        </div>
+        <h3 className="text-xl font-bold text-red-800 mb-3">
           Unable to Load Interests
         </h3>
-        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-red-600 mb-6 leading-relaxed">{error}</p>
         <button
           onClick={onRetry}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+          className="inline-flex items-center gap-3 px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transform hover:scale-105 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
         >
           <ArrowRight className="w-4 h-4 rotate-180" />
           Try Again
@@ -109,18 +143,21 @@ const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }
 
 // --- Empty State Component ---
 const EmptyState = () => (
-  <div className="text-center py-12">
+  <div className="text-center py-16">
     <div className="max-w-md mx-auto">
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-8">
-        <h3 className="text-lg font-semibold text-slate-800 mb-2">
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Package className="w-8 h-8 text-slate-600" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800 mb-3">
           No Interests Available
         </h3>
-        <p className="text-slate-600 mb-4">
-          We're currently updating our tour categories. Please check back soon!
+        <p className="text-slate-600 mb-6 leading-relaxed">
+          We're currently updating our tour categories. Please check back soon for amazing new experiences!
         </p>
         <Link
           href="/tours"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors duration-200"
+          className="inline-flex items-center gap-3 px-6 py-3 bg-slate-600 text-white rounded-full hover:bg-slate-700 transform hover:scale-105 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
         >
           Browse All Tours
           <ArrowRight className="w-4 h-4" />
@@ -213,7 +250,7 @@ export default function InterestGrid() {
     }
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
         {interests.map((interest) => {
           const attractionPage = getAttractionPageForInterest(interest);
           return (
@@ -229,14 +266,19 @@ export default function InterestGrid() {
   };
 
   return (
-    <section className="bg-slate-50 py-20">
+    <section className="bg-gradient-to-br from-slate-50 to-slate-100/50 py-24">
       <div className="container mx-auto px-4">
         {/* Header Section */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+        <div className="text-center mb-16">
+          <div className="inline-block p-2 bg-red-100 rounded-2xl mb-4">
+            <Package className="w-8 h-8 text-red-600" />
+          </div>
+          
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-6 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
             Egypt Excursions Online
           </h2>
-          <p className="text-lg text-slate-600 mb-6 max-w-2xl mx-auto">
+          
+          <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
             Discover amazing tours and experiences across Egypt. Choose from our curated categories
             to find the perfect adventure for you.
           </p>
@@ -245,7 +287,7 @@ export default function InterestGrid() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/search"
-              className="inline-flex items-center gap-3 px-8 py-3 font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 group rounded-full"
+              className="inline-flex items-center gap-3 px-8 py-4 font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-300 group rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
               aria-label="Find the right interest for you"
             >
               <span>FIND THE RIGHT INTEREST FOR YOU</span>
@@ -254,7 +296,7 @@ export default function InterestGrid() {
 
             <Link
               href="/tours"
-              className="inline-flex items-center gap-3 px-8 py-3 font-semibold text-slate-600 border-2 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-300 group rounded-full"
+              className="inline-flex items-center gap-3 px-8 py-4 font-semibold text-slate-600 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 group rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
               aria-label="Browse all tours"
             >
               <span>Browse All Tours</span>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Smile, Users, Bus, Ship, Moon, Camera } from 'lucide-react';
+import { Smile, Users, Bus, Ship, Moon, Camera, Star, ArrowRight, AlertCircle } from 'lucide-react';
 
 // --- Reusable Icons Component ---
 const icons = { Smile, Users, Bus, Ship, Moon, Camera } as const;
@@ -15,7 +15,6 @@ const interestDetails: { [key: string]: { icon: IconKey; color: string } } = {
   'ON THE WATER': { icon: 'Ship', color: 'from-cyan-500 to-sky-600' },
   'NIGHTLIFE': { icon: 'Moon', color: 'from-indigo-500 to-purple-600' },
   'SELFIE MUSEUM': { icon: 'Camera', color: 'from-pink-500 to-fuchsia-600' },
-  // Add more mappings as needed
   'CULTURAL TOURS': { icon: 'Camera', color: 'from-purple-500 to-pink-600' },
   'ADVENTURE TOUR': { icon: 'Smile', color: 'from-green-500 to-emerald-600' },
   'NATURE TOURS': { icon: 'Users', color: 'from-teal-500 to-cyan-600' },
@@ -74,46 +73,125 @@ const InterestCard = ({
   return (
     <Link
       href={linkUrl}
-      className="relative block bg-slate-900 border-2 border-slate-800 transform transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-red-500 overflow-hidden group"
+      className="relative block bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl transform transition-all duration-500 hover:scale-105 hover:shadow-2xl group overflow-hidden border border-slate-700/50 hover:border-slate-600"
+      aria-label={`Explore ${interest.products} ${interest.name.toLowerCase()} tours`}
     >
+      {/* Background Gradient Effect */}
       <div
-        className={`absolute -bottom-10 -right-10 w-40 h-40 bg-gradient-to-tr ${interest.color} rounded-full opacity-20 group-hover:scale-125 transition-transform duration-500`}
+        className={`absolute inset-0 bg-gradient-to-br ${interest.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500 rounded-3xl`}
+      />
+      
+      {/* Floating Orb Background */}
+      <div
+        className={`absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-tr ${interest.color} rounded-full opacity-20 blur-xl group-hover:scale-125 group-hover:opacity-30 transition-all duration-700`}
       />
 
+      {/* Featured Badge */}
       {hasAttractionPage && (
-        <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs px-2 py-1 rounded-full font-semibold z-20">
-          Page
+        <div className="absolute top-4 right-4 z-20">
+          <div className="bg-gradient-to-r from-emerald-400 to-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <Star className="w-3 h-3 fill-current" />
+            Featured
+          </div>
         </div>
       )}
 
-      <div className="p-8 text-white relative z-10 flex flex-col justify-between h-48">
-        <div className="flex items-center justify-between mb-4">
-          <IconComponent className="w-12 h-12 text-white group-hover:text-red-500 transition-colors duration-300" />
-          {hasAttractionPage && (
-            <div className="text-xs text-blue-300 font-medium">
+      {/* Card Content */}
+      <div className="p-8 text-white relative z-10 flex flex-col justify-between min-h-[220px]">
+        {/* Top Section with Icon */}
+        <div className="flex items-start justify-between mb-6">
+          <div className={`p-4 bg-gradient-to-br ${interest.color} rounded-2xl shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
+            <IconComponent className="w-8 h-8 text-white" />
+          </div>
+          
+          {hasAttractionPage && !hasAttractionPage && (
+            <div className="text-xs text-slate-400 font-medium bg-slate-800/50 px-2 py-1 rounded-lg backdrop-blur-sm">
               Dedicated Page
             </div>
           )}
         </div>
 
-        <div>
-          <h3 className="font-extrabold text-2xl tracking-tight leading-tight uppercase mb-2">
-            {interest.name}
-          </h3>
-          <p className="text-sm text-slate-400">
-            {interest.products} product{interest.products !== 1 ? 's' : ''}
-          </p>
+        {/* Content Section */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-bold text-xl leading-tight mb-2 group-hover:text-white transition-colors duration-300 line-clamp-2">
+              {interest.name}
+            </h3>
+            
+            <div className="flex items-center gap-2 text-slate-300 mb-4">
+              <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
+              <span className="text-sm font-medium">
+                {interest.products} {interest.products === 1 ? 'tour' : 'tours'} available
+              </span>
+            </div>
+          </div>
 
-          <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <span className="text-xs text-red-400 font-semibold">
-              {hasAttractionPage ? '→ Visit dedicated page' : '→ Search tours'}
+          {/* Action Section */}
+          <div className="flex items-center justify-between opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+            <span className="text-sm font-semibold text-slate-300 group-hover:text-white">
+              {hasAttractionPage ? 'Visit page' : 'Explore tours'}
             </span>
+            <div className={`w-10 h-10 bg-gradient-to-r ${interest.color} rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300`}>
+              <ArrowRight className="w-4 h-4 text-white" />
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Subtle Border Glow */}
+      <div className={`absolute inset-0 rounded-3xl border-2 border-transparent bg-gradient-to-r ${interest.color} opacity-0 group-hover:opacity-20 transition-opacity duration-300`} style={{
+        background: `linear-gradient(var(--tw-gradient-stops))`,
+        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+        WebkitMaskComposite: 'xor',
+        maskComposite: 'exclude',
+        padding: '1px'
+      }} />
     </Link>
   );
 };
+
+// --- Loading Skeleton Component ---
+const LoadingSkeleton = () => (
+  <div className="flex flex-wrap justify-center gap-6 md:gap-8 animate-pulse">
+    {[...Array(6)].map((_, i) => (
+      <div key={i} className="basis-80">
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl border border-slate-700/50 min-h-[220px] p-8">
+          <div className="flex items-start justify-between mb-6">
+            <div className="w-16 h-16 bg-slate-700 rounded-2xl"></div>
+          </div>
+          <div className="space-y-4">
+            <div className="h-6 w-3/4 bg-slate-700 rounded-lg"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-slate-700 rounded-full"></div>
+              <div className="h-4 w-20 bg-slate-700 rounded"></div>
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <div className="h-4 w-16 bg-slate-700 rounded"></div>
+              <div className="w-10 h-10 bg-slate-700 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// --- Error Display Component ---
+const ErrorDisplay = ({ error }: { error: string }) => (
+  <div className="text-center py-16">
+    <div className="max-w-md mx-auto">
+      <div className="bg-gradient-to-br from-red-900 to-red-800 border border-red-700 rounded-3xl p-8 shadow-xl">
+        <div className="w-16 h-16 bg-red-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+        </div>
+        <h3 className="text-xl font-bold text-red-200 mb-3">
+          Unable to Load Interests
+        </h3>
+        <p className="text-red-300 leading-relaxed">{error}</p>
+      </div>
+    </div>
+  </div>
+);
 
 export default function PopularInterests() {
   const [interests, setInterests] = useState<Interest[]>([]);
@@ -192,63 +270,43 @@ export default function PopularInterests() {
     });
   };
 
-  if (loading) {
-    return (
-      <section className="bg-slate-50 py-20 font-sans">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 text-center mb-12 tracking-tight">
-            Activities based on popular interests
-          </h2>
-          <div className="flex flex-wrap justify-center gap-6 md:gap-8">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="basis-80">
-                <div className="bg-slate-200 h-48 rounded-lg animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className="bg-slate-50 py-20 font-sans">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-8 tracking-tight">
-            Activities based on popular interests
-          </h2>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-            <p className="text-red-600">Error: {error}</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="bg-slate-50 py-20 font-sans">
+    <section className="bg-gradient-to-br from-slate-100 to-slate-200 py-24 font-sans">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-block p-3 bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl mb-6 shadow-lg">
+            <Star className="w-8 h-8 text-white" />
+          </div>
+          
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
             Activities based on popular interests
           </h2>
+          
+          <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+            Discover experiences tailored to your passions. Each category features handpicked tours designed for specific interests and preferences.
+          </p>
         </div>
 
-        {/* Interest Cards Grid */}
-        <div className="flex flex-wrap justify-center gap-6 md:gap-8">
-          {interests.map((interest) => {
-            const attractionPage = getAttractionPageForInterest(interest);
-            return (
-              <div key={interest.name} className="basis-80">
-                <InterestCard
-                  interest={interest}
-                  attractionPage={attractionPage}
-                />
-              </div>
-            );
-          })}
-        </div>
+        {/* Content Rendering */}
+        {loading && <LoadingSkeleton />}
+        {error && <ErrorDisplay error={error} />}
+        
+        {!loading && !error && (
+          <div className="flex flex-wrap justify-center gap-6 md:gap-8">
+            {interests.map((interest) => {
+              const attractionPage = getAttractionPageForInterest(interest);
+              return (
+                <div key={interest.name} className="basis-80">
+                  <InterestCard
+                    interest={interest}
+                    attractionPage={attractionPage}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );
