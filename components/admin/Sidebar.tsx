@@ -21,11 +21,13 @@ import {
   Sparkles,
   X,
   Layout, // ✅ For Attraction
+  ImageIcon, // ✅ For Hero Settings
 } from "lucide-react";
 
-// ✅ Final navItems order with Attraction included
+// ✅ Updated navItems with Hero Settings added
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/hero-settings", label: "Hero Settings", icon: ImageIcon },
   { href: "/admin/bookings", label: "Bookings", icon: FileText },
   { href: "/admin/manifests", label: "Manifest", icon: ListPlus },
   { href: "/admin/discounts", label: "Discounts", icon: Percent },

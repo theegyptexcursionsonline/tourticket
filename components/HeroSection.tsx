@@ -1,10 +1,9 @@
+// components/HeroSection.tsx
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Search } from "lucide-react";
-// The Next.js Image component is imported but not used in this file.
-// It's kept here in case you plan to add it elsewhere, but it's the source of the naming conflict.
-import Image from "next/image"; 
+import Image from "next/image";
 import { useRecentSearches } from "@/hooks/useSearch";
 import SearchModal from "@/components/SearchModel";
 
@@ -16,37 +15,95 @@ type Tag = {
   highlight?: boolean;
 };
 
-const ALL_TAG_NAMES = [
-  "PYRAMID TOURS",
-  "NILE CRUISES",
-  "LUXOR TEMPLES",
-  "SPHINX VISITS",
-  "SUNSET FELUCCA",
-  "ASWAN EXCURSIONS",
-  "VALLEY OF THE KINGS",
-  "CAMEL RIDES",
-  "DESERT SAFARI",
-  "RED SEA RESORTS",
-  "HURGHADA DIVING",
-  "ABU SIMBEL",
-  "EGYPTIAN MUSEUM",
-  "PHILAE TEMPLE",
-  "LUXURY CRUISES",
-  "CULTURAL TOURS",
-  "MARKET BAZAARS",
-  "NUBIAN VILLAGES",
-  "ANCIENT TEMPLES",
-  "HOT AIR BALLOON",
-  "LOCAL CUISINE",
-  "HISTORICAL SITES",
-  "ADVENTURE SPORTS"
-];
+interface HeroSettings {
+  backgroundImages: {
+    desktop: string;
+    mobile?: string;
+    alt: string;
+    isActive: boolean;
+  }[];
+  currentActiveImage: string;
+  title: {
+    main: string;
+    highlight: string;
+    subtitle: string;
+  };
+  searchSuggestions: string[];
+  floatingTags: {
+    isEnabled: boolean;
+    tags: string[];
+    animationSpeed: number;
+    tagCount: {
+      desktop: number;
+      mobile: number;
+    };
+  };
+  trustIndicators: {
+    travelers: string;
+    rating: string;
+    ratingText: string;
+    isVisible: boolean;
+  };
+  overlaySettings: {
+    opacity: number;
+    gradientType: 'dark' | 'light' | 'custom';
+    customGradient?: string;
+  };
+  animationSettings: {
+    slideshowSpeed: number;
+    fadeSpeed: number;
+    enableAutoplay: boolean;
+  };
+  metaTitle?: string;
+  metaDescription?: string;
+}
 
-
-const HERO_SEARCH_SUGGESTIONS = [
-  "Where are you going?", "Find your next adventure", "Discover hidden gems",
-  "Book unique experiences", "Explore new destinations", "Create lasting memories",
-];
+// Default fallback settings
+const DEFAULT_SETTINGS: HeroSettings = {
+  backgroundImages: [
+    { desktop: '/hero2.png', alt: 'Pyramids of Giza at sunrise', isActive: true },
+    { desktop: '/hero1.jpg', alt: 'Felucca on the Nile at sunset', isActive: false },
+    { desktop: '/hero3.png', alt: 'Luxor temple columns at golden hour', isActive: false }
+  ],
+  currentActiveImage: '/hero2.png',
+  title: {
+    main: 'Explore Egypt\'s Pyramids & Nile',
+    highlight: 'Incredible',
+    subtitle: 'Experiences',
+  },
+  searchSuggestions: [
+    "Where are you going?", "Find your next adventure", "Discover hidden gems",
+    "Book unique experiences", "Explore new destinations", "Create lasting memories",
+  ],
+  floatingTags: {
+    isEnabled: true,
+    tags: [
+      "PYRAMID TOURS", "NILE CRUISES", "LUXOR TEMPLES", "SPHINX VISITS",
+      "SUNSET FELUCCA", "ASWAN EXCURSIONS", "VALLEY OF THE KINGS", "CAMEL RIDES",
+      "DESERT SAFARI", "RED SEA RESORTS", "HURGHADA DIVING", "ABU SIMBEL",
+      "EGYPTIAN MUSEUM", "PHILAE TEMPLE", "LUXURY CRUISES", "CULTURAL TOURS",
+      "MARKET BAZAARS", "NUBIAN VILLAGES", "ANCIENT TEMPLES", "HOT AIR BALLOON",
+      "LOCAL CUISINE", "HISTORICAL SITES", "ADVENTURE SPORTS"
+    ],
+    animationSpeed: 5,
+    tagCount: { desktop: 9, mobile: 5 }
+  },
+  trustIndicators: {
+    travelers: '2M+ travelers',
+    rating: '4.9/5 rating',
+    ratingText: '★★★★★',
+    isVisible: true,
+  },
+  overlaySettings: {
+    opacity: 0.6,
+    gradientType: 'dark',
+  },
+  animationSettings: {
+    slideshowSpeed: 6,
+    fadeSpeed: 900,
+    enableAutoplay: true
+  }
+};
 
 const TAG_POSITIONS_DESKTOP: React.CSSProperties[] = [
   { top: "25%", left: "60%" }, { top: "20%", right: "15%" }, { top: "45%", left: "55%" },
@@ -61,15 +118,10 @@ const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
   { top: "90%", left: "35%" },
 ];
 
-const SLIDES = [
-  { src: '/hero2.png', alt: 'Pyramids of Giza at sunrise', caption: 'Pyramids of Giza' },
-  { src: '/hero1.jpg', alt: 'Felucca on the Nile at sunset', caption: 'Sunset on the Nile' },
-  { src: '/hero3.png', alt: 'Luxor temple columns at golden hour', caption: 'Ancient Temples' }
-];
-
 // --- Helper Hooks ---
 const useIsMobile = (breakpoint = 768) => {
   const [isMobile, setIsMobile] = useState(false);
+  
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < breakpoint);
     if (typeof window !== "undefined") {
@@ -78,24 +130,61 @@ const useIsMobile = (breakpoint = 768) => {
       return () => window.removeEventListener("resize", checkIsMobile);
     }
   }, [breakpoint]);
+  
   return isMobile;
 };
 
-const useDynamicTags = (allTags: string[], desktopPositions: React.CSSProperties[], mobilePositions: React.CSSProperties[], interval = 5000) => {
+const useHeroSettings = () => {
+  const [settings, setSettings] = useState<HeroSettings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/hero-settings');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setSettings(result.data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load hero settings:', error);
+        // Use default settings on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  return { settings, isLoading };
+};
+
+const useDynamicTags = (
+  allTags: string[], 
+  desktopPositions: React.CSSProperties[], 
+  mobilePositions: React.CSSProperties[], 
+  interval = 5000
+) => {
   const [displayedTags, setDisplayedTags] = useState<Tag[]>([]);
   const isMobile = useIsMobile();
+  
   const generateRandomTags = useCallback(() => {
     const positions = isMobile ? mobilePositions : desktopPositions;
     const tagCount = isMobile ? 5 : 9;
     const shuffledTags = [...allTags].sort(() => 0.5 - Math.random());
     const shuffledPositions = [...positions].sort(() => 0.5 - Math.random());
     const highlightIndex = Math.floor(Math.random() * tagCount);
+    
     const newTags = shuffledTags.slice(0, tagCount).map((name, index) => ({
-      id: `${name}-${index}`,
+      id: `${name}-${index}-${Date.now()}`,
       name,
       position: shuffledPositions[index % positions.length],
       highlight: index === highlightIndex,
     }));
+    
     setDisplayedTags(newTags);
   }, [allTags, desktopPositions, mobilePositions, isMobile]);
 
@@ -104,16 +193,23 @@ const useDynamicTags = (allTags: string[], desktopPositions: React.CSSProperties
     const timer = setInterval(generateRandomTags, interval);
     return () => clearInterval(timer);
   }, [generateRandomTags, interval]);
+  
   return displayedTags;
 };
 
 const useSlidingText = (texts: string[], interval = 3000) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  
   useEffect(() => {
-    const timer = setInterval(() => setCurrentIndex((prev) => (prev + 1) % texts.length), interval);
+    if (texts.length === 0) return;
+    const timer = setInterval(() => 
+      setCurrentIndex((prev) => (prev + 1) % texts.length), 
+      interval
+    );
     return () => clearInterval(timer);
   }, [texts.length, interval]);
-  return texts[currentIndex];
+  
+  return texts[currentIndex] || texts[0] || "Search...";
 };
 
 // --- Reusable Components ---
@@ -124,50 +220,76 @@ const FloatingTag = ({ tag }: { tag: Tag }) => (
       window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
     }}
     className={`absolute px-4 py-2 text-xs md:text-sm font-semibold rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in ${
-      tag.highlight ? "bg-red-500 text-white scale-110 -rotate-3 hover:bg-red-600" : "bg-white/90 text-slate-800 hover:bg-white backdrop-blur-sm"
+      tag.highlight 
+        ? "bg-red-500 text-white scale-110 -rotate-3 hover:bg-red-600" 
+        : "bg-white/90 text-slate-800 hover:bg-white backdrop-blur-sm"
     }`}
   >
     {tag.name}
   </button>
 );
 
-const HeroSearchBar = ({ onOpenModal }: { onOpenModal: () => void }) => {
-  const currentSuggestion = useSlidingText(HERO_SEARCH_SUGGESTIONS, 3000);
+const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; suggestion: string }) => {
   return (
     <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start">
-      <button onClick={onOpenModal} className="w-full max-w-sm md:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-4 text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform">
+      <button 
+        onClick={onOpenModal} 
+        className="w-full max-w-sm md:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-4 text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
+      >
         <Search className="h-6 w-6 md:h-7 md:w-7 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
         <div className="flex-1 text-left h-7 overflow-hidden">
-          <span key={currentSuggestion} className="font-semibold animate-text-slide-in block text-lg">{currentSuggestion}</span>
+          <span key={suggestion} className="font-semibold animate-text-slide-in block text-lg">
+            {suggestion}
+          </span>
         </div>
       </button>
     </div>
   );
 };
 
-const BackgroundSlideshow = ({ slides = SLIDES, delay = 6000, fadeMs = 900 }: { slides?: typeof SLIDES, delay?: number, fadeMs?: number }) => {
+const BackgroundSlideshow = ({ 
+  slides = [], 
+  delay = 6000, 
+  fadeMs = 900,
+  autoplay = true 
+}: { 
+  slides?: Array<{src: string, alt: string, caption?: string}>, 
+  delay?: number, 
+  fadeMs?: number,
+  autoplay?: boolean 
+}) => {
   const [index, setIndex] = useState(0);
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Preload images
     slides.forEach(s => {
-      // **FIX:** Use `window.Image` to access the native browser Image constructor
       const img = new window.Image();
       img.src = s.src;
     });
   }, [slides]);
 
   useEffect(() => {
+    if (!autoplay || slides.length <= 1) return;
+    
     const next = () => setIndex((i) => (i + 1) % slides.length);
     timeoutRef.current = window.setTimeout(next, delay);
+    
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
     };
-  }, [index, slides.length, delay]);
+  }, [index, slides.length, delay, autoplay]);
+
+  if (slides.length === 0) {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden bg-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
@@ -175,7 +297,7 @@ const BackgroundSlideshow = ({ slides = SLIDES, delay = 6000, fadeMs = 900 }: { 
         const visible = i === index;
         return (
           <div
-            key={s.src}
+            key={`${s.src}-${i}`}
             aria-hidden={!visible}
             className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out"
             style={{
@@ -193,52 +315,137 @@ const BackgroundSlideshow = ({ slides = SLIDES, delay = 6000, fadeMs = 900 }: { 
   );
 };
 
-// --- Main HeroSection ---
+// --- Main HeroSection Component ---
 export default function HeroSection() {
+  const { settings, isLoading } = useHeroSettings();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { addSearchTerm } = useRecentSearches();
-  const dynamicTags = useDynamicTags(ALL_TAG_NAMES, TAG_POSITIONS_DESKTOP, TAG_POSITIONS_MOBILE);
+  const isMobile = useIsMobile();
+
+  // Create slides from settings
+  const slides = settings.backgroundImages.map(img => ({
+    src: img.desktop,
+    alt: img.alt,
+    caption: img.alt
+  }));
+
+  // Use settings for dynamic tags
+  const dynamicTags = useDynamicTags(
+    settings.floatingTags.tags, 
+    TAG_POSITIONS_DESKTOP, 
+    TAG_POSITIONS_MOBILE,
+    settings.floatingTags.animationSpeed * 1000
+  );
+
+  // Use settings for sliding text
+  const currentSuggestion = useSlidingText(settings.searchSuggestions, 3000);
 
   const handleSearch = (term: string) => {
     addSearchTerm(term);
-    // You can redirect or perform other actions here
     console.log(`Searching for: ${term}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen min-h-[600px] max-h-[900px] w-full bg-slate-100 animate-pulse flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>
       <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
-        <BackgroundSlideshow slides={SLIDES} delay={6000} fadeMs={900} />
+        <BackgroundSlideshow 
+          slides={slides} 
+          delay={settings.animationSettings.slideshowSpeed * 1000} 
+          fadeMs={settings.animationSettings.fadeSpeed}
+          autoplay={settings.animationSettings.enableAutoplay}
+        />
+
+        {/* Overlay with settings */}
+        <div 
+          className="absolute inset-0 z-1"
+          style={{
+            background: settings.overlaySettings.gradientType === 'custom' 
+              ? settings.overlaySettings.customGradient
+              : settings.overlaySettings.gradientType === 'dark'
+                ? `linear-gradient(to br, rgba(0,0,0,${settings.overlaySettings.opacity}), rgba(0,0,0,${settings.overlaySettings.opacity * 0.7}))`
+                : `linear-gradient(to br, rgba(255,255,255,${settings.overlaySettings.opacity}), rgba(255,255,255,${settings.overlaySettings.opacity * 0.7}))`
+          }}
+        />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
           <div className="max-w-xl">
-           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
-  Explore Egypt’s Pyramids & Nile
-</h1>
-           <p className="mt-4 text-base sm:text-lg md:text-xl text-shadow font-light max-w-md mx-auto md:mx-0">
-  Unforgettable excursions — from sunrise at the pyramids to sailing the Nile.
-</p>
-            <HeroSearchBar onOpenModal={() => setIsSearchModalOpen(true)} />
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
+              {settings.title.main}
+              {settings.title.highlight && (
+                <>
+                  <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                    {settings.title.highlight}
+                  </span>
+                </>
+              )}
+              {settings.title.subtitle && (
+                <>
+                  <br />
+                  {settings.title.subtitle}
+                </>
+              )}
+            </h1>
+            <p className="mt-4 text-base sm:text-lg md:text-xl text-shadow font-light max-w-md mx-auto md:mx-0">
+              Unforgettable excursions — from sunrise at the pyramids to sailing the Nile.
+            </p>
+            
+            <HeroSearchBar 
+              onOpenModal={() => setIsSearchModalOpen(true)} 
+              suggestion={currentSuggestion}
+            />
+
+            {/* Trust Indicators */}
+            {settings.trustIndicators.isVisible && (
+              <div className="mt-6 flex items-center justify-center md:justify-start gap-6 text-white/80 text-sm">
+                <span>{settings.trustIndicators.travelers}</span>
+                <span>{settings.trustIndicators.ratingText}</span>
+                <span>{settings.trustIndicators.rating}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          {dynamicTags.map((tag) => (
-            <div key={tag.id} style={tag.position} className="pointer-events-auto">
-              <FloatingTag tag={tag} />
-            </div>
-          ))}
-        </div>
+        {/* Floating Tags */}
+        {settings.floatingTags.isEnabled && (
+          <div className="absolute inset-0 z-10 pointer-events-none">
+            {dynamicTags.slice(0, isMobile ? settings.floatingTags.tagCount.mobile : settings.floatingTags.tagCount.desktop).map((tag) => (
+              <FloatingTag key={tag.id} tag={tag} />
+            ))}
+          </div>
+        )}
       </section>
 
-      {isSearchModalOpen && <SearchModal onClose={() => setIsSearchModalOpen(false)} onSearch={handleSearch} />}
+      {isSearchModalOpen && (
+        <SearchModal 
+          onClose={() => setIsSearchModalOpen(false)} 
+          onSearch={handleSearch} 
+        />
+      )}
 
       <style jsx global>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slide-from-top { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        @keyframes tag-fade-in { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-        @keyframes text-slide-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 
+          0%, 100% { transform: translateY(0px); } 
+          50% { transform: translateY(-10px); } 
+        }
+        @keyframes tag-fade-in { 
+          from { opacity: 0; transform: scale(0.8); } 
+          to { opacity: 1; transform: scale(1); } 
+        }
+        @keyframes text-slide-in { 
+          from { opacity: 0; transform: translateY(10px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
 
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         .animate-slide-from-top { animation: slide-from-top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
@@ -254,6 +461,8 @@ export default function HeroSection() {
 
         @media (prefers-reduced-motion: reduce) {
           .animate-float { animation: none; }
+          .animate-tag-fade-in { animation: none; }
+          .animate-text-slide-in { animation: none; }
         }
       `}</style>
     </>
