@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 
@@ -53,6 +54,7 @@ const FaqItem = ({ item }: { item: typeof faqData[0] }) => {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full flex justify-between items-center text-left hover:text-red-600 transition-colors"
+                aria-expanded={isOpen}
             >
                 <h3 className="text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors">{item.question}</h3>
                 {isOpen ? (
@@ -91,7 +93,12 @@ export default function FAQ() {
                     ))}
                 </div>
                 <div className="text-center mt-12">
-                    <a href="/faqs" className="inline-flex justify-center items-center h-14 px-10 text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out">
+                    <a
+                      href="/faqs"
+                      className="inline-flex justify-center items-center h-14 px-8 text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out rounded-full"
+                      role="button"
+                      aria-label="View all FAQs"
+                    >
                         VIEW ALL
                     </a>
                 </div>

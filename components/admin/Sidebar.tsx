@@ -20,11 +20,12 @@ import {
   PenSquare,
   Sparkles,
   X,
-  Layout, // For Attraction Pages icon (kept for future if needed)
+  Layout, // ✅ For Attraction
 } from "lucide-react";
 
-// ✅ Reordered navItems based on requested order
+// ✅ Final navItems order with Attraction included
 const navItems = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/bookings", label: "Bookings", icon: FileText },
   { href: "/admin/manifests", label: "Manifest", icon: ListPlus },
   { href: "/admin/discounts", label: "Discounts", icon: Percent },
@@ -33,7 +34,6 @@ const navItems = [
   { href: "/admin/tours", label: "Tours", icon: Compass },
   { href: "/admin/destinations", label: "Destination", icon: Map },
   { href: "/admin/attraction-pages", label: "Attraction", icon: Layout },
-
   { href: "/admin/categories", label: "Category", icon: Tag },
   { href: "/admin/blog", label: "Blog", icon: PenSquare },
   { href: "/admin/users", label: "User", icon: Users },
@@ -123,7 +123,7 @@ const AdminSidebar = () => {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-6 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Logo with gradient background */}
+            {/* Logo */}
             <div className="relative flex-shrink-0">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl opacity-10"></div>
               <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl">
@@ -137,7 +137,7 @@ const AdminSidebar = () => {
               </div>
             </div>
 
-            {/* Title with gradient */}
+            {/* Title */}
             <div
               className={`transition-all duration-300 min-w-0 ${
                 !isOpen && !isMobile && "opacity-0 translate-x-2 overflow-hidden"
@@ -152,7 +152,7 @@ const AdminSidebar = () => {
             </div>
           </div>
 
-          {/* Toggle button - Hidden on mobile */}
+          {/* Toggle button (Desktop only) */}
           {!isMobile && (
             <button
               onClick={toggleSidebar}
@@ -172,8 +172,8 @@ const AdminSidebar = () => {
           <ul className="space-y-2">
             {navItems.map(({ href, label, icon: Icon }, index) => {
               const active =
-                pathname.startsWith(href) &&
-                (href !== "/admin" || pathname === "/admin");
+                pathname === href ||
+                (href !== "/admin" && pathname.startsWith(href));
 
               return (
                 <li key={href}>
@@ -197,7 +197,7 @@ const AdminSidebar = () => {
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
                     )}
 
-                    {/* Icon with background */}
+                    {/* Icon */}
                     <div
                       className={`p-2 rounded-xl transition-all duration-200 flex-shrink-0 ${
                         active
@@ -221,12 +221,12 @@ const AdminSidebar = () => {
                       </span>
                     )}
 
-                    {/* Active glow effect */}
+                    {/* Active glow */}
                     {active && (
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-2xl"></div>
                     )}
 
-                    {/* Tooltip when collapsed */}
+                    {/* Tooltip */}
                     {!showLabel && (
                       <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-sm px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none shadow-2xl transition-all duration-200 z-50 whitespace-nowrap">
                         {label}
