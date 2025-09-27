@@ -103,6 +103,10 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       
       if (data.success) {
         const page = data.data;
+        
+        console.log('📄 Fetched page data:', page);
+        console.log('📸 Page images:', page.images);
+        
         setFormData({
           title: page.title || '',
           slug: page.slug || '',
@@ -111,20 +115,22 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
           pageType: page.pageType || 'attraction',
           categoryId: typeof page.categoryId === 'object' ? page.categoryId._id : (page.categoryId || ''),
           heroImage: page.heroImage || '',
-          images: page.images || [],
-          highlights: page.highlights || [],
-          features: page.features || [],
+          images: Array.isArray(page.images) ? page.images : [], // FIX: Ensure it's always an array
+          highlights: Array.isArray(page.highlights) ? page.highlights : [],
+          features: Array.isArray(page.features) ? page.features : [],
           gridTitle: page.gridTitle || '',
           gridSubtitle: page.gridSubtitle || '',
           showStats: page.showStats !== undefined ? page.showStats : true,
           itemsPerRow: page.itemsPerRow || 6,
           metaTitle: page.metaTitle || '',
           metaDescription: page.metaDescription || '',
-          keywords: page.keywords || [],
+          keywords: Array.isArray(page.keywords) ? page.keywords : [],
           isPublished: page.isPublished || false,
           featured: page.featured || false,
         });
         setIsSlugManuallyEdited(Boolean(page.slug));
+        
+        console.log('✅ Form data set with images:', Array.isArray(page.images) ? page.images : []);
       } else {
         setError(data.error || 'Failed to fetch page data');
       }
@@ -166,12 +172,19 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
   };
 
   const addToArray = (field: 'highlights' | 'features' | 'images' | 'keywords', value: string) => {
-    if (!value.trim()) return;
+    if (!value || !value.trim()) return;
     
-    setFormData(prev => ({
-      ...prev,
-      [field]: [...prev[field], value.trim()]
-    }));
+    console.log(`➕ Adding to ${field}:`, value);
+    
+    setFormData(prev => {
+      const currentArray = prev[field] || [];
+      const newArray = [...currentArray, value.trim()];
+      console.log(`📋 New ${field} array:`, newArray);
+      return {
+        ...prev,
+        [field]: newArray
+      };
+    });
   };
 
   const removeFromArray = (field: 'highlights' | 'features' | 'images' | 'keywords', index: number) => {
@@ -197,9 +210,16 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       .then(data => {
         if (data.success && data.url) {
           if (isMainImage) {
+            console.log('🖼️ Setting hero image:', data.url);
             setFormData(prev => ({ ...prev, heroImage: data.url }));
           } else {
-            setFormData(prev => ({ ...prev, images: [...prev.images, data.url] }));
+            console.log('📸 Adding gallery image:', data.url);
+            console.log('📸 Current images before:', formData.images);
+            setFormData(prev => {
+              const newImages = [...(prev.images || []), data.url];
+              console.log('📸 New images array:', newImages);
+              return { ...prev, images: newImages };
+            });
           }
           return 'Image uploaded successfully!';
         } else {
@@ -215,62 +235,68 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       setIsUploading(false);
     });
   };
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setSaving(true);
-  setError(null);
 
-  try {
-    const url = pageId 
-      ? `/api/admin/attraction-pages/${pageId}`
-      : '/api/admin/attraction-pages';
-    
-    const method = pageId ? 'PUT' : 'POST';
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
 
-    // Clean up the form data before sending
-    const cleanedData = { ...formData };
-    
-    // If pageType is 'attraction' or categoryId is empty, remove categoryId field entirely
-    if (cleanedData.pageType === 'attraction' || !cleanedData.categoryId.trim()) {
-      delete cleanedData.categoryId;
+    try {
+      const url = pageId 
+        ? `/api/admin/attraction-pages/${pageId}`
+        : '/api/admin/attraction-pages';
+      
+      const method = pageId ? 'PUT' : 'POST';
+
+      // Clean up the form data before sending
+      const cleanedData = { ...formData };
+      
+      // If pageType is 'attraction' or categoryId is empty, remove categoryId field entirely
+      if (cleanedData.pageType === 'attraction' || !cleanedData.categoryId.trim()) {
+        delete cleanedData.categoryId;
+      }
+      
+      // FIX: Ensure arrays are properly formatted WITHOUT aggressive filtering
+      const payload = {
+        ...cleanedData,
+        highlights: Array.isArray(cleanedData.highlights) ? cleanedData.highlights.filter(item => item && item.trim() !== '') : [],
+        features: Array.isArray(cleanedData.features) ? cleanedData.features.filter(item => item && item.trim() !== '') : [],
+        images: Array.isArray(cleanedData.images) ? cleanedData.images.filter(item => item && item.trim() !== '') : [], // FIX: Check for truthy value first
+        keywords: Array.isArray(cleanedData.keywords) ? cleanedData.keywords.filter(item => item && item.trim() !== '') : [],
+      };
+
+      // ADD DEBUGGING
+      console.log('🔍 FRONTEND: Form data before submit:', formData);
+      console.log('📸 FRONTEND: Images being sent:', payload.images);
+      console.log('💾 FRONTEND: Full payload:', payload);
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(`Page ${pageId ? 'updated' : 'created'} successfully!`);
+        setIsPanelOpen(false);
+        router.push('/admin/attraction-pages');
+      } else {
+        setError(data.error || 'Failed to save page');
+        toast.error(data.error || 'Failed to save page');
+      }
+    } catch (err) {
+      const errorMessage = 'Network error occurred while saving the page';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Submit error:', err);
+    } finally {
+      setSaving(false);
     }
-    
-    // Ensure arrays are properly formatted
-    const payload = {
-      ...cleanedData,
-      highlights: cleanedData.highlights.filter(item => item.trim() !== ''),
-      features: cleanedData.features.filter(item => item.trim() !== ''),
-      images: cleanedData.images.filter(item => item.trim() !== ''),
-      keywords: cleanedData.keywords.filter(item => item.trim() !== ''),
-    };
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      toast.success(`Page ${pageId ? 'updated' : 'created'} successfully!`);
-      setIsPanelOpen(false);
-      router.push('/admin/attraction-pages');
-    } else {
-      setError(data.error || 'Failed to save page');
-      toast.error(data.error || 'Failed to save page');
-    }
-  } catch (err) {
-    const errorMessage = 'Network error occurred while saving the page';
-    setError(errorMessage);
-    toast.error(errorMessage);
-    console.error('Submit error:', err);
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: Info },
@@ -651,9 +677,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                                   <input 
                                     value={highlight}
                                     onChange={(e) => {
-                                      const newHighlights = [...formData.highlights];
-                                      newHighlights[i] = e.target.value;
-                                      setFormData(prev => ({ ...prev, highlights: newHighlights }));
+                                      setFormData(prev => {
+                                        const newHighlights = [...(prev.highlights || [])];
+                                        newHighlights[i] = e.target.value;
+                                        return { ...prev, highlights: newHighlights };
+                                      });
                                     }}
                                     className={inputBase} 
                                     placeholder={`Highlight ${i + 1}`} 
@@ -688,9 +716,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                                   <textarea 
                                     value={feature}
                                     onChange={(e) => {
-                                      const newFeatures = [...formData.features];
-                                      newFeatures[i] = e.target.value;
-                                      setFormData(prev => ({ ...prev, features: newFeatures }));
+                                      setFormData(prev => {
+                                        const newFeatures = [...(prev.features || [])];
+                                        newFeatures[i] = e.target.value;
+                                        return { ...prev, features: newFeatures };
+                                      });
                                     }}
                                     className={`${textareaBase} resize-none`}
                                     rows={2}

@@ -30,19 +30,40 @@ interface InterestData {
   };
 }
 
+// Helper function to get the base URL
+function getBaseUrl() {
+  if (typeof window !== 'undefined') {
+    // Browser environment
+    return window.location.origin;
+  }
+  
+  // Server environment
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL;
+  }
+  
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  return 'http://localhost:3000';
+}
+
 async function getInterestData(slug: string): Promise<InterestData | null> {
   try {
     console.log('Fetching interest data for slug:', slug);
     
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/interests/${slug}`,
-      {
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const baseUrl = getBaseUrl();
+    const url = `${baseUrl}/api/interests/${slug}`;
+    
+    console.log('Fetching from URL:', url);
+    
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     console.log('Response status:', res.status);
 
@@ -52,7 +73,7 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
     }
 
     const data = await res.json();
-    console.log('Interest API response:', data);
+    console.log('Interest API response success:', !!data.success);
     
     if (!data.success) {
       console.error('API returned error:', data.error);
@@ -66,37 +87,14 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
   }
 }
 
+// Make generateStaticParams more robust
 export async function generateStaticParams() {
   try {
     console.log('Generating static params for interests...');
     
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/interests`,
-      {
-        cache: 'no-store',
-      }
-    );
-    
-    if (!res.ok) {
-      console.error('Failed to fetch interests for static generation:', res.status);
-      return [];
-    }
-    
-    const data = await res.json();
-    
-    if (!data.success || !Array.isArray(data.data)) {
-      console.error('Invalid response format for static generation');
-      return [];
-    }
-    
-    const params = data.data
-      .filter((interest: any) => interest.products > 0) // Only generate for interests with tours
-      .map((interest: any) => ({
-        slug: interest.slug,
-      }));
-
-    console.log('Generated static params:', params);
-    return params;
+    // Return empty array for now to use ISR instead of SSG
+    // This prevents build failures when API is not available during build
+    return [];
   } catch (error) {
     console.error('Error generating static params for interests:', error);
     return [];
@@ -149,6 +147,9 @@ export async function generateMetadata({ params }: InterestPageProps): Promise<M
     },
   };
 }
+
+// Make the page use ISR (Incremental Static Regeneration)
+export const revalidate = 3600; // Revalidate every hour
 
 export default async function InterestPage({ params }: InterestPageProps) {
   console.log('Interest page rendering with params:', params);

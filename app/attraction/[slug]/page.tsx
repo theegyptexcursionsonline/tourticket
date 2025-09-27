@@ -2,28 +2,58 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AttractionPageTemplate from '@/components/AttractionPageTemplate';
+import AttractionLandingPage from '@/components/AttractionLandingPage';
 import type { CategoryPageData } from '@/types';
 
 interface AttractionPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
+}
+
+// Helper function to get the base URL
+function getBaseUrl() {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL;
+  }
+  
+  return 'http://localhost:3000';
 }
 
 async function getAttractionPage(slug: string): Promise<CategoryPageData | null> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages/${slug}`,
-      {
-        cache: 'no-store',
-      }
-    );
+    console.log('Fetching attraction page for slug:', slug);
+    
+    const baseUrl = getBaseUrl();
+    const url = `${baseUrl}/api/attraction-pages/${slug}`;
+    
+    console.log('Fetching from URL:', url);
+    
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('Response status:', res.status);
 
     if (!res.ok) {
+      console.error('Failed to fetch attraction page:', res.status, res.statusText);
       return null;
     }
 
     const data = await res.json();
-    return data.success ? data.data : null;
+    console.log('Attraction API response success:', !!data.success);
+    
+    if (!data.success) {
+      console.error('API returned error:', data.error);
+      return null;
+    }
+
+    return data.data;
   } catch (error) {
     console.error('Error fetching attraction page:', error);
     return null;
@@ -32,24 +62,33 @@ async function getAttractionPage(slug: string): Promise<CategoryPageData | null>
 
 export async function generateStaticParams() {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages`,
-      {
-        cache: 'no-store',
-      }
-    );
+    console.log('Generating static params for attractions...');
     
-    if (!res.ok) return [];
+    const baseUrl = getBaseUrl();
+    const res = await fetch(`${baseUrl}/api/attraction-pages`, {
+      cache: 'no-store',
+    });
+    
+    if (!res.ok) {
+      console.error('Failed to fetch attraction pages for static generation');
+      return [];
+    }
     
     const data = await res.json();
     
-    if (!data.success || !Array.isArray(data.data)) return [];
+    if (!data.success || !Array.isArray(data.data)) {
+      console.error('Invalid response format for static generation');
+      return [];
+    }
     
-    return data.data
+    const params = data.data
       .filter((page: any) => page.pageType === 'attraction' && page.isPublished)
       .map((page: any) => ({
         slug: page.slug,
       }));
+
+    console.log('Generated static params for attractions:', params);
+    return params;
   } catch (error) {
     console.error('Error generating static params for attractions:', error);
     return [];
@@ -57,7 +96,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: AttractionPageProps): Promise<Metadata> {
-  const page = await getAttractionPage(params.slug);
+  const { slug } = await params;
+  const page = await getAttractionPage(slug);
 
   if (!page) {
     return {
@@ -93,17 +133,26 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
   };
 }
 
+// Add ISR
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function AttractionPage({ params }: AttractionPageProps) {
-  const page = await getAttractionPage(params.slug);
+  const { slug } = await params;
+  console.log('Attraction page rendering with params:', { slug });
+  
+  const page = await getAttractionPage(slug);
+
+  console.log('Fetched attraction page:', page ? 'Success' : 'Failed');
 
   if (!page) {
+    console.log('Attraction page not found, showing 404');
     notFound();
   }
 
   return (
     <>
       <Header startSolid />
-      <AttractionPageTemplate page={page} urlType="attraction" />
+      <AttractionLandingPage attraction={page} />
       <Footer />
     </>
   );

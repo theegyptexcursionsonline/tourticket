@@ -74,39 +74,34 @@ export async function GET(
     } else if (populatedPage.pageType === 'attraction') {
       console.log('Fetching tours for attraction:', populatedPage.title);
       
-      // For attraction pages, find tours by title/description/keywords matching
-      const searchTerms = [
-        populatedPage.title,
-        ...(populatedPage.keywords || []),
-        ...(populatedPage.highlights || [])
-      ].filter(Boolean);
+      // FIXED: Simplified search without text index requirement
+      const searchQueries = [];
 
-      if (searchTerms.length > 0) {
-        const searchQueries = [];
-
-        // Direct title match
+      // Direct title match
+      if (populatedPage.title) {
         searchQueries.push({ title: { $regex: new RegExp(populatedPage.title, 'i') } });
-        
-        // Description match
         searchQueries.push({ description: { $regex: new RegExp(populatedPage.title, 'i') } });
-        
-        // Keywords match
-        if (populatedPage.keywords && populatedPage.keywords.length > 0) {
-          searchQueries.push({ tags: { $in: populatedPage.keywords } });
-          searchQueries.push({ highlights: { $elemMatch: { $regex: new RegExp(populatedPage.keywords.join('|'), 'i') } } });
-        }
-        
-        // Highlights match
-        if (populatedPage.highlights && populatedPage.highlights.length > 0) {
-          searchQueries.push({ highlights: { $elemMatch: { $regex: new RegExp(populatedPage.highlights.join('|'), 'i') } } });
-        }
+      }
+      
+      // Keywords match
+      if (populatedPage.keywords && populatedPage.keywords.length > 0) {
+        searchQueries.push({ tags: { $in: populatedPage.keywords } });
+        populatedPage.keywords.forEach(keyword => {
+          searchQueries.push({ title: { $regex: new RegExp(keyword, 'i') } });
+          searchQueries.push({ description: { $regex: new RegExp(keyword, 'i') } });
+        });
+      }
+      
+      // Highlights match
+      if (populatedPage.highlights && populatedPage.highlights.length > 0) {
+        populatedPage.highlights.forEach(highlight => {
+          searchQueries.push({ title: { $regex: new RegExp(highlight, 'i') } });
+          searchQueries.push({ description: { $regex: new RegExp(highlight, 'i') } });
+        });
+      }
 
-        // Text search
-        const searchText = searchTerms.join(' ');
-        if (searchText.trim()) {
-          searchQueries.push({ $text: { $search: searchText } });
-        }
-
+      // Only search if we have search criteria
+      if (searchQueries.length > 0) {
         tours = await Tour.find({
           $and: [
             { isPublished: true },
@@ -124,7 +119,28 @@ export async function GET(
           select: 'name slug'
         })
         .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-        .limit(50) // Limit for attraction pages
+        .limit(50)
+        .lean();
+
+        totalTours = tours.length;
+      } else {
+        // If no specific search criteria, show some featured tours
+        tours = await Tour.find({
+          isPublished: true,
+          isFeatured: true
+        })
+        .populate({
+          path: 'destination',
+          model: Destination,
+          select: 'name slug country image description'
+        })
+        .populate({
+          path: 'category',
+          model: Category,
+          select: 'name slug'
+        })
+        .sort({ rating: -1, bookings: -1 })
+        .limit(20)
         .lean();
 
         totalTours = tours.length;

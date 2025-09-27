@@ -47,7 +47,6 @@ export async function GET(
     }, { status: 500 });
   }
 }
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -64,7 +63,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    console.log('Updating attraction page:', params.id, 'with data:', body);
+    
+    // ADD DEBUGGING
+    console.log('🔍 Raw request body:', JSON.stringify(body, null, 2));
+    console.log('📸 Images field received:', body.images);
+    console.log('📸 Images type:', typeof body.images, Array.isArray(body.images));
     
     // Check if slug is being changed and if it conflicts
     if (body.slug) {
@@ -92,9 +95,21 @@ export async function PUT(
       }
     }
 
+    // PROPERLY HANDLE ARRAYS - This is the fix
+    const updateData = {
+      ...body,
+      // Ensure arrays are properly handled
+      images: Array.isArray(body.images) ? body.images : (body.images ? [body.images] : []),
+      highlights: Array.isArray(body.highlights) ? body.highlights : (body.highlights ? [body.highlights] : []),
+      features: Array.isArray(body.features) ? body.features : (body.features ? [body.features] : []),
+      keywords: Array.isArray(body.keywords) ? body.keywords : (body.keywords ? [body.keywords] : []),
+    };
+
+    console.log('💾 Final update data:', JSON.stringify(updateData, null, 2));
+
     const page = await AttractionPage.findByIdAndUpdate(
       params.id,
-      body,
+      updateData, // Use processed data instead of raw body
       { new: true, runValidators: true }
     )
     .populate({
@@ -110,14 +125,15 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    console.log('Attraction page updated successfully:', page._id);
+    console.log('✅ Page updated successfully');
+    console.log('✅ Final saved images:', page.images);
 
     return NextResponse.json({
       success: true,
       data: page
     });
   } catch (error) {
-    console.error('Error updating attraction page:', error);
+    console.error('❌ Error updating attraction page:', error);
     
     // Handle validation errors
     if (error instanceof Error && error.name === 'ValidationError') {

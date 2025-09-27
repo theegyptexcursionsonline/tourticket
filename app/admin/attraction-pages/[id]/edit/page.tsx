@@ -1,9 +1,20 @@
+import { Suspense } from 'react';
 import AttractionPageForm from '@/components/admin/AttractionPageForm';
 
 interface EditAttractionPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
+}
+
+async function EditAttractionPageContent({ params }: EditAttractionPageProps) {
+  const { id } = await params; // Fix: Await params first
+  
+  return <AttractionPageForm pageId={id} />;
 }
 
 export default function EditAttractionPage({ params }: EditAttractionPageProps) {
-  return <AttractionPageForm pageId={params.id} />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <EditAttractionPageContent params={params} />
+    </Suspense>
+  );
 }
