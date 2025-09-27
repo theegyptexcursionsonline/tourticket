@@ -10,56 +10,55 @@ interface Interest {
   products: number;
 }
 
-interface AttractionPage {
+interface CategoryPage {
   _id: string;
   title: string;
   slug: string;
-  pageType: 'attraction' | 'category';
+  pageType: 'category';
   categoryId?: {
     _id: string;
     name: string;
     slug: string;
   };
   isPublished: boolean;
+  description: string;
+  heroImage: string;
 }
 
 // --- InterestCard Component ---
 const InterestCard = ({
   interest,
-  attractionPage
+  categoryPage
 }: {
   interest: Interest;
-  attractionPage?: AttractionPage;
+  categoryPage?: CategoryPage;
 }) => {
   const getLink = () => {
-    if (attractionPage && attractionPage.isPublished) {
-      if (attractionPage.pageType === 'attraction') {
-        return `/attraction/${attractionPage.slug}`;
-      } else {
-        return `/category/${attractionPage.slug}`;
-      }
+    if (categoryPage && categoryPage.isPublished) {
+      return `/category/${categoryPage.slug}`;
     }
-    return `/search?q=${encodeURIComponent(interest.name)}`;
+    // Create a dedicated landing page for each interest instead of search
+    return `/interests/${interest.slug || interest.name.toLowerCase().replace(/\s+/g, '-')}`;
   };
 
   const linkUrl = getLink();
-  const hasAttractionPage = attractionPage && attractionPage.isPublished;
+  const hasCategoryPage = categoryPage && categoryPage.isPublished;
 
   return (
     <Link
       href={linkUrl}
       className="group block text-left bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:border-red-200 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 ease-out relative overflow-hidden backdrop-blur-sm"
-      aria-label={`${hasAttractionPage ? 'Visit' : 'Search for'} ${interest.products} tours related to ${interest.name}`}
+      aria-label={`${hasCategoryPage ? 'Visit' : 'View'} ${interest.products} tours related to ${interest.name}`}
     >
       {/* Background Gradient Effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
       
       {/* Page Badge */}
-      {hasAttractionPage && (
+      {hasCategoryPage && (
         <div className="absolute -top-1 -right-1 z-10">
           <div className="bg-gradient-to-r from-emerald-400 to-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg flex items-center gap-1">
             <Star className="w-3 h-3 fill-current" />
-            Featured
+            Category Page
           </div>
         </div>
       )}
@@ -82,7 +81,7 @@ const InterestCard = ({
         {/* Action Indicator */}
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-red-600 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-            {hasAttractionPage ? 'Visit page' : 'Explore tours'}
+            {hasCategoryPage ? 'Visit category page' : 'View tours'}
           </span>
           <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
             <ArrowRight className="w-4 h-4 text-red-600 transform group-hover:translate-x-0.5 transition-transform duration-300" />
@@ -126,7 +125,7 @@ const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }
           <Package className="w-8 h-8 text-red-600" />
         </div>
         <h3 className="text-xl font-bold text-red-800 mb-3">
-          Unable to Load Interests
+          Unable to Load Categories
         </h3>
         <p className="text-red-600 mb-6 leading-relaxed">{error}</p>
         <button
@@ -150,7 +149,7 @@ const EmptyState = () => (
           <Package className="w-8 h-8 text-slate-600" />
         </div>
         <h3 className="text-xl font-bold text-slate-800 mb-3">
-          No Interests Available
+          No Categories Available
         </h3>
         <p className="text-slate-600 mb-6 leading-relaxed">
           We're currently updating our tour categories. Please check back soon for amazing new experiences!
@@ -170,7 +169,7 @@ const EmptyState = () => (
 // --- Main InterestGrid Component ---
 export default function InterestGrid() {
   const [interests, setInterests] = useState<Interest[]>([]);
-  const [attractionPages, setAttractionPages] = useState<AttractionPage[]>([]);
+  const [categoryPages, setCategoryPages] = useState<CategoryPage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,9 +178,9 @@ export default function InterestGrid() {
     setError(null);
 
     try {
-      const [interestsResponse, attractionPagesResponse] = await Promise.all([
+      const [interestsResponse, categoryPagesResponse] = await Promise.all([
         fetch('/api/interests'),
-        fetch('/api/attraction-pages')
+        fetch('/api/categories/pages')
       ]);
 
       if (!interestsResponse.ok) {
@@ -191,16 +190,20 @@ export default function InterestGrid() {
       const interestsData = await interestsResponse.json();
 
       if (interestsData.success) {
-        const availableInterests = interestsData.data.filter((interest: Interest) => interest.products > 0);
+        // Only show interests that have tours available
+        const availableInterests = interestsData.data.filter((interest: Interest) => {
+          const products = typeof interest.products === 'number' ? interest.products : Number(interest.products) || 0;
+          return products > 0;
+        });
         setInterests(availableInterests);
       } else {
         throw new Error(interestsData.error || 'Failed to fetch interests');
       }
 
-      if (attractionPagesResponse.ok) {
-        const attractionPagesData = await attractionPagesResponse.json();
-        if (attractionPagesData.success) {
-          setAttractionPages(attractionPagesData.data || []);
+      if (categoryPagesResponse.ok) {
+        const categoryPagesData = await categoryPagesResponse.json();
+        if (categoryPagesData.success) {
+          setCategoryPages(categoryPagesData.data || []);
         }
       }
     } catch (err) {
@@ -219,20 +222,20 @@ export default function InterestGrid() {
     fetchData();
   };
 
-  const getAttractionPageForInterest = (interest: Interest): AttractionPage | undefined => {
-    return attractionPages.find(page => {
-      if (!page.isPublished) return false;
+  const getCategoryPageForInterest = (interest: Interest): CategoryPage | undefined => {
+    return categoryPages.find(page => {
+      if (!page.isPublished || page.pageType !== 'category') return false;
 
       if (page.categoryId) {
         const categoryName = typeof page.categoryId === 'object' ? page.categoryId.name : '';
         const categorySlug = typeof page.categoryId === 'object' ? page.categoryId.slug : '';
 
         return categoryName.toLowerCase() === interest.name.toLowerCase() ||
-               categorySlug.toLowerCase() === interest.slug.toLowerCase();
+               categorySlug.toLowerCase() === (interest.slug || interest.name.toLowerCase().replace(/\s+/g, '-'));
       }
 
       return page.title.toLowerCase().includes(interest.name.toLowerCase()) ||
-             page.slug.toLowerCase() === interest.slug.toLowerCase();
+             page.slug.toLowerCase() === (interest.slug || interest.name.toLowerCase().replace(/\s+/g, '-'));
     });
   };
 
@@ -252,12 +255,12 @@ export default function InterestGrid() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
         {interests.map((interest) => {
-          const attractionPage = getAttractionPageForInterest(interest);
+          const categoryPage = getCategoryPageForInterest(interest);
           return (
             <InterestCard
               key={interest.slug || interest.name}
               interest={interest}
-              attractionPage={attractionPage}
+              categoryPage={categoryPage}
             />
           );
         })}
@@ -275,7 +278,7 @@ export default function InterestGrid() {
           </div>
           
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-6 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-            Egypt Excursions Online
+            Egypt Categories
           </h2>
           
           <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
@@ -286,11 +289,11 @@ export default function InterestGrid() {
           {/* Call-to-Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
-              href="/search"
+              href="/interests"
               className="inline-flex items-center gap-3 px-8 py-4 font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-300 group rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
-              aria-label="Find the right interest for you"
+              aria-label="Find the right category for you"
             >
-              <span>FIND THE RIGHT INTEREST FOR YOU</span>
+              <span>FIND THE RIGHT CATEGORY FOR YOU</span>
               <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
 
