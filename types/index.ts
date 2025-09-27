@@ -6,14 +6,14 @@
 
 export interface User {
   _id: string;
-  id: string; // Often included for client-side consistency
+  id: string;
   email: string;
   name: string;
   firstName?: string;
   lastName?: string;
   picture?: string;
-  favorites?: string[]; // Array of Tour IDs
-  bookings?: Booking[]; // Populated bookings
+  favorites?: string[];
+  bookings?: Booking[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -38,6 +38,13 @@ export interface Destination {
   bestTimeToVisit?: string;
   currency?: string;
   timezone?: string;
+  isPublished?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Category {
@@ -62,7 +69,7 @@ export interface AvailabilitySlot {
 
 export interface Availability {
   type: 'daily' | 'date_range' | 'specific_dates';
-  availableDays?: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
+  availableDays?: number[];
   startDate?: string;
   endDate?: string;
   specificDates?: string[];
@@ -76,6 +83,8 @@ export interface ItineraryItem {
   description: string;
   duration?: string;
   location?: string;
+  includes?: string[];
+  icon?: string;
 }
 
 export interface FAQ {
@@ -105,21 +114,20 @@ export interface AddOn {
   price: number;
 }
 
-
 // =================================================================
 // TOUR & REVIEW INTERFACES
 // =================================================================
 
 export interface Tour {
   _id: string;
-  id?: string | number; // For client-side mapping if needed
+  id?: string | number;
   title: string;
   slug: string;
   image: string;
   images?: string[];
   discountPrice: number;
   originalPrice?: number;
-  price?: number; // Can be used as an alias for discountPrice
+  price?: number;
   duration: string;
   rating?: number;
   bookings?: number;
@@ -131,7 +139,7 @@ export interface Tour {
   whatsIncluded?: string[];
   whatsNotIncluded?: string[];
   itinerary?: ItineraryItem[];
-  faq?: FAQ[]; // Note: schema has 'faq' not 'faqs'
+  faq?: FAQ[];
   bookingOptions?: BookingOption[];
   addOns?: AddOn[];
   isPublished?: boolean;
@@ -143,55 +151,52 @@ export interface Tour {
   ageRestriction?: string;
   cancellationPolicy?: string;
   operatedBy?: string;
-  destination: Destination | string; // Can be populated or just ID
-  category: Category | string;     // Can be populated or just ID
+  destination: Destination | string;
+  category: Category | string;
   availability?: Availability;
-  reviews?: Review[]; // Can be populated
+  reviews?: Review[];
+  whatToBring?: string[];
+  whatToWear?: string[];
+  physicalRequirements?: string;
+  accessibilityInfo?: string[];
+  groupSize?: { min: number; max: number };
+  transportationDetails?: string;
+  mealInfo?: string;
+  weatherPolicy?: string;
+  photoPolicy?: string;
+  tipPolicy?: string;
+  healthSafety?: string[];
+  culturalInfo?: string[];
+  seasonalVariations?: string;
+  localCustoms?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface Review {
   _id: string;
-  tour: string; // Changed from tourId
-  user: string; // Changed from userId  
+  tour: string;
+  user: string;
   userName: string;
+  userEmail?: string;
   userAvatar?: string;
   rating: number;
-  title: string;
+  title?: string;
   comment: string;
-  date: string;
-  verified: boolean;
-  helpful: number;
+  date?: string;
+  verified?: boolean;
+  helpful?: number;
+  images?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
 
-
-// types/index.ts
-export interface Destination {
-  _id: string;
-  name: string;
-  slug: string;
-  country: string;
-  image: string;
-  description: string;
-  isActive?: boolean;
-  cloudinaryPublicId?: string;
-}
-
-export interface DestinationWithTourCount extends Destination {
-  tourCount: number;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  error?: string;
-}
-
-
-// Add to existing types/index.ts file
+// =================================================================
+// ATTRACTION & CATEGORY PAGE INTERFACES
+// =================================================================
 
 export interface AttractionPage {
   _id: string;
@@ -244,30 +249,36 @@ export interface CategoryPageData extends AttractionPage {
   category?: Category;
   tours: Tour[];
   totalTours: number;
+  reviews?: Review[];
 }
 
+// =================================================================
+// POPULATED INTERFACES
+// =================================================================
 
-
-// A more specific type for tours when destination and category are guaranteed to be populated
 export interface PopulatedTour extends Omit<Tour, 'destination' | 'category' | 'reviews'> {
   destination: Destination;
   category: Category;
   reviews?: Review[];
 }
 
+export interface DestinationWithTourCount extends Destination {
+  tourCount: number;
+}
 
 // =================================================================
 // CONTEXT & CLIENT-SIDE INTERFACES
 // =================================================================
+
 export interface CartItem extends Tour {
-  uniqueId: string; // Unique identifier for this specific cart item instance
-  quantity: number;   // Represents the number of adults
+  uniqueId: string;
+  quantity: number;
   childQuantity: number;
   infantQuantity: number;
   selectedDate: string;
   selectedTime: string;
-  selectedAddOns: { [key: string]: number }; // Maps AddOn ID to quantity
-  selectedAddOnDetails?: { // Store full add-on details for cart display
+  selectedAddOns: { [key: string]: number };
+  selectedAddOnDetails?: {
     [key: string]: {
       id: string;
       title: string;
@@ -276,7 +287,7 @@ export interface CartItem extends Tour {
       perGuest: boolean;
     }
   };
-  selectedBookingOption?: { // Store selected booking option details
+  selectedBookingOption?: {
     id: string;
     title: string;
     price: number;
@@ -287,7 +298,30 @@ export interface CartItem extends Tour {
   totalPrice: number;
 }
 
-// Add this to your existing types/index.ts file
+export interface Booking {
+  _id: string;
+  bookingReference?: string;
+  tour: Tour | string;
+  user: User | string;
+  bookingDate: string;
+  bookingTime: string;
+  adults: number;
+  children: number;
+  infants: number;
+  totalPrice: number;
+  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  paymentId?: string;
+  paymentMethod?: string;
+  specialRequests?: string;
+  emergencyContact?: string;
+  selectedAddOns?: { [key: string]: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =================================================================
+// BLOG & CONTENT INTERFACES
+// =================================================================
 
 export interface BlogPost {
   _id: string;
@@ -317,22 +351,6 @@ export interface BlogPost {
   createdAt?: string;
   updatedAt?: string;
 }
-export interface Booking {
-  _id: string;
-  tour: Tour | string;
-  user: User | string;
-  bookingDate: string; // Renamed from 'date' for clarity
-  bookingTime: string; // Renamed from 'time' for clarity
-  adults: number;
-  children: number;
-  infants: number;
-  totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
-  paymentId?: string;
-  specialRequests?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 // =================================================================
 // UTILITY & OTHER INTERFACES
@@ -350,24 +368,6 @@ export interface Language {
   nativeName: string;
 }
 
-export interface BlogPost {
-  _id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  image: string;
-  category: string;
-  author: string;
-  authorAvatar?: string;
-  publishedAt: string;
-  readTime: number;
-  tags: string[];
-  status: 'published' | 'draft';
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export interface SearchFilters {
   destination?: string;
   category?: string;
@@ -375,6 +375,12 @@ export interface SearchFilters {
   duration?: string;
   rating?: number;
   dateRange?: [string, string];
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
 }
 
 // =================================================================
@@ -402,7 +408,7 @@ export interface TourFormData {
   discountPrice: string | number;
   originalPrice: string | number;
   destination: string;
-  category: string; // Tour model uses 'category', not 'categories'
+  category: string;
   image: string;
   images: string[];
   highlights: string[];
@@ -410,7 +416,7 @@ export interface TourFormData {
   whatsIncluded: string[];
   whatsNotIncluded: string[];
   itinerary: ItineraryItem[];
-  faqs: FAQ[]; // Mapped from 'faq' in the form
+  faqs: FAQ[];
   bookingOptions: BookingOption[];
   addOns: AddOn[];
   isPublished: boolean;

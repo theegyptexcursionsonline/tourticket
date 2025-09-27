@@ -71,26 +71,35 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
     required: true,
     index: true,
   },
- // Replace the existing categoryId field definition with this:
-categoryId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Category',
-  index: true,
-  required: function(this: IAttractionPage) {
-    return this.pageType === 'category';
-  },
-  validate: {
-    validator: function(v: any) {
-      // If pageType is 'attraction', categoryId can be undefined/null
-      if (this.pageType === 'attraction') {
-        return v === undefined || v === null || mongoose.Types.ObjectId.isValid(v);
-      }
-      // If pageType is 'category', categoryId is required and must be valid
-      return v && mongoose.Types.ObjectId.isValid(v);
+  categoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    index: true,
+    required: function(this: IAttractionPage) {
+      return this.pageType === 'category';
     },
-    message: 'Invalid category ID'
-  }
-},
+    validate: {
+      validator: function(v: any) {
+        // If pageType is 'attraction', categoryId can be undefined/null
+        if (this.pageType === 'attraction') {
+          return v === undefined || v === null || mongoose.Types.ObjectId.isValid(v);
+        }
+        // If pageType is 'category', categoryId is required and must be valid
+        return v && mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid category ID'
+    }
+  },
+  heroImage: {
+    type: String,
+    required: [true, 'Hero image is required'],
+    validate: {
+      validator: function(v: string) {
+        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
+      },
+      message: 'Hero image must be a valid URL with image extension'
+    }
+  },
   images: [{
     type: String,
     validate: {
@@ -137,7 +146,7 @@ categoryId: {
   },
   itemsPerRow: {
     type: Number,
-    default: 6,
+    default: 4,
     min: [2, 'Items per row must be at least 2'],
     max: [8, 'Items per row cannot exceed 8'],
   },

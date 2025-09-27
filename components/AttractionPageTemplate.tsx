@@ -1,4 +1,3 @@
-// components/AttractionPageTemplate.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -7,12 +6,11 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowRight, Star, Users, Clock, MapPin, Search, Filter, 
-  Grid, List, Eye, Heart, Share2, Award, Calendar, Euro, DollarSign
+  Grid, List, Eye, Heart, Share2, Award, Calendar, Euro, DollarSign,
+  MessageCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { CategoryPageData, Tour } from '@/types';
+import { CategoryPageData, Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 interface AttractionPageTemplateProps {
   page: CategoryPageData;
@@ -30,7 +28,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
       transition={{ delay: index * 0.1 }}
     >
       <Link
-        href={`/${tour.slug}`} // Updated for direct URLs
+        href={`/tour/${tour.slug}`}
         className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
       >
         <div className="relative h-48 overflow-hidden">
@@ -39,6 +37,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             alt={tour.title}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           
           {/* Gradient Overlay */}
@@ -55,13 +54,13 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
           {/* Rating Badge */}
           <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            {tour.rating || 4.5}
+            {typeof tour.rating === 'number' ? tour.rating.toFixed(1) : '4.5'}
           </div>
 
           {/* Price Badge */}
           <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
             <div className="text-lg font-bold text-slate-900">
-              {formatPrice(tour.discountPrice || tour.price)}
+              {formatPrice(tour.discountPrice || tour.price || 0)}
             </div>
             {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
               <div className="text-xs text-slate-500 line-through text-center">
@@ -86,6 +85,12 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
               <Users className="w-4 h-4" />
               <span>Max {tour.maxGroupSize || 15}</span>
             </div>
+            {(tour as any).reviewCount > 0 && (
+              <div className="flex items-center gap-1">
+                <MessageCircle className="w-4 h-4" />
+                <span>{(tour as any).reviewCount} reviews</span>
+              </div>
+            )}
           </div>
           
           {/* Destination */}
@@ -101,9 +106,9 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             {tour.description}
           </p>
           
-          {/* Action Row */}
+          {/* Tags and Action */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {tour.tags?.slice(0, 2).map((tag, i) => (
                 <span 
                   key={i}
@@ -124,12 +129,85 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
   );
 };
 
+const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
+  const { formatPrice } = useSettings();
+  const destination = typeof tour.destination === 'object' ? tour.destination : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+    >
+      <Link href={`/tour/${tour.slug}`} className="group">
+        <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-6">
+          <div className="relative w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
+            <Image
+              src={tour.image}
+              alt={tour.title}
+              fill
+              className="object-cover"
+              sizes="128px"
+            />
+            {tour.isFeatured && (
+              <div className="absolute top-1 left-1 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded">
+                Featured
+              </div>
+            )}
+          </div>
+          
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors mb-2">
+              {tour.title}
+            </h3>
+            <p className="text-slate-600 text-sm mb-3 line-clamp-2">{tour.description}</p>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {tour.duration}
+              </span>
+              <span className="flex items-center gap-1">
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                {typeof tour.rating === 'number' ? tour.rating.toFixed(1) : '4.5'}
+              </span>
+              {destination && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {destination.name}
+                </span>
+              )}
+              {(tour as any).reviewCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="h-4 w-4" />
+                  {(tour as any).reviewCount} reviews
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="text-right flex-shrink-0">
+            <div className="text-2xl font-bold text-slate-900">
+              {formatPrice(tour.discountPrice || tour.price || 0)}
+            </div>
+            {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
+              <div className="text-sm text-slate-500 line-through">
+                {formatPrice(tour.originalPrice)}
+              </div>
+            )}
+            <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-red-600 transition-colors mt-2 ml-auto" />
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+};
+
 const QuickStats = ({ page }: { page: CategoryPageData }) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.3 }}
-    className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto"
+    className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-6xl mx-auto"
   >
     <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300">
       <div className="text-4xl font-black text-red-600 mb-3">
@@ -137,6 +215,15 @@ const QuickStats = ({ page }: { page: CategoryPageData }) => (
       </div>
       <div className="text-slate-600 font-semibold">
         Tours Available
+      </div>
+    </div>
+    
+    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300">
+      <div className="text-4xl font-black text-red-600 mb-3">
+        {page.reviews?.length || 0}
+      </div>
+      <div className="text-slate-600 font-semibold">
+        Customer Reviews
       </div>
     </div>
     
@@ -165,12 +252,16 @@ const SearchAndFilter = ({
   setSearchQuery, 
   viewMode, 
   setViewMode,
+  sortBy,
+  setSortBy,
   onFilterToggle 
 }: {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
+  sortBy: string;
+  setSortBy: (sort: string) => void;
   onFilterToggle: () => void;
 }) => (
   <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
@@ -186,6 +277,20 @@ const SearchAndFilter = ({
           className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
         />
       </div>
+
+      {/* Sort Dropdown */}
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+      >
+        <option value="featured">Featured First</option>
+        <option value="price_low">Price: Low to High</option>
+        <option value="price_high">Price: High to Low</option>
+        <option value="rating">Highest Rated</option>
+        <option value="duration">Duration</option>
+        <option value="newest">Newest First</option>
+      </select>
 
       {/* View Toggle */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
@@ -223,75 +328,141 @@ const SearchAndFilter = ({
   </div>
 );
 
-const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
-  const { formatPrice } = useSettings();
-  const destination = typeof tour.destination === 'object' ? tour.destination : null;
+const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 6);
+
+  if (!reviews || reviews.length === 0) {
+    return null;
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-    >
-      <Link href={`/${tour.slug}`} className="group">
-        <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-6">
-          <div className="relative w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
-            <Image
-              src={tour.image}
-              alt={tour.title}
-              fill
-              className="object-cover"
-            />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors mb-2">
-              {tour.title}
-            </h3>
-            <p className="text-slate-600 text-sm mb-3 line-clamp-2">{tour.description}</p>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {tour.duration}
-              </span>
-              <span className="flex items-center gap-1">
-                <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                {tour.rating || '4.5'}
-              </span>
-              {destination && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {destination.name}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-slate-900">
-              {formatPrice(tour.discountPrice || tour.price)}
-            </div>
-            {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
-              <div className="text-sm text-slate-500 line-through">
-                {formatPrice(tour.originalPrice)}
+    <section className="py-16 bg-gradient-to-r from-slate-50 to-white">
+      <div className="container mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">
+            What Our Customers Say
+          </h2>
+          <p className="text-xl text-slate-600">
+            Read reviews from travelers who have experienced these tours
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {displayedReviews.map((review, index) => (
+            <motion.div
+              key={review._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300"
+            >
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {review.userName ? review.userName.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-slate-900">{review.userName || 'Anonymous'}</h4>
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
-            <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-red-600 transition-colors mt-2 ml-auto" />
-          </div>
+              
+              {review.title && (
+                <h5 className="font-semibold text-slate-800 mb-2">{review.title}</h5>
+              )}
+              
+              <p className="text-slate-600 text-sm leading-relaxed mb-3 line-clamp-4">
+                {review.comment}
+              </p>
+              
+              <div className="text-xs text-slate-500">
+                {new Date(review.createdAt || review.date).toLocaleDateString()}
+              </div>
+            </motion.div>
+          ))}
         </div>
-      </Link>
-    </motion.div>
+
+        {reviews.length > 6 && (
+          <div className="text-center">
+            <button
+              onClick={() => setShowAllReviews(!showAllReviews)}
+              className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors duration-200"
+            >
+              {showAllReviews ? (
+                <>
+                  Show Less
+                  <ChevronUp className="w-5 h-5" />
+                </>
+              ) : (
+                <>
+                  View All {reviews.length} Reviews
+                  <ChevronDown className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 
 export default function AttractionPageTemplate({ page, urlType }: AttractionPageTemplateProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filter tours based on search
-  const filteredTours = page.tours?.filter(tour =>
-    tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tour.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  // Filter and sort tours based on search and sort criteria
+  const filteredAndSortedTours = React.useMemo(() => {
+    let filtered = page.tours?.filter(tour =>
+      tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tour.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tour.highlights?.some(highlight => 
+        highlight.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    ) || [];
+
+    // Sort tours
+    switch (sortBy) {
+      case 'price_low':
+        filtered.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
+        break;
+      case 'price_high':
+        filtered.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
+        break;
+      case 'rating':
+        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case 'duration':
+        filtered.sort((a, b) => a.duration.localeCompare(b.duration));
+        break;
+      case 'newest':
+        filtered.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+        break;
+      default: // featured
+        filtered.sort((a, b) => {
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          return (b.rating || 0) - (a.rating || 0);
+        });
+    }
+
+    return filtered;
+  }, [page.tours, searchQuery, sortBy]);
 
   const gridCols = {
     2: 'grid-cols-1 sm:grid-cols-2',
@@ -307,7 +478,6 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
 
   return (
     <>
-      <Header startSolid />
       <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-red-50">
         {/* Enhanced Hero Section */}
         <section className="relative h-[70vh] overflow-hidden">
@@ -318,6 +488,7 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
               fill
               className="object-cover"
               priority
+              sizes="100vw"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
           </div>
@@ -460,13 +631,15 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
                 setSearchQuery={setSearchQuery}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
                 onFilterToggle={() => setShowFilters(!showFilters)}
               />
 
               {/* Results Count */}
               <div className="text-center mb-8">
                 <p className="text-slate-600">
-                  Showing <span className="font-semibold text-slate-900">{filteredTours.length}</span> of{' '}
+                  Showing <span className="font-semibold text-slate-900">{filteredAndSortedTours.length}</span> of{' '}
                   <span className="font-semibold text-slate-900">{page.tours.length}</span> tours
                 </p>
               </div>
@@ -481,7 +654,7 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
                     exit={{ opacity: 0 }}
                     className={`grid ${gridClass} gap-8 mb-16`}
                   >
-                    {filteredTours.map((tour, index) => (
+                    {filteredAndSortedTours.map((tour, index) => (
                       <TourCard key={tour._id} tour={tour} index={index} />
                     ))}
                   </motion.div>
@@ -493,7 +666,7 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
                     exit={{ opacity: 0 }}
                     className="space-y-6 mb-16"
                   >
-                    {filteredTours.map((tour, index) => (
+                    {filteredAndSortedTours.map((tour, index) => (
                       <TourListItem key={tour._id} tour={tour} index={index} />
                     ))}
                   </motion.div>
@@ -501,7 +674,7 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
               </AnimatePresence>
 
               {/* Empty State */}
-              {filteredTours.length === 0 && searchQuery && (
+              {filteredAndSortedTours.length === 0 && searchQuery && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -534,6 +707,11 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
               )}
             </div>
           </section>
+        )}
+
+        {/* Reviews Section */}
+        {page.reviews && page.reviews.length > 0 && (
+          <ReviewsSection reviews={page.reviews} />
         )}
 
         {/* Enhanced CTA Section */}
@@ -578,7 +756,6 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
           </div>
         </section>
       </main>
-      <Footer />
     </>
   );
 }

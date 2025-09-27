@@ -3,67 +3,34 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  Star,
-  MapPin,
-  Clock,
-  Users,
-  Heart,
-  Share2,
-  Filter,
-  Grid,
-  List,
-  ChevronRight,
-  Calendar,
-  Award,
-  Camera,
-  TrendingUp,
-  ArrowRight,
-  Eye,
-  ThumbsUp
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowRight, Star, Users, Clock, MapPin, Search, Filter, 
+  Grid, List, Eye, Heart, Share2, Award, Calendar, 
+  MessageCircle, ChevronDown, ChevronUp, Shield, CheckCircle,
+  TrendingUp, Globe, Zap, Trophy, Target, Gift
 } from 'lucide-react';
-
-interface Tour {
-  _id: string;
-  title: string;
-  description: string;
-  price: number;
-  duration: string;
-  rating: number;
-  reviewCount: number;
-  image: string;
-  location: string;
-}
-
-interface AttractionPage {
-  _id: string;
-  title: string;
-  slug: string;
-  description: string;
-  heroImage: string;
-  pageType: string;
-}
-
-interface Category {
-  _id: string;
-  name: string;
-  slug: string;
-  description?: string;
-}
+import { Tour, Review } from '@/types';
+import { useSettings } from '@/hooks/useSettings';
 
 interface InterestData {
   name: string;
   slug: string;
   description: string;
+  longDescription?: string;
+  category?: any;
   tours: Tour[];
-  attractionPages: AttractionPage[];
-  categories: Category[];
-  relatedCategories: Category[];
+  totalTours: number;
+  reviews: Review[];
+  relatedCategories: any[];
+  heroImage: string;
+  highlights: string[];
+  features: string[];
   stats: {
     totalTours: number;
-    totalAttractions: number;
-    averageRating: number;
     totalReviews: number;
+    averageRating: string;
+    happyCustomers: number;
   };
 }
 
@@ -71,346 +38,671 @@ interface InterestLandingPageProps {
   interest: InterestData;
 }
 
-// Hero Section Component
-const HeroSection = ({ interest }: { interest: InterestData }) => (
-  <section className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 py-24 overflow-hidden">
-    {/* Background Pattern */}
-    <div className="absolute inset-0 opacity-10">
-      <div className="absolute inset-0" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-      }} />
-    </div>
-
-    <div className="container mx-auto px-4 relative">
-      <div className="max-w-4xl mx-auto text-center text-white">
-        {/* Breadcrumb */}
-        <nav className="flex items-center justify-center gap-2 text-blue-200 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Home</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href="/interests" className="hover:text-white transition-colors">Interests</Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-white">{interest.name}</span>
-        </nav>
-
-        {/* Main Title */}
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
-          {interest.name} Tours
-        </h1>
-        
-        <p className="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed">
-          {interest.description}
-        </p>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-            <div className="text-3xl font-bold">{interest.stats.totalTours}</div>
-            <div className="text-blue-200">Available Tours</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-            <div className="text-3xl font-bold">{interest.stats.averageRating}</div>
-            <div className="text-blue-200">Average Rating</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-            <div className="text-3xl font-bold">{interest.stats.totalReviews}</div>
-            <div className="text-blue-200">Happy Travelers</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-            <div className="text-3xl font-bold">{interest.stats.totalAttractions}</div>
-            <div className="text-blue-200">Attractions</div>
-          </div>
-        </div>
-
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-            Explore All Tours
-          </button>
-          <button className="px-8 py-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300">
-            View Attractions
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
-// Featured Tours Section
-const FeaturedToursSection = ({ tours }: { tours: Tour[] }) => {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
+const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
+  const { formatPrice } = useSettings();
+  const destination = typeof tour.destination === 'object' ? tour.destination : null;
+  
   return (
-    <section className="py-20 bg-slate-50">
-      <div className="container mx-auto px-4">
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-12">
-          <div>
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Featured Tours</h2>
-            <p className="text-slate-600 text-lg">Handpicked experiences just for you</p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+    >
+      <Link
+        href={`/tour/${tour.slug}`}
+        className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
+      >
+        <div className="relative h-48 overflow-hidden">
+          <Image
+            src={tour.image}
+            alt={tour.title}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform duration-500"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          
+          {/* Featured Badge */}
+          {tour.isFeatured && (
+            <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-full shadow-lg">
+              <Star className="w-3 h-3 inline mr-1 fill-current" />
+              Featured
+            </div>
+          )}
+          
+          {/* Rating Badge */}
+          <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
+            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+            {typeof tour.rating === 'number' ? tour.rating.toFixed(1) : '4.5'}
+          </div>
+
+          {/* Price Badge */}
+          <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
+            <div className="text-lg font-bold text-slate-900">
+              {formatPrice(tour.discountPrice || tour.price || 0)}
+            </div>
+            {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
+              <div className="text-xs text-slate-500 line-through text-center">
+                {formatPrice(tour.originalPrice)}
+              </div>
+            )}
+          </div>
+
+          {/* Wishlist Button */}
+          <button className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm p-2 rounded-full text-slate-600 hover:text-red-500 hover:bg-white transition-all duration-200 opacity-0 group-hover:opacity-100">
+            <Heart className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <h3 className="font-bold text-lg mb-3 group-hover:text-red-600 transition-colors duration-200 line-clamp-2 leading-tight">
+            {tour.title}
+          </h3>
+          
+          {/* Tour Details */}
+          <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{tour.duration}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              <span>Max {tour.maxGroupSize || 15}</span>
+            </div>
+            {(tour as any).reviewCount > 0 && (
+              <div className="flex items-center gap-1">
+                <MessageCircle className="w-4 h-4" />
+                <span>{(tour as any).reviewCount} reviews</span>
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === 'grid' ? 'bg-blue-500 text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <List className="w-4 h-4" />
-              </button>
+          {/* Destination */}
+          {destination && (
+            <div className="flex items-center gap-1 text-sm text-slate-500 mb-4">
+              <MapPin className="w-4 h-4 text-red-500" />
+              <span>{destination.name}</span>
+            </div>
+          )}
+
+          {/* Description */}
+          <p className="text-slate-600 text-sm line-clamp-2 mb-4">
+            {tour.description}
+          </p>
+          
+          {/* Highlights */}
+          {tour.highlights && tour.highlights.length > 0 && (
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-1">
+                {tour.highlights.slice(0, 2).map((highlight, i) => (
+                  <span 
+                    key={i}
+                    className="px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium"
+                  >
+                    {highlight.length > 20 ? highlight.substring(0, 20) + '...' : highlight}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Action Row */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              {tour.tags?.slice(0, 1).map((tag, i) => (
+                <span 
+                  key={i}
+                  className="px-2 py-1 bg-red-50 text-red-600 rounded-full text-xs font-medium"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
             
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
+            <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+              <ArrowRight className="w-5 h-5 text-red-600" />
+            </div>
           </div>
         </div>
-
-        {/* Tours Grid */}
-        <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-          {tours.map((tour) => (
-            <TourCard key={tour._id} tour={tour} viewMode={viewMode} />
-          ))}
-        </div>
-
-        {/* Load More */}
-        <div className="text-center mt-12">
-          <button className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
-            Load More Tours
-          </button>
-        </div>
-      </div>
-    </section>
+      </Link>
+    </motion.div>
   );
 };
 
-// Tour Card Component
-const TourCard = ({ tour, viewMode }: { tour: Tour; viewMode: 'grid' | 'list' }) => (
-  <div className={`bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group ${
-    viewMode === 'list' ? 'flex flex-row' : 'flex flex-col'
-  }`}>
-    {/* Image */}
-    <div className={`relative overflow-hidden ${viewMode === 'list' ? 'w-1/3' : 'h-48'}`}>
-      <Image
-        src={tour.image}
-        alt={tour.title}
-        fill
-        className="object-cover group-hover:scale-110 transition-transform duration-500"
-      />
-      <div className="absolute top-4 right-4 flex gap-2">
-        <button className="p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors">
-          <Heart className="w-4 h-4 text-slate-600" />
-        </button>
-        <button className="p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors">
-          <Share2 className="w-4 h-4 text-slate-600" />
-        </button>
+const StatsSection = ({ stats }: { stats: InterestData['stats'] }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.3 }}
+    className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto"
+  >
+    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
+      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
+        <Target className="w-6 h-6" />
       </div>
-      <div className="absolute bottom-4 left-4">
-        <span className="px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-full">
-          ${tour.price}
-        </span>
+      <div className="text-3xl font-black text-slate-900 mb-2">
+        {stats.totalTours}
+      </div>
+      <div className="text-slate-600 font-semibold text-sm">
+        Available Tours
       </div>
     </div>
+    
+    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
+      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
+        <MessageCircle className="w-6 h-6" />
+      </div>
+      <div className="text-3xl font-black text-slate-900 mb-2">
+        {stats.totalReviews}
+      </div>
+      <div className="text-slate-600 font-semibold text-sm">
+        Customer Reviews
+      </div>
+    </div>
+    
+    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
+      <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
+        <Star className="w-6 h-6 fill-current" />
+      </div>
+      <div className="text-3xl font-black text-slate-900 mb-2">
+        {stats.averageRating}
+      </div>
+      <div className="text-slate-600 font-semibold text-sm">
+        Average Rating
+      </div>
+    </div>
+    
+    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
+      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
+        <Trophy className="w-6 h-6" />
+      </div>
+      <div className="text-3xl font-black text-slate-900 mb-2">
+        {stats.happyCustomers.toLocaleString()}
+      </div>
+      <div className="text-slate-600 font-semibold text-sm">
+        Happy Customers
+      </div>
+    </div>
+  </motion.div>
+);
 
-    {/* Content */}
-    <div className={`p-6 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-          {tour.title}
-        </h3>
-        <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          <span className="text-sm font-semibold">{tour.rating}</span>
-          <span className="text-sm text-slate-500">({tour.reviewCount})</span>
-        </div>
+const SearchAndFilter = ({ 
+  searchQuery, 
+  setSearchQuery, 
+  viewMode, 
+  setViewMode,
+  sortBy,
+  setSortBy
+}: {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  viewMode: 'grid' | 'list';
+  setViewMode: (mode: 'grid' | 'list') => void;
+  sortBy: string;
+  setSortBy: (sort: string) => void;
+}) => (
+  <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-slate-200">
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      {/* Search Bar */}
+      <div className="relative flex-1">
+        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search tours..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+        />
       </div>
 
-      <p className="text-slate-600 mb-4 line-clamp-2">{tour.description}</p>
+      {/* Sort Dropdown */}
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
+      >
+        <option value="featured">Featured First</option>
+        <option value="price_low">Price: Low to High</option>
+        <option value="price_high">Price: High to Low</option>
+        <option value="rating">Highest Rated</option>
+        <option value="duration">Duration</option>
+        <option value="newest">Newest First</option>
+      </select>
 
-      <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
-        <div className="flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          {tour.duration}
-        </div>
-        <div className="flex items-center gap-1">
-          <MapPin className="w-4 h-4" />
-          {tour.location}
-        </div>
+      {/* View Toggle */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        <button
+          onClick={() => setViewMode('grid')}
+          className={`p-3 rounded-lg transition-all duration-200 ${
+            viewMode === 'grid' 
+              ? 'bg-white text-red-600 shadow-sm' 
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Grid className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => setViewMode('list')}
+          className={`p-3 rounded-lg transition-all duration-200 ${
+            viewMode === 'list' 
+              ? 'bg-white text-red-600 shadow-sm' 
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <List className="w-5 h-5" />
+        </button>
       </div>
-
-      <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105">
-        Book Now
-      </button>
     </div>
   </div>
 );
 
-// Attraction Pages Section
-const AttractionPagesSection = ({ attractionPages }: { attractionPages: AttractionPage[] }) => (
-  <section className="py-20 bg-white">
-    <div className="container mx-auto px-4">
-      <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold text-slate-900 mb-4">Related Attractions</h2>
-        <p className="text-slate-600 text-lg">Discover more amazing places and experiences</p>
-      </div>
+const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 6);
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {attractionPages.map((attraction) => (
-          <Link
-            key={attraction._id}
-            href={`/attraction/${attraction.slug}`}
-            className="group block bg-gradient-to-br from-slate-100 to-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-105"
-          >
-            <div className="relative h-48 overflow-hidden">
-              <Image
-                src={attraction.heroImage}
-                alt={attraction.title}
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4">
-                <h3 className="text-xl font-bold text-white mb-2">{attraction.title}</h3>
-                <p className="text-white/80 text-sm line-clamp-2">{attraction.description}</p>
-              </div>
-            </div>
-            <div className="p-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-blue-600 uppercase tracking-wide">
-                  {attraction.pageType}
-                </span>
-                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-// Related Categories Section
-const RelatedCategoriesSection = ({ categories }: { categories: Category[] }) => (
-  <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-100">
-    <div className="container mx-auto px-4">
-      <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold text-slate-900 mb-4">Explore More Categories</h2>
-        <p className="text-slate-600 text-lg">Find your next adventure</p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {categories.map((category) => (
-          <Link
-            key={category._id}
-            href={`/interests/${category.slug || category.name.toLowerCase().replace(/\s+/g, '-')}`}
-            className="group p-6 bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 text-center transform hover:scale-105"
-          >
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-              <Camera className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-              {category.name}
-            </h3>
-          </Link>
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-// Reviews Section
-const ReviewsSection = ({ interest }: { interest: InterestData }) => {
-  const mockReviews = [
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      rating: 5,
-      comment: `Amazing ${interest.name.toLowerCase()} experience! Highly recommended.`,
-      date: '2024-01-15',
-      avatar: '/images/avatar-placeholder.jpg'
-    },
-    {
-      id: 2,
-      name: 'Mohammed Ali',
-      rating: 4,
-      comment: 'Great tours and excellent guides. Will definitely book again.',
-      date: '2024-01-10',
-      avatar: '/images/avatar-placeholder.jpg'
-    },
-    {
-      id: 3,
-      name: 'Emma Wilson',
-      rating: 5,
-      comment: 'Unforgettable memories! The best tour experience in Egypt.',
-      date: '2024-01-05',
-      avatar: '/images/avatar-placeholder.jpg'
-    }
-  ];
+  if (!reviews || reviews.length === 0) {
+    return null;
+  }
 
   return (
-    <section className="py-20 bg-slate-900 text-white">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4">What Travelers Say</h2>
-          <p className="text-slate-300 text-lg">Real reviews from real travelers</p>
-        </div>
+    <section className="py-16 bg-gradient-to-r from-slate-50 to-white">
+      <div className="container mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">
+            What Our Customers Say
+          </h2>
+          <p className="text-xl text-slate-600">
+            Real experiences from travelers who have booked with us
+          </p>
+        </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {mockReviews.map((review) => (
-            <div key={review.id} className="bg-slate-800 rounded-2xl p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-slate-400" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {displayedReviews.map((review, index) => (
+            <motion.div
+              key={review._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-100"
+            >
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {review.userName ? review.userName.charAt(0).toUpperCase() : 'A'}
                 </div>
-                <div>
-                  <h4 className="font-semibold">{review.name}</h4>
-                  <div className="flex items-center gap-1">
+                <div className="ml-4">
+                  <h4 className="font-semibold text-slate-900">{review.userName || 'Anonymous'}</h4>
+                  <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
                         className={`w-4 h-4 ${
-                          i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'
+                          i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'
                         }`}
                       />
                     ))}
                   </div>
                 </div>
               </div>
-              <p className="text-slate-300 mb-4">{review.comment}</p>
-              <div className="text-sm text-slate-500">{review.date}</div>
-            </div>
+              
+              {review.title && (
+                <h5 className="font-semibold text-slate-800 mb-2">{review.title}</h5>
+              )}
+              
+              <p className="text-slate-600 text-sm leading-relaxed mb-3 line-clamp-4">
+                {review.comment}
+              </p>
+              
+              <div className="text-xs text-slate-500">
+                {new Date(review.createdAt || review.date).toLocaleDateString()}
+              </div>
+            </motion.div>
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          <button className="px-8 py-3 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 transition-colors">
-            Read All Reviews
-          </button>
-        </div>
+        {reviews.length > 6 && (
+          <div className="text-center">
+            <button
+              onClick={() => setShowAllReviews(!showAllReviews)}
+              className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors duration-200"
+            >
+              {showAllReviews ? (
+                <>
+                  Show Less
+                  <ChevronUp className="w-5 h-5" />
+                </>
+              ) : (
+                <>
+                  View All {reviews.length} Reviews
+                  <ChevronDown className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
 };
 
-// Main Component
 export default function InterestLandingPage({ interest }: InterestLandingPageProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState('featured');
+
+  // Filter and sort tours
+  const filteredAndSortedTours = React.useMemo(() => {
+    let filtered = interest.tours?.filter(tour =>
+      tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tour.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
+
+    // Sort tours
+    switch (sortBy) {
+      case 'price_low':
+        filtered.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
+        break;
+      case 'price_high':
+        filtered.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
+        break;
+      case 'rating':
+        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case 'duration':
+        filtered.sort((a, b) => a.duration.localeCompare(b.duration));
+        break;
+      case 'newest':
+        filtered.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+        break;
+      default: // featured
+        filtered.sort((a, b) => {
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          return (b.rating || 0) - (a.rating || 0);
+        });
+    }
+
+    return filtered;
+  }, [interest.tours, searchQuery, sortBy]);
+
   return (
-    <div className="min-h-screen">
-      <HeroSection interest={interest} />
-      <FeaturedToursSection tours={interest.tours} />
-      <AttractionPagesSection attractionPages={interest.attractionPages} />
-      <RelatedCategoriesSection categories={interest.relatedCategories} />
-      <ReviewsSection interest={interest} />
-    </div>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-red-50">
+      {/* Enhanced Hero Section */}
+      <section className="relative h-[80vh] overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src={interest.heroImage}
+            alt={interest.name}
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20" />
+        </div>
+        
+        <div className="relative z-10 h-full flex items-center justify-center">
+          <div className="text-center text-white max-w-6xl mx-auto px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
+            >
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 text-sm font-medium">
+                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                <span>Featured Experience Category</span>
+              </div>
+              
+              <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
+                {interest.name} <span className="text-yellow-400">Tours</span>
+              </h1>
+              
+              <p className="text-xl md:text-2xl font-medium max-w-4xl mx-auto leading-relaxed opacity-90">
+                {interest.longDescription || interest.description}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  href="#tours"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                >
+                  Explore Tours
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <button className="inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-bold rounded-xl hover:bg-white hover:text-slate-900 transition-all duration-200 transform hover:scale-105">
+                  Watch Video
+                  <Eye className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Trust Indicators */}
+              <div className="flex flex-wrap items-center justify-center gap-8 text-sm opacity-90">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-green-400" />
+                  <span>Fully Licensed & Insured</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-yellow-400" />
+                  <span>Award-Winning Service</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-400" />
+                  <span>Expert Local Guides</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 -mt-20 relative z-10">
+        <div className="container mx-auto px-6">
+          <StatsSection stats={interest.stats} />
+        </div>
+      </section>
+
+      {/* Highlights Section */}
+      {interest.highlights && interest.highlights.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">
+                Why Choose Our {interest.name} Tours?
+              </h2>
+              <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+                Experience the difference with our expertly crafted tours
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+              {interest.highlights.map((highlight, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white p-8 rounded-2xl shadow-lg text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100"
+                >
+                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <CheckCircle className="w-8 h-8" />
+                  </div>
+                  <p className="text-slate-700 leading-relaxed font-medium">{highlight}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Tours Section */}
+      {interest.tours && interest.tours.length > 0 && (
+        <section id="tours" className="py-16 bg-white">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-12">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-5xl font-bold text-slate-900 mb-6"
+              >
+                Available {interest.name} Tours
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-xl text-slate-600 max-w-3xl mx-auto"
+              >
+                Choose from our carefully selected collection of {interest.name.toLowerCase()} experiences
+              </motion.p>
+            </div>
+
+            {/* Search and Filter */}
+            <SearchAndFilter
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+            />
+
+            {/* Results Count */}
+            <div className="text-center mb-8">
+              <p className="text-slate-600">
+                Showing <span className="font-semibold text-slate-900">{filteredAndSortedTours.length}</span> of{' '}
+                <span className="font-semibold text-slate-900">{interest.tours.length}</span> tours
+              </p>
+            </div>
+
+            {/* Tours Grid */}
+            {filteredAndSortedTours.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {filteredAndSortedTours.map((tour, index) => (
+                  <TourCard key={tour._id} tour={tour} index={index} />
+                ))}
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-16"
+              >
+                <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
+                  <Search className="w-10 h-10 text-slate-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-700 mb-2">No tours found</h3>
+                <p className="text-slate-500 mb-6">
+                  {searchQuery ? 'Try adjusting your search criteria.' : `No ${interest.name.toLowerCase()} tours are currently available.`}
+                </p>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
+                  >
+                    Clear Search
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* No Tours Available Message */}
+      {(!interest.tours || interest.tours.length === 0) && (
+        <section className="py-20">
+          <div className="container mx-auto px-6 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-2xl mx-auto"
+            >
+              <div className="w-32 h-32 mx-auto mb-8 bg-slate-100 rounded-full flex items-center justify-center">
+                <Calendar className="w-16 h-16 text-slate-400" />
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 mb-4">
+                Coming Soon
+              </h2>
+              <p className="text-xl text-slate-600 mb-8">
+                We're currently working on adding amazing {interest.name.toLowerCase()} tours to our collection. 
+                Check back soon for exciting new experiences!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  href="/tours"
+                  className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                >
+                  Browse All Tours
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Contact Us
+                  <MessageCircle className="w-5 h-5" />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Reviews Section */}
+      {interest.reviews && interest.reviews.length > 0 && (
+        <ReviewsSection reviews={interest.reviews} />
+      )}
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full -translate-x-32 -translate-y-32"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-48 translate-y-48"></div>
+        </div>
+        
+        <div className="container mx-auto px-6 text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Ready for Your {interest.name} Adventure?
+            </h2>
+            <p className="text-xl mb-10 opacity-90 leading-relaxed">
+              Join thousands of travelers who have discovered unforgettable {interest.name.toLowerCase()} experiences with us. 
+              Your perfect adventure awaits!
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Link
+                href="/tours"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-white text-red-600 font-bold rounded-xl hover:bg-slate-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
+              >
+                Browse All Tours
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-bold rounded-xl hover:bg-white hover:text-red-600 transition-all duration-200 transform hover:scale-105"
+              >
+                Get Expert Advice
+                <Users className="w-5 h-5" />
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </main>
   );
 }
