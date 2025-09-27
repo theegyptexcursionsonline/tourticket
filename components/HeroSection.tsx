@@ -136,10 +136,12 @@ const useIsMobile = (breakpoint = 768) => {
 
 const useHeroSettings = () => {
   const [settings, setSettings] = useState<HeroSettings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
+  // NOTE: we keep isLoading for internal use, but default it to false so UI doesn't block
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
+      // If you want a visual indicator while loading, you can set isLoading(true) here
       try {
         const response = await fetch('/api/hero-settings');
         if (response.ok) {
@@ -156,6 +158,7 @@ const useHeroSettings = () => {
       }
     };
 
+    // Fetch in background; UI is shown immediately without spinner
     fetchSettings();
   }, []);
 
@@ -306,6 +309,7 @@ const BackgroundSlideshow = ({
               transform: visible ? 'scale(1)' : 'scale(1.02)',
             }}
           >
+            {/* Using native img to avoid Next Image layout shifting in fullscreen hero */}
             <img src={s.src} alt={s.alt} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
           </div>
@@ -317,7 +321,7 @@ const BackgroundSlideshow = ({
 
 // --- Main HeroSection Component ---
 export default function HeroSection() {
-  const { settings, isLoading } = useHeroSettings();
+  const { settings } = useHeroSettings();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { addSearchTerm } = useRecentSearches();
   const isMobile = useIsMobile();
@@ -345,14 +349,7 @@ export default function HeroSection() {
     console.log(`Searching for: ${term}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-screen min-h-[600px] max-h-[900px] w-full bg-slate-100 animate-pulse flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
+  // NOTE: no early return with spinner — UI renders immediately
   return (
     <>
       <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
