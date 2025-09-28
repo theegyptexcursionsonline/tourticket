@@ -10,17 +10,14 @@ import BookingSidebar from '@/components/BookingSidebar';
 import Link from 'next/link';
 
 /**
- * Enhanced FeaturedTours - "10x better" UI
+ * Enhanced FeaturedTours - Perfect Card Design
  *
  * Key improvements:
- * - Larger, more elegant cards with rounded-3xl corners
- * - Glassy & gradient accents, smooth hover lift + glow
- * - Bigger "See all tours" pill button (prominent CTA)
- * - Large circular Add-to-cart button with ring + subtle shadow
- * - Prominent price badge + rating badge
- * - Responsive improvements and accessible focus states
- *
- * Note: This file assumes Tailwind CSS is configured in your project.
+ * - Solid white cards with proper shadows from the start
+ * - Enhanced visual hierarchy and spacing
+ * - Smooth hover animations with scale and glow effects
+ * - Better contrast and readability
+ * - Intuitive card appearance that's immediately recognizable
  */
 
 // --- Safe Image Component ---
@@ -48,13 +45,13 @@ const SafeImage = ({
   if (!src || src.trim() === '' || imageError) {
     return (
       <div 
-        className={`flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 ${className}`}
+        className={`flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 ${className}`}
         style={{ width, height }}
         role="img"
         aria-label="No image available"
       >
-        <ImageIcon size={44} className="text-gray-300 mb-2" />
-        <span className="text-gray-400 text-sm font-medium">Image unavailable</span>
+        <ImageIcon size={48} className="text-gray-400 mb-3" />
+        <span className="text-gray-500 text-sm font-medium">Image unavailable</span>
       </div>
     );
   }
@@ -63,7 +60,7 @@ const SafeImage = ({
     <div className="relative" style={{ width, height }}>
       {isLoading && (
         <div 
-          className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
+          className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse rounded-t-3xl"
           style={{ width, height }}
           aria-hidden
         />
@@ -85,7 +82,7 @@ const SafeImage = ({
   );
 };
 
-// Small helpers
+// Helper functions
 const formatBookings = (num?: number) => {
   if (!num) return '0';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}m`;
@@ -94,23 +91,22 @@ const formatBookings = (num?: number) => {
 };
 
 const getTagColor = (tag: string) => {
-  if (tag.includes('%')) return 'bg-red-600 text-white';
-  if (tag === 'Staff favourite') return 'bg-indigo-600 text-white';
-  if (tag === 'Online only deal') return 'bg-emerald-600 text-white';
-  if (tag === 'New') return 'bg-purple-600 text-white';
-  if (tag === 'Best for Kids') return 'bg-yellow-400 text-black';
-  return 'bg-gray-100 text-gray-800';
+  if (tag.includes('%')) return 'bg-red-500 text-white shadow-lg';
+  if (tag === 'Staff favourite') return 'bg-indigo-500 text-white shadow-lg';
+  if (tag === 'Online only deal') return 'bg-emerald-500 text-white shadow-lg';
+  if (tag === 'New') return 'bg-purple-500 text-white shadow-lg';
+  if (tag === 'Best for Kids') return 'bg-yellow-400 text-black shadow-lg';
+  return 'bg-white/95 text-gray-800 shadow-md';
 };
 
-// Reusable Tour Card Component (polished)
+// Enhanced Tour Card Component
 const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
 
   return (
     <Link
       href={`/tour/${tour.slug || '#'}`}
-      className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white/60 backdrop-blur-sm border border-transparent rounded-3xl overflow-hidden transform transition-all duration-400 hover:-translate-y-3 hover:shadow-2xl hover:border-white/40 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
-      aria-label={`Open tour ${tour.title || 'tour'}`}
+className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-red-500/10 border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"      aria-label={`Open tour ${tour.title || 'tour'}`}
     >
       <div className="relative">
         <SafeImage
@@ -118,8 +114,11 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
           alt={tour.title || 'Tour image'}
           width={400}
           height={240}
-          className="w-full h-56 object-cover rounded-t-3xl transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-56 object-cover transition-transform duration-700 group-hover:scale-110"
         />
+
+        {/* Gradient overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
         {/* Top-left tags */}
         {tour.tags && tour.tags.length > 0 && (
@@ -127,7 +126,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             {tour.tags.slice(0, 2).map((tag, i) => (
               <span
                 key={i}
-                className={`px-3 py-1 text-xs font-semibold uppercase tracking-wide rounded-full shadow-sm ${getTagColor(tag)}`}
+                className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-full backdrop-blur-sm ${getTagColor(tag)}`}
               >
                 {tag}
               </span>
@@ -136,63 +135,88 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         )}
 
         {/* Rating badge (top-right) */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-          <div className="bg-white/85 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
-            <Star size={16} className="text-yellow-500" />
-            <span className="text-sm font-bold text-gray-800">{tour.rating ? tour.rating.toFixed(1) : '0.0'}</span>
+        <div className="absolute top-4 right-4 z-20">
+          <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full flex items-center gap-2 shadow-lg border border-white/20">
+            <Star size={16} className="text-yellow-500 fill-yellow-500" />
+            <span className="text-sm font-bold text-gray-800">
+              {tour.rating ? tour.rating.toFixed(1) : '0.0'}
+            </span>
           </div>
         </div>
 
         {/* Price pill (overlay bottom-left) */}
         <div className="absolute left-4 bottom-4 z-20">
-          <div className="bg-gradient-to-r from-red-600 to-rose-500 text-white px-4 py-2 rounded-full font-extrabold shadow-lg text-lg">
+          <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 rounded-full font-black shadow-xl text-lg border-2 border-white/20">
             {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
             {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
-              <span className="ml-3 text-sm font-medium line-through text-white/75">{formatPrice(tour.originalPrice)}</span>
+              <span className="ml-3 text-sm font-medium line-through text-red-100">
+                {formatPrice(tour.originalPrice)}
+              </span>
             )}
           </div>
         </div>
 
-        {/* Add to cart (big circular) */}
+        {/* Add to cart button (enhanced) */}
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onAddToCartClick(tour);
           }}
-          className="absolute bottom-4 right-4 z-30 bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-2xl ring-0 ring-red-300/40 transition transform hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-red-300"
+          className="absolute bottom-4 right-4 z-30 bg-white text-red-600 p-4 rounded-full shadow-xl border-2 border-red-100 transition-all duration-300 transform hover:scale-110 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-red-300"
           aria-label={`Add ${tour.title || 'tour'} to cart`}
           title="Add to cart"
         >
-          <ShoppingCart size={22} />
+          <ShoppingCart size={20} className="transition-transform duration-300 group-hover:scale-110" />
         </button>
       </div>
 
-      <div className="p-6 md:p-7">
-        <h3 className="text-lg md:text-xl font-extrabold text-gray-900 leading-tight mb-2 line-clamp-2">
-          {tour.title || 'Untitled Tour'}
-        </h3>
+      {/* Card content with better spacing */}
+      <div className="p-6 md:p-7 bg-white">
+        <div className="mb-4">
+          <h3 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-3 line-clamp-2 group-hover:text-red-600 transition-colors duration-300">
+            {tour.title || 'Untitled Tour'}
+          </h3>
 
-        <p className="text-sm text-gray-600 mb-4 max-w-[30rem]">
-          {tour.excerpt || tour.summary || 'A beautifully curated experience — enjoy local highlights, guided commentary, and flexible booking.'}
-        </p>
+          <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+            {tour.excerpt || tour.summary || 'A beautifully curated experience — enjoy local highlights, guided commentary, and flexible booking.'}
+          </p>
+        </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+        {/* Stats row */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-gray-400" />
-              <span className="text-sm font-medium">{tour.duration || 'Duration not specified'}</span>
+              <span className="font-medium">{tour.duration || 'Duration not specified'}</span>
             </div>
             <div className="flex items-center gap-2">
               <Users size={16} className="text-gray-400" />
-              <span className="text-sm font-medium">{formatBookings(tour.bookings)} booked</span>
+              <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
             </div>
           </div>
+        </div>
 
+        {/* Price section */}
+        <div className="flex items-center justify-between">
           <div className="text-right">
-            <span className="text-lg md:text-2xl font-extrabold text-gray-900">
-              {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
-            </span>
+            <div className="text-sm text-gray-500 mb-1">Starting from</div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl md:text-3xl font-black text-gray-900">
+                {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
+              </span>
+              {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+                <span className="text-sm text-gray-400 line-through">
+                  {formatPrice(tour.originalPrice)}
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">per person</div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">View details</span>
+            <ArrowRight size={16} className="text-red-600 transition-transform duration-300 group-hover:translate-x-1" />
           </div>
         </div>
       </div>
@@ -260,23 +284,33 @@ export default function FeaturedTours() {
 
   const duplicatedTours = tours.length > 0 ? [...tours, ...tours] : [];
 
-  // Loading skeleton
+  // Enhanced loading skeleton
   if (isLoading) {
     return (
-      <section className="bg-white py-24">
+      <section className="bg-gradient-to-b from-white to-gray-50 py-24">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex items-center justify-between mb-12">
-            <div className="space-y-3">
-              <div className="h-12 w-[420px] bg-slate-200 rounded-md animate-pulse" />
-              <div className="h-6 w-[360px] bg-slate-200 rounded-md animate-pulse" />
+            <div className="space-y-4">
+              <div className="h-12 w-[420px] bg-gray-200 rounded-xl animate-pulse" />
+              <div className="h-6 w-[360px] bg-gray-200 rounded-lg animate-pulse" />
             </div>
-            <div className="h-14 w-48 bg-slate-200 rounded-full animate-pulse" />
+            <div className="h-14 w-48 bg-gray-200 rounded-full animate-pulse" />
           </div>
 
           <div className="flex gap-6 overflow-hidden py-6">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="flex-shrink-0 px-3">
-                <div className="w-[360px] h-[420px] bg-slate-200 rounded-3xl animate-pulse" />
+                <div className="w-[360px] bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="h-56 bg-gray-200 animate-pulse" />
+                  <div className="p-6 space-y-4">
+                    <div className="h-6 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3" />
+                      <div className="h-8 bg-gray-200 rounded animate-pulse w-1/4" />
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -285,17 +319,20 @@ export default function FeaturedTours() {
     );
   }
 
-  // Error
+  // Error state
   if (fetchError) {
     return (
-      <section className="bg-white py-24">
+      <section className="bg-gradient-to-b from-white to-gray-50 py-24">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="text-center">
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Featured Tours</h2>
-            <p className="text-gray-600 mb-6">We couldn't load featured tours right now.</p>
-            <div className="inline-flex gap-3">
-              <button onClick={retryFetch} className="px-6 py-3 rounded-full bg-red-600 text-white font-semibold shadow hover:bg-red-700 transition">Retry</button>
-            </div>
+          <div className="text-center bg-white rounded-3xl shadow-lg p-12 border border-gray-100">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Tours</h2>
+            <p className="text-gray-600 mb-8 text-lg">We couldn't load featured tours right now.</p>
+            <button 
+              onClick={retryFetch} 
+              className="px-8 py-4 rounded-full bg-gradient-to-r from-red-600 to-red-500 text-white font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+            >
+              Retry Loading
+            </button>
           </div>
         </div>
       </section>
@@ -304,10 +341,12 @@ export default function FeaturedTours() {
 
   if (tours.length === 0) {
     return (
-      <section className="bg-white py-24">
+      <section className="bg-gradient-to-b from-white to-gray-50 py-24">
         <div className="container mx-auto px-4 md:px-8 text-center">
-          <h2 className="text-4xl font-extrabold text-gray-900 mb-3">Featured Tours</h2>
-          <p className="text-gray-600">No featured tours available right now.</p>
+          <div className="bg-white rounded-3xl shadow-lg p-12 border border-gray-100">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Tours</h2>
+            <p className="text-gray-600 text-lg">No featured tours available right now.</p>
+          </div>
         </div>
       </section>
     );
@@ -317,12 +356,13 @@ export default function FeaturedTours() {
     <>
       <section className="bg-gradient-to-b from-white to-gray-50 py-24">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
-            <div>
-              <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+          {/* Header section */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-16 gap-6">
+            <div className="max-w-2xl">
+              <h2 className="text-5xl md:text-6xl font-black text-gray-900 tracking-tight leading-tight">
                 Canal Cruises Perfect For You
               </h2>
-              <p className="mt-3 text-lg text-gray-600 max-w-2xl">
+              <p className="mt-4 text-xl text-gray-600 leading-relaxed">
                 Discover top-rated experiences in Amsterdam — handpicked by local experts for unforgettable memories.
               </p>
             </div>
@@ -330,22 +370,22 @@ export default function FeaturedTours() {
             <div className="flex items-center gap-4">
               <Link
                 href="/tours"
-                className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-red-600 to-rose-500 text-white text-lg font-bold shadow-2xl hover:scale-105 transform transition"
+                className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-gradient-to-r from-red-600 to-red-500 text-white text-lg font-bold shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-300 border-2 border-transparent hover:border-white/20"
                 aria-label="See all tours"
               >
                 <span>See all tours</span>
-                <ArrowRight size={20} />
+                <ArrowRight size={20} className="transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
-
             </div>
           </div>
 
-          <div className="relative w-full overflow-hidden group py-6">
-            {/* Soft gradient masks */}
-            <div className="absolute top-0 left-0 w-28 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-28 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+          {/* Cards carousel */}
+          <div className="relative w-full overflow-hidden group py-8">
+            {/* Enhanced gradient masks */}
+            <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-gray-50 via-gray-50/80 to-transparent z-10 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-gray-50 via-gray-50/80 to-transparent z-10 pointer-events-none" />
 
-            <div className="flex gap-6 animate-marquee group-hover:[animation-play-state:paused]">
+            <div className="flex gap-8 animate-marquee group-hover:[animation-play-state:paused]">
               {duplicatedTours.map((tour, idx) => (
                 <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-2">
                   <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
@@ -363,13 +403,20 @@ export default function FeaturedTours() {
       />
 
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-        .font-sans { font-family: 'Poppins', sans-serif; }
+        .font-sans { font-family: 'Inter', sans-serif; }
 
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
@@ -380,20 +427,24 @@ export default function FeaturedTours() {
         }
 
         .animate-marquee {
-          animation: marquee 36s linear infinite;
+          animation: marquee 40s linear infinite;
+          will-change: transform;
         }
 
-        /* Slight neon-glow on hover for premium look */
-        .group:hover .glow {
-          box-shadow: 0 12px 30px rgba(236, 72, 153, 0.18), 0 6px 12px rgba(0,0,0,0.06);
+        /* Enhanced shadow utilities */
+        .shadow-3xl {
+          box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
         }
 
-        /* Ensure marquee is smooth on high perf devices */
-        .animate-marquee { will-change: transform; }
+        /* Smooth performance optimizations */
+        .animate-marquee { 
+          backface-visibility: hidden;
+          perspective: 1000px;
+        }
 
-        /* Utility: clamp width for better presentation on very small screens */
+        /* Responsive adjustments */
         @media (max-width: 640px) {
-          .animate-marquee { animation-duration: 28s; }
+          .animate-marquee { animation-duration: 32s; }
         }
       `}</style>
     </>
