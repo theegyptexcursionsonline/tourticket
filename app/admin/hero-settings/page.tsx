@@ -666,8 +666,7 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
                         title: { ...editingSettings.title, highlight: e.target.value }
                       })}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="e.g., Incredible"
-                    />
+placeholder="Highlight word (optional)"                    />
                   </div>
 
                   <div>
@@ -682,8 +681,7 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
                         title: { ...editingSettings.title, subtitle: e.target.value }
                       })}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="e.g., Experiences"
-                    />
+placeholder="Subtitle (optional)"                    />
                   </div>
                 </div>
               </div>

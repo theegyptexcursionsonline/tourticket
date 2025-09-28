@@ -66,11 +66,7 @@ const DEFAULT_SETTINGS: HeroSettings = {
     { desktop: '/hero3.png', alt: 'Luxor temple columns at golden hour', isActive: false }
   ],
   currentActiveImage: '/hero2.png',
-  title: {
-    main: 'Explore Egypt\'s Pyramids & Nile',
-    highlight: 'Incredible',
-    subtitle: 'Experiences',
-  },
+ 
   searchSuggestions: [
     "Where are you going?", "Find your next adventure", "Discover hidden gems",
     "Book unique experiences", "Explore new destinations", "Create lasting memories",
