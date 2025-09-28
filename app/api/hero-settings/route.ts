@@ -37,7 +37,8 @@ export async function GET() {
           currentActiveImage: '/hero2.png',
           title: {
             main: 'Explore Egypt\'s Pyramids & Nile',
-          
+            highlight: 'Incredible',
+            subtitle: 'Experiences',
           },
           searchSuggestions: [
             "Where are you going?", "Find your next adventure", "Discover hidden gems",

@@ -11,12 +11,12 @@ interface AttractionPageProps {
 
 // Helper function to get the base URL
 function getBaseUrl() {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  
   if (process.env.NEXT_PUBLIC_BASE_URL) {
     return process.env.NEXT_PUBLIC_BASE_URL;
+  }
+  
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
   }
   
   return 'http://localhost:3000';
@@ -31,14 +31,13 @@ async function getAttractionPage(slug: string): Promise<CategoryPageData | null>
     
     console.log('Fetching from URL:', url);
     
+    // Remove no-store for static generation
     const res = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 3600 }, // Use Next.js cache with revalidation
       headers: {
         'Content-Type': 'application/json',
       },
     });
-
-    console.log('Response status:', res.status);
 
     if (!res.ok) {
       console.error('Failed to fetch attraction page:', res.status, res.statusText);
@@ -46,7 +45,6 @@ async function getAttractionPage(slug: string): Promise<CategoryPageData | null>
     }
 
     const data = await res.json();
-    console.log('Attraction API response success:', !!data.success);
     
     if (!data.success) {
       console.error('API returned error:', data.error);
@@ -66,7 +64,7 @@ export async function generateStaticParams() {
     
     const baseUrl = getBaseUrl();
     const res = await fetch(`${baseUrl}/api/attraction-pages`, {
-      cache: 'no-store',
+      next: { revalidate: 3600 }, // Use Next.js cache
     });
     
     if (!res.ok) {
@@ -113,7 +111,7 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
     openGraph: {
       title: page.metaTitle || page.title,
       description: page.metaDescription || page.description,
-      images: [page.heroImage],
+      images: page.heroImage ? [page.heroImage] : [],
       type: 'website',
       url: `/attraction/${page.slug}`,
     },
@@ -121,7 +119,7 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
       card: 'summary_large_image',
       title: page.metaTitle || page.title,
       description: page.metaDescription || page.description,
-      images: [page.heroImage],
+      images: page.heroImage ? [page.heroImage] : [],
     },
     alternates: {
       canonical: `/attraction/${page.slug}`,
@@ -133,16 +131,14 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
   };
 }
 
-// Add ISR
-export const revalidate = 3600; // Revalidate every hour
+// Keep ISR but remove conflicting cache options
+export const revalidate = 3600;
 
 export default async function AttractionPage({ params }: AttractionPageProps) {
   const { slug } = await params;
   console.log('Attraction page rendering with params:', { slug });
   
   const page = await getAttractionPage(slug);
-
-  console.log('Fetched attraction page:', page ? 'Success' : 'Failed');
 
   if (!page) {
     console.log('Attraction page not found, showing 404');
