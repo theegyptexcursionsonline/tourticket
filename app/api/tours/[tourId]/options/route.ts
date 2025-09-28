@@ -41,6 +41,11 @@ const generateTimeSlotsFromAvailability = (tourData: TourType, price: number, is
   }));
 };
 
+// Helper function to check if string is a valid MongoDB ObjectId
+const isValidObjectId = (id: string): boolean => {
+  return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
 export async function GET(
   request: Request,
   { params }: { params: { tourId: string } }
@@ -54,7 +59,16 @@ export async function GET(
   try {
     await dbConnect();
 
-    const tour: TourType | null = await Tour.findById(tourId).lean();
+    let tour: TourType | null = null;
+
+    // FIXED: Check if tourId is an ObjectId or a slug
+    if (isValidObjectId(tourId)) {
+      // It's a MongoDB ObjectId
+      tour = await Tour.findById(tourId).lean();
+    } else {
+      // It's a slug
+      tour = await Tour.findOne({ slug: tourId }).lean();
+    }
 
     if (!tour) {
       return NextResponse.json({ message: 'Tour not found' }, { status: 404 });
@@ -62,17 +76,17 @@ export async function GET(
 
     let tourOptions: TourOption[] = [];
 
-    // FIXED: Check for booking options defined in the admin panel FIRST
+    // Rest of your existing logic...
     if (tour.bookingOptions && tour.bookingOptions.length > 0) {
       tourOptions = tour.bookingOptions.map((opt: any, index: number) => ({
         id: `bo-${opt._id || index}`,
         title: opt.label,
-        price: opt.price, // Use EXACT price from database
+        price: opt.price,
         originalPrice: opt.originalPrice || tour.originalPrice,
         duration: opt.duration || tour.duration || 'N/A',
         languages: opt.languages || tour.languages || ['English'],
         description: opt.description || tour.description || '',
-        timeSlots: generateTimeSlotsFromAvailability(tour, opt.price), // Use EXACT price
+        timeSlots: generateTimeSlotsFromAvailability(tour, opt.price),
         highlights: opt.highlights || tour.highlights,
         groupSize: opt.groupSize || `Max ${tour.maxGroupSize || 15} people`,
         difficulty: opt.difficulty || tour.difficulty || 'Easy',
@@ -81,20 +95,18 @@ export async function GET(
         isRecommended: opt.isRecommended || index === 0,
       }));
     } else {
-      // FALLBACK: Only generate options if NO booking options exist in database
       const basePrice = tour.discountPrice;
       const originalPrice = tour.originalPrice;
 
-      // Use exact pricing from the database for the main option
       tourOptions.push({
         id: 'standard-default',
         title: `${tour.title} - Standard Experience`,
-        price: basePrice, // Use EXACT database price
+        price: basePrice,
         originalPrice: originalPrice,
         duration: tour.duration || '75 minutes',
         languages: tour.languages || ['English'],
         description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
-        timeSlots: generateTimeSlotsFromAvailability(tour, basePrice), // Use EXACT price
+        timeSlots: generateTimeSlotsFromAvailability(tour, basePrice),
         highlights: tour.highlights?.slice(0, 4) || [
           'Professional guide',
           'All main attractions',
@@ -106,9 +118,6 @@ export async function GET(
         badge: 'Standard',
         isRecommended: true,
       });
-
-      // Only add additional options if user specifically wants them
-      // For now, we'll only show the exact price from the database
     }
 
     return NextResponse.json(tourOptions);

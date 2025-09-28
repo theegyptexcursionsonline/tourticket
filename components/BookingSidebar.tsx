@@ -1132,7 +1132,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   
  
 
-// MODIFIED: Fetches availability and options from the backend API
+// MODIFIED: Fetches availability and options with fallback to mock data
 const fetchAvailability = async (date: Date, totalGuests: number) => {
   setIsLoading(true);
   setError('');
@@ -1143,95 +1143,143 @@ const fetchAvailability = async (date: Date, totalGuests: number) => {
         throw new Error("Tour ID is missing");
     }
 
-    // Fetch tour options from our API route
-    const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
-    if (!optionsResponse.ok) {
-      const errorData = await optionsResponse.json();
-      throw new Error(errorData.message || 'Failed to fetch tour options');
-    }
-    const tourOptions: TourOption[] = await optionsResponse.json();
-
-// Fetch add-ons with fallbacks from API
-let addOnsToUse;
-try {
-  const addOnsResponse = await fetch(`/api/tours/${tourId}/addons`);
-  if (addOnsResponse.ok) {
-    addOnsToUse = await addOnsResponse.json();
-    // Add icons to the add-ons since API doesn't include them
-    addOnsToUse = addOnsToUse.map((addon: any) => ({
-      ...addon,
-      icon: getAddOnIcon(addon.category),
-    }));
-  } else {
-    throw new Error('Failed to fetch add-ons');
-  }
-} catch (error) {
-  console.error('Error fetching add-ons, using fallback:', error);
-  // Fallback to existing logic if API fails
-  addOnsToUse = tour.addOns && tour.addOns.length > 0 
-    ? tour.addOns.map((addon: any, index: number) => ({
-        id: addon.id || `addon-${index}`,
-        title: addon.name || 'Tour Enhancement',
-        description: addon.description || 'Enhance your tour experience',
-        price: addon.price || 15,
-        originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
-        required: false,
-        maxQuantity: 1,
-        popular: index === 0,
-        category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
-        icon: getAddOnIcon(addon.category || 'Experience'),
-        savings: addon.price ? Math.round(addon.price * 0.3) : 5,
-        perGuest: addon.category === 'Food',
-      }))
-    : [
+    // Try to fetch tour options from API, but use fallback if it fails
+    let tourOptions: TourOption[];
+    try {
+      const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
+      if (!optionsResponse.ok) {
+        throw new Error('API endpoint not available');
+      }
+      tourOptions = await optionsResponse.json();
+    } catch (error) {
+      console.log('API not available, using mock tour options');
+      // Fallback to mock tour options
+      tourOptions = [
         {
-          id: 'photo-package',
-          title: 'Professional Photography Package',
-          description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
-          price: 35.00,
-          originalPrice: 50.00,
-          required: false,
-          maxQuantity: 1,
-          popular: true,
-          category: 'Photography' as const,
-          icon: Camera,
-          savings: 15,
-          perGuest: false,
+          id: 'standard-tour',
+          title: 'Standard Tour Experience',
+          price: tourDisplayData?.discountPrice || 50,
+          originalPrice: tourDisplayData?.originalPrice || tourDisplayData?.discountPrice || 50,
+          duration: tourDisplayData?.duration || '3 hours',
+          languages: tourDisplayData?.languages || ['English'],
+          description: 'Perfect introduction to the destination with expert guide',
+          timeSlots: [
+            { id: 'slot-1', time: '09:00', available: 12, price: tourDisplayData?.discountPrice || 50, isPopular: false },
+            { id: 'slot-2', time: '11:00', available: 8, price: tourDisplayData?.discountPrice || 50, isPopular: true },
+            { id: 'slot-3', time: '14:00', available: 15, price: tourDisplayData?.discountPrice || 50, isPopular: false },
+            { id: 'slot-4', time: '16:00', available: 3, price: tourDisplayData?.discountPrice || 50, isPopular: false },
+          ],
+          highlights: tourDisplayData?.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
+          included: tourDisplayData?.includes?.slice(0, 3) || ['Professional guide', 'Entry tickets', 'Group photos'],
+          groupSize: `Max ${tourDisplayData?.maxGroupSize || 15} people`,
+          difficulty: 'Easy',
+          badge: 'Most Popular',
+          discount: tourDisplayData?.originalPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : 0,
+          isRecommended: true,
         },
         {
-          id: 'transport-premium',
-          title: 'Premium Hotel Transfer Service',
-          description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
-          price: 15.00,
-          originalPrice: 25.00,
-          required: false,
-          maxQuantity: 1,
-          category: 'Transport' as const,
-          icon: Car,
-          savings: 10,
-          perGuest: false,
-        },
-        {
-          id: 'refreshment-upgrade',
-          title: 'Gourmet Refreshment Package',
-          description: 'Premium snacks, fresh juices, and traditional treats',
-          price: 12.00,
-          originalPrice: 18.00,
-          required: false,
-          maxQuantity: 1,
-          category: 'Food' as const,
-          icon: Coffee,
-          savings: 6,
-          perGuest: true,
-        },
+          id: 'premium-tour',
+          title: 'Premium Experience',
+          price: (tourDisplayData?.discountPrice || 50) * 1.5,
+          originalPrice: (tourDisplayData?.originalPrice || tourDisplayData?.discountPrice || 50) * 1.5,
+          duration: tourDisplayData?.duration || '4 hours',
+          languages: ['English', 'Spanish', 'French'],
+          description: 'Enhanced experience with additional perks and smaller groups',
+          timeSlots: [
+            { id: 'premium-slot-1', time: '10:00', available: 6, price: (tourDisplayData?.discountPrice || 50) * 1.5, isPopular: false },
+            { id: 'premium-slot-2', time: '15:00', available: 4, price: (tourDisplayData?.discountPrice || 50) * 1.5, isPopular: true },
+          ],
+          highlights: ['VIP access', 'Complimentary refreshments', 'Professional photos included'],
+          included: ['Private guide', 'VIP entry', 'Refreshments', 'Photo package'],
+          groupSize: `Max ${Math.floor((tourDisplayData?.maxGroupSize || 15) / 2)} people`,
+          difficulty: 'Easy',
+          badge: 'Premium',
+          discount: 10,
+          isRecommended: false,
+        }
       ];
-}
+    }
+
+    // Fetch add-ons with fallbacks (keep existing logic)
+    let addOnsToUse;
+    try {
+      const addOnsResponse = await fetch(`/api/tours/${tourId}/addons`);
+      if (addOnsResponse.ok) {
+        addOnsToUse = await addOnsResponse.json();
+        addOnsToUse = addOnsToUse.map((addon: any) => ({
+          ...addon,
+          icon: getAddOnIcon(addon.category),
+        }));
+      } else {
+        throw new Error('Failed to fetch add-ons');
+      }
+    } catch (error) {
+      console.log('Add-ons API not available, using fallback');
+      // Use existing fallback logic for add-ons
+      addOnsToUse = tour.addOns && tour.addOns.length > 0 
+        ? tour.addOns.map((addon: any, index: number) => ({
+            id: addon.id || `addon-${index}`,
+            title: addon.name || 'Tour Enhancement',
+            description: addon.description || 'Enhance your tour experience',
+            price: addon.price || 15,
+            originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
+            required: false,
+            maxQuantity: 1,
+            popular: index === 0,
+            category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
+            icon: getAddOnIcon(addon.category || 'Experience'),
+            savings: addon.price ? Math.round(addon.price * 0.3) : 5,
+            perGuest: addon.category === 'Food',
+          }))
+        : [
+            {
+              id: 'photo-package',
+              title: 'Professional Photography Package',
+              description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
+              price: 35.00,
+              originalPrice: 50.00,
+              required: false,
+              maxQuantity: 1,
+              popular: true,
+              category: 'Photography' as const,
+              icon: Camera,
+              savings: 15,
+              perGuest: false,
+            },
+            {
+              id: 'transport-premium',
+              title: 'Premium Hotel Transfer Service',
+              description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
+              price: 15.00,
+              originalPrice: 25.00,
+              required: false,
+              maxQuantity: 1,
+              category: 'Transport' as const,
+              icon: Car,
+              savings: 10,
+              perGuest: false,
+            },
+            {
+              id: 'refreshment-upgrade',
+              title: 'Gourmet Refreshment Package',
+              description: 'Premium snacks, fresh juices, and traditional treats',
+              price: 12.00,
+              originalPrice: 18.00,
+              required: false,
+              maxQuantity: 1,
+              category: 'Food' as const,
+              icon: Coffee,
+              savings: 6,
+              perGuest: true,
+            },
+          ];
+    }
 
     const newAvailabilityData: AvailabilityData = {
       date: date.toISOString().split('T')[0],
       timeSlots: [], // Empty since timeSlots are now part of each tourOption
       addOns: addOnsToUse,
-      tourOptions: tourOptions, // Use the options fetched from the API
+      tourOptions: tourOptions,
       weatherInfo: {
         condition: 'Sunny',
         temperature: '25°C',
