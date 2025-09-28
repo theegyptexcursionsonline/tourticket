@@ -38,6 +38,52 @@ interface InterestLandingPageProps {
   interest: InterestData;
 }
 
+// Mock tours for when no tours are available
+const createMockTours = (interestName: string): Tour[] => [
+  {
+    _id: 'mock-1',
+    title: `Ultimate ${interestName} Adventure`,
+    slug: 'ultimate-adventure',
+    description: `Experience the best of ${interestName.toLowerCase()} with our comprehensive tour that covers all the must-see highlights and hidden gems.`,
+    image: '/images/placeholder-tour-1.jpg',
+    price: 299,
+    discountPrice: 249,
+    originalPrice: 299,
+    duration: '3 Days',
+    maxGroupSize: 12,
+    rating: 4.8,
+    isFeatured: true,
+    highlights: ['Expert Local Guide', 'Small Group Experience', 'All Meals Included'],
+    tags: ['Popular', 'Best Value'],
+    destination: {
+      name: 'Premium Location',
+      slug: 'premium-location'
+    },
+    createdAt: new Date().toISOString()
+  },
+  {
+    _id: 'mock-2',
+    title: `Exclusive ${interestName} Discovery`,
+    slug: 'exclusive-discovery',
+    description: `Discover the hidden secrets of ${interestName.toLowerCase()} with our exclusive access tours and personalized experiences.`,
+    image: '/images/placeholder-tour-2.jpg',
+    price: 199,
+    discountPrice: 179,
+    originalPrice: 199,
+    duration: '2 Days',
+    maxGroupSize: 8,
+    rating: 4.9,
+    isFeatured: false,
+    highlights: ['Exclusive Access', 'Photography Tour', 'Cultural Immersion'],
+    tags: ['Exclusive', 'Premium'],
+    destination: {
+      name: 'Hidden Gem',
+      slug: 'hidden-gem'
+    },
+    createdAt: new Date().toISOString()
+  }
+];
+
 const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
   const { formatPrice } = useSettings();
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
@@ -67,16 +113,9 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
           {/* Featured Badge */}
           {tour.isFeatured && (
             <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-full shadow-lg">
-              <Star className="w-3 h-3 inline mr-1 fill-current" />
               Featured
             </div>
           )}
-          
-          {/* Rating Badge */}
-          <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            {typeof tour.rating === 'number' ? tour.rating.toFixed(1) : '4.5'}
-          </div>
 
           {/* Price Badge */}
           <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
@@ -111,12 +150,6 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
               <Users className="w-4 h-4" />
               <span>Max {tour.maxGroupSize || 15}</span>
             </div>
-            {(tour as any).reviewCount > 0 && (
-              <div className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4" />
-                <span>{(tour as any).reviewCount} reviews</span>
-              </div>
-            )}
           </div>
           
           {/* Destination */}
@@ -171,63 +204,6 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
   );
 };
 
-const StatsSection = ({ stats }: { stats: InterestData['stats'] }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 0.3 }}
-    className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto"
-  >
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <Target className="w-6 h-6" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {stats.totalTours}
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Available Tours
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <MessageCircle className="w-6 h-6" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {stats.totalReviews}
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Customer Reviews
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <Star className="w-6 h-6 fill-current" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {stats.averageRating}
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Average Rating
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <Trophy className="w-6 h-6" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {stats.happyCustomers.toLocaleString()}
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Happy Customers
-      </div>
-    </div>
-  </motion.div>
-);
-
 const SearchAndFilter = ({ 
   searchQuery, 
   setSearchQuery, 
@@ -266,7 +242,6 @@ const SearchAndFilter = ({
         <option value="featured">Featured First</option>
         <option value="price_low">Price: Low to High</option>
         <option value="price_high">Price: High to Low</option>
-        <option value="rating">Highest Rated</option>
         <option value="duration">Duration</option>
         <option value="newest">Newest First</option>
       </select>
@@ -395,12 +370,17 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
 
+  // Use mock tours if no real tours available
+  const availableTours = (interest.tours && interest.tours.length > 0) 
+    ? interest.tours 
+    : createMockTours(interest.name);
+
   // Filter and sort tours
   const filteredAndSortedTours = React.useMemo(() => {
-    let filtered = interest.tours?.filter(tour =>
+    let filtered = availableTours.filter(tour =>
       tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tour.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || [];
+    );
 
     // Sort tours
     switch (sortBy) {
@@ -409,9 +389,6 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
         break;
       case 'price_high':
         filtered.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
-        break;
-      case 'rating':
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
       case 'duration':
         filtered.sort((a, b) => a.duration.localeCompare(b.duration));
@@ -423,12 +400,12 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
         filtered.sort((a, b) => {
           if (a.isFeatured && !b.isFeatured) return -1;
           if (!a.isFeatured && b.isFeatured) return 1;
-          return (b.rating || 0) - (a.rating || 0);
+          return 0;
         });
     }
 
     return filtered;
-  }, [interest.tours, searchQuery, sortBy]);
+  }, [availableTours, searchQuery, sortBy]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-red-50">
@@ -454,8 +431,8 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
               className="space-y-8"
             >
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 text-sm font-medium">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span>Featured Experience Category</span>
+                <Globe className="w-4 h-4 text-blue-400" />
+                <span>Premium Travel Experience</span>
               </div>
               
               <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
@@ -500,163 +477,92 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 -mt-20 relative z-10">
+      {/* Tours Section - Directly after Hero */}
+      <section id="tours" className="py-16 bg-white">
         <div className="container mx-auto px-6">
-          <StatsSection stats={interest.stats} />
-        </div>
-      </section>
+          <div className="text-center mb-12">
+            <motion.h2 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-5xl font-bold text-slate-900 mb-6"
+            >
+              Available {interest.name} Tours
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-xl text-slate-600 max-w-3xl mx-auto"
+            >
+              Choose from our carefully selected collection of {interest.name.toLowerCase()} experiences
+            </motion.p>
+          </div>
 
-      {/* Highlights Section */}
-      {interest.highlights && interest.highlights.length > 0 && (
-        <section className="py-16">
-          <div className="container mx-auto px-6">
+          {/* Search and Filter */}
+          <SearchAndFilter
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+          />
+
+          {/* Results Count */}
+          <div className="text-center mb-8">
+            <p className="text-slate-600">
+              Showing <span className="font-semibold text-slate-900">{filteredAndSortedTours.length}</span> tours
+              {(!interest.tours || interest.tours.length === 0) && (
+                <span className="text-red-600 font-medium ml-2">(Coming Soon)</span>
+              )}
+            </p>
+          </div>
+
+          {/* Tours Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredAndSortedTours.map((tour, index) => (
+              <TourCard key={tour._id} tour={tour} index={index} />
+            ))}
+          </div>
+
+          {/* Mock Tours Notice */}
+          {(!interest.tours || interest.tours.length === 0) && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-12"
+              transition={{ delay: 0.5 }}
+              className="text-center mt-12 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200"
             >
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">
-                Why Choose Our {interest.name} Tours?
-              </h2>
-              <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Experience the difference with our expertly crafted tours
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-              {interest.highlights.map((highlight, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white p-8 rounded-2xl shadow-lg text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100"
-                >
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <CheckCircle className="w-8 h-8" />
-                  </div>
-                  <p className="text-slate-700 leading-relaxed font-medium">{highlight}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Tours Section */}
-      {interest.tours && interest.tours.length > 0 && (
-        <section id="tours" className="py-16 bg-white">
-          <div className="container mx-auto px-6">
-            <div className="text-center mb-12">
-              <motion.h2 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-5xl font-bold text-slate-900 mb-6"
-              >
-                Available {interest.name} Tours
-              </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="text-xl text-slate-600 max-w-3xl mx-auto"
-              >
-                Choose from our carefully selected collection of {interest.name.toLowerCase()} experiences
-              </motion.p>
-            </div>
-
-            {/* Search and Filter */}
-            <SearchAndFilter
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-            />
-
-            {/* Results Count */}
-            <div className="text-center mb-8">
-              <p className="text-slate-600">
-                Showing <span className="font-semibold text-slate-900">{filteredAndSortedTours.length}</span> of{' '}
-                <span className="font-semibold text-slate-900">{interest.tours.length}</span> tours
-              </p>
-            </div>
-
-            {/* Tours Grid */}
-            {filteredAndSortedTours.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {filteredAndSortedTours.map((tour, index) => (
-                  <TourCard key={tour._id} tour={tour} index={index} />
-                ))}
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                <Calendar className="w-8 h-8 text-white" />
               </div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
-              >
-                <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
-                  <Search className="w-10 h-10 text-slate-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-slate-700 mb-2">No tours found</h3>
-                <p className="text-slate-500 mb-6">
-                  {searchQuery ? 'Try adjusting your search criteria.' : `No ${interest.name.toLowerCase()} tours are currently available.`}
-                </p>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
-                  >
-                    Clear Search
-                  </button>
-                )}
-              </motion.div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* No Tours Available Message */}
-      {(!interest.tours || interest.tours.length === 0) && (
-        <section className="py-20">
-          <div className="container mx-auto px-6 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-2xl mx-auto"
-            >
-              <div className="w-32 h-32 mx-auto mb-8 bg-slate-100 rounded-full flex items-center justify-center">
-                <Calendar className="w-16 h-16 text-slate-400" />
-              </div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-4">
-                Coming Soon
-              </h2>
-              <p className="text-xl text-slate-600 mb-8">
-                We're currently working on adding amazing {interest.name.toLowerCase()} tours to our collection. 
-                Check back soon for exciting new experiences!
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                More Tours Coming Soon!
+              </h3>
+              <p className="text-slate-600 mb-6">
+                We're currently adding more amazing {interest.name.toLowerCase()} tours to our collection. 
+                The tours shown above are sample experiences - contact us for current availability and custom options.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  Contact Us for Custom Tours
+                  <MessageCircle className="w-5 h-5" />
+                </Link>
+                <Link
                   href="/tours"
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors"
                 >
                   Browse All Tours
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center gap-2 px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Contact Us
-                  <MessageCircle className="w-5 h-5" />
-                </Link>
               </div>
             </motion.div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* Reviews Section */}
       {interest.reviews && interest.reviews.length > 0 && (

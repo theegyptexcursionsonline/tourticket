@@ -83,15 +83,19 @@ export default async function TourDetailPage({ params }: PageProps) {
   // Get related tours
   const relatedTours = await getRelatedTours(tour.category as string, tour._id);
 
-  return (
-    <>
-      <Header startSolid />
-      <main className="min-h-screen bg-slate-50 pt-20">
-        <TourDetailClientPage tour={tour} relatedTours={relatedTours} />
-      </main>
-      <Footer />
-    </>
-  );
+ return (
+  <>
+    <Header startSolid />
+    <main className="min-h-screen bg-slate-50 pt-20">
+      <TourDetailClientPage 
+        tour={tour} 
+        relatedTours={relatedTours} 
+        initialReviews={tour.reviews || []}
+      />
+    </main>
+    <Footer />
+  </>
+);
 }
 
 // Generate static paths for better performance
