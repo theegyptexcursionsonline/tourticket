@@ -1014,10 +1014,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         )}
       </AnimatePresence>
 
-      <main className="bg-white pt-20">
-        <div className="bg-slate-50 py-4">
-          <div className="container mx-auto px-4">
-            <nav className="flex items-center gap-2 text-sm">
+<main className="bg-white pt-16 md:pt-20">          <div className="bg-slate-50">
+  <div className="container mx-auto px-4">
+    <nav className="flex items-center gap-2 text-sm">
               <Link href="/" className="text-slate-500 hover:text-red-600">
                 Home
               </Link>
@@ -1031,8 +1030,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8">
-          <Link
+<div className="container mx-auto px-4 py-4">          <Link
             href="/search"
             className="inline-flex items-center gap-2 text-red-600 font-semibold mb-6 hover:underline transition-colors"
           >
