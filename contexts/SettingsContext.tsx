@@ -158,6 +158,7 @@ const translations: Record<string, Record<string, string>> = {
   },
 };
 
+// FIXED: Enhanced usePersistentState with better error handling
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) => void] => {
   const [state, setState] = useState<T>(defaultValue);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -166,11 +167,40 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
-        const parsedItem = JSON.parse(item);
-        setState(parsedItem);
+        // Try to parse as JSON first
+        try {
+          const parsedItem = JSON.parse(item);
+          setState(parsedItem);
+        } catch (parseError) {
+          console.log(`Item ${key} in localStorage is not valid JSON, checking if it's a simple string value`);
+          
+          // Handle legacy storage format or simple string values
+          if (key === 'selectedLanguage') {
+            // If it's just a language code like "es", find the language object
+            const language = languages.find(lang => lang.code === item);
+            if (language) {
+              setState(language as T);
+            }
+          } else if (key === 'selectedCurrency') {
+            // If it's just a currency code like "USD", find the currency object
+            const currency = currencies.find(curr => curr.code === item);
+            if (currency) {
+              setState(currency as T);
+            }
+          } else {
+            // For other cases, try to use the raw string value
+            setState(item as T);
+          }
+        }
       }
     } catch (error) {
       console.error(`Error loading ${key} from localStorage:`, error);
+      // Clear corrupted data
+      try {
+        window.localStorage.removeItem(key);
+      } catch (clearError) {
+        console.error(`Error clearing corrupted ${key} from localStorage:`, clearError);
+      }
     } finally {
       setIsLoaded(true);
     }
@@ -424,7 +454,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedLanguage]);
   
-  // FIXED: Moved the 't' function definition before it is used by other functions.
+  // Translation function
   const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     const translation = translations[selectedLanguage.code]?.[key] || translations['en'][key] || key;
     
@@ -437,7 +467,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return translation;
   }, [selectedLanguage]);
 
-  // This function now correctly accesses 't' as it is defined above.
   const formatSavings = useCallback((savings: number): string => {
     return `${t('booking.save')} ${formatPrice(savings)}`;
   }, [formatPrice, t]);

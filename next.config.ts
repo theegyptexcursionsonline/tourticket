@@ -1,4 +1,6 @@
-import {withSentryConfig} from '@sentry/nextjs';
+// next.config.js
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -13,71 +15,200 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // Experimental features for app directory
+  experimental: {
+    appDir: true,
+    serverComponentsExternalPackages: ['mongoose'],
+  },
+
+  // Image optimization configuration
   images: {
     remotePatterns: [
-      // Cloudinary (your cloud)
+      // Cloudinary (example)
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
-        // scope only to your cloud + allow any path under it
         pathname: '/dm3sxllch/**',
       },
-
       // Wikimedia (example)
       {
         protocol: 'https',
         hostname: 'upload.wikimedia.org',
         pathname: '/wikipedia/en/thumb/4/41/Flag_of_India.svg/**',
       },
-
       // Unsplash static CDN (recommended for stable images)
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
-
-      // Unsplash dynamic source endpoint (source.unsplash.com)
+      // Unsplash dynamic source endpoint
       {
         protocol: 'https',
         hostname: 'source.unsplash.com',
         pathname: '/**',
       },
+      // Local development
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/**',
+      },
+      // AWS S3 style wildcard
+      {
+        protocol: 'https',
+        hostname: '**.amazonaws.com',
+        pathname: '/**',
+      },
+
+      // ----------------- Add your CDN host(s) here -----------------
+      // Exact hostname (https://your-cdn.com/...)
+      {
+        protocol: 'https',
+        hostname: 'your-cdn.com',
+        pathname: '/**',
+      },
+      // Allow any subdomain like https://cdn.your-cdn.com/ or https://images.your-cdn.com/
+      {
+        protocol: 'https',
+        hostname: '**.your-cdn.com',
+        pathname: '/**',
+      },
+
+      // If you have other CDNs or domains, add them similarly.
     ],
+    // Image formats
+    formats: ['image/webp', 'image/avif'],
+    // Device sizes for responsive images
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    // Image sizes for different breakpoints
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+
+  // Rewrites for backward compatibility and SEO
+  async rewrites() {
+    return [
+      {
+        source: '/tours/:slug',
+        destination: '/:slug',
+      },
+      {
+        source: '/experiences/:slug',
+        destination: '/:slug',
+      },
+      {
+        source: '/activities/:slug',
+        destination: '/:slug',
+      },
+      {
+        source: '/api/tours/:path*',
+        destination: '/api/admin/tours/:path*',
+      },
+    ];
+  },
+
+  // Redirects for SEO and user experience
+  async redirects() {
+    return [
+      {
+        source: '/tour/:slug',
+        destination: '/:slug',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.yourdomain.com',
+          },
+        ],
+        destination: 'https://yourdomain.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
+
+  // Headers for security and performance
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/api/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+        ],
+      },
+      {
+        source: '/images/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ];
+  },
+
+  // Handle trailing slashes consistently
+  trailingSlash: false,
+
+  // Optimize bundle size
+  swcMinify: true,
+
+  // Environment variables that should be available on the client
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
+  },
+
+  // Webpack configuration for additional optimization
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      // Add any specific aliases you need
+    };
+
+    if (!dev && !isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
+    return config;
+  },
+
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: true,
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+  output: 'standalone',
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
   },
 };
 
-module.exports = nextConfig;
-
-export default withSentryConfig(undefined, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-
-  org: "egyptexcursionsonline",
-
-  project: "javascript-nextjs",
-
-  // Only print logs for uploading source maps in CI
+// Export with Sentry configuration
+module.exports = withSentryConfig(nextConfig, {
+  org: 'egyptexcursionsonline',
+  project: 'javascript-nextjs',
   silent: !process.env.CI,
-
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
-
-  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  tunnelRoute: '/monitoring',
   disableLogger: true,
-
-  // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-  // See the following for more information:
-  // https://docs.sentry.io/product/crons/
-  // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
+  hideSourceMaps: true,
+  disableServerWebpackPlugin: process.env.NODE_ENV === 'development',
+  disableClientWebpackPlugin: process.env.NODE_ENV === 'development',
 });

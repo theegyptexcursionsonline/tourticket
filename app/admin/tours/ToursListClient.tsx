@@ -54,16 +54,6 @@ function Badge({ children, className = '', icon: Icon }: {
   );
 }
 
-function PlaceholderImg() {
-  return (
-    <div className="flex items-center justify-center h-full w-full bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg">
-      <svg className="w-8 h-8 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.51 6 17.5h12l-3.86-5.14z"/>
-      </svg>
-    </div>
-  );
-}
-
 export function ToursListClient({ tours }: { tours: TourType[] }) {
   const { selectedCurrency } = useSettings();
   const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
@@ -259,8 +249,8 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <div className="h-16 w-28 rounded-xl overflow-hidden bg-slate-100 shrink-0 shadow-sm group-hover:shadow-md transition-all duration-200">
-                          {t.image ? (
+                        {t.image && (
+                          <div className="h-16 w-28 rounded-xl overflow-hidden bg-slate-100 shrink-0 shadow-sm group-hover:shadow-md transition-all duration-200">
                             <Image
                               src={t.image}
                               alt={t.title || t.name || 'tour'}
@@ -268,10 +258,8 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                               height={64}
                               className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
                             />
-                          ) : (
-                            <PlaceholderImg />
-                          )}
-                        </div>
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1 space-y-2">
                           <Link 
                             href={`/admin/tours/edit/${t._id}`} 
@@ -334,8 +322,8 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
               className="group bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
             >
               {/* Card Image */}
-              <div className="relative h-48 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
-                {t.image ? (
+              {t.image && (
+                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
                   <Image 
                     src={t.image} 
                     alt={t.title || t.name || 'tour'} 
@@ -343,29 +331,27 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                     style={{ objectFit: 'cover' }} 
                     className="w-full h-full group-hover:scale-110 transition-transform duration-300" 
                   />
-                ) : (
-                  <div className="w-full h-full"><PlaceholderImg /></div>
-                )}
-                
-                {/* Badges Overlay */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  {t.isFeatured && (
-                    <Badge 
-                      className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg" 
-                      icon={Star}
-                    >
-                      Featured
-                    </Badge>
-                  )}
-                </div>
+                  
+                  {/* Badges Overlay */}
+                  <div className="absolute top-3 left-3 flex flex-col gap-2">
+                    {t.isFeatured && (
+                      <Badge 
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg" 
+                        icon={Star}
+                      >
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
 
-                {/* Price Overlay */}
-                <div className="absolute bottom-3 right-3">
-                  <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg border border-white/60">
-                    <div className="text-lg font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</div>
+                  {/* Price Overlay */}
+                  <div className="absolute bottom-3 right-3">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg border border-white/60">
+                      <div className="text-lg font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Card Content */}
               <div className="p-6 space-y-4">
@@ -408,6 +394,13 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                     {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
+
+                {/* Show price for tours without images */}
+                {!t.image && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="text-lg font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
