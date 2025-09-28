@@ -101,10 +101,11 @@ const nextConfig = {
         source: '/activities/:slug',
         destination: '/:slug',
       },
-      {
-        source: '/api/tours/:path*',
-        destination: '/api/admin/tours/:path*',
-      },
+     // ❌ Remove this line:
+    // {
+    //   source: '/api/tours/:path*',
+    //   destination: '/api/admin/tours/:path*',
+    // },
     ];
   },
 

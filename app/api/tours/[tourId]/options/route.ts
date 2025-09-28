@@ -2,44 +2,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
-import { Tour as TourType, BookingOption as BookingOptionType, TimeSlot, TourOption } from '@/types/index';
-
-// Helper function to generate time slots from availability
-const generateTimeSlotsFromAvailability = (tourData: TourType, price: number, isPremium: boolean = false): TimeSlot[] => {
-  if (tourData.availability && tourData.availability.slots) {
-    return tourData.availability.slots.map((slot, index) => ({
-      id: `slot-${isPremium ? 'premium-' : ''}${index}`,
-      time: slot.time,
-      available: isPremium ? Math.min(slot.capacity || 15, 8) : (slot.capacity || 15),
-      originalAvailable: isPremium ? 8 : (slot.capacity || 15),
-      price: price,
-      isPopular: index === 0 && !isPremium,
-    }));
-  }
-
-  // Default slots if no availability data
-  const baseSlots = [
-    { time: '09:00', capacity: 15 },
-    { time: '11:00', capacity: 15 },
-    { time: '14:00', capacity: 15 },
-  ];
-
-  if (isPremium) {
-    return [
-      { id: 'premium-slot-1', time: '10:00', available: 6, originalAvailable: 8, price: price },
-      { id: 'premium-slot-2', time: '15:00', available: 4, originalAvailable: 8, price: price, isPopular: true },
-    ];
-  }
-
-  return baseSlots.map((slot, index) => ({
-    id: `slot-${index}`,
-    time: slot.time,
-    available: Math.floor(Math.random() * slot.capacity) + 1,
-    originalAvailable: slot.capacity,
-    price: price,
-    isPopular: index === 1,
-  }));
-};
 
 // Helper function to check if string is a valid MongoDB ObjectId
 const isValidObjectId = (id: string): boolean => {
@@ -48,9 +10,9 @@ const isValidObjectId = (id: string): boolean => {
 
 export async function GET(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
-  const { tourId } = params;
+  const { tourId } = await params;
 
   if (!tourId) {
     return NextResponse.json({ message: 'Tour ID is required' }, { status: 400 });
@@ -59,14 +21,12 @@ export async function GET(
   try {
     await dbConnect();
 
-    let tour: TourType | null = null;
+    let tour = null;
 
-    // FIXED: Check if tourId is an ObjectId or a slug
+    // Check if tourId is an ObjectId or a slug
     if (isValidObjectId(tourId)) {
-      // It's a MongoDB ObjectId
       tour = await Tour.findById(tourId).lean();
     } else {
-      // It's a slug
       tour = await Tour.findOne({ slug: tourId }).lean();
     }
 
@@ -74,51 +34,29 @@ export async function GET(
       return NextResponse.json({ message: 'Tour not found' }, { status: 404 });
     }
 
-    let tourOptions: TourOption[] = [];
-
-    // Rest of your existing logic...
-    if (tour.bookingOptions && tour.bookingOptions.length > 0) {
-      tourOptions = tour.bookingOptions.map((opt: any, index: number) => ({
-        id: `bo-${opt._id || index}`,
-        title: opt.label,
-        price: opt.price,
-        originalPrice: opt.originalPrice || tour.originalPrice,
-        duration: opt.duration || tour.duration || 'N/A',
-        languages: opt.languages || tour.languages || ['English'],
-        description: opt.description || tour.description || '',
-        timeSlots: generateTimeSlotsFromAvailability(tour, opt.price),
-        highlights: opt.highlights || tour.highlights,
-        groupSize: opt.groupSize || `Max ${tour.maxGroupSize || 15} people`,
-        difficulty: opt.difficulty || tour.difficulty || 'Easy',
-        badge: opt.badge || (index === 0 ? 'Most Popular' : 'Standard'),
-        discount: opt.discount,
-        isRecommended: opt.isRecommended || index === 0,
-      }));
-    } else {
-      const basePrice = tour.discountPrice;
-      const originalPrice = tour.originalPrice;
-
-      tourOptions.push({
+    // Generate tour options based on tour data
+    const tourOptions = [
+      {
         id: 'standard-default',
         title: `${tour.title} - Standard Experience`,
-        price: basePrice,
-        originalPrice: originalPrice,
-        duration: tour.duration || '75 minutes',
+        price: tour.discountPrice,
+        originalPrice: tour.originalPrice,
+        duration: tour.duration || '3 hours',
         languages: tour.languages || ['English'],
         description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
-        timeSlots: generateTimeSlotsFromAvailability(tour, basePrice),
-        highlights: tour.highlights?.slice(0, 4) || [
-          'Professional guide',
-          'All main attractions',
-          'Safety equipment',
-          'Small group experience'
+        timeSlots: [
+          { id: 'slot-1', time: '09:00', available: 12, price: tour.discountPrice, isPopular: false },
+          { id: 'slot-2', time: '11:00', available: 8, price: tour.discountPrice, isPopular: true },
+          { id: 'slot-3', time: '14:00', available: 15, price: tour.discountPrice, isPopular: false },
+          { id: 'slot-4', time: '16:00', available: 3, price: tour.discountPrice, isPopular: false },
         ],
+        highlights: tour.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
         groupSize: `Max ${tour.maxGroupSize || 15} people`,
-        difficulty: tour.difficulty || 'Easy',
-        badge: 'Standard',
+        difficulty: 'Easy',
+        badge: 'Most Popular',
         isRecommended: true,
-      });
-    }
+      }
+    ];
 
     return NextResponse.json(tourOptions);
 
