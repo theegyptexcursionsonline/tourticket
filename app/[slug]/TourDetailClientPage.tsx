@@ -17,7 +17,6 @@ import {
 
 // Components
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
 import ReviewList from '@/components/reviews/ReviewList';
@@ -1379,7 +1378,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         </div>
       </main>
 
-      <Footer />
 
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
       
