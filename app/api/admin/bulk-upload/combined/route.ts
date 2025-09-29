@@ -5,7 +5,6 @@ import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
 
-// Helper for case-insensitive lookup
 const findByName = async (Model: any, name: string) => {
     return Model.findOne({ name: new RegExp(`^${name}$`, 'i') }).lean();
 };
@@ -22,6 +21,7 @@ export async function POST(req: Request) {
             categories: { created: 0, updated: 0, errors: [] as string[] },
             attractions: { created: 0, updated: 0, errors: [] as string[] },
             tours: { created: 0, updated: 0, errors: [] as string[] },
+            missingImages: [] as any[]
         };
 
         // STEP 1: Process Destinations
@@ -30,7 +30,22 @@ export async function POST(req: Request) {
                 try {
                     const existing = await Destination.findOne({ slug: item.slug });
                     await Destination.updateOne({ slug: item.slug }, item, { upsert: true, runValidators: true });
-                    existing ? results.destinations.updated++ : results.destinations.created++;
+                    
+                    if (existing) {
+                        results.destinations.updated++;
+                    } else {
+                        results.destinations.created++;
+                        // Check if image is missing
+                        const newDoc = await Destination.findOne({ slug: item.slug }).lean();
+                        if (newDoc && !newDoc.image) {
+                            results.missingImages.push({
+                                _id: newDoc._id.toString(),
+                                name: newDoc.name,
+                                imageField: 'image',
+                                modelType: 'Destinations'
+                            });
+                        }
+                    }
                 } catch (e: any) {
                     results.destinations.errors.push(`Destination "${item.name}": ${e.message}`);
                 }
@@ -50,7 +65,7 @@ export async function POST(req: Request) {
             }
         }
         
-        // STEP 3: Process Attraction Pages (Depends on Categories)
+        // STEP 3: Process Attraction Pages
         if (attractions.length > 0) {
             for (const item of attractions) {
                 try {
@@ -67,14 +82,28 @@ export async function POST(req: Request) {
                     
                     const existing = await AttractionPage.findOne({ slug: item.slug });
                     await AttractionPage.updateOne({ slug: item.slug }, doc, { upsert: true, runValidators: true });
-                    existing ? results.attractions.updated++ : results.attractions.created++;
+                    
+                    if (existing) {
+                        results.attractions.updated++;
+                    } else {
+                        results.attractions.created++;
+                        const newDoc = await AttractionPage.findOne({ slug: item.slug }).lean();
+                        if (newDoc && !newDoc.heroImage) {
+                            results.missingImages.push({
+                                _id: newDoc._id.toString(),
+                                name: newDoc.title,
+                                imageField: 'heroImage',
+                                modelType: 'Attractions'
+                            });
+                        }
+                    }
                 } catch (e: any) {
                     results.attractions.errors.push(`Attraction Page "${item.title}": ${e.message}`);
                 }
             }
         }
 
-        // STEP 4: Process Tours (Depends on Destinations & Categories)
+        // STEP 4: Process Tours
         if (tours.length > 0) {
             for (const item of tours) {
                 try {
@@ -101,7 +130,21 @@ export async function POST(req: Request) {
                     
                     const existing = await Tour.findOne({ slug: item.slug });
                     await Tour.updateOne({ slug: item.slug }, doc, { upsert: true, runValidators: true });
-                    existing ? results.tours.updated++ : results.tours.created++;
+                    
+                    if (existing) {
+                        results.tours.updated++;
+                    } else {
+                        results.tours.created++;
+                        const newDoc = await Tour.findOne({ slug: item.slug }).lean();
+                        if (newDoc && !newDoc.image) {
+                            results.missingImages.push({
+                                _id: newDoc._id.toString(),
+                                name: newDoc.title,
+                                imageField: 'image',
+                                modelType: 'Tours'
+                            });
+                        }
+                    }
                 } catch (e: any) {
                     results.tours.errors.push(`Tour "${item.title}": ${e.message}`);
                 }
@@ -111,6 +154,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, results });
 
     } catch (error: any) {
-        return NextResponse.json({ success: false, error: 'An unexpected error occurred.', details: error.message }, { status: 500 });
+        return NextResponse.json({ 
+            success: false, 
+            error: 'An unexpected error occurred.', 
+            details: error.message 
+        }, { status: 500 });
     }
 }

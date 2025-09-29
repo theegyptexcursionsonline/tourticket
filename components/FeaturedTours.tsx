@@ -1,4 +1,3 @@
-// components/FeaturedTours.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,14 +9,7 @@ import BookingSidebar from '@/components/BookingSidebar';
 import Link from 'next/link';
 
 /**
- * Enhanced FeaturedTours - Perfect Card Design
- *
- * Key improvements:
- * - Solid white cards with proper shadows from the start
- * - Enhanced visual hierarchy and spacing
- * - Smooth hover animations with scale and glow effects
- * - Better contrast and readability
- * - Intuitive card appearance that's immediately recognizable
+ * Enhanced FeaturedTours - Perfect Card Design with Activity Provider
  */
 
 // --- Safe Image Component ---
@@ -106,7 +98,8 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   return (
     <Link
       href={`/tour/${tour.slug || '#'}`}
-className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-red-500/10 border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"      aria-label={`Open tour ${tour.title || 'tour'}`}
+      className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-red-500/10 border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
+      aria-label={`Open tour ${tour.title || 'tour'}`}
     >
       <div className="relative">
         <SafeImage
@@ -120,9 +113,16 @@ className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overfl
         {/* Gradient overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
-        {/* Top-left tags */}
+        {/* Activity Provider Chip - Top Left */}
+        <div className="absolute top-4 left-4 z-20">
+          <span className="px-3 py-1.5 text-xs font-bold text-white bg-slate-900/80 backdrop-blur-sm rounded-full shadow-lg">
+            Egypt Excursions Online
+          </span>
+        </div>
+
+        {/* Tags - Below Provider Chip */}
         {tour.tags && tour.tags.length > 0 && (
-          <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20">
+          <div className="absolute top-14 left-4 flex flex-wrap gap-2 z-20">
             {tour.tags.slice(0, 2).map((tag, i) => (
               <span
                 key={i}
@@ -179,7 +179,7 @@ className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overfl
           </h3>
 
           <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-            {tour.excerpt || tour.summary || 'A beautifully curated experience — enjoy local highlights, guided commentary, and flexible booking.'}
+            {tour.description || 'A beautifully curated experience — enjoy local highlights, guided commentary, and flexible booking.'}
           </p>
         </div>
 
@@ -199,7 +199,7 @@ className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overfl
 
         {/* Price section */}
         <div className="flex items-center justify-between">
-          <div className="text-right">
+          <div className="text-left">
             <div className="text-sm text-gray-500 mb-1">Starting from</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl md:text-3xl font-black text-gray-900">
