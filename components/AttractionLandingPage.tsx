@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
+import TourCard from '@/components/shared/TourCard';
 
 interface AttractionData {
   _id: string;
@@ -36,139 +37,6 @@ interface AttractionData {
 interface AttractionLandingPageProps {
   attraction: AttractionData;
 }
-
-const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
-  const { formatPrice } = useSettings();
-  const destination = typeof tour.destination === 'object' ? tour.destination : null;
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-    >
-      <Link
-        href={`/tour/${tour.slug}`}
-        className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
-      >
-        <div className="relative h-48 overflow-hidden">
-          <Image
-            src={tour.image}
-            alt={tour.title}
-            fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          
-          {/* Featured Badge */}
-          {tour.isFeatured && (
-            <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-full shadow-lg">
-              <Star className="w-3 h-3 inline mr-1 fill-current" />
-              Featured
-            </div>
-          )}
-          
-          {/* Rating Badge */}
-          <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            {typeof tour.rating === 'number' ? tour.rating.toFixed(1) : '4.5'}
-          </div>
-
-          {/* Price Badge */}
-          <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
-            <div className="text-lg font-bold text-slate-900">
-              {formatPrice(tour.discountPrice || tour.price || 0)}
-            </div>
-            {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
-              <div className="text-xs text-slate-500 line-through text-center">
-                {formatPrice(tour.originalPrice)}
-              </div>
-            )}
-          </div>
-
-          {/* Wishlist Button */}
-          <button className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm p-2 rounded-full text-slate-600 hover:text-red-500 hover:bg-white transition-all duration-200 opacity-0 group-hover:opacity-100">
-            <Heart className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="p-6">
-          <h3 className="font-bold text-lg mb-3 group-hover:text-red-600 transition-colors duration-200 line-clamp-2 leading-tight">
-            {tour.title}
-          </h3>
-          
-          {/* Tour Details */}
-          <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{tour.duration}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              <span>Max {tour.maxGroupSize || 15}</span>
-            </div>
-            {(tour as any).reviewCount > 0 && (
-              <div className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4" />
-                <span>{(tour as any).reviewCount} reviews</span>
-              </div>
-            )}
-          </div>
-          
-          {/* Destination */}
-          {destination && (
-            <div className="flex items-center gap-1 text-sm text-slate-500 mb-4">
-              <MapPin className="w-4 h-4 text-red-500" />
-              <span>{destination.name}</span>
-            </div>
-          )}
-
-          {/* Description */}
-          <p className="text-slate-600 text-sm line-clamp-2 mb-4">
-            {tour.description}
-          </p>
-          
-          {/* Highlights */}
-          {tour.highlights && tour.highlights.length > 0 && (
-            <div className="mb-4">
-              <div className="flex flex-wrap gap-1">
-                {tour.highlights.slice(0, 2).map((highlight, i) => (
-                  <span 
-                    key={i}
-                    className="px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium"
-                  >
-                    {highlight.length > 20 ? highlight.substring(0, 20) + '...' : highlight}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Action Row */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-2">
-              {tour.tags?.slice(0, 1).map((tag, i) => (
-                <span 
-                  key={i}
-                  className="px-2 py-1 bg-red-50 text-red-600 rounded-full text-xs font-medium"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            
-            <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-              <ArrowRight className="w-5 h-5 text-red-600" />
-            </div>
-          </div>
-        </div>
-      </Link>
-    </motion.div>
-  );
-};
 
 const StatsSection = ({ attraction }: { attraction: AttractionData }) => (
   <motion.div
@@ -694,46 +562,6 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
                 </Link>
               </div>
             </motion.div>
-          </div>
-        </section>
-      )}
-
-      {/* Gallery Section */}
-      {attraction.images && attraction.images.length > 0 && (
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">
-                Gallery
-              </h2>
-              <p className="text-xl text-slate-600">
-                See more photos of this amazing attraction
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {attraction.images.map((image, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="relative h-48 rounded-xl overflow-hidden hover:scale-105 transition-transform duration-300 cursor-pointer"
-                >
-                  <Image
-                    src={image}
-                    alt={`${attraction.title} gallery ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                  />
-                </motion.div>
-              ))}
-            </div>
           </div>
         </section>
       )}
