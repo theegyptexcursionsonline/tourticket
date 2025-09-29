@@ -347,8 +347,7 @@ export default function BulkUploadPage() {
             setMissingImages(allMissingImages);
 
             if (allMissingImages.length > 0) {
-                toast.info(`${allMissingImages.length} items need images`, { duration: 5000 });
-            }
+toast(`${allMissingImages.length} items need images`, { duration: 5000, icon: 'ℹ️' });            }
 
         } catch (error: any) {
             toast.error(`Upload failed: ${error.message}`);

@@ -5,9 +5,12 @@ import Link from "next/link";
 import { ArrowRight, Package, Star } from "lucide-react";
 
 interface Interest {
+  _id?: string;
+  type?: 'category' | 'attraction';
   name: string;
   slug: string;
   products: number;
+  featured?: boolean;
 }
 
 interface CategoryPage {
@@ -33,13 +36,20 @@ const InterestCard = ({
   interest: Interest;
   categoryPage?: CategoryPage;
 }) => {
-  const getLink = () => {
-    if (categoryPage && categoryPage.isPublished) {
-      return `/category/${categoryPage.slug}`;
-    }
-    // Create a dedicated landing page for each interest instead of search
-    return `/interests/${interest.slug || interest.name.toLowerCase().replace(/\s+/g, '-')}`;
-  };
+ const getLink = () => {
+  // Priority 1: Use published category page if available
+  if (categoryPage && categoryPage.isPublished) {
+    return `/category/${categoryPage.slug}`;
+  }
+  
+  // Priority 2: Check if this is an attraction type interest
+  if (interest.type === 'attraction') {
+    return `/attraction/${interest.slug}`;
+  }
+  
+  // Priority 3: Default to interests page for categories
+  return `/interests/${interest.slug}`;
+};
 
   const linkUrl = getLink();
   const hasCategoryPage = categoryPage && categoryPage.isPublished;

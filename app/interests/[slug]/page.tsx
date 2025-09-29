@@ -4,8 +4,9 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import InterestLandingPage from '@/components/InterestLandingPage';
 
+// Types
 interface InterestPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 interface InterestData {
@@ -30,14 +31,8 @@ interface InterestData {
   };
 }
 
-// Helper function to get the base URL
-function getBaseUrl() {
-  if (typeof window !== 'undefined') {
-    // Browser environment
-    return window.location.origin;
-  }
-  
-  // Server environment
+// Helper function to get base URL
+function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_BASE_URL) {
     return process.env.NEXT_PUBLIC_BASE_URL;
   }
@@ -49,34 +44,28 @@ function getBaseUrl() {
   return 'http://localhost:3000';
 }
 
+// Fetch interest data
 async function getInterestData(slug: string): Promise<InterestData | null> {
   try {
-    console.log('Fetching interest data for slug:', slug);
-    
     const baseUrl = getBaseUrl();
     const url = `${baseUrl}/api/interests/${slug}`;
     
-    console.log('Fetching from URL:', url);
-    
     const res = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 3600 },
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    console.log('Response status:', res.status);
-
     if (!res.ok) {
-      console.error('Failed to fetch interest data:', res.status, res.statusText);
+      console.error('Failed to fetch interest data:', res.status);
       return null;
     }
 
     const data = await res.json();
-    console.log('Interest API response success:', !!data.success);
     
-    if (!data.success) {
-      console.error('API returned error:', data.error);
+    if (!data.success || !data.data) {
+      console.error('Invalid API response');
       return null;
     }
 
@@ -87,22 +76,39 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
   }
 }
 
-// Make generateStaticParams more robust
+// Generate static params
 export async function generateStaticParams() {
   try {
-    console.log('Generating static params for interests...');
+    const baseUrl = getBaseUrl();
+    const res = await fetch(`${baseUrl}/api/interests`, {
+      next: { revalidate: 3600 },
+    });
     
-    // Return empty array for now to use ISR instead of SSG
-    // This prevents build failures when API is not available during build
-    return [];
+    if (!res.ok) {
+      return [];
+    }
+    
+    const data = await res.json();
+    
+    if (!data.success || !Array.isArray(data.data)) {
+      return [];
+    }
+    
+    return data.data.map((interest: any) => ({
+      slug: interest.slug,
+    }));
   } catch (error) {
-    console.error('Error generating static params for interests:', error);
+    console.error('Error generating static params:', error);
     return [];
   }
 }
 
-export async function generateMetadata({ params }: InterestPageProps): Promise<Metadata> {
-  const interest = await getInterestData(params.slug);
+// Generate metadata
+export async function generateMetadata(
+  { params }: InterestPageProps
+): Promise<Metadata> {
+  const resolvedParams = await params;
+  const interest = await getInterestData(resolvedParams.slug);
 
   if (!interest) {
     return {
@@ -113,53 +119,29 @@ export async function generateMetadata({ params }: InterestPageProps): Promise<M
 
   return {
     title: `${interest.name} Tours in Egypt | Egypt Excursions Online`,
-    description: `Discover the best ${interest.name.toLowerCase()} tours and experiences in Egypt. ${interest.totalTours} amazing tours available. Book your perfect adventure today!`,
-    keywords: [
-      interest.name, 
-      'tours', 
-      'Egypt', 
-      'travel', 
-      'excursions',
-      'experiences',
-      'adventure',
-      'vacation',
-      'holiday'
-    ].join(', '),
+    description: `Discover the best ${interest.name.toLowerCase()} tours and experiences in Egypt. ${interest.totalTours} amazing tours available.`,
+    keywords: [interest.name, 'tours', 'Egypt', 'travel'].join(', '),
     openGraph: {
       title: `${interest.name} Tours in Egypt`,
-      description: `Discover the best ${interest.name.toLowerCase()} tours and experiences in Egypt.`,
+      description: `Discover the best ${interest.name.toLowerCase()} tours.`,
       images: [interest.heroImage],
       type: 'website',
-      url: `/interests/${params.slug}`,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${interest.name} Tours in Egypt`,
-      description: `Discover the best ${interest.name.toLowerCase()} tours and experiences in Egypt.`,
-      images: [interest.heroImage],
     },
     alternates: {
-      canonical: `/interests/${params.slug}`,
-    },
-    robots: {
-      index: true,
-      follow: true,
+      canonical: `/interests/${resolvedParams.slug}`,
     },
   };
 }
 
-// Make the page use ISR (Incremental Static Regeneration)
-export const revalidate = 3600; // Revalidate every hour
+// Revalidation
+export const revalidate = 3600;
 
-export default async function InterestPage({ params }: InterestPageProps) {
-  console.log('Interest page rendering with params:', params);
-  
+// Main page component
+export default async function Page(props: InterestPageProps) {
+  const params = await props.params;
   const interest = await getInterestData(params.slug);
 
-  console.log('Fetched interest data:', interest ? 'Success' : 'Failed');
-
   if (!interest) {
-    console.log('Interest not found, showing 404');
     notFound();
   }
 
