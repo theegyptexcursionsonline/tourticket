@@ -3,8 +3,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import Header2 from '@/components/Header2';
 import TourDetailClientPage from './TourDetailClientPage';
 import { ITour } from '@/lib/models/Tour';
 
@@ -85,7 +84,7 @@ export default async function TourDetailPage({ params }: PageProps) {
 
  return (
   <>
-    <Header startSolid />
+    <Header2 startSolid />
     <main className="min-h-screen bg-slate-50 pt-20">
       <TourDetailClientPage 
         tour={tour} 
@@ -93,7 +92,6 @@ export default async function TourDetailPage({ params }: PageProps) {
         initialReviews={tour.reviews || []}
       />
     </main>
-    <Footer />
   </>
 );
 }
