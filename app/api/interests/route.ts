@@ -1,3 +1,4 @@
+// app/api/interests/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
@@ -5,9 +6,9 @@ import Tour from '@/lib/models/Tour';
 import AttractionPage from '@/lib/models/AttractionPage';
 
 export async function GET() {
-  await dbConnect();
-
   try {
+    await dbConnect();
+
     console.log('Fetching interests with categories and attraction pages...');
     
     // Fetch all categories from the database
@@ -24,64 +25,98 @@ export async function GET() {
     // For each category, count the number of tours associated with it
     const categoriesWithCounts = await Promise.all(
       categories.map(async (category) => {
-        const tourCount = await Tour.countDocuments({ 
-          category: category._id,
-          isPublished: true 
-        });
-        console.log(`Category ${category.name}: ${tourCount} tours`);
-        return {
-          type: 'category',
-          name: category.name,
-          slug: category.slug,
-          products: tourCount,
-          _id: category._id
-        };
+        try {
+          const tourCount = await Tour.countDocuments({ 
+            category: category._id,
+            isPublished: true 
+          });
+          console.log(`Category ${category.name}: ${tourCount} tours`);
+          return {
+            type: 'category',
+            name: category.name,
+            slug: category.slug,
+            products: tourCount,
+            _id: category._id
+          };
+        } catch (error) {
+          console.error(`Error counting tours for category ${category.name}:`, error);
+          return {
+            type: 'category',
+            name: category.name,
+            slug: category.slug,
+            products: 0,
+            _id: category._id
+          };
+        }
       })
     );
 
-    // For each attraction page, count matching tours
+    // For each attraction page, count matching tours with simplified logic
     const attractionsWithCounts = await Promise.all(
       attractionPages.map(async (page) => {
-        let tourCount = 0;
-        
-        // Count tours that match this attraction
-        const searchTerms = [
-          page.title,
-          ...(page.keywords || []),
-          ...(page.highlights || [])
-        ].filter(Boolean);
-
-        if (searchTerms.length > 0) {
+        try {
+          let tourCount = 0;
+          
+          // Build a simpler search query
           const searchQueries = [];
-          searchQueries.push({ title: { $regex: new RegExp(page.title, 'i') } });
-          searchQueries.push({ description: { $regex: new RegExp(page.title, 'i') } });
           
-          if (page.keywords && page.keywords.length > 0) {
-            searchQueries.push({ tags: { $in: page.keywords } });
-            searchQueries.push({ highlights: { $elemMatch: { $regex: new RegExp(page.keywords.join('|'), 'i') } } });
+          // Search by title (most important)
+          if (page.title) {
+            searchQueries.push({ 
+              title: { $regex: page.title, $options: 'i' } 
+            });
           }
           
-          if (page.highlights && page.highlights.length > 0) {
-            searchQueries.push({ highlights: { $elemMatch: { $regex: new RegExp(page.highlights.join('|'), 'i') } } });
+          // Search by keywords if they exist
+          if (page.keywords && Array.isArray(page.keywords) && page.keywords.length > 0) {
+            // Filter out empty keywords
+            const validKeywords = page.keywords.filter(k => k && k.trim().length > 0);
+            
+            if (validKeywords.length > 0) {
+              // Search in tags array
+              searchQueries.push({ 
+                tags: { 
+                  $in: validKeywords.map(k => new RegExp(k, 'i')) 
+                } 
+              });
+              
+              // Search in title with keywords
+              validKeywords.forEach(keyword => {
+                searchQueries.push({ 
+                  title: { $regex: keyword, $options: 'i' } 
+                });
+              });
+            }
+          }
+          
+          // Only search if we have valid queries
+          if (searchQueries.length > 0) {
+            tourCount = await Tour.countDocuments({
+              isPublished: true,
+              $or: searchQueries
+            });
           }
 
-          tourCount = await Tour.countDocuments({
-            $and: [
-              { isPublished: true },
-              { $or: searchQueries }
-            ]
-          });
+          console.log(`Attraction ${page.title}: ${tourCount} tours`);
+          return {
+            type: 'attraction',
+            name: page.title,
+            slug: page.slug,
+            products: tourCount,
+            _id: page._id,
+            featured: page.featured
+          };
+        } catch (error) {
+          console.error(`Error counting tours for attraction ${page.title}:`, error);
+          return {
+            type: 'attraction',
+            name: page.title,
+            slug: page.slug,
+            products: 0,
+            _id: page._id,
+            featured: page.featured
+          };
         }
-
-        console.log(`Attraction ${page.title}: ${tourCount} tours`);
-        return {
-          type: 'attraction',
-          name: page.title,
-          slug: page.slug,
-          products: tourCount,
-          _id: page._id,
-          featured: page.featured
-        };
       })
     );
 
@@ -108,7 +143,11 @@ export async function GET() {
   } catch (error) {
     console.error('Failed to fetch interests:', error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch interests." },
+      { 
+        success: false, 
+        error: "Failed to fetch interests.",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

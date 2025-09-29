@@ -1,3 +1,4 @@
+// app/api/interests/[slug]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
@@ -61,66 +62,79 @@ export async function GET(
       });
     } else {
       // If no exact category match, search by keywords in tours
-      const searchTerms = interestName.split(' ');
-      const searchRegex = new RegExp(searchTerms.join('|'), 'i');
+      const searchTerms = interestName.split(' ').filter(term => term.length > 2);
+      
+      if (searchTerms.length > 0) {
+        const searchQueries = [];
+        
+        // Search in title
+        searchTerms.forEach(term => {
+          searchQueries.push({ 
+            title: { $regex: term, $options: 'i' } 
+          });
+        });
+        
+        // Search in tags
+        searchQueries.push({ 
+          tags: { 
+            $in: searchTerms.map(term => new RegExp(term, 'i')) 
+          } 
+        });
 
-      tours = await Tour.find({
-        $and: [
-          { isPublished: true },
-          {
-            $or: [
-              { title: { $regex: searchRegex } },
-              { description: { $regex: searchRegex } },
-              { tags: { $in: searchTerms.map(term => new RegExp(term, 'i')) } },
-              { highlights: { $elemMatch: { $regex: searchRegex } } }
-            ]
-          }
-        ]
-      })
-      .populate({
-        path: 'destination',
-        model: Destination,
-        select: 'name slug country image description'
-      })
-      .populate({
-        path: 'category',
-        model: Category,
-        select: 'name slug'
-      })
-      .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-      .limit(50)
-      .lean();
+        tours = await Tour.find({
+          isPublished: true,
+          $or: searchQueries
+        })
+        .populate({
+          path: 'destination',
+          model: Destination,
+          select: 'name slug country image description'
+        })
+        .populate({
+          path: 'category',
+          model: Category,
+          select: 'name slug'
+        })
+        .sort({ isFeatured: -1, rating: -1, bookings: -1 })
+        .limit(50)
+        .lean();
 
-      totalTours = tours.length;
+        totalTours = tours.length;
+      }
     }
 
     console.log('Found tours:', tours.length);
 
     // Fetch reviews for these tours
     const tourIds = tours.map(tour => tour._id);
-    const reviews = await Review.find({
-      tour: { $in: tourIds }
-    })
-    .populate({
-      path: 'user',
-      model: User,
-      select: 'firstName lastName picture'
-    })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean();
+    let reviews = [];
+    let reviewStats = [];
 
-    // Calculate review stats
-    const reviewStats = await Review.aggregate([
-      { $match: { tour: { $in: tourIds } } },
-      { 
-        $group: { 
-          _id: '$tour', 
-          count: { $sum: 1 }, 
-          avgRating: { $avg: '$rating' } 
-        } 
-      }
-    ]);
+    if (tourIds.length > 0) {
+      reviews = await Review.find({
+        tour: { $in: tourIds }
+      })
+      .populate({
+        path: 'user',
+        model: User,
+        select: 'firstName lastName picture'
+      })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+      // Calculate review stats
+      reviewStats = await Review.aggregate([
+        { $match: { tour: { $in: tourIds } } },
+        { 
+          $group: { 
+            _id: '$tour', 
+            count: { $sum: 1 }, 
+            avgRating: { $avg: '$rating' } 
+          } 
+        }
+      ]);
+    }
 
     const reviewStatsMap = reviewStats.reduce((acc, item) => {
       acc[item._id.toString()] = {
@@ -142,15 +156,24 @@ export async function GET(
       _id: { $ne: category?._id }
     }).limit(6).lean();
 
+    // Transform reviews
+    const transformedReviews = reviews.map(review => ({
+      ...review,
+      userName: review.user 
+        ? `${review.user.firstName} ${review.user.lastName}`.trim()
+        : review.userName || 'Anonymous',
+      userAvatar: review.user?.picture || null
+    }));
+
     const interestData = {
       name: interestName,
       slug: slug,
-      description: `Discover amazing ${interestName.toLowerCase()} experiences in Egypt`,
+      description: category?.description || `Discover amazing ${interestName.toLowerCase()} experiences in Egypt`,
       longDescription: `Explore our curated collection of ${interestName.toLowerCase()} tours and experiences. From budget-friendly options to luxury adventures, find the perfect way to experience Egypt's incredible ${interestName.toLowerCase()}.`,
       category: category,
       tours: tours,
       totalTours: totalTours,
-      reviews: reviews.slice(0, 20),
+      reviews: transformedReviews.slice(0, 20),
       relatedCategories: relatedCategories,
       heroImage: tours.length > 0 ? tours[0].image : '/images/default-hero.jpg',
       highlights: [
@@ -168,7 +191,7 @@ export async function GET(
       ],
       stats: {
         totalTours: totalTours,
-        totalReviews: reviews.length,
+        totalReviews: transformedReviews.length,
         averageRating: tours.length > 0 
           ? (tours.reduce((acc, tour) => acc + (tour.rating || 0), 0) / tours.length).toFixed(1)
           : '4.8',
@@ -184,7 +207,8 @@ export async function GET(
     console.error('Error fetching interest data:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch interest data'
+      error: 'Failed to fetch interest data',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
