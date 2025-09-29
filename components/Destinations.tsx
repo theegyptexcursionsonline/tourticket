@@ -1,5 +1,6 @@
 // components/Destinations.tsx
 'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,103 +14,78 @@ interface DestinationWithTourCount extends Destination {
 export default function Destinations() {
   const [destinations, setDestinations] = useState<DestinationWithTourCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDestinationsWithTourCounts = async () => {
+    const fetchDestinations = async () => {
       try {
-        // Fetch destinations
-        const destResponse = await fetch('/api/admin/tours/destinations');
-        if (!destResponse.ok) {
-          throw new Error(`Failed to fetch destinations: ${destResponse.statusText}`);
-        }
+        setIsLoading(true);
+        setError(null);
 
-        const destData = await destResponse.json();
-        if (!destData.success) {
-          console.error('API returned an error:', destData.error);
-          return;
-        }
-
-        // Fetch tours to calculate counts
-        const toursResponse = await fetch('/api/admin/tours');
-        let toursData = { success: true, data: [] };
+        // Fetch from new cached API endpoint
+        const response = await fetch('/api/destinations');
         
-        if (toursResponse.ok) {
-          toursData = await toursResponse.json();
+        if (!response.ok) {
+          throw new Error(`Failed to fetch destinations: ${response.statusText}`);
         }
 
-        // Calculate tour counts for each destination
-        const destinationsWithCounts = destData.data.map((destination: Destination) => {
-          let tourCount = 0;
-          
-          if (toursData.success && toursData.data) {
-            // Count real tours for this destination
-            tourCount = toursData.data.filter((tour: any) => 
-              tour.destination === destination._id || 
-              (tour.destination && tour.destination._id === destination._id)
-            ).length;
-          }
-          
-          // If no real tours, show mock count (3 sample tours per destination)
-          if (tourCount === 0) {
-            tourCount = 3;
-          }
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch destinations');
+        }
 
-          return {
-            ...destination,
-            tourCount
-          };
-        });
-
-        setDestinations(destinationsWithCounts);
+        setDestinations(data.data || []);
       } catch (error) {
         console.error('Failed to fetch destinations:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
         
-        // Fallback: show some mock destinations if API fails
-        const mockDestinations = [
+        // Fallback: show mock destinations
+        const mockDestinations: DestinationWithTourCount[] = [
           {
             _id: 'mock-1',
-            name: 'Bali',
-            slug: 'bali',
-            country: 'Indonesia',
-            image: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=400&h=400&fit=crop',
-            description: 'Tropical paradise with beautiful beaches and rich culture',
-            tourCount: 3
+            name: 'Cairo',
+            slug: 'cairo',
+            country: 'Egypt',
+            image: 'https://images.unsplash.com/photo-1539768942893-daf53e448371?w=400&h=400&fit=crop',
+            description: 'Ancient capital with pyramids and rich history',
+            tourCount: 15
           },
           {
             _id: 'mock-2',
-            name: 'Dubai',
-            slug: 'dubai', 
-            country: 'UAE',
-            image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=400&fit=crop',
-            description: 'Modern city with luxury shopping and stunning architecture',
-            tourCount: 3
+            name: 'Luxor',
+            slug: 'luxor',
+            country: 'Egypt',
+            image: 'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=400&h=400&fit=crop',
+            description: 'Valley of the Kings and ancient temples',
+            tourCount: 12
           },
           {
             _id: 'mock-3',
-            name: 'New York City',
-            slug: 'new-york-city',
-            country: 'USA', 
-            image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=400&fit=crop',
-            description: 'The city that never sleeps with iconic landmarks',
-            tourCount: 3
+            name: 'Alexandria',
+            slug: 'alexandria',
+            country: 'Egypt',
+            image: 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=400&h=400&fit=crop',
+            description: 'Mediterranean coastal city with ancient library',
+            tourCount: 8
           },
           {
             _id: 'mock-4',
-            name: 'Paris',
-            slug: 'paris',
-            country: 'France',
-            image: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=400&fit=crop',
-            description: 'City of light with romantic atmosphere and rich history',
-            tourCount: 3
+            name: 'Aswan',
+            slug: 'aswan',
+            country: 'Egypt',
+            image: 'https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=400&h=400&fit=crop',
+            description: 'Nile river city with beautiful temples',
+            tourCount: 10
           },
           {
             _id: 'mock-5',
-            name: 'Rome',
-            slug: 'rome',
-            country: 'Italy',
-            image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=400&fit=crop',
-            description: 'Eternal city with ancient history and stunning architecture',
-            tourCount: 3
+            name: 'Hurghada',
+            slug: 'hurghada',
+            country: 'Egypt',
+            image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=400&fit=crop',
+            description: 'Red Sea resort with amazing diving',
+            tourCount: 7
           }
         ];
         setDestinations(mockDestinations);
@@ -118,7 +94,7 @@ export default function Destinations() {
       }
     };
 
-    fetchDestinationsWithTourCounts();
+    fetchDestinations();
   }, []);
 
   if (isLoading) {
@@ -135,6 +111,21 @@ export default function Destinations() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error && destinations.length === 0) {
+    return (
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-extrabold text-slate-800 mb-4">
+            Where are you going?
+          </h2>
+          <p className="text-slate-600 mb-6">
+            Unable to load destinations. Please try again later.
+          </p>
         </div>
       </section>
     );

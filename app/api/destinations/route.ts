@@ -1,39 +1,69 @@
-// app/api/destinations/route.ts (PUBLIC API)
+// app/api/destinations/route.ts
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
-import { NextResponse } from 'next/server';
+import Tour from '@/lib/models/Tour';
+import { getCachedData, cacheConfig, cacheKeys } from '@/lib/redis';
 
 export async function GET() {
-  await dbConnect();
   try {
-    // Only return public fields for customer-facing API
-    const destinations = await Destination.find(
-      { isActive: true }, // Only active destinations
-      { 
-        name: 1, 
-        slug: 1, 
-        country: 1, 
-        image: 1, 
-        description: 1,
-        _id: 1 
-      }
-    ).sort({ name: 1 });
-    
-    const response = NextResponse.json({ 
-      success: true, 
-      data: destinations 
-    });
-    
-    // Aggressive caching for public API
-    response.headers.set(
-      'Cache-Control', 
-      'public, max-age=3600, stale-while-revalidate=86400'
+    await dbConnect();
+
+    const destinationsWithCounts = await getCachedData(
+      cacheKeys.destinations.withCounts(),
+      async () => {
+        // Fetch all published destinations
+        const destinations = await Destination.find({ isPublished: true })
+          .select('_id name slug country image description featured tourCount')
+          .sort({ featured: -1, tourCount: -1, name: 1 })
+          .lean();
+
+        // Get all published tours
+        const tours = await Tour.find({ isPublished: true })
+          .select('destination')
+          .lean();
+
+        // Count tours per destination
+        const tourCounts: Record<string, number> = {};
+        tours.forEach(tour => {
+          const destId = tour.destination?.toString();
+          if (destId) {
+            tourCounts[destId] = (tourCounts[destId] || 0) + 1;
+          }
+        });
+
+        // Add tour counts to destinations
+        const destinationsWithCounts = destinations.map(dest => ({
+          ...dest,
+          tourCount: tourCounts[dest._id.toString()] || 0,
+        }));
+
+        // Filter out destinations with no tours and sort
+        return destinationsWithCounts
+          .filter(dest => dest.tourCount > 0)
+          .sort((a, b) => {
+            // Featured first
+            if (a.featured && !b.featured) return -1;
+            if (!a.featured && b.featured) return 1;
+            // Then by tour count
+            return b.tourCount - a.tourCount;
+          });
+      },
+      cacheConfig.LONG // Cache for 15 minutes
     );
-    
-    return response;
+
+    return NextResponse.json({
+      success: true,
+      data: destinationsWithCounts,
+    });
   } catch (error) {
+    console.error('Error fetching destinations:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch destinations' }, 
+      {
+        success: false,
+        error: 'Failed to fetch destinations',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }
