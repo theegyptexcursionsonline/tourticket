@@ -1,4 +1,3 @@
-// app/destinations/[slug]/DestinationPageClient.tsx
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
@@ -28,7 +27,7 @@ interface DestinationPageClientProps {
 }
 
 // --- Types for Hero ---
-type Tag = {
+type TagItem = { // Renamed from 'Tag' to avoid conflict with 'lucide-react' Tag
   id: string;
   name: string;
   position: React.CSSProperties;
@@ -83,9 +82,10 @@ const useDynamicTags = (
   mobilePositions: React.CSSProperties[], 
   interval = 5000
 ) => {
-  const [displayedTags, setDisplayedTags] = useState<Tag[]>([]);
+  const [displayedTags, setDisplayedTags] = useState<TagItem[]>([]);
   const isMobile = useIsMobile();
-  
+  const intervalRef = useRef<number | null>(null);
+
   const generateRandomTags = useCallback(() => {
     const positions = isMobile ? mobilePositions : desktopPositions;
     const tagCount = positions.length;
@@ -93,6 +93,7 @@ const useDynamicTags = (
     const shuffledPositions = [...positions].sort(() => 0.5 - Math.random());
     const highlightIndex = Math.floor(Math.random() * tagCount);
     
+    // Use Date.now() for unique keys to prevent React from reusing old DOM nodes.
     const newTags = shuffledTags.slice(0, tagCount).map((name, index) => ({
       id: `${name}-${index}-${Date.now()}`,
       name,
@@ -104,9 +105,24 @@ const useDynamicTags = (
   }, [allTags, desktopPositions, mobilePositions, isMobile]);
 
   useEffect(() => {
+    // Initial generation of tags
     generateRandomTags();
+
+    // Clear any existing interval to prevent duplicates
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    
+    // Set up a new interval
     const timer = setInterval(generateRandomTags, interval);
-    return () => clearInterval(timer);
+    intervalRef.current = timer;
+    
+    // Cleanup on component unmount or dependencies change
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [generateRandomTags, interval]);
   
   return displayedTags;
@@ -114,40 +130,63 @@ const useDynamicTags = (
 
 const useSlidingText = (texts: string[], interval = 3000) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const intervalRef = useRef<number | null>(null);
   
   useEffect(() => {
     if (texts.length === 0) return;
+    
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    
+    // Set up new interval
     const timer = setInterval(() => 
       setCurrentIndex((prev) => (prev + 1) % texts.length), 
       interval
     );
-    return () => clearInterval(timer);
+    intervalRef.current = timer;
+    
+    // Cleanup on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [texts.length, interval]);
   
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
-// --- IMPROVED Floating Tag Component (REPLACE) ---
-const FloatingTag = ({ tag }: { tag: Tag }) => (
-  <button
-    style={{
-      ...tag.position,
-      willChange: 'transform',
-      backfaceVisibility: 'hidden',
-    }}
-    onClick={() => {
-      window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
-    }}
-    aria-label={`Search for ${tag.name}`}
-    className={`absolute px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full sm:rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in whitespace-nowrap ${
-      tag.highlight 
-        ? "bg-red-500 text-white scale-105 sm:scale-110 -rotate-2 sm:-rotate-3 hover:bg-red-600 shadow-red-500/50" 
-        : "bg-white/95 text-slate-800 hover:bg-white backdrop-blur-sm hover:shadow-xl"
-    }`}
-  >
-    {tag.name}
-  </button>
-);
+/* FloatingTag - REPLACEMENT */
+const FloatingTag = ({ tag }: { tag: TagItem }) => {
+  // Decide translate centering when left/right present:
+  const shouldCenterX = !!(tag.position as any).left || !!(tag.position as any).right;
+  const translate = shouldCenterX ? 'translate(-50%, -50%)' : 'translate(0, -50%)';
+
+  return (
+    <button
+      style={{
+        ...tag.position,
+        transform: translate,
+        willChange: 'transform, opacity',
+        backfaceVisibility: 'hidden',
+      }}
+      onClick={() => {
+        window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
+      }}
+      aria-label={`Search for ${tag.name}`}
+      className={`absolute px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full sm:rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in whitespace-nowrap ${
+        tag.highlight
+          ? "bg-red-500 text-white scale-105 sm:scale-110 -rotate-2 sm:-rotate-3 hover:bg-red-600 shadow-red-500/50"
+          : "bg-white/95 text-slate-800 hover:bg-white backdrop-blur-sm hover:shadow-xl"
+      }`}
+    >
+      {tag.name}
+    </button>
+  );
+};
+
 
 // --- IMPROVED Hero Search Bar (REPLACE) ---
 const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; suggestion: string }) => {
@@ -307,12 +346,10 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
           autoplay={true}
         />
 
-        {/* Overlay */}
-        <div 
-          className="absolute inset-0 z-1"
-          style={{
-            background: 'linear-gradient(to br, rgba(0,0,0,0.6), rgba(0,0,0,0.4))'
-          }}
+        {/* Overlay — corrected z-index and pointer-events */}
+        <div
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom right, rgba(0,0,0,0.6), rgba(0,0,0,0.4))' }}
         />
 
         {/* Content */}
