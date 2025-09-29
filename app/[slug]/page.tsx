@@ -4,6 +4,7 @@ import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
+import Footer from '@/components/Footer'; // 1. Import the Footer
 import TourDetailClientPage from './TourDetailClientPage';
 import { ITour } from '@/lib/models/Tour';
 
@@ -92,6 +93,7 @@ export default async function TourDetailPage({ params }: PageProps) {
         initialReviews={tour.reviews || []}
       />
     </main>
+    <Footer /> {/* 2. Add the Footer component here */}
   </>
 );
 }

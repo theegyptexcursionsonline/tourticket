@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 
 // Components
-import Header2 from '@/components/Header2';
 import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
 import ReviewList from '@/components/reviews/ReviewList';
@@ -1001,8 +1000,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
   return (
     <>
-      <Header2 />
-
       <AnimatePresence>
         {isLightboxOpen && (
           <Lightbox
