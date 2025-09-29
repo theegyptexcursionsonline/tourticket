@@ -2,12 +2,14 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, ImageIcon } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, Image as ImageIcon } from 'lucide-react';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import Link from 'next/link';
 import Image from 'next/image';
+
+type MaybeCategory = { slug?: string } | string | null | undefined;
 
 // --- Safe Image Component ---
 const SafeImage = ({ 
@@ -22,13 +24,11 @@ const SafeImage = ({
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Reset error state when src changes
   useEffect(() => {
     setImageError(false);
     setIsLoading(true);
   }, [src]);
 
-  // Check if src is valid
   if (!src || src.trim() === '' || imageError) {
     return (
       <div className={`bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center ${className}`}>
@@ -82,19 +82,16 @@ const DayTripCard = ({
           className="w-full h-full rounded-t-xl"
         />
         
-        {/* Discount Badge */}
-        {trip.tags?.find(tag => tag.includes('%')) && (
+        {trip.tags?.find((tag: any) => typeof tag === 'string' && tag.includes('%')) && (
           <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10">
-            {trip.tags.find(tag => tag.includes('%'))}
+            {trip.tags.find((tag: any) => typeof tag === 'string' && tag.includes('%'))}
           </div>
         )}
         
-        {/* Heart Button */}
         <button 
           className="absolute top-3 right-3 bg-white/80 p-2 rounded-full text-slate-600 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-white z-10"
           onClick={(e) => {
             e.preventDefault();
-            // Add to favorites logic here
             console.log('Added to favorites:', trip.title);
           }}
           aria-label="Add to favorites"
@@ -102,7 +99,6 @@ const DayTripCard = ({
           <Heart size={20} />
         </button>
         
-        {/* Add to Cart Button */}
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -128,7 +124,7 @@ const DayTripCard = ({
           <div className="flex items-center text-yellow-500">
             <Star size={16} fill="currentColor" />
             <span className="font-bold text-slate-800 ml-1">
-              {trip.rating || '0.0'}
+              {typeof trip.rating === 'number' ? trip.rating.toFixed(1) : trip.rating || '0.0'}
             </span>
           </div>
           <span className="text-slate-500 ml-2">
@@ -161,6 +157,16 @@ export default function DayTripsSection() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
+    let aborted = false;
+    const controller = new AbortController();
+
+    const parseCategorySlug = (category: MaybeCategory) => {
+      if (!category) return null;
+      if (typeof category === 'string') return category;
+      if (typeof category === 'object' && 'slug' in category) return (category as any).slug;
+      return null;
+    };
+
     const fetchTours = async () => {
       setIsLoading(true);
       setFetchError(null);
@@ -171,80 +177,107 @@ export default function DayTripsSection() {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const response = await fetch('/api/admin/tours', {
-          headers,
-        });
+        const url = '/api/admin/tours';
+        console.info('[DayTrips] fetching', url);
+        const response = await fetch(url, { headers, signal: controller.signal });
 
         const bodyText = await response.text();
+
+        // Always log raw body for debugging
+        console.debug('[DayTrips] raw response body:', bodyText);
 
         if (!response.ok) {
           let parsedBody: any = bodyText;
           try { parsedBody = JSON.parse(bodyText); } catch (e) { /* keep text */ }
-
           console.error('API call failed', {
-            url: '/api/admin/tours',
+            url,
             status: response.status,
             statusText: response.statusText,
             body: parsedBody,
           });
-
           const shortBody = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody).slice(0, 300);
           setFetchError(`Server returned ${response.status} ${response.statusText}: ${shortBody}`);
-          throw new Error(`API ${response.status} ${response.statusText} - ${shortBody}`);
-        }
-
-        const data = bodyText ? JSON.parse(bodyText) : null;
-
-        if (!data) {
-          setFetchError('API returned no data.');
-          console.error('API returned empty response body for /api/admin/tours');
           setTours([]);
           return;
         }
 
-        if (data.success) {
-          // Filter and validate tours
-          const dayTrips = (data.data || [])
-            .filter((t: Tour) => {
-              // Check if the tour has a populated category with slug 'day-trips'
-              return t.category && (t.category as any).slug === 'day-trips';
+        const data = bodyText ? JSON.parse(bodyText) : null;
+        if (!data) {
+          setFetchError('API returned no data.');
+          console.error('API returned empty response body for', url);
+          setTours([]);
+          return;
+        }
+
+        // Expecting { success: true, data: [...] } style response
+        if (data.success && Array.isArray(data.data)) {
+          // Filter for day-trips, but be tolerant:
+          const dayTrips = (data.data as any[])
+            .filter((t) => {
+              // If there's a category slug or category string, accept it
+              const slug = parseCategorySlug(t.category);
+              // Accept if slug === 'day-trips' OR if a categoryId / category field indicates day trips
+              return slug === 'day-trips' || slug === 'day_trips' || slug === 'daytrips' || slug === 'day trips' || (!slug && (t.tags || []).some((tg: any) => String(tg).toLowerCase().includes('day')));
             })
-            .map((tour: Tour) => ({
+            .map((tour) => ({
               ...tour,
-              // Ensure image is either a valid string or null
-              image: tour.image && tour.image.trim() !== '' ? tour.image : null,
-              // Ensure title exists
+              image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
               title: tour.title || 'Untitled Tour',
-              // Ensure prices are numbers
               originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
-              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : tour.originalPrice || 0,
-              // Ensure rating is a number
+              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
               rating: typeof tour.rating === 'number' ? tour.rating : 0,
-              // Ensure bookings is a number
               bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
             }));
-          
-          setTours(dayTrips);
+
+          if (!aborted) {
+            setTours(dayTrips);
+            setFetchError(dayTrips.length === 0 ? 'No day trips matched the category filter.' : null);
+          }
+        } else if (Array.isArray(data)) {
+          // Some APIs return raw array
+          const dayTrips = data
+            .filter((t: any) => parseCategorySlug(t.category) === 'day-trips' || true) // be permissive
+            .map((tour: any) => ({
+              ...tour,
+              image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
+              title: tour.title || 'Untitled Tour',
+              originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
+              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
+              rating: typeof tour.rating === 'number' ? tour.rating : 0,
+              bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
+            }));
+
+          if (!aborted) {
+            setTours(dayTrips);
+            setFetchError(dayTrips.length === 0 ? 'No tours returned from API.' : null);
+          }
         } else {
-          setFetchError(data.error ? String(data.error) : 'API returned success:false');
-          console.error('API returned success:false for /api/admin/tours', data);
+          const errMsg = data?.error || 'API returned unexpected shape.';
+          console.error('[DayTrips] unexpected API shape', data);
+          setFetchError(String(errMsg));
           setTours([]);
         }
       } catch (error: any) {
-        console.error('Failed to fetch tours:', error);
-        if (!fetchError) {
-          setFetchError(error?.message ? String(error.message) : 'Unknown error while fetching tours.');
+        if (error.name === 'AbortError') {
+          console.warn('[DayTrips] fetch aborted');
+          return;
         }
+        console.error('Failed to fetch tours:', error);
+        setFetchError(error?.message ? String(error.message) : 'Unknown error while fetching tours.');
+        setTours([]);
       } finally {
-        setIsLoading(false);
+        if (!aborted) setIsLoading(false);
       }
     };
 
     fetchTours();
+
+    return () => {
+      aborted = true;
+      controller.abort();
+    };
   }, []);
 
   const handleAddToCartClick = (tour: Tour) => {
@@ -259,7 +292,7 @@ export default function DayTripsSection() {
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainer.current) {
-      const scrollAmount = direction === 'left' ? -294 : 294; // Card width (270) + gap (24)
+      const scrollAmount = direction === 'left' ? -294 : 294;
       scrollContainer.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
@@ -267,7 +300,6 @@ export default function DayTripsSection() {
   const retryFetch = async () => {
     setIsLoading(true);
     setFetchError(null);
-    
     try {
       const response = await fetch('/api/admin/tours');
       const text = await response.text();
@@ -275,31 +307,29 @@ export default function DayTripsSection() {
         let parsed = text;
         try { parsed = JSON.parse(text); } catch (e) {}
         setFetchError(`Server returned ${response.status} ${response.statusText}: ${typeof parsed === 'string' ? parsed : JSON.stringify(parsed).slice(0, 300)}`);
+        setTours([]);
       } else {
         const data = text ? JSON.parse(text) : null;
         if (data?.success) {
-          const dayTrips = (data.data || [])
-            .filter((t: Tour) => {
-              return t.category && (t.category as any).slug === 'day-trips';
-            })
-            .map((tour: Tour) => ({
-              ...tour,
-              image: tour.image && tour.image.trim() !== '' ? tour.image : null,
-              title: tour.title || 'Untitled Tour',
-              originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
-              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : tour.originalPrice || 0,
-              rating: typeof tour.rating === 'number' ? tour.rating : 0,
-              bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-            }));
-          
+          const dayTrips = (data.data || []).map((tour: any) => ({
+            ...tour,
+            image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
+            title: tour.title || 'Untitled Tour',
+            originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
+            discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
+            rating: typeof tour.rating === 'number' ? tour.rating : 0,
+            bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
+          }));
           setTours(dayTrips);
-          setFetchError(null);
+          setFetchError(dayTrips.length === 0 ? 'No day trips matched the category filter.' : null);
         } else {
           setFetchError(data?.error ? String(data.error) : 'API returned success:false');
+          setTours([]);
         }
       }
     } catch (err: any) {
       setFetchError(err?.message ? String(err.message) : 'Unknown error while retrying.');
+      setTours([]);
     } finally {
       setIsLoading(false);
     }
@@ -376,7 +406,7 @@ export default function DayTripsSection() {
     );
   }
 
-  // If no day trips found, render nothing
+  // If no day trips found, render nothing (or you can render a friendly message)
   if (!isLoading && tours.length === 0) {
     return null;
   }
@@ -454,13 +484,9 @@ export default function DayTripsSection() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        
-        /* Hide scrollbar for Chrome, Safari and Opera */
         .overflow-x-auto::-webkit-scrollbar {
           display: none;
         }
-        
-        /* Hide scrollbar for IE, Edge and Firefox */
         .overflow-x-auto {
           -ms-overflow-style: none;
           scrollbar-width: none;
