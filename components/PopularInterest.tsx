@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, AlertCircle, Star, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, AlertCircle, Star, Users } from 'lucide-react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Autoplay } from 'swiper/modules';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/navigation';
 
 // --- TYPES & INTERFACES ---
 interface Interest {
@@ -19,7 +25,7 @@ interface Interest {
 // --- IMAGE MAPPING ---
 const getInterestImage = (name: string): string => {
   const lowerName = name.toLowerCase();
-  
+
   const imageMap: { [key: string]: string } = {
     'fun': 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&h=400&fit=crop',
     'family': 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600&h=400&fit=crop',
@@ -43,7 +49,6 @@ const getInterestImage = (name: string): string => {
 };
 
 // --- SUB-COMPONENTS ---
-
 const InterestCard = ({ interest }: { interest: Interest }) => {
   const linkUrl = interest.type === 'attraction' ? `/attraction/${interest.slug}` : `/interests/${interest.slug}`;
   const imageUrl = interest.image || getInterestImage(interest.name);
@@ -63,10 +68,10 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
           className="object-cover transition-transform duration-700 group-hover:scale-110"
           sizes="320px"
         />
-        
+
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        
+
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
 
@@ -96,129 +101,10 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
   );
 };
 
-const ScrollableRow = ({ 
-  interests, 
-  rowIndex 
-}: { 
-  interests: Interest[]; 
-  rowIndex: number;
-}) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const checkScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    checkScroll();
-    const scrollElement = scrollRef.current;
-    if (scrollElement) {
-      scrollElement.addEventListener('scroll', checkScroll);
-      window.addEventListener('resize', checkScroll);
-      return () => {
-        scrollElement.removeEventListener('scroll', checkScroll);
-        window.removeEventListener('resize', checkScroll);
-      };
-    }
-  }, [interests]);
-
-  // Auto-scroll functionality
-  useEffect(() => {
-    if (isHovered) return;
-
-    const scrollElement = scrollRef.current;
-    if (!scrollElement) return;
-
-    const scrollInterval = setInterval(() => {
-      if (scrollElement.scrollLeft >= scrollElement.scrollWidth - scrollElement.clientWidth - 10) {
-        scrollElement.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        scrollElement.scrollBy({ left: 1, behavior: 'auto' });
-      }
-    }, 30);
-
-    return () => clearInterval(scrollInterval);
-  }, [isHovered]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = 340; // Card width + gap
-      const newScrollLeft = direction === 'left' 
-        ? scrollRef.current.scrollLeft - scrollAmount
-        : scrollRef.current.scrollLeft + scrollAmount;
-      
-      scrollRef.current.scrollTo({
-        left: newScrollLeft,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  return (
-    <div 
-      className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Left Arrow */}
-      {canScrollLeft && (
-        <button
-          onClick={() => scroll('left')}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white/95 hover:bg-white text-slate-800 p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 backdrop-blur-sm border border-slate-200"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft size={24} />
-        </button>
-      )}
-
-      {/* Right Arrow */}
-      {canScrollRight && (
-        <button
-          onClick={() => scroll('right')}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white/95 hover:bg-white text-slate-800 p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 backdrop-blur-sm border border-slate-200"
-          aria-label="Scroll right"
-        >
-          <ChevronRight size={24} />
-        </button>
-      )}
-
-      {/* Scrollable Container */}
-      <div
-        ref={scrollRef}
-        className="flex gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-4 py-2"
-        style={{
-          scrollSnapType: 'x mandatory',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {interests.map((interest) => (
-          <div 
-            key={`${rowIndex}-${interest._id}`} 
-            style={{ scrollSnapAlign: 'start' }}
-          >
-            <InterestCard interest={interest} />
-          </div>
-        ))}
-      </div>
-
-      {/* Gradient Masks */}
-      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-50 to-transparent pointer-events-none z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none z-10" />
-    </div>
-  );
-};
-
 const LoadingSkeleton = () => (
   <div className="space-y-8">
     {[0, 1].map((rowIndex) => (
-      <div key={rowIndex} className="flex gap-5 overflow-hidden px-4">
+      <div key={rowIndex} className="flex gap-5 px-4 overflow-hidden">
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
@@ -238,15 +124,15 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-const InfoState = ({ 
-  icon, 
-  title, 
-  message, 
-  children 
-}: { 
-  icon: React.ReactNode; 
-  title: string; 
-  message: string; 
+const InfoState = ({
+  icon,
+  title,
+  message,
+  children
+}: {
+  icon: React.ReactNode;
+  title: string;
+  message: string;
   children?: React.ReactNode;
 }) => (
   <div className="text-center py-16">
@@ -260,7 +146,6 @@ const InfoState = ({
 );
 
 // --- MAIN COMPONENT ---
-
 export default function PopularInterests() {
   const [interests, setInterests] = useState<Interest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -300,26 +185,26 @@ export default function PopularInterests() {
 
   const renderContent = () => {
     if (loading) return <LoadingSkeleton />;
-    
+
     if (error) {
       return (
-        <InfoState 
-          icon={<AlertCircle size={32} />} 
-          title="Error Loading Content" 
+        <InfoState
+          icon={<AlertCircle size={32} />}
+          title="Error Loading Content"
           message={error}
         />
       );
     }
-    
+
     if (interests.length === 0) {
       return (
-        <InfoState 
-          icon={<Star size={32} />} 
-          title="No Experiences Found" 
+        <InfoState
+          icon={<Star size={32} />}
+          title="No Experiences Found"
           message="We're busy crafting new adventures. Please check back soon for exciting new options!"
         >
-          <Link 
-            href="/tours" 
+          <Link
+            href="/tours"
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors"
           >
             Browse All Tours <ArrowRight className="w-4 h-4" />
@@ -330,8 +215,81 @@ export default function PopularInterests() {
 
     return (
       <div className="space-y-8">
-        <ScrollableRow interests={firstRow} rowIndex={0} />
-        {secondRow.length > 0 && <ScrollableRow interests={secondRow} rowIndex={1} />}
+        <Swiper
+          modules={[Navigation, Autoplay]}
+          spaceBetween={20}
+          slidesPerView={1}
+          loop={true}
+          navigation={true}
+          autoplay={{
+            delay: 4000,
+            disableOnInteraction: false,
+          }}
+          breakpoints={{
+            640: {
+              slidesPerView: 1.5,
+              spaceBetween: 20,
+            },
+            768: {
+              slidesPerView: 2.5,
+              spaceBetween: 25,
+            },
+            1024: {
+              slidesPerView: 3,
+              spaceBetween: 30,
+            },
+            1280: {
+              slidesPerView: 3.5,
+              spaceBetween: 30,
+            },
+          }}
+          className="mySwiper !pb-8 !px-4"
+        >
+          {firstRow.map((interest) => (
+            <SwiperSlide key={interest._id}>
+              <InterestCard interest={interest} />
+            </SwiperSlide>
+          ))}
+        </Swiper>
+        {secondRow.length > 0 && (
+          <Swiper
+            modules={[Navigation, Autoplay]}
+            spaceBetween={20}
+            slidesPerView={1}
+            loop={true}
+            navigation={true}
+            autoplay={{
+              delay: 4000,
+              disableOnInteraction: false,
+              reverseDirection: true,
+            }}
+            breakpoints={{
+              640: {
+                slidesPerView: 1.5,
+                spaceBetween: 20,
+              },
+              768: {
+                slidesPerView: 2.5,
+                spaceBetween: 25,
+              },
+              1024: {
+                slidesPerView: 3,
+                spaceBetween: 30,
+              },
+              1280: {
+                slidesPerView: 3.5,
+                spaceBetween: 30,
+              },
+            }}
+            className="mySwiper !pb-8 !px-4"
+          >
+            {secondRow.map((interest) => (
+              <SwiperSlide key={interest._id}>
+                <InterestCard interest={interest} />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        )}
       </div>
     );
   };
@@ -364,14 +322,14 @@ export default function PopularInterests() {
                   Our local travel experts are here to craft your dream Egyptian adventure with personalized recommendations.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link 
-                    href="/tours" 
+                  <Link
+                    href="/tours"
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                   >
                     View All Experiences <ArrowRight className="w-5 h-5" />
                   </Link>
-                  <Link 
-                    href="/contact" 
+                  <Link
+                    href="/contact"
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-blue-300 text-blue-700 font-bold rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-300"
                   >
                     Contact an Expert <Users className="w-5 h-5" />
@@ -382,27 +340,42 @@ export default function PopularInterests() {
           </div>
         )}
       </div>
-
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        
-        body {
-          font-family: 'Inter', sans-serif;
+        /* Custom styles for Swiper pagination and navigation, if needed */
+        .swiper-button-next,
+        .swiper-button-prev {
+          color: #1e293b;
+          background-color: rgba(255, 255, 255, 0.95);
+          border-radius: 9999px;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          width: 50px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          top: 45%;
         }
 
-        /* Hide scrollbar but keep functionality */
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
+        .swiper-button-next:hover,
+        .swiper-button-prev:hover {
+            background-color: white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: scale(1.05);
         }
 
-        /* Smooth scroll behavior */
-        .scroll-smooth {
-          scroll-behavior: smooth;
+        .swiper-button-next::after,
+        .swiper-button-prev::after {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .swiper-button-prev {
+          left: 10px;
+        }
+
+        .swiper-button-next {
+          right: 10px;
         }
       `}</style>
     </section>
