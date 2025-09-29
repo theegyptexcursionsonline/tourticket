@@ -1,3 +1,4 @@
+// components/InterestLandingPage.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -10,6 +11,8 @@ import {
 } from 'lucide-react';
 import { Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
+import RelatedInterests from './RelatedInterests';
+import PopularInterestsGrid from './PopularInterestsGrid';
 
 interface InterestData {
   name: string;
@@ -36,8 +39,6 @@ interface InterestLandingPageProps {
   interest: InterestData;
 }
 
-
-
 const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
   const { formatPrice } = useSettings();
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
@@ -61,21 +62,18 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           
-          {/* Featured Badge */}
           {tour.isFeatured && (
             <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 text-xs font-semibold rounded">
               Bestseller
             </div>
           )}
 
-          {/* Price Badge */}
           <div className="absolute bottom-3 right-3 bg-white px-2 py-1 rounded shadow-lg">
             <div className="text-sm font-bold text-gray-900">
               {formatPrice(tour.discountPrice || tour.price || 0)}
             </div>
           </div>
 
-          {/* Wishlist Button */}
           <button className="absolute top-3 right-3 bg-white/80 p-1.5 rounded-full text-gray-600 hover:text-red-500 hover:bg-white transition-all duration-200">
             <Heart className="w-4 h-4" />
           </button>
@@ -86,7 +84,6 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             {tour.title}
           </h3>
           
-          {/* Tour Details */}
           <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
@@ -98,15 +95,13 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             </div>
           </div>
           
-          {/* Destination */}
           {destination && (
             <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
               <MapPin className="w-4 h-4 text-red-500" />
               <span>{destination.name}</span>
             </div>
           )}
-          
-          {/* Highlights */}
+
           {tour.highlights && tour.highlights.length > 0 && (
             <div className="mb-3">
               <div className="flex flex-wrap gap-1">
@@ -122,7 +117,6 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             </div>
           )}
 
-          {/* Pricing */}
           <div className="flex items-center justify-between">
             <div>
               {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
@@ -192,58 +186,12 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
   );
 };
 
-const RelatedCategoriesSection = ({ relatedCategories }: { relatedCategories: any[] }) => {
-  if (!relatedCategories || relatedCategories.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="py-12 bg-white">
-      <div className="container mx-auto px-6">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8">Related Interests</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {relatedCategories.map((category) => (
-            <Link
-              key={category._id}
-              href={`/interests/${category.slug}`}
-              className="group bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 border border-gray-200"
-            >
-              <div className="relative h-40 overflow-hidden">
-                <Image
-                  src={category.image || '/images/placeholder-category.jpg'}
-                  alt={category.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-              </div>
-              
-              <div className="p-4">
-                <h3 className="font-semibold text-lg mb-2 group-hover:text-red-600 transition-colors">
-                  {category.name}
-                </h3>
-                {category.description && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">{category.description}</p>
-                )}
-                <div className="text-sm text-gray-500">
-                  Explore {category.name}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
 export default function InterestLandingPage({ interest }: InterestLandingPageProps) {
-const availableTours = interest.tours || [];
+  const availableTours = interest.tours || [];
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Fixed Hero Section */}
+      {/* Hero Section */}
       <section className="relative h-[400px] md:h-[500px] overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -293,7 +241,6 @@ const availableTours = interest.tours || [];
             </p>
           </div>
 
-          {/* Tours Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {availableTours.map((tour, index) => (
               <TourCard key={tour._id} tour={tour} index={index} />
@@ -313,10 +260,22 @@ const availableTours = interest.tours || [];
         <ReviewsSection reviews={interest.reviews} />
       )}
 
-      {/* Related Categories */}
-      {interest.relatedCategories && interest.relatedCategories.length > 0 && (
-        <RelatedCategoriesSection relatedCategories={interest.relatedCategories} />
-      )}
+      {/* Related Interests Component */}
+      <RelatedInterests 
+        currentSlug={interest.slug}
+        limit={6}
+        title="More Experiences You'll Love"
+        subtitle="Explore other amazing categories and attractions"
+      />
+
+      {/* Popular Interests Grid Component */}
+      <PopularInterestsGrid 
+        limit={8}
+        showFeaturedOnly={false}
+        title="Popular Categories in Egypt"
+        subtitle="Browse the most sought-after experiences"
+        columns={4}
+      />
 
       {/* CTA Section */}
       <section className="py-16 bg-red-600 text-white">

@@ -1,3 +1,4 @@
+// components/AttractionLandingPage.tsx
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -13,6 +14,8 @@ import {
 import { Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import TourCard from '@/components/shared/TourCard';
+import RelatedInterests from '@/components/RelatedInterests';
+import PopularInterestsGrid from '@/components/PopularInterestsGrid';
 
 interface AttractionData {
   _id: string;
@@ -570,6 +573,23 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
       {attraction.reviews && attraction.reviews.length > 0 && (
         <ReviewsSection reviews={attraction.reviews} />
       )}
+
+      {/* Related Interests Component */}
+      <RelatedInterests 
+        currentSlug={attraction.slug}
+        limit={6}
+        title="Explore Similar Attractions"
+        subtitle="Discover more amazing places like this one"
+      />
+
+      {/* Popular Interests Grid Component */}
+      <PopularInterestsGrid 
+        limit={8}
+        showFeaturedOnly={true}
+        title="Featured Experiences"
+        subtitle="Don't miss these top-rated attractions and categories"
+        columns={4}
+      />
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white relative overflow-hidden">
