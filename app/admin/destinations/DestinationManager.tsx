@@ -183,26 +183,29 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     setIsPanelOpen(true);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: { ...prev[parent as keyof FormData], [child]: value }
-      }));
-    } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value 
-      }));
-    }
-    
-    if (name === 'name') {
-      setFormData(prev => ({ ...prev, slug: generateSlug(value) }));
-    }
-  };
+ // ✅ FIXED CODE
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const { name, value } = e.target;
+  const target = e.target as HTMLInputElement;
+  const type = target.type;
+  
+  if (name.includes('.')) {
+    const [parent, child] = name.split('.');
+    setFormData(prev => ({
+      ...prev,
+      [parent]: { ...prev[parent as keyof FormData], [child]: value }
+    }));
+  } else {
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? target.checked : value 
+    }));
+  }
+  
+  if (name === 'name') {
+    setFormData(prev => ({ ...prev, slug: generateSlug(value) }));
+  }
+};
 
   const handleArrayChange = (field: keyof FormData, index: number, value: string) => {
     setFormData(prev => ({

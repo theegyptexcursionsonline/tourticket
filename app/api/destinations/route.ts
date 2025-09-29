@@ -38,16 +38,15 @@ export async function GET() {
           tourCount: tourCounts[dest._id.toString()] || 0,
         }));
 
-        // Filter out destinations with no tours and sort
-        return destinationsWithCounts
-          .filter(dest => dest.tourCount > 0)
-          .sort((a, b) => {
-            // Featured first
-            if (a.featured && !b.featured) return -1;
-            if (!a.featured && b.featured) return 1;
-            // Then by tour count
-            return b.tourCount - a.tourCount;
-          });
+      return destinationsWithCounts
+  .filter(dest => dest.tourCount > 0 || dest.featured)
+  .sort((a, b) => {
+    // Featured first
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    // Then by tour count
+    return b.tourCount - a.tourCount;
+  });
       },
       cacheConfig.LONG // Cache for 15 minutes
     );

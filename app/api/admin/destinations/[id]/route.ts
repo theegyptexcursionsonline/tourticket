@@ -34,11 +34,9 @@ export async function PUT(
     // Validate required fields - only name and description are required
     const requiredFields = ['name', 'description'];
     const missingFields = requiredFields.filter(field => {
-      // Check if field is being updated and is empty
       if (data[field] !== undefined) {
         return !data[field]?.trim?.();
       }
-      // If field is not being updated, check existing value
       return !existingDestination[field]?.trim?.();
     });
    
@@ -63,26 +61,19 @@ export async function PUT(
     if (data.image !== undefined) updateData.image = data.image;
     if (data.images !== undefined) updateData.images = data.images;
     
-    // Location data - Handle coordinates specially
+    // Location data
     if (data.coordinates !== undefined) {
       if (data.coordinates && typeof data.coordinates === 'object') {
         const coords: any = {};
-        
-        // Only include lat if it's provided and not empty
         if (data.coordinates.lat !== undefined && data.coordinates.lat !== '') {
           coords.lat = parseFloat(data.coordinates.lat);
         }
-        
-        // Only include lng if it's provided and not empty
         if (data.coordinates.lng !== undefined && data.coordinates.lng !== '') {
           coords.lng = parseFloat(data.coordinates.lng);
         }
-        
-        // Only set coordinates if we have at least one valid coordinate
         if (coords.lat !== undefined || coords.lng !== undefined) {
           updateData.coordinates = coords;
         } else {
-          // If both are empty, remove coordinates
           updateData.coordinates = undefined;
         }
       } else {
@@ -95,7 +86,7 @@ export async function PUT(
     if (data.timezone !== undefined) updateData.timezone = data.timezone;
     if (data.bestTimeToVisit !== undefined) updateData.bestTimeToVisit = data.bestTimeToVisit;
     
-    // Content arrays - Filter out empty items
+    // Content arrays
     const arrayFields = ['highlights', 'thingsToDo', 'localCustoms', 'languagesSpoken', 'weatherWarnings', 'tags'];
     arrayFields.forEach(field => {
       if (data[field] !== undefined) {
@@ -115,7 +106,7 @@ export async function PUT(
     if (data.averageTemperature !== undefined) updateData.averageTemperature = data.averageTemperature;
     if (data.climate !== undefined) updateData.climate = data.climate;
     
-    // Status & meta
+    // Status & meta - THIS IS THE KEY PART FOR FEATURED
     if (data.featured !== undefined) updateData.featured = data.featured;
     if (data.isPublished !== undefined) updateData.isPublished = data.isPublished;
     if (data.tourCount !== undefined) updateData.tourCount = data.tourCount;

@@ -53,15 +53,7 @@ const InterestCard = ({
       {/* Background Gradient Effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
       
-      {/* Page Badge */}
-      {hasCategoryPage && (
-        <div className="absolute -top-1 -right-1 z-10">
-          <div className="bg-gradient-to-r from-emerald-400 to-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg flex items-center gap-1">
-            <Star className="w-3 h-3 fill-current" />
-            Category Page
-          </div>
-        </div>
-      )}
+     
 
       {/* Content Container */}
       <div className="relative z-10">
