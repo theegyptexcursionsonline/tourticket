@@ -13,7 +13,7 @@ export async function GET() {
       cacheKeys.destinations.withCounts(),
       async () => {
         // Fetch all published destinations
-        const destinations = await Destination.find({ isPublished: true })
+const destinations = await Destination.find({ isPublished: true, featured: true })
           .select('_id name slug country image description featured tourCount')
           .sort({ featured: -1, tourCount: -1, name: 1 })
           .lean();
