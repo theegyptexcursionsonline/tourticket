@@ -37,9 +37,10 @@ export default function HomePage() {
       <FeaturedTours />
 
       {/* Interest & Trips */}
+            <PopularInterest />
+
       <InterestGrid />
       <DayTrips />
-      <PopularInterest />
 
       {/* About & Reviews */}
       <AboutUs />
