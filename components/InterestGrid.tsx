@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Package, Star } from "lucide-react";
+import { ArrowRight, Package, Search, Filter } from "lucide-react";
 
 interface Interest {
   _id?: string;
@@ -24,8 +24,7 @@ interface CategoryPage {
     slug: string;
   };
   isPublished: boolean;
-  description: string;
-  heroImage: string;
+  heroImage?: string;
 }
 
 // --- InterestCard Component ---
@@ -36,144 +35,110 @@ const InterestCard = ({
   interest: Interest;
   categoryPage?: CategoryPage;
 }) => {
- const getLink = () => {
-  // Priority 1: Use published category page if available
-  if (categoryPage && categoryPage.isPublished) {
-    return `/category/${categoryPage.slug}`;
-  }
-  
-  // Priority 2: Check if this is an attraction type interest
-  if (interest.type === 'attraction') {
-    return `/attraction/${interest.slug}`;
-  }
-  
-  // Priority 3: Default to interests page for categories
-  return `/interests/${interest.slug}`;
-};
+  const getLink = () => {
+    if (categoryPage && categoryPage.isPublished) {
+      return `/category/${categoryPage.slug}`;
+    }
+    
+    if (interest.type === 'attraction') {
+      return `/attraction/${interest.slug}`;
+    }
+    
+    return `/interests/${interest.slug}`;
+  };
 
   const linkUrl = getLink();
-  const hasCategoryPage = categoryPage && categoryPage.isPublished;
 
   return (
     <Link
       href={linkUrl}
-      className="group block text-left bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:border-red-200 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 ease-out relative overflow-hidden backdrop-blur-sm"
-      aria-label={`${hasCategoryPage ? 'Visit' : 'View'} ${interest.products} tours related to ${interest.name}`}
+      className="group block text-left bg-white rounded-xl p-5 shadow-sm border border-slate-200 hover:border-red-400 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
     >
-      {/* Background Gradient Effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+      {/* Gradient Effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-red-50/40 to-orange-50/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
-     
-
-      {/* Content Container */}
+      {/* Content */}
       <div className="relative z-10">
-        {/* Interest Name */}
-        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-red-600 transition-colors duration-300 line-clamp-2">
+        <h4 className="font-bold text-slate-900 text-base mb-3 group-hover:text-red-600 transition-colors line-clamp-2">
           {interest.name}
         </h4>
 
-        {/* Products Count */}
-        <div className="flex items-center gap-2 text-slate-500 mb-4">
-          <Package className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            {interest.products} {interest.products === 1 ? 'tour' : 'tours'} available
-          </span>
-        </div>
-
-        {/* Action Indicator */}
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-red-600 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-            {hasCategoryPage ? 'Visit category page' : 'View tours'}
-          </span>
-          <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
-            <ArrowRight className="w-4 h-4 text-red-600 transform group-hover:translate-x-0.5 transition-transform duration-300" />
+          <div className="flex items-center gap-2 text-slate-600">
+            <Package className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              {interest.products} {interest.products === 1 ? 'tour' : 'tours'}
+            </span>
+          </div>
+
+          <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-red-500 transition-colors duration-300">
+            <ArrowRight className="w-4 h-4 text-red-600 group-hover:text-white transform group-hover:translate-x-0.5 transition-all duration-300" />
           </div>
         </div>
       </div>
-
-      {/* Hover Border Effect */}
-      <div className="absolute inset-0 rounded-2xl border-2 border-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
     </Link>
   );
 };
 
-// --- Loading Skeleton Component ---
+// --- Loading Skeleton ---
 const LoadingSkeleton = () => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 animate-pulse">
-    {[...Array(18)].map((_, i) => (
-      <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="space-y-4">
-          <div className="h-5 w-3/4 bg-slate-200 rounded-lg"></div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-slate-200 rounded"></div>
-            <div className="h-4 w-20 bg-slate-200 rounded"></div>
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="h-3 w-16 bg-slate-200 rounded"></div>
-            <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
-          </div>
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 animate-pulse">
+    {[...Array(20)].map((_, i) => (
+      <div key={i} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div className="h-4 w-3/4 bg-slate-200 rounded mb-3"></div>
+        <div className="flex justify-between items-center">
+          <div className="h-3 w-20 bg-slate-200 rounded"></div>
+          <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
         </div>
       </div>
     ))}
   </div>
 );
 
-// --- Error Display Component ---
+// --- Error Display ---
 const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="text-center py-16">
-    <div className="max-w-md mx-auto">
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-8 shadow-sm">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Package className="w-8 h-8 text-red-600" />
-        </div>
-        <h3 className="text-xl font-bold text-red-800 mb-3">
-          Unable to Load Categories
-        </h3>
-        <p className="text-red-600 mb-6 leading-relaxed">{error}</p>
-        <button
-          onClick={onRetry}
-          className="inline-flex items-center gap-3 px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transform hover:scale-105 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
-        >
-          <ArrowRight className="w-4 h-4 rotate-180" />
-          Try Again
-        </button>
-      </div>
+  <div className="text-center py-12">
+    <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl p-6">
+      <Package className="w-12 h-12 text-red-600 mx-auto mb-3" />
+      <h3 className="text-lg font-bold text-red-900 mb-2">Unable to Load Categories</h3>
+      <p className="text-red-700 text-sm mb-4">{error}</p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+      >
+        Try Again
+      </button>
     </div>
   </div>
 );
 
-// --- Empty State Component ---
+// --- Empty State ---
 const EmptyState = () => (
-  <div className="text-center py-16">
-    <div className="max-w-md mx-auto">
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 shadow-sm">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Package className="w-8 h-8 text-slate-600" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-800 mb-3">
-          No Categories Available
-        </h3>
-        <p className="text-slate-600 mb-6 leading-relaxed">
-          We're currently updating our tour categories. Please check back soon for amazing new experiences!
-        </p>
-        <Link
-          href="/tours"
-          className="inline-flex items-center gap-3 px-6 py-3 bg-slate-600 text-white rounded-full hover:bg-slate-700 transform hover:scale-105 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
-        >
-          Browse All Tours
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
+  <div className="text-center py-12">
+    <div className="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-xl p-6">
+      <Package className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+      <h3 className="text-lg font-bold text-slate-900 mb-2">No Categories Available</h3>
+      <p className="text-slate-600 text-sm mb-4">
+        Check back soon for amazing experiences!
+      </p>
+      <Link
+        href="/tours"
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-semibold"
+      >
+        Browse All Tours
+        <ArrowRight className="w-4 h-4" />
+      </Link>
     </div>
   </div>
 );
 
-// --- Main InterestGrid Component ---
+// --- Main Component ---
 export default function InterestGrid() {
   const [interests, setInterests] = useState<Interest[]>([]);
   const [categoryPages, setCategoryPages] = useState<CategoryPage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -186,13 +151,12 @@ export default function InterestGrid() {
       ]);
 
       if (!interestsResponse.ok) {
-        throw new Error(`Failed to fetch interests: ${interestsResponse.status} ${interestsResponse.statusText}`);
+        throw new Error(`Failed to fetch interests: ${interestsResponse.status}`);
       }
 
       const interestsData = await interestsResponse.json();
 
       if (interestsData.success) {
-        // Only show interests that have tours available
         const availableInterests = interestsData.data.filter((interest: Interest) => {
           const products = typeof interest.products === 'number' ? interest.products : Number(interest.products) || 0;
           return products > 0;
@@ -220,10 +184,6 @@ export default function InterestGrid() {
     fetchData();
   }, []);
 
-  const handleRetry = () => {
-    fetchData();
-  };
-
   const getCategoryPageForInterest = (interest: Interest): CategoryPage | undefined => {
     return categoryPages.find(page => {
       if (!page.isPublished || page.pageType !== 'category') return false;
@@ -236,10 +196,14 @@ export default function InterestGrid() {
                categorySlug.toLowerCase() === (interest.slug || interest.name.toLowerCase().replace(/\s+/g, '-'));
       }
 
-      return page.title.toLowerCase().includes(interest.name.toLowerCase()) ||
-             page.slug.toLowerCase() === (interest.slug || interest.name.toLowerCase().replace(/\s+/g, '-'));
+      return false;
     });
   };
+
+  // Filter interests based on search
+  const filteredInterests = interests.filter(interest =>
+    interest.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const renderContent = () => {
     if (isLoading) {
@@ -247,16 +211,28 @@ export default function InterestGrid() {
     }
 
     if (error) {
-      return <ErrorDisplay error={error} onRetry={handleRetry} />;
+      return <ErrorDisplay error={error} onRetry={fetchData} />;
     }
 
     if (interests.length === 0) {
       return <EmptyState />;
     }
 
+    if (filteredInterests.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Search className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-slate-900 mb-2">No Results Found</h3>
+          <p className="text-slate-600 text-sm">
+            Try adjusting your search terms
+          </p>
+        </div>
+      );
+    }
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
-        {interests.map((interest) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        {filteredInterests.map((interest) => {
           const categoryPage = getCategoryPageForInterest(interest);
           return (
             <InterestCard
@@ -271,44 +247,40 @@ export default function InterestGrid() {
   };
 
   return (
-    <section className="bg-gradient-to-br from-slate-50 to-slate-100/50 py-24">
-      <div className="container mx-auto px-4">
-        {/* Header Section */}
-        <div className="text-center mb-16">
-          <div className="inline-block p-2 bg-red-100 rounded-2xl mb-4">
-            <Package className="w-8 h-8 text-red-600" />
-          </div>
-          
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-6 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-            Egypt Categories
+    <section className="bg-slate-50 py-16">
+      <div className="container mx-auto px-4 max-w-[1400px]">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
+            Browse All Categories
           </h2>
-          
-          <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Discover amazing tours and experiences across Egypt. Choose from our curated categories
-            to find the perfect adventure for you.
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Explore our complete collection of tours and experiences across Egypt
           </p>
+        </div>
 
-          {/* Call-to-Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link
-              href="/interests"
-              className="inline-flex items-center gap-3 px-8 py-4 font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-300 group rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
-              aria-label="Find the right category for you"
-            >
-              <span>FIND THE RIGHT CATEGORY FOR YOU</span>
-              <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-
-            <Link
-              href="/tours"
-              className="inline-flex items-center gap-3 px-8 py-4 font-semibold text-slate-600 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 group rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
-              aria-label="Browse all tours"
-            >
-              <span>Browse All Tours</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
+        {/* Search Bar */}
+        <div className="max-w-xl mx-auto mb-10">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+            />
           </div>
         </div>
+
+        {/* Results Count */}
+        {!isLoading && !error && filteredInterests.length > 0 && (
+          <div className="mb-6 text-center">
+            <p className="text-sm text-slate-600">
+              Showing <span className="font-bold text-slate-900">{filteredInterests.length}</span> of {interests.length} categories
+            </p>
+          </div>
+        )}
 
         {/* Main Content */}
         {renderContent()}

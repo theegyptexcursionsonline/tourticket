@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { UploadCloud, Loader2, FileJson, Package, MapPin, Star, Image as ImageIcon, Check, X, Upload, Link as LinkIcon } from 'lucide-react';
+import { UploadCloud, Loader2, FileJson, Package, MapPin, Star, Image as ImageIcon, Check, X, Upload, Link as LinkIcon, AlertCircle } from 'lucide-react';
 
 // Types for missing images
 interface MissingImage {
@@ -265,38 +265,44 @@ const ImageUploadCard = ({
 const ResultDisplay = ({ results }: { results: UploadResults }) => {
     if (!results) return null;
     
-    const renderSection = (title: string, data: any, icon: React.ReactNode) => (
-        <div className="bg-slate-50 p-4 rounded-lg">
-            <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                {icon} {title}
-            </h4>
-            <div className="flex gap-4 text-sm">
-                <p><span className="font-semibold text-green-600">{data.created}</span> Created</p>
-                <p><span className="font-semibold text-blue-600">{data.updated}</span> Updated</p>
-                <p><span className="font-semibold text-red-600">{data.errors.length}</span> Errors</p>
+    const renderSection = (title: string, data: any, icon: React.ReactNode) => {
+        const totalProcessed = data.created + data.updated;
+        if (totalProcessed === 0 && data.errors.length === 0) return null;
+
+        return (
+            <div className="bg-slate-50 p-4 rounded-lg">
+                <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    {icon} {title}
+                </h4>
+                <div className="flex gap-4 text-sm">
+                    <p><span className="font-semibold text-green-600">{data.created}</span> Created</p>
+                    <p><span className="font-semibold text-blue-600">{data.updated}</span> Updated</p>
+                    <p><span className="font-semibold text-red-600">{data.errors.length}</span> Errors</p>
+                </div>
+                {data.errors.length > 0 && (
+                    <div className="mt-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <span className="text-sm font-semibold text-red-700">Error Details:</span>
+                        </div>
+                        <ul className="text-xs text-red-700 list-disc list-inside space-y-1 max-h-48 overflow-y-auto bg-white p-3 rounded-md border border-red-200">
+                            {data.errors.map((error: string, index: number) => (
+                                <li key={index} className="break-words">{error}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
-            {data.errors.length > 0 && (
-                 <ul className="text-xs text-red-700 list-disc list-inside mt-2 max-h-32 overflow-y-auto bg-white p-2 rounded-md font-mono">
-                    {data.errors.map((error: string, index: number) => <li key={index}>{error}</li>)}
-                </ul>
-            )}
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="mt-8 p-6 bg-white border border-slate-200 rounded-xl space-y-4">
             <h3 className="text-xl font-bold text-slate-800">Combined Upload Summary</h3>
-            {results.destinations && results.destinations.created + results.destinations.updated > 0 && 
-                renderSection('Destinations', results.destinations, <MapPin className="h-5 w-5 text-green-500" />)}
-            
-            {results.categories && results.categories.created + results.categories.updated > 0 && 
-                renderSection('Categories', results.categories, <Package className="h-5 w-5 text-blue-500" />)}
-            
-            {results.attractions && results.attractions.created + results.attractions.updated > 0 && 
-                renderSection('Attraction Pages', results.attractions, <Star className="h-5 w-5 text-purple-500" />)}
-
-            {results.tours && results.tours.created + results.tours.updated > 0 && 
-                renderSection('Tours', results.tours, <Star className="h-5 w-5 text-amber-500" />)}
+            {results.destinations && renderSection('Destinations', results.destinations, <MapPin className="h-5 w-5 text-green-500" />)}
+            {results.categories && renderSection('Categories', results.categories, <Package className="h-5 w-5 text-blue-500" />)}
+            {results.attractions && renderSection('Attraction Pages', results.attractions, <Star className="h-5 w-5 text-purple-500" />)}
+            {results.tours && renderSection('Tours', results.tours, <Star className="h-5 w-5 text-amber-500" />)}
         </div>
     );
 };
@@ -347,10 +353,29 @@ export default function BulkUploadPage() {
             setMissingImages(allMissingImages);
 
             if (allMissingImages.length > 0) {
-toast(`${allMissingImages.length} items need images`, { duration: 5000, icon: 'ℹ️' });            }
+                toast(`${allMissingImages.length} items need images`, { duration: 5000, icon: 'ℹ️' });
+            }
+
+            // Show detailed summary
+            const summary = [];
+            if (data.results.destinations) {
+                summary.push(`Destinations: ${data.results.destinations.created} created, ${data.results.destinations.updated} updated`);
+            }
+            if (data.results.categories) {
+                summary.push(`Categories: ${data.results.categories.created} created`);
+            }
+            if (data.results.attractions) {
+                summary.push(`Attractions: ${data.results.attractions.created} created, ${data.results.attractions.updated} updated`);
+            }
+            if (data.results.tours) {
+                summary.push(`Tours: ${data.results.tours.created} created, ${data.results.tours.updated} updated`);
+            }
+            
+            console.log('Upload Summary:', summary.join(' | '));
 
         } catch (error: any) {
             toast.error(`Upload failed: ${error.message}`);
+            console.error('Upload error:', error);
         } finally {
             setIsLoading(false);
         }

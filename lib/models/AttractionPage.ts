@@ -12,7 +12,7 @@ export interface IAttractionPage extends Document {
   categoryId?: mongoose.Schema.Types.ObjectId;
   
   // Content
-  heroImage: string;
+  heroImage?: string; // NOW OPTIONAL
   images?: string[];
   highlights?: string[];
   features?: string[];
@@ -92,10 +92,11 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
   },
   heroImage: {
     type: String,
-    required: [true, 'Hero image is required'],
+    required: false, // NOW OPTIONAL
     validate: {
       validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
+        // Only validate if value is provided
+        return !v || /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
       },
       message: 'Hero image must be a valid URL with image extension'
     }

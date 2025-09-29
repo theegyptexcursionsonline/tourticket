@@ -1007,12 +1007,12 @@ export default function DestinationPageClient({
         {top10Tours.length > 0 && (
           <section className="py-20 bg-slate-50">
             <div className="container mx-auto px-4">
-              <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-4">
-                TOP 10 THINGS TO DO IN {destination.name.toUpperCase()}
-              </h2>
-              <p className="text-center text-lg text-slate-600 mb-12">
-                Discover the most popular experiences curated by local experts
-              </p>
+            <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-4">
+  TOP 10 TOURS IN {destination.name.toUpperCase()}
+</h2>
+<p className="text-center text-lg text-slate-600 mb-12">
+  Our best-selling tours and experiences curated by local experts
+</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
                 {top10Tours.map((tour, index) => (
                   <Top10Card key={tour._id} tour={tour} index={index} />
