@@ -47,17 +47,30 @@ export interface Destination {
   updatedAt?: string;
 }
 
+// types/index.ts - Update the Category interface
 export interface Category {
   _id: string;
   id?: string;
   name: string;
   slug: string;
-  icon?: string;
   description?: string;
+  longDescription?: string;
+  heroImage?: string;
+  images?: string[];
+  highlights?: string[];
+  features?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
   color?: string;
+  icon?: string;
+  order?: number;
+  isPublished?: boolean;
+  featured?: boolean;
   tourCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
 // =================================================================
 // TOUR-SPECIFIC SUB-INTERFACES
 // =================================================================
