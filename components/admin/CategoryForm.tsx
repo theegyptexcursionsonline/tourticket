@@ -31,9 +31,8 @@ interface CategoryFormData {
   featured: boolean;
 }
 
-// components/admin/CategoryForm.tsx
 interface CategoryFormProps {
-  categorySlug?: string; // Changed from categoryId
+  categoryId?: string;
 }
 
 const defaultFormData: CategoryFormData = {
@@ -77,7 +76,7 @@ const SmallHint = ({ children, className = "" }: { children: React.ReactNode; cl
 const inputBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
 const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
-export default function CategoryForm({ categorySlug }: CategoryFormProps) {
+export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const router = useRouter();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -89,11 +88,9 @@ export default function CategoryForm({ categorySlug }: CategoryFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-// components/admin/CategoryForm.tsx - Key fixes at the top
-useEffect(() => {
+  useEffect(() => {
     if (categoryId) {
       fetchCategoryData();
-      setIsPanelOpen(true); // FIX: Auto-open panel when editing
     } else {
       setIsPanelOpen(true);
     }
@@ -103,29 +100,13 @@ useEffect(() => {
     if (!categoryId) return;
     
     setLoading(true);
-    setError(null); // Clear any previous errors
-    
     try {
-      console.log('🔍 Fetching category:', categoryId); // DEBUG
-      
       const response = await fetch(`/api/categories/${categoryId}`);
-      
-      console.log('📡 Response status:', response.status); // DEBUG
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       const data = await response.json();
-      
-      console.log('📦 Received data:', data); // DEBUG
       
       if (data.success) {
         const category = data.data;
         
-        console.log('✅ Category data:', category); // DEBUG
-        
-        // FIX: Properly map all fields
         setFormData({
           name: category.name || '',
           slug: category.slug || '',
@@ -140,22 +121,16 @@ useEffect(() => {
           keywords: Array.isArray(category.keywords) ? category.keywords : [],
           color: category.color || '#3B82F6',
           icon: category.icon || '',
-          order: typeof category.order === 'number' ? category.order : 0,
+          order: category.order || 0,
           isPublished: category.isPublished !== false,
           featured: category.featured || false,
         });
-        
         setIsSlugManuallyEdited(Boolean(category.slug));
-        
-        console.log('✅ Form populated successfully'); // DEBUG
       } else {
-        throw new Error(data.error || 'Failed to fetch category data');
+        setError(data.error || 'Failed to fetch category data');
       }
     } catch (err) {
-      console.error('❌ Error fetching category:', err); // DEBUG
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError('Network error');
     } finally {
       setLoading(false);
     }
