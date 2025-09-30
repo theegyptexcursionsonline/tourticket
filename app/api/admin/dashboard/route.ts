@@ -6,11 +6,11 @@ import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 
 export async function GET() {
-  await dbConnect();
-
   try {
+    await dbConnect();
+
     // --- Main Stats ---
-    const totalTours = await Tour.countDocuments();
+    const totalTours = await Tour.countDocuments({ isPublished: true });
     const totalBookings = await Booking.countDocuments();
     const totalUsers = await User.countDocuments();
 
@@ -26,18 +26,28 @@ export async function GET() {
     const recentBookingsCount = await Booking.countDocuments({
       createdAt: { $gte: twentyFourHoursAgo },
     });
-    
+
     // --- Recent Activities ---
     const recentBookings = await Booking.find()
       .sort({ createdAt: -1 })
       .limit(5)
       .populate({ path: 'tour', model: Tour, select: 'title' })
-      .populate({ path: 'user', model: User, select: 'name' });
+      .populate({ path: 'user', model: User, select: 'firstName lastName email' })
+      .lean();
 
-    const recentActivities = recentBookings.map(booking => ({
-        id: booking._id.toString(),
-        text: `New booking for "${booking.tour.title}" by ${booking.user.name}.`
-    }));
+    const recentActivities = recentBookings
+      .filter(booking => booking.tour && booking.user) // Filter out null references
+      .map((booking: any) => {
+        const tourTitle = booking.tour?.title || 'Unknown Tour';
+        const userName = booking.user 
+          ? `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim() || booking.user.email || 'Unknown User'
+          : 'Unknown User';
+        
+        return {
+          id: booking._id.toString(),
+          text: `New booking for "${tourTitle}" by ${userName}`,
+        };
+      });
 
     const responseData = {
       totalTours,
@@ -49,7 +59,6 @@ export async function GET() {
     };
 
     return NextResponse.json({ success: true, data: responseData });
-
   } catch (error) {
     console.error('Failed to fetch dashboard stats:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

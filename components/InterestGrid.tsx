@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Package, Search, Filter } from "lucide-react";
+import { ArrowRight, Package, Search, Sparkles, MapPin } from "lucide-react";
 
 interface Interest {
   _id?: string;
@@ -27,7 +27,7 @@ interface CategoryPage {
   heroImage?: string;
 }
 
-// --- InterestCard Component ---
+// --- Premium InterestCard Component ---
 const InterestCard = ({
   interest,
   categoryPage
@@ -52,80 +52,123 @@ const InterestCard = ({
   return (
     <Link
       href={linkUrl}
-      className="group block text-left bg-white rounded-xl p-5 shadow-sm border border-slate-200 hover:border-red-400 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+      className="group relative block text-left bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-red-200"
     >
-      {/* Gradient Effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-50/40 to-orange-50/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {/* Animated Background Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
-      {/* Content */}
-      <div className="relative z-10">
-        <h4 className="font-bold text-slate-900 text-base mb-3 group-hover:text-red-600 transition-colors line-clamp-2">
-          {interest.name}
-        </h4>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-slate-600">
-            <Package className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              {interest.products} {interest.products === 1 ? 'tour' : 'tours'}
+      {/* Shimmer Effect */}
+      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      
+      {/* Top Accent Bar */}
+      <div className="h-1.5 bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+      
+      {/* Content Container */}
+      <div className="relative z-10 p-6 space-y-4">
+        {/* Icon Badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          
+          {interest.featured && (
+            <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
+              Featured
             </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <div className="space-y-2">
+          <h4 className="font-bold text-slate-900 text-lg leading-snug group-hover:text-red-600 transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
+            {interest.name}
+          </h4>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-8 h-8 bg-slate-100 rounded-lg group-hover:bg-red-50 transition-colors">
+              <Package className="w-4 h-4 text-slate-600 group-hover:text-red-600 transition-colors" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-slate-500 font-medium">Available</span>
+              <span className="text-sm font-bold text-slate-900">
+                {interest.products} {interest.products === 1 ? 'Tour' : 'Tours'}
+              </span>
+            </div>
           </div>
 
-          <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-red-500 transition-colors duration-300">
-            <ArrowRight className="w-4 h-4 text-red-600 group-hover:text-white transform group-hover:translate-x-0.5 transition-all duration-300" />
+          {/* Arrow Button */}
+          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-red-500 group-hover:to-orange-500 transition-all duration-300 shadow-sm group-hover:shadow-lg">
+            <ArrowRight className="w-5 h-5 text-white transform group-hover:translate-x-1 transition-transform duration-300" />
           </div>
         </div>
       </div>
+
+      {/* Corner Decoration */}
+      <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-red-500/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
     </Link>
   );
 };
 
-// --- Loading Skeleton ---
+// --- Premium Loading Skeleton ---
 const LoadingSkeleton = () => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 animate-pulse">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
     {[...Array(20)].map((_, i) => (
-      <div key={i} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <div className="h-4 w-3/4 bg-slate-200 rounded mb-3"></div>
-        <div className="flex justify-between items-center">
-          <div className="h-3 w-20 bg-slate-200 rounded"></div>
-          <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+      <div key={i} className="bg-white p-6 rounded-2xl shadow-md border border-slate-100 animate-pulse">
+        <div className="flex items-start justify-between mb-4">
+          <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+        </div>
+        <div className="space-y-3">
+          <div className="h-5 w-3/4 bg-slate-200 rounded-lg"></div>
+          <div className="h-4 w-1/2 bg-slate-200 rounded-lg"></div>
+        </div>
+        <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-100">
+          <div className="h-8 w-24 bg-slate-200 rounded-lg"></div>
+          <div className="w-10 h-10 bg-slate-200 rounded-xl"></div>
         </div>
       </div>
     ))}
   </div>
 );
 
-// --- Error Display ---
+// --- Premium Error Display ---
 const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="text-center py-12">
-    <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl p-6">
-      <Package className="w-12 h-12 text-red-600 mx-auto mb-3" />
-      <h3 className="text-lg font-bold text-red-900 mb-2">Unable to Load Categories</h3>
-      <p className="text-red-700 text-sm mb-4">{error}</p>
+  <div className="text-center py-16">
+    <div className="max-w-md mx-auto bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-8 shadow-xl">
+      <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <Package className="w-8 h-8 text-red-600" />
+      </div>
+      <h3 className="text-xl font-bold text-slate-900 mb-2">Unable to Load Experiences</h3>
+      <p className="text-slate-700 text-sm mb-6 leading-relaxed">{error}</p>
       <button
         onClick={onRetry}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl hover:from-red-700 hover:to-orange-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
       >
-        Try Again
+        <span>Try Again</span>
+        <ArrowRight className="w-4 h-4" />
       </button>
     </div>
   </div>
 );
 
-// --- Empty State ---
+// --- Premium Empty State ---
 const EmptyState = () => (
-  <div className="text-center py-12">
-    <div className="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-xl p-6">
-      <Package className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-      <h3 className="text-lg font-bold text-slate-900 mb-2">No Categories Available</h3>
-      <p className="text-slate-600 text-sm mb-4">
-        Check back soon for amazing experiences!
+  <div className="text-center py-16">
+    <div className="max-w-md mx-auto bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-2xl p-8 shadow-xl">
+      <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <Package className="w-8 h-8 text-slate-500" />
+      </div>
+      <h3 className="text-xl font-bold text-slate-900 mb-2">No Experiences Available</h3>
+      <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+        Check back soon for amazing experiences across Egypt!
       </p>
       <Link
         href="/tours"
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-semibold"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
       >
-        Browse All Tours
+        <span>Browse All Tours</span>
         <ArrowRight className="w-4 h-4" />
       </Link>
     </div>
@@ -220,9 +263,11 @@ export default function InterestGrid() {
 
     if (filteredInterests.length === 0) {
       return (
-        <div className="text-center py-12">
-          <Search className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">No Results Found</h3>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Search className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">No Results Found</h3>
           <p className="text-slate-600 text-sm">
             Try adjusting your search terms
           </p>
@@ -231,7 +276,7 @@ export default function InterestGrid() {
     }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {filteredInterests.map((interest) => {
           const categoryPage = getCategoryPageForInterest(interest);
           return (
@@ -247,40 +292,51 @@ export default function InterestGrid() {
   };
 
   return (
-    <section className="bg-slate-50 py-16">
-      <div className="container mx-auto px-4 max-w-[1400px]">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
-            Browse All Categories
+    <section className="relative bg-gradient-to-b from-white via-slate-50 to-white py-20">
+      {/* Background Decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="container mx-auto px-4 max-w-[1400px] relative z-10">
+        {/* Premium Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-100 to-orange-100 rounded-full mb-4">
+            <Sparkles className="w-4 h-4 text-red-600" />
+            <span className="text-sm font-semibold text-red-700">Discover Egypt</span>
+          </div>
+          
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-4 leading-tight">
+            Browse All{' '}
+            <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+              Experiences
+            </span>
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Explore our complete collection of tours and experiences across Egypt
+          
+          <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+            Explore our complete collection of unforgettable tours and experiences across the wonders of Egypt
           </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="max-w-xl mx-auto mb-10">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search categories..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
-            />
+        {/* Premium Search Bar */}
+        <div className="max-w-2xl mx-auto mb-12">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity" />
+            <div className="relative flex items-center">
+              <Search className="absolute left-5 w-5 h-5 text-slate-400 group-hover:text-red-500 transition-colors z-10" />
+              <input
+                type="text"
+                placeholder="Search for experiences..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-14 pr-5 py-4 bg-white border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-slate-900 placeholder:text-slate-400 shadow-sm hover:shadow-md font-medium"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Results Count */}
-        {!isLoading && !error && filteredInterests.length > 0 && (
-          <div className="mb-6 text-center">
-            <p className="text-sm text-slate-600">
-              Showing <span className="font-bold text-slate-900">{filteredInterests.length}</span> of {interests.length} categories
-            </p>
-          </div>
-        )}
+     
 
         {/* Main Content */}
         {renderContent()}
