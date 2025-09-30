@@ -39,29 +39,29 @@ const getInterestImage = (name: string): string => {
   const lowerName = name.toLowerCase();
 
   const imageMap: { [key: string]: string } = {
-    'snorkeling': 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop',
-    'diving': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop',
-    'desert': 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=800&h=600&fit=crop',
-    'safari': 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=600&fit=crop',
-    'balloon': 'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=800&h=600&fit=crop',
-    'cruise': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop',
-    'spa': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&h=600&fit=crop',
-    'wellness': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&h=600&fit=crop',
-    'quad': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop',
-    'atv': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop',
-    'water': 'https://images.unsplash.com/photo-1530870110042-98b2cb110834?w=800&h=600&fit=crop',
-    'horse': 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800&h=600&fit=crop',
-    'camel': 'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800&h=600&fit=crop',
-    'historical': 'https://images.unsplash.com/photo-1539768942893-daf53e448371?w=800&h=600&fit=crop',
-    'cultural': 'https://images.unsplash.com/photo-1548013146-72479768bada?w=800&h=600&fit=crop',
-    'family': 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800&h=600&fit=crop',
+    'snorkeling': '/interests/1.jpg',
+    'diving': '/interests/2.png',
+    'desert': '/interests/3.png',
+    'safari': '/interests/4.png',
+    'balloon': '/interests/5.png',
+    'cruise': '/interests/6.png',
+    'spa': '/interests/7.png',
+    'wellness': '/interests/8.png',
+    'quad': '/interests/9.png',
+    'atv': '/interests/10.png',
+    'water': '/interests/11.png',
+    'horse': '/interests/12.png',
+    'camel': '/interests/13.png',
+    'historical': '/interests/14.png',
+    'cultural': '/interests/15.png',
+    'family': '/interests/16.png',
   };
 
   for (const [key, url] of Object.entries(imageMap)) {
     if (lowerName.includes(key)) return url;
   }
 
-  return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&h=600&fit=crop';
+  return '/interests/1.png';
 };
 
 // --- COMPONENTS ---
