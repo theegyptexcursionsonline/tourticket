@@ -1,10 +1,35 @@
-// app/api/checkout/route.ts (Updated with better error handling)
+// app/api/checkout/route.ts (With booking reference generation)
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
+
+// Helper function to generate unique booking reference
+async function generateUniqueBookingReference(): Promise<string> {
+  const maxAttempts = 10;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const prefix = 'EEO';
+    const timestamp = Date.now().toString().slice(-8);
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const reference = `${prefix}-${timestamp}-${random}`;
+    
+    // Check if this reference already exists
+    const existing = await Booking.findOne({ bookingReference: reference }).lean();
+    
+    if (!existing) {
+      return reference;
+    }
+    
+    // Add small delay before retry
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  // Fallback with extra randomness
+  return `EEO-${Date.now()}-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +46,7 @@ export async function POST(request: Request) {
       isGuest = false
     } = body;
 
-    // Validation (keep existing)
+    // Validation
     if (!customer || !cart || cart.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required booking information' },
@@ -38,7 +63,7 @@ export async function POST(request: Request) {
 
     let user = null;
 
-    // Handle user creation (keep existing logic)
+    // Handle user creation
     if (isGuest) {
       const existingUser = await User.findOne({ email: customer.email });
       
@@ -98,7 +123,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Mock payment processing (keep existing)
+    // Mock payment processing
     const mockPaymentProcessing = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       const isPaymentSuccessful = Math.random() > 0.05;
@@ -130,7 +155,7 @@ export async function POST(request: Request) {
       tourTitle: cart.length === 1 ? cart[0].title : `${cart.length} Tours`
     });
 
-    // Create bookings with improved error handling
+    // Create bookings with generated references
     const createdBookings = [];
     
     for (let i = 0; i < cart.length; i++) {
@@ -145,11 +170,11 @@ export async function POST(request: Request) {
         const bookingTime = cartItem.selectedTime || '10:00';
         const totalGuests = (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0);
 
-        // Generate a unique booking reference before creating
-        const bookingReference = await Booking.generateUniqueReference();
+        // Generate unique booking reference
+        const bookingReference = await generateUniqueBookingReference();
 
         const booking = await Booking.create({
-          bookingReference, // Explicitly set the booking reference
+          bookingReference, // Provide the reference explicitly
           tour: tour._id,
           user: user._id,
           date: bookingDate,
@@ -169,46 +194,14 @@ export async function POST(request: Request) {
 
         createdBookings.push(booking);
         
-        // Add a small delay between bookings to avoid rapid succession issues
+        // Add a small delay between bookings
         if (i < cart.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
       } catch (bookingError: any) {
         console.error('Error creating booking:', bookingError);
-        
-        // If it's a duplicate key error, try once more with a different approach
-        if (bookingError.code === 11000 && bookingError.message.includes('bookingReference')) {
-          try {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            const fallbackReference = `EEO-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            
-            const booking = await Booking.create({
-              bookingReference: fallbackReference,
-              tour: (await Tour.findById(cartItem._id || cartItem.id))?._id,
-              user: user._id,
-              date: new Date(cartItem.selectedDate),
-              time: cartItem.selectedTime || '10:00',
-              guests: (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0),
-              totalPrice: cartItem.totalPrice || cartItem.discountPrice || cartItem.price || 0,
-              status: 'Confirmed',
-              paymentId: paymentResult.paymentId,
-              paymentMethod,
-              specialRequests: customer.specialRequests,
-              emergencyContact: customer.emergencyContact,
-              adultGuests: cartItem.quantity || 1,
-              childGuests: cartItem.childQuantity || 0,
-              infantGuests: cartItem.infantQuantity || 0,
-              selectedAddOns: cartItem.selectedAddOns || {},
-            });
-            
-            createdBookings.push(booking);
-          } catch (retryError: any) {
-            throw new Error(`Failed to create booking for ${cartItem.title} after retry: ${retryError.message}`);
-          }
-        } else {
-          throw new Error(`Failed to create booking for ${cartItem.title}: ${bookingError.message}`);
-        }
+        throw new Error(`Failed to create booking for ${cartItem.title}: ${bookingError.message}`);
       }
     }
 
@@ -296,7 +289,7 @@ export async function POST(request: Request) {
   }
 }
 
-// GET method for retrieving checkout session (optional)
+// GET method for retrieving checkout session
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get('session_id');
@@ -311,8 +304,6 @@ export async function GET(request: Request) {
   try {
     await dbConnect();
 
-    // In a real implementation, you'd retrieve the session from your payment provider
-    // For now, we'll return a mock response
     return NextResponse.json({
       success: true,
       session: {
