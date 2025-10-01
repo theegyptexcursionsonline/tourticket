@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
-import Footer from '@/components/Footer'; // 1. Import the Footer
+import Footer from '@/components/Footer';
 import TourDetailClientPage from './TourDetailClientPage';
 import { ITour } from '@/lib/models/Tour';
 
@@ -12,28 +12,23 @@ interface PageProps {
   params: { slug: string };
 }
 
-// Server-side function to fetch single tour with populated data
 async function getTourBySlug(slug: string): Promise<ITour | null> {
   await dbConnect();
-  
-const tour = await Tour.findOne({ slug })
+  const tour = await Tour.findOne({ slug })
     .populate('destination', 'name slug')
     .populate('category', 'name slug')
     .populate('reviews')
     .lean();
-  
+
   if (!tour) {
     return null;
   }
-  
-  // Serialize the data to pass to the client component
+
   return JSON.parse(JSON.stringify(tour));
 }
 
-// Server-side function to fetch related tours
 async function getRelatedTours(categoryId: string, currentTourId: string): Promise<ITour[]> {
   await dbConnect();
-  
   const relatedTours = await Tour.find({
     category: categoryId,
     _id: { $ne: currentTourId },
@@ -43,11 +38,10 @@ async function getRelatedTours(categoryId: string, currentTourId: string): Promi
     .populate('category', 'name')
     .limit(3)
     .lean();
-  
+
   return JSON.parse(JSON.stringify(relatedTours));
 }
 
-// Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const tour = await getTourBySlug(params.slug);
 
@@ -72,7 +66,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// The main server component for the /[slug] route
 export default async function TourDetailPage({ params }: PageProps) {
   const tour = await getTourBySlug(params.slug);
 
@@ -80,25 +73,21 @@ export default async function TourDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Get related tours
   const relatedTours = await getRelatedTours(tour.category as string, tour._id);
 
- return (
-  <>
-    <Header2 startSolid />
-    <main className="min-h-screen bg-slate-50 pt-20">
-      <TourDetailClientPage 
-        tour={tour} 
-        relatedTours={relatedTours} 
+  return (
+    <>
+      <Header2 startSolid />
+      <TourDetailClientPage
+        tour={tour}
+        relatedTours={relatedTours}
         initialReviews={tour.reviews || []}
       />
-    </main>
-    <Footer /> {/* 2. Add the Footer component here */}
-  </>
-);
+      <Footer />
+    </>
+  );
 }
 
-// Generate static paths for better performance
 export async function generateStaticParams() {
   try {
     await dbConnect();
