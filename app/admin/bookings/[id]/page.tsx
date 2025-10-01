@@ -25,7 +25,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
 
 // Enhanced interfaces matching your booking model
 interface BookingUser {
@@ -78,8 +77,6 @@ const BookingDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   
   const params = useParams();
   const router = useRouter();
@@ -131,35 +128,11 @@ const BookingDetailPage = () => {
 
       const updatedBooking = await response.json();
       setBooking(updatedBooking);
-      toast.success(`Booking status updated to ${newStatus}`);
     } catch (err) {
       console.error('Error updating booking:', err);
-      toast.error('Failed to update booking status');
+      alert('Failed to update booking status');
     } finally {
       setUpdating(false);
-    }
-  };
-
-  const handleDeleteBooking = async () => {
-    if (!booking) return;
-    
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/admin/bookings/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete booking');
-      }
-
-      toast.success('Booking deleted successfully');
-      router.push('/admin/bookings');
-    } catch (err) {
-      console.error('Error deleting booking:', err);
-      toast.error('Failed to delete booking');
-      setIsDeleting(false);
-      setShowDeleteModal(false);
     }
   };
 
@@ -198,12 +171,12 @@ const BookingDetailPage = () => {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <div className="h-8 w-1/4 bg-gray-200 rounded animate-pulse mb-6"></div>
-        <div className="bg-white p-8 rounded-full shadow-sm animate-pulse">
+        <div className="bg-white p-8 rounded-lg shadow-sm animate-pulse">
           <div className="h-6 w-1/2 bg-gray-300 rounded mb-4"></div>
           <div className="h-4 w-1/3 bg-gray-200 rounded mb-8"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <div className="h-64 w-full bg-gray-200 rounded-full mb-4"></div>
+              <div className="h-64 w-full bg-gray-200 rounded-lg mb-4"></div>
               <div className="h-5 w-3/4 bg-gray-300 rounded"></div>
             </div>
             <div>
@@ -222,7 +195,7 @@ const BookingDetailPage = () => {
   if (error) {
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-full p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center mb-4">
             <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
             <h3 className="text-red-800 font-semibold text-lg">Error loading booking</h3>
@@ -231,14 +204,14 @@ const BookingDetailPage = () => {
           <div className="flex gap-3">
             <button 
               onClick={fetchBooking}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
             >
               <RefreshCw size={16} />
               Try Again
             </button>
             <button 
               onClick={() => router.back()}
-              className="px-4 py-2 border border-red-300 text-red-700 rounded-full hover:bg-red-50 transition-colors"
+              className="px-4 py-2 border border-red-300 text-red-700 rounded hover:bg-red-50 transition-colors"
             >
               Go Back
             </button>
@@ -256,7 +229,7 @@ const BookingDetailPage = () => {
           <p className="text-slate-500 mb-4">This booking may have been deleted or the ID is incorrect.</p>
           <button 
             onClick={() => router.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
           >
             Go Back
           </button>
@@ -288,49 +261,6 @@ const BookingDetailPage = () => {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
-                <Trash2 className="text-red-600" size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800">Delete Booking?</h3>
-            </div>
-            <p className="text-slate-600 mb-6">
-              Are you sure you want to delete this booking? This action cannot be undone and the customer will NOT be notified.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteBooking}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    Delete
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
@@ -347,20 +277,13 @@ const BookingDetailPage = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-full hover:bg-red-50 transition-colors"
-          >
-            <Trash2 size={16} />
-            Delete
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-full hover:bg-slate-50 transition-colors">
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
             <Download size={16} />
             Export
           </button>
           <button 
             onClick={fetchBooking}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <RefreshCw size={16} />
             Refresh
@@ -369,7 +292,7 @@ const BookingDetailPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         {/* Header Section */}
         <div className="p-6 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -405,7 +328,7 @@ const BookingDetailPage = () => {
                   value={booking.status}
                   onChange={(e) => updateBookingStatus(e.target.value)}
                   disabled={updating}
-                  className="appearance-none bg-white border border-slate-300 rounded-full px-3 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                  className="appearance-none bg-white border border-slate-300 rounded-lg px-3 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                 >
                   <option value="Confirmed">Confirmed</option>
                   <option value="Pending">Pending</option>
@@ -426,7 +349,7 @@ const BookingDetailPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             {/* Tour Image */}
             <div className="lg:col-span-2">
-              <div className="aspect-w-16 aspect-h-12 rounded-2xl overflow-hidden bg-slate-100">
+              <div className="aspect-w-16 aspect-h-12 rounded-lg overflow-hidden bg-slate-100">
                 <Image
                   src={booking.tour.image || booking.tour.images?.[0] || '/bg.png'}
                   alt={booking.tour.title}
@@ -438,11 +361,11 @@ const BookingDetailPage = () => {
               
               {/* Tour Stats */}
               <div className="mt-4 grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 rounded-2xl p-3">
+                <div className="bg-slate-50 rounded-lg p-3">
                   <div className="text-2xl font-bold text-slate-900">${booking.totalPrice.toFixed(2)}</div>
                   <div className="text-sm text-slate-500">Total Price</div>
                 </div>
-                <div className="bg-slate-50 rounded-2xl p-3">
+                <div className="bg-slate-50 rounded-lg p-3">
                   <div className="text-2xl font-bold text-slate-900">{booking.guests}</div>
                   <div className="text-sm text-slate-500">Total Guests</div>
                 </div>
@@ -543,7 +466,7 @@ const BookingDetailPage = () => {
                       icon={CreditCard} 
                       label="Payment Method" 
                       value={
-                        <span className="capitalize bg-slate-100 px-2 py-1 rounded-full text-sm">
+                        <span className="capitalize bg-slate-100 px-2 py-1 rounded text-sm">
                           {booking.paymentMethod}
                         </span>
                       }
@@ -554,7 +477,7 @@ const BookingDetailPage = () => {
                       icon={Hash} 
                       label="Payment ID" 
                       value={
-                        <code className="bg-slate-100 px-2 py-1 rounded-full text-sm">
+                        <code className="bg-slate-100 px-2 py-1 rounded text-sm">
                           {booking.paymentId}
                         </code>
                       }
@@ -575,7 +498,7 @@ const BookingDetailPage = () => {
                     <MessageSquare className="w-5 h-5 mr-2 text-purple-500" />
                     Special Requests
                   </h3>
-                  <div className="bg-slate-50 rounded-2xl p-4">
+                  <div className="bg-slate-50 rounded-lg p-4">
                     <p className="text-slate-700">{booking.specialRequests}</p>
                   </div>
                 </div>
@@ -589,7 +512,7 @@ const BookingDetailPage = () => {
                   </h3>
                   <div className="space-y-2">
                     {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => (
-                      <div key={addOnId} className="flex justify-between items-center bg-slate-50 rounded-2xl p-3">
+                      <div key={addOnId} className="flex justify-between items-center bg-slate-50 rounded-lg p-3">
                         <span className="font-medium text-slate-700">{addOnId}</span>
                         <span className="text-slate-600">Qty: {quantity}</span>
                       </div>

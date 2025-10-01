@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Define interfaces matching your enhanced booking model
 interface BookingUser {
   _id: string;
   firstName?: string;
@@ -22,8 +21,10 @@ interface BookingTour {
   image?: string;
   duration?: string;
   destination?: {
-    name: string;
-  };
+    _id?: string;
+    name?: string;
+    slug?: string;
+  } | null;
 }
 
 interface Booking {
@@ -56,7 +57,6 @@ const BookingsPage = () => {
   
   const router = useRouter();
 
-  // Fetch bookings from API
   const fetchBookings = async () => {
     setLoading(true);
     setError(null);
@@ -80,11 +80,9 @@ const BookingsPage = () => {
     fetchBookings();
   }, []);
 
-  // Filter bookings based on search and filters
   useEffect(() => {
     let filtered = bookings;
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(booking => 
         booking.tour?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,12 +92,10 @@ const BookingsPage = () => {
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
-    // Date filter
     if (dateFilter !== 'all') {
       const now = new Date();
       
@@ -172,13 +168,13 @@ const BookingsPage = () => {
     }
   };
 
-  const formatUserName = (user: BookingUser | null) => {
+  const formatUserName = (user: BookingUser | null | undefined) => {
     if (!user) return 'Deleted User';
-    if (user.name) return user.name;
-    if (user.firstName && user.lastName) {
+    if (user?.name) return user.name;
+    if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
-    return user.firstName || user.email || 'Unknown User';
+    return user?.firstName || user?.email || 'Unknown User';
   };
 
   const formatGuestBreakdown = (booking: Booking) => {
@@ -194,14 +190,16 @@ const BookingsPage = () => {
   };
 
   const getTourTitle = (booking: Booking): string => {
+    if (!booking || !booking.tour) return 'Deleted Tour';
     return booking.tour?.title || 'Deleted Tour';
   };
 
   const getDestinationName = (booking: Booking): string | null => {
-    return booking.tour?.destination?.name || null;
+    if (!booking || !booking.tour) return null;
+    if (!booking.tour.destination) return null;
+    return booking.tour.destination?.name || null;
   };
 
-  // Status Dropdown Component
   const StatusDropdown = ({ booking, onStatusChange }: { 
     booking: Booking; 
     onStatusChange: (bookingId: string, newStatus: string) => void; 
@@ -245,7 +243,6 @@ const BookingsPage = () => {
     );
   };
 
-  // Status change handler
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
       const response = await fetch(`/api/admin/bookings/${bookingId}`, {
@@ -309,7 +306,6 @@ const BookingsPage = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Bookings Management</h1>
@@ -349,10 +345,8 @@ const BookingsPage = () => {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <input
@@ -364,7 +358,6 @@ const BookingsPage = () => {
             />
           </div>
 
-          {/* Status Filter */}
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <select
@@ -379,7 +372,6 @@ const BookingsPage = () => {
             </select>
           </div>
 
-          {/* Date Filter */}
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <select
@@ -394,7 +386,6 @@ const BookingsPage = () => {
             </select>
           </div>
 
-          {/* Clear Filters */}
           {(searchTerm || statusFilter !== 'all' || dateFilter !== 'all') && (
             <button
               onClick={() => {
@@ -410,7 +401,6 @@ const BookingsPage = () => {
         </div>
       </div>
 
-      {/* Bookings Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {filteredBookings.length === 0 ? (
           <div className="p-8 text-center">
@@ -528,7 +518,6 @@ const BookingsPage = () => {
         )}
       </div>
 
-      {/* Summary Stats */}
       {bookings.length > 0 && (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">

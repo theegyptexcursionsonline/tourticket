@@ -1,8 +1,8 @@
 // lib/email/types.ts
+
 export interface BaseEmailData {
   customerName: string;
   customerEmail: string;
-  baseUrl?: string;
 }
 
 export interface BookingEmailData extends BaseEmailData {
@@ -61,16 +61,6 @@ export interface CancellationData extends BaseEmailData {
   cancellationReason?: string;
 }
 
-export interface BookingStatusUpdateData extends BaseEmailData {
-  bookingId: string;
-  tourTitle: string;
-  bookingDate: string;
-  bookingTime: string;
-  newStatus: string;
-  statusMessage: string;
-  additionalInfo?: string;
-}
-
 export interface WelcomeEmailData extends BaseEmailData {
   verificationLink?: string;
   dashboardLink: string;
@@ -92,16 +82,14 @@ export interface AdminAlertData {
   paymentMethod?: string;
   specialRequests?: string;
   adminDashboardLink?: string;
-  baseUrl?: string;
 }
 
-export type EmailType =
+export type EmailType = 
   | 'booking-confirmation'
-  | 'payment-confirmation'
+  | 'payment-confirmation' 
   | 'trip-reminder'
   | 'trip-completion'
   | 'booking-cancellation'
-  | 'booking-update'
   | 'welcome'
   | 'admin-booking-alert';
 

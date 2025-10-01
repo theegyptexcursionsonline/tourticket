@@ -4,7 +4,6 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
-import { EmailService } from '@/lib/email/emailService';
 
 export async function GET(
   request: NextRequest,
@@ -118,32 +117,6 @@ export async function PATCH(
       );
     }
 
-    // Send email notification to customer about status change
-    try {
-      const customerName = updatedBooking.user.name || 
-        `${updatedBooking.user.firstName || ''} ${updatedBooking.user.lastName || ''}`.trim() ||
-        'Valued Customer';
-
-      await EmailService.sendBookingStatusUpdate({
-        customerName,
-        customerEmail: updatedBooking.user.email,
-        bookingId: updatedBooking._id.toString(),
-        tourTitle: updatedBooking.tour.title,
-        bookingDate: updatedBooking.date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        bookingTime: updatedBooking.time,
-        newStatus: status,
-        statusMessage: getStatusMessage(status),
-      });
-    } catch (emailError) {
-      console.error('Failed to send status update email:', emailError);
-      // Don't fail the request if email fails
-    }
-
     // Transform for client compatibility
     const transformedBooking = {
       ...updatedBooking.toObject(),
@@ -202,19 +175,5 @@ export async function DELETE(
       },
       { status: 500 }
     );
-  }
-}
-
-// Helper function to get status-specific messages
-function getStatusMessage(status: string): string {
-  switch (status) {
-    case 'Confirmed':
-      return 'Your booking has been confirmed! We look forward to welcoming you.';
-    case 'Pending':
-      return 'Your booking is currently pending. We will update you shortly.';
-    case 'Cancelled':
-      return 'Your booking has been cancelled. If you have any questions, please contact our support team.';
-    default:
-      return 'Your booking status has been updated.';
   }
 }

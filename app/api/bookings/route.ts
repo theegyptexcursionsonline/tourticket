@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
   await dbConnect();
 
   try {
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const isAdmin = searchParams.get('admin') === 'true';
     const userId = searchParams.get('userId');
@@ -22,23 +21,16 @@ export async function GET(request: NextRequest) {
     let query: any = {};
     let requireAuth = false;
 
-    // Handle admin requests
     if (isAdmin) {
-      // Admin can see all bookings
       if (status) {
         query.status = status;
       }
-    } 
-    // Handle user-specific requests
-    else if (userId) {
+    } else if (userId) {
       query.user = userId;
       requireAuth = true;
-    }
-    // Handle authenticated user requests via JWT
-    else {
+    } else {
       requireAuth = true;
       
-      // Extract token from Authorization header
       const authHeader = request.headers.get('Authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return NextResponse.json(
@@ -60,15 +52,13 @@ export async function GET(request: NextRequest) {
       query.user = payload.sub;
     }
 
-    // Calculate pagination
     const skip = (page - 1) * limit;
 
-    // Fetch bookings with population
     const bookings = await Booking.find(query)
       .populate({
         path: 'tour',
         model: Tour,
-        select: 'title slug image duration rating discountPrice destination',
+        select: 'title slug image images duration rating discountPrice destination',
         populate: {
           path: 'destination',
           model: 'Destination',
@@ -78,25 +68,25 @@ export async function GET(request: NextRequest) {
       .populate({
         path: 'user',
         model: User,
-        select: 'firstName lastName email',
+        select: 'firstName lastName email name',
       })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
-    // Get total count for pagination
-    const totalCount = await Booking.countDocuments(query);
+    // Filter out bookings where tour is null (deleted tours)
+    const validBookings = bookings.filter(booking => booking.tour !== null);
+
+    const totalCount = validBookings.length;
     const totalPages = Math.ceil(totalCount / limit);
 
-    // Transform bookings for client compatibility
-    const transformedBookings = bookings.map(booking => ({
+    const transformedBookings = validBookings.map(booking => ({
       ...booking,
-      // Ensure consistent field naming
       id: booking._id,
-      bookingDate: booking.date, // Map 'date' to 'bookingDate' for client
-      bookingTime: booking.time,  // Map 'time' to 'bookingTime' for client
-      participants: booking.guests, // Map 'guests' to 'participants' for client
+      bookingDate: booking.date,
+      bookingTime: booking.time,
+      participants: booking.guests,
       tour: booking.tour ? {
         ...booking.tour,
         id: booking.tour._id,
@@ -104,7 +94,7 @@ export async function GET(request: NextRequest) {
       user: booking.user ? {
         ...booking.user,
         id: booking.user._id,
-        name: `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim(),
+        name: booking.user.name || `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim(),
       } : null,
     }));
 
@@ -137,7 +127,6 @@ export async function POST(request: NextRequest) {
   await dbConnect();
 
   try {
-    // Authentication check
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -158,7 +147,6 @@ export async function POST(request: NextRequest) {
 
     const userId = payload.sub as string;
     
-    // Parse request body
     const body = await request.json();
     const {
       tourId,
@@ -172,7 +160,6 @@ export async function POST(request: NextRequest) {
       selectedAddOns = {},
     } = body;
 
-    // Validate required fields
     if (!tourId || !date || !time || !totalPrice) {
       return NextResponse.json(
         { success: false, message: 'Missing required booking information' },
@@ -180,7 +167,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify tour exists
     const tour = await Tour.findById(tourId);
     if (!tour) {
       return NextResponse.json(
@@ -189,7 +175,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user exists
     const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json(
@@ -198,10 +183,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total guests
     const totalGuests = adults + children + infants;
 
-    // Create booking
     const booking = await Booking.create({
       tour: tourId,
       user: userId,
@@ -210,15 +193,13 @@ export async function POST(request: NextRequest) {
       guests: totalGuests,
       totalPrice: parseFloat(totalPrice),
       status: 'Confirmed',
-      // Additional fields
       adultGuests: adults,
       childGuests: children,
-infantGuests: infants,
+      infantGuests: infants,
       specialRequests,
       selectedAddOns,
     });
 
-    // Populate the created booking for response
     const populatedBooking = await Booking.findById(booking._id)
       .populate({
         path: 'tour',
@@ -231,7 +212,6 @@ infantGuests: infants,
         select: 'firstName lastName email',
       });
 
-    // Transform booking for client compatibility
     const transformedBooking = {
       ...populatedBooking?.toObject(),
       id: populatedBooking?._id,
@@ -249,7 +229,6 @@ infantGuests: infants,
   } catch (error: any) {
     console.error('Failed to create booking:', error);
     
-    // Handle validation errors
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map((err: any) => err.message);
       return NextResponse.json(

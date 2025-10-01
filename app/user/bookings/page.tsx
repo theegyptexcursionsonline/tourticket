@@ -1,28 +1,62 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, Clock, Users, MapPin, ChevronRight, Loader2, AlertCircle, X } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Tour, Booking } from '@/types';
+import { Calendar, Clock, Users, MapPin, Loader2, AlertTriangle, ChevronRight, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface PopulatedBooking extends Omit<Booking, 'tour' | 'user'> {
-  tour: Tour & {
+interface Booking {
+  _id: string;
+  tour: {
+    _id: string;
+    title: string;
+    slug: string;
+    image: string;
+    duration: string;
+    rating?: number;
     destination?: {
       name: string;
     };
-  };
+  } | null;
+  bookingDate: string;
+  bookingTime: string;
+  participants: number;
+  totalPrice: number;
+  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  createdAt: string;
+  adultGuests?: number;
+  childGuests?: number;
+  infantGuests?: number;
 }
 
-const BookingCard = ({ booking, onCancelSuccess }: { booking: PopulatedBooking; onCancelSuccess: () => void }) => {
-  const bookingDate = new Date(booking.date);
-  const isPast = bookingDate < new Date();
-  const isUpcoming = bookingDate >= new Date();
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState('');
+const BookingCard = ({ booking }: { booking: Booking }) => {
+  const router = useRouter();
+
+  // Handle deleted tours
+  if (!booking.tour) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden p-6">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertTriangle size={24} />
+          <div>
+            <h3 className="font-semibold">Tour No Longer Available</h3>
+            <p className="text-sm text-red-500">This tour has been removed from our catalog.</p>
+            <p className="text-xs text-slate-500 mt-2">Booking ID: {booking._id}</p>
+            <div className="mt-3 flex items-center gap-4">
+              <span className="text-sm text-slate-600">
+                Booked on: {new Date(booking.createdAt).toLocaleDateString()}
+              </span>
+              <span className="text-sm font-semibold text-slate-900">
+                ${booking.totalPrice.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -33,293 +67,169 @@ const BookingCard = ({ booking, onCancelSuccess }: { booking: PopulatedBooking; 
       case 'Cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const handleCancelBooking = async () => {
-    if (!cancellationReason.trim()) {
-      toast.error('Please provide a cancellation reason');
-      return;
-    }
-
-    setIsCancelling(true);
-    try {
-      const { token } = useAuth.getState();
-      const response = await fetch(`/api/admin/bookings/${booking._id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reason: cancellationReason }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to cancel booking');
-      }
-
-      const data = await response.json();
-      toast.success(`Booking cancelled successfully! ${data.refundAmount > 0 ? `Refund: $${data.refundAmount.toFixed(2)}` : ''}`);
-      setShowCancelModal(false);
-      onCancelSuccess();
-    } catch (err) {
-      console.error('Error cancelling booking:', err);
-      toast.error((err as Error).message);
-    } finally {
-      setIsCancelling(false);
-    }
+  const formatGuestBreakdown = () => {
+    const parts = [];
+    if (booking.adultGuests) parts.push(`${booking.adultGuests} Adult${booking.adultGuests > 1 ? 's' : ''}`);
+    if (booking.childGuests) parts.push(`${booking.childGuests} Child${booking.childGuests > 1 ? 'ren' : ''}`);
+    if (booking.infantGuests) parts.push(`${booking.infantGuests} Infant${booking.infantGuests > 1 ? 's' : ''}`);
+    
+    return parts.length > 0 ? parts.join(', ') : `${booking.participants} Guest${booking.participants > 1 ? 's' : ''}`;
   };
 
   return (
-    <>
-      {/* Cancel Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-slate-800">Cancel Booking</h3>
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <p className="text-slate-600 mb-4">
-              Are you sure you want to cancel your booking for <strong>{booking.tour.title}</strong>?
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Reason for cancellation *
-              </label>
-              <textarea
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                rows={3}
-                placeholder="Please tell us why you're cancelling..."
-              />
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4">
-              <p className="text-xs text-yellow-800">
-                <strong>Refund Policy:</strong> Cancellations 7+ days before: 100% refund. 3-6 days: 50% refund. Less than 3 days: No refund.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowCancelModal(false)}
-                disabled={isCancelling}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                Keep Booking
-              </button>
-              <button
-                onClick={handleCancelBooking}
-                disabled={isCancelling || !cancellationReason.trim()}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isCancelling ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Cancelling...
-                  </>
-                ) : (
-                  'Cancel Booking'
-                )}
-              </button>
-            </div>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+      <div className="flex flex-col sm:flex-row">
+        {/* Tour Image */}
+        <div className="relative w-full h-48 sm:w-64 sm:h-40 flex-shrink-0">
+          <Image
+            src={booking.tour.image || '/bg.png'}
+            alt={booking.tour.title}
+            fill
+            className="object-cover"
+          />
+          <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(booking.status)}`}>
+            {booking.status}
           </div>
         </div>
-      )}
 
-      {/* Booking Card */}
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-lg transition-all duration-300">
-        <div className="flex flex-col sm:flex-row">
-          {/* Image */}
-          <div className="relative w-full h-48 sm:w-64 sm:h-40 flex-shrink-0">
-            <Image 
-              src={booking.tour.image} 
-              alt={booking.tour.title} 
-              fill 
-              className="object-cover" 
-              sizes="(max-width: 640px) 100vw, 256px"
-            />
-            
-            {/* Status Badge */}
-            <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(booking.status)}`}>
-              {booking.status}
-            </div>
-            
-            {/* Past/Upcoming Indicator */}
-            {isPast && (
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <span className="bg-black/60 text-white text-sm font-medium px-3 py-1 rounded-full">
-                  Completed
-                </span>
-              </div>
-            )}
-            
-            {isUpcoming && (
-              <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full">
-                Upcoming
-              </div>
-            )}
-          </div>
+        {/* Booking Details */}
+        <div className="flex-1 p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-bold text-slate-900 mb-1 truncate">
+                {booking.tour.title}
+              </h3>
+              
+              {booking.tour.destination && (
+                <div className="flex items-center text-sm text-slate-500 mb-3">
+                  <MapPin size={14} className="mr-1 flex-shrink-0" />
+                  <span className="truncate">{booking.tour.destination.name}</span>
+                </div>
+              )}
 
-          {/* Content */}
-          <div className="flex-1 p-6">
-            <div className="flex flex-col h-full">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2 line-clamp-2">
-                  {booking.tour.title}
-                </h3>
-                
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-slate-600 text-sm">
-                    <Calendar size={14} className="flex-shrink-0" />
-                    <span className="font-medium">{bookingDate.toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      month: 'short', 
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center text-slate-600">
+                  <Calendar size={16} className="mr-2 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">
+                    {new Date(booking.bookingDate).toLocaleDateString('en-US', {
+                      month: 'short',
                       day: 'numeric',
                       year: 'numeric'
-                    })}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-slate-600 text-sm">
-                    <Clock size={14} className="flex-shrink-0" />
-                    <span>{booking.time}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-slate-600 text-sm">
-                    <Users size={14} className="flex-shrink-0" />
-                    <span>{booking.guests} guest{booking.guests > 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  {booking.tour.destination && (
-                    <div className="flex items-center gap-2 text-slate-600 text-sm">
-                      <MapPin size={14} className="flex-shrink-0" />
-                      <span>{booking.tour.destination.name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Price */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-slate-500">Total Paid</span>
-                  <span className="text-lg font-bold text-slate-900">
-                    ${booking.totalPrice.toFixed(2)}
+                    })}
                   </span>
                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center pt-4 border-t border-slate-100 gap-3">
-                {isUpcoming && booking.status !== 'Cancelled' && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="px-4 py-2 border border-red-300 text-red-600 text-sm font-medium rounded-full hover:bg-red-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
+                <div className="flex items-center text-slate-600">
+                  <Clock size={16} className="mr-2 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{booking.bookingTime}</span>
+                </div>
+                <div className="flex items-center text-slate-600">
+                  <Users size={16} className="mr-2 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{formatGuestBreakdown()}</span>
+                </div>
+                {booking.tour.rating && (
+                  <div className="flex items-center text-slate-600">
+                    <Star size={16} className="mr-1 text-yellow-400 fill-yellow-400 flex-shrink-0" />
+                    <span className="truncate">{booking.tour.rating} Rating</span>
+                  </div>
                 )}
-                <Link 
-                  href={`/tour/${booking.tour.slug}`} 
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-full hover:bg-red-700 transition-colors ml-auto"
-                >
-                  View Tour
-                  <ChevronRight size={14} />
-                </Link>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
 
-const BookingSkeleton = () => (
-  <div className="animate-pulse bg-white rounded-2xl border border-slate-100 overflow-hidden">
-    <div className="flex flex-col sm:flex-row">
-      <div className="w-full h-48 sm:w-64 sm:h-40 bg-slate-200 flex-shrink-0" />
-      <div className="flex-1 p-6 space-y-4">
-        <div className="h-5 bg-slate-200 rounded w-3/4" />
-        <div className="space-y-2">
-          <div className="h-4 bg-slate-200 rounded w-1/2" />
-          <div className="h-4 bg-slate-200 rounded w-2/3" />
-          <div className="h-4 bg-slate-200 rounded w-1/3" />
-        </div>
-        <div className="flex justify-between items-center pt-4">
-          <div className="h-4 bg-slate-200 rounded w-16" />
-          <div className="h-9 w-24 bg-slate-200 rounded" />
+            {/* Price and Action */}
+            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-200">
+              <div className="text-right">
+                <div className="text-xs text-slate-500 mb-1">Total Price</div>
+                <div className="text-2xl font-bold text-slate-900">
+                  ${booking.totalPrice.toFixed(2)}
+                </div>
+              </div>
+              <button
+                onClick={() => router.push(`/user/bookings/${booking._id}`)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                View Details
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function BookingsPage() {
-  const { token } = useAuth();
-  const [bookings, setBookings] = useState<PopulatedBooking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, token, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchBookings = async () => {
-    if (!token) {
-      setIsLoading(false);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login?redirect=/user/bookings');
       return;
     }
 
-    try {
-      const response = await fetch('/api/user/bookings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    const fetchBookings = async () => {
+      if (!token) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/bookings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            toast.error('Session expired. Please log in again.');
+            router.push('/login?redirect=/user/bookings');
+            return;
+          }
+          throw new Error('Failed to fetch bookings');
         }
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch bookings' }));
-        throw new Error(errorData.error || 'Failed to fetch bookings');
+        const data = await response.json();
+        setBookings(data.data || []);
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+        setError((err as Error).message);
+        toast.error('Failed to load your bookings');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      if (data.success) {
-        setBookings(data.data);
-      } else {
-        throw new Error(data.error || 'Failed to fetch bookings');
-      }
-    } catch (err) {
-      console.error('Error fetching bookings:', err);
-      setError((err as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
     fetchBookings();
-  }, [token]);
+  }, [isAuthenticated, token, router]);
 
-  const upcomingBookings = bookings.filter(booking => new Date(booking.date) >= new Date());
-  const pastBookings = bookings.filter(booking => new Date(booking.date) < new Date());
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div className="h-8 bg-slate-200 rounded w-48 mb-2 animate-pulse" />
-          <div className="h-5 bg-slate-200 rounded w-96 animate-pulse" />
-        </div>
-        <div className="space-y-6">
-          <BookingSkeleton />
-          <BookingSkeleton />
-          <BookingSkeleton />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="h-10 w-48 bg-gray-200 rounded animate-pulse mb-8"></div>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm animate-pulse">
+                <div className="flex gap-4">
+                  <div className="w-64 h-40 bg-gray-200 rounded"></div>
+                  <div className="flex-1 space-y-4">
+                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -327,82 +237,65 @@ export default function BookingsPage() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertCircle size={32} className="text-red-600" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <AlertTriangle size={24} />
+              <h3 className="font-semibold text-lg">Error Loading Bookings</h3>
+            </div>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading Bookings</h2>
-        <p className="text-red-600 mb-4">{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="bg-red-600 text-white px-4 py-2 rounded-full hover:bg-red-700 transition-colors"
-        >
-          Try Again
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">My Bookings</h1>
-        <p className="text-slate-600">
-          View and manage all your tour bookings. Total bookings: {bookings.length}
-        </p>
-      </div>
-
-      {bookings.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center">
-          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Calendar size={32} className="text-slate-400" />
-          </div>
-          <h2 className="text-2xl font-semibold text-slate-700 mb-2">No bookings yet</h2>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
-            You haven't booked any tours yet. Start exploring our amazing destinations and create unforgettable memories!
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">My Bookings</h1>
+          <p className="text-slate-600">
+            {bookings.length > 0 
+              ? `You have ${bookings.length} booking${bookings.length > 1 ? 's' : ''}`
+              : 'No bookings yet'
+            }
           </p>
-          <Link
-            href="/search"
-            className="inline-flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-full hover:bg-red-700 transition-colors font-medium"
-          >
-            Browse Tours
-            <ChevronRight size={16} />
-          </Link>
         </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Upcoming Bookings */}
-          {upcomingBookings.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                Upcoming Bookings ({upcomingBookings.length})
-              </h2>
-              <div className="space-y-6">
-                {upcomingBookings.map((booking) => (
-                  <BookingCard key={booking._id} booking={booking} onCancelSuccess={fetchBookings} />
-                ))}
-              </div>
-            </section>
-          )}
 
-          {/* Past Bookings */}
-          {pastBookings.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <div className="w-2 h-2 bg-slate-400 rounded-full" />
-                Past Bookings ({pastBookings.length})
-              </h2>
-              <div className="space-y-6">
-                {pastBookings.map((booking) => (
-                  <BookingCard key={booking._id} booking={booking} onCancelSuccess={fetchBookings} />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+        {/* Bookings List */}
+        {bookings.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Calendar className="w-10 h-10 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">No Bookings Yet</h3>
+            <p className="text-slate-600 mb-6">
+              Start exploring amazing tours and experiences!
+            </p>
+            <button
+              onClick={() => router.push('/tours')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
+            >
+              Explore Tours
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {bookings.map((booking) => (
+              <BookingCard key={booking._id} booking={booking} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
