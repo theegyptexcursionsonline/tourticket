@@ -10,6 +10,7 @@ import type {
   CancellationData,
   WelcomeEmailData,
   AdminAlertData,
+  BookingStatusUpdateData,
   EmailTemplate
 } from './types';
 
@@ -20,19 +21,19 @@ export class EmailService {
     'trip-reminder': '⏰ Your Trip is Tomorrow - {{tourTitle}}',
     'trip-completion': '🌟 Thank You for Traveling with Us!',
     'booking-cancellation': '❌ Booking Cancelled - {{tourTitle}}',
+    'booking-update': '📢 Booking Status Update - {{tourTitle}}',
     'welcome': '🎊 Welcome to Egypt Excursions Online!',
     'admin-booking-alert': '📋 New Booking Alert - {{tourTitle}}'
   };
 
   private static async generateEmailTemplate(
-    type: EmailType, 
+    type: EmailType,
     data: Record<string, any>
   ): Promise<EmailTemplate> {
     try {
       const htmlTemplate = await TemplateEngine.loadTemplate(type);
       const html = TemplateEngine.replaceVariables(htmlTemplate, data);
       const subject = TemplateEngine.generateSubject(this.subjects[type], data);
-
       return { subject, html };
     } catch (error) {
       console.error(`Error generating email template for ${type}:`, error);
@@ -92,6 +93,17 @@ export class EmailService {
       subject: template.subject,
       html: template.html,
       type: 'booking-cancellation'
+    });
+  }
+
+  // BOOKING STATUS UPDATE
+  static async sendBookingStatusUpdate(data: BookingStatusUpdateData): Promise<void> {
+    const template = await this.generateEmailTemplate('booking-update', data);
+    await sendEmail({
+      to: data.customerEmail,
+      subject: template.subject,
+      html: template.html,
+      type: 'booking-update'
     });
   }
 

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, Loader2 } from 'lucide-react';
+import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Define interfaces matching your enhanced booking model
@@ -28,14 +28,13 @@ interface BookingTour {
 
 interface Booking {
   _id: string;
-  tour: BookingTour;
-  user: BookingUser;
+  tour: BookingTour | null;
+  user: BookingUser | null;
   date: string;
   time: string;
   guests: number;
   totalPrice: number;
   status: 'Confirmed' | 'Pending' | 'Cancelled';
-  // Enhanced fields from your model
   adultGuests?: number;
   childGuests?: number;
   infantGuests?: number;
@@ -53,6 +52,7 @@ const BookingsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [isClearingTest, setIsClearingTest] = useState(false);
   
   const router = useRouter();
 
@@ -87,9 +87,9 @@ const BookingsPage = () => {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(booking => 
-        booking.tour.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.tour?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking._id.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -102,7 +102,6 @@ const BookingsPage = () => {
     // Date filter
     if (dateFilter !== 'all') {
       const now = new Date();
-      const bookingDate = new Date(filtered[0]?.createdAt || now);
       
       switch (dateFilter) {
         case 'today':
@@ -133,6 +132,32 @@ const BookingsPage = () => {
     router.push(`/admin/bookings/${id}`);
   };
 
+  const handleClearTestBookings = async () => {
+    if (!confirm('Are you sure you want to delete ALL test bookings? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsClearingTest(true);
+    try {
+      const response = await fetch('/api/admin/bookings/clear-test', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear test bookings');
+      }
+
+      const data = await response.json();
+      toast.success(`${data.deletedCount} test bookings cleared successfully`);
+      fetchBookings();
+    } catch (err) {
+      console.error('Error clearing test bookings:', err);
+      toast.error('Failed to clear test bookings');
+    } finally {
+      setIsClearingTest(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const baseClasses = "px-2 py-1 text-xs font-semibold rounded-full";
     switch (status) {
@@ -147,12 +172,13 @@ const BookingsPage = () => {
     }
   };
 
-  const formatUserName = (user: BookingUser) => {
+  const formatUserName = (user: BookingUser | null) => {
+    if (!user) return 'Deleted User';
     if (user.name) return user.name;
     if (user.firstName && user.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
-    return user.firstName || user.email;
+    return user.firstName || user.email || 'Unknown User';
   };
 
   const formatGuestBreakdown = (booking: Booking) => {
@@ -165,6 +191,14 @@ const BookingsPage = () => {
       return `${booking.guests} (${parts.join(', ')})`;
     }
     return booking.guests.toString();
+  };
+
+  const getTourTitle = (booking: Booking): string => {
+    return booking.tour?.title || 'Deleted Tour';
+  };
+
+  const getDestinationName = (booking: Booking): string | null => {
+    return booking.tour?.destination?.name || null;
   };
 
   // Status Dropdown Component
@@ -226,9 +260,6 @@ const BookingsPage = () => {
         throw new Error('Failed to update booking status');
       }
 
-      const updatedBooking = await response.json();
-      
-      // Update the booking in the local state
       setBookings(prevBookings => 
         prevBookings.map(booking => 
           booking._id === bookingId 
@@ -248,7 +279,7 @@ const BookingsPage = () => {
     return (
       <div className="p-6">
         <div className="h-9 w-1/4 bg-gray-200 rounded animate-pulse mb-6"></div>
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-full shadow-sm">
           <div className="space-y-4">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
@@ -262,12 +293,12 @@ const BookingsPage = () => {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-full p-4">
           <h3 className="text-red-800 font-semibold">Error loading bookings</h3>
           <p className="text-red-600 mt-1">{error}</p>
           <button 
             onClick={fetchBookings}
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
           >
             Try Again
           </button>
@@ -288,13 +319,30 @@ const BookingsPage = () => {
         </div>
         <div className="flex items-center gap-3 mt-4 sm:mt-0">
           <button
+            onClick={handleClearTestBookings}
+            disabled={isClearingTest}
+            className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-600 rounded-full hover:bg-orange-50 transition-colors disabled:opacity-50"
+          >
+            {isClearingTest ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Clearing...
+              </>
+            ) : (
+              <>
+                <Trash2 size={16} />
+                Clear Test
+              </>
+            )}
+          </button>
+          <button
             onClick={fetchBookings}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
           >
             <RefreshCw size={16} />
             Refresh
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-full hover:bg-slate-50 transition-colors">
             <Download size={16} />
             Export
           </button>
@@ -302,7 +350,7 @@ const BookingsPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
@@ -312,7 +360,7 @@ const BookingsPage = () => {
               placeholder="Search bookings..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -322,7 +370,7 @@ const BookingsPage = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
             >
               <option value="all">All Status</option>
               <option value="Confirmed">Confirmed</option>
@@ -337,7 +385,7 @@ const BookingsPage = () => {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
@@ -354,7 +402,7 @@ const BookingsPage = () => {
                 setStatusFilter('all');
                 setDateFilter('all');
               }}
-              className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 text-slate-600 border border-slate-300 rounded-full hover:bg-slate-50 transition-colors"
             >
               Clear Filters
             </button>
@@ -363,7 +411,7 @@ const BookingsPage = () => {
       </div>
 
       {/* Bookings Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {filteredBookings.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -403,70 +451,77 @@ const BookingsPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {filteredBookings.map((booking) => (
-                  <tr
-                    key={booking._id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900 truncate max-w-xs">
-                          {booking.tour.title}
+                {filteredBookings.map((booking) => {
+                  const tourTitle = getTourTitle(booking);
+                  const userName = formatUserName(booking.user);
+                  const destinationName = getDestinationName(booking);
+                  const isDeleted = !booking.tour;
+
+                  return (
+                    <tr
+                      key={booking._id}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className={`text-sm font-medium truncate max-w-xs flex items-center gap-2 ${
+                            isDeleted ? 'text-orange-600' : 'text-slate-900'
+                          }`}>
+                            {isDeleted && <AlertTriangle size={14} />}
+                            {tourTitle}
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {userName}
+                          </div>
+                          {destinationName && (
+                            <div className="text-xs text-slate-400">
+                              {destinationName}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-sm text-slate-500">
-                          {formatUserName(booking.user)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-slate-900">
+                          {new Date(booking.date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                         </div>
-                        {booking.tour.destination && (
-                          <div className="text-xs text-slate-400">
-                            {booking.tour.destination.name}
+                        <div className="text-sm text-slate-500">{booking.time}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center text-sm text-slate-900">
+                          <Users size={14} className="mr-1 text-slate-400" />
+                          {formatGuestBreakdown(booking)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusDropdown booking={booking} onStatusChange={handleStatusChange} />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center text-sm font-semibold text-slate-900">
+                          <DollarSign size={14} className="mr-1 text-green-600" />
+                          {booking.totalPrice.toFixed(2)}
+                        </div>
+                        {booking.paymentMethod && (
+                          <div className="text-xs text-slate-500 capitalize">
+                            {booking.paymentMethod}
                           </div>
                         )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-slate-900">
-                        {new Date(booking.date).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </div>
-                      <div className="text-sm text-slate-500">{booking.time}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-slate-900">
-                        <Users size={14} className="mr-1 text-slate-400" />
-                        {formatGuestBreakdown(booking)}
-                      </div>
-                    </td>
-                    
-                    {/* Updated Status Column with Inline Editing */}
-                    <td className="px-6 py-4">
-                      <StatusDropdown booking={booking} onStatusChange={handleStatusChange} />
-                    </td>
-                    
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm font-semibold text-slate-900">
-                        <DollarSign size={14} className="mr-1 text-green-600" />
-                        {booking.totalPrice.toFixed(2)}
-                      </div>
-                      {booking.paymentMethod && (
-                        <div className="text-xs text-slate-500 capitalize">
-                          {booking.paymentMethod}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => handleRowClick(booking._id)}
-                        className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                      >
-                        <Eye size={12} />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleRowClick(booking._id)}
+                          className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors"
+                        >
+                          <Eye size={12} />
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -476,7 +531,7 @@ const BookingsPage = () => {
       {/* Summary Stats */}
       {bookings.length > 0 && (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Bookings</p>
@@ -486,7 +541,7 @@ const BookingsPage = () => {
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Confirmed</p>
@@ -500,7 +555,7 @@ const BookingsPage = () => {
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Revenue</p>
@@ -512,7 +567,7 @@ const BookingsPage = () => {
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Guests</p>

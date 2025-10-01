@@ -229,7 +229,9 @@ const STEPS = [
   { id: 2, title: 'Tour Options', shortTitle: 'Options', icon: Star },
   { id: 3, title: 'Enhance Tour', shortTitle: 'Enhance', icon: Sparkles },
   { id: 4, title: 'Review & Book', shortTitle: 'Review', icon: CheckCircle },
-];const StepsIndicator: React.FC<{
+];
+
+const StepsIndicator: React.FC<{
   currentStep: number;
   onStepClick?: (step: number) => void;
   isClickable?: boolean;
@@ -387,7 +389,7 @@ const CalendarWidget: React.FC<{
           disabled={isPast || isFull}
           whileHover={{ scale: isPast || isFull ? 1 : 1.1 }}
           whileTap={{ scale: isPast || isFull ? 1 : 0.95 }}
-          className={`relative w-10 h-10 text-sm rounded-xl border-2 transition-all font-medium ${
+          className={`relative w-10 h-10 text-sm rounded-full border-2 transition-all font-medium ${
             isSelected
               ? 'bg-gradient-to-br from-red-500 to-orange-600 text-white border-red-600 shadow-lg scale-110'
               : isToday
@@ -433,7 +435,7 @@ const CalendarWidget: React.FC<{
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => navigateMonth('prev')}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <ChevronLeft size={20} className="text-gray-600" />
           </motion.button>
@@ -441,7 +443,7 @@ const CalendarWidget: React.FC<{
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => navigateMonth('next')}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <ChevronRight size={20} className="text-gray-600" />
           </motion.button>
@@ -539,15 +541,15 @@ const TourOptionCard: React.FC<{
 
           {/* Rating and Bookings Row - Now using real data */}
           <div className="flex items-center gap-4 mb-3">
-            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
               <Star size={14} className="text-yellow-500 fill-yellow-500" />
               <span className="text-sm font-semibold text-gray-800">{rating}</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
               <Users size={14} className="text-blue-500" />
               <span className="text-sm font-medium text-gray-700">{totalBookings.toLocaleString()} booked</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-lg">
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
               <User size={14} className="text-purple-500" />
               <span className="text-sm font-medium text-gray-700">Max {maxParticipants}</span>
             </div>
@@ -555,7 +557,7 @@ const TourOptionCard: React.FC<{
         </div>
 
         {/* Price Section */}
-        <div className="text-right bg-gray-50 rounded-xl p-3 min-w-[100px]">
+        <div className="text-right bg-gray-50 rounded-2xl p-3 min-w-[100px]">
           {originalSubtotal > subtotal && (
             <div className="text-sm text-gray-400 line-through mb-1">
               {formatPrice(originalSubtotal)}
@@ -571,7 +573,7 @@ const TourOptionCard: React.FC<{
       </div>
 
       {/* Specs Row */}
-      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4 bg-gray-50 rounded-lg p-3">
+      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4 bg-gray-50 rounded-full p-3">
         <div className="flex items-center gap-2">
           <Clock size={16} className="text-red-500" />
           <span className="font-medium">{option.duration}</span>
@@ -580,7 +582,7 @@ const TourOptionCard: React.FC<{
           <Languages size={16} className="text-green-500" />
           <span className="font-medium">{option.languages.slice(0, 2).join(', ')}</span>
           {option.languages.length > 2 && (
-            <span className="text-xs bg-gray-200 px-1.5 py-0.5 rounded">
+            <span className="text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">
               +{option.languages.length - 2}
             </span>
           )}
@@ -592,7 +594,7 @@ const TourOptionCard: React.FC<{
       </div>
 
       {/* Description */}
-      <p className="text-sm text-gray-700 leading-relaxed mb-4 bg-white rounded-lg p-3 border border-gray-100">
+      <p className="text-sm text-gray-700 leading-relaxed mb-4 bg-white rounded-full p-3 border border-gray-100">
         {option.description}
       </p>
 
@@ -602,13 +604,13 @@ const TourOptionCard: React.FC<{
           <h4 className="font-semibold text-gray-800 text-sm mb-2">What's Included</h4>
           <div className="grid grid-cols-1 gap-2">
             {option.highlights.slice(0, 3).map((highlight, index) => (
-              <div key={index} className="flex items-center gap-2 bg-green-50 rounded-lg p-2">
+              <div key={index} className="flex items-center gap-2 bg-green-50 rounded-full p-2">
                 <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
                 <span className="text-sm text-gray-800 font-medium">{highlight}</span>
               </div>
             ))}
             {option.highlights.length > 3 && (
-              <div className="text-sm text-red-600 font-medium bg-red-50 rounded-lg p-2 text-center">
+              <div className="text-sm text-red-600 font-medium bg-red-50 rounded-full p-2 text-center">
                 +{option.highlights.length - 3} more benefits included
               </div>
             )}
@@ -617,7 +619,7 @@ const TourOptionCard: React.FC<{
       )}
 
       {/* Price Summary */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 mb-5 border border-gray-200">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-4 mb-5 border border-gray-200">
         <div className="flex justify-between items-center text-sm mb-2">
           <span className="text-gray-700 font-medium">
             {adults} Adult{adults > 1 ? 's' : ''}{children > 0 && `, ${children} Child${children > 1 ? 'ren' : ''}`}
@@ -654,7 +656,7 @@ const TourOptionCard: React.FC<{
                 disabled={isSoldOut}
                 whileHover={{ scale: isSoldOut ? 1 : 1.02 }}
                 whileTap={{ scale: isSoldOut ? 1 : 0.98 }}
-                className={`relative p-4 rounded-xl text-sm font-medium transition-all border-2 ${
+                className={`relative p-4 rounded-full text-sm font-medium transition-all border-2 ${
                   isSelected
                     ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white border-red-600 shadow-lg'
                     : isSoldOut
@@ -779,7 +781,7 @@ const AddOnCard: React.FC<{
 
       <div className="flex items-start gap-3 sm:gap-4 mb-4 mt-2">
         {/* Icon */}
-        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(addOn.category || '')} flex items-center justify-center text-white flex-shrink-0`}>
+        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${getCategoryColor(addOn.category || '')} flex items-center justify-center text-white flex-shrink-0`}>
           <IconComponent size={20} />
         </div>
 
@@ -839,9 +841,9 @@ const AddOnCard: React.FC<{
 const BookingSummaryCard: React.FC<{
   bookingData: BookingData;
   tour: Tour | null;
-  availability: AvailabilityData | null; // Add this line
+  availability: AvailabilityData | null;
   onEditClick: (section: 'date' | 'guests' | 'language') => void;
-}> = ({ bookingData, tour, availability, onEditClick }) => { // Add availability to destructuring
+}> = ({ bookingData, tour, availability, onEditClick }) => {
   const { formatPrice } = useSettings();
 
   const formatDate = (date: Date) => {
@@ -887,7 +889,7 @@ const BookingSummaryCard: React.FC<{
       <div className="space-y-4">
         {/* Date & Time */}
         <motion.div 
-          className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+          className="flex items-start justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:shadow-md transition-all group"
           whileHover={{ scale: 1.01 }}
         >
           <div className="flex items-center gap-3">
@@ -905,7 +907,7 @@ const BookingSummaryCard: React.FC<{
           </div>
           <motion.button
             onClick={() => onEditClick('date')}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -915,7 +917,7 @@ const BookingSummaryCard: React.FC<{
 
         {/* Participants */}
         <motion.div 
-          className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+          className="flex items-start justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:shadow-md transition-all group"
           whileHover={{ scale: 1.01 }}
         >
           <div className="flex items-center gap-3">
@@ -933,7 +935,7 @@ const BookingSummaryCard: React.FC<{
           </div>
           <motion.button
             onClick={() => onEditClick('guests')}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -943,7 +945,7 @@ const BookingSummaryCard: React.FC<{
 
         {/* Language */}
         <motion.div 
-          className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
+          className="flex items-start justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:shadow-md transition-all group"
           whileHover={{ scale: 1.01 }}
         >
           <div className="flex items-center gap-3">
@@ -961,7 +963,7 @@ const BookingSummaryCard: React.FC<{
           </div>
           <motion.button
             onClick={() => onEditClick('language')}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -969,58 +971,57 @@ const BookingSummaryCard: React.FC<{
           </motion.button>
         </motion.div>
 
-
         {/* Selected Tour Option */}
-{(() => {
-  const selectedOption = availability?.tourOptions.find(option =>
-    option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
-  );
-  
-  if (selectedOption) {
-    return (
-      <motion.div 
-        className="flex items-start justify-between p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-all group"
-        whileHover={{ scale: 1.01 }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-            <Star size={20} className="text-orange-600" />
-          </div>
-          <div>
-            <div className="font-semibold text-slate-800 text-sm sm:text-base">
-              {selectedOption.title}
-            </div>
-            <div className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
-              <span>{selectedOption.duration}</span>
-              <span>•</span>
-              <span>{selectedOption.languages.slice(0, 2).join(', ')}</span>
-              {selectedOption.badge && (
-                <>
-                  <span>•</span>
-                  <span className="text-orange-600 font-medium">{selectedOption.badge}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <motion.button
-          onClick={() => onEditClick('date')} // This will take them back to step 2
-          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Edit size={16} />
-        </motion.button>
-      </motion.div>
-    );
-  }
-  return null;
-})()}
+        {(() => {
+          const selectedOption = availability?.tourOptions.find(option =>
+            option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+          );
+          
+          if (selectedOption) {
+            return (
+              <motion.div 
+                className="flex items-start justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:shadow-md transition-all group"
+                whileHover={{ scale: 1.01 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <Star size={20} className="text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-800 text-sm sm:text-base">
+                      {selectedOption.title}
+                    </div>
+                    <div className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
+                      <span>{selectedOption.duration}</span>
+                      <span>•</span>
+                      <span>{selectedOption.languages.slice(0, 2).join(', ')}</span>
+                      {selectedOption.badge && (
+                        <>
+                          <span>•</span>
+                          <span className="text-orange-600 font-medium">{selectedOption.badge}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => onEditClick('date')}
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Edit size={16} />
+                </motion.button>
+              </motion.div>
+            );
+          }
+          return null;
+        })()}
 
         {/* Tour Information */}
         {tourDisplayData && (
-          <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200">
-            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+          <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border border-red-200">
+            <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
               <Image 
                 src={tourDisplayData.image} 
                 alt={tourDisplayData.title} 
@@ -1064,7 +1065,6 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
   
-  // 1. Add a new ref for the scrollable area
   const datePickerRef = useRef<HTMLDivElement>(null);
   const scrollableContentRef = useRef<HTMLDivElement>(null);
 
@@ -1126,201 +1126,149 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     };
   }, [tour]);
 
+  // MODIFIED: Fetches availability and options with fallback to mock data
+  const fetchAvailability = async (date: Date, totalGuests: number) => {
+    setIsLoading(true);
+    setError('');
 
-
-
-  
- 
-
-// MODIFIED: Fetches availability and options with fallback to mock data
-const fetchAvailability = async (date: Date, totalGuests: number) => {
-  setIsLoading(true);
-  setError('');
-
-  try {
-    const tourId = tour._id || tour.id;
-    if (!tourId) {
+    try {
+      const tourId = tour._id || tour.id;
+      if (!tourId) {
         throw new Error("Tour ID is missing");
-    }
-
-    // Try to fetch tour options from API, but use fallback if it fails
-    let tourOptions: TourOption[];
-    try {
-      const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
-      if (!optionsResponse.ok) {
-        throw new Error('API endpoint not available');
       }
-      tourOptions = await optionsResponse.json();
-    } catch (error) {
-      console.log('API not available, using mock tour options');
-      // Fallback to mock tour options
-      tourOptions = [
-        {
-          id: 'standard-tour',
-          title: 'Standard Tour Experience',
-          price: tourDisplayData?.discountPrice || 50,
-          originalPrice: tourDisplayData?.originalPrice || tourDisplayData?.discountPrice || 50,
-          duration: tourDisplayData?.duration || '3 hours',
-          languages: tourDisplayData?.languages || ['English'],
-          description: 'Perfect introduction to the destination with expert guide',
-          timeSlots: [
-            { id: 'slot-1', time: '09:00', available: 12, price: tourDisplayData?.discountPrice || 50, isPopular: false },
-            { id: 'slot-2', time: '11:00', available: 8, price: tourDisplayData?.discountPrice || 50, isPopular: true },
-            { id: 'slot-3', time: '14:00', available: 15, price: tourDisplayData?.discountPrice || 50, isPopular: false },
-            { id: 'slot-4', time: '16:00', available: 3, price: tourDisplayData?.discountPrice || 50, isPopular: false },
-          ],
-          highlights: tourDisplayData?.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
-          included: tourDisplayData?.includes?.slice(0, 3) || ['Professional guide', 'Entry tickets', 'Group photos'],
-          groupSize: `Max ${tourDisplayData?.maxGroupSize || 15} people`,
-          difficulty: 'Easy',
-          badge: 'Most Popular',
-          discount: tourDisplayData?.originalPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : 0,
-          isRecommended: true,
-        },
-        {
-          id: 'premium-tour',
-          title: 'Premium Experience',
-          price: (tourDisplayData?.discountPrice || 50) * 1.5,
-          originalPrice: (tourDisplayData?.originalPrice || tourDisplayData?.discountPrice || 50) * 1.5,
-          duration: tourDisplayData?.duration || '4 hours',
-          languages: ['English', 'Spanish', 'French'],
-          description: 'Enhanced experience with additional perks and smaller groups',
-          timeSlots: [
-            { id: 'premium-slot-1', time: '10:00', available: 6, price: (tourDisplayData?.discountPrice || 50) * 1.5, isPopular: false },
-            { id: 'premium-slot-2', time: '15:00', available: 4, price: (tourDisplayData?.discountPrice || 50) * 1.5, isPopular: true },
-          ],
-          highlights: ['VIP access', 'Complimentary refreshments', 'Professional photos included'],
-          included: ['Private guide', 'VIP entry', 'Refreshments', 'Photo package'],
-          groupSize: `Max ${Math.floor((tourDisplayData?.maxGroupSize || 15) / 2)} people`,
-          difficulty: 'Easy',
-          badge: 'Premium',
-          discount: 10,
-          isRecommended: false,
+
+      // Try to fetch tour options from API, but use fallback if it fails
+      let tourOptions: TourOption[];
+      try {
+        const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
+        if (!optionsResponse.ok) {
+          throw new Error('API endpoint not available');
         }
-      ];
-    }
-
-    // Fetch add-ons with fallbacks (keep existing logic)
-    let addOnsToUse;
-    try {
-      const addOnsResponse = await fetch(`/api/tours/${tourId}/addons`);
-      if (addOnsResponse.ok) {
-        addOnsToUse = await addOnsResponse.json();
-        addOnsToUse = addOnsToUse.map((addon: any) => ({
-          ...addon,
-          icon: getAddOnIcon(addon.category),
-        }));
-      } else {
-        throw new Error('Failed to fetch add-ons');
+        tourOptions = await optionsResponse.json();
+      } catch (error) {
+        console.log('API not available, using mock tour options');
+        // Fallback to mock tour options
+        tourOptions = [
+          {
+            id: 'standard-tour',
+            title: 'Standard Tour Experience',
+            price: tourDisplayData?.discountPrice || 50,
+            originalPrice: tourDisplayData?.originalPrice || tourDisplayData?.discountPrice || 50,
+            duration: tourDisplayData?.duration || '3 hours',
+            languages: tourDisplayData?.languages || ['English'],
+            description: 'Perfect introduction to the destination with expert guide',
+            timeSlots: [
+              { id: 'slot-1', time: '09:00', available: 12, price: tourDisplayData?.discountPrice || 50, isPopular: false },
+              { id: 'slot-2', time: '11:00', available: 8, price: tourDisplayData?.discountPrice || 50, isPopular: true },
+              { id: 'slot-3', time: '14:00', available: 15, price: tourDisplayData?.discountPrice || 50, isPopular: false },
+              { id: 'slot-4', time: '16:00', available: 3, price: tourDisplayData?.discountPrice || 50, isPopular: false },
+            ],
+            highlights: tourDisplayData?.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
+            included: tourDisplayData?.includes?.slice(0, 3) || ['Professional guide', 'Entry tickets', 'Group photos'],
+            groupSize: `Max ${tourDisplayData?.maxGroupSize || 15} people`,
+            difficulty: 'Easy',
+            badge: 'Most Popular',
+            discount: tourDisplayData?.originalPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : 0,
+            isRecommended: true,
+          },
+          {
+            id: 'premium-tour',
+            title: 'Premium Experience',
+            price: (tourDisplayData?.discountPrice || 50) * 1.5,
+            originalPrice: (tourDisplayData?.originalPrice || tourDisplayData?.discountPrice || 50) * 1.5,
+            duration: tourDisplayData?.duration || '4 hours',
+            languages: ['English', 'Spanish', 'French'],
+            description: 'Enhanced experience with additional perks and smaller groups',
+            timeSlots: [
+              { id: 'premium-slot-1', time: '10:00', available: 6, price: (tourDisplayData?.discountPrice || 50) * 1.5, isPopular: false },
+              { id: 'premium-slot-2', time: '15:00', available: 4, price: (tourDisplayData?.discountPrice || 50) * 1.5, isPopular: true },
+            ],
+            highlights: ['VIP access', 'Complimentary refreshments', 'Professional photos included'],
+            included: ['Private guide', 'VIP entry', 'Refreshments', 'Photo package'],
+            groupSize: `Max ${Math.floor((tourDisplayData?.maxGroupSize || 15) / 2)} people`,
+            difficulty: 'Easy',
+            badge: 'Premium',
+            discount: 10,
+            isRecommended: false,
+          }
+        ];
       }
-    } catch (error) {
-      console.log('Add-ons API not available, using fallback');
-      // Use existing fallback logic for add-ons
-      addOnsToUse = tour.addOns && tour.addOns.length > 0 
-        ? tour.addOns.map((addon: any, index: number) => ({
-            id: addon.id || `addon-${index}`,
-            title: addon.name || 'Tour Enhancement',
-            description: addon.description || 'Enhance your tour experience',
-            price: addon.price || 15,
-            originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
-            required: false,
-            maxQuantity: 1,
-            popular: index === 0,
-            category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
-            icon: getAddOnIcon(addon.category || 'Experience'),
-            savings: addon.price ? Math.round(addon.price * 0.3) : 5,
-            perGuest: addon.category === 'Food',
-          }))
-        : [
-            {
-              id: 'photo-package',
-              title: 'Professional Photography Package',
-              description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
-              price: 35.00,
-              originalPrice: 50.00,
+
+      // Fetch add-ons with fallbacks
+      let addOnsToUse;
+      try {
+        const addOnsResponse = await fetch(`/api/tours/${tourId}/addons`);
+        if (addOnsResponse.ok) {
+          addOnsToUse = await addOnsResponse.json();
+          addOnsToUse = addOnsToUse.map((addon: any) => ({
+            ...addon,
+            icon: getAddOnIcon(addon.category),
+          }));
+        } else {
+          throw new Error('Failed to fetch add-ons');
+        }
+      } catch (error) {
+        console.log('Add-ons API not available, using fallback');
+        addOnsToUse = tour.addOns && tour.addOns.length > 0 
+          ? tour.addOns.map((addon: any, index: number) => ({
+              id: addon.id || `addon-${index}`,
+              title: addon.name || 'Tour Enhancement',
+              description: addon.description || 'Enhance your tour experience',
+              price: addon.price || 15,
+              originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
               required: false,
               maxQuantity: 1,
-              popular: true,
-              category: 'Photography' as const,
-              icon: Camera,
-              savings: 15,
-              perGuest: false,
-            },
-            {
-              id: 'transport-premium',
-              title: 'Premium Hotel Transfer Service',
-              description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
-              price: 15.00,
-              originalPrice: 25.00,
-              required: false,
-              maxQuantity: 1,
-              category: 'Transport' as const,
-              icon: Car,
-              savings: 10,
-              perGuest: false,
-            },
-            {
-              id: 'refreshment-upgrade',
-              title: 'Gourmet Refreshment Package',
-              description: 'Premium snacks, fresh juices, and traditional treats',
-              price: 12.00,
-              originalPrice: 18.00,
-              required: false,
-              maxQuantity: 1,
-              category: 'Food' as const,
-              icon: Coffee,
-              savings: 6,
-              perGuest: true,
-            },
-          ];
+              popular: index === 0,
+              category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
+              icon: getAddOnIcon(addon.category || 'Experience'),
+              savings: addon.price ? Math.round(addon.price * 0.3) : 5,
+              perGuest: addon.category === 'Food',
+            }))
+          : addOnData;
+      }
+
+      const newAvailabilityData: AvailabilityData = {
+        date: date.toISOString().split('T')[0],
+        timeSlots: [],
+        addOns: addOnsToUse,
+        tourOptions: tourOptions,
+        weatherInfo: {
+          condition: 'Sunny',
+          temperature: '25°C',
+          icon: '☀️'
+        },
+        specialOffers: []
+      };
+
+      setAvailability(newAvailabilityData);
+      setCurrentStep(2);
+      setAnimationKey(prev => prev + 1);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unable to check availability.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-
-    const newAvailabilityData: AvailabilityData = {
-      date: date.toISOString().split('T')[0],
-      timeSlots: [], // Empty since timeSlots are now part of each tourOption
-      addOns: addOnsToUse,
-      tourOptions: tourOptions,
-      weatherInfo: {
-        condition: 'Sunny',
-        temperature: '25°C',
-        icon: '☀️'
-      },
-      specialOffers: []
-    };
-
-    setAvailability(newAvailabilityData);
-    setCurrentStep(2);
-    setAnimationKey(prev => prev + 1);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unable to check availability.';
-    setError(errorMessage);
-    toast.error(errorMessage);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   // Enhanced price calculations with savings
   const { subtotal, addOnsTotal, total, totalSavings } = useMemo(() => {
     let basePrice = 0;
     let originalBasePrice = 0;
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
-if (bookingData.selectedTimeSlot) {
-  // Use the specific time slot price instead of the general option price
-  basePrice = bookingData.selectedTimeSlot.price;
-  
-  // Find the selected option for original pricing fallback
-  const selectedOption = availability?.tourOptions.find(option =>
-    option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
-  );
-  
-  // Use time slot's original price if available, otherwise fall back to option's pricing
-  originalBasePrice = bookingData.selectedTimeSlot.originalPrice || 
-                     selectedOption?.originalPrice || 
-                     bookingData.selectedTimeSlot.price;
-} else if (tourDisplayData) {
-      // Use tour price as fallback
+
+    if (bookingData.selectedTimeSlot) {
+      basePrice = bookingData.selectedTimeSlot.price;
+      
+      const selectedOption = availability?.tourOptions.find(option =>
+        option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+      );
+      
+      originalBasePrice = bookingData.selectedTimeSlot.originalPrice || 
+                         selectedOption?.originalPrice || 
+                         bookingData.selectedTimeSlot.price;
+    } else if (tourDisplayData) {
       basePrice = tourDisplayData.discountPrice;
       originalBasePrice = tourDisplayData.originalPrice || tourDisplayData.discountPrice;
     }
@@ -1328,8 +1276,9 @@ if (bookingData.selectedTimeSlot) {
     const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * basePrice * 0.5);
     const originalSubtotal = (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
 
-  const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
-const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) {
+    const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
+      const addOn = availability?.addOns.find(a => a.id === addOnId);
+      if (addOn) {
         const itemQuantity = addOn.perGuest ? totalGuests : 1;
         return acc + (addOn.price * itemQuantity);
       }
@@ -1356,7 +1305,7 @@ const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) 
     };
   }, [bookingData, availability, tourDisplayData]);
 
-  // Reset when sidebar opens with enhanced animations
+  // Reset when sidebar opens
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
@@ -1410,7 +1359,7 @@ const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) 
     }
   }, [currentStep]);
 
-  // Enhanced availability check with better validation
+  // Enhanced availability check
   const handleCheckAvailability = useCallback(() => {
     if (!bookingData.selectedDate) {
       setError('Please select a date to continue');
@@ -1436,36 +1385,35 @@ const addOn = availability?.addOns.find(a => a.id === addOnId);      if (addOn) 
     fetchAvailability(bookingData.selectedDate, totalGuests);
   }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability]);
 
- // Enhanced date selection with availability feedback
-const handleDateSelect = useCallback((date: Date) => {
-  setBookingData(prev => ({ ...prev, selectedDate: date, selectedTimeSlot: null }));
-  setShowDatePicker(false);
-  setAvailability(null);
-  setCurrentStep(1);
+  // Enhanced date selection
+  const handleDateSelect = useCallback((date: Date) => {
+    setBookingData(prev => ({ ...prev, selectedDate: date, selectedTimeSlot: null }));
+    setShowDatePicker(false);
+    setAvailability(null);
+    setCurrentStep(1);
 
-  const dateKey = date.toISOString().split('T')[0];
-  const dayAvailability = mockAvailabilityData[dateKey];
+    const dateKey = date.toISOString().split('T')[0];
+    const dayAvailability = mockAvailabilityData[dateKey];
 
-  if (dayAvailability === 'full') {
-    toast.error('This date is fully booked. Please select another date.', {
-      id: 'availability-toast',   // prevents duplicate
-      duration: 4000,
-      icon: '😞'
-    });
-  } else if (dayAvailability === 'low') {
-    toast('Limited availability on this date! Book soon.', {
-      id: 'availability-toast',
-      icon: '⚡',
-      style: { background: '#FEF3C7', color: '#D97706' }
-    });
-  } else if (dayAvailability === 'high') {
-    toast.success('Great choice! Plenty of availability.', {
-      id: 'availability-toast',
-      icon: '✨'
-    });
-  }
-}, [mockAvailabilityData]);
-
+    if (dayAvailability === 'full') {
+      toast.error('This date is fully booked. Please select another date.', {
+        id: 'availability-toast',
+        duration: 4000,
+        icon: '😞'
+      });
+    } else if (dayAvailability === 'low') {
+      toast('Limited availability on this date! Book soon.', {
+        id: 'availability-toast',
+        icon: '⚡',
+        style: { background: '#FEF3C7', color: '#D97706' }
+      });
+    } else if (dayAvailability === 'high') {
+      toast.success('Great choice! Plenty of availability.', {
+        id: 'availability-toast',
+        icon: '✨'
+      });
+    }
+  }, [mockAvailabilityData]);
 
   const handleTimeSlotSelect = useCallback((timeSlot: TimeSlot) => {
     if (timeSlot.available === 0) {
@@ -1480,7 +1428,7 @@ const handleDateSelect = useCallback((date: Date) => {
     });
   }, []);
 
-  // Enhanced participant controls with better UX
+  // Enhanced participant controls
   const handleParticipantChange = useCallback((type: 'adults' | 'children' | 'infants', increment: boolean) => {
     setBookingData(prev => {
       const currentCount = prev[type];
@@ -1511,7 +1459,7 @@ const handleDateSelect = useCallback((date: Date) => {
     return details.length > 0 ? `${text} (${details.join(', ')})` : text;
   }, [bookingData]);
 
-  // Enhanced add-on quantity management (simplified for toggle)
+  // Enhanced add-on quantity management
   const handleAddOnQuantityChange = useCallback((addOnId: string, quantity: number) => {
     setBookingData(prev => {
       const selectedAddOns = { ...prev.selectedAddOns };
@@ -1524,7 +1472,7 @@ const handleDateSelect = useCallback((date: Date) => {
     });
   }, []);
 
-  // Enhanced final booking actions with better feedback
+  // Enhanced final booking actions
   const handleFinalAction = useCallback(async (action: 'cart' | 'checkout') => {
     if (isProcessing || !tourDisplayData) return;
 
@@ -1552,7 +1500,8 @@ const handleDateSelect = useCallback((date: Date) => {
       if (!bookingData.selectedDate || !bookingData.selectedTimeSlot) {
         throw new Error('Incomplete booking data.');
       }
-// Prepare add-on details for cart storage
+
+      // Prepare add-on details for cart storage
       const selectedAddOnDetails: { [key: string]: any } = {};
       Object.keys(bookingData.selectedAddOns).forEach(addOnId => {
         const addOnData = availability?.addOns.find(a => a.id === addOnId);
@@ -1577,7 +1526,7 @@ const handleDateSelect = useCallback((date: Date) => {
         badge: selectedOption.badge,
       } : undefined;
 
-      // Prepare the cart item with all necessary data
+      // Prepare the cart item
       const newCartItem = {
         ...tourDisplayData,
         id: tourDisplayData.id,
@@ -1591,24 +1540,24 @@ const handleDateSelect = useCallback((date: Date) => {
         selectedAddOnDetails,
         selectedBookingOption: selectedBookingOptionDetails,
         price: selectedOption?.price || tourDisplayData.discountPrice,
-      originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
+        originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
         discountPrice: selectedOption?.price || tourDisplayData.discountPrice,
-        totalPrice: 0, // Don't set total initially as requested
+        totalPrice: 0,
       };
 
-      addToCart(newCartItem, false); // Add item to cart but don't open the sidebar yet
+      addToCart(newCartItem, false);
 
       toast.dismiss(loadingToast);
-      onClose(); // Close the booking sidebar
+      onClose();
 
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (action === 'checkout') {
-      toast.success('Redirecting to secure checkout...', {
-  icon: '🔒',
-  duration: 1500,
-  style: { background: '#10B981', color: 'white' }
-});
+        toast.success('Redirecting to secure checkout...', {
+          icon: '🔒',
+          duration: 1500,
+          style: { background: '#10B981', color: 'white' }
+        });
         router.push('/checkout');
       } else {
         toast.success('🎉 Added to Cart! Ready for more adventures?', {
@@ -1616,7 +1565,6 @@ const handleDateSelect = useCallback((date: Date) => {
           position: 'bottom-center',
           style: { background: '#059669', color: 'white' }
         });
-        // Stay on the same page or redirect as needed
       }
     } catch (error) {
       toast.dismiss(loadingToast);
@@ -1647,26 +1595,21 @@ const handleDateSelect = useCallback((date: Date) => {
         setCurrentStep(1);
         break;
       case 'language':
-        // Could open a language selector
         toast.info('Language selection coming soon!');
         break;
     }
     setAnimationKey(prev => prev + 1);
   }, []);
 
-
-  // 3. Replace the scrolling logic with this new, precise version
+  // Scrolling logic
   useEffect(() => {
     if (showDatePicker && datePickerRef.current && scrollableContentRef.current) {
-      // A short delay allows the animation to start before scrolling
       setTimeout(() => {
         const scrollContainer = scrollableContentRef.current;
         const elementToScrollTo = datePickerRef.current;
 
-        // Calculate the position of the date picker relative to the scrollable container
         const topPosition = elementToScrollTo.offsetTop;
 
-        // Scroll the container to bring the top of the element into view
         scrollContainer.scrollTo({
           top: topPosition,
           behavior: 'smooth'
@@ -1675,19 +1618,17 @@ const handleDateSelect = useCallback((date: Date) => {
     }
   }, [showDatePicker]);
 
-  // Enhanced click outside handler
+  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       
-      // Check if click is outside participants dropdown
       if (showParticipantsDropdown && 
           !target.closest('.participants-dropdown') && 
           !target.closest('.participants-content')) {
         setShowParticipantsDropdown(false);
       }
       
-      // Check if click is outside date picker
       if (showDatePicker && 
           !target.closest('.date-picker-dropdown') && 
           !target.closest('.date-picker-content')) {
@@ -1701,15 +1642,15 @@ const handleDateSelect = useCallback((date: Date) => {
     }
   }, [isOpen, showParticipantsDropdown, showDatePicker]);
 
-  // Enhanced step content renderer with better animations
+  // Step content renderer
   const renderStepContent = () => {
     if (isLoading) {
       return (
         <div className="space-y-6 p-4 sm:p-6">
           <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded-xl w-2/3 mb-4"></div>
+            <div className="h-6 bg-gray-200 rounded-full w-2/3 mb-4"></div>
             <div className="h-24 bg-gray-200 rounded-2xl mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded-xl w-1/3 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded-full w-1/3 mb-4"></div>
             <div className="h-16 bg-gray-200 rounded-2xl"></div>
           </div>
         </div>
@@ -1723,7 +1664,6 @@ const handleDateSelect = useCallback((date: Date) => {
     };
 
     switch (currentStep) {
-      // Step 1 Content
       case 1:
         return (
           <motion.div
@@ -1748,7 +1688,7 @@ const handleDateSelect = useCallback((date: Date) => {
             </div>
 
             {/* Compact Price Section */}
-            <div className="flex justify-between items-center bg-gray-100 rounded-xl p-4 text-gray-800 border border-gray-200">
+            <div className="flex justify-between items-center bg-gray-100 rounded-2xl p-4 text-gray-800 border border-gray-200">
               <div>
                 {tourDisplayData?.originalPrice && (
                   <span className="text-sm text-gray-500 line-through block">
@@ -1766,10 +1706,10 @@ const handleDateSelect = useCallback((date: Date) => {
               </div>
             </div>
 
-            {/* Compact Highlights - Only show 2 */}
+            {/* Compact Highlights */}
             <div className="grid grid-cols-1 gap-2">
               {tourDisplayData?.highlights?.slice(0, 2).map((highlight, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                <div key={index} className="flex items-center gap-2 bg-gray-50 rounded-full p-2">
                   <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
                   <span className="text-xs text-gray-700 font-medium leading-tight">{highlight}</span>
                 </div>
@@ -1782,11 +1722,12 @@ const handleDateSelect = useCallback((date: Date) => {
             </div>
 
             {/* Date Picker */}
-            <div ref={datePickerRef} className="date-picker-dropdown">              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. Select your date</h3>
+            <div ref={datePickerRef} className="date-picker-dropdown">
+              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. Select your date</h3>
               <div className="relative">
                 <motion.button
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
+                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-2xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
                 >
                   <div className="flex items-center gap-2">
                     <Calendar size={18} className="text-red-500 flex-shrink-0" />
@@ -1823,7 +1764,7 @@ const handleDateSelect = useCallback((date: Date) => {
               <div className="relative">
                 <motion.button
                   onClick={() => setShowParticipantsDropdown(!showParticipantsDropdown)}
-                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
+                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-2xl bg-white text-left hover:border-red-300 transition-all shadow-sm"
                 >
                   <div className="flex items-center gap-2">
                     <Users size={18} className="text-red-500 flex-shrink-0" />
@@ -1947,7 +1888,7 @@ const handleDateSelect = useCallback((date: Date) => {
                 selectedTimeSlot={bookingData.selectedTimeSlot}
                 adults={bookingData.adults}
                 children={bookingData.children}
-                tour={tour} // MODIFIED: Pass the real tour data
+                tour={tour}
               />
             ))}
           </motion.div>
@@ -1994,12 +1935,12 @@ const handleDateSelect = useCallback((date: Date) => {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Review & Book</h2>
             <p className="text-gray-600 mb-6">Your adventure is ready! Review the details and complete your booking.</p>
 
-        <BookingSummaryCard
-  bookingData={bookingData}
-  tour={tourDisplayData}
-  availability={availability} // Add this line
-  onEditClick={handleEditClick}
-/>
+            <BookingSummaryCard
+              bookingData={bookingData}
+              tour={tourDisplayData}
+              availability={availability}
+              onEditClick={handleEditClick}
+            />
 
             {/* Add-ons Summary */}
             {Object.keys(bookingData.selectedAddOns).length > 0 && (
@@ -2017,8 +1958,8 @@ const handleDateSelect = useCallback((date: Date) => {
                     const totalPrice = addOn.price * (addOn.perGuest ? (bookingData.adults + bookingData.children) : 1);
                     
                     return (
-                      <div key={addOnId} className="flex items-center gap-3 bg-white p-3 rounded-xl">
-                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <div key={addOnId} className="flex items-center gap-3 bg-white p-3 rounded-2xl">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                           <IconComponent size={16} className="text-purple-600" />
                         </div>
                         <div className="flex-1">
@@ -2073,11 +2014,11 @@ const handleDateSelect = useCallback((date: Date) => {
 
             {/* Trust Badges */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div className="flex items-center gap-2 bg-green-50 p-3 sm:p-4 rounded-lg">
+              <div className="flex items-center gap-2 bg-green-50 p-3 sm:p-4 rounded-full">
                 <Shield size={20} className="text-green-600" />
                 <span className="text-sm font-medium text-green-800">Secure Payment</span>
               </div>
-              <div className="flex items-center gap-2 bg-red-50 p-3 sm:p-4 rounded-lg">
+              <div className="flex items-center gap-2 bg-red-50 p-3 sm:p-4 rounded-full">
                 <Clock size={20} className="text-red-600" />
                 <span className="text-sm font-medium text-red-800">Free Cancellation</span>
               </div>
@@ -2157,7 +2098,6 @@ const handleDateSelect = useCallback((date: Date) => {
               isClickable={currentStep >= 2}
             />
 
-            {/* 2. Attach the new ref to the scrollable container */}
             <div ref={scrollableContentRef} className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 {renderStepContent()}
@@ -2204,7 +2144,7 @@ const handleDateSelect = useCallback((date: Date) => {
                   exit={{ opacity: 0, y: 50 }}
                   className="bg-white border-t border-gray-200 p-4 shadow-lg"
                 >
-                  {/* Price Display - Always visible for steps 2+ */}
+                  {/* Price Display */}
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <span className="block font-bold text-lg text-red-600">{formatPrice(total)}</span>

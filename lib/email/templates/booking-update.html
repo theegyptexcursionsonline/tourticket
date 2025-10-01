@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Status Update</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px 20px; text-align: center; }
+        .logo { max-width: 120px; height: auto; margin-bottom: 15px; }
+        .header h1 { font-size: 28px; margin: 0; font-weight: 700; }
+        .header p { font-size: 16px; margin: 10px 0 0; opacity: 0.9; }
+        .content { padding: 40px 30px; }
+        .status-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0; }
+        .status-box h2 { color: #1e40af; font-size: 22px; margin-bottom: 15px; }
+        .status-badge { display: inline-block; padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 16px; margin: 10px 0; }
+        .status-confirmed { background: #dcfce7; color: #166534; border: 2px solid #86efac; }
+        .status-pending { background: #fef3c7; color: #92400e; border: 2px solid #fcd34d; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; border: 2px solid #fca5a5; }
+        .booking-details { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 25px 0; }
+        .detail-header { background: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; }
+        .detail-header h3 { color: #2d3748; margin: 0; font-size: 18px; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f1f5f9; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #4a5568; }
+        .detail-value { color: #2d3748; text-align: right; }
+        .message-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 25px 0; }
+        .message-box p { color: #047857; }
+        .cta-section { text-align: center; margin: 35px 0; }
+        .cta-button { display: inline-block; background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; transition: background 0.3s; }
+        .cta-button:hover { background: #2563eb; }
+        .footer { background: #2d3748; color: white; padding: 30px 20px; text-align: center; }
+        .footer-logo { max-width: 80px; height: auto; margin-bottom: 15px; opacity: 0.8; }
+        .footer p { margin: 5px 0; opacity: 0.8; }
+        @media (max-width: 600px) {
+            .content { padding: 25px 20px; }
+            .detail-row { flex-direction: column; align-items: flex-start; }
+            .detail-value { margin-top: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="{{baseUrl}}/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+            <h1>📢 Booking Status Update</h1>
+            <p>Important update about your booking</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="status-box">
+                <h2>Status Changed</h2>
+                <div class="status-badge status-{{newStatus}}">
+                    {{newStatus}}
+                </div>
+            </div>
+
+            <p>Dear {{customerName}},</p>
+
+            <p>We wanted to inform you that the status of your booking has been updated.</p>
+
+            <!-- Booking Details -->
+            <div class="booking-details">
+                <div class="detail-header">
+                    <h3>📋 Booking Information</h3>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Booking ID:</span>
+                    <span class="detail-value">{{bookingId}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Tour:</span>
+                    <span class="detail-value">{{tourTitle}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date & Time:</span>
+                    <span class="detail-value">{{bookingDate}} at {{bookingTime}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">New Status:</span>
+                    <span class="detail-value"><strong>{{newStatus}}</strong></span>
+                </div>
+            </div>
+
+            <!-- Status Message -->
+            <div class="message-box">
+                <p><strong>{{statusMessage}}</strong></p>
+            </div>
+
+            {{#if additionalInfo}}
+            <p>{{additionalInfo}}</p>
+            {{/if}}
+
+            <!-- Call to Action -->
+            <div class="cta-section">
+                <a href="{{baseUrl}}/user/bookings" class="cta-button">
+                    View My Bookings
+                </a>
+            </div>
+
+            <p>If you have any questions or concerns about this status change, please don't hesitate to contact our support team.</p>
+
+            <p style="margin-top: 30px;">
+                Best regards,<br>
+                <strong>The Egypt Excursions Online Team</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <img src="{{baseUrl}}/EEO-logo.png" alt="EEO" class="footer-logo">
+            <p><strong>Egypt Excursions Online</strong></p>
+            <p>📧 support@egyptexcursions.com | 📞 +20 123 456 7890</p>
+        </div>
+    </div>
+</body>
+</html>
