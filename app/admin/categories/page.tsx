@@ -1,19 +1,82 @@
-// app/admin/categories/page.tsx
-import dbConnect from '@/lib/dbConnect';
-import Category from '@/lib/models/Category';
-import { ICategory } from '@/lib/models/Category';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Edit, Trash2, Plus, Eye, EyeOff, Star, Tag } from 'lucide-react';
+import { Edit, Plus, Tag, Trash2, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
-async function getCategories(): Promise<ICategory[]> {
-  await dbConnect();
-  const categories = await Category.find({}).sort({ order: 1, name: 1 });
-  return JSON.parse(JSON.stringify(categories));
+interface ICategory {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  heroImage?: string;
+  isPublished?: boolean;
+  featured?: boolean;
+  order?: number;
 }
 
-export default async function CategoriesPage() {
-  const categories = await getCategories();
+export default function CategoriesPage() {
+  const [categories, setCategories] = useState<ICategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      if (data.success) {
+        setCategories(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Category deleted successfully');
+        setCategories(categories.filter(cat => cat._id !== id));
+      } else {
+        toast.error(data.error || 'Failed to delete category');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error('Failed to delete category');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
@@ -59,7 +122,7 @@ export default async function CategoriesPage() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {categories.length > 0 ? (
                   categories.map(cat => (
-                    <tr key={cat._id.toString()} className="hover:bg-slate-50 transition-colors duration-150">
+                    <tr key={cat._id} className="hover:bg-slate-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {cat.heroImage ? (
@@ -117,6 +180,18 @@ export default async function CategoriesPage() {
                           >
                             <Edit className="w-4 h-4" />
                           </Link>
+                          <button
+                            onClick={() => handleDelete(cat._id, cat.name)}
+                            disabled={deletingId === cat._id}
+                            className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete Category"
+                          >
+                            {deletingId === cat._id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                       </td>
                     </tr>

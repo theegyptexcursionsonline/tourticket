@@ -1,4 +1,3 @@
-// app/admin/categories/[id]/edit/page.tsx
 import { Suspense } from 'react';
 import CategoryForm from '@/components/admin/CategoryForm';
 

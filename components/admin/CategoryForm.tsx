@@ -1,4 +1,3 @@
-// components/admin/CategoryForm.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -78,7 +77,7 @@ const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl 
 
 export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const router = useRouter();
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   
@@ -91,8 +90,6 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   useEffect(() => {
     if (categoryId) {
       fetchCategoryData();
-    } else {
-      setIsPanelOpen(true);
     }
   }, [categoryId]);
 
@@ -128,9 +125,11 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
         setIsSlugManuallyEdited(Boolean(category.slug));
       } else {
         setError(data.error || 'Failed to fetch category data');
+        toast.error(data.error || 'Failed to load category');
       }
     } catch (err) {
       setError('Network error');
+      toast.error('Failed to load category');
     } finally {
       setLoading(false);
     }
@@ -248,7 +247,6 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
 
       if (data.success) {
         toast.success(`Category ${categoryId ? 'updated' : 'created'} successfully!`);
-        setIsPanelOpen(false);
         router.push('/admin/categories');
         router.refresh();
       } else {
@@ -295,10 +293,10 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="mb-12">
+        <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
             <button 
-              onClick={() => router.back()}
+              onClick={() => router.push('/admin/categories')}
               className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200 group"
             >
               <ArrowLeft className="h-5 w-5 text-slate-600 group-hover:text-indigo-600" />
@@ -306,56 +304,20 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
-                  Categories
+                  {categoryId ? 'Edit Category' : 'Create Category'}
                 </h1>
                 <div className="px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 rounded-full text-xs font-semibold text-indigo-700">
                   {categoryId ? 'EDITING' : 'CREATING'}
                 </div>
               </div>
+              <p className="text-slate-500 mt-2">
+                {categoryId ? `Editing: ${formData.name || 'Category'}` : 'Fill out the form to create your category'}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="space-y-8">
-          {!isPanelOpen && (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-gradient-to-br from-white to-slate-50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 p-8">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-                      <Tag className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                        {categoryId ? 'Edit Category' : 'Create Category'}
-                      </h1>
-                      <p className="text-slate-500 mt-1">
-                        {categoryId ? `Editing: ${formData.name}` : 'Fill out the form to create your category'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => setIsPanelOpen(true)}
-                    className="group inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
-                  >
-                    {categoryId ? (
-                      <>
-                        <Edit className="h-5 w-5 group-hover:rotate-12 transition-transform duration-200" />
-                        Edit Category
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-200" />
-                        Create Category
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          
           {/* Panel */}
           <AnimatePresence>
             {isPanelOpen && (
@@ -365,29 +327,6 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                 exit={{ opacity: 0, y: 20 }}
                 className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
               >
-                {/* Panel Header */}
-                <div className="flex items-center justify-between p-8 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-sm">
-                      {categoryId ? <Edit className="h-5 w-5 text-white" /> : <PlusCircle className="h-5 w-5 text-white" />}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-800">
-                        {categoryId ? 'Edit Category' : 'Create New Category'}
-                      </h2>
-                      <p className="text-sm text-slate-500">
-                        {categoryId ? `Editing: ${formData.name}` : 'Fill out the form to create your category'}
-                      </p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setIsPanelOpen(false)} 
-                    className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
                 {/* Tab Navigation */}
                 <div className="flex border-b border-slate-200 bg-slate-50 px-8 overflow-x-auto">
                   {tabs.map((tab) => {
@@ -885,7 +824,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                     <div className="flex items-center gap-4">
                       <button
                         type="button"
-                        onClick={() => setIsPanelOpen(false)}
+                        onClick={() => router.push('/admin/categories')}
                         className="flex-1 px-6 py-3 text-slate-700 font-semibold border border-slate-300 rounded-xl hover:bg-slate-50 transition-all duration-200"
                       >
                         Cancel

@@ -1,14 +1,15 @@
-// app/admin/users/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
-import { Users, Mail, Calendar, BookOpen, TrendingUp, UserCheck, Activity } from 'lucide-react';
+import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-// --- Type Definition for a User ---
 interface User {
   _id: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
   email: string;
   createdAt: string;
   bookingCount: number;
@@ -30,25 +31,93 @@ const UsersPage = () => {
     averageBookingsPerUser: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/admin/users');
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
-        }
-        const data = await response.json();
-        setUsers(data);
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data);
+      
+      const totalUsers = data.length;
+      const totalBookings = data.reduce((sum: number, user: User) => sum + user.bookingCount, 0);
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const activeThisMonth = data.filter((user: User) => {
+        const userDate = new Date(user.createdAt);
+        return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
+      }).length;
+      const averageBookingsPerUser = totalUsers > 0 ? Math.round((totalBookings / totalUsers) * 10) / 10 : 0;
+      
+      setStats({
+        totalUsers,
+        totalBookings,
+        activeThisMonth,
+        averageBookingsPerUser
+      });
+    } catch (err) {
+      setError((err as Error).message);
+      toast.error('Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getUserDisplayName = (user: User) => {
+    if (user.name) return user.name;
+    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+    if (user.firstName) return user.firstName;
+    return user.email.split('@')[0];
+  };
+
+  const handleDeleteUser = async (userId: string, userEmail: string) => {
+    const userName = users.find(u => u._id === userId);
+    const displayName = userName ? getUserDisplayName(userName) : userEmail;
+    
+    const confirmMessage = `Are you sure you want to delete this user?\n\nName: ${displayName}\nEmail: ${userEmail}\n\nThis action cannot be undone and will also delete all associated bookings and data.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const doubleConfirm = confirm('⚠️ FINAL WARNING: This will permanently delete the user and all their data. Are you absolutely sure?');
+    
+    if (!doubleConfirm) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
+      if (data.success) {
+        toast.success(`User "${displayName}" deleted successfully`);
+        setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
         
-        // Calculate stats
-        const totalUsers = data.length;
-        const totalBookings = data.reduce((sum: number, user: User) => sum + user.bookingCount, 0);
+        const updatedUsers = users.filter(user => user._id !== userId);
+        const totalUsers = updatedUsers.length;
+        const totalBookings = updatedUsers.reduce((sum, user) => sum + user.bookingCount, 0);
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-        const activeThisMonth = data.filter((user: User) => {
+        const activeThisMonth = updatedUsers.filter((user) => {
           const userDate = new Date(user.createdAt);
           return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
         }).length;
@@ -60,14 +129,16 @@ const UsersPage = () => {
           activeThisMonth,
           averageBookingsPerUser
         });
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setIsLoading(false);
+      } else {
+        throw new Error(data.error || 'Failed to delete user');
       }
-    };
-    fetchUsers();
-  }, []);
+    } catch (err) {
+      console.error('Delete user error:', err);
+      toast.error((err as Error).message || 'Failed to delete user');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -77,7 +148,6 @@ const UsersPage = () => {
           <div className="h-8 w-64 bg-slate-200 rounded" />
         </div>
         
-        {/* Stats Cards Skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white p-6 rounded-xl shadow-lg">
@@ -88,7 +158,6 @@ const UsersPage = () => {
           ))}
         </div>
 
-        {/* Table Skeleton */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -197,51 +266,57 @@ const UsersPage = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {/* Header */}
-              <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
-                <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <div className="col-span-4">User</div>
-                  <div className="col-span-4">Contact</div>
-                  <div className="col-span-2">Joined</div>
-                  <div className="col-span-2 text-center">Bookings</div>
-                </div>
-              </div>
-
-              {/* User Rows */}
-              <div className="divide-y divide-slate-200">
-                {users.map((user) => (
-                  <div
-                    key={user._id}
-                    className="px-6 py-4 hover:bg-slate-50 transition-colors duration-200 group"
-                  >
-                    <div className="grid grid-cols-12 gap-4 items-center">
-                      {/* User Info */}
-                      <div className="col-span-4">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Joined
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Bookings
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {users.map((user) => {
+                  const displayName = getUserDisplayName(user);
+                  const initial = displayName.charAt(0).toUpperCase();
+                  
+                  return (
+                    <tr key={user._id} className="hover:bg-slate-50 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3">
-{user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}                          </div>
-                          <div>
-                            <div className="font-semibold text-slate-800 group-hover:text-red-600 transition-colors">
-                              {user.name}
+                          <div className="w-10 h-10 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3 flex-shrink-0">
+                            {initial}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-800 truncate">
+                              {displayName}
                             </div>
                             <div className="text-xs text-slate-500">ID: {user._id.slice(-6)}</div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Contact */}
-                      <div className="col-span-4">
+                      </td>
+                      
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-slate-600">
-                          <Mail className="h-4 w-4 mr-2 text-slate-400" />
-                          <span className="text-sm">{user.email}</span>
+                          <Mail className="h-4 w-4 mr-2 text-slate-400 flex-shrink-0" />
+                          <span className="text-sm truncate">{user.email}</span>
                         </div>
-                      </div>
-
-                      {/* Join Date */}
-                      <div className="col-span-2">
+                      </td>
+                      
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-slate-600">
-                          <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                          <Calendar className="h-4 w-4 mr-2 text-slate-400 flex-shrink-0" />
                           <span className="text-sm">
                             {new Date(user.createdAt).toLocaleDateString('en-US', {
                               month: 'short',
@@ -250,22 +325,42 @@ const UsersPage = () => {
                             })}
                           </span>
                         </div>
-                      </div>
-
-                      {/* Bookings */}
-                      <div className="col-span-2 text-center">
-                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 group-hover:bg-red-100 transition-colors">
-                          <BookOpen className="h-4 w-4 mr-1 text-slate-500 group-hover:text-red-600 transition-colors" />
-                          <span className="text-sm font-semibold text-slate-700 group-hover:text-red-700 transition-colors">
+                      </td>
+                      
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100">
+                          <BookOpen className="h-4 w-4 mr-1 text-slate-500" />
+                          <span className="text-sm font-semibold text-slate-700">
                             {user.bookingCount}
                           </span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                      </td>
+                      
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => handleDeleteUser(user._id, user.email)}
+                          disabled={deletingUserId === user._id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-300 hover:border-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete User"
+                        >
+                          {deletingUserId === user._id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Deleting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4" />
+                              <span>Delete</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
