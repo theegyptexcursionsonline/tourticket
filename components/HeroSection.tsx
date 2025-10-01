@@ -26,7 +26,6 @@ interface HeroSettings {
   title: {
     main: string;
     highlight: string;
-    subtitle: string;
   };
   searchSuggestions: string[];
   floatingTags: {
@@ -67,9 +66,8 @@ const DEFAULT_SETTINGS: HeroSettings = {
   ],
   currentActiveImage: '/hero2.png',
   title: {
-    main: 'Explore Egypt\'s Pyramids & Nile',
-    highlight: 'Incredible',
-    subtitle: 'Experiences',
+    main: 'Explore Egypt\'s ',
+    highlight: 'Pyramids & Nile',
   },
   searchSuggestions: [
     "Where are you going?", "Find your next adventure", "Discover hidden gems",
@@ -382,12 +380,6 @@ export default function HeroSection() {
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
                     {settings.title.highlight}
                   </span>
-                </>
-              )}
-              {settings.title.subtitle && (
-                <>
-                  <br />
-                  {settings.title.subtitle}
                 </>
               )}
             </h1>

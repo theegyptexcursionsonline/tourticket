@@ -24,7 +24,6 @@ interface HeroSettings {
   title: {
     main: string;
     highlight: string;
-    subtitle: string;
   };
   searchSuggestions: string[];
   floatingTags: {
@@ -76,8 +75,6 @@ const HeroSettingsPage = () => {
   useEffect(() => {
     fetchHeroSettings();
   }, []);
-
- // app/admin/hero-settings/page.tsx (Update these specific functions)
 
 const fetchHeroSettings = async () => {
   try {
@@ -206,10 +203,6 @@ const handleSaveSettings = async () => {
     setIsSaving(false);
   }
 };
-
-
-// app/admin/hero-settings/page.tsx
-// Add this function inside your HeroSettingsPage component
 
 const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
   if (!file) return '';
@@ -666,22 +659,8 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
                         title: { ...editingSettings.title, highlight: e.target.value }
                       })}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-placeholder="Highlight word (optional)"                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Subtitle
-                    </label>
-                    <input
-                      type="text"
-                      value={editingSettings.title.subtitle}
-                      onChange={(e) => setEditingSettings({
-                        ...editingSettings,
-                        title: { ...editingSettings.title, subtitle: e.target.value }
-                      })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-placeholder="Subtitle (optional)"                    />
+                      placeholder="e.g., Incredible"
+                    />
                   </div>
                 </div>
               </div>
@@ -1279,12 +1258,14 @@ placeholder="Subtitle (optional)"                    />
                   <div className="text-center">
                     <h1 className="text-2xl md:text-4xl font-bold mb-4">
                       {editingSettings.title.main}
-                      <br />
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-                        {editingSettings.title.highlight}
-                      </span>
-                      <br />
-                      {editingSettings.title.subtitle}
+                      {editingSettings.title.highlight && (
+                        <>
+                          {' '}
+                          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                            {editingSettings.title.highlight}
+                          </span>
+                        </>
+                      )}
                     </h1>
                     
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">

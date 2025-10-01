@@ -15,7 +15,6 @@ export interface IHeroSettings extends Document {
   title: {
     main: string;
     highlight: string;
-    subtitle: string;
   };
   
   // Search Settings
@@ -104,7 +103,7 @@ const HeroSettingsSchema: Schema<IHeroSettings> = new Schema({
     required: true
   },
   
- title: {
+  title: {
     main: {
       type: String,
       required: true,
@@ -116,15 +115,8 @@ const HeroSettingsSchema: Schema<IHeroSettings> = new Schema({
       required: true,
       trim: true,
       maxlength: [50, 'Highlight word cannot exceed 50 characters']
-    },
-    subtitle: {
-      type: String,
-      required: false, // Changed from required: true to required: false
-      trim: true,
-      maxlength: [100, 'Subtitle cannot exceed 100 characters']
     }
   },
-  
   
   searchSuggestions: {
     type: [String],
