@@ -2,10 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSettings } from '@/hooks/useSettings';
-import { 
-  Search, 
-  Grid, 
-  List, 
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  Search,
+  Grid,
+  List,
   Filter,
   ArrowUpDown,
   Eye,
@@ -16,7 +17,11 @@ import {
   DollarSign,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal
+  MoreHorizontal,
+  FileText,
+  CheckCircle,
+  Edit3,
+  Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import { TourActions } from './TourActions';
@@ -54,24 +59,76 @@ function Badge({ children, className = '', icon: Icon }: {
   );
 }
 
+type TabFilter = 'all' | 'published' | 'draft' | 'featured';
+
 export function ToursListClient({ tours }: { tours: TourType[] }) {
   const { selectedCurrency } = useSettings();
   const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
+  // Get initial tab and page from URL or defaults
+  const initialTab = (searchParams.get('status') as TabFilter) || 'all';
+  const initialPage = parseInt(searchParams.get('page') || '1', 10);
+
+  const [activeTab, setActiveTab] = useState<TabFilter>(initialTab);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'table' | 'cards'>('cards');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [perPage, setPerPage] = useState(12);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
+
+  // Update URL when tab or page changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    // Handle status parameter
+    if (activeTab === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', activeTab);
+    }
+
+    // Handle page parameter
+    if (page === 1) {
+      params.delete('page');
+    } else {
+      params.set('page', page.toString());
+    }
+
+    const newUrl = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/admin/tours${newUrl}`, { scroll: false });
+  }, [activeTab, page, router, searchParams]);
 
   const formatPrice = (p?: number) => {
     if (p === undefined || p === null) return '—';
     return `${selectedCurrency.symbol}${Number(p).toFixed(2)}`;
   };
 
+  // Helper function to build edit URL with preserved state
+  const getEditUrl = (tourId: string) => {
+    const params = new URLSearchParams();
+    if (activeTab !== 'all') params.set('status', activeTab);
+    if (page !== 1) params.set('page', page.toString());
+    const queryString = params.toString();
+    return `/admin/tours/edit/${tourId}${queryString ? `?returnTo=${encodeURIComponent(`/admin/tours?${queryString}`)}` : ''}`;
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = [...tours];
+
+    // Apply tab filter first
+    if (activeTab === 'published') {
+      list = list.filter((t) => t.published === true && !t.draft);
+    } else if (activeTab === 'draft') {
+      list = list.filter((t) => t.draft === true || t.published === false);
+    } else if (activeTab === 'featured') {
+      list = list.filter((t) => t.isFeatured === true);
+    }
+    // 'all' shows everything, no filter needed
+
+    // Apply search filter
     if (q) {
       list = list.filter((t) => {
         const title = (t.title || t.name || '').toLowerCase();
@@ -81,6 +138,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
       });
     }
 
+    // Apply sorting
     if (sortBy === 'newest')
       list.sort(
         (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
@@ -95,7 +153,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
       );
 
     return list;
-  }, [tours, query, sortBy]);
+  }, [tours, query, sortBy, activeTab]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -104,10 +162,60 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [query, sortBy]);
+  }, [query, sortBy, activeTab]);
+
+  // Calculate counts for each tab
+  const tabCounts = useMemo(() => {
+    return {
+      all: tours.length,
+      published: tours.filter((t) => t.published === true && !t.draft).length,
+      draft: tours.filter((t) => t.draft === true || t.published === false).length,
+      featured: tours.filter((t) => t.isFeatured === true).length,
+    };
+  }, [tours]);
+
+  const tabs = [
+    { id: 'all' as TabFilter, label: 'All Tours', icon: FileText, count: tabCounts.all },
+    { id: 'published' as TabFilter, label: 'Published', icon: CheckCircle, count: tabCounts.published },
+    { id: 'draft' as TabFilter, label: 'Draft', icon: Edit3, count: tabCounts.draft },
+    { id: 'featured' as TabFilter, label: 'Featured', icon: Star, count: tabCounts.featured },
+  ];
 
   return (
     <div className="space-y-8">
+      {/* Tabs Section */}
+      <div className="bg-gradient-to-br from-white to-slate-50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 p-6">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 whitespace-nowrap ${
+                  isActive
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Enhanced Header Controls */}
       <div className="bg-gradient-to-br from-white to-slate-50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 p-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -261,8 +369,8 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                           </div>
                         )}
                         <div className="min-w-0 flex-1 space-y-2">
-                          <Link 
-                            href={`/admin/tours/edit/${t._id}`} 
+                          <Link
+                            href={getEditUrl(t._id)}
                             className="block text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600"
                             title={t.title || t.name}
                           >
@@ -358,8 +466,8 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                 {/* Title and Actions */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <Link 
-                      href={`/admin/tours/edit/${t._id}`} 
+                    <Link
+                      href={getEditUrl(t._id)}
                       className="block text-lg font-bold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600 mb-2"
                       title={t.title || t.name}
                     >

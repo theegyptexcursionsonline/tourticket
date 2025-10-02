@@ -4,7 +4,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Edit, Trash2, MoreVertical, X, Check } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
 export const TourActions = ({ tourId }: { tourId: string }) => {
@@ -14,6 +14,7 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Close on outside click
   useEffect(() => {
@@ -74,7 +75,11 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
 
     try {
       await promise;
-      // after success, refresh listing
+      // after success, refresh listing while preserving search params
+      const currentPath = window.location.pathname;
+      const params = searchParams.toString();
+      const fullPath = params ? `${currentPath}?${params}` : currentPath;
+      router.push(fullPath);
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -105,9 +110,9 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
           aria-labelledby="options-menu"
         >
           <div className="py-1">
-            {/* FIXED: Ensure consistent URL structure */}
+            {/* Edit link with preserved state */}
             <Link
-              href={`/admin/tours/edit/${tourId}`}
+              href={`/admin/tours/edit/${tourId}${searchParams.toString() ? `?returnTo=${encodeURIComponent(`/admin/tours?${searchParams.toString()}`)}` : ''}`}
               className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
               role="menuitem"
               onClick={() => setIsOpen(false)} // Close menu when clicking edit
