@@ -975,7 +975,7 @@ export default function CheckoutPage() {
       if (data.success) {
         const discountData = data.data;
         let calculatedDiscount = 0;
-        if (discountData.type === 'percentage') {
+        if (discountData.discountType === 'percentage') {
           calculatedDiscount = (pricing.subtotal * discountData.value) / 100;
         } else {
           calculatedDiscount = discountData.value;
@@ -1045,6 +1045,7 @@ export default function CheckoutPage() {
         },
         userId: user?._id || user?.id,
         isGuest: !user,
+        discountCode: discount > 0 ? promoCode : null,
       };
 
       // Call the checkout API

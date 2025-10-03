@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
+import Discount from '@/lib/models/Discount';
 import { EmailService } from '@/lib/email/emailService';
 
 // Helper function to generate unique booking reference
@@ -36,14 +37,15 @@ export async function POST(request: Request) {
     await dbConnect();
     
     const body = await request.json();
-    const { 
-      customer, 
-      cart, 
-      pricing, 
+    const {
+      customer,
+      cart,
+      pricing,
       paymentMethod = 'card',
       paymentDetails,
       userId,
-      isGuest = false
+      isGuest = false,
+      discountCode = null
     } = body;
 
     // Validation
@@ -142,6 +144,19 @@ export async function POST(request: Request) {
 
     // Process payment
     const paymentResult = await mockPaymentProcessing();
+
+    // Increment discount usage counter if a discount was applied
+    if (discountCode) {
+      try {
+        await Discount.findOneAndUpdate(
+          { code: discountCode.toUpperCase() },
+          { $inc: { timesUsed: 1 } }
+        );
+      } catch (discountError) {
+        console.error('Error updating discount usage:', discountError);
+        // Don't fail the booking if discount update fails
+      }
+    }
 
     // Send Payment Confirmation
     await EmailService.sendPaymentConfirmation({

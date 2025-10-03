@@ -26,16 +26,14 @@ export async function POST(request: Request) {
     }
 
     // Check if the discount has expired
-    if (discount.validUntil && new Date(discount.validUntil) < new Date()) {
-      // Optionally, you could also update the isActive status in the database here
-      // await Discount.updateOne({ _id: discount._id }, { $set: { isActive: false } });
+    if (discount.expiresAt && new Date(discount.expiresAt) < new Date()) {
       return NextResponse.json({ success: false, error: 'This coupon has expired' }, { status: 400 });
     }
-    
-    // Future enhancement: Add checks for usage limits if you add that to your model
-    // if (discount.usageLimit && discount.timesUsed >= discount.usageLimit) {
-    //   return NextResponse.json({ success: false, error: 'This coupon has reached its usage limit' }, { status: 400 });
-    // }
+
+    // Check for usage limits
+    if (discount.usageLimit && discount.timesUsed >= discount.usageLimit) {
+      return NextResponse.json({ success: false, error: 'This coupon has reached its usage limit' }, { status: 400 });
+    }
 
     // If all checks pass, return the discount data
     return NextResponse.json({ success: true, data: discount });
