@@ -1067,6 +1067,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   
   const datePickerRef = useRef<HTMLDivElement>(null);
   const scrollableContentRef = useRef<HTMLDivElement>(null);
+  const lastToastTimeSlotRef = useRef<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1326,6 +1327,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         selectedLanguage: 'English',
         specialRequests: '',
       });
+      lastToastTimeSlotRef.current = null; // Reset toast tracking
     }
   }, [isOpen]);
 
@@ -1422,10 +1424,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     }
 
     setBookingData(prev => ({ ...prev, selectedTimeSlot: timeSlot }));
-    toast.success(`${timeSlot.time} selected!`, {
-      icon: '⏰',
-      duration: 2000
-    });
+
+    // Prevent duplicate toasts in React Strict Mode
+    const toastId = `${timeSlot.id}-${timeSlot.time}`;
+    if (lastToastTimeSlotRef.current !== toastId) {
+      lastToastTimeSlotRef.current = toastId;
+      toast.success(`${timeSlot.time} selected!`, {
+        icon: '⏰',
+        duration: 2000
+      });
+
+      // Reset after toast duration to allow future selections to show toast
+      setTimeout(() => {
+        lastToastTimeSlotRef.current = null;
+      }, 2100);
+    }
   }, []);
 
   // Enhanced participant controls
