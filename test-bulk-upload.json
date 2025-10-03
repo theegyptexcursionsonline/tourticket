@@ -1,0 +1,306 @@
+{
+  "wipeData": false,
+  "updateMode": "upsert",
+  "destinations": [
+    {
+      "name": "Dubai",
+      "slug": "dubai",
+      "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80&fm=jpg",
+      "description": "A modern metropolis known for luxury shopping, ultramodern architecture, and vibrant nightlife"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Adventure Tours",
+      "slug": "adventure-tours"
+    }
+  ],
+  "tours": [
+    {
+      "title": "Dubai City Explorer - Complete Experience",
+      "slug": "dubai-city-explorer-complete",
+      "description": "Discover the best of Dubai in one unforgettable day. Visit iconic landmarks and experience modern luxury.",
+      "longDescription": "Experience the ultimate Dubai adventure with our comprehensive city tour. From the towering Burj Khalifa to the traditional souks, explore everything this magnificent city has to offer. Our expert guides will take you through the modern marvels and historical treasures that make Dubai unique.",
+      "price": 120,
+      "discountPrice": 89,
+      "duration": "8 hours",
+      "maxGroupSize": 12,
+      "difficulty": "Easy",
+      "destinationName": "Dubai",
+      "categoryNames": ["Adventure Tours"],
+      "featured": true,
+      "isPublished": true,
+      "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80&fm=jpg",
+      "images": [
+        "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&q=80&fm=jpg"
+      ],
+      "highlights": [
+        "Visit Burj Khalifa observation deck",
+        "Explore Dubai Mall and Dubai Fountain",
+        "Traditional Abra boat ride across Dubai Creek",
+        "Walk through Gold and Spice Souks",
+        "Photo stop at Atlantis The Palm"
+      ],
+      "includes": [
+        "Hotel pickup and drop-off",
+        "Professional English-speaking guide",
+        "Air-conditioned luxury vehicle"
+      ],
+      "whatsIncluded": [
+        "Hotel pickup and drop-off in Dubai",
+        "Professional English-speaking tour guide",
+        "Air-conditioned luxury transport",
+        "Burj Khalifa observation deck tickets",
+        "Dubai Creek abra boat ride",
+        "Bottled water throughout the tour"
+      ],
+      "whatsNotIncluded": [
+        "Lunch and personal meals",
+        "Personal shopping expenses",
+        "Gratuities for guide and driver",
+        "Optional activities and upgrades"
+      ],
+      "tags": ["dubai", "city-tour", "burj-khalifa", "modern-architecture", "luxury"],
+      "location": "Dubai, United Arab Emirates",
+      "meetingPoint": "Hotel lobby pickup (Dubai hotels only) or Dubai Mall main entrance",
+      "languages": ["English", "Arabic", "Hindi", "Urdu"],
+      "ageRestriction": "All ages welcome. Children under 12 must be accompanied by an adult.",
+      "cancellationPolicy": "Free cancellation up to 24 hours before the tour start time. 50% refund for cancellations within 12-24 hours. No refund for cancellations within 12 hours.",
+      "operatedBy": "Dubai Premium Tours LLC",
+      "whatToBring": [
+        "Camera or smartphone for photos",
+        "Comfortable walking shoes",
+        "Sunglasses and sunscreen (SPF 30+)",
+        "Light jacket for air-conditioned venues",
+        "Valid ID or passport copy",
+        "Credit card for personal purchases"
+      ],
+      "whatToWear": [
+        "Light, breathable clothing (cotton recommended)",
+        "Modest attire for mosque visits (shoulders and knees covered)",
+        "Comfortable walking shoes",
+        "Sun hat or cap for outdoor activities"
+      ],
+      "physicalRequirements": "Moderate walking required (approximately 2-3km total). Tour involves stairs, some uneven surfaces, and standing periods. Please inform us of any mobility concerns in advance.",
+      "accessibilityInfo": [
+        "Wheelchair accessible with advance notice (48 hours)",
+        "Most venues have elevator access",
+        "Audio guides available for hearing impaired",
+        "Service animals welcome with documentation",
+        "Please contact us for specific accessibility requirements"
+      ],
+      "groupSize": {
+        "min": 2,
+        "max": 12
+      },
+      "transportationDetails": "Luxury air-conditioned vehicle (minivan or coach depending on group size). Hotel pickup starts 30 minutes before tour time. Return to hotel or Dubai Mall (your choice).",
+      "mealInfo": "Lunch not included. We'll stop at Dubai Mall Food Court where you can choose from 200+ restaurants (own expense). Vegetarian, halal, and vegan options widely available.",
+      "weatherPolicy": "Tours operate year-round. In case of extreme weather (rare), tours may be rescheduled or refunded at your choice. Indoor activities prioritized during peak summer heat.",
+      "photoPolicy": "Photography encouraged throughout the tour. Professional photographers available at Burj Khalifa (optional purchase). Flash photography prohibited in museums. Respect privacy of locals.",
+      "tipPolicy": "Gratuities not included but appreciated for excellent service. Standard tipping: 10-15 AED per person for guide, 5-10 AED for driver.",
+      "healthSafety": [
+        "Enhanced sanitization protocols on all vehicles",
+        "Hand sanitizer available throughout tour",
+        "First aid trained guides with emergency kits",
+        "Small group sizes for social comfort",
+        "Temperature checks may be conducted",
+        "Face masks available upon request"
+      ],
+      "culturalInfo": [
+        "Learn about Dubai's transformation from fishing village to global city",
+        "Understand Islamic architecture and cultural traditions",
+        "Discover Emirati heritage and local customs",
+        "Experience blend of modern luxury and traditional values",
+        "Insights into Dubai's role as global business hub"
+      ],
+      "seasonalVariations": "Best visited October-April (cooler weather 20-30°C). Summer months (May-September) can be extremely hot (40-50°C) but all venues are air-conditioned. Ramadan requires adjusted schedules.",
+      "localCustoms": [
+        "Arrive at pickup point 10 minutes early",
+        "Dress modestly when visiting cultural sites",
+        "Remove shoes before entering mosques",
+        "Ask permission before photographing people",
+        "Respect prayer times (tour may pause briefly)",
+        "Public displays of affection should be minimal",
+        "Stay hydrated - guide will provide water breaks"
+      ],
+      "metaTitle": "Dubai City Tour - Burj Khalifa & Top Attractions | Book Now",
+      "metaDescription": "Explore Dubai's iconic landmarks including Burj Khalifa, Dubai Mall, Gold Souk & more. 8-hour guided tour with hotel pickup. Book your Dubai adventure today!",
+      "keywords": ["dubai tour", "burj khalifa tickets", "dubai city tour", "dubai attractions", "dubai sightseeing"],
+      "itinerary": [
+        {
+          "day": 1,
+          "time": "08:00",
+          "title": "Hotel Pickup",
+          "description": "Your professional guide will pick you up from your Dubai hotel in a comfortable, air-conditioned vehicle. Meet your fellow travelers and receive a brief overview of the exciting day ahead.",
+          "duration": "30 mins",
+          "location": "Your Dubai Hotel",
+          "includes": ["Air-conditioned transport", "Meet and greet", "Tour briefing"],
+          "icon": "transport"
+        },
+        {
+          "day": 1,
+          "time": "09:00",
+          "title": "Burj Khalifa Observation Deck",
+          "description": "Ascend to the 124th floor observation deck of the world's tallest building. Enjoy breathtaking 360-degree views of Dubai's skyline, desert, and ocean. Learn about the tower's incredible engineering.",
+          "duration": "1.5 hours",
+          "location": "Burj Khalifa, Downtown Dubai",
+          "includes": ["Skip-the-line tickets", "Observation deck access", "Multimedia presentation"],
+          "icon": "monument"
+        },
+        {
+          "day": 1,
+          "time": "11:00",
+          "title": "Dubai Mall & Fountain Show",
+          "description": "Explore the world's largest shopping mall. Visit the Dubai Aquarium, see the dancing fountains, and enjoy free time for shopping or refreshments.",
+          "duration": "1.5 hours",
+          "location": "Dubai Mall",
+          "includes": ["Guided tour", "Fountain show viewing", "Free time"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "13:00",
+          "title": "Lunch Break",
+          "description": "Free time for lunch at Dubai Mall's extensive Food Court or nearby restaurants. Your guide will provide recommendations for every budget and dietary preference.",
+          "duration": "1 hour",
+          "location": "Dubai Mall Food Court",
+          "includes": ["Restaurant recommendations", "Dietary assistance"],
+          "icon": "food"
+        },
+        {
+          "day": 1,
+          "time": "14:30",
+          "title": "Dubai Creek & Abra Boat Ride",
+          "description": "Experience traditional Dubai with an authentic abra (wooden boat) ride across Dubai Creek. See the historic waterway that made Dubai a trading hub.",
+          "duration": "45 mins",
+          "location": "Dubai Creek",
+          "includes": ["Abra boat ride", "Guide commentary", "Photo opportunities"],
+          "icon": "transport"
+        },
+        {
+          "day": 1,
+          "time": "15:30",
+          "title": "Gold & Spice Souks",
+          "description": "Wander through the bustling traditional markets. See dazzling gold jewelry displays and aromatic spice stalls. Learn bargaining tips and enjoy the vibrant atmosphere.",
+          "duration": "1.5 hours",
+          "location": "Deira - Gold & Spice Souks",
+          "includes": ["Guided souk tour", "Shopping assistance", "Cultural insights"],
+          "icon": "shopping"
+        },
+        {
+          "day": 1,
+          "time": "17:30",
+          "title": "Atlantis The Palm Photo Stop",
+          "description": "Visit the iconic Palm Jumeirah and stop for photos at the magnificent Atlantis hotel. Capture the engineering marvel of the palm-shaped island.",
+          "duration": "30 mins",
+          "location": "Palm Jumeirah",
+          "includes": ["Photo stop", "Palm Jumeirah drive"],
+          "icon": "camera"
+        },
+        {
+          "day": 1,
+          "time": "18:30",
+          "title": "Return to Hotel",
+          "description": "Relax on the comfortable journey back to your hotel or request drop-off at Dubai Mall. Your guide will answer any final questions and provide recommendations for the rest of your stay.",
+          "duration": "30 mins",
+          "location": "Your Hotel or Dubai Mall",
+          "includes": ["Return transport", "Final Q&A"],
+          "icon": "transport"
+        }
+      ],
+      "faqs": [
+        {
+          "question": "What time does the tour start?",
+          "answer": "Hotel pickup begins at 8:00 AM. Please be ready in your hotel lobby 10 minutes early. The exact pickup time may vary by 15 minutes depending on your hotel location."
+        },
+        {
+          "question": "Is lunch included in the tour price?",
+          "answer": "Lunch is not included to give you flexibility in choosing your preferred dining option. Dubai Mall has over 200 restaurants with options from budget-friendly to fine dining, including vegetarian, halal, and vegan choices."
+        },
+        {
+          "question": "Can I skip certain stops if I've already visited them?",
+          "answer": "While the tour follows a set itinerary, we can often accommodate requests to skip certain attractions. Please inform your guide at the start of the tour, and they'll adjust the timing to allow more free time elsewhere."
+        },
+        {
+          "question": "What is the dress code?",
+          "answer": "Casual, modest clothing is recommended. When visiting mosques or traditional areas, shoulders and knees should be covered. Comfortable walking shoes are essential. Dubai can be very hot, so light, breathable fabrics are best."
+        },
+        {
+          "question": "Is the tour suitable for elderly or disabled travelers?",
+          "answer": "Yes, the tour is generally accessible. Most venues have wheelchair access and elevators. Please inform us of any specific requirements when booking so we can ensure appropriate arrangements."
+        }
+      ],
+      "bookingOptions": [
+        {
+          "type": "Per Person",
+          "label": "Standard City Explorer",
+          "price": 90,
+          "originalPrice": 120,
+          "description": "Complete Dubai city tour with all major attractions, professional guide, and comfortable transport2",
+          "duration": "8 hours",
+          "languages": ["English", "Arabic"],
+          "highlights": [
+            "Burj Khalifa 124th floor access",
+            "Dubai Mall and Fountain",
+            "Gold & Spice Souks",
+            "Abra boat ride"
+          ],
+          "groupSize": "2-12 people",
+          "difficulty": "Easy",
+          "badge": "Most Popular",
+          "discount": 26,
+          "isRecommended": true
+        },
+        {
+          "type": "Per Person",
+          "label": "VIP Premium Experience",
+          "price": 149,
+          "originalPrice": 199,
+          "description": "Enhanced experience with luxury transport, private guide option, and Burj Khalifa 148th floor Sky Lounge access",
+          "duration": "8 hours",
+          "languages": ["English", "Arabic", "Hindi"],
+          "highlights": [
+            "Burj Khalifa 148th floor Sky Lounge",
+            "Luxury vehicle (Mercedes/Lexus)",
+            "Priority access at all venues",
+            "Complimentary refreshments",
+            "Professional photographer option"
+          ],
+          "groupSize": "2-6 people",
+          "difficulty": "Easy",
+          "badge": "Best Value",
+          "discount": 25,
+          "isRecommended": false
+        }
+      ],
+      "addOns": [
+        {
+          "name": "Desert Safari Add-on",
+          "description": "Extend your day with an evening desert safari including dune bashing, camel ride, BBQ dinner, and live entertainment",
+          "price": 65,
+          "category": "Experience"
+        },
+        {
+          "name": "Professional Photography Package",
+          "description": "Personal photographer for the entire tour with 100+ edited photos delivered within 48 hours",
+          "price": 120,
+          "category": "Photography"
+        },
+        {
+          "name": "Luxury Lunch at Armani Hotel",
+          "description": "3-course lunch at Armani/Ristorante in Burj Khalifa with stunning views",
+          "price": 95,
+          "category": "Food & Drink"
+        },
+        {
+          "name": "Private Car Upgrade",
+          "description": "Upgrade to private luxury vehicle (up to 4 people) instead of shared group transport",
+          "price": 150,
+          "category": "Transport"
+        }
+      ]
+    }
+  ]
+}
+

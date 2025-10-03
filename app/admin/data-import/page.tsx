@@ -37,9 +37,10 @@ export default function DataImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  // Sample JSON template
+  // Sample JSON template with ALL supported fields
   const sampleTemplate = {
     "wipeData": false,
+    "updateMode": "upsert",
     "destinations": [
       {
         "name": "Cairo",
@@ -59,14 +60,146 @@ export default function DataImportPage() {
         "title": "Pyramids of Giza Private Tour",
         "slug": "pyramids-giza-private-tour",
         "description": "Explore the last standing wonder of the ancient world",
+        "longDescription": "Experience the majesty of the Pyramids of Giza on this comprehensive private tour...",
         "price": 89,
         "discountPrice": 69,
         "duration": "4 hours",
         "maxGroupSize": 8,
+        "difficulty": "Easy",
         "destinationName": "Cairo",
         "categoryNames": ["Historical Tours"],
         "featured": true,
-        "image": ""
+        "isPublished": true,
+        "image": "",
+        "images": [],
+        "highlights": [
+          "Visit the Great Pyramid of Khufu",
+          "See the Sphinx up close",
+          "Professional Egyptologist guide"
+        ],
+        "includes": ["Hotel pickup", "Entry fees", "Guide"],
+        "whatsIncluded": ["Private tour guide", "Air-conditioned vehicle", "All entrance fees"],
+        "whatsNotIncluded": ["Lunch", "Gratuities", "Personal expenses"],
+        "tags": ["history", "pyramids", "ancient-egypt"],
+        "location": "Giza Plateau, Cairo",
+        "meetingPoint": "Hotel lobby (Cairo hotels only)",
+        "languages": ["English", "Arabic", "Spanish"],
+        "ageRestriction": "All ages welcome",
+        "cancellationPolicy": "Free cancellation up to 24 hours before the tour",
+        "operatedBy": "Egypt Tours Company",
+        "whatToBring": [
+          "Camera for photos",
+          "Comfortable walking shoes",
+          "Sun protection",
+          "Water bottle"
+        ],
+        "whatToWear": [
+          "Comfortable clothing",
+          "Walking shoes",
+          "Hat and sunglasses"
+        ],
+        "physicalRequirements": "Moderate walking required. Some climbing of stairs.",
+        "accessibilityInfo": [
+          "Limited wheelchair accessibility",
+          "Please contact us for special requirements"
+        ],
+        "groupSize": { "min": 1, "max": 8 },
+        "transportationDetails": "Air-conditioned vehicle with pickup from Cairo hotels",
+        "mealInfo": "Lunch not included. Restaurant recommendations available.",
+        "weatherPolicy": "Tours operate rain or shine. Refund available for extreme weather.",
+        "photoPolicy": "Photography allowed. Flash not permitted inside tombs.",
+        "tipPolicy": "Gratuities appreciated but not required.",
+        "healthSafety": [
+          "Hand sanitizer available",
+          "First aid trained guides",
+          "Enhanced cleaning protocols"
+        ],
+        "culturalInfo": [
+          "Learn about ancient Egyptian civilization",
+          "Discover pyramid construction techniques",
+          "Understand pharaonic burial customs"
+        ],
+        "seasonalVariations": "Summer visits can be very hot. Winter offers cooler temperatures.",
+        "localCustoms": [
+          "Respect local customs and traditions",
+          "Dress modestly when appropriate",
+          "Follow guide instructions"
+        ],
+        "metaTitle": "Pyramids of Giza Private Tour - Best Egypt Tours",
+        "metaDescription": "Explore the Pyramids of Giza with a private Egyptologist guide. Includes hotel pickup and all entrance fees. Book now!",
+        "keywords": ["pyramids", "giza", "egypt tours", "private tour"],
+        "itinerary": [
+          {
+            "day": 1,
+            "time": "08:00",
+            "title": "Hotel Pickup",
+            "description": "Your guide will pick you up from your Cairo hotel",
+            "duration": "30 mins",
+            "location": "Cairo Hotel",
+            "includes": ["Air-conditioned vehicle"],
+            "icon": "transport"
+          },
+          {
+            "day": 1,
+            "time": "09:00",
+            "title": "Visit the Great Pyramid",
+            "description": "Explore the Great Pyramid of Khufu, the last remaining wonder of the ancient world",
+            "duration": "1.5 hours",
+            "location": "Giza Plateau",
+            "includes": ["Entry ticket", "Guide commentary"],
+            "icon": "monument"
+          },
+          {
+            "day": 1,
+            "time": "11:00",
+            "title": "Sphinx and Valley Temple",
+            "description": "See the mysterious Sphinx and explore the Valley Temple",
+            "duration": "1 hour",
+            "location": "Giza Complex",
+            "icon": "camera"
+          }
+        ],
+        "faqs": [
+          {
+            "question": "Is lunch included?",
+            "answer": "Lunch is not included, but we can recommend excellent local restaurants."
+          },
+          {
+            "question": "Can I enter the pyramids?",
+            "answer": "Yes, pyramid entry is included. Some areas may require additional tickets."
+          }
+        ],
+        "bookingOptions": [
+          {
+            "type": "Per Person",
+            "label": "Standard Tour",
+            "price": 69,
+            "originalPrice": 89,
+            "description": "Private tour with Egyptologist guide",
+            "duration": "4 hours",
+            "languages": ["English", "Arabic"],
+            "highlights": ["Great Pyramid", "Sphinx", "Valley Temple"],
+            "groupSize": "1-8 people",
+            "difficulty": "Easy",
+            "badge": "Popular",
+            "discount": 22,
+            "isRecommended": true
+          }
+        ],
+        "addOns": [
+          {
+            "name": "Camel Ride",
+            "description": "30-minute camel ride around the pyramids",
+            "price": 15,
+            "category": "Experience"
+          },
+          {
+            "name": "Professional Photos",
+            "description": "Professional photographer for your tour",
+            "price": 50,
+            "category": "Photography"
+          }
+        ]
       }
     ]
   };

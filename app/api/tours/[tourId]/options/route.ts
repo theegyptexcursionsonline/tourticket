@@ -34,29 +34,58 @@ export async function GET(
       return NextResponse.json({ message: 'Tour not found' }, { status: 404 });
     }
 
-    // Generate tour options based on tour data
-    const tourOptions = [
-      {
-        id: 'standard-default',
-        title: `${tour.title} - Standard Experience`,
-        price: tour.discountPrice,
-        originalPrice: tour.originalPrice,
-        duration: tour.duration || '3 hours',
-        languages: tour.languages || ['English'],
-        description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
-        timeSlots: [
-          { id: 'slot-1', time: '09:00', available: 12, price: tour.discountPrice, isPopular: false },
-          { id: 'slot-2', time: '11:00', available: 8, price: tour.discountPrice, isPopular: true },
-          { id: 'slot-3', time: '14:00', available: 15, price: tour.discountPrice, isPopular: false },
-          { id: 'slot-4', time: '16:00', available: 3, price: tour.discountPrice, isPopular: false },
+    // Return actual booking options from database, or generate fallback if none exist
+    let tourOptions;
+
+    if (tour.bookingOptions && tour.bookingOptions.length > 0) {
+      // Use real booking options from database
+      tourOptions = tour.bookingOptions.map((option: any, index: number) => ({
+        id: option._id?.toString() || `option-${index}`,
+        title: option.label || `${tour.title} - ${option.type}`,
+        type: option.type || 'Per Person',
+        price: option.price || tour.discountPrice,
+        originalPrice: option.originalPrice || tour.originalPrice,
+        duration: option.duration || tour.duration || '3 hours',
+        languages: option.languages || tour.languages || ['English'],
+        description: option.description || tour.description || 'Complete tour experience',
+        timeSlots: option.timeSlots || [
+          { id: 'slot-1', time: '09:00', available: 12, price: option.price || tour.discountPrice, isPopular: false },
+          { id: 'slot-2', time: '11:00', available: 8, price: option.price || tour.discountPrice, isPopular: true },
+          { id: 'slot-3', time: '14:00', available: 15, price: option.price || tour.discountPrice, isPopular: false },
+          { id: 'slot-4', time: '16:00', available: 3, price: option.price || tour.discountPrice, isPopular: false },
         ],
-        highlights: tour.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
-        groupSize: `Max ${tour.maxGroupSize || 15} people`,
-        difficulty: 'Easy',
-        badge: 'Most Popular',
-        isRecommended: true,
-      }
-    ];
+        highlights: option.highlights || tour.highlights?.slice(0, 3) || ['Expert guide included'],
+        groupSize: option.groupSize || `Max ${tour.maxGroupSize || 15} people`,
+        difficulty: option.difficulty || tour.difficulty || 'Easy',
+        badge: option.badge || (option.isRecommended ? 'Recommended' : undefined),
+        discount: option.discount,
+        isRecommended: option.isRecommended || false,
+      }));
+    } else {
+      // Fallback: Generate default option if no booking options exist
+      tourOptions = [
+        {
+          id: 'standard-default',
+          title: `${tour.title} - Standard Experience`,
+          price: tour.discountPrice,
+          originalPrice: tour.originalPrice,
+          duration: tour.duration || '3 hours',
+          languages: tour.languages || ['English'],
+          description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
+          timeSlots: [
+            { id: 'slot-1', time: '09:00', available: 12, price: tour.discountPrice, isPopular: false },
+            { id: 'slot-2', time: '11:00', available: 8, price: tour.discountPrice, isPopular: true },
+            { id: 'slot-3', time: '14:00', available: 15, price: tour.discountPrice, isPopular: false },
+            { id: 'slot-4', time: '16:00', available: 3, price: tour.discountPrice, isPopular: false },
+          ],
+          highlights: tour.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
+          groupSize: `Max ${tour.maxGroupSize || 15} people`,
+          difficulty: 'Easy',
+          badge: 'Most Popular',
+          isRecommended: true,
+        }
+      ];
+    }
 
     return NextResponse.json(tourOptions);
 

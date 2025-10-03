@@ -1,0 +1,33 @@
+{
+  "destinations": [
+    {
+      "name": "Test Dubai 2",
+      "slug": "test-dubai-2",
+      "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80&fm=jpg",
+      "description": "A modern metropolis known for luxury shopping"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Test Adventures",
+      "slug": "test-adventures"
+    }
+  ],
+  "tours": [
+    {
+      "title": "Dubai Test Tour",
+      "slug": "dubai-test-tour-123",
+      "description": "Discover the best of Dubai",
+      "price": 120,
+      "discountPrice": 89,
+      "duration": "8 hours",
+      "maxGroupSize": 12,
+      "difficulty": "Easy",
+      "destinationName": "Test Dubai 2",
+      "categoryName": "Test Adventures",
+      "featured": true,
+      "isPublished": true,
+      "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80&fm=jpg"
+    }
+  ]
+}

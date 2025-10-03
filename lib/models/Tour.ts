@@ -141,10 +141,9 @@ const ItineraryItemSchema = new Schema<IItineraryItem>({
   duration: { type: String, trim: true },
   location: { type: String, trim: true },
   includes: [{ type: String, trim: true }],
-  icon: { 
-    type: String, 
+  icon: {
+    type: String,
     default: 'location',
-    enum: ['location', 'transport', 'monument', 'camera', 'food', 'time']
   },
   day: { type: Number, min: 1 },
 }, { _id: false });
@@ -447,28 +446,14 @@ const TourSchema: Schema<ITour> = new Schema({
   },
 
   // Media
-  image: { 
-    type: String, 
+  image: {
+    type: String,
     required: [true, 'Main image is required'],
     trim: true,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v) || 
-               /^\/[^?#]*\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Image must be a valid URL or path with image extension'
-    }
   },
   images: [{
     type: String,
     trim: true,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v) || 
-               /^\/[^?#]*\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Each image must be a valid URL or path with image extension'
-    }
   }],
 
   // Lists

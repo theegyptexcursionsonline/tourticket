@@ -120,21 +120,11 @@ country: {
   image: {
     type: String,
     required: false,
-    validate: {
-      validator: function(v: string) {
-        return !v || /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Image must be a valid URL with image extension'
-    }
+    trim: true,
   },
   images: [{
     type: String,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Each image must be a valid URL with image extension'
-    }
+    trim: true,
   }],
   
   description: {

@@ -23,6 +23,7 @@ interface SeedCategory {
 }
 
 interface SeedTour {
+  // Basic information
   title: string;
   slug?: string;
   description: string;
@@ -33,18 +34,63 @@ interface SeedTour {
   maxGroupSize: number;
   destinationName: string;
   categoryNames: string[];
+
+  // Basic tour details
+  location?: string;
+  meetingPoint?: string;
+  languages?: string[];
+  ageRestriction?: string;
+  cancellationPolicy?: string;
+  operatedBy?: string;
+
+  // Status
   featured?: boolean;
   isFeatured?: boolean;
+  isPublished?: boolean;
+  difficulty?: string;
+
+  // Media
   image: string;
   images?: string[];
+
+  // Lists
   highlights?: string[];
   includes?: string[];
   whatsIncluded?: string[];
   whatsNotIncluded?: string[];
+  tags?: string[];
+
+  // Practical information
+  whatToBring?: string[];
+  whatToWear?: string[];
+  physicalRequirements?: string;
+  accessibilityInfo?: string[];
+  groupSize?: { min: number; max: number };
+  transportationDetails?: string;
+  mealInfo?: string;
+  weatherPolicy?: string;
+  photoPolicy?: string;
+  tipPolicy?: string;
+  healthSafety?: string[];
+  culturalInfo?: string[];
+  seasonalVariations?: string;
+  localCustoms?: string[];
+
+  // SEO
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+
+  // Complex objects with full support
   itinerary?: Array<{
-    day: number;
+    day?: number;
+    time?: string;
     title: string;
     description: string;
+    duration?: string;
+    location?: string;
+    includes?: string[];
+    icon?: string;
   }>;
   faqs?: Array<{
     question: string;
@@ -54,15 +100,23 @@ interface SeedTour {
     type: string;
     label: string;
     price: number;
+    originalPrice?: number;
+    description?: string;
+    duration?: string;
+    languages?: string[];
+    highlights?: string[];
+    groupSize?: string;
+    difficulty?: string;
+    badge?: string;
+    discount?: number;
+    isRecommended?: boolean;
   }>;
   addOns?: Array<{
     name: string;
     description: string;
     price: number;
+    category?: string;
   }>;
-  difficulty?: string;
-  isPublished?: boolean;
-  tags?: string[];
 }
 
 interface SeedData {
@@ -330,49 +384,114 @@ export async function POST(request: Request) {
             );
           }
 
-          // Prepare tour document
+          // Prepare tour document with ALL fields
           const tourDoc = {
             // Basic info
             title: restOfTourData.title.trim(),
             slug: restOfTourData.slug?.trim() || generateSlug(restOfTourData.title),
             description: restOfTourData.description?.trim() || '',
             longDescription: restOfTourData.longDescription?.trim() || restOfTourData.description?.trim() || '',
-            
+
             // Pricing
             price: restOfTourData.discountPrice || restOfTourData.price || 0,
             discountPrice: restOfTourData.discountPrice || restOfTourData.price || 0,
             originalPrice: restOfTourData.price && restOfTourData.discountPrice ? restOfTourData.price : undefined,
-            
+
             // Duration and capacity
             duration: restOfTourData.duration.trim(),
             maxGroupSize: restOfTourData.maxGroupSize || 10,
             difficulty: restOfTourData.difficulty || 'Easy',
-            
+
+            // Basic tour details
+            location: restOfTourData.location?.trim() || undefined,
+            meetingPoint: restOfTourData.meetingPoint?.trim() || undefined,
+            languages: Array.isArray(restOfTourData.languages) ? restOfTourData.languages.filter(Boolean) : undefined,
+            ageRestriction: restOfTourData.ageRestriction?.trim() || undefined,
+            cancellationPolicy: restOfTourData.cancellationPolicy?.trim() || undefined,
+            operatedBy: restOfTourData.operatedBy?.trim() || undefined,
+
             // Relations
             destination: destinationId,
             category: categoryIds[0], // Use first category (schema expects singular)
-            
+
             // Media
             image: restOfTourData.image || '/placeholder-tour.jpg',
             images: Array.isArray(restOfTourData.images) ? restOfTourData.images : [],
-            
+
             // Lists
             highlights: Array.isArray(restOfTourData.highlights) ? restOfTourData.highlights.filter(Boolean) : [],
             includes: Array.isArray(restOfTourData.includes) ? restOfTourData.includes.filter(Boolean) : [],
             whatsIncluded: Array.isArray(restOfTourData.whatsIncluded) ? restOfTourData.whatsIncluded.filter(Boolean) : [],
             whatsNotIncluded: Array.isArray(restOfTourData.whatsNotIncluded) ? restOfTourData.whatsNotIncluded.filter(Boolean) : [],
-            
-            // Complex objects
-            itinerary: Array.isArray(restOfTourData.itinerary) ? restOfTourData.itinerary : [],
+            tags: Array.isArray(restOfTourData.tags) ? restOfTourData.tags : [],
+
+            // Practical information
+            whatToBring: Array.isArray(restOfTourData.whatToBring) ? restOfTourData.whatToBring.filter(Boolean) : undefined,
+            whatToWear: Array.isArray(restOfTourData.whatToWear) ? restOfTourData.whatToWear.filter(Boolean) : undefined,
+            physicalRequirements: restOfTourData.physicalRequirements?.trim() || undefined,
+            accessibilityInfo: Array.isArray(restOfTourData.accessibilityInfo) ? restOfTourData.accessibilityInfo.filter(Boolean) : undefined,
+            groupSize: restOfTourData.groupSize && typeof restOfTourData.groupSize === 'object' && restOfTourData.groupSize.min && restOfTourData.groupSize.max
+              ? { min: Number(restOfTourData.groupSize.min), max: Number(restOfTourData.groupSize.max) }
+              : undefined,
+            transportationDetails: restOfTourData.transportationDetails?.trim() || undefined,
+            mealInfo: restOfTourData.mealInfo?.trim() || undefined,
+            weatherPolicy: restOfTourData.weatherPolicy?.trim() || undefined,
+            photoPolicy: restOfTourData.photoPolicy?.trim() || undefined,
+            tipPolicy: restOfTourData.tipPolicy?.trim() || undefined,
+            healthSafety: Array.isArray(restOfTourData.healthSafety) ? restOfTourData.healthSafety.filter(Boolean) : undefined,
+            culturalInfo: Array.isArray(restOfTourData.culturalInfo) ? restOfTourData.culturalInfo.filter(Boolean) : undefined,
+            seasonalVariations: restOfTourData.seasonalVariations?.trim() || undefined,
+            localCustoms: Array.isArray(restOfTourData.localCustoms) ? restOfTourData.localCustoms.filter(Boolean) : undefined,
+
+            // SEO fields
+            metaTitle: restOfTourData.metaTitle?.trim() || undefined,
+            metaDescription: restOfTourData.metaDescription?.trim() || undefined,
+            keywords: Array.isArray(restOfTourData.keywords) ? restOfTourData.keywords.filter(Boolean) : undefined,
+
+            // Complex objects with full field support
+            itinerary: Array.isArray(restOfTourData.itinerary)
+              ? restOfTourData.itinerary.map((item: any) => ({
+                  day: item.day || undefined,
+                  time: item.time?.trim() || undefined,
+                  title: item.title?.trim() || '',
+                  description: item.description?.trim() || '',
+                  duration: item.duration?.trim() || undefined,
+                  location: item.location?.trim() || undefined,
+                  includes: Array.isArray(item.includes) ? item.includes.filter(Boolean) : undefined,
+                  icon: item.icon?.trim() || 'location',
+                }))
+              : [],
             faq: Array.isArray(restOfTourData.faqs) ? restOfTourData.faqs : [],
-            bookingOptions: Array.isArray(restOfTourData.bookingOptions) ? restOfTourData.bookingOptions : [],
-            addOns: Array.isArray(restOfTourData.addOns) ? restOfTourData.addOns : [],
-            
+            bookingOptions: Array.isArray(restOfTourData.bookingOptions)
+              ? restOfTourData.bookingOptions.map((option: any) => ({
+                  type: option.type || 'Per Person',
+                  label: option.label?.trim() || '',
+                  price: Number(option.price) || 0,
+                  originalPrice: option.originalPrice ? Number(option.originalPrice) : undefined,
+                  description: option.description?.trim() || undefined,
+                  duration: option.duration?.trim() || undefined,
+                  languages: Array.isArray(option.languages) ? option.languages.filter(Boolean) : undefined,
+                  highlights: Array.isArray(option.highlights) ? option.highlights.filter(Boolean) : undefined,
+                  groupSize: option.groupSize?.trim() || undefined,
+                  difficulty: option.difficulty?.trim() || undefined,
+                  badge: option.badge?.trim() || undefined,
+                  discount: option.discount !== undefined ? Number(option.discount) : undefined,
+                  isRecommended: Boolean(option.isRecommended),
+                }))
+              : [],
+            addOns: Array.isArray(restOfTourData.addOns)
+              ? restOfTourData.addOns.map((addon: any) => ({
+                  name: addon.name?.trim() || '',
+                  description: addon.description?.trim() || '',
+                  price: Number(addon.price) || 0,
+                  category: addon.category?.trim() || undefined,
+                }))
+              : [],
+
             // Status and tags
             isFeatured: featured || isFeatured || false,
             isPublished: restOfTourData.isPublished !== false, // Default to true unless explicitly false
-            tags: Array.isArray(restOfTourData.tags) ? restOfTourData.tags : [],
-            
+
             // Availability with proper structure
             availability: {
               type: 'daily',
@@ -380,7 +499,7 @@ export async function POST(request: Request) {
               slots: [{ time: '10:00', capacity: restOfTourData.maxGroupSize || 10 }],
               blockedDates: [],
             },
-            
+
             // Timestamp
             updatedAt: new Date(),
           };
