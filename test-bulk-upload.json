@@ -5,14 +5,105 @@
     {
       "name": "Dubai",
       "slug": "dubai",
+      "country": "United Arab Emirates",
       "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80&fm=jpg",
-      "description": "A modern metropolis known for luxury shopping, ultramodern architecture, and vibrant nightlife"
+      "images": [
+        "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1559628376-f3fe5f782a2e?w=800&q=80&fm=jpg"
+      ],
+      "description": "A modern metropolis known for luxury shopping, ultramodern architecture, and vibrant nightlife",
+      "longDescription": "Dubai is a city and emirate in the United Arab Emirates known for luxury shopping, ultramodern architecture and a lively nightlife scene. Burj Khalifa, an 830m-tall tower, dominates the skyscraper-filled skyline. At its foot lies Dubai Fountain, with jets and lights choreographed to music. On artificial islands just offshore is Atlantis, The Palm, a resort with water and marine-animal parks.",
+      "coordinates": { "lat": 25.2048, "lng": 55.2708 },
+      "currency": "UAE Dirham (AED)",
+      "timezone": "GST (UTC+4)",
+      "bestTimeToVisit": "November to March for pleasant weather (20-30°C). Avoid summer months (May-September) when temperatures can exceed 45°C.",
+      "highlights": [
+        "Burj Khalifa - World's tallest building",
+        "Dubai Mall - Largest shopping mall",
+        "Palm Jumeirah - Iconic artificial island",
+        "Dubai Marina - Stunning waterfront",
+        "Gold & Spice Souks - Traditional markets",
+        "Dubai Fountain - Choreographed water show"
+      ],
+      "thingsToDo": [
+        "Visit Burj Khalifa observation deck",
+        "Shop at Dubai Mall and traditional souks",
+        "Desert safari and dune bashing",
+        "Dhow cruise on Dubai Creek",
+        "Beach clubs and water sports",
+        "Visit Miracle Garden (seasonal)",
+        "Explore Old Dubai and museums",
+        "Skydiving over Palm Jumeirah"
+      ],
+      "localCustoms": [
+        "Dress modestly in public areas (shoulders and knees covered)",
+        "Remove shoes before entering mosques and homes",
+        "Use right hand for eating and greeting",
+        "Public displays of affection are discouraged",
+        "Respect prayer times (5 times daily)",
+        "Avoid alcohol consumption in public (only in licensed venues)",
+        "Always ask permission before photographing people, especially women"
+      ],
+      "visaRequirements": "Most nationalities receive free 30-90 day visa on arrival. US, UK, EU, Australia, Canada citizens get 90 days. Check with UAE embassy for your specific nationality. Passport must be valid for 6 months.",
+      "languagesSpoken": ["Arabic (official)", "English", "Hindi", "Urdu", "Tagalog", "Malayalam"],
+      "emergencyNumber": "999",
+      "averageTemperature": {
+        "summer": "42°C (May-September)",
+        "winter": "24°C (November-March)"
+      },
+      "climate": "Desert climate with very hot summers and warm winters. Rainfall is minimal (100mm/year) mainly in winter months. High humidity in coastal areas.",
+      "weatherWarnings": [
+        "Extreme heat in summer (May-September) - temperatures can exceed 50°C",
+        "Sandstorms occasionally occur, especially in spring",
+        "High humidity near coast can make temperatures feel hotter",
+        "Minimal rainfall but occasional flash floods during winter storms"
+      ],
+      "featured": true,
+      "isPublished": true,
+      "metaTitle": "Dubai Tours & Activities - Book Dubai Experiences 2024",
+      "metaDescription": "Discover top Dubai tours. Visit Burj Khalifa, desert safaris, dhow cruises. Best prices guaranteed. Book your Dubai adventure today!",
+      "keywords": ["dubai tours", "burj khalifa", "desert safari dubai", "dubai attractions", "things to do in dubai", "dubai vacation"],
+      "tags": ["luxury", "modern-city", "shopping", "desert", "middle-east", "skyscrapers", "beaches"]
     }
   ],
   "categories": [
     {
       "name": "Adventure Tours",
-      "slug": "adventure-tours"
+      "slug": "adventure-tours",
+      "description": "Experience thrilling adventures and outdoor activities",
+      "longDescription": "Get your adrenaline pumping with our exciting adventure tours. From desert safaris to water sports, mountain climbing to zip-lining, we offer authentic adventure experiences led by expert guides. Perfect for thrill-seekers and outdoor enthusiasts looking to push their boundaries and create unforgettable memories.",
+      "heroImage": "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&q=80&fm=jpg",
+      "images": [
+        "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80&fm=jpg"
+      ],
+      "highlights": [
+        "Expert adventure guides with safety certifications",
+        "Small group sizes (max 12 people)",
+        "Top-quality safety equipment provided",
+        "Suitable for various fitness levels",
+        "Stunning natural locations",
+        "Photo and video documentation included"
+      ],
+      "features": [
+        "Professional safety briefings and training",
+        "All necessary equipment and gear included",
+        "Travel insurance recommendations",
+        "Weather-based rescheduling options",
+        "Emergency support and first aid",
+        "Post-adventure refreshments",
+        "Digital photo packages available"
+      ],
+      "metaTitle": "Adventure Tours - Thrilling Outdoor Experiences 2024",
+      "metaDescription": "Book exciting adventure tours. Desert safaris, water sports, expeditions. Expert guides, top safety standards. Start your adventure today!",
+      "keywords": ["adventure tours", "outdoor activities", "desert safari", "extreme sports", "adventure travel", "thrill seeking"],
+      "color": "#FF6B35",
+      "icon": "compass",
+      "order": 2,
+      "isPublished": true,
+      "featured": true
     }
   ],
   "tours": [
@@ -237,7 +328,7 @@
           "label": "Standard City Explorer",
           "price": 90,
           "originalPrice": 120,
-          "description": "Complete Dubai city tour with all major attractions, professional guide, and comfortable transport2",
+          "description": "Complete Dubai city tour with all major attractions, professional guide, and comfortable transport",
           "duration": "8 hours",
           "languages": ["English", "Arabic"],
           "highlights": [
@@ -303,4 +394,3 @@
     }
   ]
 }
-

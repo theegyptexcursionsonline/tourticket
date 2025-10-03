@@ -72,21 +72,11 @@ const CategorySchema: Schema<ICategory> = new Schema({
   // Media
   heroImage: {
     type: String,
-    validate: {
-      validator: function(v: string) {
-        return !v || /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Hero image must be a valid URL with image extension'
-    }
+    trim: true,
   },
   images: [{
     type: String,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Each image must be a valid URL with image extension'
-    }
+    trim: true,
   }],
   
   // Content

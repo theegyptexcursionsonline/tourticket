@@ -31,6 +31,7 @@ export default function DataViewerPage() {
   const [expandedItems, setExpandedItems] = useState<{[key: string]: boolean}>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'tours' | 'destinations' | 'categories' | 'attractions'>('all');
+  const [showFullJSON, setShowFullJSON] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -119,32 +120,88 @@ export default function DataViewerPage() {
             />
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-2 mt-4 overflow-x-auto">
-            {[
-              { id: 'all', label: 'All Data', count: data.summary.totalTours + data.summary.totalDestinations + data.summary.totalCategories + data.summary.totalAttractions },
-              { id: 'tours', label: 'Tours', count: data.summary.totalTours },
-              { id: 'destinations', label: 'Destinations', count: data.summary.totalDestinations },
-              { id: 'categories', label: 'Categories', count: data.summary.totalCategories },
-              { id: 'attractions', label: 'Attractions', count: data.summary.totalAttractions },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tab.label} ({tab.count})
-              </button>
-            ))}
+          {/* Tabs and Actions */}
+          <div className="flex items-center justify-between gap-4 mt-4">
+            <div className="flex gap-2 overflow-x-auto">
+              {[
+                { id: 'all', label: 'All Data', count: data.summary.totalTours + data.summary.totalDestinations + data.summary.totalCategories + data.summary.totalAttractions },
+                { id: 'tours', label: 'Tours', count: data.summary.totalTours },
+                { id: 'destinations', label: 'Destinations', count: data.summary.totalDestinations },
+                { id: 'categories', label: 'Categories', count: data.summary.totalCategories },
+                { id: 'attractions', label: 'Attractions', count: data.summary.totalAttractions },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowFullJSON(!showFullJSON)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap font-medium"
+            >
+              <FileText className="w-4 h-4" />
+              {showFullJSON ? 'Hide' : 'Show'} Full JSON
+            </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Full JSON View */}
+        {showFullJSON && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-green-600" />
+                <h2 className="text-xl font-bold text-gray-900">Complete Database JSON</h2>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const jsonString = JSON.stringify(data, null, 2);
+                    navigator.clipboard.writeText(jsonString);
+                    alert('JSON copied to clipboard!');
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  Copy JSON
+                </button>
+                <button
+                  onClick={() => {
+                    const jsonString = JSON.stringify(data, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `database-export-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                >
+                  Download JSON
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <pre className="text-xs bg-gray-900 text-green-400 p-6 rounded overflow-x-auto max-h-[600px] overflow-y-auto">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
+
         {/* Summary Section */}
         {(activeTab === 'all') && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">

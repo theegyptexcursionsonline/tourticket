@@ -18,9 +18,7 @@ export async function GET() {
         .lean(),
       Destination.find({}).lean(),
       Category.find({}).lean(),
-      AttractionPage.find({})
-        .populate('category', 'name slug')
-        .lean(),
+      AttractionPage.find({}).lean(), // Don't populate category for attractions
     ]);
 
     // Structure the data nicely

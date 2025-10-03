@@ -92,23 +92,12 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
   },
   heroImage: {
     type: String,
-    required: false, // NOW OPTIONAL
-    validate: {
-      validator: function(v: string) {
-        // Only validate if value is provided
-        return !v || /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Hero image must be a valid URL with image extension'
-    }
+    required: false,
+    trim: true,
   },
   images: [{
     type: String,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
-      },
-      message: 'Each image must be a valid URL with image extension'
-    }
+    trim: true,
   }],
   highlights: {
     type: [String],

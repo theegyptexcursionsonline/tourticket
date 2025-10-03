@@ -70,21 +70,11 @@ const HeroSettingsSchema: Schema<IHeroSettings> = new Schema({
     desktop: {
       type: String,
       required: true,
-      validate: {
-        validator: function(v: string) {
-          return /^\/|^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif)$/i.test(v);
-        },
-        message: 'Desktop image must be a valid URL or path with image extension'
-      }
+      trim: true,
     },
     mobile: {
       type: String,
-      validate: {
-        validator: function(v: string) {
-          return !v || /^\/|^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif)$/i.test(v);
-        },
-        message: 'Mobile image must be a valid URL or path with image extension'
-      }
+      trim: true,
     },
     alt: {
       type: String,

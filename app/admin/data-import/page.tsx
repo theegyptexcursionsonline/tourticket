@@ -45,14 +45,80 @@ export default function DataImportPage() {
       {
         "name": "Cairo",
         "slug": "cairo",
-        "image": "",
-        "description": "Egypt's bustling capital city"
+        "country": "Egypt",
+        "image": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a",
+        "images": [
+          "https://images.unsplash.com/photo-1568322445389-f64ac2515020",
+          "https://images.unsplash.com/photo-1539768942893-daf53e448371"
+        ],
+        "description": "Egypt's bustling capital city with ancient wonders",
+        "longDescription": "Cairo, Egypt's sprawling capital, is set on the Nile River. At its heart is Tahrir Square and the vast Egyptian Museum, a trove of antiquities including royal mummies and gilded King Tutankhamun artifacts. Nearby, Giza is the site of the iconic pyramids and Great Sphinx, dating to the 26th century BC.",
+        "coordinates": { "lat": 30.0444, "lng": 31.2357 },
+        "currency": "Egyptian Pound (EGP)",
+        "timezone": "EET (UTC+2)",
+        "bestTimeToVisit": "October to April for pleasant weather",
+        "highlights": [
+          "Pyramids of Giza",
+          "Egyptian Museum",
+          "Khan el-Khalili Bazaar",
+          "Citadel of Saladin"
+        ],
+        "thingsToDo": [
+          "Explore the Pyramids of Giza",
+          "Visit the Egyptian Museum",
+          "Shop at Khan el-Khalili",
+          "Cruise the Nile River"
+        ],
+        "localCustoms": [
+          "Dress modestly when visiting religious sites",
+          "Remove shoes before entering mosques",
+          "Haggling is expected in markets"
+        ],
+        "visaRequirements": "Most nationalities can obtain visa on arrival for $25 USD",
+        "languagesSpoken": ["Arabic", "English", "French"],
+        "emergencyNumber": "122 (Police), 123 (Ambulance)",
+        "averageTemperature": { "summer": "35°C", "winter": "20°C" },
+        "climate": "Hot desert climate with mild winters",
+        "weatherWarnings": ["Very hot summers", "Sandstorms possible in spring"],
+        "featured": true,
+        "isPublished": true,
+        "metaTitle": "Cairo Tours & Activities - Explore Ancient Egypt",
+        "metaDescription": "Discover the best tours and activities in Cairo. Visit the Pyramids, Egyptian Museum, and experience authentic Egyptian culture.",
+        "keywords": ["cairo tours", "egypt travel", "pyramids", "egyptian museum"],
+        "tags": ["ancient-egypt", "history", "culture", "middle-east"]
       }
     ],
     "categories": [
       {
         "name": "Historical Tours",
-        "slug": "historical"
+        "slug": "historical-tours",
+        "description": "Explore ancient civilizations and historical landmarks",
+        "longDescription": "Journey through time with our carefully curated historical tours. Experience the grandeur of ancient civilizations, walk through centuries-old monuments, and learn fascinating stories from expert guides.",
+        "heroImage": "https://images.unsplash.com/photo-1503756234508-e32369269deb",
+        "images": [
+          "https://images.unsplash.com/photo-1513581166391-887a96ddeafd",
+          "https://images.unsplash.com/photo-1549144511-f099e773c147"
+        ],
+        "highlights": [
+          "Expert Egyptologist guides",
+          "Skip-the-line access",
+          "Small group sizes",
+          "UNESCO World Heritage Sites"
+        ],
+        "features": [
+          "Professional photography opportunities",
+          "Air-conditioned transportation",
+          "Comprehensive historical context",
+          "Authentic local experiences"
+        ],
+        "metaTitle": "Historical Tours - Ancient Sites & Archaeological Wonders",
+        "metaDescription": "Explore world-famous historical sites with expert guides. From ancient pyramids to medieval castles, discover the stories that shaped our world.",
+        "keywords": ["historical tours", "ancient sites", "archaeology", "cultural heritage"],
+        "color": "#8B4513",
+        "icon": "monument",
+        "order": 1,
+        "isPublished": true,
+        "featured": true
       }
     ],
     "tours": [

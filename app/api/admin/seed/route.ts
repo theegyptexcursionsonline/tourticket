@@ -13,13 +13,49 @@ const generateSlug = (name: string): string =>
 interface SeedDestination {
   name: string;
   slug?: string;
-  image: string;
+  country?: string;
+  image?: string;
+  images?: string[];
   description: string;
+  longDescription?: string;
+  coordinates?: { lat: number; lng: number };
+  currency?: string;
+  timezone?: string;
+  bestTimeToVisit?: string;
+  highlights?: string[];
+  thingsToDo?: string[];
+  localCustoms?: string[];
+  visaRequirements?: string;
+  languagesSpoken?: string[];
+  emergencyNumber?: string;
+  averageTemperature?: { summer: string; winter: string };
+  climate?: string;
+  weatherWarnings?: string[];
+  featured?: boolean;
+  isPublished?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  tags?: string[];
 }
 
 interface SeedCategory {
   name: string;
   slug?: string;
+  description?: string;
+  longDescription?: string;
+  heroImage?: string;
+  images?: string[];
+  highlights?: string[];
+  features?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  color?: string;
+  icon?: string;
+  order?: number;
+  isPublished?: boolean;
+  featured?: boolean;
 }
 
 interface SeedTour {
@@ -201,8 +237,30 @@ export async function POST(request: Request) {
           const destinationDoc = {
             name: destData.name.trim(),
             slug: destData.slug?.trim() || generateSlug(destData.name),
+            country: destData.country?.trim(),
             image: destData.image || '/placeholder-destination.jpg',
+            images: destData.images,
             description: destData.description?.trim() || '',
+            longDescription: destData.longDescription?.trim(),
+            coordinates: destData.coordinates,
+            currency: destData.currency?.trim(),
+            timezone: destData.timezone?.trim(),
+            bestTimeToVisit: destData.bestTimeToVisit?.trim(),
+            highlights: destData.highlights,
+            thingsToDo: destData.thingsToDo,
+            localCustoms: destData.localCustoms,
+            visaRequirements: destData.visaRequirements?.trim(),
+            languagesSpoken: destData.languagesSpoken,
+            emergencyNumber: destData.emergencyNumber?.trim(),
+            averageTemperature: destData.averageTemperature,
+            climate: destData.climate?.trim(),
+            weatherWarnings: destData.weatherWarnings,
+            featured: destData.featured ?? false,
+            isPublished: destData.isPublished ?? true,
+            metaTitle: destData.metaTitle?.trim(),
+            metaDescription: destData.metaDescription?.trim(),
+            keywords: destData.keywords,
+            tags: destData.tags,
             updatedAt: new Date(),
           };
 
@@ -265,6 +323,20 @@ export async function POST(request: Request) {
           const categoryDoc = {
             name: catData.name.trim(),
             slug: catData.slug?.trim() || generateSlug(catData.name),
+            description: catData.description?.trim(),
+            longDescription: catData.longDescription?.trim(),
+            heroImage: catData.heroImage?.trim(),
+            images: catData.images,
+            highlights: catData.highlights,
+            features: catData.features,
+            metaTitle: catData.metaTitle?.trim(),
+            metaDescription: catData.metaDescription?.trim(),
+            keywords: catData.keywords,
+            color: catData.color?.trim(),
+            icon: catData.icon?.trim(),
+            order: catData.order,
+            isPublished: catData.isPublished ?? true,
+            featured: catData.featured ?? false,
             updatedAt: new Date(),
           };
 
