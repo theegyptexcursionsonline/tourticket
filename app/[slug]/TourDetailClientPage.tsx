@@ -370,58 +370,141 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   return icons[iconType || 'location'] || icons.location;
 };
 
-const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
-  <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
-    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-      <Clock size={24} className="text-red-600" />
-      Detailed Itinerary
-    </h3>
-    <div className="relative">
-      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
-      {itinerary.map((item, index) => (
-        <div key={index} className="relative flex items-start gap-4 pb-8">
-          <div className="flex-shrink-0 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm relative z-10">
-            <ItineraryIcon iconType={item.icon} className="w-6 h-6" />
-          </div>
-          <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full">
-                  {item.time}
-                </span>
-                {item.duration && (
-                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                    {item.duration}
-                  </span>
-                )}
-              </div>
-              {item.location && (
-                <div className="flex items-center gap-1 text-xs text-slate-500">
-                  <MapPin size={14} />
-                  {item.location}
+const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: ItineraryItem[], tourTitle: string, sectionRef: React.RefObject<HTMLDivElement> }) => {
+  // Extract locations for map
+  const locations = itinerary
+    .filter(item => item.location)
+    .map(item => item.location)
+    .join('|');
+
+  // Use tour title as fallback if no locations
+  const mapQuery = locations || tourTitle;
+
+  return (
+    <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
+      <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <Clock size={24} className="text-red-600" />
+        Detailed Itinerary
+      </h3>
+
+      {/* Split Layout: Itinerary Items + Map */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Itinerary Timeline */}
+        <div className="relative order-2 lg:order-1">
+          {/* Dotted line connector */}
+          <div className="absolute left-6 top-6 bottom-6 w-0.5 border-l-2 border-dashed border-slate-300"></div>
+
+          <div className="max-h-[600px] lg:max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
+            {itinerary.map((item, index) => (
+              <div key={index} className="relative flex items-start gap-4 pb-6 last:pb-0">
+                {/* Large connection point */}
+                <div className="flex-shrink-0 relative z-10">
+                  {/* Outer ring */}
+                  <div className={`absolute inset-0 rounded-full ${
+                    index === 0 ? 'bg-green-100 animate-pulse' :
+                    index === itinerary.length - 1 ? 'bg-red-100' :
+                    'bg-blue-100'
+                  }`} style={{ transform: 'scale(1.3)' }}></div>
+
+                  {/* Icon circle */}
+                  <div className={`relative w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shadow-lg ${
+                    index === 0 ? 'bg-green-600' :
+                    index === itinerary.length - 1 ? 'bg-red-600' :
+                    'bg-blue-600'
+                  } text-white`}>
+                    <ItineraryIcon iconType={item.icon} className="w-6 h-6" />
+                  </div>
+
+                  {/* Connecting dots */}
+                  {index < itinerary.length - 1 && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col gap-1 py-2">
+                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <h4 className="font-bold text-slate-800 mb-2">{item.title}</h4>
-            <p className="text-slate-600 text-sm leading-relaxed mb-3">{item.description}</p>
-            {item.includes && item.includes.length > 0 && (
-              <div className="border-t border-slate-100 pt-3">
-                <p className="text-xs font-semibold text-slate-700 mb-2">Includes:</p>
-                <div className="flex flex-wrap gap-2">
-                  {item.includes.map((include, i) => (
-                    <span key={i} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
-                      {include}
-                    </span>
-                  ))}
+
+                {/* Content card */}
+                <div className="flex-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                        index === 0 ? 'bg-green-50 text-green-700' :
+                        index === itinerary.length - 1 ? 'bg-red-50 text-red-700' :
+                        'bg-blue-50 text-blue-700'
+                      }`}>
+                        {item.time}
+                      </span>
+                      {item.duration && (
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                          {item.duration}
+                        </span>
+                      )}
+                    </div>
+                    {item.location && (
+                      <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-full">
+                        <MapPin size={12} />
+                        <span className="hidden md:inline">{item.location}</span>
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-slate-800 mb-2 text-base">{item.title}</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-3">{item.description}</p>
+                  {item.includes && item.includes.length > 0 && (
+                    <div className="border-t border-slate-100 pt-3 mt-3">
+                      <p className="text-xs font-semibold text-slate-700 mb-2">Includes:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {item.includes.map((include, i) => (
+                          <span key={i} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full flex items-center gap-1">
+                            <Check size={12} />
+                            {include}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            ))}
           </div>
         </div>
-      ))}
+
+        {/* Right: Google Map */}
+        <div className="relative order-1 lg:order-2 lg:sticky lg:top-24 h-[400px] lg:h-[700px]">
+          <div className="h-full rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg">
+            <iframe
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(mapQuery)}&zoom=12`}
+            ></iframe>
+          </div>
+
+          {/* Map Controls Overlay */}
+          <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Navigation size={16} className="text-blue-600" />
+                <span className="text-sm font-medium text-slate-800">Tour Route</span>
+              </div>
+              <button
+                onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(mapQuery)}`, '_blank')}
+                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1"
+              >
+                <Navigation size={12} />
+                Open Maps
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
@@ -1160,7 +1243,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
               <OverviewSection tour={tour} sectionRef={overviewRef} />
               
               {enhancement.itinerary && enhancement.itinerary.length > 0 && (
-                <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />
+                <ItinerarySection itinerary={enhancement.itinerary} tourTitle={tour.title} sectionRef={itineraryRef} />
               )}
               
               <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />

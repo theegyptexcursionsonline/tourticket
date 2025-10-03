@@ -114,7 +114,7 @@ export async function GET(
 ) {
     try {
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
         
         console.log('Fetching tour with ID:', id);
         
@@ -145,7 +145,7 @@ export async function PUT(
 ) {
     try {
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
 
         console.log('Updating tour with ID:', id);
@@ -261,7 +261,7 @@ export async function DELETE(
 ) {
     try {
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
 
         let deletedTour;
         
