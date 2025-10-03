@@ -1,0 +1,43 @@
+{
+  "wipeData": false,
+  "updateMode": "upsert",
+  "destinations": [
+    {
+      "name": "Makadi Bay",
+      "slug": "makadi-bay",
+      "country": "Egypt",
+      "description": "Beautiful Red Sea resort town known for pristine beaches and luxury resorts",
+      "image": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80&fm=jpg"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Spa & Wellness",
+      "slug": "spa-wellness",
+      "description": "Relaxation and wellness experiences"
+    },
+    {
+      "name": "Hammam & Turkish Bath",
+      "slug": "hammam-turkish-bath",
+      "description": "Traditional Turkish bath experiences"
+    },
+    {
+      "name": "Massage Therapy",
+      "slug": "massage-therapy",
+      "description": "Professional massage treatments"
+    }
+  ],
+  "tours": [
+    {
+      "title": "Makadi Bay: Lotus Hammam & Spa Turkish Bath Experience",
+      "slug": "makadi-bay-lotus-hammam-spa-turkish-bath",
+      "description": "Refresh body and spirit with a Hammam & spa retreat in Makadi Bay",
+      "price": 30,
+      "discountPrice": 22,
+      "duration": "2 hours",
+      "destinationName": "Makadi Bay",
+      "categoryNames": ["Spa & Wellness"],
+      "image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&q=80&fm=jpg"
+    }
+  ]
+}

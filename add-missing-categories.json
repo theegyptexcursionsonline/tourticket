@@ -1,0 +1,109 @@
+{
+  "wipeData": false,
+  "updateMode": "upsert",
+  "destinations": [
+    {
+      "name": "Marsa Alam",
+      "slug": "marsa-alam",
+      "country": "Egypt",
+      "description": "Pristine Red Sea destination famous for world-class diving and untouched coral reefs",
+      "image": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200&q=80&fm=jpg",
+      "isPublished": true,
+      "featured": false
+    }
+  ],
+  "categories": [
+    {
+      "name": "Wellness & Spa",
+      "slug": "wellness-spa",
+      "description": "Relaxation and wellness experiences including spa treatments and therapeutic activities",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Relaxation",
+      "slug": "relaxation",
+      "description": "Peaceful and calming activities designed to help you unwind and de-stress",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Cultural Experiences",
+      "slug": "cultural-experiences",
+      "description": "Authentic local cultural activities and immersive experiences",
+      "isPublished": true,
+      "featured": true
+    },
+    {
+      "name": "Air, Helicopter & Balloon Tours",
+      "slug": "air-helicopter-balloon-tours",
+      "description": "Aerial tours and sky-high adventures including helicopter rides, hot air balloons, and scenic flights",
+      "isPublished": true,
+      "featured": true
+    },
+    {
+      "name": "Jeep & 4x4 Tours",
+      "slug": "jeep-4x4-tours",
+      "description": "Off-road adventures and 4x4 desert safari experiences",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Evening Tours",
+      "slug": "evening-tours",
+      "description": "Tours and activities during evening hours with dinner and entertainment",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Camel Tours",
+      "slug": "camel-tours",
+      "description": "Traditional camel riding experiences and desert excursions",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Buggy & Dune Tours",
+      "slug": "buggy-dune-tours",
+      "description": "Thrilling dune buggy rides and desert racing adventures",
+      "isPublished": true,
+      "featured": true
+    },
+    {
+      "name": "Sunset Tours",
+      "slug": "sunset-tours",
+      "description": "Beautiful sunset experiences and golden hour activities",
+      "isPublished": true,
+      "featured": true
+    },
+    {
+      "name": "Attractions & Museums",
+      "slug": "attractions-museums",
+      "description": "Popular attractions, museums, and cultural landmarks",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Aquariums",
+      "slug": "aquariums",
+      "description": "Marine life exhibits and underwater world experiences",
+      "isPublished": true,
+      "featured": false
+    },
+    {
+      "name": "Horseback Riding",
+      "slug": "horseback-riding",
+      "description": "Horseback riding tours through desert and beach landscapes",
+      "isPublished": true,
+      "featured": true
+    },
+    {
+      "name": "Beach Activities",
+      "slug": "beach-activities",
+      "description": "Fun activities and experiences along beautiful beaches",
+      "isPublished": true,
+      "featured": false
+    }
+  ],
+  "tours": []
+}

@@ -246,11 +246,10 @@ const FAQSchema = new Schema<IFAQ>({
 }, { _id: false });
 
 const BookingOptionSchema = new Schema<IBookingOption>({
-  type: { 
-    type: String, 
-    required: true, 
-    trim: true,
-    enum: ['Per Person', 'Per Group', 'Per Couple', 'Per Family']
+  type: {
+    type: String,
+    required: true,
+    trim: true
   },
   label: { 
     type: String, 
@@ -336,8 +335,7 @@ const AddOnSchema = new Schema<IAddOn>({
   },
   category: {
     type: String,
-    enum: ['Experience', 'Photography', 'Transport', 'Food & Drink', 'Equipment'],
-    default: 'Experience'
+    trim: true
   }
 }, { _id: false });
 

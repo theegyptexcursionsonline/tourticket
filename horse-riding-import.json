@@ -1,0 +1,320 @@
+{
+  "wipeData": false,
+  "updateMode": "upsert",
+  "destinations": [],
+  "categories": [],
+  "tours": [
+    {
+      "title": "El Gouna: Desert & Sea Horse Riding With Swimming Optional",
+      "slug": "el-gouna-desert-sea-horse-riding-swimming",
+      "destinationName": "Hurghada",
+      "categoryNames": ["Horse Riding"],
+      "price": 55,
+      "discountPrice": 40,
+      "duration": "2-3 hours",
+      "difficulty": "Easy",
+      "maxGroupSize": 12,
+      "isPublished": true,
+      "isFeatured": true,
+      "description": "Experience the magic of horseback riding through El Gouna's desert landscapes and along pristine Red Sea beaches. Optional swimming with horses in crystal-clear waters.",
+      "longDescription": "Embark on an unforgettable horseback riding adventure that combines the beauty of Egypt's desert with the stunning Red Sea coastline. This unique experience in El Gouna takes you through diverse landscapes, from golden sand dunes to turquoise waters, creating memories that will last a lifetime.\n\nYour adventure begins with convenient hotel pickup from El Gouna, Hurghada, Makadi Bay, or Sahl Hasheesh. Upon arrival at the professional stables, you'll meet your Arabian or Egyptian horse, carefully selected to match your riding experience level. Whether you're a complete beginner or experienced rider, our gentle, well-trained horses and expert guides ensure a safe and enjoyable ride.\n\nAfter a brief safety orientation and mounting instructions, set off into the desert. Feel the rhythm of your horse as you trot through sandy trails, witnessing the raw beauty of the Eastern Desert. The landscape unfolds before you—endless golden dunes, scattered acacia trees, and distant mountains creating a stunning backdrop.\n\nAs you ride toward the Red Sea, the scenery transforms dramatically. The desert gives way to pristine beaches where the golden sand meets crystal-clear turquoise waters. This is where the magic truly happens—you'll have the opportunity to ride along the shoreline, feeling the sea breeze and listening to gentle waves.\n\nThe highlight of this experience is the optional swimming session with your horse. Wade into the warm Red Sea waters alongside your equine companion, experiencing the rare joy of swimming with horses in one of Egypt's most beautiful locations. The horses love the water, and this bonding experience creates an incredible connection between rider and animal.\n\nThroughout the ride, your professional guide shares insights about Egyptian horse breeding traditions, local wildlife, and the unique ecosystem where desert meets sea. Pause for photo opportunities at scenic viewpoints, capturing stunning images of you and your horse against breathtaking backdrops.\n\nThis tour offers flexible options: choose a shorter 2-hour ride focusing on desert or beach, or opt for the extended 3-hour experience combining both landscapes with ample time for swimming. Morning rides offer cooler temperatures and soft light, while sunset rides provide magical golden hour views.\n\nNo prior riding experience is necessary—our patient guides provide all instruction needed. We supply safety helmets and ensure all equipment is well-maintained. The experience is suitable for children (8+) when accompanied by adults, making it perfect for families seeking unique adventure.\n\nWhether you're seeking peaceful beach riding, desert exploration, or the thrill of swimming with horses in the Red Sea, this El Gouna horseback adventure delivers an extraordinary experience combining natural beauty, animal connection, and Egyptian hospitality.",
+      "meetingPoint": "Hotel pickup from El Gouna, Hurghada, Makadi Bay, and Sahl Hasheesh",
+      "languages": ["English", "Arabic", "German", "Russian"],
+      "cancellationPolicy": "Free cancellation up to 24 hours before tour. 50% refund for 12-24 hours notice.",
+      "operatedBy": "El Gouna Equestrian Center",
+      "image": "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=1200&q=80&fm=jpg",
+      "images": [
+        "https://images.unsplash.com/photo-1551884831-bbf3cdc6469e?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1565182999561-18d7dc61c393?w=800&q=80&fm=jpg",
+        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80&fm=jpg"
+      ],
+      "highlights": [
+        "Ride through desert landscapes and along Red Sea beaches",
+        "Optional swimming with horses in crystal-clear waters",
+        "Professional Arabian and Egyptian horses",
+        "Suitable for all experience levels including beginners",
+        "Expert guides with safety equipment included",
+        "Stunning photo opportunities at beach and desert"
+      ],
+      "includes": [],
+      "whatsIncluded": [
+        "Hotel pickup and drop-off",
+        "Professional horse riding guide",
+        "Well-trained Arabian or Egyptian horse",
+        "Safety helmet and equipment",
+        "Brief riding instruction for beginners",
+        "Beach and desert riding experience",
+        "Swimming session with horse (if option selected)",
+        "Bottled water",
+        "Insurance coverage"
+      ],
+      "whatsNotIncluded": [
+        "Photos and videos (available for purchase)",
+        "Personal riding boots (can be provided for small fee)",
+        "Gratuities for guides",
+        "Hotel pickup from Soma Bay or El Gouna (extra charge)"
+      ],
+      "tags": ["horse-riding", "adventure", "beach", "desert", "swimming", "family-friendly"],
+      "whatToBring": [
+        "Swimsuit (under clothes if planning to swim)",
+        "Towel for swimming option",
+        "Sunscreen and sunglasses",
+        "Camera or smartphone for photos",
+        "Comfortable clothes"
+      ],
+      "whatToWear": [
+        "Long comfortable pants (jeans or riding pants ideal)",
+        "Closed-toe shoes or boots",
+        "Light shirt or t-shirt",
+        "Hat or cap for sun protection",
+        "Swimsuit underneath if swimming"
+      ],
+      "accessibilityInfo": [
+        "Not suitable for pregnant women",
+        "Not recommended for people with back or neck problems",
+        "Minimum age 8 years (children must be accompanied)",
+        "Maximum weight limit 100kg (220lbs)",
+        "Riders must be able to mount and dismount independently"
+      ],
+      "groupSize": {
+        "min": 1,
+        "max": 12
+      },
+      "healthSafety": [
+        "All horses regularly veterinary checked",
+        "Safety helmets provided and mandatory",
+        "First aid kit and trained staff",
+        "Insurance coverage included",
+        "COVID-19 safety protocols",
+        "Equipment sanitized between uses"
+      ],
+      "culturalInfo": [
+        "Learn about Arabian horse breeding in Egypt",
+        "Discover Bedouin horse traditions",
+        "Understand desert ecosystem and wildlife",
+        "Experience Egyptian equestrian heritage"
+      ],
+      "localCustoms": [
+        "Approach horses calmly and gently",
+        "Follow guide's instructions at all times",
+        "No loud noises or sudden movements around horses",
+        "Respect the beach environment—no littering"
+      ],
+      "transportationDetails": "Air-conditioned minibus pickup from hotels in El Gouna (15-20 min), Hurghada (30-40 min), Makadi Bay (25-35 min), and Sahl Hasheesh (25-30 min). Return transfer after activity.",
+      "mealInfo": "Light refreshments and bottled water provided. No full meals included. Snacks available for purchase at stables.",
+      "weatherPolicy": "Tours operate in most weather conditions. In case of extreme wind or storms, tour may be rescheduled or refunded. Swimming option weather-dependent.",
+      "photoPolicy": "Photography and videos allowed throughout. Professional photographer available for hire (optional) to capture your experience.",
+      "tipPolicy": "Gratuities not included. Tipping 50-100 EGP per person for guides is customary for good service.",
+      "physicalRequirements": "Basic fitness required. Ability to mount/dismount horse and sit in saddle for 2-3 hours. Some muscle soreness normal for first-time riders.",
+      "seasonalVariations": "Available year-round. Summer months (June-September) best done early morning or late afternoon due to heat. Winter (November-March) offers comfortable temperatures throughout the day.",
+      "metaTitle": "El Gouna Horse Riding | Desert & Beach Ride with Swimming",
+      "metaDescription": "Horseback riding in El Gouna through desert and along Red Sea beaches. Optional swimming with horses. All levels welcome. Book your adventure!",
+      "keywords": ["el gouna horse riding", "red sea beach riding", "desert horse ride", "swimming with horses", "horseback riding egypt", "equestrian tour hurghada"],
+      "itinerary": [
+        {
+          "day": 1,
+          "time": "Variable",
+          "title": "Hotel Pickup",
+          "description": "Your driver picks you up from your hotel in El Gouna, Hurghada, Makadi Bay, or Sahl Hasheesh in air-conditioned transport.",
+          "duration": "15-40 mins",
+          "location": "Your Hotel",
+          "includes": ["Hotel pickup", "Air-conditioned transport"],
+          "icon": "transport"
+        },
+        {
+          "day": 1,
+          "time": "+0:30",
+          "title": "Arrival at Stables",
+          "description": "Arrive at the professional equestrian center. Meet your guide and receive safety briefing. Get fitted with helmet and meet your horse.",
+          "duration": "15 mins",
+          "location": "El Gouna Stables",
+          "includes": ["Safety briefing", "Helmet fitting", "Horse introduction"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "+0:45",
+          "title": "Riding Instruction",
+          "description": "For beginners: basic riding instruction including mounting, dismounting, posture, and control. Experienced riders proceed directly to trail.",
+          "duration": "10-15 mins",
+          "location": "Practice Arena",
+          "includes": ["Riding lessons", "Practice time", "Guide support"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "+1:00",
+          "title": "Desert Trail Ride",
+          "description": "Begin your adventure riding through the beautiful desert landscape. Enjoy golden dunes, acacia trees, and stunning mountain views. Walk and trot pace.",
+          "duration": "45-60 mins",
+          "location": "Eastern Desert",
+          "includes": ["Guided desert ride", "Photo stops", "Wildlife viewing"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "+1:45",
+          "title": "Beach Riding",
+          "description": "Transition to the stunning Red Sea coastline. Ride along pristine beaches with turquoise waters. Feel the sea breeze and hear gentle waves.",
+          "duration": "30-45 mins",
+          "location": "Red Sea Beach",
+          "includes": ["Beach riding", "Scenic views", "Photo opportunities"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "+2:15",
+          "title": "Swimming with Horses (Optional)",
+          "description": "Wade into the warm Red Sea waters with your horse. Experience the joy of swimming alongside your equine companion in crystal-clear water.",
+          "duration": "20-30 mins",
+          "location": "Red Sea Beach",
+          "includes": ["Swimming session", "Guide assistance", "Unique experience"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "+2:45",
+          "title": "Return Ride",
+          "description": "Gentle ride back to the stables through desert or beach route. Final photo opportunities and farewell to your horse.",
+          "duration": "20-30 mins",
+          "location": "Back to Stables",
+          "includes": ["Return ride", "Photo stops"],
+          "icon": "location"
+        },
+        {
+          "day": 1,
+          "time": "+3:15",
+          "title": "Return Transfer",
+          "description": "After saying goodbye to your horse, comfortable transfer back to your hotel with memories of an incredible experience.",
+          "duration": "15-40 mins",
+          "location": "Your Hotel",
+          "includes": ["Return transfer"],
+          "icon": "transport"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Do I need previous horse riding experience?",
+          "answer": "No prior experience necessary! Our guides provide instruction for beginners, and our horses are gentle and well-trained. We match horses to your experience level to ensure a safe, enjoyable ride."
+        },
+        {
+          "question": "Is it safe to swim with the horses?",
+          "answer": "Yes, completely safe. Our horses are trained for water activities and love swimming. Guides stay with you throughout, and life jackets are available if needed. The water is shallow near shore."
+        },
+        {
+          "question": "What if I'm nervous about riding?",
+          "answer": "That's completely normal! Our experienced guides specialize in working with nervous riders. We'll start slowly, provide patient instruction, and never push you beyond your comfort level. You can always walk instead of trot."
+        },
+        {
+          "question": "Can children participate?",
+          "answer": "Yes, children 8 years and older can join when accompanied by adults. We have smaller horses and ponies suitable for children. Younger, lighter children may be able to share a horse with an adult—please inquire."
+        },
+        {
+          "question": "What happens if I don't want to swim?",
+          "answer": "Swimming is completely optional! You can choose to ride only through desert and beach, or watch from shore if your group swims. The experience is customizable to your preferences."
+        },
+        {
+          "question": "Will I be sore after riding?",
+          "answer": "First-time riders often experience some muscle soreness in the legs and seat the next day—this is normal! It typically subsides within 24-48 hours. Stretching after the ride helps minimize discomfort."
+        }
+      ],
+      "bookingOptions": [
+        {
+          "type": "Per Person",
+          "label": "2-Hour Desert & Beach Ride",
+          "price": 40,
+          "originalPrice": 55,
+          "description": "Ride through desert landscapes and along Red Sea beaches. Optional swimming with horses included.",
+          "duration": "2 hours riding + 1 hour transfers",
+          "languages": ["English", "Arabic", "German"],
+          "highlights": [
+            "Desert trail riding",
+            "Beach riding experience",
+            "Optional horse swimming",
+            "All equipment included",
+            "Hotel transfers"
+          ],
+          "groupSize": "1-12 people",
+          "difficulty": "Easy",
+          "badge": "Most Popular",
+          "discount": 27,
+          "isRecommended": true
+        },
+        {
+          "type": "Per Person",
+          "label": "3-Hour Extended Adventure",
+          "price": 60,
+          "originalPrice": 80,
+          "description": "Extended ride with more desert exploration, longer beach riding, guaranteed swimming time, and refreshments.",
+          "duration": "3 hours riding + 1 hour transfers",
+          "languages": ["English", "Arabic", "German", "Russian"],
+          "highlights": [
+            "Extended desert exploration",
+            "Longer beach riding",
+            "Guaranteed swimming session",
+            "Light refreshments included",
+            "More photo opportunities"
+          ],
+          "groupSize": "1-10 people",
+          "difficulty": "Easy to Moderate",
+          "badge": "Best Value",
+          "discount": 25,
+          "isRecommended": false
+        },
+        {
+          "type": "Per Person",
+          "label": "Private Sunset Ride for Two",
+          "price": 110,
+          "originalPrice": 150,
+          "description": "Romantic private sunset ride for couples. Includes champagne toast on the beach, professional photos, and private guide.",
+          "duration": "2.5 hours + transfers",
+          "languages": ["English", "Arabic"],
+          "highlights": [
+            "Private couple's experience",
+            "Sunset beach ride",
+            "Champagne toast included",
+            "Professional photographer",
+            "Private guide"
+          ],
+          "groupSize": "2 people",
+          "difficulty": "Easy",
+          "badge": "Romantic",
+          "discount": 27,
+          "isRecommended": false
+        }
+      ],
+      "addOns": [
+        {
+          "name": "Professional Photography Package",
+          "description": "Personal photographer for entire ride with 50+ edited digital photos delivered same day",
+          "price": 45,
+          "category": "Photography"
+        },
+        {
+          "name": "GoPro Video Package",
+          "description": "Mounted GoPro camera recording your entire ride from horse's perspective, edited video delivered",
+          "price": 35,
+          "category": "Photography"
+        },
+        {
+          "name": "Private Guide Upgrade",
+          "description": "Upgrade to private guide for your group instead of shared tour (up to 4 people)",
+          "price": 50,
+          "category": "Experience"
+        },
+        {
+          "name": "Extended Swimming Time",
+          "description": "Add an extra 30 minutes of swimming time with horses and beach relaxation",
+          "price": 20,
+          "category": "Experience"
+        },
+        {
+          "name": "Beachside Refreshments",
+          "description": "Fresh fruit platter and refreshing drinks served on the beach during your ride",
+          "price": 15,
+          "category": "Food & Drink"
+        }
+      ]
+    }
+  ]
+}

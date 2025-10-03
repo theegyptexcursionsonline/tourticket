@@ -9,12 +9,33 @@ interface ImportReport {
   destinationsCreated: number;
   categoriesCreated: number;
   toursCreated: number;
+  destinationsUpdated: number;
+  categoriesUpdated: number;
+  toursUpdated: number;
   errors: string[];
+  warnings: string[];
 }
 
 interface ImportResult {
   success: boolean;
   report?: ImportReport;
+  summary?: {
+    created: {
+      destinations: number;
+      categories: number;
+      tours: number;
+      total: number;
+    };
+    updated: {
+      destinations: number;
+      categories: number;
+      tours: number;
+      total: number;
+    };
+    errors: number;
+    warnings: number;
+  };
+  message?: string;
   error?: string;
 }
 
@@ -665,50 +686,171 @@ export default function DataImportPage() {
 
         {/* Results */}
         {result && (
-          <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">Import Results</h3>
-            
-            {result.success ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-semibold">Import Successful!</span>
-                </div>
-                
-                {result.report && (
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-800 mb-2">Summary:</h4>
-                    <ul className="space-y-1 text-green-700">
-                      <li>• Destinations: {result.report.destinationsCreated}</li>
-                      <li>• Categories: {result.report.categoriesCreated}</li>
-                      <li>• Tours: {result.report.toursCreated}</li>
-                      {result.report.wipedData && (
-                        <li className="text-orange-600">• Existing data was wiped</li>
-                      )}
-                    </ul>
-                    
-                    {result.report.errors.length > 0 && (
-                      <div className="mt-3">
-                        <h5 className="font-semibold text-orange-800">Warnings:</h5>
-                        <ul className="mt-1 space-y-1">
-                          {result.report.errors.map((error, index) => (
-                            <li key={index} className="text-orange-700 text-sm">• {error}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+          <div className="mt-8 bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className={`p-6 border-b ${
+              result.success
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+                : 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                {result.success ? (
+                  <>
+                    <div className="flex-shrink-0 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-green-900">Import Successful!</h3>
+                      <p className="text-green-700 text-sm mt-1">{result.message || 'Data imported successfully'}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-shrink-0 w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
+                      <XCircle className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-red-900">Import Failed</h3>
+                      <p className="text-red-700 text-sm mt-1">{result.message || 'There were errors during import'}</p>
+                    </div>
+                  </>
                 )}
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-red-600">
-                  <XCircle className="w-5 h-5" />
-                  <span className="font-semibold">Import Failed</span>
+            </div>
+
+            {/* Summary Stats */}
+            {result.summary && (
+              <div className="p-6 bg-gray-50">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Created */}
+                  <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <div className="text-2xl font-bold text-green-600">{result.summary.created.total}</div>
+                    <div className="text-sm text-gray-600 mt-1">Created</div>
+                    <div className="text-xs text-gray-500 mt-2 space-y-0.5">
+                      <div>Destinations: {result.summary.created.destinations}</div>
+                      <div>Categories: {result.summary.created.categories}</div>
+                      <div>Tours: {result.summary.created.tours}</div>
+                    </div>
+                  </div>
+
+                  {/* Updated */}
+                  <div className="bg-white rounded-lg p-4 border border-blue-200">
+                    <div className="text-2xl font-bold text-blue-600">{result.summary.updated.total}</div>
+                    <div className="text-sm text-gray-600 mt-1">Updated</div>
+                    <div className="text-xs text-gray-500 mt-2 space-y-0.5">
+                      <div>Destinations: {result.summary.updated.destinations}</div>
+                      <div>Categories: {result.summary.updated.categories}</div>
+                      <div>Tours: {result.summary.updated.tours}</div>
+                    </div>
+                  </div>
+
+                  {/* Errors */}
+                  <div className="bg-white rounded-lg p-4 border border-red-200">
+                    <div className="text-2xl font-bold text-red-600">{result.summary.errors}</div>
+                    <div className="text-sm text-gray-600 mt-1">Errors</div>
+                    {result.summary.errors > 0 && (
+                      <div className="text-xs text-red-600 mt-2">See details below</div>
+                    )}
+                  </div>
+
+                  {/* Warnings */}
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <div className="text-2xl font-bold text-orange-600">{result.summary.warnings}</div>
+                    <div className="text-sm text-gray-600 mt-1">Warnings</div>
+                    {result.summary.warnings > 0 && (
+                      <div className="text-xs text-orange-600 mt-2">See details below</div>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="bg-red-50 rounded-lg p-4">
-                  <p className="text-red-700">{result.error}</p>
+              </div>
+            )}
+
+            {/* Errors Section */}
+            {result.report?.errors && result.report.errors.length > 0 && (
+              <div className="p-6 border-t border-red-200 bg-red-50">
+                <h4 className="flex items-center gap-2 text-lg font-bold text-red-900 mb-4">
+                  <XCircle className="w-5 h-5" />
+                  Errors ({result.report.errors.length})
+                </h4>
+                <div className="space-y-3">
+                  {result.report.errors.map((error, index) => (
+                    <div key={index} className="bg-white rounded-lg border border-red-300 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-red-800 font-medium">{error}</p>
+                          {error.includes('destinationName') && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                              <p className="text-sm text-blue-900 font-semibold mb-2">💡 How to fix:</p>
+                              <p className="text-sm text-blue-800">Make sure your JSON uses <code className="bg-blue-100 px-1 rounded">"destinationName": "City Name"</code></p>
+                              <p className="text-sm text-blue-800 mt-1">NOT <code className="bg-red-100 px-1 rounded">"destination": &#123;...&#125;</code></p>
+                            </div>
+                          )}
+                          {error.includes('categoryNames') && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                              <p className="text-sm text-blue-900 font-semibold mb-2">💡 How to fix:</p>
+                              <p className="text-sm text-blue-800">Make sure your JSON uses <code className="bg-blue-100 px-1 rounded">"categoryNames": ["Category 1", "Category 2"]</code></p>
+                              <p className="text-sm text-blue-800 mt-1">NOT <code className="bg-red-100 px-1 rounded">"category": &#123;...&#125;</code></p>
+                            </div>
+                          )}
+                          {error.includes('not found') && error.includes('Destination') && (
+                            <div className="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+                              <p className="text-sm text-yellow-900 font-semibold mb-2">💡 Suggestion:</p>
+                              <p className="text-sm text-yellow-800">The destination doesn't exist in the database. Either:</p>
+                              <ul className="text-sm text-yellow-800 mt-1 ml-4 list-disc">
+                                <li>Add it to the "destinations" array in your JSON first</li>
+                                <li>Check the spelling matches exactly (case-sensitive)</li>
+                              </ul>
+                            </div>
+                          )}
+                          {error.includes('not found') && error.includes('categor') && (
+                            <div className="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+                              <p className="text-sm text-yellow-900 font-semibold mb-2">💡 Suggestion:</p>
+                              <p className="text-sm text-yellow-800">The category doesn't exist in the database. Either:</p>
+                              <ul className="text-sm text-yellow-800 mt-1 ml-4 list-disc">
+                                <li>Add it to the "categories" array in your JSON first</li>
+                                <li>Check the spelling matches exactly (case-sensitive)</li>
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warnings Section */}
+            {result.report?.warnings && result.report.warnings.length > 0 && (
+              <div className="p-6 border-t border-orange-200 bg-orange-50">
+                <h4 className="flex items-center gap-2 text-lg font-bold text-orange-900 mb-4">
+                  <AlertCircle className="w-5 h-5" />
+                  Warnings ({result.report.warnings.length})
+                </h4>
+                <div className="space-y-2">
+                  {result.report.warnings.map((warning, index) => (
+                    <div key={index} className="bg-white rounded-lg border border-orange-300 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </div>
+                        <p className="text-orange-800 text-sm flex-1">{warning}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Success details */}
+            {result.success && result.report?.wipedData && (
+              <div className="p-4 bg-yellow-50 border-t border-yellow-200">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Note: Previous data was wiped before import</span>
                 </div>
               </div>
             )}
