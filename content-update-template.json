@@ -1,0 +1,207 @@
+{
+  "wipeData": false,
+  "updateMode": "upsert",
+
+  "destinations": [
+    {
+      "name": "Cairo",
+      "slug": "cairo",
+      "country": "Egypt",
+      "description": "Egypt's capital, home to ancient pyramids, museums, and vibrant bazaars",
+      "longDescription": "Cairo is Egypt's sprawling capital, set on the Nile River. At its heart is Tahrir Square and the vast Egyptian Museum, a trove of antiquities including royal mummies and gilded King Tutankhamun artifacts. Nearby, Giza is the site of the iconic pyramids and Great Sphinx, dating to the 26th century BC.",
+
+      "image": "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=1200&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=1200&q=80",
+        "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=1200&q=80"
+      ],
+
+      "coordinates": {
+        "lat": 30.0444,
+        "lng": 31.2357
+      },
+
+      "currency": "EGP",
+      "timezone": "Africa/Cairo",
+      "bestTimeToVisit": "October to April (cooler weather)",
+
+      "highlights": [
+        "Great Pyramids of Giza and Sphinx",
+        "Egyptian Museum with King Tut treasures",
+        "Khan El-Khalili Bazaar",
+        "Islamic Cairo with historic mosques",
+        "Nile River felucca rides"
+      ],
+
+      "thingsToDo": [
+        "Visit the Pyramids of Giza and ride camels in the desert",
+        "Explore the Egyptian Museum's vast collection of antiquities",
+        "Shop for souvenirs at Khan El-Khalili market",
+        "Take a sunset felucca ride on the Nile River",
+        "Tour the Citadel of Cairo and Muhammad Ali Mosque"
+      ],
+
+      "localCustoms": [
+        "Dress modestly when visiting mosques and religious sites",
+        "Bargaining is expected in markets and bazaars",
+        "Remove shoes before entering mosques",
+        "Friday is the main prayer day; some sites may have limited hours",
+        "Tipping (baksheesh) is customary for most services"
+      ],
+
+      "visaRequirements": "Most nationalities can obtain a visa on arrival at Cairo International Airport for $25 USD. E-visas are also available online. Passports must be valid for at least 6 months from entry date.",
+
+      "languagesSpoken": ["Arabic", "English", "French"],
+      "emergencyNumber": "122",
+
+      "averageTemperature": {
+        "summer": "30-40°C (86-104°F)",
+        "winter": "10-20°C (50-68°F)"
+      },
+
+      "climate": "Hot desert climate with very little rainfall. Summers (June-August) are extremely hot, while winters (December-February) are mild and pleasant.",
+
+      "weatherWarnings": [
+        "Summer temperatures can exceed 40°C - stay hydrated and avoid midday sun",
+        "Sandstorms can occur in spring (Khamsin winds)",
+        "Winter nights can be surprisingly cold - bring a jacket"
+      ],
+
+      "featured": true,
+      "isPublished": true,
+
+      "metaTitle": "Cairo Travel Guide - Pyramids, Museums & Ancient Wonders",
+      "metaDescription": "Discover Cairo, Egypt's vibrant capital. Visit the Pyramids, explore ancient museums, cruise the Nile, and experience rich history and culture.",
+      "keywords": ["Cairo", "Egypt", "Pyramids", "Giza", "Egyptian Museum", "Nile River"],
+      "tags": ["historical", "cultural", "desert", "ancient", "UNESCO"]
+    }
+  ],
+
+  "categories": [
+    {
+      "name": "Pyramid Tours",
+      "slug": "pyramid-tours",
+      "description": "Guided tours to explore the ancient pyramids of Egypt",
+      "longDescription": "Experience the wonder of ancient Egypt with our comprehensive pyramid tours. Visit the Great Pyramids of Giza, the Sphinx, and lesser-known pyramids at Saqqara and Dahshur. Learn about the fascinating history, construction techniques, and mysteries surrounding these 4,500-year-old monuments from expert Egyptologists.",
+
+      "heroImage": "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=1200&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=1200&q=80",
+        "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=1200&q=80"
+      ],
+
+      "highlights": [
+        "Skip-the-line access to pyramid complexes",
+        "Expert Egyptologist guides",
+        "Camel or horse rides around the pyramids",
+        "Photo opportunities at the Sphinx",
+        "Visits to pyramid interiors (when available)"
+      ],
+
+      "features": [
+        "Small group sizes for personalized experience",
+        "Hotel pickup and drop-off included",
+        "Air-conditioned transportation",
+        "Entry fees to all sites included",
+        "Traditional Egyptian lunch at local restaurants"
+      ],
+
+      "metaTitle": "Pyramid Tours Egypt - Giza, Saqqara & Dahshur | Book Now",
+      "metaDescription": "Explore Egypt's magnificent pyramids with expert guides. Visit Giza, Saqqara, and Dahshur. Skip-the-line access, camel rides, and unforgettable experiences.",
+      "keywords": ["pyramid tours", "Giza pyramids", "Egypt tours", "Sphinx", "Saqqara", "Dahshur"],
+
+      "color": "#F59E0B",
+      "icon": "pyramid",
+      "order": 1,
+
+      "isPublished": true,
+      "featured": true
+    }
+  ],
+
+  "attractionPages": [
+    {
+      "title": "Best Attractions in Cairo",
+      "slug": "cairo-attractions",
+      "description": "Discover Cairo's top attractions including the Pyramids, museums, and historical sites",
+      "longDescription": "Cairo is home to some of the world's most iconic attractions. From the ancient Pyramids of Giza to world-class museums housing priceless artifacts, the city offers an unparalleled journey through 5,000 years of history. Explore our curated selection of must-visit attractions and book unforgettable experiences.",
+
+      "pageType": "attraction",
+
+      "heroImage": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=1600&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=1600&q=80",
+        "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=1600&q=80"
+      ],
+
+      "highlights": [
+        "Over 200 curated experiences",
+        "Skip-the-line tickets available",
+        "Expert local guides",
+        "Flexible cancellation policies",
+        "Best price guarantee"
+      ],
+
+      "features": [
+        "Instant booking confirmation",
+        "Mobile tickets accepted",
+        "Free cancellation up to 24 hours before",
+        "Customer reviews and ratings",
+        "24/7 customer support"
+      ],
+
+      "gridTitle": "Explore Cairo's Top Attractions",
+      "gridSubtitle": "Book tickets and tours to Cairo's must-see destinations",
+      "showStats": true,
+      "itemsPerRow": 4,
+
+      "metaTitle": "Cairo Attractions & Things to Do | Book Tours & Tickets",
+      "metaDescription": "Discover and book the best attractions in Cairo. Pyramids, museums, cruises, and more. Skip-the-line tickets, expert guides, best prices guaranteed.",
+      "keywords": ["Cairo attractions", "things to do Cairo", "Cairo tours", "Egypt activities"],
+
+      "isPublished": true,
+      "featured": true
+    },
+    {
+      "title": "Pyramid Tours - All Pyramid Experiences",
+      "slug": "pyramid-tours-landing",
+      "description": "Browse all pyramid tours and experiences across Egypt",
+      "longDescription": "Explore the wonders of ancient Egypt with our comprehensive collection of pyramid tours. From the iconic Giza Plateau to the Step Pyramid of Saqqara and the Bent Pyramid of Dahshur, we offer expertly guided experiences that bring 4,500 years of history to life.",
+
+      "pageType": "category",
+      "categoryName": "Pyramid Tours",
+
+      "heroImage": "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=1600&q=80",
+
+      "highlights": [
+        "Visit all major pyramid complexes",
+        "Expert Egyptologist guides",
+        "Small group and private options",
+        "Combo tours with museums and bazaars",
+        "Sunrise and sunset experiences"
+      ],
+
+      "features": [
+        "All entry fees included",
+        "Hotel pickup and drop-off",
+        "Air-conditioned vehicles",
+        "Traditional lunch included",
+        "Photo stops at best viewpoints"
+      ],
+
+      "gridTitle": "All Pyramid Tours",
+      "gridSubtitle": "Choose from our selection of pyramid experiences",
+      "showStats": true,
+      "itemsPerRow": 3,
+
+      "metaTitle": "Pyramid Tours Egypt - Giza, Saqqara & More | Book Online",
+      "metaDescription": "Book pyramid tours in Egypt. Visit Giza, Saqqara, Dahshur with expert guides. Skip lines, see interiors, ride camels. Best prices and experiences.",
+      "keywords": ["pyramid tours", "Egypt pyramids", "Giza tours", "Saqqara", "pyramid experiences"],
+
+      "isPublished": true,
+      "featured": true
+    }
+  ],
+
+  "tours": []
+}

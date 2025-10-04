@@ -8,9 +8,11 @@ interface ImportReport {
   wipedData: boolean;
   destinationsCreated: number;
   categoriesCreated: number;
+  attractionPagesCreated: number;
   toursCreated: number;
   destinationsUpdated: number;
   categoriesUpdated: number;
+  attractionPagesUpdated: number;
   toursUpdated: number;
   errors: string[];
   warnings: string[];
@@ -23,12 +25,14 @@ interface ImportResult {
     created: {
       destinations: number;
       categories: number;
+      attractionPages: number;
       tours: number;
       total: number;
     };
     updated: {
       destinations: number;
       categories: number;
+      attractionPages: number;
       tours: number;
       total: number;
     };
@@ -729,6 +733,7 @@ export default function DataImportPage() {
                     <div className="text-xs text-gray-500 mt-2 space-y-0.5">
                       <div>Destinations: {result.summary.created.destinations}</div>
                       <div>Categories: {result.summary.created.categories}</div>
+                      <div>Attraction Pages: {result.summary.created.attractionPages}</div>
                       <div>Tours: {result.summary.created.tours}</div>
                     </div>
                   </div>
@@ -740,6 +745,7 @@ export default function DataImportPage() {
                     <div className="text-xs text-gray-500 mt-2 space-y-0.5">
                       <div>Destinations: {result.summary.updated.destinations}</div>
                       <div>Categories: {result.summary.updated.categories}</div>
+                      <div>Attraction Pages: {result.summary.updated.attractionPages}</div>
                       <div>Tours: {result.summary.updated.tours}</div>
                     </div>
                   </div>

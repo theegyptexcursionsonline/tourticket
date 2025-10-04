@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
+import AttractionPage from '@/lib/models/AttractionPage';
 
 // Utility function to generate URL-friendly slugs
 const generateSlug = (name: string): string =>
@@ -54,6 +55,28 @@ interface SeedCategory {
   color?: string;
   icon?: string;
   order?: number;
+  isPublished?: boolean;
+  featured?: boolean;
+}
+
+interface SeedAttractionPage {
+  title: string;
+  slug?: string;
+  description: string;
+  longDescription?: string;
+  pageType: 'attraction' | 'category';
+  categoryName?: string; // Will be resolved to categoryId
+  heroImage?: string;
+  images?: string[];
+  highlights?: string[];
+  features?: string[];
+  gridTitle: string;
+  gridSubtitle?: string;
+  showStats?: boolean;
+  itemsPerRow?: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
   isPublished?: boolean;
   featured?: boolean;
 }
@@ -158,6 +181,7 @@ interface SeedTour {
 interface SeedData {
   destinations?: SeedDestination[];
   categories?: SeedCategory[];
+  attractionPages?: SeedAttractionPage[];
   tours?: SeedTour[];
   wipeData?: boolean;
   updateMode?: 'insert' | 'upsert' | 'replace';
@@ -167,9 +191,11 @@ interface ImportReport {
   wipedData: boolean;
   destinationsCreated: number;
   categoriesCreated: number;
+  attractionPagesCreated: number;
   toursCreated: number;
   destinationsUpdated: number;
   categoriesUpdated: number;
+  attractionPagesUpdated: number;
   toursUpdated: number;
   errors: string[];
   warnings: string[];
@@ -183,11 +209,12 @@ export async function POST(request: Request) {
 
   try {
     const seedData: SeedData = await request.json();
-    const { destinations, categories, tours, wipeData, updateMode = 'upsert' } = seedData;
+    const { destinations, categories, attractionPages, tours, wipeData, updateMode = 'upsert' } = seedData;
 
     console.log('📦 Received data summary:');
     console.log(`   Destinations: ${destinations?.length || 0}`);
     console.log(`   Categories: ${categories?.length || 0}`);
+    console.log(`   Attraction Pages: ${attractionPages?.length || 0}`);
     console.log(`   Tours: ${tours?.length || 0}`);
     console.log(`   Wipe data: ${wipeData ? 'YES' : 'NO'}`);
     console.log(`   Update mode: ${updateMode.toUpperCase()}\n`);
@@ -196,9 +223,11 @@ export async function POST(request: Request) {
       wipedData: false,
       destinationsCreated: 0,
       categoriesCreated: 0,
+      attractionPagesCreated: 0,
       toursCreated: 0,
       destinationsUpdated: 0,
       categoriesUpdated: 0,
+      attractionPagesUpdated: 0,
       toursUpdated: 0,
       errors: [],
       warnings: [],
@@ -404,6 +433,122 @@ export async function POST(request: Request) {
       report.categoriesCreated = categoriesCreated;
       report.categoriesUpdated = categoriesUpdated;
       console.log(`\n   ✅ Categories complete: ${categoriesCreated} created, ${categoriesUpdated} updated\n`);
+    }
+
+    // Step 3.5: Process attraction pages with upsert logic
+    if (attractionPages && attractionPages.length > 0) {
+      console.log(`🎨 PROCESSING ${attractionPages.length} ATTRACTION PAGES (${updateMode} mode)...\n`);
+
+      let attractionPagesCreated = 0;
+      let attractionPagesUpdated = 0;
+
+      // Load categories for reference mapping
+      const allCategories = await Category.find({});
+      const categoryMap = new Map(allCategories.map(cat => [cat.name.toLowerCase(), cat._id]));
+
+      for (const pageData of attractionPages) {
+        try {
+          if (!pageData.title?.trim()) {
+            report.warnings.push('Skipped attraction page with missing title');
+            continue;
+          }
+
+          if (!pageData.description?.trim()) {
+            report.warnings.push(`Skipped attraction page "${pageData.title}" with missing description`);
+            continue;
+          }
+
+          if (!pageData.gridTitle?.trim()) {
+            report.warnings.push(`Skipped attraction page "${pageData.title}" with missing gridTitle`);
+            continue;
+          }
+
+          // Resolve categoryId if pageType is 'category'
+          let categoryId = undefined;
+          if (pageData.pageType === 'category' && pageData.categoryName) {
+            const categoryNameLower = pageData.categoryName.toLowerCase();
+            categoryId = categoryMap.get(categoryNameLower);
+
+            if (!categoryId) {
+              report.errors.push(`Attraction page "${pageData.title}": Category "${pageData.categoryName}" not found`);
+              continue;
+            }
+          }
+
+          const attractionPageDoc = {
+            title: pageData.title.trim(),
+            slug: pageData.slug?.trim() || generateSlug(pageData.title),
+            description: pageData.description.trim(),
+            longDescription: pageData.longDescription?.trim(),
+            pageType: pageData.pageType,
+            categoryId: categoryId,
+            heroImage: pageData.heroImage?.trim(),
+            images: pageData.images,
+            highlights: pageData.highlights,
+            features: pageData.features,
+            gridTitle: pageData.gridTitle.trim(),
+            gridSubtitle: pageData.gridSubtitle?.trim(),
+            showStats: pageData.showStats ?? true,
+            itemsPerRow: pageData.itemsPerRow ?? 4,
+            metaTitle: pageData.metaTitle?.trim(),
+            metaDescription: pageData.metaDescription?.trim(),
+            keywords: pageData.keywords,
+            isPublished: pageData.isPublished ?? false,
+            featured: pageData.featured ?? false,
+            updatedAt: new Date(),
+          };
+
+          const existingPage = await AttractionPage.findOne({
+            $or: [
+              { slug: attractionPageDoc.slug },
+              { title: attractionPageDoc.title }
+            ]
+          });
+
+          if (existingPage && (updateMode === 'upsert' || updateMode === 'replace')) {
+            // Update existing page
+            await AttractionPage.findByIdAndUpdate(
+              existingPage._id,
+              { $set: attractionPageDoc },
+              { runValidators: true }
+            );
+            attractionPagesUpdated++;
+            console.log(`   ✅ Updated attraction page: ${attractionPageDoc.title}`);
+          } else if (!existingPage || updateMode === 'insert') {
+            // Create new page
+            await AttractionPage.create({
+              ...attractionPageDoc,
+              createdAt: new Date()
+            });
+            attractionPagesCreated++;
+            console.log(`   ✅ Created attraction page: ${attractionPageDoc.title}`);
+          } else {
+            report.warnings.push(`Attraction page "${pageData.title}" already exists (skipped)`);
+          }
+        } catch (pageError: any) {
+          console.error(`\n❌ ERROR processing attraction page "${pageData.title}":`, {
+            name: pageError.name,
+            message: pageError.message,
+            code: pageError.code,
+            stack: pageError.stack
+          });
+          if (pageError.code === 11000) {
+            const duplicateField = Object.keys(pageError.keyPattern || {})[0] || 'field';
+            report.warnings.push(`Attraction page "${pageData.title}" already exists (duplicate ${duplicateField})`);
+          } else if (pageError.name === 'ValidationError') {
+            const validationErrors = Object.entries(pageError.errors || {})
+              .map(([field, err]: [string, any]) => `${field}: ${err.message}`)
+              .join('; ');
+            report.errors.push(`Attraction page "${pageData.title}" validation failed: ${validationErrors}`);
+          } else {
+            report.errors.push(`Attraction page "${pageData.title}": ${pageError.message}`);
+          }
+        }
+      }
+
+      report.attractionPagesCreated = attractionPagesCreated;
+      report.attractionPagesUpdated = attractionPagesUpdated;
+      console.log(`\n   ✅ Attraction pages complete: ${attractionPagesCreated} created, ${attractionPagesUpdated} updated\n`);
     }
 
     // Step 4: Process tours with upsert logic
@@ -741,10 +886,12 @@ export async function POST(request: Request) {
     console.log(`\n   Created:`);
     console.log(`      Destinations: ${report.destinationsCreated}`);
     console.log(`      Categories: ${report.categoriesCreated}`);
+    console.log(`      Attraction Pages: ${report.attractionPagesCreated}`);
     console.log(`      Tours: ${report.toursCreated}`);
     console.log(`\n   Updated:`);
     console.log(`      Destinations: ${report.destinationsUpdated}`);
     console.log(`      Categories: ${report.categoriesUpdated}`);
+    console.log(`      Attraction Pages: ${report.attractionPagesUpdated}`);
     console.log(`      Tours: ${report.toursUpdated}`);
     console.log(`\n   Issues:`);
     console.log(`      Errors: ${report.errors.length}`);
@@ -763,13 +910,14 @@ export async function POST(request: Request) {
     console.log('\n============================================\n');
 
     // Determine success based on whether any items were processed
-    const totalProcessed = report.destinationsCreated + report.destinationsUpdated + 
-                          report.categoriesCreated + report.categoriesUpdated + 
+    const totalProcessed = report.destinationsCreated + report.destinationsUpdated +
+                          report.categoriesCreated + report.categoriesUpdated +
+                          report.attractionPagesCreated + report.attractionPagesUpdated +
                           report.toursCreated + report.toursUpdated;
 
     // Calculate totals
-    const created = report.destinationsCreated + report.categoriesCreated + report.toursCreated;
-    const updated = report.destinationsUpdated + report.categoriesUpdated + report.toursUpdated;
+    const created = report.destinationsCreated + report.categoriesCreated + report.attractionPagesCreated + report.toursCreated;
+    const updated = report.destinationsUpdated + report.categoriesUpdated + report.attractionPagesUpdated + report.toursUpdated;
     const hasErrors = report.errors.length > 0;
     const hasWarnings = report.warnings.length > 0;
 
@@ -780,12 +928,14 @@ export async function POST(request: Request) {
         created: {
           destinations: report.destinationsCreated,
           categories: report.categoriesCreated,
+          attractionPages: report.attractionPagesCreated,
           tours: report.toursCreated,
           total: created
         },
         updated: {
           destinations: report.destinationsUpdated,
           categories: report.categoriesUpdated,
+          attractionPages: report.attractionPagesUpdated,
           tours: report.toursUpdated,
           total: updated
         },

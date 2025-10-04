@@ -2,7 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Package, Search, Sparkles, MapPin } from "lucide-react";
+import { ArrowRight, Package, Search, Sparkles, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Grid } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/grid';
 
 interface Interest {
   _id?: string;
@@ -182,6 +190,7 @@ export default function InterestGrid() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [swiperRef, setSwiperRef] = useState<SwiperType | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -276,17 +285,82 @@ export default function InterestGrid() {
     }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {filteredInterests.map((interest) => {
-          const categoryPage = getCategoryPageForInterest(interest);
-          return (
-            <InterestCard
-              key={interest.slug || interest.name}
-              interest={interest}
-              categoryPage={categoryPage}
-            />
-          );
-        })}
+      <div className="relative">
+        {/* Custom Navigation Buttons */}
+        <button
+          onClick={() => swiperRef?.slidePrev()}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white hover:bg-red-600 text-slate-800 hover:text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group -translate-x-1/2 hidden lg:flex"
+          aria-label="Previous slide"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <button
+          onClick={() => swiperRef?.slideNext()}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white hover:bg-red-600 text-slate-800 hover:text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group translate-x-1/2 hidden lg:flex"
+          aria-label="Next slide"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        {/* Swiper with Grid Layout (2 rows) */}
+        <Swiper
+          modules={[Navigation, Pagination, Grid]}
+          onSwiper={setSwiperRef}
+          spaceBetween={24}
+          slidesPerView={1}
+          grid={{
+            rows: 2,
+            fill: 'row'
+          }}
+          pagination={{
+            clickable: true,
+            dynamicBullets: true,
+          }}
+          breakpoints={{
+            640: {
+              slidesPerView: 2,
+              grid: {
+                rows: 2,
+                fill: 'row'
+              }
+            },
+            768: {
+              slidesPerView: 3,
+              grid: {
+                rows: 2,
+                fill: 'row'
+              }
+            },
+            1024: {
+              slidesPerView: 4,
+              grid: {
+                rows: 2,
+                fill: 'row'
+              }
+            },
+            1280: {
+              slidesPerView: 5,
+              grid: {
+                rows: 2,
+                fill: 'row'
+              }
+            }
+          }}
+          className="!pb-16"
+        >
+          {filteredInterests.map((interest) => {
+            const categoryPage = getCategoryPageForInterest(interest);
+            return (
+              <SwiperSlide key={interest.slug || interest.name}>
+                <InterestCard
+                  interest={interest}
+                  categoryPage={categoryPage}
+                />
+              </SwiperSlide>
+            );
+          })}
+        </Swiper>
       </div>
     );
   };
