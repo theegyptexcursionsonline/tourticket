@@ -163,3 +163,28 @@
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 #f1f5f9;
 }
+
+/* Swiper pagination styling for interest grid */
+.swiper-pagination-bullet {
+  width: 10px;
+  height: 10px;
+  background: #cbd5e1;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.swiper-pagination-bullet-active {
+  background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+  width: 32px;
+  border-radius: 5px;
+}
+
+.swiper-pagination {
+  bottom: 0 !important;
+}
+
+/* Grid layout fixes for swiper */
+.swiper-slide {
+  height: auto;
+  margin-bottom: 24px;
+}
