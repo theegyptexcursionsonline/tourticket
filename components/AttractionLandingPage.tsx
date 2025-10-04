@@ -416,7 +416,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
             </p>
 
             <div className="flex flex-wrap gap-4">
-              
+              <a
                 href="#activities"
                 className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all shadow-lg hover:shadow-xl"
               >
@@ -616,7 +616,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
               Book unforgettable experiences with free cancellation and instant confirmation
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              
+              <a
                 href="#activities"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-red-600 font-semibold rounded-lg hover:bg-slate-100 transition-all shadow-lg"
               >
