@@ -9,7 +9,7 @@ import {
   ArrowRight, Star, Users, Clock, MapPin, Search, Filter, 
   Grid, List, Eye, Heart, Share2, Award, Calendar, 
   MessageCircle, ChevronDown, ChevronUp, Shield, CheckCircle,
-  TrendingUp, Globe, Zap, Trophy, Target, Gift
+  TrendingUp, Globe, Zap, Trophy, Target, Gift, Info
 } from 'lucide-react';
 import { Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -41,62 +41,133 @@ interface AttractionLandingPageProps {
   attraction: AttractionData;
 }
 
-const StatsSection = ({ attraction }: { attraction: AttractionData }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 0.3 }}
-    className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto"
-  >
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <Target className="w-6 h-6" />
+const QuickInfo = ({ attraction }: { attraction: AttractionData }) => {
+  const avgRating = 4.8;
+  const totalReviews = attraction.reviews?.length || 0;
+  
+  return (
+    <div className="flex flex-wrap items-center gap-6 text-sm">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Star className="w-5 h-5 text-yellow-400 fill-current" />
+          <span className="font-bold text-lg">{avgRating}</span>
+        </div>
+        <span className="text-slate-600">
+          ({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})
+        </span>
       </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {attraction.totalTours}
+      
+      <div className="h-4 w-px bg-slate-300" />
+      
+      <div className="flex items-center gap-2">
+        <Target className="w-5 h-5 text-slate-600" />
+        <span className="text-slate-700 font-medium">
+          {attraction.totalTours} {attraction.totalTours === 1 ? 'activity' : 'activities'}
+        </span>
       </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Available Tours
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <MessageCircle className="w-6 h-6" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {attraction.reviews?.length || 0}
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Customer Reviews
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <Star className="w-6 h-6 fill-current" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        4.8
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Average Rating
+      
+      <div className="h-4 w-px bg-slate-300" />
+      
+      <div className="flex items-center gap-2">
+        <Clock className="w-5 h-5 text-slate-600" />
+        <span className="text-slate-700 font-medium">Flexible duration</span>
       </div>
     </div>
-    
-    <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100">
-      <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
-        <Trophy className="w-6 h-6" />
-      </div>
-      <div className="text-3xl font-black text-slate-900 mb-2">
-        {Math.floor(Math.random() * 1000) + 500}
-      </div>
-      <div className="text-slate-600 font-semibold text-sm">
-        Happy Customers
-      </div>
+  );
+};
+
+const ExpandableDescription = ({ attraction }: { attraction: AttractionData }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shortDescription = attraction.description;
+  const fullDescription = attraction.longDescription || attraction.description;
+  const hasMore = fullDescription.length > shortDescription.length;
+
+  return (
+    <div className="max-w-4xl">
+      <AnimatePresence mode="wait">
+        {!isExpanded ? (
+          <motion.div
+            key="short"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <p className="text-lg text-slate-700 leading-relaxed mb-4">
+              {shortDescription}
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="full"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-4"
+          >
+            <p className="text-lg text-slate-700 leading-relaxed">
+              {fullDescription}
+            </p>
+            
+            {attraction.highlights && attraction.highlights.length > 0 && (
+              <div className="bg-slate-50 rounded-xl p-6 mt-6">
+                <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Info className="w-5 h-5 text-red-600" />
+                  Key Highlights
+                </h3>
+                <ul className="space-y-2">
+                  {attraction.highlights.slice(0, 5).map((highlight, index) => (
+                    <li key={index} className="flex items-start gap-3 text-slate-700">
+                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span>{highlight}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+              <div className="bg-white border border-slate-200 rounded-lg p-4">
+                <div className="text-sm text-slate-600 mb-1">Peak Season</div>
+                <div className="font-semibold text-slate-900">Nov - April</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-lg p-4">
+                <div className="text-sm text-slate-600 mb-1">Avg. Duration</div>
+                <div className="font-semibold text-slate-900">3-5 days</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-lg p-4">
+                <div className="text-sm text-slate-600 mb-1">Best For</div>
+                <div className="font-semibold text-slate-900">All ages</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-lg p-4">
+                <div className="text-sm text-slate-600 mb-1">Languages</div>
+                <div className="font-semibold text-slate-900">15+ available</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {hasMore && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="inline-flex items-center gap-2 text-red-600 font-semibold hover:text-red-700 transition-colors mt-4"
+        >
+          {isExpanded ? (
+            <>
+              Show less
+              <ChevronUp className="w-5 h-5" />
+            </>
+          ) : (
+            <>
+              Read more
+              <ChevronDown className="w-5 h-5" />
+            </>
+          )}
+        </button>
+      )}
     </div>
-  </motion.div>
-);
+  );
+};
 
 const SearchAndFilter = ({ 
   searchQuery, 
@@ -113,55 +184,52 @@ const SearchAndFilter = ({
   sortBy: string;
   setSortBy: (sort: string) => void;
 }) => (
-  <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-slate-200">
-    <div className="flex flex-col md:flex-row items-center gap-4">
-      {/* Search Bar */}
-      <div className="relative flex-1">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+  <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+    <div className="flex flex-col md:flex-row items-center gap-3">
+      <div className="relative flex-1 w-full">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
         <input
           type="text"
-          placeholder="Search tours..."
+          placeholder="Search activities..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
         />
       </div>
 
-      {/* Sort Dropdown */}
       <select
         value={sortBy}
         onChange={(e) => setSortBy(e.target.value)}
-        className="px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
+        className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm min-w-[180px]"
       >
-        <option value="featured">Featured First</option>
+        <option value="featured">Most popular</option>
         <option value="price_low">Price: Low to High</option>
         <option value="price_high">Price: High to Low</option>
-        <option value="rating">Highest Rated</option>
+        <option value="rating">Top rated</option>
         <option value="duration">Duration</option>
-        <option value="newest">Newest First</option>
+        <option value="newest">Newest</option>
       </select>
 
-      {/* View Toggle */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
         <button
           onClick={() => setViewMode('grid')}
-          className={`p-3 rounded-lg transition-all duration-200 ${
+          className={`p-2 rounded transition-all ${
             viewMode === 'grid' 
               ? 'bg-white text-red-600 shadow-sm' 
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          <Grid className="w-5 h-5" />
+          <Grid className="w-4 h-4" />
         </button>
         <button
           onClick={() => setViewMode('list')}
-          className={`p-3 rounded-lg transition-all duration-200 ${
+          className={`p-2 rounded transition-all ${
             viewMode === 'list' 
               ? 'bg-white text-red-600 shadow-sm' 
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          <List className="w-5 h-5" />
+          <List className="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -177,59 +245,64 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-r from-slate-50 to-white">
+    <section className="py-16 bg-white">
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="mb-10"
         >
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">
-            What Our Customers Say
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            Reviews from travelers
           </h2>
-          <p className="text-xl text-slate-600">
-            Real experiences from travelers who have visited this attraction
+          <p className="text-slate-600">
+            See what others say about their experience
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {displayedReviews.map((review, index) => (
             <motion.div
               key={review._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-100"
+              transition={{ delay: index * 0.05 }}
+              className="bg-slate-50 p-6 rounded-xl border border-slate-200 hover:border-slate-300 transition-all"
             >
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  {review.userName ? review.userName.charAt(0).toUpperCase() : 'A'}
-                </div>
-                <div className="ml-4">
-                  <h4 className="font-semibold text-slate-900">{review.userName || 'Anonymous'}</h4>
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'
-                        }`}
-                      />
-                    ))}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    {review.userName ? review.userName.charAt(0).toUpperCase() : 'A'}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 text-sm">{review.userName || 'Anonymous'}</h4>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3.5 h-3.5 ${
+                            i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
               
               {review.title && (
-                <h5 className="font-semibold text-slate-800 mb-2">{review.title}</h5>
+                <h5 className="font-semibold text-slate-800 mb-2 text-sm">{review.title}</h5>
               )}
               
-              <p className="text-slate-600 text-sm leading-relaxed mb-3 line-clamp-4">
+              <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
                 {review.comment}
               </p>
               
-              <div className="text-xs text-slate-500">
-                {new Date(review.createdAt || review.date || '').toLocaleDateString()}
+              <div className="text-xs text-slate-500 mt-3">
+                {new Date(review.createdAt || review.date || '').toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
               </div>
             </motion.div>
           ))}
@@ -239,17 +312,17 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
           <div className="text-center">
             <button
               onClick={() => setShowAllReviews(!showAllReviews)}
-              className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors duration-200"
+              className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:border-slate-400 transition-colors"
             >
               {showAllReviews ? (
                 <>
-                  Show Less
-                  <ChevronUp className="w-5 h-5" />
+                  Show less
+                  <ChevronUp className="w-4 h-4" />
                 </>
               ) : (
                 <>
-                  View All {reviews.length} Reviews
-                  <ChevronDown className="w-5 h-5" />
+                  Show all {reviews.length} reviews
+                  <ChevronDown className="w-4 h-4" />
                 </>
               )}
             </button>
@@ -265,14 +338,12 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
 
-  // Filter and sort tours
   const filteredAndSortedTours = useMemo(() => {
     let filtered = attraction.tours?.filter(tour =>
       tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tour.description?.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-    // Sort tours
     switch (sortBy) {
       case 'price_low':
         filtered.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
@@ -289,7 +360,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
       case 'newest':
         filtered.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
         break;
-      default: // featured
+      default:
         filtered.sort((a, b) => {
           if (a.isFeatured && !b.isFeatured) return -1;
           if (!a.isFeatured && b.isFeatured) return 1;
@@ -301,152 +372,65 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
   }, [attraction.tours, searchQuery, sortBy]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-red-50">
-      {/* Hero Section */}
-      <section className="relative h-[80vh] overflow-hidden">
+    <main className="min-h-screen bg-white">
+      {/* Clean Hero Section */}
+      <section className="relative bg-slate-900">
         <div className="absolute inset-0">
           <Image
             src={attraction.heroImage}
             alt={attraction.title}
             fill
-            className="object-cover"
+            className="object-cover opacity-40"
             priority
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20" />
         </div>
         
-        <div className="relative z-10 h-full flex items-center justify-center">
-          <div className="text-center text-white max-w-6xl mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8"
-            >
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 text-sm font-medium">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span>Featured Attraction Experience</span>
-              </div>
-              
-              <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
-                {attraction.title}
-              </h1>
-              
-              <p className="text-xl md:text-2xl font-medium max-w-4xl mx-auto leading-relaxed opacity-90">
-                {attraction.longDescription || attraction.description}
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="#tours"
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
-                >
-                  Explore Tours
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <button className="inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-bold rounded-xl hover:bg-white hover:text-slate-900 transition-all duration-200 transform hover:scale-105">
-                  Learn More
-                  <Eye className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center justify-center gap-8 text-sm opacity-90">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-green-400" />
-                  <span>Verified Attraction</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-yellow-400" />
-                  <span>Top Rated Experience</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-400" />
-                  <span>Expert Guides Available</span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+        <div className="relative z-10 container mx-auto px-6 py-16 md:py-24">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-4xl"
+          >
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium text-white mb-6">
+              <Award className="w-4 h-4" />
+              <span>Popular attraction</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              Things to do in {attraction.title}
+            </h1>
+            
+            <QuickInfo attraction={attraction} />
+          </motion.div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      {attraction.showStats && (
-        <section className="py-16 -mt-20 relative z-10">
-          <div className="container mx-auto px-6">
-            <StatsSection attraction={attraction} />
-          </div>
-        </section>
-      )}
+      {/* Description Section */}
+      <section className="py-12 bg-white border-b border-slate-200">
+        <div className="container mx-auto px-6">
+          <ExpandableDescription attraction={attraction} />
+        </div>
+      </section>
 
-      {/* Highlights Section */}
-      {attraction.highlights && attraction.highlights.length > 0 && (
-        <section className="py-16">
-          <div className="container mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">
-                Why Visit {attraction.title}?
-              </h2>
-              <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Discover what makes this attraction truly special
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-              {attraction.highlights.map((highlight, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white p-8 rounded-2xl shadow-lg text-center hover:shadow-xl transition-shadow duration-300 border border-slate-100"
-                >
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <CheckCircle className="w-8 h-8" />
-                  </div>
-                  <p className="text-slate-700 leading-relaxed font-medium">{highlight}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Features Section */}
+      {/* Features Grid */}
       {attraction.features && attraction.features.length > 0 && (
-        <section className="py-16 bg-white">
+        <section className="py-12 bg-slate-50">
           <div className="container mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">
-                What Makes This Experience Special
-              </h2>
-              <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Comprehensive features designed for your perfect visit
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              {attraction.features.map((feature, index) => (
-                <motion.div
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">
+              What makes this special
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {attraction.features.slice(0, 6).map((feature, index) => (
+                <div
                   key={index}
-                  initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start gap-6 bg-slate-50 p-8 rounded-2xl hover:bg-white hover:shadow-lg transition-all duration-300"
+                  className="flex items-start gap-3 bg-white p-4 rounded-lg border border-slate-200"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg font-bold">{index + 1}</span>
+                  <div className="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-4 h-4" />
                   </div>
-                  <p className="text-slate-700 leading-relaxed text-lg">{feature}</p>
-                </motion.div>
+                  <p className="text-slate-700 text-sm leading-relaxed">{feature}</p>
+                </div>
               ))}
             </div>
           </div>
@@ -455,29 +439,17 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
 
       {/* Tours Section */}
       {attraction.tours && attraction.tours.length > 0 && (
-        <section id="tours" className="py-16 bg-slate-50">
+        <section id="tours" className="py-12 bg-white">
           <div className="container mx-auto px-6">
-            <div className="text-center mb-12">
-              <motion.h2 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-5xl font-bold text-slate-900 mb-6"
-              >
-                {attraction.gridTitle}
-              </motion.h2>
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-slate-900 mb-2">
+                {attraction.gridTitle || 'Available activities'}
+              </h2>
               {attraction.gridSubtitle && (
-                <motion.p 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-xl text-slate-600 max-w-3xl mx-auto"
-                >
-                  {attraction.gridSubtitle}
-                </motion.p>
+                <p className="text-slate-600">{attraction.gridSubtitle}</p>
               )}
             </div>
 
-            {/* Search and Filter */}
             <SearchAndFilter
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -487,84 +459,37 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
               setSortBy={setSortBy}
             />
 
-            {/* Results Count */}
-            <div className="text-center mb-8">
-              <p className="text-slate-600">
-                Showing <span className="font-semibold text-slate-900">{filteredAndSortedTours.length}</span> of{' '}
-                <span className="font-semibold text-slate-900">{attraction.tours.length}</span> tours
-              </p>
+            <div className="text-sm text-slate-600 mb-6">
+              {filteredAndSortedTours.length} {filteredAndSortedTours.length === 1 ? 'result' : 'results'}
             </div>
 
-            {/* Tours Grid */}
             {filteredAndSortedTours.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredAndSortedTours.map((tour, index) => (
                   <TourCard key={tour._id} tour={tour} index={index} />
                 ))}
               </div>
             ) : (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16 bg-slate-50 rounded-xl"
               >
-                <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
-                  <Search className="w-10 h-10 text-slate-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-slate-700 mb-2">No tours found</h3>
-                <p className="text-slate-500 mb-6">
-                  {searchQuery ? 'Try adjusting your search criteria.' : 'No tours are currently available for this attraction.'}
+                <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">No activities found</h3>
+                <p className="text-slate-500 mb-4">
+                  {searchQuery ? 'Try adjusting your search' : 'Check back soon for new activities'}
                 </p>
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
+                    className="text-red-600 font-semibold hover:text-red-700"
                   >
-                    Clear Search
+                    Clear search
                   </button>
                 )}
               </motion.div>
             )}
-          </div>
-        </section>
-      )}
-
-      {/* No Tours Available Message */}
-      {(!attraction.tours || attraction.tours.length === 0) && (
-        <section className="py-20">
-          <div className="container mx-auto px-6 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-2xl mx-auto"
-            >
-              <div className="w-32 h-32 mx-auto mb-8 bg-slate-100 rounded-full flex items-center justify-center">
-                <Calendar className="w-16 h-16 text-slate-400" />
-              </div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-4">
-                Tours Coming Soon
-              </h2>
-              <p className="text-xl text-slate-600 mb-8">
-                We're working on adding tours for this amazing attraction. 
-                Check back soon for exciting experiences!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="/tours"
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
-                >
-                  Browse All Tours
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center gap-2 px-8 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Contact Us
-                  <MessageCircle className="w-5 h-5" />
-                </Link>
-              </div>
-            </motion.div>
           </div>
         </section>
       )}
@@ -574,57 +499,53 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
         <ReviewsSection reviews={attraction.reviews} />
       )}
 
-      {/* Related Interests Component */}
-      <RelatedInterests 
-        currentSlug={attraction.slug}
-        limit={6}
-        title="Explore Similar Attractions"
-        subtitle="Discover more amazing places like this one"
-      />
+      {/* Related Interests */}
+      <div className="bg-slate-50">
+        <RelatedInterests 
+          currentSlug={attraction.slug}
+          limit={6}
+          title="Similar attractions"
+          subtitle="Explore more places you might like"
+        />
+      </div>
 
-      {/* Popular Interests Grid Component */}
+      {/* Popular Interests */}
       <PopularInterestsGrid 
         limit={8}
         showFeaturedOnly={true}
-        title="Featured Experiences"
-        subtitle="Don't miss these top-rated attractions and categories"
+        title="Top experiences"
+        subtitle="Don't miss these popular activities"
         columns={4}
       />
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full -translate-x-32 -translate-y-32"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-48 translate-y-48"></div>
-        </div>
-        
-        <div className="container mx-auto px-6 text-center relative z-10">
+      {/* Simple CTA */}
+      <section className="py-16 bg-red-600 text-white">
+        <div className="container mx-auto px-6 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-4xl mx-auto"
+            className="max-w-3xl mx-auto"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Ready to Experience {attraction.title}?
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to explore {attraction.title}?
             </h2>
-            <p className="text-xl mb-10 opacity-90 leading-relaxed">
-              Book your unforgettable adventure today and create memories that will last a lifetime.
+            <p className="text-lg mb-8 opacity-90">
+              Book now and create unforgettable memories
             </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/tours"
-                className="inline-flex items-center gap-3 px-8 py-4 bg-white text-red-600 font-bold rounded-xl hover:bg-slate-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                href="#tours"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white text-red-600 font-semibold rounded-lg hover:bg-slate-100 transition-all"
               >
-                Book Your Tour
+                View all activities
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-bold rounded-xl hover:bg-white hover:text-red-600 transition-all duration-200 transform hover:scale-105"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all"
               >
-                Get Expert Advice
-                <Users className="w-5 h-5" />
+                Contact us
               </Link>
             </div>
           </motion.div>
