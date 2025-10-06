@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, act } from '@testing-library/react'
-import { CartProvider, useCart } from '../CartContext'
+import { CartProvider } from '../CartContext'
+import { useCart } from '@/hooks/useCart'
 
 // Component to test the hook
 function TestComponent() {
