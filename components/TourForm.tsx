@@ -53,10 +53,75 @@ interface Destination {
     name: string;
 }
 
+interface TimeSlot {
+    time: string;
+    capacity: number;
+}
+
+interface Availability {
+    type: string;
+    slots?: TimeSlot[];
+    availableDays?: number[];
+}
+
+interface BookingOption {
+    type: string;
+    label: string;
+    price: number;
+    description?: string;
+}
+
+interface ItineraryItem {
+    day: number;
+    title: string;
+    description: string;
+}
+
+interface FAQ {
+    question: string;
+    answer: string;
+}
+
+interface AddOn {
+    name: string;
+    description: string;
+    price: number;
+}
+
+interface TourFormData {
+    title: string;
+    slug: string;
+    description: string;
+    longDescription: string;
+    duration: string;
+    discountPrice: string | number;
+    originalPrice: string | number;
+    destination: string;
+    category: string;
+    image: string;
+    images: string[];
+    highlights: string[];
+    includes: string[];
+    tags: string;
+    isFeatured: boolean;
+    whatsIncluded: string[];
+    whatsNotIncluded: string[];
+    itinerary: ItineraryItem[];
+    faqs: FAQ[];
+    bookingOptions: BookingOption[];
+    availability: Availability;
+    addOns: AddOn[];
+}
+
+interface Tour extends Partial<TourFormData> {
+    _id?: string;
+    faq?: FAQ[];
+}
+
 // --- Helper Components ---
 const FormLabel = ({ children, icon: Icon, required = false }: {
     children: React.ReactNode;
-    icon?: any;
+    icon?: React.ComponentType<{ className?: string }>;
     required?: boolean;
 }) => (
     <div className="flex items-center gap-2 mb-3">
@@ -76,7 +141,7 @@ const inputBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl sha
 const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
 // --- Availability Manager Sub-Component ---
-const AvailabilityManager = ({ availability, setAvailability }: { availability: any, setAvailability: (data: any) => void }) => {
+const AvailabilityManager = ({ availability, setAvailability }: { availability: Availability, setAvailability: (data: Availability) => void }) => {
     
     const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setAvailability({ ...availability, type: e.target.value });
@@ -94,7 +159,7 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
     };
 
     const removeSlot = (index: number) => {
-        const newSlots = availability.slots.filter((_: any, i: number) => i !== index);
+        const newSlots = availability.slots?.filter((_, i: number) => i !== index) || [];
         setAvailability({ ...availability, slots: newSlots });
     };
 
@@ -155,7 +220,7 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
                 <FormLabel icon={Users}>Time Slots & Capacity</FormLabel>
                 
                 <div className="space-y-4">
-                    {(availability?.slots || []).map((slot: any, index: number) => (
+                    {(availability?.slots || []).map((slot: TimeSlot, index: number) => (
                         <div 
                             key={index} 
                             className="group flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 transition-all duration-200 hover:shadow-md"
@@ -217,7 +282,7 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
 };
 
 // --- Main Tour Form Component ---
-export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onSave?: () => void }) {
+export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, onSave?: () => void }) {
     const router = useRouter();
     const { selectedCurrency } = useSettings();
     const CurrencyIcon = selectedCurrency.code === 'USD' ? DollarSign : Euro;
@@ -231,7 +296,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
     const [expandedItineraryIndex, setExpandedItineraryIndex] = useState<number | null>(0);
     const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
 
-    const [formData, setFormData] = useState<any>({
+    const [formData, setFormData] = useState<TourFormData>({
         title: '',
         slug: '',
         description: '',
@@ -272,7 +337,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
         if (tourToEdit) {
             setIsSlugManuallyEdited(Boolean(tourToEdit.slug));
             
-            const initialData: any = {
+            const initialData: Partial<TourFormData> = {
                 title: tourToEdit.title || '',
                 slug: tourToEdit.slug || '',
                 description: tourToEdit.description || '',
@@ -292,8 +357,8 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
                 whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
                 itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
                 faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-                bookingOptions: tourToEdit.bookingOptions?.length > 0 
-                    ? tourToEdit.bookingOptions.map((option: any) => ({
+                bookingOptions: tourToEdit.bookingOptions?.length > 0
+                    ? tourToEdit.bookingOptions.map((option: BookingOption) => ({
                         type: option.type || 'Per Person',
                         label: option.label || '',
                         price: option.price || 0,
@@ -425,24 +490,24 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
         setIsPanelOpen(true);
     };
 
-    const setAvailability = (availabilityData: any) => {
-        setFormData((prev: any) => ({ ...prev, availability: availabilityData }));
+    const setAvailability = (availabilityData: Availability) => {
+        setFormData((prev) => ({ ...prev, availability: availabilityData }));
     };
-    
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const target = e.target as HTMLInputElement;
         const { name, value, type } = target;
-        
+
         if (type === 'checkbox') {
-            setFormData((p: any) => ({ ...p, [name]: (target as HTMLInputElement).checked }));
+            setFormData((p) => ({ ...p, [name]: (target as HTMLInputElement).checked }));
             return;
         }
-        
-        setFormData((p: any) => ({ ...p, [name]: value }));
-        
+
+        setFormData((p) => ({ ...p, [name]: value }));
+
         if (name === 'title' && !isSlugManuallyEdited) {
             const newSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-            setFormData((p: any) => ({ ...p, slug: newSlug }));
+            setFormData((p) => ({ ...p, slug: newSlug }));
         }
         
         if (name === 'slug') {
@@ -453,7 +518,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
     const handleTextAreaArrayChange = (fieldName: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value;
         const arrayValue = value.split('\n');
-        setFormData((p: any) => ({ ...p, [fieldName]: arrayValue }));
+        setFormData((p) => ({ ...p, [fieldName]: arrayValue }));
     };
 
     const toggleItineraryItem = (index: number) => {
@@ -464,13 +529,13 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: any, onS
 const handleItineraryChange = (index: number, field: string, value: string | number) => {
   const updatedItinerary = [...formData.itinerary];
   updatedItinerary[index] = { ...updatedItinerary[index], [field]: value };
-  setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
+  setFormData((p) => ({ ...p, itinerary: updatedItinerary }));
 };
 
 // Ensure icon is properly saved when adding new items
 const addItineraryItem = () => {
   const newDay = formData.itinerary.length + 1;
-  setFormData((p: any) => ({ 
+  setFormData((p) => ({ 
     ...p, 
     itinerary: [...p.itinerary, { 
       day: newDay, 
@@ -484,11 +549,11 @@ const addItineraryItem = () => {
 
     const removeItineraryItem = (index: number) => {
         if (formData.itinerary.length <= 1) return;
-        const updatedItinerary = formData.itinerary.filter((_: any, i: number) => i !== index);
-        updatedItinerary.forEach((item: any, i: number) => {
+        const updatedItinerary = formData.itinerary.filter((_, i: number) => i !== index);
+        updatedItinerary.forEach((item, i: number) => {
             item.day = i + 1;
         });
-        setFormData((p: any) => ({ ...p, itinerary: updatedItinerary }));
+        setFormData((p) => ({ ...p, itinerary: updatedItinerary }));
         setExpandedItineraryIndex(null);
     };
 
@@ -499,21 +564,21 @@ const addItineraryItem = () => {
     const handleFAQChange = (index: number, field: string, value: string) => {
         const updatedFAQs = [...formData.faqs];
         updatedFAQs[index] = { ...updatedFAQs[index], [field]: value };
-        setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
+        setFormData((p) => ({ ...p, faqs: updatedFAQs }));
     };
 
     const addFAQ = () => {
-        setFormData((p: any) => ({ 
-            ...p, 
-            faqs: [...p.faqs, { question: '', answer: '' }] 
+        setFormData((p) => ({
+            ...p,
+            faqs: [...p.faqs, { question: '', answer: '' }]
         }));
         setExpandedFaqIndex(formData.faqs.length);
     };
 
     const removeFAQ = (index: number) => {
         if (formData.faqs.length <= 1) return;
-        const updatedFAQs = formData.faqs.filter((_: any, i: number) => i !== index);
-        setFormData((p: any) => ({ ...p, faqs: updatedFAQs }));
+        const updatedFAQs = formData.faqs.filter((_, i: number) => i !== index);
+        setFormData((p) => ({ ...p, faqs: updatedFAQs }));
         setExpandedFaqIndex(null);
     };
 
@@ -524,11 +589,11 @@ const addItineraryItem = () => {
     const handleBookingOptionChange = (index: number, field: string, value: string | number | boolean | string[]) => {
         const updatedOptions = [...formData.bookingOptions];
         updatedOptions[index] = { ...updatedOptions[index], [field]: value };
-        setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
+        setFormData((p) => ({ ...p, bookingOptions: updatedOptions }));
     };
 
     const addBookingOption = () => {
-        setFormData((p: any) => ({ 
+        setFormData((p) => ({ 
             ...p, 
             bookingOptions: [...p.bookingOptions, { type: 'Per Person', label: '', price: 0 }] 
         }));
@@ -537,8 +602,8 @@ const addItineraryItem = () => {
 
     const removeBookingOption = (index: number) => {
         if (formData.bookingOptions.length <= 1) return;
-        const updatedOptions = formData.bookingOptions.filter((_: any, i: number) => i !== index);
-        setFormData((p: any) => ({ ...p, bookingOptions: updatedOptions }));
+        const updatedOptions = formData.bookingOptions.filter((_, i: number) => i !== index);
+        setFormData((p) => ({ ...p, bookingOptions: updatedOptions }));
         setExpandedOptionIndex(null);
     };
 
@@ -583,11 +648,11 @@ const addItineraryItem = () => {
     const handleAddOnChange = (index: number, field: string, value: string | number) => {
         const updatedAddOns = [...formData.addOns];
         updatedAddOns[index] = { ...updatedAddOns[index], [field]: value };
-        setFormData((p: any) => ({ ...p, addOns: updatedAddOns }));
+        setFormData((p) => ({ ...p, addOns: updatedAddOns }));
     };
 
     const addAddOn = () => {
-        setFormData((p: any) => ({ 
+        setFormData((p) => ({ 
             ...p, 
             addOns: [...p.addOns, { name: '', description: '', price: 0 }] 
         }));
@@ -595,23 +660,23 @@ const addItineraryItem = () => {
 
     const removeAddOn = (index: number) => {
         if (formData.addOns.length <= 1) return;
-        const updatedAddOns = formData.addOns.filter((_: any, i: number) => i !== index);
-        setFormData((p: any) => ({ ...p, addOns: updatedAddOns }));
+        const updatedAddOns = formData.addOns.filter((_, i: number) => i !== index);
+        setFormData((p) => ({ ...p, addOns: updatedAddOns }));
     };
 
     const handleListChange = (index: number, value: string, field: 'highlights' | 'includes') => {
         const updated = [...formData[field]];
         updated[index] = value;
-        setFormData((p: any) => ({ ...p, [field]: updated }));
+        setFormData((p) => ({ ...p, [field]: updated }));
     };
 
     const addListItem = (field: 'highlights' | 'includes') => {
-        setFormData((p: any) => ({ ...p, [field]: [...p[field], ''] }));
+        setFormData((p) => ({ ...p, [field]: [...p[field], ''] }));
     };
 
     const removeListItem = (index: number, field: 'highlights' | 'includes') => {
         if (formData[field].length <= 1) return;
-        setFormData((p: any) => ({ ...p, [field]: p[field].filter((_: any, i: number) => i !== index) }));
+        setFormData((p) => ({ ...p, [field]: p[field].filter((_, i: number) => i !== index) }));
     };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMainImage = true) => {
@@ -632,9 +697,9 @@ const addItineraryItem = () => {
             .then(data => {
                 if (data.success && data.url) {
                     if (isMainImage) {
-                        setFormData((prevData: any) => ({ ...prevData, image: data.url }));
+                        setFormData((prevData) => ({ ...prevData, image: data.url }));
                     } else {
-                        setFormData((prevData: any) => ({ ...prevData, images: [...prevData.images, data.url] }));
+                        setFormData((prevData) => ({ ...prevData, images: [...prevData.images, data.url] }));
                     }
                     return 'Image uploaded successfully!';
                 } else {
@@ -652,7 +717,7 @@ const addItineraryItem = () => {
     };
 
     const removeGalleryImage = (imageUrl: string) => {
-        setFormData((p: any) => ({ ...p, images: p.images.filter((u: string) => u !== imageUrl) }));
+        setFormData((p) => ({ ...p, images: p.images.filter((u: string) => u !== imageUrl) }));
     };
 
    const handleSubmit = async (e: React.FormEvent) => {
@@ -697,10 +762,10 @@ const addItineraryItem = () => {
                 includes: Array.isArray(cleanedData.includes) ? cleanedData.includes.filter((item: string) => item.trim() !== '') : [],
                 whatsIncluded: Array.isArray(cleanedData.whatsIncluded) ? cleanedData.whatsIncluded.filter((item: string) => item.trim() !== '') : [],
                 whatsNotIncluded: Array.isArray(cleanedData.whatsNotIncluded) ? cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '') : [],
-                itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: any) => item.title?.trim() && item.description?.trim()) : [],
-                faq: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: any) => faq.question?.trim() && faq.answer?.trim()) : [],
-                bookingOptions: Array.isArray(cleanedData.bookingOptions) ? cleanedData.bookingOptions.filter((option: any) => option.label?.trim()) : [],
-                addOns: Array.isArray(cleanedData.addOns) ? cleanedData.addOns.filter((addon: any) => addon.name?.trim()) : [],
+                itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: ItineraryItem) => item.title?.trim() && item.description?.trim()) : [],
+                faq: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: FAQ) => faq.question?.trim() && faq.answer?.trim()) : [],
+                bookingOptions: Array.isArray(cleanedData.bookingOptions) ? cleanedData.bookingOptions.filter((option: BookingOption) => option.label?.trim()) : [],
+                addOns: Array.isArray(cleanedData.addOns) ? cleanedData.addOns.filter((addon: AddOn) => addon.name?.trim()) : [],
                 tags: typeof cleanedData.tags === 'string'
                     ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
                     : Array.isArray(cleanedData.tags) ? cleanedData.tags : [],
@@ -1122,7 +1187,7 @@ const addItineraryItem = () => {
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                                                         <button 
                                                             type="button" 
-                                                            onClick={() => setFormData((p: any) => ({ ...p, image: '' }))} 
+                                                            onClick={() => setFormData((p) => ({ ...p, image: '' }))} 
                                                             className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200"
                                                         >
                                                             <Trash2 size={16} />
@@ -1319,7 +1384,7 @@ const addItineraryItem = () => {
                                         {/* FAQs */}
                                         <div className="space-y-6">
                                             <FormLabel icon={HelpCircle}>Frequently Asked Questions</FormLabel>
-                                            {formData.faqs.map((faq: any, i: number) => (
+                                            {formData.faqs.map((faq: FAQ, i: number) => (
                                                 <div 
                                                     key={i} 
                                                     className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
@@ -1390,7 +1455,7 @@ const addItineraryItem = () => {
                                 {activeTab === 'itinerary' && (
                                     <div className="space-y-6">
                                         <FormLabel icon={Map}>Day-by-day Itinerary</FormLabel>
-                                        {formData.itinerary.map((day: any, i: number) => (
+                                        {formData.itinerary.map((day: ItineraryItem, i: number) => (
                                             <div 
                                                 key={i} 
                                                 className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
@@ -1484,7 +1549,7 @@ const addItineraryItem = () => {
                                                     Preview - How customers see booking options
                                                 </h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {formData.bookingOptions.map((option: any, index: number) => (
+                                                    {formData.bookingOptions.map((option: BookingOption, index: number) => (
                                                         <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200">
                                                             <div className="flex items-start justify-between mb-3">
                                                                 <div className="flex-1">
@@ -1518,7 +1583,7 @@ const addItineraryItem = () => {
 
                                         {/* Booking Options Editor */}
                                         <div className="space-y-4">
-                                            {formData.bookingOptions.map((option: any, index: number) => (
+                                            {formData.bookingOptions.map((option: BookingOption, index: number) => (
                                                 <div 
                                                     key={index} 
                                                     className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${
@@ -1658,7 +1723,7 @@ const addItineraryItem = () => {
                                                     Preview - How customers see add-ons
                                                 </h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {formData.addOns.map((addon: any, index: number) => (
+                                                    {formData.addOns.map((addon: AddOn, index: number) => (
                                                         <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-green-300 transition-all duration-200">
                                                             <div className="flex items-start justify-between mb-3">
                                                                 <div className="flex-1">
@@ -1687,7 +1752,7 @@ const addItineraryItem = () => {
                                         )}
 
                                         <div className="space-y-4">
-                                            {formData.addOns.map((addon: any, index: number) => (
+                                            {formData.addOns.map((addon: AddOn, index: number) => (
                                                 <div key={index} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-green-300 transition-all duration-200">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <div className="flex items-center gap-3">
