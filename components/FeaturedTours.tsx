@@ -396,11 +396,13 @@ export default function FeaturedTours() {
         </div>
       </section>
 
-      <BookingSidebar
-        isOpen={isBookingSidebarOpen}
-        onClose={closeSidebar}
-        tour={selectedTour}
-      />
+      {selectedTour && (
+        <BookingSidebar
+          isOpen={isBookingSidebarOpen}
+          onClose={closeSidebar}
+          tour={selectedTour as any}
+        />
+      )}
 
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');

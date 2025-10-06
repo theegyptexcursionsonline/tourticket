@@ -2,12 +2,12 @@
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
-import { 
-    ArrowRight, Star, Tag, Clock, Users, ChevronLeft, ChevronRight, 
-    Check, ShoppingCart, Award, MapPin, CheckCircle2, TrendingUp,
-    Calendar, Plane, Info, Shield, Heart, MessageCircle, ChevronDown,
-    Sun, Thermometer, DollarSign, Languages, Phone, AlertTriangle,
-    Camera, Utensils, Hotel, Navigation, Search, Plus, Minus
+import {
+    ArrowRight, Star, Tag, Clock, Users, ChevronLeft, ChevronRight,
+    Check, ShoppingCart, Award, MapPin, CheckCircle2,
+    Calendar, Shield, Heart, MessageCircle,
+    Sun, DollarSign, Languages, Phone,
+    Search, Plus, Minus
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -77,14 +77,14 @@ const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
 ];
 
 const useDynamicTags = (
-  allTags: string[], 
-  desktopPositions: React.CSSProperties[], 
-  mobilePositions: React.CSSProperties[], 
+  allTags: string[],
+  desktopPositions: React.CSSProperties[],
+  mobilePositions: React.CSSProperties[],
   interval = 5000
 ) => {
   const [displayedTags, setDisplayedTags] = useState<TagItem[]>([]);
   const isMobile = useIsMobile();
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const generateRandomTags = useCallback(() => {
     const positions = isMobile ? mobilePositions : desktopPositions;
@@ -92,16 +92,16 @@ const useDynamicTags = (
     const shuffledTags = [...allTags].sort(() => 0.5 - Math.random());
     const shuffledPositions = [...positions].sort(() => 0.5 - Math.random());
     const highlightIndex = Math.floor(Math.random() * tagCount);
-    
+
     const newTags = shuffledTags.slice(0, tagCount).map((name, index) => ({
       id: `${name}-${index}-${Date.now()}`,
       name,
       position: shuffledPositions[index % positions.length],
       highlight: index === highlightIndex,
     }));
-    
+
     setDisplayedTags(newTags);
-  }, [allTags, isMobile]); // Removed position arrays from dependencies
+  }, [allTags, isMobile, desktopPositions, mobilePositions]);
 
   useEffect(() => {
     generateRandomTags();
@@ -109,44 +109,44 @@ const useDynamicTags = (
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    
+
     const timer = setInterval(generateRandomTags, interval);
     intervalRef.current = timer;
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
   }, [generateRandomTags, interval]);
-  
+
   return displayedTags;
 };
 
 const useSlidingText = (texts: string[], interval = 3000) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const intervalRef = useRef<number | null>(null);
-  
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (texts.length === 0) return;
-    
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    
-    const timer = setInterval(() => 
-      setCurrentIndex((prev) => (prev + 1) % texts.length), 
+
+    const timer = setInterval(() =>
+      setCurrentIndex((prev) => (prev + 1) % texts.length),
       interval
     );
     intervalRef.current = timer;
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
   }, [texts.length, interval]);
-  
+
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
@@ -267,9 +267,9 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
   const { addSearchTerm } = useRecentSearches();
   const isMobile = useIsMobile();
 
-  const slides = destination.images && destination.images.length > 0
-    ? destination.images.map(img => ({ src: img, alt: `${destination.name} view` }))
-    : [{ src: destination.image || '/hero2.png', alt: destination.name }];
+  const slides = destination.image
+    ? [{ src: destination.image, alt: destination.name }]
+    : [{ src: '/hero2.png', alt: destination.name }];
 
  // Memoize destination-specific tags
 const destinationTags = useMemo(() => {
@@ -593,12 +593,12 @@ const TravelTipsSection = ({ destination }: { destination: Destination }) => {
     {
       icon: <Languages className="w-6 h-6" />,
       title: "Languages",
-      content: destination.languagesSpoken?.join(', ') || "English widely spoken"
+      content: "English widely spoken"
     },
     {
       icon: <Phone className="w-6 h-6" />,
       title: "Emergency",
-      content: destination.emergencyNumber || "Local emergency services"
+      content: "Local emergency services"
     }
   ];
 
@@ -622,17 +622,6 @@ const TravelTipsSection = ({ destination }: { destination: Destination }) => {
           ))}
         </div>
 
-        {destination.visaRequirements && (
-          <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
-              <div>
-                <h4 className="font-bold text-yellow-900 mb-2">Visa Requirements</h4>
-                <p className="text-yellow-800">{destination.visaRequirements}</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );
@@ -942,27 +931,22 @@ const NewsletterSection = ({ destinationName }: { destinationName: string }) => 
 };
 
 // --- MAIN COMPONENT ---
-export default function DestinationPageClient({ 
-  destination, 
-  destinationTours, 
+export default function DestinationPageClient({
+  destination,
+  destinationTours,
   allCategories,
   reviews = [],
   relatedDestinations = []
 }: DestinationPageClientProps) {
-  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [selectedTour] = useState<Tour | null>(null);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
-  const combiScrollContainer = useRef<HTMLDivElement>(null);
+  const combiScrollContainer = useRef<HTMLDivElement | null>(null);
 
-  const scroll = (container: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
+  const scroll = (container: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
     if (container.current) {
       const scrollAmount = direction === 'left' ? -344 : 344;
       container.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
-  };
-
-  const handleTourSelect = (tour: Tour) => {
-    setSelectedTour(tour);
-    setBookingSidebarOpen(true);
   };
   
   const top10Tours = destinationTours.slice(0, 10);
@@ -1103,11 +1087,13 @@ export default function DestinationPageClient({
       </main>
       <Footer />
 
-      <BookingSidebar 
-        isOpen={isBookingSidebarOpen} 
-        onClose={() => setBookingSidebarOpen(false)} 
-        tour={selectedTour} 
-      />
+      {selectedTour && (
+        <BookingSidebar
+          isOpen={isBookingSidebarOpen}
+          onClose={() => setBookingSidebarOpen(false)}
+          tour={selectedTour as any}
+        />
+      )}
 
       <style jsx global>{`
         @keyframes fade-in { 

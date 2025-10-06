@@ -471,11 +471,13 @@ export default function DayTripsSection() {
         </div>
       </section>
 
-      <BookingSidebar
-        isOpen={isBookingSidebarOpen}
-        onClose={closeSidebar}
-        tour={selectedTour}
-      />
+      {selectedTour && (
+        <BookingSidebar
+          isOpen={isBookingSidebarOpen}
+          onClose={closeSidebar}
+          tour={selectedTour as any}
+        />
+      )}
 
       <style jsx global>{`
         .line-clamp-2 {
