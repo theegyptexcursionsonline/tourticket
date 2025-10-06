@@ -9,8 +9,6 @@ import { WishlistProvider } from "@/contexts/WishlistContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
-
-// Client-side Intercom initializer wrapper
 import IntercomClient from "@/components/IntercomClient";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
@@ -35,9 +33,7 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
-        {/* Intercom client initializer (client component) */}
         <IntercomClient />
-
         <AuthProvider>
           <SettingsProvider>
             <CartProvider>
