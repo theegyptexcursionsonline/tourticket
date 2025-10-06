@@ -193,7 +193,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaE
     const [parent, child] = name.split('.');
     setFormData(prev => ({
       ...prev,
-      [parent]: { ...prev[parent as keyof FormData], [child]: value }
+      [parent]: { ...(prev[parent as keyof FormData] as Record<string, any>), [child]: value }
     }));
   } else {
     setFormData(prev => ({ 
@@ -452,8 +452,8 @@ const handleSubmit = async (e: React.FormEvent) => {
       {/* Destinations Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {initialDestinations.map((dest, index) => (
-          <motion.div 
-            key={dest._id}
+          <motion.div
+            key={dest._id as string}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -485,8 +485,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                 >
                   <Edit size={16} />
                 </button>
-                <button 
-                  onClick={() => handleDelete(dest._id, dest.name)} 
+                <button
+                  onClick={() => handleDelete(dest._id as string, dest.name)} 
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Delete destination"
                 >
