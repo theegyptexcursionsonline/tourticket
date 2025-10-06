@@ -3,6 +3,15 @@
 
 import { useEffect } from "react";
 
+// CSS to hide the Intercom launcher
+const hideIntercomStyle = `
+  #intercom-container .intercom-launcher,
+  .intercom-launcher-frame,
+  .intercom-app-launcher-enabled .intercom-launcher {
+    display: none !important;
+  }
+`;
+
 // Replace with your real app_id
 const INTERCOM_APP_ID = "o5up1xz3";
 
@@ -18,10 +27,10 @@ export default function IntercomClient() {
         if (!mounted) return;
         messenger = mod.default ?? mod;
 
-        // initialize messenger
+        // initialize messenger with hidden launcher
         messenger({
           app_id: INTERCOM_APP_ID,
-          // any other init options you want
+          hide_default_launcher: true, // Hide the default chat bubble
         });
 
         // expose a helper to open the messenger
@@ -93,7 +102,10 @@ export default function IntercomClient() {
         const tryInit = () => {
           const w = window as any;
           if (typeof w.Intercom === "function") {
-            w.Intercom("boot", { app_id: INTERCOM_APP_ID });
+            w.Intercom("boot", {
+              app_id: INTERCOM_APP_ID,
+              hide_default_launcher: true // Hide the default chat bubble
+            });
             // expose open helper
             (window as any).openIntercom = () => w.Intercom("show");
           } else {
@@ -121,6 +133,10 @@ export default function IntercomClient() {
     };
   }, []);
 
-  // This component renders nothing visible — it only initializes intercom.
-  return null;
+  // This component renders nothing visible — it only initializes intercom and hides the launcher
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: hideIntercomStyle }} />
+    </>
+  );
 }
