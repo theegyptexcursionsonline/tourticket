@@ -54,6 +54,13 @@ export default function ContactUsPage() {
     { icon: Twitter, href: "#" },
     { icon: Youtube, href: "#" },
   ];
+
+  const openChatbot = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-chatbot'));
+    }
+  };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -139,9 +146,12 @@ export default function ContactUsPage() {
                   </li>
                   <li className="flex gap-4 items-center">
                     <MessageSquare size={24} className="text-red-600 flex-shrink-0" />
-                    <a href="#" className="font-semibold text-slate-700 hover:text-red-600 transition-colors">
+                    <button
+                      onClick={openChatbot}
+                      className="font-semibold text-slate-700 hover:text-red-600 transition-colors text-left"
+                    >
                       Chat with us
-                    </a>
+                    </button>
                   </li>
                 </ul>
               </div>
