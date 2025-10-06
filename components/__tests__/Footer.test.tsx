@@ -2,6 +2,16 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import Footer from '../Footer'
 
+// Mock the useSettings hook
+jest.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    currency: 'USD',
+    language: 'en',
+    setCurrency: jest.fn(),
+    setLanguage: jest.fn(),
+  }),
+}))
+
 describe('Footer', () => {
   it('should render footer', () => {
     render(<Footer />)

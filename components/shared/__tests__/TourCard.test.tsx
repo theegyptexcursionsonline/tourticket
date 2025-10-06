@@ -15,6 +15,15 @@ jest.mock('@/hooks/useCart', () => ({
   }),
 }))
 
+jest.mock('@/contexts/WishlistContext', () => ({
+  useWishlist: () => ({
+    items: [],
+    addItem: jest.fn(),
+    removeItem: jest.fn(),
+    isInWishlist: () => false,
+  }),
+}))
+
 describe('TourCard', () => {
   const mockTour = {
     _id: '1',

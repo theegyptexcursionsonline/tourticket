@@ -3,23 +3,34 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CartSidebar from '../CartSidebar'
 
+const mockRemoveFromCart = jest.fn()
+const mockUpdateQuantity = jest.fn()
+const mockClearCart = jest.fn()
+
+const defaultCartState = {
+  cart: [
+    {
+      id: '1',
+      title: 'Pyramids Tour',
+      price: 100,
+      quantity: 2,
+      image: '/pyramid.jpg',
+      discountPrice: 100,
+    },
+  ],
+  totalPrice: 200,
+  totalItems: 2,
+  removeFromCart: mockRemoveFromCart,
+  updateQuantity: mockUpdateQuantity,
+  clearCart: mockClearCart,
+  addToCart: jest.fn(),
+  isCartOpen: true,
+  openCart: jest.fn(),
+  closeCart: jest.fn(),
+}
+
 jest.mock('@/hooks/useCart', () => ({
-  useCart: () => ({
-    items: [
-      {
-        id: '1',
-        title: 'Pyramids Tour',
-        price: 100,
-        quantity: 2,
-        image: '/pyramid.jpg',
-      },
-    ],
-    totalPrice: 200,
-    totalItems: 2,
-    removeFromCart: jest.fn(),
-    updateQuantity: jest.fn(),
-    clearCart: jest.fn(),
-  }),
+  useCart: jest.fn(() => defaultCartState),
 }))
 
 jest.mock('@/hooks/useSettings', () => ({
@@ -83,18 +94,22 @@ describe('CartSidebar', () => {
 
   it('should show empty cart message when no items', () => {
     const useCartMock = require('@/hooks/useCart').useCart
-    useCartMock.mockReturnValue({
-      items: [],
+    useCartMock.mockReturnValueOnce({
+      cart: [],
       totalPrice: 0,
       totalItems: 0,
       removeFromCart: jest.fn(),
       updateQuantity: jest.fn(),
       clearCart: jest.fn(),
+      addToCart: jest.fn(),
+      isCartOpen: true,
+      openCart: jest.fn(),
+      closeCart: jest.fn(),
     })
 
     render(<CartSidebar {...mockProps} />)
 
-    expect(screen.getByText(/empty|no items/i)).toBeInTheDocument()
+    expect(screen.getByText(/empty|no items|cart is empty/i)).toBeInTheDocument()
   })
 
   it('should have remove button for each item', () => {

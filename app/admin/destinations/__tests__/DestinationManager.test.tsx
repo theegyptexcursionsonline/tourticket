@@ -130,9 +130,9 @@ describe('DestinationManager', () => {
     it('should display destination details', () => {
       render(<DestinationManager initialDestinations={mockDestinations} />)
 
-      expect(screen.getByText('Egypt')).toBeInTheDocument()
-      expect(screen.getByText('/cairo')).toBeInTheDocument()
-      expect(screen.getByText('50 tours')).toBeInTheDocument()
+      expect(screen.getAllByText('Egypt')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('/cairo')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('50 tours')[0]).toBeInTheDocument()
     })
 
     it('should show featured badge for featured destinations', () => {

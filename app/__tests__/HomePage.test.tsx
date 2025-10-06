@@ -12,6 +12,11 @@ jest.mock('@/components/Destinations', () => () => <div data-testid="destination
 jest.mock('@/components/InterestGrid', () => () => <div data-testid="interests">Interests</div>)
 jest.mock('@/components/Reviews', () => () => <div data-testid="reviews">Reviews</div>)
 jest.mock('@/components/FAQ', () => () => <div data-testid="faq">FAQ</div>)
+jest.mock('@/components/IcebarPromo', () => () => <div data-testid="icebar">IcebarPromo</div>)
+jest.mock('@/components/PopularInterest', () => () => <div data-testid="popular">PopularInterest</div>)
+jest.mock('@/components/AboutUs', () => () => <div data-testid="about">AboutUs</div>)
+jest.mock('@/components/ReviewsStructuredData', () => () => null)
+jest.mock('@/components/ElfsightWidget', () => () => null)
 
 describe('HomePage', () => {
   it('should render all main sections', () => {
