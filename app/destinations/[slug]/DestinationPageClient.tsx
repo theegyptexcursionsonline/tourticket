@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { 
     ArrowRight, Star, Tag, Clock, Users, ChevronLeft, ChevronRight, 
@@ -27,7 +27,7 @@ interface DestinationPageClientProps {
 }
 
 // --- Types for Hero ---
-type TagItem = { // Renamed from 'Tag' to avoid conflict with 'lucide-react' Tag
+type TagItem = {
   id: string;
   name: string;
   position: React.CSSProperties;
@@ -50,7 +50,7 @@ const useIsMobile = (breakpoint = 768) => {
   return isMobile;
 };
 
-// --- IMPROVED Tag Positions (REPLACE) ---
+// --- Tag Positions ---
 const TAG_POSITIONS_DESKTOP: React.CSSProperties[] = [
   { top: "15%", left: "58%" }, 
   { top: "18%", right: "12%" }, 
@@ -93,7 +93,6 @@ const useDynamicTags = (
     const shuffledPositions = [...positions].sort(() => 0.5 - Math.random());
     const highlightIndex = Math.floor(Math.random() * tagCount);
     
-    // Use Date.now() for unique keys to prevent React from reusing old DOM nodes.
     const newTags = shuffledTags.slice(0, tagCount).map((name, index) => ({
       id: `${name}-${index}-${Date.now()}`,
       name,
@@ -102,22 +101,18 @@ const useDynamicTags = (
     }));
     
     setDisplayedTags(newTags);
-  }, [allTags, desktopPositions, mobilePositions, isMobile]);
+  }, [allTags, isMobile]); // Removed position arrays from dependencies
 
   useEffect(() => {
-    // Initial generation of tags
     generateRandomTags();
 
-    // Clear any existing interval to prevent duplicates
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     
-    // Set up a new interval
     const timer = setInterval(generateRandomTags, interval);
     intervalRef.current = timer;
     
-    // Cleanup on component unmount or dependencies change
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -135,19 +130,16 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   useEffect(() => {
     if (texts.length === 0) return;
     
-    // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     
-    // Set up new interval
     const timer = setInterval(() => 
       setCurrentIndex((prev) => (prev + 1) % texts.length), 
       interval
     );
     intervalRef.current = timer;
     
-    // Cleanup on unmount
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -158,17 +150,12 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
-/* FloatingTag - REPLACEMENT */
+/* FloatingTag */
 const FloatingTag = ({ tag }: { tag: TagItem }) => {
-  // Decide translate centering when left/right present:
-  const shouldCenterX = !!(tag.position as any).left || !!(tag.position as any).right;
-  const translate = shouldCenterX ? 'translate(-50%, -50%)' : 'translate(0, -50%)';
-
   return (
     <button
       style={{
         ...tag.position,
-        transform: translate,
         willChange: 'transform, opacity',
         backfaceVisibility: 'hidden',
       }}
@@ -176,10 +163,10 @@ const FloatingTag = ({ tag }: { tag: TagItem }) => {
         window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
       }}
       aria-label={`Search for ${tag.name}`}
-      className={`absolute px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full sm:rounded-3xl shadow-lg transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in whitespace-nowrap ${
+      className={`absolute px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full sm:rounded-3xl shadow-xl transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in whitespace-nowrap ${
         tag.highlight
           ? "bg-red-500 text-white scale-105 sm:scale-110 -rotate-2 sm:-rotate-3 hover:bg-red-600 shadow-red-500/50"
-          : "bg-white/95 text-slate-800 hover:bg-white backdrop-blur-sm hover:shadow-xl"
+          : "bg-white/95 text-slate-800 hover:bg-white backdrop-blur-sm hover:shadow-2xl"
       }`}
     >
       {tag.name}
@@ -187,8 +174,7 @@ const FloatingTag = ({ tag }: { tag: TagItem }) => {
   );
 };
 
-
-// --- IMPROVED Hero Search Bar (REPLACE) ---
+// --- Hero Search Bar ---
 const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; suggestion: string }) => {
   return (
     <div className="mt-6 sm:mt-8 lg:mt-10 w-full flex justify-center md:justify-start px-4 sm:px-0">
@@ -275,46 +261,43 @@ const BackgroundSlideshow = ({
   );
 };
 
-// --- HERO SECTION COMPONENT (REPLACE ENTIRE DestinationHeroSection) ---
+// --- HERO SECTION COMPONENT (FIXED) ---
 const DestinationHeroSection = ({ destination, tourCount }: { destination: Destination, tourCount: number }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { addSearchTerm } = useRecentSearches();
+  const isMobile = useIsMobile();
 
-  // Create slides from destination images
   const slides = destination.images && destination.images.length > 0
     ? destination.images.map(img => ({ src: img, alt: `${destination.name} view` }))
     : [{ src: destination.image || '/hero2.png', alt: destination.name }];
 
-  // Destination-specific tags - MORE TAGS FOR VARIETY
-  const destinationTags = [
+  // Memoize the tags array to prevent recreation on every render
+  const destinationTags = useMemo(() => [
     `${destination.name.toUpperCase()} TOURS`,
     "GUIDED EXPERIENCES",
     "LOCAL CULTURE",
     "HIDDEN GEMS",
-    "PHOTO OPPORTUNITIES",
+    "PHOTO SPOTS",
     "HISTORICAL SITES",
     "LOCAL CUISINE",
-    "ADVENTURE ACTIVITIES",
+    "ADVENTURES",
     "FAMILY FRIENDLY",
-    "ROMANTIC GETAWAYS",
+    "ROMANTIC",
     "BUDGET TOURS",
-    "LUXURY EXPERIENCES",
+    "LUXURY",
     "DAY TRIPS",
     "EVENING TOURS",
     "PRIVATE TOURS",
-    "GROUP ACTIVITIES",
+    "GROUP TOURS",
     "SKIP THE LINE",
     "BEST SELLERS",
-    "SEASONAL SPECIALS",
     "WALKING TOURS",
     "FOOD TOURS",
-    "CULTURAL TOURS",
-    "ADVENTURE SPORTS"
-  ];
+  ], [destination.name]);
 
   const dynamicTags = useDynamicTags(
-    destinationTags, 
-    TAG_POSITIONS_DESKTOP, 
+    destinationTags,
+    TAG_POSITIONS_DESKTOP,
     TAG_POSITIONS_MOBILE,
     5000
   );
@@ -323,56 +306,44 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
     `Explore ${destination.name}`,
     `Things to do in ${destination.name}`,
     `Best tours in ${destination.name}`,
-    `${destination.name} attractions`,
-    `Book ${destination.name} experiences`,
-    `Discover ${destination.name}`
   ];
 
   const currentSuggestion = useSlidingText(searchSuggestions, 3000);
 
   const handleSearch = (term: string) => {
     addSearchTerm(term);
-    console.log(`Searching for: ${term}`);
   };
 
   return (
     <>
-      <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
-        {/* Background Slideshow */}
-        <BackgroundSlideshow 
-          slides={slides} 
-          delay={6000} 
-          fadeMs={900}
-          autoplay={true}
-        />
-
-        {/* Overlay — corrected z-index and pointer-events */}
-        <div
-          className="absolute inset-0 z-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom right, rgba(0,0,0,0.6), rgba(0,0,0,0.4))' }}
-        />
-
+      <section className="relative w-full h-screen min-h-[600px] max-h-[900px]">
+        {/* Background */}
+        <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
+        
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/40 z-10" />
+        
         {/* Content */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
-          <div className="max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg animate-fade-in">
+        <div className="relative z-20 h-full flex items-center justify-center text-white">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center md:text-left">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-4">
               DISCOVER
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
                 {destination.name}
               </span>
             </h1>
-            <p className="mt-4 text-sm sm:text-base md:text-lg lg:text-xl text-shadow font-light max-w-md mx-auto md:mx-0">
+            
+            <p className="text-base sm:text-lg md:text-xl mb-6 max-w-2xl">
               {destination.description}
             </p>
-            
-            <HeroSearchBar 
-              onOpenModal={() => setIsSearchModalOpen(true)} 
+
+            <HeroSearchBar
+              onOpenModal={() => setIsSearchModalOpen(true)}
               suggestion={currentSuggestion}
             />
 
-            {/* Trust Indicators */}
-            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 text-white/90 text-xs sm:text-sm">
+            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/90 text-sm">
               <span className="flex items-center gap-2">
                 <Tag size={16} />
                 <span className="font-semibold">{tourCount}+ Tours</span>
@@ -385,25 +356,35 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
             </div>
           </div>
         </div>
-
-        {/* Floating Tags - FIXED AND WORKING */}
-        <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
-          {dynamicTags.length > 0 && dynamicTags.map((tag) => (
-            <FloatingTag key={tag.id} tag={tag} />
-          ))}
-        </div>
+        
+        {/* Floating Tags - On Top */}
+        {dynamicTags.slice(0, isMobile ? 5 : 12).map((tag) => (
+          <button
+            key={tag.id}
+            style={tag.position}
+            onClick={() => {
+              window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
+            }}
+            className={`absolute z-50 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-xl transition-all duration-300 hover:scale-110 animate-tag-fade-in whitespace-nowrap ${
+              tag.highlight
+                ? "bg-red-500 text-white scale-105 hover:bg-red-600"
+                : "bg-white/95 text-slate-800 hover:bg-white"
+            }`}
+          >
+            {tag.name}
+          </button>
+        ))}
       </section>
 
       {isSearchModalOpen && (
-        <SearchModal 
-          onClose={() => setIsSearchModalOpen(false)} 
-          onSearch={handleSearch} 
+        <SearchModal
+          onClose={() => setIsSearchModalOpen(false)}
+          onSearch={handleSearch}
         />
       )}
     </>
   );
 };
-
 
 // --- Card Components ---
 const Top10Card = ({ tour, index }: { tour: Tour, index: number }) => {
@@ -1007,12 +988,12 @@ export default function DestinationPageClient({
         {top10Tours.length > 0 && (
           <section className="py-20 bg-slate-50">
             <div className="container mx-auto px-4">
-            <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-4">
-  TOP 10 TOURS IN {destination.name.toUpperCase()}
-</h2>
-<p className="text-center text-lg text-slate-600 mb-12">
-  Our best-selling tours and experiences curated by local experts
-</p>
+              <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-4">
+                TOP 10 TOURS IN {destination.name.toUpperCase()}
+              </h2>
+              <p className="text-center text-lg text-slate-600 mb-12">
+                Our best-selling tours and experiences curated by local experts
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
                 {top10Tours.map((tour, index) => (
                   <Top10Card key={tour._id} tour={tour} index={index} />
@@ -1120,19 +1101,16 @@ export default function DestinationPageClient({
           -webkit-backface-visibility: hidden; 
         }
 
-        /* Hide scrollbar for carousel */
         [style*="scrollbarWidth"]::-webkit-scrollbar {
           display: none;
         }
 
-        /* Mobile optimizations */
         @media (max-width: 640px) {
           .animate-float {
             animation-duration: 10s;
           }
         }
 
-        /* Reduce motion for accessibility */
         @media (prefers-reduced-motion: reduce) {
           .animate-float,
           .animate-tag-fade-in,
@@ -1143,7 +1121,6 @@ export default function DestinationPageClient({
           }
         }
 
-        /* Ensure tags are visible above content */
         .pointer-events-auto {
           pointer-events: auto !important;
         }
