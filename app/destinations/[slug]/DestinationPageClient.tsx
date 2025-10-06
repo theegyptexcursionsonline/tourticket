@@ -271,29 +271,80 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
     ? destination.images.map(img => ({ src: img, alt: `${destination.name} view` }))
     : [{ src: destination.image || '/hero2.png', alt: destination.name }];
 
-  // Memoize the tags array to prevent recreation on every render
-  const destinationTags = useMemo(() => [
-    `${destination.name.toUpperCase()} TOURS`,
-    "GUIDED EXPERIENCES",
-    "LOCAL CULTURE",
-    "HIDDEN GEMS",
-    "PHOTO SPOTS",
-    "HISTORICAL SITES",
-    "LOCAL CUISINE",
-    "ADVENTURES",
-    "FAMILY FRIENDLY",
-    "ROMANTIC",
-    "BUDGET TOURS",
-    "LUXURY",
-    "DAY TRIPS",
-    "EVENING TOURS",
-    "PRIVATE TOURS",
-    "GROUP TOURS",
-    "SKIP THE LINE",
-    "BEST SELLERS",
-    "WALKING TOURS",
-    "FOOD TOURS",
-  ], [destination.name]);
+ // Memoize destination-specific tags
+const destinationTags = useMemo(() => {
+  const name = destination.name.toLowerCase();
+  
+  // Cairo-specific tags
+  if (name.includes('cairo')) {
+    return [
+      "PYRAMIDS", "SPHINX", "EGYPTIAN MUSEUM", "NILE CRUISE", 
+      "KHAN EL-KHALILI", "CAIRO CITADEL", "ISLAMIC CAIRO", "COPTIC CAIRO",
+      "SAQQARA", "MEMPHIS", "SOUND & LIGHT SHOW", "FELUCCA RIDE",
+      "DESERT SAFARI", "CAMEL RIDE", "PAPYRUS MAKING", "BAZAAR SHOPPING",
+      "ANCIENT TEMPLES", "PHARAOH TOMBS", "HIEROGLYPHICS", "MUMMIES"
+    ];
+  }
+  
+  // Luxor-specific tags
+  if (name.includes('luxor')) {
+    return [
+      "VALLEY OF KINGS", "KARNAK TEMPLE", "LUXOR TEMPLE", "HOT AIR BALLOON",
+      "HATSHEPSUT TEMPLE", "COLOSSI MEMNON", "NILE CRUISE", "FELUCCA RIDE",
+      "TOMBS OF NOBLES", "MEDINET HABU", "RAMESSEUM", "WEST BANK TOUR",
+      "EAST BANK TOUR", "SUNSET CRUISE", "ANCIENT THEBES", "PHARAOH HISTORY"
+    ];
+  }
+  
+  // Aswan-specific tags
+  if (name.includes('aswan')) {
+    return [
+      "ABU SIMBEL", "PHILAE TEMPLE", "NUBIAN VILLAGE", "NILE CRUISE",
+      "UNFINISHED OBELISK", "FELUCCA SUNSET", "HIGH DAM", "ELEPHANTINE ISLAND",
+      "BOTANICAL GARDEN", "NUBIAN MUSEUM", "SUNSET VIEWS", "CAMEL MARKET",
+      "KITCHENER ISLAND", "TOMBS OF NOBLES", "ST. SIMEON MONASTERY", "LAKE NASSER"
+    ];
+  }
+  
+  // Hurghada/Red Sea-specific tags
+  if (name.includes('hurghada') || name.includes('red sea')) {
+    return [
+      "SNORKELING", "SCUBA DIVING", "CORAL REEFS", "BOAT TRIPS",
+      "GIFTUN ISLAND", "DESERT SAFARI", "QUAD BIKING", "BEACH RESORT",
+      "SUBMARINE TOUR", "DOLPHIN WATCHING", "PARASAILING", "WATER SPORTS",
+      "BEDOUIN DINNER", "MARINA WALK", "ISLAND HOPPING", "SUNSET CRUISE"
+    ];
+  }
+  
+  // Alexandria-specific tags
+  if (name.includes('alexandria')) {
+    return [
+      "LIBRARY OF ALEXANDRIA", "CITADEL OF QAITBAY", "CATACOMBS", "CORNICHE WALK",
+      "MONTAZA PALACE", "ROMAN AMPHITHEATRE", "POMPEY PILLAR", "STANLEY BRIDGE",
+      "MEDITERRANEAN SEAFOOD", "GRECO-ROMAN MUSEUM", "ROYAL JEWELRY MUSEUM", "BEACH PROMENADE",
+      "HISTORICAL SITES", "COASTAL VIEWS", "ANCIENT HARBOR", "SEAFRONT CAFES"
+    ];
+  }
+  
+  // Sharm El Sheikh-specific tags
+  if (name.includes('sharm')) {
+    return [
+      "DIVING", "SNORKELING", "RAS MOHAMMED", "BLUE HOLE",
+      "NAAMA BAY", "OLD MARKET", "MOUNT SINAI", "ST. CATHERINE",
+      "TIRAN ISLAND", "QUAD SAFARI", "BEACH CLUBS", "YACHT CRUISE",
+      "DESERT EXCURSION", "WATER SPORTS", "COLORED CANYON", "BEDOUIN CAMP"
+    ];
+  }
+  
+  // Generic destination tags as fallback
+  return [
+    `${destination.name.toUpperCase()}`, "GUIDED TOURS", "LOCAL CULTURE", "HIDDEN GEMS",
+    "PHOTO SPOTS", "HISTORICAL SITES", "LOCAL FOOD", "ADVENTURES",
+    "FAMILY TOURS", "ROMANTIC", "BUDGET FRIENDLY", "LUXURY TOURS",
+    "DAY TRIPS", "EVENING TOURS", "PRIVATE TOURS", "GROUP TOURS",
+    "SKIP THE LINE", "BEST SELLERS", "WALKING TOURS", "FOOD TOURS"
+  ];
+}, [destination.name]);
 
   const dynamicTags = useDynamicTags(
     destinationTags,

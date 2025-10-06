@@ -367,7 +367,7 @@ export default function DayTripsSection() {
         <div className="container mx-auto text-center px-4">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">
-              Best Deals on Tours from Amsterdam
+              Best Deals on Tours from Egypt
             </h2>
             <p className="mt-2 text-lg text-slate-600">
               Explore beyond the city with these top-rated day trips.
@@ -418,7 +418,7 @@ export default function DayTripsSection() {
           <div className="flex justify-between items-center mb-8 px-4">
             <div className="max-w-2xl">
               <h2 className="text-4xl font-extrabold text-slate-800 tracking-tight">
-                Best Deals on Tours from Amsterdam
+                Best Deals on Tours from Egypt
               </h2>
               <p className="mt-2 text-lg text-slate-600">
                 Explore beyond the city with these top-rated day trips, all with exclusive online discounts.

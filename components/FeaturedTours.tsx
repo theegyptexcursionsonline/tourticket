@@ -363,7 +363,7 @@ export default function FeaturedTours() {
                 Canal Cruises Perfect For You
               </h2>
               <p className="mt-4 text-xl text-gray-600 leading-relaxed">
-                Discover top-rated experiences in Amsterdam — handpicked by local experts for unforgettable memories.
+                Discover top-rated experiences in Egypt — handpicked by local experts for unforgettable memories.
               </p>
             </div>
 

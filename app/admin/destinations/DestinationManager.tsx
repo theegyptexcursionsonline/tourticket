@@ -720,7 +720,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                           id="name" 
                           value={formData.name} 
                           onChange={handleInputChange} 
-                          placeholder="e.g., Amsterdam, Paris, Tokyo"
+                          placeholder="e.g., Egypt, Cairo, Tokyo"
                           required 
                           className={inputStyles} 
                         />
