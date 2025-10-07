@@ -3,16 +3,30 @@
 export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
+import Tour from '@/lib/models/Tour';
 import { IDestination } from '@/lib/models/Destination';
 import DestinationManager from './DestinationManager';
 
 async function getDestinations(): Promise<IDestination[]> {
   await dbConnect();
   const destinations = await Destination.find({}).sort({ name: 1 });
-  
+
+  // Get all tours to calculate tour counts per destination
+  const tours = await Tour.find({}).select('destination').lean();
+
+  // Count tours per destination
+  const tourCounts: Record<string, number> = {};
+  tours.forEach(tour => {
+    const destId = tour.destination?.toString();
+    if (destId) {
+      tourCounts[destId] = (tourCounts[destId] || 0) + 1;
+    }
+  });
+
   // Sanitize all destinations by providing defaults for missing coordinates
   const sanitizedDestinations = destinations.map(dest => {
     const destObj = dest.toObject();
+    const destId = destObj._id.toString();
     return {
       ...destObj,
       coordinates: {
@@ -24,7 +38,7 @@ async function getDestinations(): Promise<IDestination[]> {
       description: destObj.description || '',
       image: destObj.image || '',
       slug: destObj.slug || '',
-      tourCount: destObj.tourCount || 0
+      tourCount: tourCounts[destId] || 0
     };
   });
 
