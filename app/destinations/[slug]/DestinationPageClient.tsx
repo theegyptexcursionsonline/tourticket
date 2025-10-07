@@ -26,14 +26,6 @@ interface DestinationPageClientProps {
   relatedDestinations?: Destination[];
 }
 
-// --- Types for Hero ---
-type TagItem = {
-  id: string;
-  name: string;
-  position: React.CSSProperties;
-  highlight?: boolean;
-};
-
 // --- Hero Helper Hooks ---
 const useIsMobile = (breakpoint = 768) => {
   const [isMobile, setIsMobile] = useState(false);
@@ -48,79 +40,6 @@ const useIsMobile = (breakpoint = 768) => {
   }, [breakpoint]);
   
   return isMobile;
-};
-
-// --- Tag Positions ---
-const TAG_POSITIONS_DESKTOP: React.CSSProperties[] = [
-  { top: "15%", left: "58%" }, 
-  { top: "18%", right: "12%" }, 
-  { top: "38%", left: "60%" },
-  { top: "28%", right: "18%" }, 
-  { top: "48%", right: "22%" }, 
-  { top: "58%", left: "55%" },
-  { top: "42%", right: "8%" }, 
-  { top: "68%", right: "15%" }, 
-  { top: "75%", left: "58%" },
-  { top: "22%", left: "52%" },
-  { top: "52%", left: "65%" },
-  { top: "82%", right: "20%" },
-];
-
-const TAG_POSITIONS_MOBILE: React.CSSProperties[] = [
-  { top: "12%", left: "5%" }, 
-  { top: "22%", right: "8%" }, 
-  { top: "42%", left: "8%" },
-  { top: "58%", right: "5%" }, 
-  { top: "72%", left: "10%" },
-  { top: "32%", right: "10%" },
-  { top: "88%", right: "12%" },
-];
-
-const useDynamicTags = (
-  allTags: string[],
-  desktopPositions: React.CSSProperties[],
-  mobilePositions: React.CSSProperties[],
-  interval = 5000
-) => {
-  const [displayedTags, setDisplayedTags] = useState<TagItem[]>([]);
-  const isMobile = useIsMobile();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const generateRandomTags = useCallback(() => {
-    const positions = isMobile ? mobilePositions : desktopPositions;
-    const tagCount = positions.length;
-    const shuffledTags = [...allTags].sort(() => 0.5 - Math.random());
-    const shuffledPositions = [...positions].sort(() => 0.5 - Math.random());
-    const highlightIndex = Math.floor(Math.random() * tagCount);
-
-    const newTags = shuffledTags.slice(0, tagCount).map((name, index) => ({
-      id: `${name}-${index}-${Date.now()}`,
-      name,
-      position: shuffledPositions[index % positions.length],
-      highlight: index === highlightIndex,
-    }));
-
-    setDisplayedTags(newTags);
-  }, [allTags, isMobile, desktopPositions, mobilePositions]);
-
-  useEffect(() => {
-    generateRandomTags();
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    const timer = setInterval(generateRandomTags, interval);
-    intervalRef.current = timer;
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [generateRandomTags, interval]);
-
-  return displayedTags;
 };
 
 const useSlidingText = (texts: string[], interval = 3000) => {
@@ -150,41 +69,17 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
-/* FloatingTag */
-const FloatingTag = ({ tag }: { tag: TagItem }) => {
-  return (
-    <button
-      style={{
-        ...tag.position,
-        willChange: 'transform, opacity',
-        backfaceVisibility: 'hidden',
-      }}
-      onClick={() => {
-        window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
-      }}
-      aria-label={`Search for ${tag.name}`}
-      className={`absolute px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full sm:rounded-3xl shadow-xl transition-all duration-300 ease-in-out hover:scale-110 pointer-events-auto animate-float animate-tag-fade-in whitespace-nowrap ${
-        tag.highlight
-          ? "bg-red-500 text-white scale-105 sm:scale-110 -rotate-2 sm:-rotate-3 hover:bg-red-600 shadow-red-500/50"
-          : "bg-white/95 text-slate-800 hover:bg-white backdrop-blur-sm hover:shadow-2xl"
-      }`}
-    >
-      {tag.name}
-    </button>
-  );
-};
-
 // --- Hero Search Bar ---
 const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; suggestion: string }) => {
   return (
-    <div className="mt-6 sm:mt-8 lg:mt-10 w-full flex justify-center md:justify-start px-4 sm:px-0">
+    <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0">
       <button 
         onClick={onOpenModal} 
-        className="w-full max-w-xs sm:max-w-md md:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-3 sm:p-4 text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
+        className="w-full max-w-[280px] sm:max-w-xs md:max-w-md lg:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-2.5 sm:p-3 md:p-4 text-xs sm:text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
       >
-        <Search className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
-        <div className="flex-1 text-left h-6 sm:h-7 overflow-hidden">
-          <span key={suggestion} className="font-semibold animate-text-slide-in block text-base sm:text-lg">
+        <Search className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
+        <div className="flex-1 text-left h-5 sm:h-6 md:h-7 overflow-hidden">
+          <span key={suggestion} className="font-semibold animate-text-slide-in block text-sm sm:text-base md:text-lg">
             {suggestion}
           </span>
         </div>
@@ -261,97 +156,14 @@ const BackgroundSlideshow = ({
   );
 };
 
-// --- HERO SECTION COMPONENT (FIXED) ---
+// --- HERO SECTION COMPONENT ---
 const DestinationHeroSection = ({ destination, tourCount }: { destination: Destination, tourCount: number }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { addSearchTerm } = useRecentSearches();
-  const isMobile = useIsMobile();
 
   const slides = destination.image
     ? [{ src: destination.image, alt: destination.name }]
     : [{ src: '/hero2.png', alt: destination.name }];
-
- // Memoize destination-specific tags
-const destinationTags = useMemo(() => {
-  const name = destination.name.toLowerCase();
-  
-  // Cairo-specific tags
-  if (name.includes('cairo')) {
-    return [
-      "PYRAMIDS", "SPHINX", "EGYPTIAN MUSEUM", "NILE CRUISE", 
-      "KHAN EL-KHALILI", "CAIRO CITADEL", "ISLAMIC CAIRO", "COPTIC CAIRO",
-      "SAQQARA", "MEMPHIS", "SOUND & LIGHT SHOW", "FELUCCA RIDE",
-      "DESERT SAFARI", "CAMEL RIDE", "PAPYRUS MAKING", "BAZAAR SHOPPING",
-      "ANCIENT TEMPLES", "PHARAOH TOMBS", "HIEROGLYPHICS", "MUMMIES"
-    ];
-  }
-  
-  // Luxor-specific tags
-  if (name.includes('luxor')) {
-    return [
-      "VALLEY OF KINGS", "KARNAK TEMPLE", "LUXOR TEMPLE", "HOT AIR BALLOON",
-      "HATSHEPSUT TEMPLE", "COLOSSI MEMNON", "NILE CRUISE", "FELUCCA RIDE",
-      "TOMBS OF NOBLES", "MEDINET HABU", "RAMESSEUM", "WEST BANK TOUR",
-      "EAST BANK TOUR", "SUNSET CRUISE", "ANCIENT THEBES", "PHARAOH HISTORY"
-    ];
-  }
-  
-  // Aswan-specific tags
-  if (name.includes('aswan')) {
-    return [
-      "ABU SIMBEL", "PHILAE TEMPLE", "NUBIAN VILLAGE", "NILE CRUISE",
-      "UNFINISHED OBELISK", "FELUCCA SUNSET", "HIGH DAM", "ELEPHANTINE ISLAND",
-      "BOTANICAL GARDEN", "NUBIAN MUSEUM", "SUNSET VIEWS", "CAMEL MARKET",
-      "KITCHENER ISLAND", "TOMBS OF NOBLES", "ST. SIMEON MONASTERY", "LAKE NASSER"
-    ];
-  }
-  
-  // Hurghada/Red Sea-specific tags
-  if (name.includes('hurghada') || name.includes('red sea')) {
-    return [
-      "SNORKELING", "SCUBA DIVING", "CORAL REEFS", "BOAT TRIPS",
-      "GIFTUN ISLAND", "DESERT SAFARI", "QUAD BIKING", "BEACH RESORT",
-      "SUBMARINE TOUR", "DOLPHIN WATCHING", "PARASAILING", "WATER SPORTS",
-      "BEDOUIN DINNER", "MARINA WALK", "ISLAND HOPPING", "SUNSET CRUISE"
-    ];
-  }
-  
-  // Alexandria-specific tags
-  if (name.includes('alexandria')) {
-    return [
-      "LIBRARY OF ALEXANDRIA", "CITADEL OF QAITBAY", "CATACOMBS", "CORNICHE WALK",
-      "MONTAZA PALACE", "ROMAN AMPHITHEATRE", "POMPEY PILLAR", "STANLEY BRIDGE",
-      "MEDITERRANEAN SEAFOOD", "GRECO-ROMAN MUSEUM", "ROYAL JEWELRY MUSEUM", "BEACH PROMENADE",
-      "HISTORICAL SITES", "COASTAL VIEWS", "ANCIENT HARBOR", "SEAFRONT CAFES"
-    ];
-  }
-  
-  // Sharm El Sheikh-specific tags
-  if (name.includes('sharm')) {
-    return [
-      "DIVING", "SNORKELING", "RAS MOHAMMED", "BLUE HOLE",
-      "NAAMA BAY", "OLD MARKET", "MOUNT SINAI", "ST. CATHERINE",
-      "TIRAN ISLAND", "QUAD SAFARI", "BEACH CLUBS", "YACHT CRUISE",
-      "DESERT EXCURSION", "WATER SPORTS", "COLORED CANYON", "BEDOUIN CAMP"
-    ];
-  }
-  
-  // Generic destination tags as fallback
-  return [
-    `${destination.name.toUpperCase()}`, "GUIDED TOURS", "LOCAL CULTURE", "HIDDEN GEMS",
-    "PHOTO SPOTS", "HISTORICAL SITES", "LOCAL FOOD", "ADVENTURES",
-    "FAMILY TOURS", "ROMANTIC", "BUDGET FRIENDLY", "LUXURY TOURS",
-    "DAY TRIPS", "EVENING TOURS", "PRIVATE TOURS", "GROUP TOURS",
-    "SKIP THE LINE", "BEST SELLERS", "WALKING TOURS", "FOOD TOURS"
-  ];
-}, [destination.name]);
-
-  const dynamicTags = useDynamicTags(
-    destinationTags,
-    TAG_POSITIONS_DESKTOP,
-    TAG_POSITIONS_MOBILE,
-    5000
-  );
 
   const searchSuggestions = [
     `Explore ${destination.name}`,
@@ -367,7 +179,7 @@ const destinationTags = useMemo(() => {
 
   return (
     <>
-      <section className="relative w-full h-screen min-h-[600px] max-h-[900px]">
+      <section className="relative w-full min-h-[500px] h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px] mt-16 sm:mt-20 md:mt-0">
         {/* Background */}
         <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
         
@@ -375,9 +187,9 @@ const destinationTags = useMemo(() => {
         <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/40 z-10" />
         
         {/* Content */}
-        <div className="relative z-20 h-full flex items-center justify-center text-white">
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center md:text-left">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-4">
+        <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
               DISCOVER
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
@@ -385,7 +197,7 @@ const destinationTags = useMemo(() => {
               </span>
             </h1>
             
-            <p className="text-base sm:text-lg md:text-xl mb-6 max-w-2xl">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 sm:mb-6 max-w-2xl mx-auto md:mx-0 px-4 sm:px-0">
               {destination.description}
             </p>
 
@@ -394,37 +206,19 @@ const destinationTags = useMemo(() => {
               suggestion={currentSuggestion}
             />
 
-            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/90 text-sm">
-              <span className="flex items-center gap-2">
-                <Tag size={16} />
+            <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 text-white/90 text-xs sm:text-sm px-4 sm:px-0">
+              <span className="flex items-center gap-1.5 sm:gap-2">
+                <Tag size={14} className="sm:w-4 sm:h-4" />
                 <span className="font-semibold">{tourCount}+ Tours</span>
               </span>
-              <span className="flex items-center gap-2">
-                <Star size={16} className="fill-current text-yellow-400" />
+              <span className="flex items-center gap-1.5 sm:gap-2">
+                <Star size={14} className="sm:w-4 sm:h-4 fill-current text-yellow-400" />
                 <span className="font-semibold">4.8/5 Rating</span>
               </span>
               <span className="font-semibold">50K+ Travelers</span>
             </div>
           </div>
         </div>
-        
-        {/* Floating Tags - On Top */}
-        {dynamicTags.slice(0, isMobile ? 5 : 12).map((tag) => (
-          <button
-            key={tag.id}
-            style={tag.position}
-            onClick={() => {
-              window.location.href = `/search?q=${encodeURIComponent(tag.name)}`;
-            }}
-            className={`absolute z-50 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-xl transition-all duration-300 hover:scale-110 animate-tag-fade-in whitespace-nowrap ${
-              tag.highlight
-                ? "bg-red-500 text-white scale-105 hover:bg-red-600"
-                : "bg-white/95 text-slate-800 hover:bg-white"
-            }`}
-          >
-            {tag.name}
-          </button>
-        ))}
       </section>
 
       {isSearchModalOpen && (
@@ -453,48 +247,49 @@ const Top10Card = ({ tour, index }: { tour: Tour, index: number }) => {
   };
 
   return (
-    <a href={`/tour/${tour.slug}`} className="flex items-center gap-6 p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
-      <span className="text-4xl font-extrabold text-slate-200 group-hover:text-red-500 transition-colors duration-200">{index + 1}.</span>
-      <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden">
+    <a href={`/tour/${tour.slug}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
+      <span className="hidden sm:block text-3xl md:text-4xl font-extrabold text-slate-200 group-hover:text-red-500 transition-colors duration-200">{index + 1}.</span>
+      <div className="relative w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 flex-shrink-0 rounded-md overflow-hidden">
         <Image src={tour.image} alt={tour.title} fill className="object-cover" />
+        <span className="sm:hidden absolute top-2 left-2 bg-red-500 text-white font-bold text-lg px-3 py-1 rounded-full">{index + 1}</span>
       </div>
-      <div className="flex-1">
-        <h3 className="text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors duration-200 line-clamp-2">{tour.title}</h3>
-        <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
+      <div className="flex-1 w-full">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors duration-200 line-clamp-2">{tour.title}</h3>
+        <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-slate-500">
           <Clock size={14} />
           <span>{tour.duration}</span>
           <Star size={14} className="ml-2 text-yellow-500 fill-current" />
           <span>{tour.rating}</span>
         </div>
-        <div className="mt-2 text-sm">
-          {tour.originalPrice && <span className="text-slate-500 line-through mr-2">{formatPrice(tour.originalPrice)}</span>}
-          <span className="text-red-600 font-bold text-xl">{formatPrice(tour.discountPrice)}</span>
+        <div className="mt-2 text-sm flex items-center gap-2">
+          {tour.originalPrice && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(tour.originalPrice)}</span>}
+          <span className="text-red-600 font-bold text-lg sm:text-xl">{formatPrice(tour.discountPrice)}</span>
         </div>
       </div>
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex sm:flex-col items-center gap-2 ml-auto sm:ml-0">
         <button  
           onClick={handleAddToCart}
           disabled={isAdded}
           aria-label={isAdded ? "Added to cart" : "Add to cart"}
-          className={`p-2.5 rounded-full text-white transition-all duration-300 ease-in-out ${
+          className={`p-2 sm:p-2.5 rounded-full text-white transition-all duration-300 ease-in-out ${
             isAdded 
               ? 'bg-green-500 cursor-not-allowed' 
               : 'bg-red-600 hover:bg-red-700'
           }`}
         >
-          {isAdded ? <Check size={18} /> : <ShoppingCart size={18} />}
+          {isAdded ? <Check size={16} className="sm:w-[18px] sm:h-[18px]" /> : <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />}
         </button>
-        <ArrowRight className="text-slate-400 group-hover:text-red-500 transition-colors duration-200" />
+        <ArrowRight className="text-slate-400 group-hover:text-red-500 transition-colors duration-200 w-5 h-5" />
       </div>
     </a>
   );
 };
 
 const InterestCard = ({ category, tourCount }: { category: Category, tourCount: number }) => (
-  <a href={`/categories/${category.slug}`} className="flex flex-col items-center p-6 bg-white shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 rounded-lg">
-    <div className="text-4xl mb-4">{category.icon}</div>
-    <h3 className="text-base font-bold text-slate-900 uppercase text-center">{category.name}</h3>
-    <p className="text-sm text-slate-500">{tourCount} tours</p>
+  <a href={`/categories/${category.slug}`} className="flex flex-col items-center p-4 sm:p-6 bg-white shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 rounded-lg">
+    <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">{category.icon}</div>
+    <h3 className="text-sm sm:text-base font-bold text-slate-900 uppercase text-center">{category.name}</h3>
+    <p className="text-xs sm:text-sm text-slate-500">{tourCount} tours</p>
   </a>
 );
 
@@ -513,25 +308,25 @@ const CombiDealCard = ({ tour }: { tour: Tour }) => {
   };
 
   return (
-    <a href={`/tour/${tour.slug}`} className="w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
+    <a href={`/tour/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
       <div className="relative">
-        <Image src={tour.image} alt={tour.title} width={320} height={180} className="w-full h-40 object-cover" />
+        <Image src={tour.image} alt={tour.title} width={320} height={180} className="w-full h-36 sm:h-40 object-cover" />
         <button  
           onClick={handleAddToCart}
           disabled={isAdded}
           aria-label={isAdded ? "Added to cart" : "Add to cart"}
-          className={`absolute bottom-4 right-4 p-2.5 rounded-full text-white transition-all duration-300 ease-in-out transform group-hover:scale-110 ${
+          className={`absolute bottom-3 right-3 sm:bottom-4 sm:right-4 p-2 sm:p-2.5 rounded-full text-white transition-all duration-300 ease-in-out transform group-hover:scale-110 ${
             isAdded 
               ? 'bg-green-500 cursor-not-allowed' 
               : 'bg-red-600 hover:bg-red-700'
           }`}
         >
-          {isAdded ? <Check size={18} /> : <ShoppingCart size={18} />}
+          {isAdded ? <Check size={16} className="sm:w-[18px] sm:h-[18px]" /> : <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />}
         </button>
       </div>
-      <div className="p-4">
-        <h3 className="text-lg font-bold text-slate-900 line-clamp-2">{tour.title}</h3>
-        <div className="flex items-center gap-3 text-sm text-slate-500 my-2">
+      <div className="p-3 sm:p-4">
+        <h3 className="text-base sm:text-lg font-bold text-slate-900 line-clamp-2">{tour.title}</h3>
+        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-500 my-2">
           <span className="flex items-center gap-1">
             <Clock size={14} />{tour.duration}
           </span>
@@ -540,9 +335,9 @@ const CombiDealCard = ({ tour }: { tour: Tour }) => {
           </span>
           <span>{tour.bookings} bookings</span>
         </div>
-        <div className="flex items-end justify-end mt-4">
-          {tour.originalPrice && <span className="text-slate-500 line-through mr-2">{formatPrice(tour.originalPrice)}</span>}
-          <span className="text-xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
+        <div className="flex items-end justify-end mt-3 sm:mt-4">
+          {tour.originalPrice && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(tour.originalPrice)}</span>}
+          <span className="text-lg sm:text-xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
         </div>
       </div>
     </a>
@@ -559,16 +354,16 @@ const StatsSection = ({ destinationTours }: { destinationTours: Tour[] }) => {
   ];
 
   return (
-    <section className="bg-slate-900 py-16">
+    <section className="bg-slate-900 py-12 sm:py-16">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
           {stats.map((stat, index) => (
             <div key={index} className="text-center">
-              <div className="flex justify-center mb-3 text-red-500">
-                {React.cloneElement(stat.icon, { size: 32 })}
+              <div className="flex justify-center mb-2 sm:mb-3 text-red-500">
+                {React.cloneElement(stat.icon, { size: 24, className: 'sm:w-8 sm:h-8' })}
               </div>
-              <div className="text-4xl font-extrabold text-white mb-2">{stat.value}</div>
-              <div className="text-slate-300">{stat.label}</div>
+              <div className="text-2xl sm:text-4xl font-extrabold text-white mb-1 sm:mb-2">{stat.value}</div>
+              <div className="text-sm sm:text-base text-slate-300">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -581,47 +376,46 @@ const StatsSection = ({ destinationTours }: { destinationTours: Tour[] }) => {
 const TravelTipsSection = ({ destination }: { destination: Destination }) => {
   const tips = [
     {
-      icon: <Sun className="w-6 h-6" />,
+      icon: <Sun className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: "Best Time to Visit",
       content: destination.bestTimeToVisit || "Year-round destination with pleasant weather"
     },
     {
-      icon: <DollarSign className="w-6 h-6" />,
+      icon: <DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: "Currency",
       content: destination.currency || "Local currency accepted"
     },
     {
-      icon: <Languages className="w-6 h-6" />,
+      icon: <Languages className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: "Languages",
       content: "English widely spoken"
     },
     {
-      icon: <Phone className="w-6 h-6" />,
+      icon: <Phone className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: "Emergency",
       content: "Local emergency services"
     }
   ];
 
   return (
-    <section className="bg-gradient-to-br from-blue-50 to-indigo-50 py-20">
+    <section className="bg-gradient-to-br from-blue-50 to-indigo-50 py-12 sm:py-20">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Travel Tips & Essential Info</h2>
-          <p className="text-lg text-slate-600">Everything you need to know before you go</p>
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-3 sm:mb-4">Travel Tips & Essential Info</h2>
+          <p className="text-base sm:text-lg text-slate-600">Everything you need to know before you go</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {tips.map((tip, index) => (
-            <div key={index} className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
+            <div key={index} className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3 sm:mb-4">
                 {tip.icon}
               </div>
-              <h3 className="font-bold text-slate-900 mb-2">{tip.title}</h3>
-              <p className="text-slate-600 text-sm">{tip.content}</p>
+              <h3 className="font-bold text-slate-900 mb-2 text-sm sm:text-base">{tip.title}</h3>
+              <p className="text-slate-600 text-xs sm:text-sm">{tip.content}</p>
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );
@@ -630,47 +424,47 @@ const TravelTipsSection = ({ destination }: { destination: Destination }) => {
 // --- ABOUT US SECTION ---
 const AboutUsSection = ({ destination }: { destination: Destination }) => {
   return (
-    <section className="bg-white py-20">
+    <section className="bg-white py-12 sm:py-20">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          <div className="col-span-1 md:col-span-1 lg:col-span-1">
-            <h2 className="text-4xl font-extrabold text-slate-900 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 sm:gap-12">
+          <div className="col-span-1">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-3 sm:mb-4">
               Your Local Guide In {destination.name}
             </h2>
-            <p className="text-lg text-slate-600 mb-6">
+            <p className="text-base sm:text-lg text-slate-600 mb-4 sm:mb-6">
               {destination.longDescription || `Discover the best of ${destination.name} with our expert local guides. We'll show you hidden gems, share fascinating stories, and create unforgettable memories that will last a lifetime.`}
             </p>
-            <a href="/about" className="inline-flex items-center gap-2 text-red-600 font-bold hover:text-red-700 transition-colors">
+            <a href="/about" className="inline-flex items-center gap-2 text-red-600 font-bold hover:text-red-700 transition-colors text-sm sm:text-base">
               <span>Learn more about us</span>
-              <ArrowRight size={20} />
+              <ArrowRight size={18} className="sm:w-5 sm:h-5" />
             </a>
           </div>
-          <div className="col-span-1 md:col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-8">
-            <div className="bg-slate-50 p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
-              <Award className="w-10 h-10 text-red-600 mb-4" />
-              <h3 className="font-bold text-xl text-slate-900">Expert Local Guides</h3>
-              <p className="mt-2 text-slate-600">
+          <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+            <div className="bg-slate-50 p-6 sm:p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
+              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-red-600 mb-3 sm:mb-4" />
+              <h3 className="font-bold text-lg sm:text-xl text-slate-900">Expert Local Guides</h3>
+              <p className="mt-2 text-slate-600 text-sm sm:text-base">
                 Our experienced local guides know all the hidden gems and stories of {destination.name}.
               </p>
             </div>
-            <div className="bg-slate-50 p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
-              <Star className="w-10 h-10 text-red-600 mb-4" />
-              <h3 className="font-bold text-xl text-slate-900">Quality Experiences</h3>
-              <p className="mt-2 text-slate-600">
+            <div className="bg-slate-50 p-6 sm:p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
+              <Star className="w-8 h-8 sm:w-10 sm:h-10 text-red-600 mb-3 sm:mb-4" />
+              <h3 className="font-bold text-lg sm:text-xl text-slate-900">Quality Experiences</h3>
+              <p className="mt-2 text-slate-600 text-sm sm:text-base">
                 We offer you the best experiences in {destination.name}, handpicked by our experts.
               </p>
             </div>
-            <div className="bg-slate-50 p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
-              <Shield className="w-10 h-10 text-red-600 mb-4" />
-              <h3 className="font-bold text-xl text-slate-900">Safe & Reliable</h3>
-              <p className="mt-2 text-slate-600">
+            <div className="bg-slate-50 p-6 sm:p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
+              <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-red-600 mb-3 sm:mb-4" />
+              <h3 className="font-bold text-lg sm:text-xl text-slate-900">Safe & Reliable</h3>
+              <p className="mt-2 text-slate-600 text-sm sm:text-base">
                 Your safety is our priority. All tours are carefully vetted and insured.
               </p>
             </div>
-            <div className="bg-slate-50 p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
-              <Heart className="w-10 h-10 text-red-600 mb-4" />
-              <h3 className="font-bold text-xl text-slate-900">Best Price Guarantee</h3>
-              <p className="mt-2 text-slate-600">
+            <div className="bg-slate-50 p-6 sm:p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
+              <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-red-600 mb-3 sm:mb-4" />
+              <h3 className="font-bold text-lg sm:text-xl text-slate-900">Best Price Guarantee</h3>
+              <p className="mt-2 text-slate-600 text-sm sm:text-base">
                 Find a lower price? We'll match it. Enjoy the best deals for {destination.name}.
               </p>
             </div>
@@ -686,28 +480,28 @@ const FaqItem = ({ item }: { item: { question: string; answer: string } }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="border-b border-slate-200 py-6 group">
+    <div className="border-b border-slate-200 py-4 sm:py-6 group">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex justify-between items-center text-left hover:text-red-600 transition-colors"
         aria-expanded={isOpen}
       >
-        <h3 className="text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors pr-4">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors pr-4">
           {item.question}
         </h3>
         {isOpen ? (
-          <Minus className="w-6 h-6 text-red-500 transition-transform duration-300 flex-shrink-0" />
+          <Minus className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 transition-transform duration-300 flex-shrink-0" />
         ) : (
-          <Plus className="w-6 h-6 text-slate-500 transition-transform duration-300 flex-shrink-0" />
+          <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-slate-500 transition-transform duration-300 flex-shrink-0" />
         )}
       </button>
       <div
         className={`grid transition-all duration-500 ease-in-out ${
-          isOpen ? 'grid-rows-[1fr] opacity-100 pt-4' : 'grid-rows-[0fr] opacity-0'
+          isOpen ? 'grid-rows-[1fr] opacity-100 pt-3 sm:pt-4' : 'grid-rows-[0fr] opacity-0'
         }`}
       >
         <div className="overflow-hidden">
-          <p className="text-slate-600">{item.answer}</p>
+          <p className="text-slate-600 text-sm sm:text-base">{item.answer}</p>
         </div>
       </div>
     </div>
@@ -759,25 +553,25 @@ const FAQSection = ({ destinationName }: { destinationName: string }) => {
   ];
 
   return (
-    <section className="bg-white py-20 font-sans">
+    <section className="bg-white py-12 sm:py-20 font-sans">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="text-center mb-10">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+        <div className="text-center mb-8 sm:mb-10">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
             FREQUENTLY ASKED QUESTIONS
           </h2>
-          <p className="mt-4 text-lg text-slate-600">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-slate-600">
             Everything you need to know about visiting {destinationName}
           </p>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-2 sm:space-y-4">
           {faqData.map((item, index) => (
             <FaqItem key={index} item={item} />
           ))}
         </div>
-        <div className="text-center mt-12">
+        <div className="text-center mt-8 sm:mt-12">
           <a
             href="/faqs"
-            className="inline-flex justify-center items-center h-14 px-8 text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out rounded-full"
+            className="inline-flex justify-center items-center h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out rounded-full"
             role="button"
             aria-label="View all FAQs"
           >
@@ -794,39 +588,39 @@ const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], desti
   if (!reviews || reviews.length === 0) return null;
 
   return (
-    <section className="bg-slate-50 py-20">
+    <section className="bg-slate-50 py-12 sm:py-20">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-extrabold text-slate-900 mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-3 sm:mb-4">
             What Travelers Say About {destinationName}
           </h2>
           <div className="flex items-center justify-center gap-2 text-yellow-500">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-6 h-6 fill-current" />
+              <Star key={i} className="w-4 h-4 sm:w-6 sm:h-6 fill-current" />
             ))}
-            <span className="ml-2 text-slate-600 font-bold">4.8/5 from 1,000+ reviews</span>
+            <span className="ml-2 text-slate-600 font-bold text-sm sm:text-base">4.8/5 from 1,000+ reviews</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {reviews.slice(0, 6).map((review) => (
-            <div key={review._id} className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
+            <div key={review._id} className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 {[...Array(5)].map((_, i) => (
                   <Star 
                     key={i} 
-                    className={`w-4 h-4 ${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`}
+                    className={`w-3 h-3 sm:w-4 sm:h-4 ${i < review.rating ? 'text-yellow-500 fill-current' : 'text-slate-300'}`}
                   />
                 ))}
               </div>
-              {review.title && <h4 className="font-bold text-slate-900 mb-2">{review.title}</h4>}
-              <p className="text-slate-700 mb-4 line-clamp-4">{review.comment}</p>
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-600">
+              {review.title && <h4 className="font-bold text-slate-900 mb-2 text-sm sm:text-base">{review.title}</h4>}
+              <p className="text-slate-700 mb-3 sm:mb-4 line-clamp-4 text-sm sm:text-base">{review.comment}</p>
+              <div className="flex items-center gap-3 pt-3 sm:pt-4 border-t border-slate-100">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-600 text-sm sm:text-base">
                   {review.userName?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{review.userName}</p>
+                  <p className="font-bold text-slate-900 text-sm sm:text-base">{review.userName}</p>
                   {review.verified && (
                     <span className="text-xs text-green-600 flex items-center gap-1">
                       <CheckCircle2 size={12} /> Verified traveler
@@ -838,13 +632,13 @@ const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], desti
           ))}
         </div>
 
-        <div className="text-center mt-12">
+        <div className="text-center mt-8 sm:mt-12">
           <a
             href="#reviews"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 text-white font-bold rounded-full hover:bg-red-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-red-600 text-white font-bold rounded-full hover:bg-red-700 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base"
           >
             Read All Reviews
-            <MessageCircle size={20} />
+            <MessageCircle size={18} className="sm:w-5 sm:h-5" />
           </a>
         </div>
       </div>
@@ -857,25 +651,25 @@ const RelatedDestinationsSection = ({ destinations }: { destinations: Destinatio
   if (!destinations || destinations.length === 0) return null;
 
   return (
-    <section className="bg-white py-20">
+    <section className="bg-white py-12 sm:py-20">
       <div className="container mx-auto px-4 max-w-7xl">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-extrabold text-slate-900 mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-3 sm:mb-4">
             Explore More Destinations
           </h2>
-          <p className="text-lg text-slate-600">
+          <p className="text-base sm:text-lg text-slate-600">
             Discover other amazing places you might love
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {destinations.slice(0, 4).map((dest) => (
             <a 
               key={dest._id} 
               href={`/destinations/${dest.slug}`}
               className="group block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
             >
-              <div className="relative h-48">
+              <div className="relative h-40 sm:h-48">
                 <Image
                   src={dest.image || '/placeholder.jpg'}
                   alt={dest.name}
@@ -883,9 +677,9 @@ const RelatedDestinationsSection = ({ destinations }: { destinations: Destinatio
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <h3 className="text-xl font-bold text-white mb-1">{dest.name}</h3>
-                  <p className="text-white/90 text-sm flex items-center gap-1">
+                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1">{dest.name}</h3>
+                  <p className="text-white/90 text-xs sm:text-sm flex items-center gap-1">
                     <MapPin size={14} />
                     {dest.tourCount || 0} tours available
                   </p>
@@ -902,27 +696,27 @@ const RelatedDestinationsSection = ({ destinations }: { destinations: Destinatio
 // --- Newsletter CTA ---
 const NewsletterSection = ({ destinationName }: { destinationName: string }) => {
   return (
-    <section className="bg-gradient-to-r from-red-600 to-red-700 py-20">
+    <section className="bg-gradient-to-r from-red-600 to-red-700 py-12 sm:py-20">
       <div className="container mx-auto px-4 max-w-4xl text-center text-white">
-        <h2 className="text-4xl font-extrabold mb-4">
+        <h2 className="text-2xl sm:text-4xl font-extrabold mb-3 sm:mb-4">
           Get Exclusive {destinationName} Travel Deals
         </h2>
-        <p className="text-xl mb-8 opacity-90">
+        <p className="text-base sm:text-xl mb-6 sm:mb-8 opacity-90">
           Subscribe to our newsletter and receive special offers, travel tips, and insider guides
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-xl mx-auto">
           <input
             type="email"
             placeholder="Enter your email"
-            className="flex-1 px-6 py-4 rounded-full text-slate-900 outline-none"
+            className="flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-full text-slate-900 outline-none text-sm sm:text-base"
           />
-          <button className="px-8 py-4 bg-white text-red-600 font-bold rounded-full hover:bg-slate-100 transition-all duration-300 shadow-lg hover:shadow-xl">
+          <button className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-red-600 font-bold rounded-full hover:bg-slate-100 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base whitespace-nowrap">
             Subscribe Now
           </button>
         </div>
 
-        <p className="mt-4 text-sm opacity-75">
+        <p className="mt-3 sm:mt-4 text-xs sm:text-sm opacity-75">
           Join 50,000+ travelers getting exclusive deals. Unsubscribe anytime.
         </p>
       </div>
@@ -967,53 +761,53 @@ export default function DestinationPageClient({
 
         <StatsSection destinationTours={destinationTours} />
         
-        <section className="bg-slate-50 py-12">
+        <section className="bg-slate-50 py-8 sm:py-12">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto">
               <div className="text-center">
-                <h3 className="font-bold text-slate-800 mb-2">Best Time to Visit</h3>
-                <p className="text-slate-600">{destination.bestTimeToVisit || 'Year-round'}</p>
+                <h3 className="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Best Time to Visit</h3>
+                <p className="text-slate-600 text-xs sm:text-base">{destination.bestTimeToVisit || 'Year-round'}</p>
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-slate-800 mb-2">Currency</h3>
-                <p className="text-slate-600">{destination.currency || 'EUR'}</p>
+                <h3 className="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Currency</h3>
+                <p className="text-slate-600 text-xs sm:text-base">{destination.currency || 'EUR'}</p>
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-slate-800 mb-2">Time Zone</h3>
-                <p className="text-slate-600">{destination.timezone || 'Central European Time'}</p>
+                <h3 className="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Time Zone</h3>
+                <p className="text-slate-600 text-xs sm:text-base">{destination.timezone || 'Central European Time'}</p>
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-slate-800 mb-2">Available Tours</h3>
-                <p className="text-slate-600">{destinationTours.length} experiences</p>
+                <h3 className="font-bold text-slate-800 mb-1 sm:mb-2 text-sm sm:text-base">Available Tours</h3>
+                <p className="text-slate-600 text-xs sm:text-base">{destinationTours.length} experiences</p>
               </div>
             </div>
           </div>
         </section>
         
         {featuredTours.length > 0 && (
-          <section className="py-20 bg-white overflow-hidden">
+          <section className="py-12 sm:py-20 bg-white overflow-hidden">
             <div className="container mx-auto">
-                <div className="px-4 mb-10">
-                    <h2 className="text-4xl font-extrabold text-slate-900">Best Deals in {destination.name}</h2>
-                    <p className="text-lg text-slate-600 mt-2">Handpicked experiences at unbeatable prices</p>
+                <div className="px-4 mb-6 sm:mb-10">
+                    <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900">Best Deals in {destination.name}</h2>
+                    <p className="text-base sm:text-lg text-slate-600 mt-2">Handpicked experiences at unbeatable prices</p>
                 </div>
                 <div className="relative">
-                    <div ref={combiScrollContainer} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <div ref={combiScrollContainer} className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scroll-smooth px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         {featuredTours.map(tour => <CombiDealCard key={tour._id} tour={tour} />)}
                     </div>
                     <button 
                         onClick={() => scroll(combiScrollContainer, 'left')} 
                         aria-label="Scroll left"
-                        className="absolute top-1/2 -translate-y-1/2 left-0 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300 backdrop-blur-sm ml-2"
+                        className="hidden sm:block absolute top-1/2 -translate-y-1/2 left-0 z-10 bg-white/80 p-2 sm:p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300 backdrop-blur-sm ml-2"
                     >
-                        <ChevronLeft size={24} className="text-slate-700"/>
+                        <ChevronLeft size={20} className="sm:w-6 sm:h-6 text-slate-700"/>
                     </button>
                     <button 
                         onClick={() => scroll(combiScrollContainer, 'right')} 
                         aria-label="Scroll right"
-                        className="absolute top-1/2 -translate-y-1/2 right-0 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300 backdrop-blur-sm mr-2"
+                        className="hidden sm:block absolute top-1/2 -translate-y-1/2 right-0 z-10 bg-white/80 p-2 sm:p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300 backdrop-blur-sm mr-2"
                     >
-                        <ChevronRight size={24} className="text-slate-700"/>
+                        <ChevronRight size={20} className="sm:w-6 sm:h-6 text-slate-700"/>
                     </button>
                 </div>
             </div>
@@ -1021,15 +815,15 @@ export default function DestinationPageClient({
         )}
         
         {top10Tours.length > 0 && (
-          <section className="py-20 bg-slate-50">
+          <section className="py-12 sm:py-20 bg-slate-50">
             <div className="container mx-auto px-4">
-              <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-4">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 text-center mb-3 sm:mb-4">
                 TOP 10 TOURS IN {destination.name.toUpperCase()}
               </h2>
-              <p className="text-center text-lg text-slate-600 mb-12">
+              <p className="text-center text-base sm:text-lg text-slate-600 mb-8 sm:mb-12">
                 Our best-selling tours and experiences curated by local experts
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 max-w-6xl mx-auto">
                 {top10Tours.map((tour, index) => (
                   <Top10Card key={tour._id} tour={tour} index={index} />
                 ))}
@@ -1039,15 +833,15 @@ export default function DestinationPageClient({
         )}
 
         {destinationCategories.length > 0 && (
-          <section className="bg-white py-20">
+          <section className="bg-white py-12 sm:py-20">
             <div className="container mx-auto px-4 text-center">
-              <h2 className="text-4xl font-extrabold text-slate-900 mb-6">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-4 sm:mb-6">
                 Discover {destination.name} by Interest
               </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-12">
+              <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-12">
                 Find the perfect experience for you, whether you're interested in culture, adventure, or food.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {destinationCategories.map((category) => (
                   <InterestCard key={category._id} category={category} tourCount={category.tourCount} />
                 ))}
@@ -1059,14 +853,14 @@ export default function DestinationPageClient({
         <AboutUsSection destination={destination} />
 
         {destination.highlights && destination.highlights.length > 0 && (
-          <section className="bg-slate-50 py-20">
+          <section className="bg-slate-50 py-12 sm:py-20">
             <div className="container mx-auto px-4 max-w-4xl">
-              <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-10">Why Visit {destination.name}?</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 text-center mb-6 sm:mb-10">Why Visit {destination.name}?</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
                 {destination.highlights.map((highlight, index) => (
-                  <div key={index} className="flex items-start gap-4">
-                    <CheckCircle2 className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" />
-                    <p className="text-lg text-slate-600">{highlight}</p>
+                  <div key={index} className="flex items-start gap-3 sm:gap-4">
+                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 mt-1 flex-shrink-0" />
+                    <p className="text-base sm:text-lg text-slate-600">{highlight}</p>
                   </div>
                 ))}
               </div>
@@ -1106,16 +900,6 @@ export default function DestinationPageClient({
           to { opacity: 1; transform: translateY(0); } 
         }
         
-        @keyframes float { 
-          0%, 100% { transform: translateY(0px); } 
-          50% { transform: translateY(-10px); } 
-        }
-        
-        @keyframes tag-fade-in { 
-          from { opacity: 0; transform: scale(0.8); } 
-          to { opacity: 1; transform: scale(1); } 
-        }
-        
         @keyframes text-slide-in { 
           from { opacity: 0; transform: translateY(10px); } 
           to { opacity: 1; transform: translateY(0); } 
@@ -1123,11 +907,6 @@ export default function DestinationPageClient({
 
         .animate-fade-in { animation: fade-in 0.8s ease-out forwards; }
         .animate-slide-from-top { animation: slide-from-top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        .animate-float { 
-          animation: float 8s ease-in-out infinite; 
-          animation-delay: calc(var(--float-delay, 0) * 1s);
-        }
-        .animate-tag-fade-in { animation: tag-fade-in 0.7s ease-out forwards; }
         .animate-text-slide-in { animation: text-slide-in 0.5s ease-out forwards; }
 
         .text-shadow { text-shadow: 1px 1px 4px rgb(0 0 0 / 0.5); }
@@ -1142,24 +921,12 @@ export default function DestinationPageClient({
           display: none;
         }
 
-        @media (max-width: 640px) {
-          .animate-float {
-            animation-duration: 10s;
-          }
-        }
-
         @media (prefers-reduced-motion: reduce) {
-          .animate-float,
-          .animate-tag-fade-in,
           .animate-text-slide-in,
           .animate-fade-in,
           .animate-slide-from-top {
             animation: none !important;
           }
-        }
-
-        .pointer-events-auto {
-          pointer-events: auto !important;
         }
       `}</style>
     </>
