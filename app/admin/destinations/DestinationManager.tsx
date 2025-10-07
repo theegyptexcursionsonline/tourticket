@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -29,6 +29,12 @@ import {
   Minus
 } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
+
+interface Tour {
+  _id: string;
+  title: string;
+  slug: string;
+}
 
 interface FormData {
   name: string;
@@ -62,6 +68,7 @@ interface FormData {
   metaTitle: string;
   metaDescription: string;
   tags: string[];
+  linkedTours?: string[];
 }
 
 const generateSlug = (name: string) =>
@@ -100,8 +107,31 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     isPublished: true,
     metaTitle: '',
     metaDescription: '',
-    tags: []
+    tags: [],
+    linkedTours: []
   });
+
+  const [availableTours, setAvailableTours] = useState<Tour[]>([]);
+
+  // Fetch available tours on component mount
+  useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        const response = await fetch('/api/admin/tours');
+        const data = await response.json();
+        if (data.success) {
+          setAvailableTours(data.data.map((tour: any) => ({
+            _id: tour._id,
+            title: tour.title,
+            slug: tour.slug
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching tours:', error);
+      }
+    };
+    fetchTours();
+  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -129,7 +159,8 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       isPublished: true,
       metaTitle: '',
       metaDescription: '',
-      tags: []
+      tags: [],
+      linkedTours: []
     });
   };
 
@@ -177,8 +208,30 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       isPublished: dest.isPublished ?? true,
       metaTitle: dest.metaTitle || '',
       metaDescription: dest.metaDescription || '',
-      tags: dest.tags || []
+      tags: dest.tags || [],
+      linkedTours: []
     });
+
+    // Fetch tours for this destination
+    if (dest._id) {
+      fetch(`/api/admin/tours`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Find tours that have this destination
+            const toursForThisDestination = data.data
+              .filter((tour: any) => {
+                const tourDestId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;
+                return tourDestId === dest._id.toString();
+              })
+              .map((tour: any) => tour._id);
+
+            setFormData(prev => ({ ...prev, linkedTours: toursForThisDestination }));
+          }
+        })
+        .catch(err => console.error('Error fetching tours for destination:', err));
+    }
+
     setActiveTab('basic');
     setIsPanelOpen(true);
   };
@@ -207,7 +260,20 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaE
   }
 };
 
-  const handleArrayChange = (field: keyof FormData, index: number, value: string) => {
+  const handleTourSelection = (tourId: string) => {
+    setFormData(prev => {
+      const currentTours = prev.linkedTours || [];
+      const isSelected = currentTours.includes(tourId);
+
+      if (isSelected) {
+        return { ...prev, linkedTours: currentTours.filter(id => id !== tourId) };
+      } else {
+        return { ...prev, linkedTours: [...currentTours, tourId] };
+      }
+    });
+  };
+
+const handleArrayChange = (field: keyof FormData, index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: (prev[field] as string[]).map((item, i) => i === index ? value : item)
@@ -282,8 +348,9 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   try {
     // Prepare data for submission
+    const { linkedTours, ...destinationData } = formData;
     const submitData = {
-      ...formData,
+      ...destinationData,
       // Only include coordinates if both lat and lng are provided
       ...(formData.coordinates.lat && formData.coordinates.lng ? {
         coordinates: {
@@ -300,6 +367,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     };
 
     console.log('Submit data prepared:', submitData);
+    console.log('Linked tours (will sync after save):', linkedTours);
 
     const apiEndpoint = editingDestination
       ? `/api/admin/tours/destinations/${editingDestination._id}`
@@ -347,18 +415,81 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    let data;
+    let responseData;
     try {
-      data = await response.json();
-      console.log('Success response data:', data);
+      responseData = await response.json();
+      console.log('Success response data:', responseData);
     } catch (parseError) {
       console.error('Error parsing success response:', parseError);
       toast.error('Response parsing error, but destination may have been saved');
+      // Close panel and refresh on error too
+      setIsPanelOpen(false);
+      router.refresh();
+      return;
     }
-    
+
+    const savedDestination = responseData.data;
+    console.log('Saved destination:', savedDestination._id);
+
+    // Sync tour relationships
+    if (linkedTours && linkedTours.length > 0 && savedDestination?._id) {
+      console.log('Starting tour sync for', linkedTours.length, 'tours');
+      try {
+        // Update each selected tour to link to this destination
+        console.log('Updating selected tours...');
+        const updatePromises = linkedTours.map(tourId =>
+          fetch(`/api/admin/tours/${tourId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ destination: savedDestination._id })
+          })
+        );
+        await Promise.all(updatePromises);
+        console.log('Selected tours updated successfully');
+
+        // Update unselected tours (remove this destination if previously linked)
+        const allTourIds = availableTours.map(t => t._id);
+        const unselectedTours = allTourIds.filter(id => !linkedTours.includes(id));
+        console.log('Checking', unselectedTours.length, 'unselected tours...');
+
+        if (editingDestination && unselectedTours.length > 0) {
+          console.log('Processing unselected tours to unlink...');
+          // For unselected tours that were previously linked to this destination, remove the link
+          const unlinkPromises = unselectedTours.map(async (tourId) => {
+            // Fetch tour to check if it's linked to this destination
+            const tourRes = await fetch(`/api/admin/tours/${tourId}`);
+            if (tourRes.ok) {
+              const tourData = await tourRes.json();
+              const tour = tourData.data;
+              const tourDestId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;
+
+              if (tourDestId === editingDestination._id.toString()) {
+                console.log('Unlinking tour:', tourId);
+                // This tour was linked to this destination, unlink it
+                return fetch(`/api/admin/tours/${tourId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ destination: null })
+                });
+              }
+            }
+            return Promise.resolve();
+          });
+          await Promise.all(unlinkPromises);
+          console.log('Unselected tours processed');
+        }
+      } catch (syncError) {
+        console.error('Error syncing tour relationships:', syncError);
+        toast.error('Destination saved but some tour links may not have updated');
+      }
+    } else {
+      console.log('No tours to sync or no destination ID');
+    }
+
+    console.log('Showing success toast and closing panel');
     // Show success toast
     toast.success(`Destination ${editingDestination ? 'updated' : 'created'} successfully!`);
-    
+
     // Close panel and refresh
     setIsPanelOpen(false);
     router.refresh();
@@ -1246,6 +1377,39 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                 {/* SEO Tab */}
                 {activeTab === 'seo' && (
+                  <div className="space-y-8">
+                    {/* Linked Tours Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-indigo-500" />
+                        <label className="text-sm font-bold text-slate-700">Linked Tours</label>
+                        <span className="text-slate-400 text-sm">(optional)</span>
+                      </div>
+                      <div className="border border-slate-300 rounded-xl p-4 max-h-64 overflow-y-auto bg-white">
+                        {availableTours.length === 0 ? (
+                          <p className="text-sm text-slate-500">No tours available</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {availableTours.map((tour) => (
+                              <label key={tour._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={(formData.linkedTours || []).includes(tour._id)}
+                                  onChange={() => handleTourSelection(tour._id)}
+                                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-slate-700">{tour.title}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Select tours that should be linked to this destination. When you save, these tours will be updated to reference this destination.
+                      </p>
+                    </div>
+
+                {/* Original SEO Fields */}
                   <div className="space-y-6">
                     {/* Meta Title */}
                     <div className="space-y-3">
@@ -1330,6 +1494,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         )}
                       </div>
                     </div>
+                  </div>
                   </div>
                 )}
               </div>

@@ -15,6 +15,12 @@ interface AttractionPageFormProps {
   pageId?: string;
 }
 
+interface Tour {
+  _id: string;
+  title: string;
+  slug: string;
+}
+
 const defaultFormData: AttractionPageFormData = {
   title: '',
   slug: '',
@@ -35,6 +41,7 @@ const defaultFormData: AttractionPageFormData = {
   keywords: [],
   isPublished: false,
   featured: false,
+  linkedTours: [],
 };
 
 // Helper Components
@@ -67,6 +74,7 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
   
   const [formData, setFormData] = useState<AttractionPageFormData>(defaultFormData);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [availableTours, setAvailableTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,12 +82,29 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
 
   useEffect(() => {
     fetchCategories();
+    fetchTours();
     if (pageId) {
       fetchPageData();
     } else {
       setIsPanelOpen(true); // Auto-open for new pages
     }
   }, [pageId]);
+
+  const fetchTours = async () => {
+    try {
+      const response = await fetch('/api/admin/tours');
+      const data = await response.json();
+      if (data.success) {
+        setAvailableTours(data.data.map((tour: any) => ({
+          _id: tour._id,
+          title: tour.title,
+          slug: tour.slug
+        })));
+      }
+    } catch (err) {
+      console.error('Error fetching tours:', err);
+    }
+  };
 
   const fetchCategories = async () => {
     try {

@@ -53,6 +53,13 @@ interface Destination {
     name: string;
 }
 
+interface AttractionInterest {
+    _id: string;
+    title: string;
+    slug: string;
+    pageType: 'attraction' | 'category';
+}
+
 interface TimeSlot {
     time: string;
     capacity: number;
@@ -111,6 +118,8 @@ interface TourFormData {
     bookingOptions: BookingOption[];
     availability: Availability;
     addOns: AddOn[];
+    attractions?: string[];
+    interests?: string[];
 }
 
 interface Tour extends Partial<TourFormData> {
@@ -321,15 +330,19 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         isPublished: false,
         difficulty: '',
         maxGroupSize: 10,
-        availability: { 
-            type: 'daily', 
-            availableDays: [0, 1, 2, 3, 4, 5, 6], 
-            slots: [{ time: '10:00', capacity: 10 }] 
+        availability: {
+            type: 'daily',
+            availableDays: [0, 1, 2, 3, 4, 5, 6],
+            slots: [{ time: '10:00', capacity: 10 }]
         },
+        attractions: [],
+        interests: [],
     });
 
     const [destinations, setDestinations] = useState<Destination[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [attractions, setAttractions] = useState<AttractionInterest[]>([]);
+    const [interests, setInterests] = useState<AttractionInterest[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
@@ -410,8 +423,29 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                     slots: [{ time: '10:00', capacity: 10 }]
                 };
             }
-            
-            setFormData(initialData);
+
+            // Handle attractions and interests - extract IDs if they're populated objects
+            const attractionIds = Array.isArray(tourToEdit.attractions)
+                ? tourToEdit.attractions.map((a: any) => {
+                    const id = typeof a === 'string' ? a : (a._id || a);
+                    return typeof id === 'string' ? id : String(id);
+                  })
+                : [];
+            const interestIds = Array.isArray(tourToEdit.interests)
+                ? tourToEdit.interests.map((i: any) => {
+                    const id = typeof i === 'string' ? i : (i._id || i);
+                    return typeof id === 'string' ? id : String(id);
+                  })
+                : [];
+
+            initialData.attractions = attractionIds;
+            initialData.interests = interestIds;
+
+            console.log('Loading tour with attractions:', attractionIds);
+            console.log('Loading tour with interests:', interestIds);
+            console.log('Attraction IDs types:', attractionIds.map(id => typeof id));
+
+            setFormData(initialData as TourFormData);
             
             // On edit, expand the first item in each collapsible section if they exist
             if (initialData.bookingOptions.length > 0) setExpandedOptionIndex(0);
@@ -421,26 +455,40 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
 
         const fetchData = async () => {
             try {
-                const [destRes, catRes] = await Promise.all([
+                const [destRes, catRes, attractionsRes] = await Promise.all([
                     fetch('/api/admin/tours/destinations'),
-                    fetch('/api/categories')
+                    fetch('/api/categories'),
+                    fetch('/api/attractions-interests')
                 ]);
-                
+
                 if (!destRes.ok) throw new Error(`Failed to fetch destinations: ${destRes.statusText}`);
                 if (!catRes.ok) throw new Error(`Failed to fetch categories: ${catRes.statusText}`);
-                
+
                 const destData = await destRes.json();
                 const catData = await catRes.json();
-                
+                const attractionsData = await attractionsRes.json();
+
                 if (destData?.success) setDestinations(destData.data);
                 if (catData?.success) setCategories(catData.data);
+                if (attractionsData?.success) {
+                    setAttractions(attractionsData.data.attractions || []);
+                    setInterests(attractionsData.data.interests || []);
+                }
             } catch (err) {
                 console.error('Error fetching data:', err);
-                toast.error('Failed to load destinations or categories.');
+                toast.error('Failed to load form data.');
             }
         };
         fetchData();
     }, [tourToEdit]);
+
+    // Debug logging for attractions/interests
+    useEffect(() => {
+        console.log('FormData changed - Attractions:', formData.attractions);
+        console.log('FormData changed - Interests:', formData.interests);
+        console.log('Available attractions:', attractions.map(a => ({ id: a._id, title: a.title })));
+        console.log('Available interests:', interests.map(i => ({ id: i._id, title: i.title })));
+    }, [formData.attractions, formData.interests, attractions, interests]);
 
     const resetForm = () => {
         setFormData({
@@ -468,11 +516,13 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         isPublished: false,
         difficulty: '',
         maxGroupSize: 10,
-        availability: { 
-            type: 'daily', 
-            availableDays: [0, 1, 2, 3, 4, 5, 6], 
-            slots: [{ time: '10:00', capacity: 10 }] 
+        availability: {
+            type: 'daily',
+            availableDays: [0, 1, 2, 3, 4, 5, 6],
+            slots: [{ time: '10:00', capacity: 10 }]
         },
+        attractions: [],
+        interests: [],
         metaTitle: '',
         metaDescription: '',
         keywords: '',
@@ -509,10 +559,25 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             const newSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
             setFormData((p) => ({ ...p, slug: newSlug }));
         }
-        
+
         if (name === 'slug') {
             setIsSlugManuallyEdited(true);
         }
+    };
+
+    const handleMultiSelectChange = (fieldName: 'attractions' | 'interests', selectedId: string) => {
+        setFormData((prev) => {
+            const currentValues = prev[fieldName] || [];
+            const isSelected = currentValues.includes(selectedId);
+
+            if (isSelected) {
+                // Remove if already selected
+                return { ...prev, [fieldName]: currentValues.filter(id => id !== selectedId) };
+            } else {
+                // Add if not selected
+                return { ...prev, [fieldName]: [...currentValues, selectedId] };
+            }
+        });
     };
 
     const handleTextAreaArrayChange = (fieldName: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -779,9 +844,13 @@ const addItineraryItem = () => {
                 keywords: typeof cleanedData.keywords === 'string'
                     ? cleanedData.keywords.split(',').map((t: string) => t.trim()).filter(Boolean)
                     : Array.isArray(cleanedData.keywords) ? cleanedData.keywords : [],
+                attractions: Array.isArray(cleanedData.attractions) ? cleanedData.attractions.filter(Boolean) : [],
+                interests: Array.isArray(cleanedData.interests) ? cleanedData.interests.filter(Boolean) : [],
             };
 
             console.log('Payload being sent:', payload);
+            console.log('Attractions:', payload.attractions);
+            console.log('Interests:', payload.interests);
 
             const apiEndpoint = tourToEdit ? `/api/admin/tours/${tourToEdit._id}` : '/api/admin/tours';
             const method = tourToEdit ? 'PUT' : 'POST';
@@ -1065,6 +1134,78 @@ const addItineraryItem = () => {
                                                     </select>
                                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                                                 </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Attractions & Interests Multi-Select */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Attractions */}
+                                            <div className="space-y-3">
+                                                <FormLabel icon={MapPin}>Attractions</FormLabel>
+                                                <div className="border border-slate-300 rounded-xl p-4 max-h-48 overflow-y-auto bg-white">
+                                                    {attractions.length === 0 ? (
+                                                        <p className="text-sm text-slate-500">No attractions available</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            {attractions.map((attr) => {
+                                                                const formAttractions = formData.attractions || [];
+                                                                const attrId = String(attr._id);
+                                                                const isChecked = formAttractions.some(id => String(id) === attrId);
+
+                                                                if (formAttractions.length > 0 && attr === attractions[0]) {
+                                                                    console.log('First attraction comparison:', {
+                                                                        attrId,
+                                                                        attrIdType: typeof attr._id,
+                                                                        formAttractions,
+                                                                        formTypes: formAttractions.map(id => typeof id),
+                                                                        isChecked
+                                                                    });
+                                                                }
+
+                                                                return (
+                                                                <label key={attr._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        onChange={() => handleMultiSelectChange('attractions', attr._id)}
+                                                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                                                    />
+                                                                    <span className="text-sm text-slate-700">{attr.title}</span>
+                                                                </label>
+                                                            )})}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <SmallHint>Select attractions related to this tour</SmallHint>
+                                            </div>
+
+                                            {/* Interests */}
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Star}>Interests</FormLabel>
+                                                <div className="border border-slate-300 rounded-xl p-4 max-h-48 overflow-y-auto bg-white">
+                                                    {interests.length === 0 ? (
+                                                        <p className="text-sm text-slate-500">No interests available</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            {interests.map((interest) => {
+                                                                const formInterests = formData.interests || [];
+                                                                const interestId = String(interest._id);
+                                                                const isChecked = formInterests.some(id => String(id) === interestId);
+                                                                return (
+                                                                <label key={interest._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        onChange={() => handleMultiSelectChange('interests', interest._id)}
+                                                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                                                    />
+                                                                    <span className="text-sm text-slate-700">{interest.title}</span>
+                                                                </label>
+                                                            )})}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <SmallHint>Select interest categories for this tour</SmallHint>
                                             </div>
                                         </div>
                                     </div>

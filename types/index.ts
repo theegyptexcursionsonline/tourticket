@@ -168,6 +168,8 @@ export interface Tour {
   category: Category | string;
   availability?: Availability;
   reviews?: Review[];
+  attractions?: (AttractionPage | string)[];
+  interests?: (AttractionPage | string)[];
   whatToBring?: string[];
   whatToWear?: string[];
   physicalRequirements?: string;
@@ -256,6 +258,7 @@ export interface AttractionPageFormData {
   keywords: string[];
   isPublished: boolean;
   featured: boolean;
+  linkedTours?: string[];
 }
 
 export interface CategoryPageData extends AttractionPage {
@@ -438,4 +441,6 @@ export interface TourFormData {
   tags: string;
   isFeatured: boolean;
   availability: Availability;
+  attractions?: string[];
+  interests?: string[];
 }
