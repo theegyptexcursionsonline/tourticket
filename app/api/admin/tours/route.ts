@@ -70,6 +70,8 @@ async function fetchToursWithPopulate() {
       .populate('category')
       .populate('destination')
       .populate('reviews')
+      .populate('attractions')
+      .populate('interests')
       .lean();
   } catch (err) {
     console.warn('Populate failed, retrying with strictPopulate:false', err);
@@ -77,6 +79,8 @@ async function fetchToursWithPopulate() {
       .populate({ path: 'category', strictPopulate: false })
       .populate({ path: 'destination', strictPopulate: false })
       .populate({ path: 'reviews', strictPopulate: false })
+      .populate({ path: 'attractions', strictPopulate: false })
+      .populate({ path: 'interests', strictPopulate: false })
       .lean();
   }
 }
@@ -119,7 +123,15 @@ export async function POST(request: Request) {
     if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
       body.bookingOptions = cleanBookingOptions(body.bookingOptions);
     }
-    
+
+    // Handle attractions and interests arrays
+    if (body.attractions && Array.isArray(body.attractions)) {
+      body.attractions = body.attractions.filter(id => id && id.trim());
+    }
+    if (body.interests && Array.isArray(body.interests)) {
+      body.interests = body.interests.filter(id => id && id.trim());
+    }
+
     const tour = await Tour.create(body);
     
     let populated = tour;
@@ -128,6 +140,8 @@ export async function POST(request: Request) {
         .populate('category')
         .populate('destination')
         .populate('reviews')
+        .populate('attractions')
+        .populate('interests')
         .lean();
     } catch (popErr) {
       console.warn('Populate after create failed, returning raw tour', popErr);
@@ -136,8 +150,7 @@ export async function POST(request: Request) {
     // Invalidate all tour-related caches
     await invalidateCache('tours:*');
     await invalidateCache('destinations:*');
-    await invalidateCache('interests:*');
-    await invalidateCache('attractions:*');
+    await invalidateCache('attractions-interests:*');
 
     return NextResponse.json({ success: true, data: populated ?? tour }, { status: 201 });
   } catch (error) {

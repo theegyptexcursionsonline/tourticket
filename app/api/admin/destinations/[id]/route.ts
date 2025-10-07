@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
+import { invalidateCache } from '@/lib/redis';
 
 export async function PUT(
   request: NextRequest,
@@ -136,16 +137,19 @@ export async function PUT(
     );
     
     if (!destination) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Destination not found after update' 
+      return NextResponse.json({
+        success: false,
+        error: 'Destination not found after update'
       }, { status: 404 });
     }
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    // Invalidate destinations cache
+    await invalidateCache('destinations:*');
+
+    return NextResponse.json({
+      success: true,
       data: destination,
-      message: 'Destination updated successfully' 
+      message: 'Destination updated successfully'
     });
     
   } catch (error: any) {
@@ -218,6 +222,9 @@ export async function DELETE(
         error: 'Destination not found'
       }, { status: 404 });
     }
+
+    // Invalidate destinations cache
+    await invalidateCache('destinations:*');
 
     return NextResponse.json({
       success: true,

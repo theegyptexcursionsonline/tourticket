@@ -39,6 +39,9 @@ async function findTour(identifier: string) {
             }
         }
 
+        // Note: attractions and interests are just arrays of IDs, no need to populate
+        // They will be loaded as-is and the form will handle them
+
         return tour;
     } catch (error) {
         console.error('Error in findTour:', error);
@@ -117,7 +120,7 @@ export async function GET(
         const { id } = await params;
         
         console.log('Fetching tour with ID:', id);
-        
+
         const tour = await findTour(id);
 
         if (!tour) {
@@ -126,6 +129,9 @@ export async function GET(
         }
 
         console.log('Tour found successfully');
+        console.log('Tour attractions:', tour.attractions);
+        console.log('Tour interests:', tour.interests);
+
         return NextResponse.json({ success: true, data: tour });
         
     } catch (error: any) {
@@ -162,26 +168,40 @@ export async function PUT(
             body.bookingOptions = cleanBookingOptions(body.bookingOptions);
         }
 
-        // Validate required fields
-        if (!body.title || !body.description || !body.duration || !body.discountPrice || !body.destination || !body.category) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Missing required fields: title, description, duration, discountPrice, destination, category' 
+        // Handle attractions and interests arrays
+        if (body.attractions && Array.isArray(body.attractions)) {
+            body.attractions = body.attractions.filter((id: string) => id && id.trim());
+        }
+        if (body.interests && Array.isArray(body.interests)) {
+            body.interests = body.interests.filter((id: string) => id && id.trim());
+        }
+
+        // Validate required fields only if they're being updated
+        // For partial updates (like syncing relationships), we don't need all fields
+        const isFullUpdate = body.title || body.description || body.duration || body.discountPrice;
+
+        if (isFullUpdate) {
+            // For full updates, ensure all required fields are present
+            if (!body.title || !body.description || !body.duration || !body.discountPrice || !body.destination || !body.category) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Missing required fields: title, description, duration, discountPrice, destination, category'
+                }, { status: 400 });
+            }
+        }
+
+        // Validate ObjectIds only if they're provided
+        if (body.destination && !mongoose.Types.ObjectId.isValid(body.destination)) {
+            return NextResponse.json({
+                success: false,
+                error: 'Invalid destination ID format'
             }, { status: 400 });
         }
 
-        // Validate ObjectIds
-        if (!mongoose.Types.ObjectId.isValid(body.destination)) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Invalid destination ID format' 
-            }, { status: 400 });
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(body.category)) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Invalid category ID format' 
+        if (body.category && !mongoose.Types.ObjectId.isValid(body.category)) {
+            return NextResponse.json({
+                success: false,
+                error: 'Invalid category ID format'
             }, { status: 400 });
         }
 
@@ -206,19 +226,23 @@ export async function PUT(
 
         const updatedTour = await Tour.findByIdAndUpdate(
             id,
-            body,
-            { 
-                new: true, 
+            { $set: body },
+            {
+                new: true,
                 runValidators: true,
-                upsert: false
+                upsert: false,
+                strict: false
             }
         );
-        
+
         if (!updatedTour) {
             return NextResponse.json({ success: false, error: "Tour not found" }, { status: 404 });
         }
 
         console.log('Tour updated successfully');
+        console.log('Updated tour attractions:', updatedTour.attractions);
+        console.log('Updated tour interests:', updatedTour.interests);
+
         return NextResponse.json({ success: true, data: updatedTour });
         
     } catch (error: any) {

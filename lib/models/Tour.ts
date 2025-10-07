@@ -118,6 +118,8 @@ export interface ITour extends Document {
   // Relationships
   reviews?: mongoose.Schema.Types.ObjectId[];
   availability: IAvailability;
+  attractions?: mongoose.Schema.Types.ObjectId[]; // Link to AttractionPage
+  interests?: mongoose.Schema.Types.ObjectId[]; // Link to AttractionPage (interest type)
 
   // Meta
   rating?: number;
@@ -655,19 +657,41 @@ const TourSchema: Schema<ITour> = new Schema({
   },
   
   // Relationships
-  reviews: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Review' 
+  reviews: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Review'
   }],
-  availability: { 
-    type: AvailabilitySchema, 
-    required: true, 
+  availability: {
+    type: AvailabilitySchema,
+    required: true,
     default: () => ({
       type: 'daily',
       availableDays: [0, 1, 2, 3, 4, 5, 6],
       slots: [{ time: '10:00', capacity: 10 }]
     })
   },
+  attractions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AttractionPage',
+    index: true,
+    validate: {
+      validator: function(v: any) {
+        return !v || mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid attraction ID'
+    }
+  }],
+  interests: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AttractionPage',
+    index: true,
+    validate: {
+      validator: function(v: any) {
+        return !v || mongoose.Types.ObjectId.isValid(v);
+      },
+      message: 'Invalid interest ID'
+    }
+  }],
   
   // SEO fields
   metaTitle: { 

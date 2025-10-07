@@ -683,80 +683,83 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full'} ${headerBg} ${headerText}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
-            <div className="flex items-center gap-4 lg:gap-8">
-              <a href="/" className="flex items-center h-full">
-                <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
-              </a>
+     <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full'} ${headerBg} ${headerText}`}>
+  {/* Add backdrop blur for better mobile visibility when transparent */}
+  {isTransparent && (
+    <div className="absolute inset-0 bg-black/10 backdrop-blur-sm md:backdrop-blur-none md:bg-transparent" />
+  )}
+  
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <div className="flex items-center justify-between h-16 md:h-20">
+      <div className="flex items-center gap-4 lg:gap-8">
+        <a href="/" className="flex items-center h-full">
+          <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
+        </a>
 
-              <nav className="hidden md:flex items-center relative">
-                <button
-                  onClick={handleMegaMenuToggle}
-                  onMouseEnter={() => setMegaMenuOpen(true)} // open on hover
-                  className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}
-                >
-                  <span>EXPLORE</span>
-                  <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}>
-                    <ChevronDown size={20} />
-                  </motion.div>
-                </button>
-              </nav>
-            </div>
+        <nav className="hidden md:flex items-center relative">
+          <button
+            onClick={handleMegaMenuToggle}
+            onMouseEnter={() => setMegaMenuOpen(true)}
+            className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}
+          >
+            <span>EXPLORE</span>
+            <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}>
+              <ChevronDown size={20} />
+            </motion.div>
+          </button>
+        </nav>
+      </div>
 
-            {/* Show search only when scrolled (keeps header clean on hero) */}
-            {isScrolled && <HeaderSearchBar onFocus={handleSearchModalOpen} isTransparent={isTransparent} />}
+      {isScrolled && <HeaderSearchBar onFocus={handleSearchModalOpen} isTransparent={isTransparent} />}
 
-            <div className="flex items-center gap-3 md:gap-5">
-              <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
+      <div className="flex items-center gap-3 md:gap-5">
+        <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
 
-              <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
-                <Star size={24} className={`${headerText} ${linkHoverColor}`} />
-                {wishlist?.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
-                    {wishlist.length}
-                  </span>
-                )}
-              </button>
+        <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
+          <Star size={24} className={`${headerText} ${linkHoverColor}`} />
+          {wishlist?.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
+              {wishlist.length}
+            </span>
+          )}
+        </button>
 
-              <button onClick={openCart} className="relative group p-2" aria-label="Open cart">
-                <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
-                {totalItems > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
-                    {totalItems}
-                  </span>
-                )}
-              </button>
+        <button onClick={openCart} className="relative group p-2" aria-label="Open cart">
+          <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
+          {totalItems > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
+              {totalItems}
+            </span>
+          )}
+        </button>
 
-              <button onClick={handleSearchModalOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
-                <Search size={22} className="group-hover:text-red-500" />
-              </button>
+        <button onClick={handleSearchModalOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
+          <Search size={22} className="group-hover:text-red-500" />
+        </button>
 
-              {user ? (
-                <UserMenu user={user} onLogout={logout} />
-              ) : (
-                <div className="hidden md:flex items-center gap-3">
-                  <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>Log In</a>
-                  <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">Sign Up</a>
-                </div>
-              )}
-
-              <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
-                <Menu size={24} className={`${headerText} ${linkHoverColor}`} />
-              </button>
-            </div>
+        {user ? (
+          <UserMenu user={user} onLogout={logout} />
+        ) : (
+          <div className="hidden md:flex items-center gap-3">
+            <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>Log In</a>
+            <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">Sign Up</a>
           </div>
-        </div>
+        )}
 
-        {/* Mega menu is rendered here so it sits below header content */}
-        <MegaMenu
-          isOpen={isMegaMenuOpen}
-          onClose={() => setMegaMenuOpen(false)}
-          destinations={destinations}
-          categories={categories}
-        />
-      </header>
+        <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
+          <Menu size={24} className={`${headerText} ${linkHoverColor}`} />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <MegaMenu
+    isOpen={isMegaMenuOpen}
+    onClose={() => setMegaMenuOpen(false)}
+    destinations={destinations}
+    categories={categories}
+  />
+</header>
 
       {/* Mobile menu */}
       <MobileMenu
