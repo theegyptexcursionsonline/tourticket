@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import TourCard from '../TourCard'
+import { Tour } from '@/types'
 
 jest.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
@@ -40,7 +41,7 @@ describe('TourCard', () => {
   }
 
   it('should render tour information', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     expect(screen.getByText('Pyramids Tour')).toBeInTheDocument()
     expect(screen.getByText('4 hours')).toBeInTheDocument()
@@ -48,14 +49,14 @@ describe('TourCard', () => {
   })
 
   it('should render price information', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     expect(screen.getByText('$80.00')).toBeInTheDocument()
     expect(screen.getByText('$100.00')).toBeInTheDocument() // original price
   })
 
   it('should render tour image', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     const image = screen.getByAlt('Pyramids Tour')
     expect(image).toBeInTheDocument()
@@ -63,26 +64,26 @@ describe('TourCard', () => {
   })
 
   it('should render rating', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     expect(screen.getByText('4.8')).toBeInTheDocument()
   })
 
   it('should render booking count', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     expect(screen.getByText(/1,500|1.5k/i)).toBeInTheDocument()
   })
 
   it('should be clickable and navigate to tour details', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     const link = screen.getByRole('link')
     expect(link).toHaveAttribute('href', expect.stringContaining('pyramids-tour'))
   })
 
   it('should render tags', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     expect(screen.getByText('Popular')).toBeInTheDocument()
     expect(screen.getByText('20% OFF')).toBeInTheDocument()
@@ -97,7 +98,7 @@ describe('TourCard', () => {
       discountPrice: 50,
     }
 
-    render(<TourCard tour={minimalTour as any} />)
+    render(<TourCard tour={minimalTour as Tour} />)
 
     expect(screen.getByText('Basic Tour')).toBeInTheDocument()
     expect(screen.getByText('$50.00')).toBeInTheDocument()
@@ -105,7 +106,7 @@ describe('TourCard', () => {
 
   it('should show add to cart button', async () => {
     const user = userEvent.setup()
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     const addButton = screen.getByLabelText(/add to cart/i) || screen.getByRole('button')
     expect(addButton).toBeInTheDocument()
@@ -115,7 +116,7 @@ describe('TourCard', () => {
   })
 
   it('should display discount badge when discount exists', () => {
-    render(<TourCard tour={mockTour as any} />)
+    render(<TourCard tour={mockTour as Tour} />)
 
     const discountBadge = screen.getByText('20% OFF')
     expect(discountBadge).toBeInTheDocument()

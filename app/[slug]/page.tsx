@@ -93,7 +93,7 @@ export async function generateStaticParams() {
     await dbConnect();
     const tours = await Tour.find({ isPublished: true }).select('slug').lean();
     return tours.map((tour) => ({ slug: tour.slug }));
-  } catch (error) {
+  } catch {
     return [];
   }
 }

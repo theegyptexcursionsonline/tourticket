@@ -1,4 +1,4 @@
-import { Tour, Destination, SearchFilters, SearchResult } from '@/types';
+import { Tour, SearchFilters, SearchResult } from '@/types';
 import { tours } from '@/lib/data/tours';
 import { destinations } from '@/lib/data/destinations';
 

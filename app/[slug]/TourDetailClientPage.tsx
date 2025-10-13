@@ -7,11 +7,11 @@ import { AnimatePresence, motion, useInView } from 'framer-motion';
 import {
   Star, Clock, Users, MapPin, Calendar, Heart, Share2, ArrowLeft,
   Check, X, Camera, Shield, ChevronDown, ChevronUp, MessageCircle,
-  Phone, Mail, Plus, Minus, ShoppingCart, Info, CheckCircle,
-  Umbrella, Thermometer, Bus, Utensils, Mountain, Languages,
-  CreditCard, AlertCircle, Car, Plane, Navigation, Backpack,
-  Sun, CloudRain, Snowflake, Eye, Gift, Accessibility, Baby,
-  PawPrint, Smartphone, Wifi, Headphones, ChevronLeft,
+  Phone, Mail, ShoppingCart, Info, CheckCircle,
+  Umbrella, Bus, Utensils, Mountain, Languages,
+  CreditCard, Navigation, Backpack,
+  Sun, Snowflake, Eye, Accessibility,
+  Smartphone, Headphones, ChevronLeft,
   ChevronRight, ZoomIn
 } from 'lucide-react';
 
@@ -21,7 +21,6 @@ import StickyBookButton from '@/components/StickyBookButton';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
-import Reviews from '@/components/Reviews';
 import ElfsightWidget from '@/components/ElfsightWidget';
 
 // Hooks and contexts
@@ -33,13 +32,37 @@ import toast from 'react-hot-toast';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
-  time: string;
+  time?: string;
   title: string;
   description: string;
   duration?: string;
   location?: string;
   includes?: string[];
   icon?: string;
+}
+
+interface TabItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+interface TabNavigationProps {
+  activeTab: string;
+  tabs: TabItem[];
+  scrollToSection: (id: string) => void;
+  isHeaderVisible: boolean;
+}
+
+interface FAQ {
+  question: string;
+  answer: string;
+}
+
+interface Review {
+  _id: string;
+  rating: number;
+  [key: string]: unknown;
 }
 
 interface TourEnhancement {
@@ -228,7 +251,7 @@ function useScrollDirection() {
   return { scrollY, isVisible };
 }
 
-const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: any) => {
+const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: TabNavigationProps) => {
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
   const navRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -316,7 +339,7 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
             role="tablist"
             aria-label="Tour sections"
           >
-            {tabs.map((tab: any) => (
+            {tabs.map((tab) => (
               <a
                 key={tab.id}
                 href={`#${tab.id}`}
@@ -715,12 +738,12 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   </div>
 );
 
-const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement> }) => {
+const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefObject<HTMLDivElement> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const faqsToShow = faqs && faqs.length > 0 ? faqs : [
     {
-      question: "What happens if I'm late for the departure?",
+      question: "What happens if I&apos;m late for the departure?",
       answer: "Please arrive 15 minutes before departure. Late arrivals cannot be accommodated due to strict departure schedules. No refunds are provided for missed departures due to tardiness."
     },
     {
@@ -783,15 +806,15 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefO
   );
 };
 
-const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: { 
-  tour: ITour, 
-  reviews: any[], 
-  onReviewSubmitted: (review: any) => void,
-  sectionRef: React.RefObject<HTMLDivElement> 
+const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
+  tour: ITour,
+  reviews: Review[],
+  onReviewSubmitted: (review: Review) => void,
+  sectionRef: React.RefObject<HTMLDivElement>
 }) => {
-  const [currentReviews, setCurrentReviews] = useState<any[]>(reviews);
+  const [currentReviews, setCurrentReviews] = useState<Review[]>(reviews);
 
-  const handleReviewUpdated = (updatedReview: any) => {
+  const handleReviewUpdated = (updatedReview: Review) => {
     setCurrentReviews(prevReviews => 
       prevReviews.map(review => 
         review._id === updatedReview._id ? updatedReview : review
@@ -805,7 +828,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
     );
   };
 
-  const handleNewReview = (newReview: any) => {
+  const handleNewReview = (newReview: Review) => {
     setCurrentReviews(prevReviews => [newReview, ...prevReviews]);
     onReviewSubmitted(newReview);
   };
@@ -858,7 +881,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {tour.includes && tour.includes.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-3">What's included</h3>
+            <h3 className="text-lg font-semibold text-slate-800 mb-3">What&apos;s included</h3>
             <ul className="space-y-2">
               {tour.includes.map((item, index) => (
                 <li key={index} className="flex items-start gap-2 text-slate-600">
@@ -908,7 +931,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
 interface TourPageClientProps {
   tour: ITour;
   relatedTours: ITour[];
-  initialReviews?: any[];
+  initialReviews?: Review[];
 }
 
 // Main TourPageClient component
@@ -919,11 +942,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   
-  const [reviews, setReviews] = useState<any[]>(initialReviews);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
 
   const tourIsWishlisted = isWishlisted(tour._id!);
 
-  const handleReviewSubmitted = (newReview: any) => {
+  const handleReviewSubmitted = (newReview: Review) => {
     setReviews(prevReviews => [newReview, ...prevReviews]);
     toast.success('Review submitted successfully!');
   };
@@ -950,14 +973,14 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error sharing:', err);
       }
     } else {
       try {
         await navigator.clipboard.writeText(window.location.href);
         toast.success('Tour link copied to clipboard!');
-      } catch (err) {
+      } catch (err: unknown) {
         toast.error('Could not copy link.');
       }
     }
@@ -1061,7 +1084,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       setTimeout(() => {
         setAdded(false);
       }, 2500);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Add to cart failed:', err);
       setLiveMessage('Failed to add to cart. Please try again.');
       setTimeout(() => {

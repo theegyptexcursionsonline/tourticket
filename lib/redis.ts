@@ -137,7 +137,7 @@ export async function invalidateCache(pattern: string): Promise<void> {
  */
 export async function setCache(
   key: string,
-  data: any,
+  data: unknown,
   ttl: number = cacheConfig.MEDIUM
 ): Promise<void> {
   try {

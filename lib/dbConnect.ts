@@ -1,4 +1,6 @@
 // lib/dbConnect.ts
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import mongoose from 'mongoose';
 

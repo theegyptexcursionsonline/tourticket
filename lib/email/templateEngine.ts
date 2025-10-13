@@ -25,7 +25,7 @@ export class TemplateEngine {
     }
   }
 
-  static replaceVariables(template: string, data: Record<string, any>): string {
+  static replaceVariables(template: string, data: Record<string, unknown>): string {
     let result = template;
     
     // Replace all {{variable}} with actual values
@@ -57,7 +57,7 @@ export class TemplateEngine {
     return result;
   }
 
-  static generateSubject(template: string, data: Record<string, any>): string {
+  static generateSubject(template: string, data: Record<string, unknown>): string {
     return this.replaceVariables(template, data);
   }
 }

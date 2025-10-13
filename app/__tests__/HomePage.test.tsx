@@ -3,20 +3,76 @@ import { render, screen } from '@testing-library/react'
 import HomePage from '../page'
 
 // Mock all the components
-jest.mock('@/components/Header', () => () => <div data-testid="header">Header</div>)
-jest.mock('@/components/Footer', () => () => <div data-testid="footer">Footer</div>)
-jest.mock('@/components/HeroSection', () => () => <div data-testid="hero">Hero</div>)
-jest.mock('@/components/DayTrips', () => () => <div data-testid="daytrips">DayTrips</div>)
-jest.mock('@/components/FeaturedTours', () => () => <div data-testid="featured">Featured</div>)
-jest.mock('@/components/Destinations', () => () => <div data-testid="destinations">Destinations</div>)
-jest.mock('@/components/InterestGrid', () => () => <div data-testid="interests">Interests</div>)
-jest.mock('@/components/Reviews', () => () => <div data-testid="reviews">Reviews</div>)
-jest.mock('@/components/FAQ', () => () => <div data-testid="faq">FAQ</div>)
-jest.mock('@/components/IcebarPromo', () => () => <div data-testid="icebar">IcebarPromo</div>)
-jest.mock('@/components/PopularInterest', () => () => <div data-testid="popular">PopularInterest</div>)
-jest.mock('@/components/AboutUs', () => () => <div data-testid="about">AboutUs</div>)
-jest.mock('@/components/ReviewsStructuredData', () => () => null)
-jest.mock('@/components/ElfsightWidget', () => () => null)
+jest.mock('@/components/Header', () => {
+  const Header = () => <div data-testid="header">Header</div>;
+  Header.displayName = 'Header';
+  return Header;
+})
+jest.mock('@/components/Footer', () => {
+  const Footer = () => <div data-testid="footer">Footer</div>;
+  Footer.displayName = 'Footer';
+  return Footer;
+})
+jest.mock('@/components/HeroSection', () => {
+  const HeroSection = () => <div data-testid="hero">Hero</div>;
+  HeroSection.displayName = 'HeroSection';
+  return HeroSection;
+})
+jest.mock('@/components/DayTrips', () => {
+  const DayTrips = () => <div data-testid="daytrips">DayTrips</div>;
+  DayTrips.displayName = 'DayTrips';
+  return DayTrips;
+})
+jest.mock('@/components/FeaturedTours', () => {
+  const FeaturedTours = () => <div data-testid="featured">Featured</div>;
+  FeaturedTours.displayName = 'FeaturedTours';
+  return FeaturedTours;
+})
+jest.mock('@/components/Destinations', () => {
+  const Destinations = () => <div data-testid="destinations">Destinations</div>;
+  Destinations.displayName = 'Destinations';
+  return Destinations;
+})
+jest.mock('@/components/InterestGrid', () => {
+  const InterestGrid = () => <div data-testid="interests">Interests</div>;
+  InterestGrid.displayName = 'InterestGrid';
+  return InterestGrid;
+})
+jest.mock('@/components/Reviews', () => {
+  const Reviews = () => <div data-testid="reviews">Reviews</div>;
+  Reviews.displayName = 'Reviews';
+  return Reviews;
+})
+jest.mock('@/components/FAQ', () => {
+  const FAQ = () => <div data-testid="faq">FAQ</div>;
+  FAQ.displayName = 'FAQ';
+  return FAQ;
+})
+jest.mock('@/components/IcebarPromo', () => {
+  const IcebarPromo = () => <div data-testid="icebar">IcebarPromo</div>;
+  IcebarPromo.displayName = 'IcebarPromo';
+  return IcebarPromo;
+})
+jest.mock('@/components/PopularInterest', () => {
+  const PopularInterest = () => <div data-testid="popular">PopularInterest</div>;
+  PopularInterest.displayName = 'PopularInterest';
+  return PopularInterest;
+})
+jest.mock('@/components/AboutUs', () => {
+  const AboutUs = () => <div data-testid="about">AboutUs</div>;
+  AboutUs.displayName = 'AboutUs';
+  return AboutUs;
+})
+jest.mock('@/components/ReviewsStructuredData', () => {
+  const ReviewsStructuredData = () => null;
+  ReviewsStructuredData.displayName = 'ReviewsStructuredData';
+  return ReviewsStructuredData;
+})
+jest.mock('@/components/ElfsightWidget', () => {
+  const ElfsightWidget = () => null;
+  ElfsightWidget.displayName = 'ElfsightWidget';
+  return ElfsightWidget;
+})
 
 describe('HomePage', () => {
   it('should render all main sections', () => {

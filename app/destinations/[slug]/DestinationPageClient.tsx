@@ -88,7 +88,6 @@ const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; s
   );
 };
 
-// --- Background Slideshow ---
 const BackgroundSlideshow = ({ 
   slides = [], 
   delay = 6000, 
@@ -126,9 +125,7 @@ const BackgroundSlideshow = ({
 
   if (slides.length === 0) {
     return (
-      <div className="absolute inset-0 z-0 overflow-hidden bg-slate-800">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-      </div>
+      <div className="absolute inset-0 z-0 overflow-hidden bg-slate-800" />
     );
   }
 
@@ -148,7 +145,6 @@ const BackgroundSlideshow = ({
             }}
           >
             <img src={s.src} alt={s.alt} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
           </div>
         );
       })}
@@ -156,7 +152,6 @@ const BackgroundSlideshow = ({
   );
 };
 
-// --- HERO SECTION COMPONENT ---
 const DestinationHeroSection = ({ destination, tourCount }: { destination: Destination, tourCount: number }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const { addSearchTerm } = useRecentSearches();
@@ -179,16 +174,11 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
 
   return (
     <>
-      <section className="relative w-full min-h-[500px] h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px] mt-16 sm:mt-20 md:mt-0">
-        {/* Background */}
+<section className="relative w-full min-h-[500px] h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]">        {/* Background */}
         <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
         
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/40 z-10" />
-        
         {/* Content */}
-        <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8">
-          <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
+<div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-20 md:pt-0">          <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
               DISCOVER
               <br />
