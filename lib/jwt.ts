@@ -4,7 +4,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const issuer = 'urn:tourticket:issuer';
 const audience = 'urn:tourticket:audience';
 
-export async function signToken(payload: any, options?: { expiresIn?: string }) {
+export async function signToken(payload: Record<string, unknown>, options?: { expiresIn?: string }) {
   const expiresAt = options?.expiresIn || '2h';
   
   const token = await new SignJWT(payload)

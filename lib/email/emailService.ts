@@ -28,7 +28,7 @@ export class EmailService {
 
   private static async generateEmailTemplate(
     type: EmailType,
-    data: Record<string, any>
+    data: Record<string, unknown>
   ): Promise<EmailTemplate> {
     try {
       const htmlTemplate = await TemplateEngine.loadTemplate(type);

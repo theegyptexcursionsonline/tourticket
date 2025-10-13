@@ -1,4 +1,5 @@
 // lib/models/Tour.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import './Review';
 
@@ -133,7 +134,7 @@ export interface ITour extends Document {
   keywords?: string[];
 
   // Virtual fields
-  reviewDetails?: any[];
+  reviewDetails?: unknown[];
 }
 
 const ItineraryItemSchema = new Schema<IItineraryItem>({

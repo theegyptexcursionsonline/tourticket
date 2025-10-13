@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { 
+import {
   Star, Clock, Users, MapPin, Heart, ShoppingCart, ArrowRight,
-  Shield, Calendar, Languages, Award, Zap, Mountain, Camera,
+  Languages, Award, Zap, Mountain,
   Smartphone, CheckCircle
 } from 'lucide-react';
 import { Tour } from '@/types';
@@ -23,12 +23,11 @@ interface TourCardProps {
   className?: string;
 }
 
-const TourCard: React.FC<TourCardProps> = ({ 
-  tour, 
-  index = 0, 
-  variant = 'default',
+const TourCard: React.FC<TourCardProps> = ({
+  tour,
+  index = 0,
   showQuickAdd = true,
-  className = '' 
+  className = ''
 }) => {
   const { formatPrice } = useSettings();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
@@ -75,7 +74,7 @@ const TourCard: React.FC<TourCardProps> = ({
       
       addToCart(quickAddCartItem);
       toast.success('Added to cart!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to add to cart');
     } finally {
       setIsAdding(false);

@@ -42,7 +42,14 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 }
 
 // Legacy functions for contact form and password reset
-export async function sendContactFormEmail(data: any) {
+interface ContactFormData {
+  name: string;
+  fromEmail: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export async function sendContactFormEmail(data: ContactFormData) {
   await sendEmail({
     to: process.env.ADMIN_NOTIFICATION_EMAIL!,
     subject: `New Contact Message from ${data.name}`,
@@ -61,7 +68,7 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   });
 }
 
-function generateContactFormHTML(data: any): string {
+function generateContactFormHTML(data: ContactFormData): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>New Contact Form Submission</h2>

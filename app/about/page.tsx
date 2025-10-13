@@ -1,12 +1,12 @@
 'use client';
 
 import React from "react";
-import { 
-  Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, 
-  Menu, Search, ChevronDown, Award, DollarSign, Smartphone, CalendarCheck,
-  Globe, Heart, Users, Compass
+import {
+  Award, DollarSign, Smartphone, CalendarCheck,
+  Heart, Users, Compass
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 // Import the reusable Header and Footer components
 import Header from "@/components/Header";
@@ -79,7 +79,7 @@ export default function AboutUsPage() {
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-slate-900">Our Story</h2>
               <p className="text-slate-700 leading-relaxed">
-                Founded with a passion for creating unforgettable memories, Egypt Excursions Online has been a leader in the travel industry for over three and a half decades. We started with a simple goal: to make discovering the world's most incredible destinations accessible and seamless for everyone.
+                Founded with a passion for creating unforgettable memories, Egypt Excursions Online has been a leader in the travel industry for over three and a half decades. We started with a simple goal: to make discovering the world&apos;s most incredible destinations accessible and seamless for everyone.
               </p>
               <p className="text-slate-700 leading-relaxed">
                 Our journey began by connecting travelers with authentic, high-quality experiences, and today, we continue that tradition. We are proud to be travel experts, dedicated to curating the best tours, tickets, and activities that offer genuine insight and joy.
@@ -160,9 +160,9 @@ export default function AboutUsPage() {
             <p className="text-lg mb-6 max-w-2xl mx-auto">
               Browse our hand-picked selection of tours and tickets and find your next unforgettable experience.
             </p>
-            <a href="/" className="inline-block bg-red-600 text-white px-8 py-3 rounded-full font-semibold text-lg hover:bg-red-700 transition-colors">
+            <Link href="/" className="inline-block bg-red-600 text-white px-8 py-3 rounded-full font-semibold text-lg hover:bg-red-700 transition-colors">
               Explore Tours
-            </a>
+            </Link>
           </section>
 
         </div>
