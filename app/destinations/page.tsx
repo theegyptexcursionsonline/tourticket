@@ -14,10 +14,13 @@ async function getDestinationsWithTourCounts(): Promise<IDestination[]> {
   // Fetch all destinations
   const destinations = await Destination.find({}).lean();
   
-  // For each destination, count the number of tours
+  // For each destination, count the number of published tours
   const destinationsWithCounts = await Promise.all(
     destinations.map(async (dest) => {
-      const tourCount = await Tour.countDocuments({ destination: dest._id });
+      const tourCount = await Tour.countDocuments({
+        destination: dest._id,
+        isPublished: true
+      });
       return {
         ...dest,
         tourCount: tourCount,
