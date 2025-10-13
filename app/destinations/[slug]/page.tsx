@@ -38,7 +38,7 @@ async function getPageData(slug: string) {
     .lean();
 
   // Fetch related destinations (same country or similar)
-  const relatedDestinations = await DestinationModel.find({
+  const relatedDestinationsRaw = await DestinationModel.find({
     _id: { $ne: destination._id },
     $or: [
       { country: destination.country },
@@ -47,6 +47,20 @@ async function getPageData(slug: string) {
   })
     .limit(4)
     .lean();
+
+  // Calculate tour count for each related destination
+  const relatedDestinations = await Promise.all(
+    relatedDestinationsRaw.map(async (dest) => {
+      const tourCount = await TourModel.countDocuments({
+        destination: dest._id,
+        isPublished: true
+      });
+      return {
+        ...dest,
+        tourCount
+      };
+    })
+  );
 
   // If no real tours found, use mock data
   if (!destinationTours || destinationTours.length === 0) {
