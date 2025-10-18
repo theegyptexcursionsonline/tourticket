@@ -1,0 +1,9 @@
+Bug ID,Date Reported,Reported By,Title,Description,Module/Feature,Severity,Priority,Status,Assigned To,Environment,Browser,Device/OS,Steps to Reproduce,Expected Result,Actual Result,Screenshot/Video URL,Date Fixed,Fixed By,Notes
+BUG-001,2025-01-15,QA Tester,Sample Bug - Payment fails on checkout,User unable to complete payment with valid card,Checkout,Critical,P1,New,Developer Name,Staging,Chrome 120,Windows 11,"1. Add tour to cart
+2. Go to checkout
+3. Enter valid card details
+4. Click Pay Now",Payment should process successfully,Error message: Payment failed,https://screenshots.example.com/bug001.png,,,
+BUG-002,,,,,Homepage,High,P2,New,,,,,"1. Navigate to homepage
+2. Click search button",Search modal should open,Nothing happens,,,,"Example template - delete this row"
+BUG-003,,,,,Tour Details,Medium,P3,New,,,,,Steps go here,Expected behavior,Actual behavior,,,,"Example template - delete this row"
+BUG-004,,,,,User Dashboard,Low,P4,New,,,,,Steps go here,Expected behavior,Actual behavior,,,,"Example template - delete this row"
