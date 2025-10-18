@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, AlertTriangle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface BookingUser {
@@ -53,7 +53,6 @@ const BookingsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
-  const [isClearingTest, setIsClearingTest] = useState(false);
   
   const router = useRouter();
 
@@ -126,32 +125,6 @@ const BookingsPage = () => {
 
   const handleRowClick = (id: string) => {
     router.push(`/admin/bookings/${id}`);
-  };
-
-  const handleClearTestBookings = async () => {
-    if (!confirm('Are you sure you want to delete ALL test bookings? This action cannot be undone.')) {
-      return;
-    }
-
-    setIsClearingTest(true);
-    try {
-      const response = await fetch('/api/admin/bookings/clear-test', {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to clear test bookings');
-      }
-
-      const data = await response.json();
-      toast.success(`${data.deletedCount} test bookings cleared successfully`);
-      fetchBookings();
-    } catch (err) {
-      console.error('Error clearing test bookings:', err);
-      toast.error('Failed to clear test bookings');
-    } finally {
-      setIsClearingTest(false);
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -314,23 +287,6 @@ const BookingsPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 mt-4 sm:mt-0">
-          <button
-            onClick={handleClearTestBookings}
-            disabled={isClearingTest}
-            className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-600 rounded-full hover:bg-orange-50 transition-colors disabled:opacity-50"
-          >
-            {isClearingTest ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Clearing...
-              </>
-            ) : (
-              <>
-                <Trash2 size={16} />
-                Clear Test
-              </>
-            )}
-          </button>
           <button
             onClick={fetchBookings}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
