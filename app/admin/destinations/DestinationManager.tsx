@@ -333,186 +333,110 @@ const handleArrayChange = (field: keyof FormData, index: number, value: string) 
   };
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
-  
-  console.log('Form submission started');
-  console.log('Form data:', formData);
-  
+
   const errors = validateForm();
   if (errors.length > 0) {
-    console.log('Validation errors:', errors);
     toast.error(`Please fix the following errors:\n${errors.join('\n')}`);
     return;
   }
-  
+
   setIsSubmitting(true);
 
   try {
-    // Prepare data for submission
-    const { linkedTours, ...destinationData } = formData;
-    const submitData = {
-      ...destinationData,
-      // Only include coordinates if both lat and lng are provided
-      ...(formData.coordinates.lat && formData.coordinates.lng ? {
-        coordinates: {
-          lat: parseFloat(formData.coordinates.lat),
-          lng: parseFloat(formData.coordinates.lng)
-        }
-      } : {}),
-      highlights: formData.highlights.filter(h => h.trim()),
-      thingsToDo: formData.thingsToDo.filter(t => t.trim()),
-      localCustoms: formData.localCustoms.filter(c => c.trim()),
-      languagesSpoken: formData.languagesSpoken.filter(l => l.trim()),
-      weatherWarnings: formData.weatherWarnings.filter(w => w.trim()),
-      tags: formData.tags.filter(t => t.trim())
-    };
-
-    console.log('Submit data prepared:', submitData);
-    console.log('Linked tours (will sync after save):', linkedTours);
-
-    const apiEndpoint = editingDestination
-      ? `/api/admin/destinations/${editingDestination._id}`
-      : '/api/admin/tours/destinations';
-
-    const method = editingDestination ? 'PUT' : 'POST';
-
-    console.log(`Making ${method} request to:`, apiEndpoint);
-
-    // Show loading toast
-    const loadingToast = toast.loading('Saving destination...');
-
-    const response = await fetch(apiEndpoint, { 
-      method, 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify(submitData)
-    });
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
-    // Dismiss loading toast
-    toast.dismiss(loadingToast);
-
-    if (!response.ok) {
-      let errorMessage = 'Failed to save destination';
-      let errorDetails = '';
-      
-      try {
-        const errorData = await response.json();
-        console.log('Error response data:', errorData);
-        errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
-        errorDetails = errorData.details || '';
-      } catch (parseError) {
-        console.error('Error parsing error response:', parseError);
-        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+   const saveOperation = async () => {
+  // Prepare data for submission
+  const { linkedTours, ...destinationData } = formData;
+  const submitData = {
+    ...destinationData,
+    // Only include coordinates if both lat and lng are provided
+    ...(formData.coordinates.lat && formData.coordinates.lng ? {
+      coordinates: {
+        lat: parseFloat(formData.coordinates.lat),
+        lng: parseFloat(formData.coordinates.lng)
       }
-      
-      // Show detailed error toast
-      toast.error(`${errorMessage}${errorDetails ? '\n' + errorDetails : ''}`, {
-        duration: 6000 // Show longer for error messages
-      });
-      
-      console.error('API Error:', errorMessage, errorDetails);
-      return;
-    }
+    } : {}),
+    highlights: formData.highlights.filter(h => h.trim()),
+    thingsToDo: formData.thingsToDo.filter(t => t.trim()),
+    localCustoms: formData.localCustoms.filter(c => c.trim()),
+    languagesSpoken: formData.languagesSpoken.filter(l => l.trim()),
+    weatherWarnings: formData.weatherWarnings.filter(w => w.trim()),
+    tags: formData.tags.filter(t => t.trim())
+  };
 
-    let responseData;
-    try {
-      responseData = await response.json();
-      console.log('Success response data:', responseData);
-    } catch (parseError) {
-      console.error('Error parsing success response:', parseError);
-      toast.error('Response parsing error, but destination may have been saved');
-      // Close panel and refresh on error too
-      setIsPanelOpen(false);
-      router.refresh();
-      return;
-    }
+  const apiEndpoint = editingDestination
+    ? `/api/admin/destinations/${editingDestination._id}`
+    : '/api/admin/tours/destinations';
 
-    const savedDestination = responseData.data;
-    console.log('Saved destination:', savedDestination._id);
+  const method = editingDestination ? 'PUT' : 'POST';
 
-    // Sync tour relationships
-    if (linkedTours && linkedTours.length > 0 && savedDestination?._id) {
-      console.log('Starting tour sync for', linkedTours.length, 'tours');
-      try {
-        // Update each selected tour to link to this destination
-        console.log('Updating selected tours...');
-        const updatePromises = linkedTours.map(tourId =>
-          fetch(`/api/admin/tours/${tourId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ destination: savedDestination._id })
-          })
-        );
-        await Promise.all(updatePromises);
-        console.log('Selected tours updated successfully');
+  const response = await fetch(apiEndpoint, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(submitData)
+  });
 
-        // Update unselected tours (remove this destination if previously linked)
-        const allTourIds = availableTours.map(t => t._id);
-        const unselectedTours = allTourIds.filter(id => !linkedTours.includes(id));
-        console.log('Checking', unselectedTours.length, 'unselected tours...');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
+    throw new Error(errorMessage);
+  }
 
-        if (editingDestination && unselectedTours.length > 0) {
-          console.log('Processing unselected tours to unlink...');
-          // For unselected tours that were previously linked to this destination, remove the link
-          const unlinkPromises = unselectedTours.map(async (tourId) => {
-            // Fetch tour to check if it's linked to this destination
-            const tourRes = await fetch(`/api/admin/tours/${tourId}`);
+  const responseData = await response.json();
+  const savedDestination = responseData.data;
+
+  // Sync tour relationships in background (non-blocking)
+  if (linkedTours && linkedTours.length > 0 && savedDestination?._id) {
+    // Don't await - let this run in background
+    Promise.all([
+      // Update selected tours
+      ...linkedTours.map(tourId =>
+        fetch(`/api/admin/tours/${tourId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ destination: savedDestination._id })
+        })
+      ),
+      // Update unselected tours if editing
+      ...(editingDestination ? 
+        availableTours
+          .filter(t => !linkedTours.includes(t._id))
+          .map(async (tour) => {
+            const tourRes = await fetch(`/api/admin/tours/${tour._id}`);
             if (tourRes.ok) {
               const tourData = await tourRes.json();
-              const tour = tourData.data;
-              const tourDestId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;
+              const tourDestId = typeof tourData.data.destination === 'string' 
+                ? tourData.data.destination 
+                : tourData.data.destination?._id;
 
               if (tourDestId === editingDestination._id.toString()) {
-                console.log('Unlinking tour:', tourId);
-                // This tour was linked to this destination, unlink it
-                return fetch(`/api/admin/tours/${tourId}`, {
+                return fetch(`/api/admin/tours/${tour._id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ destination: null })
                 });
               }
             }
-            return Promise.resolve();
-          });
-          await Promise.all(unlinkPromises);
-          console.log('Unselected tours processed');
-        }
-      } catch (syncError) {
-        console.error('Error syncing tour relationships:', syncError);
-        toast.error('Destination saved but some tour links may not have updated');
-      }
-    } else {
-      console.log('No tours to sync or no destination ID');
-    }
-
-    console.log('Showing success toast and closing panel');
-    // Show success toast
-    toast.success(`Destination ${editingDestination ? 'updated' : 'created'} successfully!`);
-
-    // Close panel and refresh
-    setIsPanelOpen(false);
-    router.refresh();
-
-  } catch (error: any) {
-    console.error('Submit error:', error);
-    
-    // Handle network or other unexpected errors
-    let errorMessage = 'An unexpected error occurred';
-    
-    if (error.name === 'TypeError' && error.message?.includes('fetch')) {
-      errorMessage = 'Network error. Please check your connection and try again.';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    
-    toast.error(errorMessage, {
-      duration: 6000
-    });
-  } finally {
-    setIsSubmitting(false);
-    console.log('Form submission ended');
+          })
+        : [])
+    ]).catch(err => console.error('Error syncing tour relationships:', err));
   }
+
+  return `Destination ${editingDestination ? 'updated' : 'created'} successfully!`;
+};
+
+const result = await saveOperation();
+
+// Close panel and reset state IMMEDIATELY
+setIsPanelOpen(false);
+setIsSubmitting(false);
+toast.success(result);
+
+// Refresh in background (non-blocking)
+setTimeout(() => router.refresh(), 0);
+} catch (error: any) {
+  setIsSubmitting(false);
+  toast.error(error instanceof Error ? error.message : 'Failed to save destination');
+}
 };
   const handleDelete = (destId: string, destName: string) => {
     const promise = fetch(`/api/admin/destinations/${destId}`, { method: 'DELETE' })
