@@ -370,7 +370,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     console.log('Linked tours (will sync after save):', linkedTours);
 
     const apiEndpoint = editingDestination
-      ? `/api/admin/tours/destinations/${editingDestination._id}`
+      ? `/api/admin/destinations/${editingDestination._id}`
       : '/api/admin/tours/destinations';
 
     const method = editingDestination ? 'PUT' : 'POST';
@@ -515,7 +515,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 };
   const handleDelete = (destId: string, destName: string) => {
-    const promise = fetch(`/api/admin/tours/destinations/${destId}`, { method: 'DELETE' })
+    const promise = fetch(`/api/admin/destinations/${destId}`, { method: 'DELETE' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to delete.');
         return res.json();
