@@ -40,7 +40,9 @@ export async function GET() {
                 name: category.name,
                 slug: category.slug,
                 products: tourCount,
-                _id: category._id
+                _id: category._id,
+                image: category.heroImage,
+                featured: category.featured
               };
             } catch (error) {
               console.error(`Error counting tours for category ${category.name}:`, error);
@@ -49,7 +51,9 @@ export async function GET() {
                 name: category.name,
                 slug: category.slug,
                 products: 0,
-                _id: category._id
+                _id: category._id,
+                image: category.heroImage,
+                featured: category.featured
               };
             }
           })
@@ -105,7 +109,8 @@ export async function GET() {
                 slug: page.slug,
                 products: tourCount,
                 _id: page._id,
-                featured: page.featured
+                featured: page.featured,
+                image: page.heroImage
               };
             } catch (error) {
               console.error(`Error counting tours for attraction ${page.title}:`, error);
@@ -115,7 +120,8 @@ export async function GET() {
                 slug: page.slug,
                 products: 0,
                 _id: page._id,
-                featured: page.featured
+                featured: page.featured,
+                image: page.heroImage
               };
             }
           })

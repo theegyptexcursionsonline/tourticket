@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Script from 'next/script';
 
 type Props = {
   className?: string;
@@ -61,14 +62,20 @@ export default function ElfsightWidget({
   }, [appId]);
 
   return (
-    <div className={className} style={{ width, minHeight }}>
-      <div
-        // NOTE: Elfsight expects the exact class "elfsight-app-<appId>"
-        // keep data-elfsight-app-lazy so it lazily initializes if supported
-        className={`elfsight-app-${appId}`}
-        data-elfsight-app-lazy
-        style={{ width: '100%', height: '100%' }}
+    <>
+      <Script
+        src="https://static.elfsight.com/platform/platform.js"
+        strategy="afterInteractive"
       />
-    </div>
+      <div className={className} style={{ width, minHeight }}>
+        <div
+          // NOTE: Elfsight expects the exact class "elfsight-app-<appId>"
+          // keep data-elfsight-app-lazy so it lazily initializes if supported
+          className={`elfsight-app-${appId}`}
+          data-elfsight-app-lazy
+          style={{ width: '100%', height: '100%' }}
+        />
+      </div>
+    </>
   );
 }
