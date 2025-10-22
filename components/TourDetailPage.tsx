@@ -757,30 +757,29 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
             <Star size={18} className="text-yellow-500 fill-current" />
             <span className="font-bold text-lg">{averageRating}</span>
           </div>
-<span className="text-slate-500">({reviews?.length ?? 0} reviews)</span>        </div>
+          <span className="text-slate-500">({currentReviews.length} {currentReviews.length === 1 ? 'review' : 'reviews'})</span>
+        </div>
       </div>
 
       {/* Server-side JSON-LD for reviews (important for Google) */}
       <ReviewsStructuredData />
 
       {/* Our own reviews UI (client) */}
-
-     
-      
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <ReviewList 
-          reviews={currentReviews} 
+        <ReviewList
+          reviews={currentReviews}
           onReviewUpdated={handleReviewUpdated}
           onReviewDeleted={handleReviewDeleted}
         />
-        
+
         <div className="border-t border-slate-200 p-6">
           <ReviewForm tourId={tour._id!} onReviewSubmitted={handleNewReview} />
         </div>
-         {/* Elfsight third-party reviews widget (client component) */}
-      <div className="container mx-auto px-4 my-8">
-        <ElfsightWidget />
       </div>
+
+      {/* Elfsight third-party reviews widget - show on all tours */}
+      <div className="mt-8">
+        <ElfsightWidget minHeight="200px" />
       </div>
     </div>
   );

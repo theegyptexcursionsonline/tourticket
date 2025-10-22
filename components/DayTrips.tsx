@@ -465,7 +465,7 @@ export default function DayTripsSection() {
               href="/search" 
               className="bg-red-600 text-white font-bold py-3.5 px-10 rounded-full text-base hover:bg-red-700 transform hover:scale-105 transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl"
             >
-              SEE ALL DAY TRIPS FROM AMSTERDAM
+              SEE ALL DAY TRIPS FROM Egypt
             </Link>
           </div>
         </div>

@@ -519,9 +519,9 @@ const TourOptionCard: React.FC<{
       whileHover={{ scale: 1.01 }}
     >
       {/* Header with Badges */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1 pr-3">
-          <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-start justify-between mb-4 gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
             {option.isRecommended && (
               <span className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
                 <Sparkles size={12} />
@@ -534,13 +534,13 @@ const TourOptionCard: React.FC<{
               </span>
             )}
           </div>
-          
+
           <h3 className="text-base font-bold text-gray-900 leading-tight mb-3">
             {option.title}
           </h3>
 
           {/* Rating and Bookings Row - Now using real data */}
-          <div className="flex items-center gap-4 mb-3">
+          <div className="flex items-center gap-2 sm:gap-4 mb-3 flex-wrap">
             <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
               <Star size={14} className="text-yellow-500 fill-yellow-500" />
               <span className="text-sm font-semibold text-gray-800">{rating}</span>
@@ -557,16 +557,16 @@ const TourOptionCard: React.FC<{
         </div>
 
         {/* Price Section */}
-        <div className="text-right bg-gray-50 rounded-2xl p-3 min-w-[100px]">
+        <div className="flex-shrink-0 text-right bg-gray-50 rounded-2xl p-3 w-[110px] sm:w-[120px]">
           {originalSubtotal > subtotal && (
-            <div className="text-sm text-gray-400 line-through mb-1">
+            <div className="text-sm text-gray-400 line-through mb-1 whitespace-nowrap">
               {formatPrice(originalSubtotal)}
             </div>
           )}
-          <div className="text-xl font-bold text-red-600">
+          <div className="text-xl font-bold text-red-600 whitespace-nowrap">
             {formatPrice(subtotal)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-500 mt-1 whitespace-nowrap">
             Total price
           </div>
         </div>

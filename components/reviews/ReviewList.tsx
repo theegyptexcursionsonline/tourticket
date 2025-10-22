@@ -130,45 +130,45 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
 
   if (!reviews || reviews.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-8 px-4 text-gray-500">
         <p>No reviews yet for this tour. Be the first to leave a review!</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h3 className="text-3xl font-extrabold text-gray-900 mb-6">What our travelers are saying</h3>
+    <div className="p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">What our travelers are saying</h3>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {reviews.map((review) => (
           <article
             key={review._id}
-            className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(2,6,23,0.06)] border border-gray-100 p-6 sm:p-7 md:p-8"
+            className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-5"
             aria-labelledby={`review-title-${review._id}`}
           >
-            <div className="flex items-start gap-5">
+            <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
                 {review.user?.picture ? (
                   <img
-                    className="h-14 w-14 rounded-full object-cover ring-1 ring-gray-100"
+                    className="h-10 w-10 rounded-full object-cover ring-1 ring-gray-200"
                     src={review.user.picture}
                     alt={review.user.name || 'Reviewer avatar'}
                   />
                 ) : (
-                  <div className="h-14 w-14 rounded-full bg-gray-50 flex items-center justify-center ring-1 ring-gray-100">
-                    <UserCircle className="h-8 w-8 text-gray-400" />
+                  <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center ring-1 ring-gray-200">
+                    <UserCircle className="h-6 w-6 text-gray-400" />
                   </div>
                 )}
               </div>
 
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p id={`review-title-${review._id}`} className="text-lg font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <p id={`review-title-${review._id}`} className="text-base font-semibold text-gray-900">
                       {review.user?.name || 'Anonymous'}
                     </p>
-                    <p className="text-xs uppercase tracking-wide text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       {formatDate(review.createdAt)}
                     </p>
                   </div>
@@ -288,7 +288,7 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-4 text-gray-700 leading-relaxed text-sm">{review.comment}</p>
+                  <p className="mt-3 text-gray-700 leading-relaxed text-sm">{review.comment}</p>
                 )}
               </div>
             </div>
