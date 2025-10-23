@@ -36,7 +36,15 @@ const TourCard: React.FC<TourCardProps> = ({
   const [isAdding, setIsAdding] = useState(false);
 
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
-  const category = typeof tour.category === 'object' ? tour.category : null;
+
+  // Handle category as array or single object
+  let categories: any[] = [];
+  if (Array.isArray(tour.category)) {
+    categories = tour.category.filter(cat => typeof cat === 'object');
+  } else if (typeof tour.category === 'object' && tour.category) {
+    categories = [tour.category];
+  }
+
   const tourIsWishlisted = isWishlisted(tour._id);
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
@@ -223,10 +231,10 @@ const TourCard: React.FC<TourCardProps> = ({
                     <span>{destination.name}</span>
                   </div>
                 )}
-                {category && (
+                {categories.length > 0 && (
                   <div className="flex items-center gap-1">
                     <Zap className="w-4 h-4 text-blue-500" />
-                    <span>{category.name}</span>
+                    <span>{categories.map(cat => cat.name).join(', ')}</span>
                   </div>
                 )}
               </div>

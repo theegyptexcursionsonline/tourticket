@@ -63,7 +63,7 @@ export interface ITour extends Document {
   title: string;
   slug: string;
   destination: mongoose.Schema.Types.ObjectId;
-  category: mongoose.Schema.Types.ObjectId;
+  category: mongoose.Schema.Types.ObjectId | mongoose.Schema.Types.ObjectId[];
   description: string;
   longDescription?: string;
   price?: number;
@@ -376,10 +376,10 @@ const TourSchema: Schema<ITour> = new Schema({
       message: 'Invalid destination ID'
     }
   },
-  category: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Category', 
-    required: [true, 'Category is required'],
+  category: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: [true, 'At least one category is required'],
     index: true,
     validate: {
       validator: function(v: any) {
@@ -387,7 +387,7 @@ const TourSchema: Schema<ITour> = new Schema({
       },
       message: 'Invalid category ID'
     }
-  },
+  }],
   description: { 
     type: String, 
     required: [true, 'Description is required'],

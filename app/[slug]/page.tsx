@@ -27,10 +27,24 @@ async function getTourBySlug(slug: string): Promise<ITour | null> {
   return JSON.parse(JSON.stringify(tour));
 }
 
-async function getRelatedTours(categoryId: string, currentTourId: string): Promise<ITour[]> {
+async function getRelatedTours(categoryIds: string | string[] | any, currentTourId: string): Promise<ITour[]> {
   await dbConnect();
+
+  // Extract category IDs from populated categories or use the IDs directly
+  let categoryIdArray: string[] = [];
+  if (Array.isArray(categoryIds)) {
+    categoryIdArray = categoryIds.map(cat => typeof cat === 'object' ? cat._id?.toString() : cat?.toString()).filter(Boolean);
+  } else if (categoryIds) {
+    const catId = typeof categoryIds === 'object' ? categoryIds._id?.toString() : categoryIds?.toString();
+    if (catId) categoryIdArray = [catId];
+  }
+
+  if (categoryIdArray.length === 0) {
+    return [];
+  }
+
   const relatedTours = await Tour.find({
-    category: categoryId,
+    category: { $in: categoryIdArray },
     _id: { $ne: currentTourId },
     isPublished: true
   })
@@ -73,7 +87,7 @@ export default async function TourDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const relatedTours = await getRelatedTours(tour.category as string, tour._id);
+  const relatedTours = await getRelatedTours(tour.category, tour._id);
 
   return (
     <>

@@ -23,8 +23,13 @@ async function findTour(identifier: string) {
         // Manually populate to avoid potential circular reference issues
         if (tour.category) {
             try {
-                const category = await Category.findById(tour.category);
-                tour.category = category;
+                if (Array.isArray(tour.category)) {
+                    const categories = await Category.find({ _id: { $in: tour.category } });
+                    tour.category = categories;
+                } else {
+                    const category = await Category.findById(tour.category);
+                    tour.category = category;
+                }
             } catch (err) {
                 console.warn('Failed to populate category:', err);
             }
@@ -168,7 +173,10 @@ export async function PUT(
             body.bookingOptions = cleanBookingOptions(body.bookingOptions);
         }
 
-        // Handle attractions and interests arrays
+        // Handle category, attractions and interests arrays
+        if (body.category && Array.isArray(body.category)) {
+            body.category = body.category.filter((id: string) => id && id.trim());
+        }
         if (body.attractions && Array.isArray(body.attractions)) {
             body.attractions = body.attractions.filter((id: string) => id && id.trim());
         }
@@ -182,10 +190,11 @@ export async function PUT(
 
         if (isFullUpdate) {
             // For full updates, ensure all required fields are present
-            if (!body.title || !body.description || !body.duration || !body.discountPrice || !body.destination || !body.category) {
+            const hasCategory = Array.isArray(body.category) ? body.category.length > 0 : body.category;
+            if (!body.title || !body.description || !body.duration || !body.discountPrice || !body.destination || !hasCategory) {
                 return NextResponse.json({
                     success: false,
-                    error: 'Missing required fields: title, description, duration, discountPrice, destination, category'
+                    error: 'Missing required fields: title, description, duration, discountPrice, destination, at least one category'
                 }, { status: 400 });
             }
         }
@@ -198,11 +207,21 @@ export async function PUT(
             }, { status: 400 });
         }
 
-        if (body.category && !mongoose.Types.ObjectId.isValid(body.category)) {
-            return NextResponse.json({
-                success: false,
-                error: 'Invalid category ID format'
-            }, { status: 400 });
+        if (body.category) {
+            if (Array.isArray(body.category)) {
+                const invalidCategoryIds = body.category.filter((id: string) => !mongoose.Types.ObjectId.isValid(id));
+                if (invalidCategoryIds.length > 0) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Invalid category ID format'
+                    }, { status: 400 });
+                }
+            } else if (!mongoose.Types.ObjectId.isValid(body.category)) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Invalid category ID format'
+                }, { status: 400 });
+            }
         }
 
         // Ensure availability has proper structure

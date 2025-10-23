@@ -6,10 +6,10 @@ import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, Image as ImageIco
 import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
+import { useWishlist } from '@/contexts/WishlistContext';
 import Link from 'next/link';
 import Image from 'next/image';
-
-type MaybeCategory = { slug?: string } | string | null | undefined;
+import toast from 'react-hot-toast';
 
 // --- Safe Image Component ---
 const SafeImage = ({ 
@@ -61,14 +61,16 @@ const SafeImage = ({
 };
 
 // --- Day Trip Card Component ---
-const DayTripCard = ({ 
-  trip, 
-  onAddToCartClick 
-}: { 
-  trip: Tour; 
-  onAddToCartClick: (trip: Tour) => void; 
+const DayTripCard = ({
+  trip,
+  onAddToCartClick
+}: {
+  trip: Tour;
+  onAddToCartClick: (trip: Tour) => void;
 }) => {
   const { formatPrice } = useSettings();
+  const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+  const tourIsWishlisted = isWishlisted(trip._id || '');
 
   return (
     <Link 
@@ -88,15 +90,27 @@ const DayTripCard = ({
           </div>
         )}
         
-        <button 
-          className="absolute top-3 right-3 bg-white/80 p-2 rounded-full text-slate-600 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-white z-10"
+        <button
+          className={`absolute top-3 right-3 bg-white/80 p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${
+            tourIsWishlisted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          } hover:bg-white z-10 ${
+            tourIsWishlisted ? 'text-red-500' : 'text-slate-600 hover:text-red-500'
+          }`}
           onClick={(e) => {
             e.preventDefault();
-            console.log('Added to favorites:', trip.title);
+            e.stopPropagation();
+
+            if (tourIsWishlisted) {
+              removeFromWishlist(trip._id || '');
+              toast.success('Removed from wishlist');
+            } else {
+              addToWishlist(trip);
+              toast.success('Added to wishlist!');
+            }
           }}
-          aria-label="Add to favorites"
+          aria-label={tourIsWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
-          <Heart size={20} />
+          <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
         </button>
         
         <button
@@ -160,13 +174,6 @@ export default function DayTripsSection() {
     let aborted = false;
     const controller = new AbortController();
 
-    const parseCategorySlug = (category: MaybeCategory) => {
-      if (!category) return null;
-      if (typeof category === 'string') return category;
-      if (typeof category === 'object' && 'slug' in category) return (category as any).slug;
-      return null;
-    };
-
     const fetchTours = async () => {
       setIsLoading(true);
       setFetchError(null);
@@ -213,14 +220,10 @@ export default function DayTripsSection() {
 
         // Expecting { success: true, data: [...] } style response
         if (data.success && Array.isArray(data.data)) {
-          // Filter for day-trips, but be tolerant:
+          // Show all published tours (filter removed to show more tours)
           const dayTrips = (data.data as any[])
-            .filter((t) => {
-              // If there's a category slug or category string, accept it
-              const slug = parseCategorySlug(t.category);
-              // Accept if slug === 'day-trips' OR if a categoryId / category field indicates day trips
-              return slug === 'day-trips' || slug === 'day_trips' || slug === 'daytrips' || slug === 'day trips' || (!slug && (t.tags || []).some((tg: any) => String(tg).toLowerCase().includes('day')));
-            })
+            .filter((t) => t.isPublished !== false) // Only filter out explicitly unpublished tours
+            .slice(0, 12) // Limit to 12 tours
             .map((tour) => ({
               ...tour,
               image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
@@ -233,12 +236,13 @@ export default function DayTripsSection() {
 
           if (!aborted) {
             setTours(dayTrips);
-            setFetchError(dayTrips.length === 0 ? 'No day trips matched the category filter.' : null);
+            setFetchError(dayTrips.length === 0 ? 'No tours found.' : null);
           }
         } else if (Array.isArray(data)) {
           // Some APIs return raw array
           const dayTrips = data
-            .filter((t: any) => parseCategorySlug(t.category) === 'day-trips' || true) // be permissive
+            .filter((t: any) => t.isPublished !== false)
+            .slice(0, 12)
             .map((tour: any) => ({
               ...tour,
               image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
@@ -311,17 +315,20 @@ export default function DayTripsSection() {
       } else {
         const data = text ? JSON.parse(text) : null;
         if (data?.success) {
-          const dayTrips = (data.data || []).map((tour: any) => ({
-            ...tour,
-            image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
-            title: tour.title || 'Untitled Tour',
-            originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
-            discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
-            rating: typeof tour.rating === 'number' ? tour.rating : 0,
-            bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-          }));
+          const dayTrips = (data.data || [])
+            .filter((t: any) => t.isPublished !== false)
+            .slice(0, 12)
+            .map((tour: any) => ({
+              ...tour,
+              image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
+              title: tour.title || 'Untitled Tour',
+              originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
+              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
+              rating: typeof tour.rating === 'number' ? tour.rating : 0,
+              bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
+            }));
           setTours(dayTrips);
-          setFetchError(dayTrips.length === 0 ? 'No day trips matched the category filter.' : null);
+          setFetchError(dayTrips.length === 0 ? 'No tours found.' : null);
         } else {
           setFetchError(data?.error ? String(data.error) : 'API returned success:false');
           setTours([]);
@@ -351,7 +358,7 @@ export default function DayTripsSection() {
             </div>
           </div>
           <div className="flex gap-6 overflow-hidden px-4">
-            {[...Array(4)].map((_, i) => (
+            {[...Array(12)].map((_, i) => (
               <div key={i} className="flex-shrink-0 w-[270px] h-[360px] bg-slate-200 rounded-xl animate-pulse" />
             ))}
           </div>
