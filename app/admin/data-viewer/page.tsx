@@ -380,7 +380,10 @@ const TourCard = ({ tour }: any) => (
 
     {tour.category && (
       <div className="bg-purple-50 p-3 rounded">
-        <strong className="text-purple-900">Category:</strong> {tour.category.name}
+        <strong className="text-purple-900">Categories:</strong>{' '}
+        {Array.isArray(tour.category)
+          ? tour.category.map((cat: any) => cat.name || cat).join(', ')
+          : (typeof tour.category === 'object' ? tour.category.name : tour.category)}
       </div>
     )}
 

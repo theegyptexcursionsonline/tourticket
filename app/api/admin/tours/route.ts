@@ -124,7 +124,10 @@ export async function POST(request: Request) {
       body.bookingOptions = cleanBookingOptions(body.bookingOptions);
     }
 
-    // Handle attractions and interests arrays
+    // Handle category, attractions and interests arrays
+    if (body.category && Array.isArray(body.category)) {
+      body.category = body.category.filter(id => id && id.trim());
+    }
     if (body.attractions && Array.isArray(body.attractions)) {
       body.attractions = body.attractions.filter(id => id && id.trim());
     }

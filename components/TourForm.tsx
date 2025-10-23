@@ -104,7 +104,7 @@ interface TourFormData {
     discountPrice: string | number;
     originalPrice: string | number;
     destination: string;
-    category: string;
+    category: string[];
     image: string;
     images: string[];
     highlights: string[];
@@ -314,7 +314,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         discountPrice: '',
         originalPrice: '',
         destination: '',
-        category: '',
+        category: [],
         image: '',
         images: [],
         highlights: [''],
@@ -359,7 +359,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
                 originalPrice: tourToEdit.originalPrice || '',
                 destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
-                category: tourToEdit.category?._id?.toString() || tourToEdit.category || '',
+                category: Array.isArray(tourToEdit.category)
+                    ? tourToEdit.category.map((cat: any) => cat?._id?.toString() || cat?.toString() || cat)
+                    : (tourToEdit.category?._id?.toString() || tourToEdit.category ? [tourToEdit.category?._id?.toString() || tourToEdit.category] : []),
                 image: tourToEdit.image || '', 
                 images: tourToEdit.images || [],
                 highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
@@ -500,7 +502,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             discountPrice: '',
             originalPrice: '',
             destination: '',
-            category: '',
+            category: [],
             image: '',
             images: [],
             highlights: [''],
@@ -565,7 +567,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         }
     };
 
-    const handleMultiSelectChange = (fieldName: 'attractions' | 'interests', selectedId: string) => {
+    const handleMultiSelectChange = (fieldName: 'attractions' | 'interests' | 'category', selectedId: string) => {
         setFormData((prev) => {
             const currentValues = prev[fieldName] || [];
             const isSelected = currentValues.includes(selectedId);
@@ -796,9 +798,9 @@ const addItineraryItem = () => {
             !formData.duration?.trim() ||
             !formData.discountPrice ||
             !formData.destination ||
-            !formData.category
+            !formData.category?.length
         ) {
-            toast.error('Please fill all required fields: Title, Description, Duration, Discount Price, Destination, and Category.');
+            toast.error('Please fill all required fields: Title, Description, Duration, Discount Price, Destination, and at least one Category.');
             setIsSubmitting(false);
             return;
         }
@@ -1119,21 +1121,32 @@ const addItineraryItem = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-3">
-                                                <FormLabel icon={Grid3x3} required>Category</FormLabel>
-                                                <div className="relative">
-                                                    <Grid3x3 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                    <select 
-                                                        name="category" 
-                                                        value={formData.category || ''} 
-                                                        onChange={handleChange} 
-                                                        className={`${inputBase} pl-10 appearance-none cursor-pointer`}
-                                                        required
-                                                    >
-                                                        <option value="">Select a Category</option>
-                                                        {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                <FormLabel icon={Grid3x3} required>Categories</FormLabel>
+                                                <div className="border border-slate-300 rounded-xl p-4 max-h-48 overflow-y-auto bg-white">
+                                                    {categories.length === 0 ? (
+                                                        <p className="text-sm text-slate-500">No categories available</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            {categories.map((cat) => {
+                                                                const formCategories = formData.category || [];
+                                                                const catId = String(cat._id);
+                                                                const isChecked = formCategories.some(id => String(id) === catId);
+                                                                return (
+                                                                    <label key={cat._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isChecked}
+                                                                            onChange={() => handleMultiSelectChange('category', cat._id)}
+                                                                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                                                        />
+                                                                        <span className="text-sm text-slate-700">{cat.name}</span>
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
+                                                <SmallHint>Select one or more categories for this tour</SmallHint>
                                             </div>
                                         </div>
 
@@ -2094,7 +2107,7 @@ const addItineraryItem = () => {
                                                     { field: 'duration', label: 'Duration', value: formData.duration },
                                                     { field: 'discountPrice', label: 'Price', value: formData.discountPrice },
                                                     { field: 'destination', label: 'Destination', value: formData.destination },
-                                                    { field: 'category', label: 'Category', value: formData.category },
+                                                    { field: 'category', label: 'Category', value: formData.category?.length },
                                                 ].map((item) => (
                                                     <div key={item.field} className="flex items-center gap-2 text-sm">
                                                         {item.value ? (
@@ -2176,8 +2189,8 @@ const addItineraryItem = () => {
                                         !formData.duration?.trim() ||
                                         !formData.discountPrice ||
                                         !formData.destination ||
-                                        !formData.category
-                                    } 
+                                        !formData.category?.length
+                                    }
                                     className="flex-1 inline-flex justify-center items-center gap-3 px-6 py-3 text-white font-bold bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 disabled:transform-none"
                                 >
                                     {isSubmitting ? (
@@ -2195,7 +2208,7 @@ const addItineraryItem = () => {
                             </div>
                             
                             {/* Validation Message */}
-                            {(!formData.title?.trim() || !formData.description?.trim() || !formData.duration?.trim() || !formData.discountPrice || !formData.destination || !formData.category) && (
+                            {(!formData.title?.trim() || !formData.description?.trim() || !formData.duration?.trim() || !formData.discountPrice || !formData.destination || !formData.category?.length) && (
                                 <div className="flex items-start gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                                     <HelpCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                                     <div>
