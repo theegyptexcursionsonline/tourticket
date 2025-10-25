@@ -34,35 +34,8 @@ interface CategoryPage {
   };
 }
 
-// --- IMAGE MAPPING ---
-const getInterestImage = (name: string): string => {
-  const lowerName = name.toLowerCase();
-
-  const imageMap: { [key: string]: string } = {
-    'snorkeling': '/interests/1.jpg',
-    'diving': '/interests/2.png',
-    'desert': '/interests/3.png',
-    'safari': '/interests/4.png',
-    'balloon': '/interests/5.png',
-    'cruise': '/interests/6.png',
-    'spa': '/interests/7.png',
-    'wellness': '/interests/8.png',
-    'quad': '/interests/9.png',
-    'atv': '/interests/10.png',
-    'water': '/interests/11.png',
-    'horse': '/interests/12.png',
-    'camel': '/interests/13.png',
-    'historical': '/interests/14.png',
-    'cultural': '/interests/15.png',
-    'family': '/interests/16.png',
-  };
-
-  for (const [key, url] of Object.entries(imageMap)) {
-    if (lowerName.includes(key)) return url;
-  }
-
-  return '/interests/1.png';
-};
+// Default fallback image for categories without images
+const DEFAULT_CATEGORY_IMAGE = '/placeholder-category.jpg';
 
 // --- COMPONENTS ---
 const InterestCard = ({ 
@@ -72,13 +45,14 @@ const InterestCard = ({
   interest: Interest;
   categoryPage?: CategoryPage;
 }) => {
-  const linkUrl = categoryPage?.isPublished 
+  const linkUrl = categoryPage?.isPublished
     ? `/category/${categoryPage.slug}`
-    : interest.type === 'attraction' 
-      ? `/attraction/${interest.slug}` 
+    : interest.type === 'attraction'
+      ? `/attraction/${interest.slug}`
       : `/interests/${interest.slug}`;
 
-  const imageUrl = categoryPage?.heroImage || interest.image || getInterestImage(interest.name);
+  // Only use actual database images - no mock images
+  const imageUrl = categoryPage?.heroImage || interest.image || DEFAULT_CATEGORY_IMAGE;
 
   return (
     <Link
@@ -198,16 +172,8 @@ export default function PopularInterests() {
         if (!mounted) return;
 
         if (interestsData.success && Array.isArray(interestsData.data)) {
-          // Filter: Only show featured interests OR top 12 by product count
-          let filtered = interestsData.data.filter((item: Interest) => item.featured);
-          
-          if (filtered.length === 0) {
-            // If no featured, get top 12 by products
-            filtered = [...interestsData.data]
-              .sort((a, b) => (b.products || 0) - (a.products || 0))
-              .slice(0, 12);
-          }
-          
+          // Filter: Only show featured categories/interests
+          const filtered = interestsData.data.filter((item: Interest) => item.featured === true);
           setInterests(filtered);
         }
 

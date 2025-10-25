@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Edit, Plus, Tag, Trash2, Loader2 } from 'lucide-react';
+import { Edit, Plus, Tag, Trash2, Loader2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 
 interface ICategory {
   _id: string;
@@ -22,7 +21,7 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchCategories();
@@ -70,6 +69,13 @@ export default function CategoriesPage() {
     }
   };
 
+  // Filter categories based on search query
+  const filteredCategories = categories.filter(cat =>
+    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cat.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cat.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -97,6 +103,40 @@ export default function CategoriesPage() {
           </Link>
         </div>
 
+        {/* Search Box */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search categories by name, slug, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:placeholder-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
+            />
+            {searchQuery && (
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  title="Clear search"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="mt-2 text-sm text-slate-600">
+              Showing {filteredCategories.length} of {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+            </p>
+          )}
+        </div>
+
         <div className="bg-white shadow-md rounded-2xl overflow-hidden border border-slate-200/60">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
@@ -120,8 +160,8 @@ export default function CategoriesPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {categories.length > 0 ? (
-                  categories.map(cat => (
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map(cat => (
                     <tr key={cat._id} className="hover:bg-slate-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -199,7 +239,21 @@ export default function CategoriesPage() {
                 ) : (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-500">
-                      No categories found. Click 'Add Category' to create one.
+                      {searchQuery ? (
+                        <div>
+                          <p className="text-lg font-medium text-slate-600 mb-1">No categories found</p>
+                          <p className="text-sm">Try adjusting your search terms or{' '}
+                            <button
+                              onClick={() => setSearchQuery('')}
+                              className="text-indigo-600 hover:text-indigo-800 font-medium underline"
+                            >
+                              clear the search
+                            </button>
+                          </p>
+                        </div>
+                      ) : (
+                        "No categories found. Click 'Add Category' to create one."
+                      )}
                     </td>
                   </tr>
                 )}
