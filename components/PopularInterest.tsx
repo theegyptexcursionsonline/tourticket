@@ -172,8 +172,11 @@ export default function PopularInterests() {
         if (!mounted) return;
 
         if (interestsData.success && Array.isArray(interestsData.data)) {
-          // Filter: Only show featured categories/interests
+          // Filter: Only show featured categories/interests (must be explicitly true)
           const filtered = interestsData.data.filter((item: Interest) => item.featured === true);
+          console.log('Total interests from API:', interestsData.data.length);
+          console.log('Featured interests:', filtered.length);
+          console.log('Filtered data:', filtered.map((i: Interest) => ({ name: i.name, featured: i.featured })));
           setInterests(filtered);
         }
 
