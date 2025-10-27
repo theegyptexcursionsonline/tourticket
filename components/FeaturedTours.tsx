@@ -98,7 +98,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   return (
     <Link
       href={`/tour/${tour.slug || '#'}`}
-      className="block w-[360px] md:w-[380px] lg:w-[400px] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-red-500/10 border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
+      className="block w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[400px] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-red-500/10 border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
       aria-label={`Open tour ${tour.title || 'tour'}`}
     >
       <div className="relative">
@@ -354,40 +354,40 @@ export default function FeaturedTours() {
 
   return (
     <>
-      <section className="bg-gradient-to-b from-white to-gray-50 py-24">
+      <section className="bg-gradient-to-b from-white to-gray-50 py-12 sm:py-16 md:py-20 lg:py-24">
         <div className="container mx-auto px-4 md:px-8">
           {/* Header section */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-16 gap-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 sm:mb-12 md:mb-16 gap-4 sm:gap-6">
             <div className="max-w-2xl">
-              <h2 className="text-5xl md:text-6xl font-black text-gray-900 tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 tracking-tight leading-tight">
                 Canal Cruises Perfect For You
               </h2>
-              <p className="mt-4 text-xl text-gray-600 leading-relaxed">
+              <p className="mt-3 sm:mt-4 text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed">
                 Discover top-rated experiences in Egypt — handpicked by local experts for unforgettable memories.
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-full md:w-auto">
               <Link
                 href="/tours"
-                className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-gradient-to-r from-red-600 to-red-500 text-white text-lg font-bold shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-300 border-2 border-transparent hover:border-white/20"
+                className="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-full bg-gradient-to-r from-red-600 to-red-500 text-white text-sm sm:text-base md:text-lg font-bold shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-300 border-2 border-transparent hover:border-white/20 w-full md:w-auto"
                 aria-label="See all tours"
               >
                 <span>See all tours</span>
-                <ArrowRight size={20} className="transition-transform duration-300 group-hover:translate-x-1" />
+                <ArrowRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 flex-shrink-0" />
               </Link>
             </div>
           </div>
 
           {/* Cards carousel */}
-          <div className="relative w-full overflow-hidden group py-8">
+          <div className="relative w-full overflow-hidden group py-4 sm:py-6 md:py-8">
             {/* Enhanced gradient masks */}
-            <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-gray-50 via-gray-50/80 to-transparent z-10 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-gray-50 via-gray-50/80 to-transparent z-10 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-16 sm:w-24 md:w-32 h-full bg-gradient-to-r from-gray-50 via-gray-50/80 to-transparent z-10 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-16 sm:w-24 md:w-32 h-full bg-gradient-to-l from-gray-50 via-gray-50/80 to-transparent z-10 pointer-events-none" />
 
-            <div className="flex gap-8 animate-marquee group-hover:[animation-play-state:paused]">
+            <div className="flex gap-4 sm:gap-6 md:gap-8 animate-marquee group-hover:[animation-play-state:paused]">
               {duplicatedTours.map((tour, idx) => (
-                <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-2">
+                <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
                   <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
                 </div>
               ))}
