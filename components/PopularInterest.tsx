@@ -223,19 +223,19 @@ export default function PopularInterests() {
   if (interests.length === 0) return <EmptyState />;
 
   return (
-    <section className="bg-gradient-to-b from-slate-900 to-slate-800 py-20 overflow-hidden">
+    <section className="bg-gradient-to-b from-slate-900 to-slate-800 py-12 sm:py-16 md:py-20 overflow-hidden">
       <div className="container mx-auto px-4 max-w-[1400px]">
         {/* Header */}
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 bg-yellow-400/20 text-yellow-300 px-4 py-2 rounded-full mb-4">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-bold">Featured Experiences</span>
+        <div className="text-center mb-10 sm:mb-12 md:mb-14">
+          <div className="inline-flex items-center gap-2 bg-yellow-400/20 text-yellow-300 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full mb-3 sm:mb-4">
+            <Sparkles className="w-3 sm:w-4 h-3 sm:h-4" />
+            <span className="text-xs sm:text-sm font-bold">Featured Experiences</span>
           </div>
-          
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3 sm:mb-4 px-4">
           Top Experience Categories.
           </h2>
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl mx-auto px-4">
             Discover our most loved experiences curated for unforgettable adventures
           </p>
         </div>
@@ -279,13 +279,13 @@ export default function PopularInterests() {
         </Swiper>
 
         {/* CTA */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-8 sm:mt-10 md:mt-12 px-4">
           <Link
             href="/interests"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-100 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-slate-900 rounded-xl text-sm sm:text-base font-bold hover:bg-slate-100 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
           >
-            Explore All 
-            <ArrowRight className="w-5 h-5" />
+            Explore All
+            <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5" />
           </Link>
         </div>
       </div>
@@ -300,6 +300,14 @@ export default function PopularInterests() {
           width: 50px;
           height: 50px;
           transition: all 0.3s ease;
+        }
+
+        /* Hide navigation buttons on mobile */
+        @media (max-width: 768px) {
+          .swiper-button-next,
+          .swiper-button-prev {
+            display: none;
+          }
         }
 
         .swiper-button-next:hover,

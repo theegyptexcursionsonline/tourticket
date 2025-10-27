@@ -81,28 +81,28 @@ export default function EgyptPromo() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-6 md:px-8 py-20 md:py-28">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 md:px-8 py-16 sm:py-20 md:py-28">
         <div className="max-w-4xl mx-auto text-center text-white">
           <div
             className={`transform transition-all duration-700 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
           >
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
               <span className="block text-amber-400/95">{heading}</span>
-              <span className="block text-white text-2xl sm:text-3xl font-medium mt-2">{subheading}</span>
+              <span className="block text-white text-xl sm:text-2xl md:text-3xl font-medium mt-2">{subheading}</span>
             </h2>
 
-            <p className="mt-6 text-lg sm:text-xl text-amber-100/95 max-w-3xl mx-auto leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-amber-100/95 max-w-3xl mx-auto leading-relaxed px-2">
               {description}
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href={primaryHref}
-                className="inline-flex items-center gap-3 px-12 py-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-black font-semibold shadow-2xl transform transition hover:scale-[1.03] focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300"
+                className="inline-flex items-center gap-2 sm:gap-3 px-8 sm:px-10 md:px-12 py-3 sm:py-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-black text-sm sm:text-base font-semibold shadow-2xl transform transition hover:scale-[1.03] focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300"
                 aria-label={primaryText}
               >
                 <span>{primaryText}</span>
-                <ArrowRight size={18} />
+                <ArrowRight size={18} className="flex-shrink-0" />
               </Link>
             </div>
           </div>

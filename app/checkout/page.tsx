@@ -105,15 +105,15 @@ const CustomerTypeSelector = ({
   onSignupClick: () => void;
 }) => {
   return (
-    <div className="bg-white p-6 shadow-xl space-y-4 border-t border-b border-r border-slate-200">
-      <h2 className="text-xl font-bold text-slate-900 mb-4">How would you like to checkout?</h2>
+    <div className="bg-white p-4 sm:p-6 shadow-xl space-y-3 sm:space-y-4 border-t border-b border-r border-slate-200">
+      <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">How would you like to checkout?</h2>
       
       <div className="space-y-3">
         {/* Continue as Guest */}
         <motion.button
           type="button"
           onClick={() => setCustomerType('guest')}
-          className={`w-full p-4 border-2 rounded-xl text-left transition-all ${
+          className={`w-full p-3 sm:p-4 border-2 rounded-xl text-left transition-all ${
             customerType === 'guest'
               ? 'border-red-500 bg-red-50'
               : 'border-slate-200 hover:border-red-300 hover:bg-red-50'
@@ -121,8 +121,8 @@ const CustomerTypeSelector = ({
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
               <div className={`w-4 h-4 rounded-full border-2 ${
                 customerType === 'guest' 
                   ? 'border-red-500 bg-red-500' 
@@ -132,12 +132,12 @@ const CustomerTypeSelector = ({
                   <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                 )}
               </div>
-              <div>
-                <div className="font-semibold text-slate-800">Continue as Guest</div>
-                <div className="text-sm text-slate-600">Quick checkout without creating an account</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm sm:text-base text-slate-800">Continue as Guest</div>
+                <div className="text-xs sm:text-sm text-slate-600">Quick checkout without creating an account</div>
               </div>
             </div>
-            <User size={24} className={customerType === 'guest' ? 'text-red-500' : 'text-slate-400'} />
+            <User size={20} className={`${customerType === 'guest' ? 'text-red-500' : 'text-slate-400'} flex-shrink-0 hidden sm:block`} />
           </div>
         </motion.button>
 
@@ -193,7 +193,7 @@ const CustomerTypeSelector = ({
 const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const { formatPrice } = useSettings();
   const { removeFromCart } = useCart();
-  
+
   // Use the same calculation logic as in BookingSidebar and CartSidebar
   const getItemTotal = (item: CartItem) => {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
@@ -219,16 +219,16 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const itemTotal = getItemTotal(item);
 
   return (
-    <div className="flex gap-4 py-4">
-      <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded">
+    <div className="flex gap-3 sm:gap-4 py-3 sm:py-4">
+      <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 overflow-hidden rounded">
         {item.image ? (
           <Image src={item.image} alt={item.title} width={64} height={64} className="w-16 h-16 object-cover" />
         ) : (
           <div className="w-16 h-16 bg-slate-100" />
         )}
       </div>
-      <div className="flex-1">
-        <h4 className="font-bold text-md text-slate-800 leading-tight">{item.title}</h4>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-bold text-sm sm:text-base text-slate-800 leading-tight">{item.title}</h4>
         
        {/* This line should show the selected booking option */}
   {item.selectedBookingOption && (
@@ -275,14 +275,14 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
           </div>
         )}
       </div>
-      <div className="text-right flex flex-col justify-between items-end">
-        <p className="font-bold text-lg text-slate-800">{formatPrice(itemTotal)}</p>
-        <button 
-          onClick={() => removeFromCart(item.uniqueId!)} 
-          className="text-slate-400 hover:text-red-500 transition-colors" 
+      <div className="text-right flex flex-col justify-between items-end flex-shrink-0">
+        <p className="font-bold text-base sm:text-lg text-slate-800">{formatPrice(itemTotal)}</p>
+        <button
+          onClick={() => removeFromCart(item.uniqueId!)}
+          className="text-slate-400 hover:text-red-500 transition-colors mt-2"
           aria-label="Remove item"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} className="sm:w-4 sm:h-4" />
         </button>
       </div>
     </div>
@@ -296,8 +296,8 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
   if (!cart || cart.length === 0) return null;
 
   return (
-    <aside className="bg-white border-t border-b border-l border-slate-200 p-6 shadow-xl sticky top-28">
-      <h3 className="text-2xl font-bold text-slate-900 mb-4">Your Booking Summary</h3>
+    <aside className="bg-white border-t border-b border-l border-slate-200 p-4 sm:p-6 shadow-xl lg:sticky lg:top-28">
+      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4">Your Booking Summary</h3>
       <div className="divide-y divide-slate-200">
         {cart.map((item, index) => (
           <SummaryItem key={`${item._id ?? item.uniqueId}-${index}`} item={item} />
@@ -421,7 +421,7 @@ const CheckoutFormStep = ({
   }, [user, customerType, setFormData]);
 
   return (
-    <form onSubmit={handleSubmit} id="checkout-form" className="bg-white p-8 shadow-xl space-y-8 border-t border-b border-r border-slate-200">
+    <form onSubmit={handleSubmit} id="checkout-form" className="bg-white p-4 sm:p-6 md:p-8 shadow-xl space-y-6 sm:space-y-8 border-t border-b border-r border-slate-200">
       {/* Customer Type Selection (only show if not authenticated) */}
       {!user && (
         <section>
@@ -450,9 +450,9 @@ const CheckoutFormStep = ({
       {/* Contact Information (show for guest or authenticated users) */}
       {(customerType === 'guest' || user) && (
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-extrabold text-slate-900">Contact Information</h2>
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">Contact Information</h2>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
               <Shield size={14} className="text-emerald-500" /> 
               <span>Secure &amp; encrypted</span>
             </div>
@@ -524,19 +524,19 @@ const CheckoutFormStep = ({
       {/* Payment Information (show for guest or authenticated users) */}
       {(customerType === 'guest' || user) && (
         <section>
-          <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
 
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <button 
-              type="button" 
-              onClick={() => setPaymentMethod('card')} 
-              aria-pressed={paymentMethod === 'card'} 
-              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-6">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('card')}
+              aria-pressed={paymentMethod === 'card'}
+              className={`flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-2 p-3 sm:p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
             >
-              <div className="h-10 flex items-center">
-                <Image src="/payment/visam.png" alt="Card logos" width={72} height={28} className="object-contain" />
+              <div className="h-8 sm:h-10 flex items-center">
+                <Image src="/payment/visam.png" alt="Card logos" width={60} height={24} className="object-contain sm:w-[72px] sm:h-[28px]" />
               </div>
-              <span className="text-sm font-medium text-slate-700">Card</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-700">Card</span>
             </button>
 
             <button 
@@ -760,18 +760,18 @@ const handleDownloadReceipt = async () => {
 };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 8 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      className="bg-white p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200"
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white p-4 sm:p-6 md:p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200"
     >
-      <div className="mx-auto w-fit mb-6 p-4 bg-emerald-100 rounded-full">
-        <CheckCircle size={48} className="text-emerald-600" />
+      <div className="mx-auto w-fit mb-4 sm:mb-6 p-3 sm:p-4 bg-emerald-100 rounded-full">
+        <CheckCircle size={36} className="sm:w-12 sm:h-12 text-emerald-600" />
       </div>
-      <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
-      <p className="text-slate-600 mb-6">We've sent a booking confirmation and receipt to your email address.</p>
+      <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
+      <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">We've sent a booking confirmation and receipt to your email address.</p>
 
-      <div className="text-left bg-slate-50 p-6 border border-slate-200 mb-6">
+      <div className="text-left bg-slate-50 p-4 sm:p-6 border border-slate-200 mb-4 sm:mb-6">
         <h3 className="font-bold text-lg text-slate-800 mb-4">Your Receipt</h3>
       <div className="space-y-3 mb-4 divide-y divide-slate-200">
   {orderedItems.map((item, index) => {
@@ -839,26 +839,26 @@ const handleDownloadReceipt = async () => {
         </div>
       </div>
 
-      <div className="flex justify-center gap-3">
-        <button 
-          onClick={() => window.location.assign('/')} 
-          className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg"
+      <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+        <button
+          onClick={() => window.location.assign('/')}
+          className="px-4 sm:px-5 py-2.5 sm:py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors text-sm sm:text-base font-semibold rounded-lg"
         >
           Go to homepage
         </button>
-        <button 
-          onClick={handleDownloadReceipt} 
-          disabled={isDownloading} 
-          className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center gap-2"
+        <button
+          onClick={handleDownloadReceipt}
+          disabled={isDownloading}
+          className="px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-900 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center justify-center gap-2"
         >
-          {isDownloading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+          {isDownloading ? <Loader2 className="animate-spin" size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Download size={16} className="sm:w-[18px] sm:h-[18px]" />}
           Download Receipt
         </button>
-        <button 
-          onClick={() => window.print()} 
-          className="px-5 py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors font-semibold rounded-lg flex items-center gap-2"
+        <button
+          onClick={() => window.print()}
+          className="px-4 sm:px-5 py-2.5 sm:py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors text-sm sm:text-base font-semibold rounded-lg flex items-center justify-center gap-2"
         >
-          <Printer size={18} /> Print
+          <Printer size={16} className="sm:w-[18px] sm:h-[18px]" /> Print
         </button>
       </div>
     </motion.div>
@@ -866,10 +866,10 @@ const handleDownloadReceipt = async () => {
 };
 
 const TrustIndicators = () => (
-  <div className="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-12 py-8 mt-12 border-t border-slate-200">
-    <div className="flex items-center gap-2 text-slate-600"><Shield size={20} className="text-emerald-600" /><span>Easy and secure booking</span></div>
-    <div className="flex items-center gap-2 text-slate-600"><Smartphone size={20} className="text-red-600" /><span>Ticket available on smartphone</span></div>
-    <div className="flex items-center gap-2 text-slate-600"><Headphones size={20} className="text-slate-900" /><span>Excellent customer service</span></div>
+  <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 md:gap-12 py-6 sm:py-8 mt-8 sm:mt-12 border-t border-slate-200">
+    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Shield size={18} className="sm:w-5 sm:h-5 text-emerald-600" /><span>Easy and secure booking</span></div>
+    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Smartphone size={18} className="sm:w-5 sm:h-5 text-red-600" /><span>Ticket available on smartphone</span></div>
+    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Headphones size={18} className="sm:w-5 sm:h-5 text-slate-900" /><span>Excellent customer service</span></div>
   </div>
 );
 
@@ -1102,8 +1102,8 @@ export default function CheckoutPage() {
   return (
     <>
       <Header startSolid={true} />
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-24 pb-40 lg:pb-16">
-        <div className="container mx-auto px-6 max-w-7xl">
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-20 sm:pt-24 pb-40 lg:pb-16">
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
           <AnimatePresence mode="wait">
             <motion.div 
               key={isConfirmed ? 'thankyou' : 'checkout'} 
@@ -1121,8 +1121,8 @@ export default function CheckoutPage() {
                   discount={discount} 
                 />
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-start">
-                  <div className="lg:col-span-2">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 items-start">
+                  <div className="lg:col-span-2 order-2 lg:order-1">
                     <CheckoutFormStep 
                       onPaymentProcess={handlePaymentProcess} 
                       isProcessing={isProcessing} 
@@ -1134,7 +1134,7 @@ export default function CheckoutPage() {
                       user={user}
                     />
                   </div>
-                  <div className="lg:col-span-1">
+                  <div className="lg:col-span-1 order-1 lg:order-2">
                     <BookingSummary
                       pricing={pricing}
                       promoCode={promoCode}
