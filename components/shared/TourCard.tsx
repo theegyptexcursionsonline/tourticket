@@ -29,7 +29,7 @@ const TourCard: React.FC<TourCardProps> = ({
   showQuickAdd = true,
   className = ''
 }) => {
-  const { formatPrice } = useSettings();
+  const { formatPrice, t } = useSettings();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   const { addToCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
@@ -50,13 +50,13 @@ const TourCard: React.FC<TourCardProps> = ({
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (tourIsWishlisted) {
       removeFromWishlist(tour._id);
-      toast.success('Removed from wishlist');
+      toast.success(t('tourCard.removedFromWishlist'));
     } else {
       addToWishlist(tour);
-      toast.success('Added to wishlist!');
+      toast.success(t('tourCard.addedToWishlist'));
     }
   };
 
@@ -81,9 +81,9 @@ const TourCard: React.FC<TourCardProps> = ({
       };
       
       addToCart(quickAddCartItem);
-      toast.success('Added to cart!');
+      toast.success(t('tourCard.addedToCart'));
     } catch {
-      toast.error('Failed to add to cart');
+      toast.error(t('tourCard.failedToAdd'));
     } finally {
       setIsAdding(false);
     }
@@ -139,7 +139,7 @@ const TourCard: React.FC<TourCardProps> = ({
               {tour.isFeatured && (
                 <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
                   <Award size={12} />
-                  Featured
+                  {t('tourCard.featured')}
                 </div>
               )}
               
@@ -249,7 +249,7 @@ const TourCard: React.FC<TourCardProps> = ({
             <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                <span>Max {tour.maxGroupSize || 15}</span>
+                <span>{t('tourCard.max')} {tour.maxGroupSize || 15}</span>
               </div>
               
               {tour.difficulty && (
@@ -281,7 +281,7 @@ const TourCard: React.FC<TourCardProps> = ({
                   ))}
                   {tour.highlights.length > 3 && (
                     <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">
-                      +{tour.highlights.length - 3} more
+                      +{tour.highlights.length - 3} {t('tourCard.more')}
                     </span>
                   )}
                 </div>
@@ -293,11 +293,11 @@ const TourCard: React.FC<TourCardProps> = ({
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   <CheckCircle className="w-3 h-3 text-green-500" />
-                  <span>Free cancellation</span>
+                  <span>{t('tourCard.freeCancellation')}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   <Smartphone className="w-3 h-3 text-blue-500" />
-                  <span>Mobile ticket</span>
+                  <span>{t('tourCard.mobileTicket')}</span>
                 </div>
               </div>
               
