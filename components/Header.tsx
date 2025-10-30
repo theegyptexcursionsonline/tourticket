@@ -25,6 +25,7 @@ import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitch
 import AuthModal from '@/components/AuthModal';
 import { Destination, Category, Tour } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { useSettings } from '@/hooks/useSettings';
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -176,6 +177,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
   const popularSearches = usePopularSearches();
   const { recentSearches, removeSearchTerm } = useRecentSearches();
   const modalRef = useRef<HTMLDivElement>(null);
+  const { t } = useSettings();
 
   useEffect(() => {
     const fetchSearch = async () => {
@@ -276,7 +278,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="What are you looking for?"
+              placeholder={t('search.placeholder')}
               autoFocus
               className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500"
             />
@@ -285,7 +287,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
 
         {loading && (
           <div className="mb-8">
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Searching...</h3>
+            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.searching')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[...Array(3)].map((_, i) => (
                 <TourResultSkeleton key={i} />
@@ -296,7 +298,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
 
         {!loading && searchResults.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Tours</h3>
+            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.tours')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {searchResults.map((tour) => (
                 <a key={(tour as any)._id} href={`/tour/${(tour as any).slug}`} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
@@ -315,13 +317,13 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
 
         {!loading && searchTerm.length > 2 && searchResults.length === 0 && (
           <div className="text-center py-8 text-slate-500">
-            <p>No tours found for "{searchTerm}". Try a different search.</p>
+            <p>{t('search.noResults', { query: searchTerm })}</p>
           </div>
         )}
 
         <div className="space-y-8">
           <div>
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Most popular</h3>
+            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.mostPopular')}</h3>
             <div className="flex flex-wrap gap-3">
               {popularSearches.map((item) => (
                 <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />
@@ -331,7 +333,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
 
           {recentSearches.length > 0 && (
             <div>
-              <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Your recent searches</h3>
+              <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.recentSearches')}</h3>
               <div className="flex flex-wrap gap-3">
                 {recentSearches.map((item) => (
                   <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />
@@ -350,6 +352,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }>
 // =================================================================
 const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destination[]; categories: Category[] }> = React.memo(({ isOpen, onClose, destinations, categories }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const { t } = useSettings();
   useOnClickOutside(menuRef, onClose);
 
   const activityIcons: { [key: string]: React.ElementType } = {
@@ -379,7 +382,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
               <div className="md:col-span-2">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Top Destinations</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">{t('header.destinations')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {destinations.slice(0, 6).map((dest) => (
                     <a key={dest._id} href={`/destinations/${dest.slug}`} className="group block">
@@ -395,7 +398,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
               </div>
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Activity Types</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">{t('header.activities')}</h3>
                 <ul className="space-y-3">
                   {categories.slice(0, 9).map((activity) => {
                     const Icon = activityIcons[activity.slug] || Ticket;
@@ -413,9 +416,9 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
 
               <div className="bg-gray-50 rounded-lg p-6 flex flex-col justify-center items-center text-center">
                 <Star size={32} className="text-yellow-500 mb-2" />
-                <h3 className="font-bold text-lg text-gray-800">Special Offers</h3>
-                <p className="text-sm text-gray-600 my-2">Save up to 20% on combi deals and city passes!</p>
-                <a href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">View Deals</a>
+                <h3 className="font-bold text-lg text-gray-800">{t('header.specialOffers')}</h3>
+                <p className="text-sm text-gray-600 my-2">{t('offers.save')}</p>
+                <a href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">{t('header.deals')}</a>
               </div>
             </div>
           </div>
@@ -432,6 +435,7 @@ MegaMenu.displayName = 'MegaMenu';
 const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { t } = useSettings();
 
   useOnClickOutside(menuRef, () => setIsOpen(false));
 
@@ -457,15 +461,15 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             </div>
 
             <div className="py-2">
-              <a href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>My Profile</span></a>
-              <a href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>My Bookings</span></a>
-              <a href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Star size={16} /><span>Favorites</span></a>
+              <a href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>{t('header.myProfile')}</span></a>
+              <a href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>{t('header.myBookings')}</span></a>
+              <a href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Star size={16} /><span>{t('header.favorites')}</span></a>
             </div>
 
             <div className="border-t py-2">
               <button onClick={onLogout} className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors w-full text-left">
                 <LogOut size={16} />
-                <span>Sign Out</span>
+                <span>{t('header.signOut')}</span>
               </button>
             </div>
           </motion.div>
@@ -488,6 +492,7 @@ const MobileMenu: FC<{
 }> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth, destinations, categories }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+  const { t } = useSettings();
 
   useOnClickOutside(menuRef, onClose);
 
@@ -547,16 +552,16 @@ const MobileMenu: FC<{
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <a href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Profile</a>
-                    <a href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Bookings</a>
-                    <button onClick={() => { logout(); onClose(); }} className="block py-2 text-red-600 hover:text-red-700 w-full text-left">Sign Out</button>
+                    <a href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myProfile')}</a>
+                    <a href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myBookings')}</a>
+                    <button onClick={() => { logout(); onClose(); }} className="block py-2 text-red-600 hover:text-red-700 w-full text-left">{t('header.signOut')}</button>
                   </div>
                 </div>
               ) : (
                 <div className="p-6 border-b">
                   <div className="space-y-3">
-                    <a href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">Log In</a>
-                    <a href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">Sign Up</a>
+                    <a href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">{t('header.login')}</a>
+                    <a href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">{t('header.signup')}</a>
                   </div>
                 </div>
               )}
@@ -568,7 +573,7 @@ const MobileMenu: FC<{
                 </button>
 
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800 mb-4">Destinations</h3>
+                  <h3 className="font-bold text-lg text-slate-800 mb-4">{t('header.destinations')}</h3>
                   <div className="space-y-2">
                     {destinations.map((dest) => (
                       <a key={dest._id} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
@@ -579,7 +584,7 @@ const MobileMenu: FC<{
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800 mb-4">Activities</h3>
+                  <h3 className="font-bold text-lg text-slate-800 mb-4">{t('header.activities')}</h3>
                   <div className="space-y-2">
                     {categories.map((activity) => {
                       const Icon = activityIcons[activity.slug] || Ticket;
@@ -610,6 +615,7 @@ MobileMenu.displayName = 'MobileMenu';
 // --- HEADER SEARCH BAR (desktop) ---
 // =================================================================
 const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = React.memo(({ onFocus, isTransparent }) => {
+  const { t } = useSettings();
   const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
   const borderColor = isTransparent ? 'border-transparent' : 'border-slate-200';
   return (
@@ -617,7 +623,7 @@ const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = Rea
       <div className="relative">
         <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none transition-colors duration-500 ${isTransparent ? 'text-white' : 'text-slate-400'}`} />
         <button onClick={onFocus} className={`w-full text-left pl-12 pr-6 py-3 text-sm bg-white border-2 rounded-full shadow-sm hover:border-red-300 transition-colors ${borderColor}`}>
-          <span className="text-slate-500">{currentSuggestion}</span>
+          <span className="text-slate-500">{t('search.placeholder')}</span>
         </button>
       </div>
     </div>
@@ -637,6 +643,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
 
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const { t } = useSettings();
 
   useEffect(() => {
     const fetchNavData = async () => {
@@ -702,7 +709,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
             onMouseEnter={() => setMegaMenuOpen(true)}
             className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}
           >
-            <span>EXPLORE</span>
+            <span>{t('header.explore')}</span>
             <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}>
               <ChevronDown size={20} />
             </motion.div>
@@ -741,8 +748,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
           <UserMenu user={user} onLogout={logout} />
         ) : (
           <div className="hidden md:flex items-center gap-3">
-            <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>Log In</a>
-            <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">Sign Up</a>
+            <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>{t('header.login')}</a>
+            <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">{t('header.signup')}</a>
           </div>
         )}
 
