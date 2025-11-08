@@ -2,6 +2,7 @@
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextResponse } from 'next/server';
+import { syncTourToAlgolia } from '@/lib/algolia';
 
 // Helper function to clean booking options
 function cleanBookingOptions(bookingOptions: any[]): any[] {
@@ -141,6 +142,16 @@ export async function POST(request: Request) {
         .lean();
     } catch (popErr) {
       console.warn('Populate after create failed, returning raw tour', popErr);
+    }
+
+    // Sync to Algolia if published
+    if (body.isPublished) {
+      try {
+        await syncTourToAlgolia(populated ?? tour);
+      } catch (algoliaErr) {
+        console.warn('Failed to sync tour to Algolia:', algoliaErr);
+        // Don't fail the request if Algolia sync fails
+      }
     }
 
     return NextResponse.json({ success: true, data: populated ?? tour }, { status: 201 });

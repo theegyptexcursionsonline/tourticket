@@ -4,6 +4,7 @@ import Tour from "@/lib/models/Tour";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
 import mongoose from "mongoose";
+import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -262,6 +263,22 @@ export async function PUT(
         console.log('Updated tour attractions:', updatedTour.attractions);
         console.log('Updated tour interests:', updatedTour.interests);
 
+        // Sync to Algolia if published
+        if (updatedTour.isPublished) {
+            try {
+                await syncTourToAlgolia(updatedTour);
+            } catch (algoliaErr) {
+                console.warn('Failed to sync updated tour to Algolia:', algoliaErr);
+            }
+        } else {
+            // Remove from Algolia if unpublished
+            try {
+                await deleteTourFromAlgolia(id);
+            } catch (algoliaErr) {
+                console.warn('Failed to remove tour from Algolia:', algoliaErr);
+            }
+        }
+
         return NextResponse.json({ success: true, data: updatedTour });
         
     } catch (error: any) {
@@ -316,6 +333,13 @@ export async function DELETE(
 
         if (!deletedTour) {
             return NextResponse.json({ success: false, error: "Tour not found" }, { status: 404 });
+        }
+
+        // Remove from Algolia
+        try {
+            await deleteTourFromAlgolia(deletedTour._id.toString());
+        } catch (algoliaErr) {
+            console.warn('Failed to remove deleted tour from Algolia:', algoliaErr);
         }
 
         return NextResponse.json({ success: true, data: {} });

@@ -167,6 +167,19 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
       router.replace(`${pathname}?${newQuery}`, { scroll: false });
 
       try {
+        // Try Algolia search first
+        const algoliaRes = await fetch(`/api/search/algolia?${newQuery}`, { signal: controller.signal });
+
+        if (algoliaRes.ok) {
+          const algoliaData = await algoliaRes.json();
+          if (algoliaData.hits && algoliaData.hits.length > 0) {
+            setTours(algoliaData.hits);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Fallback to MongoDB search if Algolia fails or returns no results
         const res = await fetch(`/api/search/tours?${newQuery}`, { signal: controller.signal });
         if (!res.ok) throw new Error('Failed to fetch tours');
         const data = await res.json();
