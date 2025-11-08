@@ -105,34 +105,36 @@ export async function GET(
 
     console.log('Found tours:', tours.length);
 
-    // Fetch reviews for these tours
-    const tourIds = tours.map(tour => tour._id);
+    // Fetch reviews for these tours (optimized with limit)
+    const tourIds = tours.slice(0, 20).map(tour => tour._id); // Limit to first 20 tours for reviews
     let reviews = [];
     let reviewStats = [];
 
     if (tourIds.length > 0) {
-      reviews = await Review.find({
-        tour: { $in: tourIds }
-      })
-      .populate({
-        path: 'user',
-        model: User,
-        select: 'firstName lastName picture'
-      })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+      // Run review queries in parallel
+      [reviews, reviewStats] = await Promise.all([
+        Review.find({
+          tour: { $in: tourIds }
+        })
+        .populate({
+          path: 'user',
+          model: User,
+          select: 'firstName lastName picture'
+        })
+        .sort({ createdAt: -1 })
+        .limit(20) // Reduced limit
+        .lean(),
 
-      // Calculate review stats
-      reviewStats = await Review.aggregate([
-        { $match: { tour: { $in: tourIds } } },
-        { 
-          $group: { 
-            _id: '$tour', 
-            count: { $sum: 1 }, 
-            avgRating: { $avg: '$rating' } 
-          } 
-        }
+        Review.aggregate([
+          { $match: { tour: { $in: tourIds } } },
+          {
+            $group: {
+              _id: '$tour',
+              count: { $sum: 1 },
+              avgRating: { $avg: '$rating' }
+            }
+          }
+        ])
       ]);
     }
 
@@ -151,15 +153,18 @@ export async function GET(
       rating: reviewStatsMap[tour._id.toString()]?.avgRating || tour.rating || 4.5
     }));
 
-    // Get related categories
-    const relatedCategories = await Category.find({
-      _id: { $ne: category?._id }
-    }).limit(6).lean();
+    // Get related categories (fetch in parallel if possible, but skip during build)
+    let relatedCategories = [];
+    if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+      relatedCategories = await Category.find({
+        _id: { $ne: category?._id }
+      }).limit(6).lean();
+    }
 
     // Transform reviews
     const transformedReviews = reviews.map(review => ({
       ...review,
-      userName: review.user 
+      userName: review.user
         ? `${review.user.firstName} ${review.user.lastName}`.trim()
         : review.userName || 'Anonymous',
       userAvatar: review.user?.picture || null

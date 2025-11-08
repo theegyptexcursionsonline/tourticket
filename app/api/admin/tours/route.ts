@@ -2,7 +2,6 @@
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextResponse } from 'next/server';
-import { getCachedData, invalidateCache, cacheConfig, cacheKeys } from '@/lib/redis';
 
 // Helper function to clean booking options
 function cleanBookingOptions(bookingOptions: any[]): any[] {
@@ -85,18 +84,12 @@ async function fetchToursWithPopulate() {
   }
 }
 
-// GET all tours with caching
+// GET all tours
 export async function GET() {
   await dbConnect();
-  
+
   try {
-    const tours = await getCachedData(
-      cacheKeys.tours.all(),
-      async () => {
-        return await fetchToursWithPopulate();
-      },
-      cacheConfig.MEDIUM // Cache for 5 minutes
-    );
+    const tours = await fetchToursWithPopulate();
 
     return NextResponse.json({ success: true, data: tours }, { status: 200 });
   } catch (error) {
@@ -149,11 +142,6 @@ export async function POST(request: Request) {
     } catch (popErr) {
       console.warn('Populate after create failed, returning raw tour', popErr);
     }
-
-    // Invalidate all tour-related caches
-    await invalidateCache('tours:*');
-    await invalidateCache('destinations:*');
-    await invalidateCache('attractions-interests:*');
 
     return NextResponse.json({ success: true, data: populated ?? tour }, { status: 201 });
   } catch (error) {

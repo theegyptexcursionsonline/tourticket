@@ -76,32 +76,9 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
   }
 }
 
-// Generate static params
-export async function generateStaticParams() {
-  try {
-    const baseUrl = getBaseUrl();
-    const res = await fetch(`${baseUrl}/api/interests`, {
-      next: { revalidate: 3600 },
-    });
-    
-    if (!res.ok) {
-      return [];
-    }
-    
-    const data = await res.json();
-    
-    if (!data.success || !Array.isArray(data.data)) {
-      return [];
-    }
-    
-    return data.data.map((interest: any) => ({
-      slug: interest.slug,
-    }));
-  } catch (error) {
-    console.error('Error generating static params:', error);
-    return [];
-  }
-}
+// Use dynamic rendering to avoid build timeouts
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 
 // Generate metadata
 export async function generateMetadata(
@@ -132,9 +109,6 @@ export async function generateMetadata(
     },
   };
 }
-
-// Revalidation
-export const revalidate = 3600;
 
 // Main page component
 export default async function Page(props: InterestPageProps) {
