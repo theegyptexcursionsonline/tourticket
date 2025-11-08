@@ -33,6 +33,7 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 - 🚀 **Server-Side Rendering** - Fast page loads with Next.js App Router
 - 📱 **Responsive Design** - Mobile-first approach with Tailwind CSS
 - 🎨 **Modern UI/UX** - Framer Motion animations, Lucide React icons
+- 🔍 **Advanced Search** - Algolia-powered instant search with typo tolerance
 - 🛡️ **Error Tracking** - Sentry integration for monitoring
 - 💬 **Customer Support** - Intercom integration
 - 🔒 **Security** - Protected routes, input validation, secure sessions
@@ -50,6 +51,7 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 ### Backend
 - **Runtime:** Node.js 20+
 - **Database:** [MongoDB](https://www.mongodb.com/) with [Mongoose ODM](https://mongoosejs.com/)
+- **Search:** [Algolia](https://www.algolia.com/) for instant search
 - **Authentication:** JWT (Jose), bcryptjs
 - **Payment:** [Stripe](https://stripe.com/)
 - **Email:** [Mailgun](https://www.mailgun.com/)
@@ -93,6 +95,12 @@ CLOUDINARY_API_SECRET=your_api_secret
 # Mailgun
 MAILGUN_API_KEY=your_mailgun_api_key
 MAILGUN_DOMAIN=your_mailgun_domain
+
+# Algolia Search (optional but recommended)
+NEXT_PUBLIC_ALGOLIA_APP_ID=your_algolia_app_id
+NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY=your_algolia_search_api_key
+ALGOLIA_ADMIN_API_KEY=your_algolia_admin_api_key
+NEXT_PUBLIC_ALGOLIA_INDEX_NAME=tours
 
 # Sentry (optional)
 SENTRY_DSN=your_sentry_dsn
@@ -141,10 +149,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## 📜 Available Scripts
 
 ```bash
-pnpm dev          # Start development server with Turbopack
-pnpm build        # Build for production
-pnpm start        # Start production server
-pnpm lint         # Run ESLint
+pnpm dev                # Start development server with Turbopack
+pnpm build              # Build for production
+pnpm start              # Start production server
+pnpm lint               # Run ESLint
+pnpm algolia:sync       # Sync all tours to Algolia search index
+pnpm algolia:clear-sync # Clear and resync Algolia index
 ```
 
 ## 📁 Project Structure
@@ -249,6 +259,60 @@ pnpm build
 ### Start Command
 ```bash
 pnpm start
+```
+
+## 🔍 Algolia Search Setup
+
+This application uses Algolia for fast, typo-tolerant search functionality.
+
+### Setting up Algolia
+
+1. **Create an Algolia account** at [algolia.com](https://www.algolia.com/)
+
+2. **Create a new application** in your Algolia dashboard
+
+3. **Get your API credentials:**
+   - Application ID
+   - Search-Only API Key (for frontend)
+   - Admin API Key (for backend operations)
+
+4. **Add to your `.env` file:**
+   ```env
+   NEXT_PUBLIC_ALGOLIA_APP_ID=your_app_id
+   NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY=your_search_api_key
+   ALGOLIA_ADMIN_API_KEY=your_admin_api_key
+   NEXT_PUBLIC_ALGOLIA_INDEX_NAME=tours
+   ```
+
+5. **Initial index sync:**
+   ```bash
+   pnpm algolia:sync
+   ```
+
+### Algolia Features
+
+- **Instant Search** - Results appear as you type
+- **Typo Tolerance** - Finds results even with misspellings
+- **Faceted Filters** - Filter by category, destination, price, rating
+- **Custom Ranking** - Featured tours ranked higher
+- **Auto-sync** - Tours automatically sync when created/updated/deleted
+- **Fallback** - Falls back to MongoDB search if Algolia is unavailable
+
+### Manual Sync Commands
+
+```bash
+# Sync all published tours to Algolia
+pnpm algolia:sync
+
+# Clear index and resync all tours
+pnpm algolia:clear-sync
+```
+
+### API Endpoint for Admin Sync
+
+```bash
+# Trigger sync via API
+POST /api/algolia/sync
 ```
 
 ## 🧪 Testing
