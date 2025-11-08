@@ -2,29 +2,22 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
-import { getCachedData, cacheConfig } from '@/lib/redis';
 
 export async function GET() {
   try {
     await dbConnect();
 
-    const data = await getCachedData(
-      'attractions-interests:all',
-      async () => {
-        // Fetch all attraction pages
-        const pages = await AttractionPage.find({ isPublished: true })
-          .select('_id title slug pageType')
-          .sort({ title: 1 })
-          .lean();
+    // Fetch all attraction pages
+    const pages = await AttractionPage.find({ isPublished: true })
+      .select('_id title slug pageType')
+      .sort({ title: 1 })
+      .lean();
 
-        // Separate into attractions and interests
-        const attractions = pages.filter(p => p.pageType === 'attraction');
-        const interests = pages.filter(p => p.pageType === 'category');
+    // Separate into attractions and interests
+    const attractions = pages.filter(p => p.pageType === 'attraction');
+    const interests = pages.filter(p => p.pageType === 'category');
 
-        return { attractions, interests };
-      },
-      cacheConfig.MEDIUM // Cache for 5 minutes
-    );
+    const data = { attractions, interests };
 
     return NextResponse.json({
       success: true,

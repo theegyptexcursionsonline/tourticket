@@ -4,7 +4,6 @@ import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
-import { invalidateCache } from '@/lib/redis';
 
 export async function PUT(
   request: NextRequest,
@@ -143,9 +142,6 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    // Invalidate destinations cache
-    await invalidateCache('destinations:*');
-
     return NextResponse.json({
       success: true,
       data: destination,
@@ -222,9 +218,6 @@ export async function DELETE(
         error: 'Destination not found'
       }, { status: 404 });
     }
-
-    // Invalidate destinations cache
-    await invalidateCache('destinations:*');
 
     return NextResponse.json({
       success: true,

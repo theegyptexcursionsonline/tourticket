@@ -15,11 +15,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Experimental features for app directory
-  experimental: {
-    appDir: true,
-    serverComponentsExternalPackages: ['mongoose'],
-  },
+  // Server external packages configuration
+  serverExternalPackages: ['mongoose'],
 
   // Image optimization configuration
   images: {
@@ -160,9 +157,6 @@ const nextConfig = {
 
   // Handle trailing slashes consistently
   trailingSlash: false,
-
-  // Optimize bundle size
-  swcMinify: true,
 
   // Environment variables that should be available on the client
   env: {

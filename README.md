@@ -33,7 +33,6 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 - 🚀 **Server-Side Rendering** - Fast page loads with Next.js App Router
 - 📱 **Responsive Design** - Mobile-first approach with Tailwind CSS
 - 🎨 **Modern UI/UX** - Framer Motion animations, Lucide React icons
-- 🔄 **Real-time Updates** - Redis caching with IORedis
 - 🛡️ **Error Tracking** - Sentry integration for monitoring
 - 💬 **Customer Support** - Intercom integration
 - 🔒 **Security** - Protected routes, input validation, secure sessions
@@ -55,7 +54,6 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 - **Payment:** [Stripe](https://stripe.com/)
 - **Email:** [Mailgun](https://www.mailgun.com/)
 - **Storage:** [Cloudinary](https://cloudinary.com/)
-- **Caching:** [Redis](https://redis.io/) (IORedis)
 
 ### DevOps & Tools
 - **Monitoring:** [Sentry](https://sentry.io/)
@@ -71,7 +69,6 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 - **Node.js** 20.x or later
 - **pnpm** 8.x or later
 - **MongoDB** 6.x or later (local or Atlas)
-- **Redis** (optional, for caching)
 
 ### Environment Variables
 
@@ -96,9 +93,6 @@ CLOUDINARY_API_SECRET=your_api_secret
 # Mailgun
 MAILGUN_API_KEY=your_mailgun_api_key
 MAILGUN_DOMAIN=your_mailgun_domain
-
-# Redis (optional)
-REDIS_URL=your_redis_url
 
 # Sentry (optional)
 SENTRY_DSN=your_sentry_dsn

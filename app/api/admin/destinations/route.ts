@@ -3,7 +3,6 @@ import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import { NextResponse } from 'next/server';
 import { MongoError } from 'mongodb';
-import { invalidateCache } from '@/lib/redis';
 
 export async function GET() {
   await dbConnect();
@@ -50,9 +49,6 @@ export async function POST(request: Request) {
     }
     
     const destination = await Destination.create(body);
-
-    // Invalidate destinations cache
-    await invalidateCache('destinations:*');
 
     return NextResponse.json({ success: true, data: destination }, { status: 201 });
     
