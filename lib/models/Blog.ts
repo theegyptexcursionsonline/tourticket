@@ -295,6 +295,44 @@ BlogSchema.statics.getByCategory = function(category: string) {
   return this.find({ status: 'published', category }).sort({ publishedAt: -1 });
 };
 
+// Post-save hook to sync to Algolia
+BlogSchema.post('save', async function(doc) {
+  try {
+    if (doc.status === 'published') {
+      const { syncBlogToAlgolia } = await import('../algolia');
+      await syncBlogToAlgolia(doc);
+      console.log(`Auto-synced blog ${doc._id} to Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-syncing blog to Algolia:', error);
+  }
+});
+
+// Post-delete hooks to remove from Algolia
+BlogSchema.post('findOneAndDelete', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteBlogFromAlgolia } = await import('../algolia');
+      await deleteBlogFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted blog ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting blog from Algolia:', error);
+  }
+});
+
+BlogSchema.post('deleteOne', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteBlogFromAlgolia } = await import('../algolia');
+      await deleteBlogFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted blog ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting blog from Algolia:', error);
+  }
+});
+
 const Blog: Model<IBlog> = mongoose.models.Blog || mongoose.model<IBlog>('Blog', BlogSchema);
 
 export default Blog;

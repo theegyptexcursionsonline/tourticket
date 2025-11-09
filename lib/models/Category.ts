@@ -192,4 +192,42 @@ CategorySchema.pre('save', function(next) {
   next();
 });
 
+// Post-save hook to sync to Algolia
+CategorySchema.post('save', async function(doc) {
+  try {
+    if (doc.isPublished) {
+      const { syncCategoryToAlgolia } = await import('../algolia');
+      await syncCategoryToAlgolia(doc);
+      console.log(`Auto-synced category ${doc._id} to Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-syncing category to Algolia:', error);
+  }
+});
+
+// Post-delete hooks to remove from Algolia
+CategorySchema.post('findOneAndDelete', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteCategoryFromAlgolia } = await import('../algolia');
+      await deleteCategoryFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted category ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting category from Algolia:', error);
+  }
+});
+
+CategorySchema.post('deleteOne', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteCategoryFromAlgolia } = await import('../algolia');
+      await deleteCategoryFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted category ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting category from Algolia:', error);
+  }
+});
+
 export default models.Category || mongoose.model<ICategory>('Category', CategorySchema);

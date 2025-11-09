@@ -327,4 +327,42 @@ DestinationSchema.pre('save', function(next) {
   next();
 });
 
+// Post-save hook to sync to Algolia
+DestinationSchema.post('save', async function(doc) {
+  try {
+    if (doc.isPublished) {
+      const { syncDestinationToAlgolia } = await import('../algolia');
+      await syncDestinationToAlgolia(doc);
+      console.log(`Auto-synced destination ${doc._id} to Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-syncing destination to Algolia:', error);
+  }
+});
+
+// Post-delete hooks to remove from Algolia
+DestinationSchema.post('findOneAndDelete', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteDestinationFromAlgolia } = await import('../algolia');
+      await deleteDestinationFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted destination ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting destination from Algolia:', error);
+  }
+});
+
+DestinationSchema.post('deleteOne', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteDestinationFromAlgolia } = await import('../algolia');
+      await deleteDestinationFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted destination ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting destination from Algolia:', error);
+  }
+});
+
 export default models.Destination || mongoose.model<IDestination>('Destination', DestinationSchema);

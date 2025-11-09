@@ -1,14 +1,14 @@
 // app/api/search/algolia/route.ts
 import { NextResponse } from 'next/server';
-import { getToursIndex } from '@/lib/algolia';
+import { algoliaClient, ALGOLIA_INDEX_NAME } from '@/lib/algolia';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const index = getToursIndex();
+    const client = algoliaClient();
 
     // Fallback to empty results if Algolia is not configured
-    if (!index) {
+    if (!client) {
       console.warn('Algolia not configured, returning empty results');
       return NextResponse.json({
         hits: [],
@@ -124,11 +124,19 @@ export async function GET(request: Request) {
       }
     }
 
-    // Perform search
-    const results = await index.search(query, searchOptions);
+    // Perform search using Algolia v5 API
+    const results = await client.search({
+      requests: [{
+        indexName: ALGOLIA_INDEX_NAME,
+        query,
+        ...searchOptions
+      }]
+    });
+
+    const searchResults = results.results[0];
 
     // Transform hits to match expected format
-    const transformedHits = results.hits.map((hit: any) => ({
+    const transformedHits = searchResults.hits.map((hit: any) => ({
       _id: hit.objectID,
       id: hit.objectID,
       ...hit
@@ -136,11 +144,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       hits: transformedHits,
-      nbHits: results.nbHits,
-      page: results.page,
-      nbPages: results.nbPages,
-      hitsPerPage: results.hitsPerPage,
-      query: results.query
+      nbHits: searchResults.nbHits,
+      page: searchResults.page,
+      nbPages: searchResults.nbPages,
+      hitsPerPage: searchResults.hitsPerPage,
+      query: searchResults.query
     });
 
   } catch (error) {

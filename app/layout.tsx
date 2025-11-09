@@ -10,6 +10,7 @@ import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
 import IntercomClient from "@/components/IntercomClient";
+import AIAssistantButton from "@/components/AIAssistantButton";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -41,6 +42,7 @@ export default function RootLayout({
                 {children}
                 <CartSidebar />
                 <WishlistSidebar />
+                <AIAssistantButton />
                 <Toaster
                   position="top-right"
                   reverseOrder={false}

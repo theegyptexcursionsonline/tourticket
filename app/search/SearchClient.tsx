@@ -3,10 +3,22 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Tour as TourType, Category, Destination } from '@/types';
 import TourCard from '@/components/user/TourCard';
-import { Star, Search as SearchIcon, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Star, Search as SearchIcon, Loader2, SlidersHorizontal, MessageSquare, Grid3x3 } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Header from '@/components/Headersearch';
 import Footer from '@/components/Footer';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the AI Chat component (client-side only)
+const AlgoliaChat = dynamic(() => import('@/components/search/AlgoliaChat'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+      <p className="ml-3 text-slate-600">Loading AI Assistant...</p>
+    </div>
+  ),
+});
 
 interface SearchClientProps {
   initialTours: TourType[];
@@ -63,6 +75,9 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // View mode state
+  const [viewMode, setViewMode] = useState<'browse' | 'ai'>('browse');
+
   // Filters & UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -76,7 +91,7 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
   const [tours, setTours] = useState<TourType[]>(initialTours || []);
   const [isLoading, setIsLoading] = useState(true); // Start true on initial load
   const [isMobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  
+
   const isFirstMount = useRef(true);
   
   // parse initial filters from URL on mount
@@ -223,50 +238,86 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 mb-6">
             Find Your Next Adventure
           </h1>
-          <div className="relative max-w-2xl">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by tour name, e.g., 'Giza Pyramids'"
-              className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-full focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-sm"
-            />
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
+
+          {/* Mode Switcher */}
+          <div className="flex gap-2 mb-6 max-w-2xl">
+            <button
+              onClick={() => setViewMode('browse')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
+                viewMode === 'browse'
+                  ? 'bg-red-600 text-white shadow-lg'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              <Grid3x3 className="w-5 h-5" />
+              Browse Tours
+            </button>
+            <button
+              onClick={() => setViewMode('ai')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
+                viewMode === 'ai'
+                  ? 'bg-red-600 text-white shadow-lg'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              AI Assistant
+            </button>
           </div>
+
+          {/* Search Input - Only show in browse mode */}
+          {viewMode === 'browse' && (
+            <div className="relative max-w-2xl">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by tour name, e.g., 'Giza Pyramids'"
+                className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-full focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-sm"
+              />
+              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
+            </div>
+          )}
         </div>
       </div>
 
       <main className="container mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
-          <div className="lg:col-span-1">
-            <div className="lg:hidden mb-4">
-              <button onClick={() => setMobileFiltersOpen(!isMobileFiltersOpen)} className="flex items-center justify-center w-full px-4 py-2 bg-white border border-slate-300 rounded-lg shadow-sm">
-                <SlidersHorizontal className="w-5 h-5 mr-2 text-slate-600" />
-                <span>{isMobileFiltersOpen ? 'Hide' : 'Show'} Filters</span>
-              </button>
-              {isMobileFiltersOpen && <div className="mt-3"><FilterSidebar /></div>}
-            </div>
-            <div className="hidden lg:block"><FilterSidebar /></div>
-          </div>
-
-          <div className="lg:col-span-3">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 pb-4 border-b border-slate-200">
-              <p className="text-sm text-slate-600 mb-2 sm:mb-0">
-                {isLoading ? 'Searching...' : `Showing ${tours.length} result(s)`}
-              </p>
-              <div className="flex items-center gap-2">
-                <label htmlFor="sort" className="text-sm font-medium text-slate-700">Sort by:</label>
-                <select id="sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border-slate-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 text-sm">
-                  <option value="relevance">Relevance</option>
-                  <option value="rating">Rating</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                </select>
+        {viewMode === 'browse' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+            <div className="lg:col-span-1">
+              <div className="lg:hidden mb-4">
+                <button onClick={() => setMobileFiltersOpen(!isMobileFiltersOpen)} className="flex items-center justify-center w-full px-4 py-2 bg-white border border-slate-300 rounded-lg shadow-sm">
+                  <SlidersHorizontal className="w-5 h-5 mr-2 text-slate-600" />
+                  <span>{isMobileFiltersOpen ? 'Hide' : 'Show'} Filters</span>
+                </button>
+                {isMobileFiltersOpen && <div className="mt-3"><FilterSidebar /></div>}
               </div>
+              <div className="hidden lg:block"><FilterSidebar /></div>
             </div>
-            <TourGrid />
+
+            <div className="lg:col-span-3">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 pb-4 border-b border-slate-200">
+                <p className="text-sm text-slate-600 mb-2 sm:mb-0">
+                  {isLoading ? 'Searching...' : `Showing ${tours.length} result(s)`}
+                </p>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort" className="text-sm font-medium text-slate-700">Sort by:</label>
+                  <select id="sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border-slate-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 text-sm">
+                    <option value="relevance">Relevance</option>
+                    <option value="rating">Rating</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                  </select>
+                </div>
+              </div>
+              <TourGrid />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-5xl mx-auto">
+            <AlgoliaChat />
+          </div>
+        )}
       </main>
 
       <Footer />
