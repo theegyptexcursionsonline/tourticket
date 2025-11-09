@@ -1,178 +1,89 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
-import { Search, X, Clock, Zap, Star } from 'lucide-react';
+import { Search, X, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { Tour } from '@/types';
-import { useRecentSearches, usePopularSearches } from '@/hooks/useSearch';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
+import dynamic from 'next/dynamic';
 
-const TourResultSkeleton = () => (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-        <div className="w-full h-40 bg-slate-200"></div>
-        <div className="p-4">
-            <div className="h-5 bg-slate-200 rounded w-3/4 mb-2"></div>
-            <div className="h-4 bg-slate-200 rounded w-1/2 mb-4"></div>
-            <div className="flex items-center">
-                <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-            </div>
-        </div>
+// Dynamically import AI Chat
+const AlgoliaChat = dynamic(() => import('@/components/search/AlgoliaChat'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      <p className="ml-3 text-slate-600">Loading AI Assistant...</p>
     </div>
-);
-
-const TourResultCard: FC<{ tour: Tour }> = ({ tour }) => (
-    <a 
-        href={`/tour/${tour.slug}`} 
-        className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl"
-    >
-        <div className="aspect-w-16 aspect-h-9 w-full h-40 overflow-hidden relative">
-            <Image 
-                src={tour.image || '/placeholder-image.png'} 
-                alt={tour.title || 'Tour Image'}
-                fill 
-                sizes="(max-width: 768px) 50vw, 33vw" 
-                className="object-cover transition-transform duration-300 group-hover:scale-110" 
-            />
-        </div>
-        <div className="p-4">
-            <h4 className="font-bold text-gray-900 group-hover:text-red-500 truncate text-lg mb-1">
-                {tour.title || 'Untitled Tour'}
-            </h4>
-            <p className="text-sm text-gray-500 mb-2">
-                {tour.destination?.name || 'Unknown Destination'}
-            </p>
-            {tour.rating ? (
-                <div className="flex items-center">
-                    <Star className="w-5 h-5 text-yellow-400 mr-1" />
-                    <span className="text-gray-800 font-bold">{tour.rating.toFixed(1)}</span>
-                    {tour.reviews && (
-                        <span className="text-gray-500 text-sm ml-2">
-                            ({Array.isArray(tour.reviews) ? tour.reviews.length : 0} reviews)
-                        </span>
-                    )}
-                </div>
-            ) : (
-                <div className="text-sm text-gray-500">No reviews yet</div>
-            )}
-            {tour.discountPrice && (
-                <div className="mt-2">
-                    <span className="text-lg font-bold text-red-600">
-                        ${tour.discountPrice}
-                    </span>
-                </div>
-            )}
-        </div>
-    </a>
-);
-
-const SearchSuggestion: FC<{ 
-    term: string; 
-    icon: React.ElementType; 
-    onSelect: (term: string) => void; 
-    onRemove?: (term: string) => void; 
-}> = React.memo(({ term, icon: Icon, onSelect, onRemove }) => (
-    <div className="group relative">
-        <button 
-            onClick={() => onSelect(term)} 
-            className="flex items-center gap-3 pl-4 pr-5 py-2 bg-slate-100 text-slate-700 rounded-full transition-all hover:bg-slate-200 hover:shadow-md group-hover:pr-10"
-        >
-            <Icon className="h-5 w-5 text-slate-500 group-hover:text-red-500 transition-colors" />
-            <span className="font-medium">{term}</span>
-        </button>
-        {onRemove && (
-            <button 
-                onClick={(e) => { 
-                    e.stopPropagation(); 
-                    onRemove(term); 
-                }} 
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-slate-300" 
-                aria-label={`Remove ${term}`}
-            >
-                <X size={14} />
-            </button>
-        )}
-    </div>
-));
-
-SearchSuggestion.displayName = 'SearchSuggestion';
+  ),
+});
 
 const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }> = ({ onClose, onSearch }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState<Tour[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    
-    const popularSearches = usePopularSearches();
-    const { recentSearches, addSearchTerm, removeSearchTerm } = useRecentSearches();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showAIChat, setShowAIChat] = useState(false);
     const modalRef = useRef<HTMLDivElement>(null);
 
-    // Debounced search effect
+    // Example queries for users to try
+    const exampleQueries = [
+        {
+            icon: '👨‍👩‍👧‍👦',
+            title: 'Family Tours',
+            query: 'Find family-friendly tours in Cairo under $100 per person',
+            category: 'Budget'
+        },
+        {
+            icon: '🌅',
+            title: 'Sunset Cruises',
+            query: 'Show me romantic sunset cruises with dinner on the Nile',
+            category: 'Romantic'
+        },
+        {
+            icon: '⛰️',
+            title: 'Adventure Activities',
+            query: 'What adventure activities and tours are available in Luxor?',
+            category: 'Adventure'
+        },
+        {
+            icon: '🏛️',
+            title: 'Historical Tours',
+            query: 'Best historical and cultural tours to visit pyramids and museums',
+            category: 'Cultural'
+        },
+        {
+            icon: '🏖️',
+            title: 'Beach & Relaxation',
+            query: 'Find beach tours and spa experiences in Hurghada',
+            category: 'Relaxation'
+        },
+        {
+            icon: '🌟',
+            title: 'Luxury Experiences',
+            query: 'Premium luxury tours with private guides and transfers',
+            category: 'Luxury'
+        }
+    ];
+
+    // Handle query selection
+    const handleQuerySelect = (query: string) => {
+        setSearchQuery(query);
+        setShowAIChat(true);
+    };
+
+    // Show AI chat when user starts typing
     useEffect(() => {
-        const fetchSearch = async () => {
-            if (searchTerm.trim().length > 2) {
-                setLoading(true);
-                setError(null);
-                
-                try {
-                    const res = await fetch(`/api/search/live?q=${encodeURIComponent(searchTerm.trim())}`);
-                    const data = await res.json();
-                    
-                    if (data.success) {
-                        setSearchResults(data.data || []);
-                    } else {
-                        setSearchResults([]);
-                        setError(data.message || 'Search failed');
-                    }
-                } catch (err) {
-                    console.error('Search error:', err);
-                    setSearchResults([]);
-                    setError('Failed to search. Please try again.');
-                } finally {
-                    setLoading(false);
-                }
-            } else {
-                setSearchResults([]);
-                setError(null);
-            }
-        };
-
-        const debounceTimer = setTimeout(() => {
-            fetchSearch();
-        }, 300);
-
-        return () => clearTimeout(debounceTimer);
-    }, [searchTerm]);
+        if (searchQuery.trim().length > 0) {
+            setShowAIChat(true);
+        } else {
+            setShowAIChat(false);
+        }
+    }, [searchQuery]);
 
     // Handle search form submission
     const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
         e?.preventDefault();
-        const trimmedTerm = searchTerm.trim();
-        
-        if (trimmedTerm) {
-            addSearchTerm(trimmedTerm);
-            window.location.href = `/search?q=${encodeURIComponent(trimmedTerm)}`;
-            onSearch(trimmedTerm);
-            setSearchTerm('');
-            onClose();
+        if (searchQuery.trim()) {
+            setShowAIChat(true);
         }
-    }, [searchTerm, onSearch, onClose, addSearchTerm]);
-
-    // Handle popular search selection
-    const handlePopularSearch = useCallback((term: string) => {
-        addSearchTerm(term);
-        window.location.href = `/search?q=${encodeURIComponent(term)}`;
-        onSearch(term);
-        onClose();
-    }, [onSearch, onClose, addSearchTerm]);
-
-    // Handle recent search selection
-    const handleRecentSearch = useCallback((term: string) => {
-        // Don't add to recent searches since it's already there
-        window.location.href = `/search?q=${encodeURIComponent(term)}`;
-        onSearch(term);
-        onClose();
-    }, [onSearch, onClose]);
+    }, [searchQuery]);
 
     // Handle escape key and prevent body scroll
     useEffect(() => {
@@ -211,115 +122,92 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="relative w-full max-w-5xl bg-white shadow-2xl rounded-lg p-6 sm:p-8 mt-16 max-h-[80vh] overflow-y-auto"
             >
-                <button 
-                    onClick={onClose} 
-                    className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100 z-10" 
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100 z-10"
                     aria-label="Close search"
                 >
                     <X size={28} />
                 </button>
 
                 <div id="search-modal-title" className="sr-only">Search Tours</div>
-                
-                <form onSubmit={handleSearchSubmit} className="mb-8">
-                    <div className="relative">
-                        <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-400" />
-                        <input 
-                            type="text" 
-                            value={searchTerm} 
-                            onChange={(e) => setSearchTerm(e.target.value)} 
-                            placeholder="What are you looking for?" 
-                            autoFocus 
-                            className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500 transition-colors" 
-                        />
-                    </div>
-                </form>
 
-                {/* Loading State */}
-                {loading && (
-                    <div className="mb-8">
-                        <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">
-                            Searching...
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => (
-                                <TourResultSkeleton key={i} />
-                            ))}
+                {/* AI-Powered Search Interface */}
+                {!showAIChat ? (
+                    <>
+                        {/* Hero Section */}
+                        <div className="text-center mb-8">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-4">
+                                <Sparkles className="w-8 h-8 text-white" />
+                            </div>
+                            <h2 className="text-3xl font-bold text-slate-800 mb-2">
+                                AI-Powered Tour Search
+                            </h2>
+                            <p className="text-slate-600 text-lg">
+                                Ask me anything about Egypt tours in natural language
+                            </p>
                         </div>
-                    </div>
-                )}
 
-                {/* Error State */}
-                {error && !loading && (
-                    <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-red-600">{error}</p>
-                    </div>
-                )}
-
-                {/* Search Results */}
-                {!loading && !error && searchResults.length > 0 && (
-                    <div className="mb-8">
-                        <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">
-                            Tours ({searchResults.length} found)
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {searchResults.map((tour) => (
-                                <TourResultCard key={tour._id || tour.slug} tour={tour} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* No Results */}
-                {!loading && !error && searchTerm.length > 2 && searchResults.length === 0 && (
-                    <div className="text-center py-8 text-slate-500 mb-8">
-                        <div className="mb-4">
-                            <Search className="mx-auto h-16 w-16 text-slate-300" />
-                        </div>
-                        <p className="text-lg font-medium mb-2">No tours found for "{searchTerm}"</p>
-                        <p className="text-sm">Try searching for destinations like "Dubai", "Cairo", or activities like "Museum", "Cruise"</p>
-                    </div>
-                )}
-
-                {/* Suggestions */}
-                <div className="space-y-8">
-                    {/* Popular Searches */}
-                    <div>
-                        <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">
-                            Most popular
-                        </h3>
-                        <div className="flex flex-wrap gap-3">
-                            {popularSearches.map((item) => (
-                                <SearchSuggestion 
-                                    key={item} 
-                                    term={item} 
-                                    icon={Zap} 
-                                    onSelect={handlePopularSearch} 
+                        {/* Search Input */}
+                        <form onSubmit={handleSearchSubmit} className="mb-8">
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Ask me anything... e.g., 'Find romantic sunset cruises in Cairo'"
+                                    autoFocus
+                                    className="w-full text-lg pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:bg-white transition-all"
                                 />
-                            ))}
-                        </div>
-                    </div>
+                            </div>
+                        </form>
 
-                    {/* Recent Searches */}
-                    {recentSearches.length > 0 && (
-                        <div>
-                            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">
-                                Your recent searches
+                        {/* Example Query Cards */}
+                        <div className="space-y-4">
+                            <h3 className="text-slate-700 font-bold text-lg mb-4 flex items-center gap-2">
+                                <span className="text-2xl">💡</span>
+                                Try these example searches
                             </h3>
-                            <div className="flex flex-wrap gap-3">
-                                {recentSearches.map((item) => (
-                                    <SearchSuggestion 
-                                        key={item} 
-                                        term={item} 
-                                        icon={Clock} 
-                                        onSelect={handleRecentSearch} 
-                                        onRemove={removeSearchTerm} 
-                                    />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {exampleQueries.map((example, index) => (
+                                    <motion.button
+                                        key={index}
+                                        onClick={() => handleQuerySelect(example.query)}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="group relative bg-gradient-to-br from-white to-slate-50 border-2 border-slate-200 rounded-xl p-5 text-left transition-all hover:border-red-500 hover:shadow-lg"
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="text-4xl">{example.icon}</div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="font-bold text-slate-800 text-lg group-hover:text-red-600 transition-colors">
+                                                        {example.title}
+                                                    </h4>
+                                                    <span className="text-xs font-medium px-2 py-1 bg-red-100 text-red-600 rounded-full">
+                                                        {example.category}
+                                                    </span>
+                                                </div>
+                                                <p className="text-slate-600 text-sm leading-relaxed">
+                                                    {example.query}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-red-600 text-sm font-medium">Click to search →</span>
+                                        </div>
+                                    </motion.button>
                                 ))}
                             </div>
                         </div>
-                    )}
-                </div>
+                    </>
+                ) : (
+                    // AI Chat Interface
+                    <div>
+                        <AlgoliaChat initialQuery={searchQuery} />
+                    </div>
+                )}
             </motion.div>
         </motion.div>
     );

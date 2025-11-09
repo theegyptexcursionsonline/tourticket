@@ -1,5 +1,10 @@
 // scripts/sync-algolia.ts
 // Script to sync all tours from MongoDB to Algolia
+
+// Load environment variables first
+import dotenv from 'dotenv';
+dotenv.config();
+
 import dbConnect from '../lib/dbConnect';
 import Tour from '../lib/models/Tour';
 import { syncToursToAlgolia, configureAlgoliaIndex, clearAlgoliaIndex } from '../lib/algolia';

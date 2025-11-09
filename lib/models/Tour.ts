@@ -811,6 +811,53 @@ TourSchema.pre('save', async function(next) {
   }
 });
 
+// Post-save hook to sync to Algolia
+TourSchema.post('save', async function(doc) {
+  try {
+    // Only sync if tour is published
+    if (doc.isPublished) {
+      // Dynamic import to avoid circular dependencies
+      const { syncTourToAlgolia } = await import('../algolia');
+
+      // Populate category and destination before syncing
+      await doc.populate('category', 'name');
+      await doc.populate('destination', 'name');
+
+      await syncTourToAlgolia(doc);
+      console.log(`Auto-synced tour ${doc._id} to Algolia`);
+    }
+  } catch (error) {
+    // Log error but don't fail the save operation
+    console.error('Error auto-syncing tour to Algolia:', error);
+  }
+});
+
+// Post-delete hook to remove from Algolia
+TourSchema.post('findOneAndDelete', async function(doc) {
+  try {
+    if (doc) {
+      // Dynamic import to avoid circular dependencies
+      const { deleteTourFromAlgolia } = await import('../algolia');
+      await deleteTourFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted tour ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting tour from Algolia:', error);
+  }
+});
+
+TourSchema.post('deleteOne', async function(doc) {
+  try {
+    if (doc) {
+      const { deleteTourFromAlgolia } = await import('../algolia');
+      await deleteTourFromAlgolia(doc._id.toString());
+      console.log(`Auto-deleted tour ${doc._id} from Algolia`);
+    }
+  } catch (error) {
+    console.error('Error auto-deleting tour from Algolia:', error);
+  }
+});
+
 // Text search indexes for flexible search
 TourSchema.index({
   title: 'text',
