@@ -2,29 +2,114 @@
 
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Chat } from 'react-instantsearch';
-import { Sparkles, MessageCircle, Zap, Shield, Globe2 } from 'lucide-react';
+import { Sparkles, MessageCircle, Zap, Shield, Globe2, AlertCircle, ArrowRight } from 'lucide-react';
 import 'instantsearch.css/themes/satellite.css';
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import fallback search
+const FallbackSearch = dynamic(() => import('./FallbackSearch'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>,
+});
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '1F31U1NOMS';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || '90dc77f33842e5ca1ad27ba3e42bbc50';
 const AGENT_ID = '3b0e3cf3-58a7-4fec-82af-dcb12d10bd22';
 const INDEX_NAME = 'tours';
 
-const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+// Create search client with error handling
+const createSearchClient = () => {
+  try {
+    return algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+  } catch (error) {
+    console.error('Failed to create Algolia search client:', error);
+    throw error;
+  }
+};
+
+const searchClient = createSearchClient();
 
 interface AlgoliaChatProps {
   initialQuery?: string;
 }
 
 export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [useFallback, setUseFallback] = useState(false);
+
   // Log configuration for debugging
-  if (typeof window !== 'undefined') {
-    console.log('Algolia Chat Configuration:', {
-      appId: ALGOLIA_APP_ID,
-      agentId: AGENT_ID,
-      indexName: INDEX_NAME,
-      hasSearchKey: !!ALGOLIA_SEARCH_KEY
-    });
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('Algolia Chat Configuration:', {
+        appId: ALGOLIA_APP_ID,
+        agentId: AGENT_ID,
+        indexName: INDEX_NAME,
+        hasSearchKey: !!ALGOLIA_SEARCH_KEY
+      });
+
+      // Verify credentials
+      if (!ALGOLIA_APP_ID || !ALGOLIA_SEARCH_KEY) {
+        setError('Algolia credentials are missing. Please check your environment variables.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Mark as loaded after a short delay
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Handle errors
+  if (error) {
+    return (
+      <div className="w-full p-8 bg-red-50 border-2 border-red-200 rounded-2xl">
+        <div className="flex items-start gap-4">
+          <div className="bg-red-500 p-3 rounded-full">
+            <AlertCircle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-red-900 mb-2">Configuration Error</h3>
+            <p className="text-red-700 mb-4">{error}</p>
+            <p className="text-sm text-red-600">
+              Please contact support or check the{' '}
+              <a href="/ALGOLIA_AGENT_TROUBLESHOOTING.md" className="underline font-semibold">
+                troubleshooting guide
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Use fallback search if requested
+  if (useFallback) {
+    return (
+      <div className="w-full">
+        <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-amber-900 font-semibold mb-1">Using Standard Search</p>
+              <p className="text-xs text-amber-700">AI Chat will be available once the agent is configured.</p>
+            </div>
+            <button
+              onClick={() => setUseFallback(false)}
+              className="px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg text-xs font-semibold hover:shadow-lg transition-all"
+            >
+              Try AI Chat Again
+            </button>
+          </div>
+        </div>
+        <FallbackSearch initialQuery={initialQuery} />
+      </div>
+    );
   }
 
   return (
@@ -128,12 +213,20 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-red-100/20 to-orange-100/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
-                <Chat
-                  agentId={AGENT_ID}
-                  classNames={{
-                    root: 'min-h-[500px] algolia-chat-enhanced',
-                  }}
-                />
+                {isLoading ? (
+                  <div className="min-h-[500px] flex flex-col items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+                    <p className="text-slate-600 font-medium">Initializing AI Assistant...</p>
+                  </div>
+                ) : (
+                  <Chat
+                    agentId={AGENT_ID}
+                    classNames={{
+                      root: 'min-h-[500px] algolia-chat-enhanced',
+                    }}
+                    placeholder="Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')"
+                  />
+                )}
               </div>
             </div>
 
@@ -143,6 +236,25 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
                 <span className="font-semibold">Need help?</span> This AI assistant is connected to our live tour database.
                 All recommendations are based on real, bookable tours.
               </p>
+            </div>
+
+            {/* Troubleshooting Info */}
+            <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs text-blue-700 mb-2">
+                    <AlertCircle className="w-3 h-3 inline mr-1" />
+                    <span className="font-semibold">AI not responding?</span> The agent may need configuration in Algolia Dashboard.
+                  </p>
+                  <button
+                    onClick={() => setUseFallback(true)}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:gap-2 transition-all underline"
+                  >
+                    Use Standard Search Instead
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
