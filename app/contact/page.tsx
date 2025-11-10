@@ -127,9 +127,9 @@ export default function ContactUsPage() {
                 <ul className="space-y-4 text-slate-700">
                   <li className="flex gap-4 items-start">
                     <Phone size={24} className="text-red-600 flex-shrink-0" />
-                    <div>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <div className="font-semibold">+20 11 42255624</div>
-                      <div className="text-sm text-slate-500">From 8.30 - 17.00 EET</div>
+                      <span className="text-sm text-slate-500">(24*7)</span>
                     </div>
                   </li>
                   <li className="flex gap-4 items-start">
@@ -141,7 +141,7 @@ export default function ContactUsPage() {
                       >
                         booking@egypt-excursionsonline.com
                       </a>
-                      <div className="text-sm text-slate-500">Replies within 2 working days</div>
+                      <div className="text-sm text-slate-500">Replies within 1 hour</div>
                     </div>
                   </li>
                   <li className="flex gap-4 items-center">
