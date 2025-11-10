@@ -211,15 +211,15 @@ export default function Footer() {
                 <li className="flex gap-3">
                   <Phone size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <a href="tel:+201142222920" className="font-medium hover:text-red-600">+201142222920</a>
+                    <a href="tel:+201142255624" className="font-medium hover:text-red-600">+20 11 42255624</a>
                     <div className="text-xs text-slate-500">From 8.30 - 17.00 EET</div>
                   </div>
                 </li>
                 <li className="flex gap-3">
                   <Mail size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <a href="mailto:hello@egyptexcursionsonline.com" className="text-blue-600 hover:underline break-all">
-                      hello@egyptexcursionsonline.com
+                    <a href="mailto:booking@egypt-excursionsonline.com" className="text-blue-600 hover:underline break-all">
+                      booking@egypt-excursionsonline.com
                     </a>
                     <div className="text-xs text-slate-500">Replies within 2 working days</div>
                   </div>

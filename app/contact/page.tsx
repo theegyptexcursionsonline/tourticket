@@ -128,7 +128,7 @@ export default function ContactUsPage() {
                   <li className="flex gap-4 items-start">
                     <Phone size={24} className="text-red-600 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold">+201142222920</div>
+                      <div className="font-semibold">+20 11 42255624</div>
                       <div className="text-sm text-slate-500">From 8.30 - 17.00 EET</div>
                     </div>
                   </li>
@@ -136,10 +136,10 @@ export default function ContactUsPage() {
                     <Mail size={24} className="text-red-600 flex-shrink-0" />
                     <div>
                       <a
-                        href="mailto:hello@egyptexcursionsonline.com"
+                        href="mailto:booking@egypt-excursionsonline.com"
                         className="font-semibold text-blue-600 hover:underline break-all"
                       >
-                        hello@egyptexcursionsonline.com
+                        booking@egypt-excursionsonline.com
                       </a>
                       <div className="text-sm text-slate-500">Replies within 2 working days</div>
                     </div>

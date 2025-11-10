@@ -125,7 +125,7 @@ export default function PrivacyPolicyPage() {
               If you have any questions or concerns about this Privacy Policy, please contact us at:
             </p>
             <p>
-              hello@egyptexcursionsonline.com
+              booking@egypt-excursionsonline.com
             </p>
           </section>
         </div>
