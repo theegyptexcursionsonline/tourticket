@@ -242,7 +242,7 @@ export async function POST(request: Request) {
       bookingId: bookingId,
       specialRequests: customer.specialRequests,
       meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
-      contactNumber: "+20 123 456 7890",
+      contactNumber: "+20 11 42255624",
       tourImage: mainTour?.image
     });
 

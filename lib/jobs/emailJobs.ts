@@ -45,7 +45,7 @@ export async function sendTripReminders() {
           }),
           bookingTime: booking.time,
           meetingPoint: booking.tour.meetingPoint || "Meeting point will be provided via WhatsApp",
-          contactNumber: "+20 123 456 7890",
+          contactNumber: "+20 11 42255624",
           weatherInfo: "Sunny, 28°C - Perfect weather for sightseeing!",
           whatToBring: [
             "Comfortable walking shoes",

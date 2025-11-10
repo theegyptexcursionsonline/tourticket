@@ -112,7 +112,7 @@ export default function TermsAndConditionsPage() {
               If you have any questions about these Terms and Conditions, please contact us at:
             </p>
             <p>
-              hello@egyptexcursionsonline.com
+              booking@egypt-excursionsonline.com
             </p>
           </section>
         </div>

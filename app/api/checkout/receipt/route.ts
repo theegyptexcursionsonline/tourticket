@@ -502,7 +502,7 @@ const total = round2(toNumber(pricing?.total ?? 0));
     }
 
     // --- FOOTER ---
-    page.drawText('Thank you for your booking. For support, contact support@egyptexcursionsonline.com', {
+    page.drawText('Thank you for your booking. For support, contact booking@egypt-excursionsonline.com', {
       x: margin,
       y: 25,
       font: font,
