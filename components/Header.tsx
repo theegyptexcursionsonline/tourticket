@@ -26,6 +26,7 @@ import AuthModal from '@/components/AuthModal';
 import { Destination, Category, Tour } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useSettings } from '@/hooks/useSettings';
+import AlgoliaSearchModal from '@/components/search/AlgoliaSearchModal';
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -170,182 +171,7 @@ const TourResultSkeleton = () => (
   </div>
 );
 
-const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void }> = ({ onClose, onSearch }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<Tour[]>([]);
-  const [loading, setLoading] = useState(false);
-  const popularSearches = usePopularSearches();
-  const { recentSearches, removeSearchTerm } = useRecentSearches();
-  const modalRef = useRef<HTMLDivElement>(null);
-  const { t } = useSettings();
-
-  useEffect(() => {
-    const fetchSearch = async () => {
-      if (searchTerm.trim().length > 2) {
-        setLoading(true);
-        try {
-          const res = await fetch(`/api/search/live?q=${encodeURIComponent(searchTerm)}`);
-          const data = await res.json();
-          if (data.success) setSearchResults(data.data);
-        } catch (error) {
-          console.error('Search live fetch failed', error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    };
-
-    const debounce = setTimeout(() => {
-      fetchSearch();
-    }, 300);
-
-    return () => clearTimeout(debounce);
-  }, [searchTerm]);
-
-  const handleSearchSubmit = useCallback(
-    (e?: React.FormEvent) => {
-      e?.preventDefault();
-      if (searchTerm.trim()) {
-        window.location.href = `/search?q=${encodeURIComponent(searchTerm)}`;
-        onSearch(searchTerm);
-        setSearchTerm('');
-        onClose();
-      }
-    },
-    [searchTerm, onSearch, onClose]
-  );
-
-  const handlePopularSearch = useCallback(
-    (term: string) => {
-      window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term);
-      onClose();
-    },
-    [onSearch, onClose]
-  );
-
-  const handleRecentSearch = useCallback(
-    (term: string) => {
-      window.location.href = `/search?q=${encodeURIComponent(term)}`;
-      onSearch(term);
-      onClose();
-    },
-    [onSearch, onClose]
-  );
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'auto';
-    };
-  }, [onClose]);
-
-  useOnClickOutside(modalRef, onClose);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-lg flex items-start justify-center p-4 sm:p-6 lg:p-8"
-      role="dialog"
-      aria-modal="true"
-    >
-      <motion.div
-        ref={modalRef}
-        initial={{ y: -30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -30, opacity: 0 }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="relative w-full max-w-5xl bg-white shadow-2xl rounded-lg p-6 sm:p-8 mt-16"
-      >
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100" aria-label="Close search">
-          <X size={28} />
-        </button>
-
-        <form onSubmit={handleSearchSubmit} className="mb-8">
-          <div className="relative">
-            <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t('search.placeholder')}
-              autoFocus
-              className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500"
-            />
-          </div>
-        </form>
-
-        {loading && (
-          <div className="mb-8">
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.searching')}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
-                <TourResultSkeleton key={i} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!loading && searchResults.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.tours')}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {searchResults.map((tour) => (
-                <a key={(tour as any)._id} href={`/tour/${(tour as any).slug}`} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
-                  <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden relative">
-                    <Image src={(tour as any).image} alt={(tour as any).title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
-                  </div>
-                  <div className="p-4">
-                    <h4 className="font-bold text-gray-900 group-hover:text-red-500 truncate">{(tour as any).title}</h4>
-                    <p className="text-sm text-gray-500">{(tour as any).destination?.name}</p>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!loading && searchTerm.length > 2 && searchResults.length === 0 && (
-          <div className="text-center py-8 text-slate-500">
-            <p>{t('search.noResults', { query: searchTerm })}</p>
-          </div>
-        )}
-
-        <div className="space-y-8">
-          <div>
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.mostPopular')}</h3>
-            <div className="flex flex-wrap gap-3">
-              {popularSearches.map((item) => (
-                <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />
-              ))}
-            </div>
-          </div>
-
-          {recentSearches.length > 0 && (
-            <div>
-              <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.recentSearches')}</h3>
-              <div className="flex flex-wrap gap-3">
-                {recentSearches.map((item) => (
-                  <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
+// SearchModal removed - now using AlgoliaSearchModal
 
 // =================================================================
 // --- MEGA MENU ---
@@ -779,9 +605,10 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
       />
 
       {/* Search modal (desktop + mobile) */}
-      <AnimatePresence>
-        {isSearchModalOpen && <SearchModal onClose={handleSearchModalClose} onSearch={handleSearch} />}
-      </AnimatePresence>
+      <AlgoliaSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={handleSearchModalClose}
+      />
 
       {/* Auth modal */}
       <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialState={authModalState} />

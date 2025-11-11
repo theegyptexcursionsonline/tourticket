@@ -11,6 +11,7 @@ import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
 import IntercomClient from "@/components/IntercomClient";
 import AISearchWidget from "@/components/AISearchWidget";
+import AIAgentWidget from "@/components/AIAgentWidget";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -43,6 +44,7 @@ export default function RootLayout({
                 <CartSidebar />
                 <WishlistSidebar />
                 <AISearchWidget />
+                <AIAgentWidget />
                 <Toaster
                   position="top-right"
                   reverseOrder={false}
