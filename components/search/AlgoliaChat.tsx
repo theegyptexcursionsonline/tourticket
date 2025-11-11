@@ -101,7 +101,7 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
             </div>
             <button
               onClick={() => setUseFallback(false)}
-              className="px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg text-xs font-semibold hover:shadow-lg transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-xs font-semibold hover:shadow-lg transition-all"
             >
               Try AI Chat Again
             </button>
@@ -115,9 +115,9 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
   return (
     <div className="w-full">
       <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
-        <div className="bg-gradient-to-br from-white via-red-50/30 to-orange-50/30 rounded-2xl shadow-2xl border border-red-100 overflow-hidden backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl shadow-2xl border border-blue-100 overflow-hidden backdrop-blur-sm">
           {/* Enhanced Header with Gradient and Icons */}
-          <div className="relative bg-gradient-to-br from-red-600 via-red-500 to-orange-500 p-8 text-white overflow-hidden">
+          <div className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 p-8 text-white overflow-hidden">
             {/* Animated Background Pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full mix-blend-overlay filter blur-3xl animate-pulse"></div>
@@ -138,7 +138,7 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
                         <Zap className="w-6 h-6 text-yellow-300 animate-pulse" />
                       </span>
                     </h2>
-                    <p className="text-red-100 text-sm font-medium flex items-center gap-2">
+                    <p className="text-blue-100 text-sm font-medium flex items-center gap-2">
                       <Shield className="w-4 h-4" />
                       Powered by Algolia AI
                     </p>
@@ -172,11 +172,11 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
           {/* Chat Interface with Enhanced Styling */}
           <div className="p-6 bg-gradient-to-b from-white to-slate-50/50">
             {initialQuery && (
-              <div className="mb-5 p-5 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-xl shadow-sm">
-                <p className="text-sm text-red-900 font-medium mb-1">
+              <div className="mb-5 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-xl shadow-sm">
+                <p className="text-sm text-blue-900 font-medium mb-1">
                   <span className="font-bold">Your query:</span> {initialQuery}
                 </p>
-                <p className="text-xs text-red-600 flex items-center gap-1">
+                <p className="text-xs text-blue-600 flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
                   Type this into the chat below to search
                 </p>
@@ -211,11 +211,11 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
 
             {/* Enhanced Chat Component */}
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-100/20 to-orange-100/20 rounded-2xl blur-xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-indigo-100/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
                 {isLoading ? (
                   <div className="min-h-[500px] flex flex-col items-center justify-center p-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                     <p className="text-slate-600 font-medium">Initializing AI Assistant...</p>
                   </div>
                 ) : (
@@ -287,11 +287,11 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
           }
 
           .algolia-chat-enhanced .ais-Chat-message--user {
-            background: linear-gradient(135deg, #dc2626, #ea580c) !important;
+            background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
             color: white !important;
             border-radius: 1.25rem 1.25rem 0.25rem 1.25rem !important;
             padding: 0.875rem 1.25rem !important;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
             font-weight: 500;
           }
 
@@ -314,8 +314,8 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
           }
 
           .algolia-chat-enhanced .ais-Chat-inputWrapper:focus-within {
-            border-color: #dc2626 !important;
-            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.15) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15) !important;
           }
 
           .algolia-chat-enhanced .ais-Chat-input {
@@ -325,19 +325,19 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
           }
 
           .algolia-chat-enhanced .ais-Chat-button {
-            background: linear-gradient(135deg, #dc2626, #ea580c) !important;
+            background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
             color: white !important;
             border-radius: 0.75rem !important;
             padding: 0.625rem 1.25rem !important;
             font-weight: 600 !important;
             transition: all 0.3s ease !important;
             border: none !important;
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
           }
 
           .algolia-chat-enhanced .ais-Chat-button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
           }
 
           .algolia-chat-enhanced .ais-Chat-button:active {

@@ -28,7 +28,7 @@ interface FallbackSearchProps {
 function TourHit({ hit }: { hit: any }) {
   return (
     <Link href={`/tours/${hit.slug}`} className="block">
-      <div className="bg-white rounded-xl border-2 border-slate-200 hover:border-red-400 transition-all hover:shadow-lg p-4 group">
+      <div className="bg-white rounded-xl border-2 border-slate-200 hover:border-blue-400 transition-all hover:shadow-lg p-4 group">
         {/* Tour Image */}
         {hit.image && (
           <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
@@ -38,7 +38,7 @@ function TourHit({ hit }: { hit: any }) {
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
             {hit.isFeatured && (
-              <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+              <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1 rounded-full text-xs font-bold">
                 Featured
               </div>
             )}
@@ -47,7 +47,7 @@ function TourHit({ hit }: { hit: any }) {
 
         {/* Tour Details */}
         <div className="space-y-2">
-          <h3 className="font-bold text-lg text-slate-900 group-hover:text-red-600 transition-colors line-clamp-2">
+          <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2">
             {hit.title}
           </h3>
 
@@ -82,7 +82,7 @@ function TourHit({ hit }: { hit: any }) {
             <div className="flex items-center gap-2">
               {hit.discountPrice && hit.discountPrice < hit.price ? (
                 <>
-                  <span className="text-lg font-bold text-red-600">
+                  <span className="text-lg font-bold text-blue-600">
                     ${hit.discountPrice}
                   </span>
                   <span className="text-sm text-slate-400 line-through">
@@ -90,12 +90,12 @@ function TourHit({ hit }: { hit: any }) {
                   </span>
                 </>
               ) : (
-                <span className="text-lg font-bold text-red-600">
+                <span className="text-lg font-bold text-blue-600">
                   ${hit.price}
                 </span>
               )}
             </div>
-            <button className="px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all">
+            <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all">
               View Tour
             </button>
           </div>
@@ -137,16 +137,16 @@ export default function FallbackSearch({ initialQuery }: FallbackSearchProps) {
           snippetEllipsisText="..."
         />
 
-        <div className="bg-gradient-to-br from-white via-red-50/30 to-orange-50/30 rounded-2xl shadow-2xl border border-red-100 overflow-hidden backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl shadow-2xl border border-blue-100 overflow-hidden backdrop-blur-sm">
           {/* Header */}
-          <div className="relative bg-gradient-to-br from-red-600 via-red-500 to-orange-500 p-6 text-white">
+          <div className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 p-6 text-white">
             <div className="flex items-center gap-3 mb-3">
               <div className="bg-white/20 p-3 rounded-xl backdrop-blur-md border border-white/30">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h2 className="text-2xl font-bold">Search Tours</h2>
-                <p className="text-red-100 text-sm">Standard search powered by Algolia</p>
+                <p className="text-blue-100 text-sm">Standard search powered by Algolia</p>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function FallbackSearch({ initialQuery }: FallbackSearchProps) {
               classNames={{
                 root: 'w-full',
                 form: 'relative',
-                input: 'w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-red-500 focus:outline-none text-base',
+                input: 'w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none text-base',
                 submit: 'absolute right-3 top-1/2 -translate-y-1/2 p-2',
                 reset: 'absolute right-12 top-1/2 -translate-y-1/2 p-2',
               }}
@@ -186,7 +186,7 @@ export default function FallbackSearch({ initialQuery }: FallbackSearchProps) {
                     root: 'space-y-2',
                     list: 'space-y-2',
                     item: 'flex items-center gap-2 text-sm',
-                    checkbox: 'w-4 h-4 text-red-600 rounded',
+                    checkbox: 'w-4 h-4 text-blue-600 rounded',
                     label: 'flex items-center gap-2 cursor-pointer',
                     count: 'ml-auto text-xs bg-slate-100 px-2 py-0.5 rounded-full',
                   }}
@@ -203,7 +203,7 @@ export default function FallbackSearch({ initialQuery }: FallbackSearchProps) {
                     root: 'space-y-2',
                     list: 'space-y-2',
                     item: 'flex items-center gap-2 text-sm',
-                    checkbox: 'w-4 h-4 text-red-600 rounded',
+                    checkbox: 'w-4 h-4 text-blue-600 rounded',
                     label: 'flex items-center gap-2 cursor-pointer',
                     count: 'ml-auto text-xs bg-slate-100 px-2 py-0.5 rounded-full',
                   }}
@@ -228,8 +228,8 @@ export default function FallbackSearch({ initialQuery }: FallbackSearchProps) {
                     root: 'flex gap-2',
                     list: 'flex gap-2',
                     item: 'inline-block',
-                    link: 'px-4 py-2 border border-slate-300 rounded-lg hover:bg-red-500 hover:text-white hover:border-red-500 transition-all',
-                    selectedItem: 'bg-red-500 text-white border-red-500',
+                    link: 'px-4 py-2 border border-slate-300 rounded-lg hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all',
+                    selectedItem: 'bg-blue-500 text-white border-blue-500',
                   }}
                 />
               </div>
