@@ -3,12 +3,28 @@
 
 import { useEffect } from "react";
 
-// CSS to hide the Intercom launcher
+// CSS to hide the Intercom launcher completely
 const hideIntercomStyle = `
+  /* Hide all Intercom launcher variations */
   #intercom-container .intercom-launcher,
   .intercom-launcher-frame,
-  .intercom-app-launcher-enabled .intercom-launcher {
+  .intercom-app-launcher-enabled .intercom-launcher,
+  .intercom-launcher,
+  #intercom-frame,
+  .intercom-lightweight-app,
+  .intercom-messenger-frame,
+  iframe[name="intercom-launcher-frame"],
+  iframe[title*="Intercom"],
+  [class*="intercom"][class*="launcher"],
+  div[aria-label*="Open Intercom"],
+  .intercom-namespace .intercom-launcher-frame,
+  .intercom-launcher-discovery-frame {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 `;
 

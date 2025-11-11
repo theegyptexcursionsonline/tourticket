@@ -2,10 +2,12 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, MapPin, Clock, Compass, Tag, FileText, X } from "lucide-react";
 import Image from "next/image";
-import { useRecentSearches } from "@/hooks/useSearch";
-import AlgoliaSearchModal from "@/components/search/AlgoliaSearchModal";
+import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
+import { motion, AnimatePresence } from 'framer-motion';
+import 'instantsearch.css/themes/satellite.css';
 
 // --- Types and Constants ---
 interface HeroSettings {
@@ -41,6 +43,16 @@ interface HeroSettings {
   metaDescription?: string;
 }
 
+// Algolia Configuration
+const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
+const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
+const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
+const INDEX_DESTINATIONS = 'destinations';
+const INDEX_CATEGORIES = 'categories';
+const INDEX_BLOGS = 'blogs';
+
+const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+
 // Default fallback settings
 const DEFAULT_SETTINGS: HeroSettings = {
   backgroundImages: [
@@ -73,6 +85,178 @@ const DEFAULT_SETTINGS: HeroSettings = {
     enableAutoplay: true
   }
 };
+
+// --- Algolia Search Components ---
+function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+  const { refine } = useSearchBox();
+
+  useEffect(() => {
+    refine(searchQuery);
+  }, [searchQuery, refine]);
+
+  return null;
+}
+
+function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 py-2 bg-blue-50/90 border-b border-blue-100/50 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-blue-600" />
+          <span className="text-xs font-semibold text-blue-900 uppercase tracking-wider">
+            Tours ({hits.length})
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/tours/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          className="block px-4 py-3 hover:bg-blue-50/50 transition-colors border-b border-gray-100/50 last:border-0 backdrop-blur-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+              {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
+                <img
+                  src={hit.image || hit.images?.[0] || hit.primaryImage}
+                  alt={hit.title || 'Tour'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-blue-600" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-gray-900 text-sm truncate">
+                {hit.title || 'Untitled Tour'}
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                {hit.location && <span>{hit.location}</span>}
+                {hit.duration && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <Clock className="w-3 h-3" />
+                    <span>{hit.duration} days</span>
+                  </>
+                )}
+                {(hit.price || hit.discountPrice) && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="font-medium text-blue-600">
+                      ${hit.discountPrice || hit.price}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 py-2 bg-emerald-50/90 border-b border-emerald-100/50 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <Compass className="w-4 h-4 text-emerald-600" />
+          <span className="text-xs font-semibold text-emerald-900 uppercase tracking-wider">
+            Destinations ({hits.length})
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/destinations/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          className="block px-4 py-3 hover:bg-emerald-50/50 transition-colors border-b border-gray-100/50 last:border-0 backdrop-blur-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center flex-shrink-0 border border-emerald-200">
+              <Compass className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-gray-900 text-sm truncate">
+                {hit.name || 'Untitled Destination'}
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                {hit.country && <span>{hit.country}</span>}
+                {hit.tourCount && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span>{hit.tourCount} tours</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 py-2 bg-purple-50/90 border-b border-purple-100/50 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <Tag className="w-4 h-4 text-purple-600" />
+          <span className="text-xs font-semibold text-purple-900 uppercase tracking-wider">
+            Categories ({hits.length})
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/categories/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          className="block px-4 py-3 hover:bg-purple-50/50 transition-colors border-b border-gray-100/50 last:border-0 backdrop-blur-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center flex-shrink-0 border border-purple-200">
+              <Tag className="w-5 h-5 text-purple-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-gray-900 text-sm truncate">
+                {hit.name || 'Untitled Category'}
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                {hit.tourCount && <span>{hit.tourCount} tours</span>}
+              </div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
 
 // --- Helper Hooks ---
 const useIsMobile = (breakpoint = 768) => {
@@ -137,20 +321,124 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 };
 
 // --- Reusable Components ---
-const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; suggestion: string }) => {
+const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
+
+  const handleCloseDropdown = () => {
+    setIsExpanded(false);
+  };
+
   return (
-    <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start">
-      <button 
-        onClick={onOpenModal} 
-        className="w-full max-w-sm md:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-4 text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
-      >
-        <Search className="h-6 w-6 md:h-7 md:w-7 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
-        <div className="flex-1 text-left h-7 overflow-hidden">
-          <span key={suggestion} className="font-semibold animate-text-slide-in block text-lg">
-            {suggestion}
-          </span>
+    <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start" ref={containerRef}>
+      <div className="relative w-full max-w-sm md:max-w-xl">
+        {/* Search Input */}
+        <div className="relative bg-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white hover:border-blue-200">
+          <Search className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 md:h-7 md:w-7 text-red-500 flex-shrink-0 pointer-events-none" />
+
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setIsExpanded(true)}
+            placeholder={suggestion}
+            className="w-full pl-14 md:pl-16 pr-12 py-4 text-sm md:text-base text-slate-700 placeholder-slate-500 font-semibold rounded-full outline-none bg-transparent"
+          />
+
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setIsExpanded(false);
+              }}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+          )}
         </div>
-      </button>
+
+        {/* Dropdown Results - Using absolute positioning with z-index */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="absolute top-full mt-2 left-0 right-0 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 overflow-hidden max-h-[400px] z-[9999]"
+            >
+              <div className="overflow-y-auto max-h-[400px]">
+                {searchQuery ? (
+                  <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
+                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+                    {/* Tours Index */}
+                    <Index indexName={INDEX_TOURS}>
+                      <Configure hitsPerPage={5} />
+                      <TourHits onHitClick={handleCloseDropdown} limit={5} />
+                    </Index>
+
+                    {/* Destinations Index */}
+                    <Index indexName={INDEX_DESTINATIONS}>
+                      <Configure hitsPerPage={3} />
+                      <DestinationHits onHitClick={handleCloseDropdown} limit={3} />
+                    </Index>
+
+                    {/* Categories Index */}
+                    <Index indexName={INDEX_CATEGORIES}>
+                      <Configure hitsPerPage={3} />
+                      <CategoryHits onHitClick={handleCloseDropdown} limit={3} />
+                    </Index>
+                  </InstantSearch>
+                ) : (
+                  // Trending Searches - shown when no search query
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Compass className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Popular Searches
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend) => (
+                        <button
+                          key={trend}
+                          onClick={() => {
+                            setSearchQuery(trend);
+                          }}
+                          className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-300 hover:text-blue-700 hover:shadow-md transition-all duration-200"
+                        >
+                          {trend}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
@@ -227,8 +515,6 @@ const BackgroundSlideshow = ({
 // --- Main HeroSection Component ---
 export default function HeroSection() {
   const { settings } = useHeroSettings();
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const { addSearchTerm } = useRecentSearches();
 
   // Create slides from settings
   const slides = settings.backgroundImages.map(img => ({
@@ -240,27 +526,22 @@ export default function HeroSection() {
   // Use settings for sliding text
   const currentSuggestion = useSlidingText(settings.searchSuggestions, 3000);
 
-  const handleSearch = (term: string) => {
-    addSearchTerm(term);
-    console.log(`Searching for: ${term}`);
-  };
-
   // NOTE: no early return with spinner — UI renders immediately
   return (
     <>
-      <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-hidden font-sans">
-        <BackgroundSlideshow 
-          slides={slides} 
-          delay={settings.animationSettings.slideshowSpeed * 1000} 
+      <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-visible font-sans">
+        <BackgroundSlideshow
+          slides={slides}
+          delay={settings.animationSettings.slideshowSpeed * 1000}
           fadeMs={settings.animationSettings.fadeSpeed}
           autoplay={settings.animationSettings.enableAutoplay}
         />
 
         {/* Overlay with settings */}
-        <div 
+        <div
           className="absolute inset-0 z-1"
           style={{
-            background: settings.overlaySettings.gradientType === 'custom' 
+            background: settings.overlaySettings.gradientType === 'custom'
               ? settings.overlaySettings.customGradient
               : settings.overlaySettings.gradientType === 'dark'
                 ? `linear-gradient(to br, rgba(0,0,0,${settings.overlaySettings.opacity}), rgba(0,0,0,${settings.overlaySettings.opacity * 0.7}))`
@@ -284,9 +565,8 @@ export default function HeroSection() {
             <p className="mt-4 text-base sm:text-lg md:text-xl text-shadow font-light max-w-md mx-auto md:mx-0">
               Unforgettable excursions — from sunrise at the pyramids to sailing the Nile.
             </p>
-            
-            <HeroSearchBar 
-              onOpenModal={() => setIsSearchModalOpen(true)} 
+
+            <HeroSearchBar
               suggestion={currentSuggestion}
             />
 
@@ -301,11 +581,6 @@ export default function HeroSection() {
           </div>
         </div>
       </section>
-
-      <AlgoliaSearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-      />
 
       <style jsx global>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
