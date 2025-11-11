@@ -1,23 +1,70 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, Minimize2, X } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { Sparkles, X, Minimize2 } from 'lucide-react';
 
-// Dynamically import the AI Chat component
-const SimpleAlgoliaChat = dynamic(() => import('./search/SimpleAlgoliaChat'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <p className="ml-3 text-slate-600">Loading AI Assistant...</p>
-    </div>
-  ),
-});
+// --- Algolia Config ---
+// We will load algoliasearch and react-instantsearch from CDNs
+const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
+const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
+const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
+const INDEX_NAME = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
+
+// --- CDN URLs ---
+const ALGOLIA_CSS_URL = 'https://cdn.jsdelivr.net/npm/instantsearch.css@8.0.0/themes/satellite.css';
+const ALGOLIA_SEARCH_CLIENT_URL = 'https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js';
+const REACT_INSTANTSEARCH_URL = 'https://cdn.jsdelivr.net/npm/react-instantsearch@7.0.0/dist/umd/index.production.min.js';
+
+// --- Type definitions for window properties ---
+declare global {
+  interface Window {
+    algoliasearch: any;
+    ReactInstantSearch: any;
+  }
+}
 
 export default function AISearchWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAlgoliaReady, setIsAlgoliaReady] = useState(false);
+
+  // --- Dynamically load Algolia scripts and CSS ---
+  useEffect(() => {
+    if (isAlgoliaReady) return;
+
+    // 1. Load CSS
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = ALGOLIA_CSS_URL;
+    document.head.appendChild(cssLink);
+
+    // 2. Load AlgoliaSearch client
+    const searchClientScript = document.createElement('script');
+    searchClientScript.src = ALGOLIA_SEARCH_CLIENT_URL;
+    searchClientScript.async = true;
+    searchClientScript.onload = () => {
+      
+      // 3. Load React InstantSearch *after* Algolia client
+      const instantSearchScript = document.createElement('script');
+      instantSearchScript.src = REACT_INSTANTSEARCH_URL;
+      instantSearchScript.async = true;
+      instantSearchScript.onload = () => {
+        // All scripts are loaded
+        if (window.algoliasearch && window.ReactInstantSearch) {
+          setIsAlgoliaReady(true);
+        }
+      };
+      document.body.appendChild(instantSearchScript);
+    };
+    document.body.appendChild(searchClientScript);
+
+    // Cleanup function
+    return () => {
+      document.head.removeChild(cssLink);
+      // Note: Scripts are harder to remove cleanly, but for this widget's lifecycle,
+      // it's generally fine to leave them.
+    };
+  }, [isAlgoliaReady]); // Only run once
 
   // Keyboard shortcut handler (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -27,8 +74,10 @@ export default function AISearchWidget() {
         setIsExpanded(true);
       }
       // ESC to minimize
-      if (e.key === 'Escape' && isExpanded) {
-        setIsExpanded(false);
+      if (e.key === 'Escape') {
+        if (isExpanded) {
+          setIsExpanded(false);
+        }
       }
     };
 
@@ -36,121 +85,181 @@ export default function AISearchWidget() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isExpanded]);
 
-  const handleSearchBarClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Search bar clicked, expanding...');
+  const handleSearchBarClick = () => {
     setIsExpanded(true);
   };
 
   const handleMinimize = () => {
-    console.log('Minimizing...');
     setIsExpanded(false);
   };
 
-  // Debug log
-  console.log('AISearchWidget render - isExpanded:', isExpanded);
+  // --- Memoize Algolia client and components ---
+  // We can only initialize them *after* scripts are loaded
+  const algoliaSearchClient = useMemo(() => {
+    if (!isAlgoliaReady || !window.algoliasearch) return null;
+    return window.algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+  }, [isAlgoliaReady]);
+
+  const { InstantSearch, Chat } = useMemo(() => {
+    if (!isAlgoliaReady || !window.ReactInstantSearch) {
+      return { InstantSearch: null, Chat: null };
+    }
+    return window.ReactInstantSearch;
+  }, [isAlgoliaReady]);
+
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[9998]">
-      <AnimatePresence mode="wait">
-        {isExpanded ? (
-          /* Expanded State - Full Chat Window */
+    <>
+      {/* =================================================== */}
+      {/* Expanded State - Chat Popup                         */}
+      {/* =================================================== */}
+      <AnimatePresence>
+        {isExpanded && (
           <motion.div
             key="expanded"
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="bg-white shadow-2xl border-t-2 border-blue-500 mx-3 mb-3 sm:mx-4 sm:mb-4 rounded-2xl overflow-hidden flex flex-col"
-            style={{ height: 'calc(80vh - 1rem)', maxWidth: '1200px', marginLeft: 'auto', marginRight: 'auto' }}
+            // Positioned relative to the bottom of the viewport
+            // 1.25rem (pb-5) + 50px (bar height) + 0.5rem (gap) = ~78px
+            className="fixed bottom-[80px] w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden z-[9999]"
+            style={{ height: '550px' }}
           >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="bg-white/20 backdrop-blur-sm p-1.5 sm:p-2 rounded-full border border-white/40">
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-sm sm:text-base">AI Travel Assistant</h3>
-                  <p className="text-white/70 text-[10px] sm:text-xs">Search Egypt tours with AI</p>
-                </div>
+            {/* Compact Header */}
+            <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-blue-600" strokeWidth={2} />
+                <h3 className="text-gray-800 font-semibold text-sm">AI Assistant</h3>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={handleMinimize}
-                  className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
                   aria-label="Minimize"
                 >
-                  <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <Minimize2 className="w-4 h-4 text-gray-600" />
+                </button>
+                {/* Close button now also just minimizes */}
+                <button
+                  onClick={handleMinimize}
+                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
             </div>
 
-            {/* Chat Content */}
-            <div className="flex-1 overflow-hidden bg-slate-50">
-              <SimpleAlgoliaChat />
-            </div>
-          </motion.div>
-        ) : (
-          /* Minimized State - Bottom Search Bar */
-          <motion.div
-            key="minimized"
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="px-3 pb-3 sm:px-4 sm:pb-4"
-          >
-            <div className="max-w-4xl mx-auto">
-              <motion.div
-                whileHover={{ y: -3, scale: 1.005 }}
-                whileTap={{ scale: 0.995 }}
-                className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.4)] hover:shadow-[0_12px_40px_rgba(59,130,246,0.5)] cursor-pointer group overflow-hidden"
-                onClick={handleSearchBarClick}
-              >
-                {/* Animated gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none"></div>
-
-                <div className="relative flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-3.5 pointer-events-none">
-                  {/* AI Icon */}
-                  <div className="flex-shrink-0 bg-white/20 backdrop-blur-sm p-2 sm:p-2.5 rounded-full border border-white/40 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
-                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" strokeWidth={2.5} />
-                  </div>
-
-                  {/* Search Text */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white/90 text-xs sm:text-sm font-medium tracking-wide truncate">
-                      Ask AI about Egypt tours
-                    </p>
-                    <p className="hidden sm:block text-white/60 text-[10px] sm:text-xs mt-0.5">
-                      Try: "Find luxury Nile cruises" or "Day trips from Cairo"
-                    </p>
-                  </div>
-
-                  {/* Arrow Icon */}
-                  <div className="flex-shrink-0 bg-white/10 backdrop-blur-sm p-2 rounded-full group-hover:bg-white/20 transition-all duration-300">
-                    <ArrowRight className="w-4 h-4 sm:w-4 sm:h-4 text-white group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={2.5} />
-                  </div>
+            {/* Chat Content (from AIAgentWidget) */}
+            <div className="flex-1 overflow-hidden">
+              {/* --- Conditional Render --- */}
+              {isAlgoliaReady && algoliaSearchClient && InstantSearch && Chat ? (
+                <InstantSearch searchClient={algoliaSearchClient} indexName={INDEX_NAME}>
+                  <Chat
+                    agentId={AGENT_ID}
+                    classNames={{
+                      root: 'h-full ai-agent-chat',
+                    }}
+                    placeholder="Ask me anything..."
+                  />
+                </InstantSearch>
+              ) : (
+                // --- Loading State ---
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500 text-sm">Loading AI Assistant...</p>
                 </div>
-
-                {/* Shine effect */}
-                <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
-              </motion.div>
-
-              {/* Helper text */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-center mt-1.5 text-[10px] sm:text-xs text-slate-500/80 font-medium tracking-wide"
-              >
-                Powered by AI • Click to start searching • Press Ctrl+K
-              </motion.p>
+              )}
             </div>
+
+            {/* Styling (from AIAgentWidget) */}
+            <style jsx global>{`
+              .ai-agent-chat {
+                font-family: inherit !important;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+              }
+              .ai-agent-chat .ais-Chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 1rem;
+                font-size: 0.875rem;
+              }
+              .ai-agent-chat .ais-Chat-message {
+                margin-bottom: 0.75rem;
+              }
+              .ai-agent-chat .ais-Chat-message--user {
+                background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+                color: white !important;
+                border-radius: 0.75rem 0.75rem 0.25rem 0.75rem !important;
+                padding: 0.625rem 0.875rem !important;
+                font-size: 0.875rem;
+              }
+              .ai-agent-chat .ais-Chat-message--assistant {
+                background: #f1f5f9 !important;
+                color: #1e293b !important;
+                border-radius: 0.75rem 0.75rem 0.75rem 0.25rem !important;
+                padding: 0.625rem 0.875rem !important;
+                font-size: 0.875rem;
+              }
+              .ai-agent-chat .ais-Chat-inputWrapper {
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 0.5rem !important;
+                margin: 0.75rem;
+                padding: 0.25rem !important;
+              }
+              .ai-agent-chat .ais-Chat-input {
+                font-size: 0.875rem !important;
+                padding: 0.5rem 0.75rem !important;
+              }
+              .ai-agent-chat .ais-Chat-button {
+                background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+                color: white !important;
+                border-radius: 0.5rem !important;
+                padding: 0.5rem 0.875rem !important;
+                font-size: 0.75rem !important;
+              }
+            `}</style>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* =================================================== */}
+      {/* Minimized State - Persistent Bar                    */}
+      {/* =================================================== */}
+      <div className="fixed bottom-0 left-0 right-0 z-[9998] flex justify-center">
+        <div className="px-4 pb-5 w-full max-w-2xl">
+          <motion.div
+            key="minimized"
+            whileHover={{ y: isExpanded ? 0 : -2 }} // Only hover when minimized
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className={`bg-white rounded-lg shadow-lg hover:shadow-xl border border-gray-200 cursor-pointer group transition-all duration-200 ease-in-out ${
+              isExpanded ? 'opacity-70' : 'opacity-100' // Fade out slightly when expanded
+            }`}
+            onClick={!isExpanded ? handleSearchBarClick : undefined}
+          >
+            <div className="flex items-center gap-3 px-4 py-3">
+              {/* AI Icon */}
+              <div className="p-2 bg-blue-50 rounded-full border border-blue-200">
+                <Sparkles className="w-5 h-5 text-blue-600" strokeWidth={2} />
+              </div>
+
+              {/* Search Prompt */}
+              <div className="flex-1">
+                <p className="text-gray-500 text-sm">
+                  Ask me anything...
+                </p>
+              </div>
+
+              {/* Keyboard shortcut hint */}
+              <div className="hidden sm:block bg-gray-100 border border-gray-200 rounded-md px-2 py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Ctrl + K</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </>
   );
 }

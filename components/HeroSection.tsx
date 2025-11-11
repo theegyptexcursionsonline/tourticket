@@ -5,7 +5,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import { useRecentSearches } from "@/hooks/useSearch";
-import SearchModal from "@/components/SearchModel";
+import AlgoliaSearchModal from "@/components/search/AlgoliaSearchModal";
 
 // --- Types and Constants ---
 interface HeroSettings {
@@ -302,12 +302,10 @@ export default function HeroSection() {
         </div>
       </section>
 
-      {isSearchModalOpen && (
-        <SearchModal 
-          onClose={() => setIsSearchModalOpen(false)} 
-          onSearch={handleSearch} 
-        />
-      )}
+      <AlgoliaSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+      />
 
       <style jsx global>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

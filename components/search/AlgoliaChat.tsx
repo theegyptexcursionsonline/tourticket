@@ -1,22 +1,15 @@
 'use client';
 
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
-import { InstantSearch, Chat } from 'react-instantsearch';
-import { Sparkles, MessageCircle, Zap, Shield, Globe2, AlertCircle, ArrowRight } from 'lucide-react';
+import { InstantSearch, Chat, SearchBox, Hits, Configure, useInstantSearch } from 'react-instantsearch';
+import { Sparkles, MessageCircle, Zap, Shield, Globe2, AlertCircle, ArrowRight, MapPin, DollarSign, Clock } from 'lucide-react';
 import 'instantsearch.css/themes/satellite.css';
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 
-// Dynamically import fallback search
-const FallbackSearch = dynamic(() => import('./FallbackSearch'), {
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>,
-});
-
-const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '1F31U1NOMS';
-const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || '90dc77f33842e5ca1ad27ba3e42bbc50';
-const AGENT_ID = '3b0e3cf3-58a7-4fec-82af-dcb12d10bd22';
-const INDEX_NAME = 'tours';
+const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
+const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
+const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
+const INDEX_NAME = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
 
 // Create search client with error handling
 const createSearchClient = () => {
@@ -30,19 +23,94 @@ const createSearchClient = () => {
 
 const searchClient = createSearchClient();
 
+// Empty state boundary component
+const EmptyQueryBoundary = ({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) => {
+  const { indexUiState } = useInstantSearch();
+  if (!indexUiState.query) {
+    return <>{fallback}</>;
+  }
+  return <>{children}</>;
+};
+
+// No results boundary component
+const NoResultsBoundary = ({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) => {
+  const { results } = useInstantSearch();
+  if (!results.__isArtificial && results.nbHits === 0) {
+    return <>{fallback}</>;
+  }
+  return <>{children}</>;
+};
+
+// Compact hit component for Crunchbase-style display
+const CompactHit = ({ hit }: any) => {
+  return (
+    <a
+      href={`/tours/${hit.slug}`}
+      className="block p-3 hover:bg-slate-50 transition-colors"
+    >
+      <div className="flex items-start gap-3">
+        {/* Tour Image */}
+        {hit.image && (
+          <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100">
+            <img
+              src={hit.image}
+              alt={hit.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Tour Info */}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-semibold text-slate-900 truncate mb-0.5">
+            {hit.title}
+          </h4>
+          <div className="flex items-center gap-3 text-xs text-slate-600">
+            {hit.location && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {hit.location}
+              </span>
+            )}
+            {hit.duration && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {hit.duration}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Price */}
+        {(hit.discountPrice || hit.price) && (
+          <div className="flex-shrink-0 text-right">
+            <div className="text-sm font-bold text-blue-600">
+              ${hit.discountPrice || hit.price}
+            </div>
+            {hit.discountPrice && hit.price && hit.discountPrice < hit.price && (
+              <div className="text-xs text-slate-400 line-through">
+                ${hit.price}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </a>
+  );
+};
+
 interface AlgoliaChatProps {
   initialQuery?: string;
+  minimal?: boolean; // New prop for minimal UI mode
 }
 
-export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
+export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaChatProps) {
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [useFallback, setUseFallback] = useState(false);
 
   // Log configuration for debugging
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      console.log('Algolia Chat Configuration:', {
+      console.log('Algolia AI Search Configuration:', {
         appId: ALGOLIA_APP_ID,
         agentId: AGENT_ID,
         indexName: INDEX_NAME,
@@ -52,16 +120,8 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
       // Verify credentials
       if (!ALGOLIA_APP_ID || !ALGOLIA_SEARCH_KEY) {
         setError('Algolia credentials are missing. Please check your environment variables.');
-        setIsLoading(false);
         return;
       }
-
-      // Mark as loaded after a short delay
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
-
-      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -77,11 +137,7 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
             <h3 className="text-lg font-bold text-red-900 mb-2">Configuration Error</h3>
             <p className="text-red-700 mb-4">{error}</p>
             <p className="text-sm text-red-600">
-              Please contact support or check the{' '}
-              <a href="/ALGOLIA_AGENT_TROUBLESHOOTING.md" className="underline font-semibold">
-                troubleshooting guide
-              </a>
-              .
+              Please contact support or check your Algolia configuration.
             </p>
           </div>
         </div>
@@ -89,29 +145,168 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
     );
   }
 
-  // Use fallback search if requested
-  if (useFallback) {
+  // Minimal mode - AI-powered search results display like Crunchbase
+  if (minimal) {
     return (
-      <div className="w-full">
-        <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-amber-900 font-semibold mb-1">Using Standard Search</p>
-              <p className="text-xs text-amber-700">AI Chat will be available once the agent is configured.</p>
+      <div className="w-full h-full flex flex-col bg-white">
+        <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* Search Input */}
+            <div className="p-3 border-b border-slate-100">
+              <SearchBox
+                placeholder="Search Egypt tours (e.g., tours under $100, Pyramids, Nile cruise)..."
+                classNames={{
+                  root: 'w-full',
+                  form: 'relative flex items-center',
+                  input: 'w-full px-3 py-2 pr-20 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none text-sm',
+                  submit: 'absolute right-10 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:text-blue-700',
+                  reset: 'absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600',
+                  submitIcon: 'w-4 h-4',
+                  resetIcon: 'w-4 h-4',
+                }}
+                autoFocus
+              />
             </div>
-            <button
-              onClick={() => setUseFallback(false)}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-xs font-semibold hover:shadow-lg transition-all"
-            >
-              Try AI Chat Again
-            </button>
+
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto bg-white">
+              <EmptyQueryBoundary
+                fallback={
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <Sparkles className="w-10 h-10 text-blue-500 mb-3" />
+                    <h3 className="text-sm font-semibold text-slate-800 mb-1">AI-Powered Search</h3>
+                    <p className="text-xs text-slate-600 mb-4">
+                      Ask naturally: "tours under $100", "romantic Nile cruise", "family trips"
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                      {['Pyramids of Giza', 'tours under $100', 'Nile cruise', 'Desert safari'].map((tag) => (
+                        <button
+                          key={tag}
+                          className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors"
+                          onClick={() => {
+                            const input = document.querySelector('.ais-SearchBox-input') as HTMLInputElement;
+                            if (input) {
+                              input.value = tag;
+                              input.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                          }}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                }
+              >
+                <NoResultsBoundary
+                  fallback={
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                      <AlertCircle className="w-10 h-10 text-slate-400 mb-3" />
+                      <h3 className="text-sm font-semibold text-slate-800 mb-1">No tours found</h3>
+                      <p className="text-xs text-slate-600">Try rephrasing or use different keywords</p>
+                    </div>
+                  }
+                >
+                  <Hits
+                    hitComponent={CompactHit}
+                    classNames={{
+                      root: 'w-full',
+                      list: 'divide-y divide-slate-100',
+                      item: 'list-none',
+                    }}
+                  />
+                </NoResultsBoundary>
+              </EmptyQueryBoundary>
+            </div>
           </div>
-        </div>
-        <FallbackSearch initialQuery={initialQuery} />
+
+          {/* Minimal chat styling */}
+          <style jsx global>{`
+            .algolia-chat-minimal {
+              font-family: inherit !important;
+            }
+
+            .algolia-chat-minimal .ais-Chat-messages {
+              padding: 0.875rem;
+              background: white;
+            }
+
+            .algolia-chat-minimal .ais-Chat-message {
+              margin-bottom: 0.625rem;
+              animation: slideIn 0.2s ease-out;
+            }
+
+            @keyframes slideIn {
+              from {
+                opacity: 0;
+                transform: translateY(6px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+
+            .algolia-chat-minimal .ais-Chat-message--user {
+              background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+              color: white !important;
+              border-radius: 1rem 1rem 0.25rem 1rem !important;
+              padding: 0.625rem 0.875rem !important;
+              box-shadow: 0 1px 4px rgba(37, 99, 235, 0.15) !important;
+              font-size: 0.875rem;
+            }
+
+            .algolia-chat-minimal .ais-Chat-message--assistant {
+              background: #f8fafc !important;
+              color: #1e293b !important;
+              border-radius: 1rem 1rem 1rem 0.25rem !important;
+              padding: 0.625rem 0.875rem !important;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+              border: 1px solid #e2e8f0;
+              font-size: 0.875rem;
+            }
+
+            .algolia-chat-minimal .ais-Chat-inputWrapper {
+              border: 1.5px solid #e2e8f0 !important;
+              border-radius: 0.625rem !important;
+              background: white !important;
+              padding: 0.25rem !important;
+              transition: all 0.2s ease !important;
+            }
+
+            .algolia-chat-minimal .ais-Chat-inputWrapper:focus-within {
+              border-color: #2563eb !important;
+              box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08) !important;
+            }
+
+            .algolia-chat-minimal .ais-Chat-input {
+              font-size: 0.8125rem !important;
+              padding: 0.5rem 0.75rem !important;
+              border: none !important;
+            }
+
+            .algolia-chat-minimal .ais-Chat-button {
+              background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+              color: white !important;
+              border-radius: 0.5rem !important;
+              padding: 0.5rem 0.875rem !important;
+              font-weight: 600 !important;
+              font-size: 0.8125rem !important;
+              transition: all 0.2s ease !important;
+              border: none !important;
+            }
+
+            .algolia-chat-minimal .ais-Chat-button:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25) !important;
+            }
+          `}</style>
+        </InstantSearch>
       </div>
     );
   }
 
+  // Full mode - original UI with all features
   return (
     <div className="w-full">
       <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
@@ -213,20 +408,13 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-indigo-100/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
-                {isLoading ? (
-                  <div className="min-h-[500px] flex flex-col items-center justify-center p-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                    <p className="text-slate-600 font-medium">Initializing AI Assistant...</p>
-                  </div>
-                ) : (
-                  <Chat
-                    agentId={AGENT_ID}
-                    classNames={{
-                      root: 'min-h-[500px] algolia-chat-enhanced',
-                    }}
-                    placeholder="Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')"
-                  />
-                )}
+                <Chat
+                  agentId={AGENT_ID}
+                  classNames={{
+                    root: 'min-h-[500px] algolia-chat-enhanced',
+                  }}
+                  placeholder="Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')"
+                />
               </div>
             </div>
 
@@ -238,21 +426,15 @@ export default function AlgoliaChat({ initialQuery }: AlgoliaChatProps) {
               </p>
             </div>
 
-            {/* Troubleshooting Info */}
+            {/* Help Info */}
             <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs text-blue-700 mb-2">
-                    <AlertCircle className="w-3 h-3 inline mr-1" />
-                    <span className="font-semibold">AI not responding?</span> The agent may need configuration in Algolia Dashboard.
+                  <p className="text-xs text-blue-900 font-semibold mb-1">AI-Powered Intelligent Search</p>
+                  <p className="text-xs text-blue-700">
+                    Ask naturally and get smart results. Try queries like "tours under $100", "romantic Nile cruises", or "family-friendly pyramids tour".
                   </p>
-                  <button
-                    onClick={() => setUseFallback(true)}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:gap-2 transition-all underline"
-                  >
-                    Use Standard Search Instead
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
                 </div>
               </div>
             </div>

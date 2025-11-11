@@ -9,8 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 import AuthModal from '@/components/AuthModal';
 import { Destination, Category } from '@/types';
-import { useWishlist } from '@/contexts/WishlistContext'; 
-import SearchModal from '@/components/SearchModel';
+import { useWishlist } from '@/contexts/WishlistContext';
+import AlgoliaSearchModal from '@/components/search/AlgoliaSearchModal';
 import { useRecentSearches } from '@/hooks/useSearch';
 
 const useSlidingText = (texts: string[], interval = 3000) => {
@@ -538,11 +538,10 @@ const linkHoverColor = 'hover:text-red-500';
         categories={categories}
       />
 
-      <AnimatePresence>
-        {isSearchModalOpen && (
-          <SearchModal onClose={handleSearchModalClose} onSearch={handleSearch} />
-        )}
-      </AnimatePresence>
+      <AlgoliaSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={handleSearchModalClose}
+      />
 
       <AuthModal
         isOpen={isAuthModalOpen}
