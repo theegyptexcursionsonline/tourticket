@@ -369,13 +369,6 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="relative group"
         >
-          {/* Animated Gradient Border Effect */}
-          <motion.div
-            animate={{ opacity: isExpanded ? 0.6 : 0.3 }}
-            transition={{ duration: 0.3 }}
-            className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-lg animate-gradient-rotate"
-          />
-
           {/* Main Search Box - Fully Rounded Capsule */}
           <div
             className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
@@ -384,13 +377,6 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
             }`}
           >
-            {/* Inner glow effect */}
-            <motion.div
-              animate={{ opacity: isExpanded ? 0.4 : 0.2 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-gradient-to-r from-blue-50/40 via-purple-50/40 to-pink-50/40 rounded-full animate-pulse-slow"
-            />
-
             <div className="relative">
               <input
                 type="text"
@@ -708,20 +694,6 @@ export default function HeroSection() {
           to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Animated gradient background with rotation */
-        @keyframes gradient-rotate {
-          0%, 100% {
-            transform: rotate(0deg);
-          }
-          50% {
-            transform: rotate(180deg);
-          }
-        }
-
-        .animate-gradient-rotate {
-          animation: gradient-rotate 8s linear infinite;
-        }
-
         /* Slow pulse animation */
         @keyframes pulse-slow {
           0%, 100% {
@@ -787,7 +759,6 @@ export default function HeroSection() {
 
         @media (prefers-reduced-motion: reduce) {
           .animate-text-slide-in { animation: none; }
-          .animate-gradient-rotate { animation: none; }
           .animate-pulse-slow { animation: none; }
         }
       `}</style>
