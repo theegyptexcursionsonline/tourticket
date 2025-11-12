@@ -109,7 +109,7 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[9999] bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-2xl flex items-start justify-center p-4 sm:p-6 lg:p-8"
+            className="fixed inset-0 z-30 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-2xl flex items-start justify-center p-4 sm:p-6 lg:p-8"
             role="dialog"
             aria-modal="true"
             aria-labelledby="search-modal-title"

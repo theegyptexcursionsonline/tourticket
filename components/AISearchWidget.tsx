@@ -336,7 +336,7 @@ export default function AISearchWidget() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 100 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="fixed bottom-6 left-0 right-0 z-[9999] flex justify-center px-4"
+        className="hidden md:flex fixed bottom-6 left-0 right-0 z-30 justify-center px-4"
       >
         <div className="w-full max-w-3xl">
         <div className="ai-search-container relative">

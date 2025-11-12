@@ -23,7 +23,7 @@ export default function AIAssistantButton() {
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.4, type: "spring" }}
-        className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[9998]"
+        className="hidden md:block fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-30"
       >
         <motion.button
           onClick={handleOpenSearch}
