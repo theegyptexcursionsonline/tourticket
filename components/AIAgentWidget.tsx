@@ -186,6 +186,9 @@ export default function AIAgentWidget() {
       // Skip if already processed
       if (element.classList.contains('tour-cards-processed')) return;
 
+      // Check if element is still in the document
+      if (!document.contains(element)) return;
+
       const text = element.textContent || '';
 
       // Check if element contains tour JSON data
@@ -195,6 +198,9 @@ export default function AIAgentWidget() {
 
           if (tours.length > 0) {
             console.log('Found tours to transform:', tours);
+
+            // Mark as processed first to prevent race conditions
+            element.classList.add('tour-cards-processed');
 
             // Create tour cards HTML
             const cardsHTML = tours.map(tour => createTourCardHTML(tour)).join('');
@@ -210,10 +216,22 @@ export default function AIAgentWidget() {
               wrapper.innerHTML = `<div class="space-y-4 max-w-md">${cardsHTML}</div>`;
             }
 
-            // Replace content with tour cards
-            element.innerHTML = '';
-            element.appendChild(wrapper);
-            element.classList.add('tour-cards-processed');
+            // Safely replace content - use requestAnimationFrame to avoid conflicts
+            requestAnimationFrame(() => {
+              if (document.contains(element)) {
+                try {
+                  // Clear and append in a safer way
+                  while (element.firstChild) {
+                    element.removeChild(element.firstChild);
+                  }
+                  element.appendChild(wrapper);
+                } catch (err) {
+                  console.error('Error replacing content:', err);
+                  // Fallback: just set innerHTML
+                  element.innerHTML = wrapper.innerHTML;
+                }
+              }
+            });
           }
         } catch (error) {
           console.error('Error transforming tour message:', error);
