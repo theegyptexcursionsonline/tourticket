@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Search, MapPin, Clock, Compass, Tag, FileText, X } from "lucide-react";
+import { Search, MapPin, Clock, Compass, Tag, FileText, X, Sparkles, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
@@ -105,10 +105,12 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
   return (
     <div>
-      <div className="px-4 py-2 bg-blue-50/90 border-b border-blue-100/50 backdrop-blur-sm">
+      <div className="px-5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50">
         <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-blue-600" />
-          <span className="text-xs font-semibold text-blue-900 uppercase tracking-wider">
+          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+            <MapPin className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
             Tours ({hits.length})
           </span>
         </div>
@@ -118,10 +120,10 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           key={hit.objectID}
           href={`/tours/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-4 py-3 hover:bg-blue-50/50 transition-colors border-b border-gray-100/50 last:border-0 backdrop-blur-sm"
+          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
               {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
                 <img
                   src={hit.image || hit.images?.[0] || hit.primaryImage}
@@ -129,32 +131,39 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
+                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
                   }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-blue-600" />
+                  <MapPin className="w-7 h-7 text-blue-500" />
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 text-sm truncate">
+              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">
                 {hit.title || 'Untitled Tour'}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
-                {hit.location && <span>{hit.location}</span>}
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                {hit.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {hit.location}
+                  </span>
+                )}
                 {hit.duration && (
                   <>
                     <span className="text-gray-300">•</span>
-                    <Clock className="w-3 h-3" />
-                    <span>{hit.duration} days</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {hit.duration} days
+                    </span>
                   </>
                 )}
                 {(hit.price || hit.discountPrice) && (
                   <>
                     <span className="text-gray-300">•</span>
-                    <span className="font-medium text-blue-600">
+                    <span className="font-bold text-blue-600">
                       ${hit.discountPrice || hit.price}
                     </span>
                   </>
@@ -176,10 +185,12 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 
   return (
     <div>
-      <div className="px-4 py-2 bg-emerald-50/90 border-b border-emerald-100/50 backdrop-blur-sm">
+      <div className="px-5 py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100/50">
         <div className="flex items-center gap-2">
-          <Compass className="w-4 h-4 text-emerald-600" />
-          <span className="text-xs font-semibold text-emerald-900 uppercase tracking-wider">
+          <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+            <Compass className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
             Destinations ({hits.length})
           </span>
         </div>
@@ -189,17 +200,17 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-4 py-3 hover:bg-emerald-50/50 transition-colors border-b border-gray-100/50 last:border-0 backdrop-blur-sm"
+          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center flex-shrink-0 border border-emerald-200">
-              <Compass className="w-5 h-5 text-emerald-600" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center flex-shrink-0 border-2 border-emerald-100 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+              <Compass className="w-6 h-6 text-emerald-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 text-sm truncate">
+              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-emerald-600 transition-colors">
                 {hit.name || 'Untitled Destination'}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
                 {hit.country && <span>{hit.country}</span>}
                 {hit.tourCount && (
                   <>
@@ -224,10 +235,12 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 
   return (
     <div>
-      <div className="px-4 py-2 bg-purple-50/90 border-b border-purple-100/50 backdrop-blur-sm">
+      <div className="px-5 py-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100/50">
         <div className="flex items-center gap-2">
-          <Tag className="w-4 h-4 text-purple-600" />
-          <span className="text-xs font-semibold text-purple-900 uppercase tracking-wider">
+          <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+            <Tag className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">
             Categories ({hits.length})
           </span>
         </div>
@@ -237,17 +250,17 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-4 py-3 hover:bg-purple-50/50 transition-colors border-b border-gray-100/50 last:border-0 backdrop-blur-sm"
+          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center flex-shrink-0 border border-purple-200">
-              <Tag className="w-5 h-5 text-purple-600" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center flex-shrink-0 border-2 border-purple-100 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+              <Tag className="w-6 h-6 text-purple-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 text-sm truncate">
+              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-purple-600 transition-colors">
                 {hit.name || 'Untitled Category'}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
                 {hit.tourCount && <span>{hit.tourCount} tours</span>}
               </div>
             </div>
@@ -350,44 +363,149 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   return (
     <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start" ref={containerRef}>
       <div className="relative w-full max-w-sm md:max-w-xl">
-        {/* Search Input */}
-        <div className="relative bg-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white hover:border-blue-200">
-          <Search className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 md:h-7 md:w-7 text-red-500 flex-shrink-0 pointer-events-none" />
-
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsExpanded(true)}
-            placeholder={suggestion}
-            className="w-full pl-14 md:pl-16 pr-12 py-4 text-sm md:text-base text-slate-700 placeholder-slate-500 font-semibold rounded-full outline-none bg-transparent"
+        <motion.div
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          className="relative group"
+        >
+          {/* Animated Gradient Border Effect */}
+          <motion.div
+            animate={{ opacity: isExpanded ? 0.6 : 0.3 }}
+            transition={{ duration: 0.3 }}
+            className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-lg animate-gradient-rotate"
           />
 
-          {searchQuery && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setIsExpanded(false);
-              }}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Clear search"
-            >
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
-          )}
-        </div>
+          {/* Main Search Box - Fully Rounded Capsule */}
+          <div
+            className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
+              isExpanded
+                ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
+                : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
+            }`}
+          >
+            {/* Inner glow effect */}
+            <motion.div
+              animate={{ opacity: isExpanded ? 0.4 : 0.2 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 bg-gradient-to-r from-blue-50/40 via-purple-50/40 to-pink-50/40 rounded-full animate-pulse-slow"
+            />
+
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsExpanded(true)}
+                placeholder={suggestion}
+                className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                style={{ cursor: 'text' }}
+              />
+
+              {/* Left Icon with Animation */}
+              <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
+                <motion.div
+                  className="relative"
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isExpanded
+                      ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30'
+                      : 'bg-gradient-to-br from-blue-400 to-purple-400 shadow-md'
+                  }`}>
+                    <Search className={`w-4 h-4 transition-colors duration-300 text-white`} />
+                  </div>
+                  <motion.div
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white shadow-sm"
+                    animate={{
+                      scale: [1, 1.3, 1],
+                      opacity: [1, 0.7, 1]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                </motion.div>
+              </div>
+
+              {/* Right Side Elements with Animation */}
+              <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-10">
+                {searchQuery ? (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setIsExpanded(false);
+                    }}
+                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                ) : isExpanded ? (
+                  <motion.div
+                    initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <ChevronUp className="w-4 h-4 text-white" />
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    animate={{
+                      rotate: [0, 15, -15, 0],
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md"
+                  >
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Dropdown Results - Using absolute positioning with z-index */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="absolute top-full mt-2 left-0 right-0 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 overflow-hidden max-h-[400px] z-[9999]"
+              initial={{ opacity: 0, y: -10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.96 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute top-full mt-3 left-0 right-0 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden z-[9999]"
+              style={{ maxHeight: '65vh' }}
             >
-              <div className="overflow-y-auto max-h-[400px]">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {searchQuery ? 'Search Results' : 'Popular Searches'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
+                  >
+                    <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Results Area */}
+              <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
                 {searchQuery ? (
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
                     <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -414,9 +532,9 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   // Trending Searches - shown when no search query
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <Compass className="w-4 h-4 text-blue-600" />
+                      <Sparkles className="w-4 h-4 text-blue-500" />
                       <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Popular Searches
+                        Trending Egypt Tours
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -426,7 +544,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                           onClick={() => {
                             setSearchQuery(trend);
                           }}
-                          className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-300 hover:text-blue-700 hover:shadow-md transition-all duration-200"
+                          className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
                         >
                           {trend}
                         </button>
@@ -590,6 +708,52 @@ export default function HeroSection() {
           to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Animated gradient background with rotation */
+        @keyframes gradient-rotate {
+          0%, 100% {
+            transform: rotate(0deg);
+          }
+          50% {
+            transform: rotate(180deg);
+          }
+        }
+
+        .animate-gradient-rotate {
+          animation: gradient-rotate 8s linear infinite;
+        }
+
+        /* Slow pulse animation */
+        @keyframes pulse-slow {
+          0%, 100% {
+            opacity: 0.4;
+          }
+          50% {
+            opacity: 0.2;
+          }
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #d1d5db, #9ca3af);
+          border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #9ca3af, #6b7280);
+        }
+
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         .animate-slide-from-top { animation: slide-from-top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
         .animate-text-slide-in { animation: text-slide-in 0.5s ease-out forwards; }
@@ -600,8 +764,31 @@ export default function HeroSection() {
 
         img { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 
+        /* Hide default Algolia styling */
+        .ais-InstantSearch {
+          font-family: inherit;
+        }
+
+        .ais-SearchBox {
+          display: none;
+        }
+
+        .ais-Hits-list {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .ais-Hits-item {
+          margin: 0;
+          padding: 0;
+          border: none;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .animate-text-slide-in { animation: none; }
+          .animate-gradient-rotate { animation: none; }
+          .animate-pulse-slow { animation: none; }
         }
       `}</style>
     </>
