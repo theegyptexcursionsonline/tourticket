@@ -7,7 +7,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { CheckCircle, Play, ArrowRight, Clock, Users, Star } from 'lucide-react';
+import TourCard from '@/components/shared/TourCard';
+import { CheckCircle, Play, ArrowRight } from 'lucide-react';
+import { Tour, Category } from '@/types';
 
 /**
  * Complete Egypt landing page: app/egypt/page.tsx
@@ -30,28 +32,12 @@ const FEATURES = [
 
 const GALLERY = [
   { src: '/pyramid.png', alt: 'Pyramids at sunrise' },
-  { src: '/pyramid-2.png', alt: 'Traditional felucca on the Nile' },
-  { src: '/pyramid-3.png', alt: 'Temple silhouette at twilight' },
-  { src: '/pyramid-thumb.png', alt: 'Local market and cultural scene' }
+  { src: '/pyramid3.png', alt: 'Traditional felucca on the Nile' },
+  { src: '/pyramid2.png', alt: 'Temple silhouette at twilight' },
+  { src: '/image.png', alt: 'Local market and cultural scene' }
 ];
 
-const PLANS = [
-  {
-    title: 'Explorer',
-    price: '₹8,499',
-    bullets: ['Guided city walk', 'Museum entry', 'Local guide', 'Basic insurance']
-  },
-  {
-    title: 'Curator',
-    price: '₹15,999',
-    bullets: ['Nile cruise', 'Premium guide', 'Local lunch', 'Photo highlights']
-  },
-  {
-    title: 'Luxury',
-    price: '₹39,999',
-    bullets: ['Private vehicle', '5★ stays', 'Sunset private cruise', 'Concierge services']
-  }
-];
+// Removed fake pricing plans - will use real tours instead
 
 const FAQS = [
   { q: 'How long are the experiences?', a: 'Typical experiences are 1–3 days depending on the package; custom itineraries can be arranged.' },
@@ -172,6 +158,55 @@ function EgyptHero() {
 
 /* ---------- Page ---------- */
 export default function AboutEgyptLanding(): JSX.Element {
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingTours, setIsLoadingTours] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  // Fetch tours
+  useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        const response = await fetch('/api/admin/tours');
+        const data = await response.json();
+        if (data.success) {
+          // Get all published tours - can filter by Egypt destination later
+          const publishedTours = (data.data || []).filter((t: Tour) => t.isPublished === true);
+          setTours(publishedTours.slice(0, 12)); // Show first 12 tours
+        }
+      } catch (error) {
+        console.error('Failed to fetch tours:', error);
+      } finally {
+        setIsLoadingTours(false);
+      }
+    };
+
+    fetchTours();
+  }, []);
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        if (data.success) {
+          // Get published categories with tour counts
+          const publishedCategories = (data.data || []).filter((c: Category) =>
+            c.isPublished !== false && (c.tourCount || 0) > 0
+          );
+          setCategories(publishedCategories.slice(0, 8)); // Show first 8 categories
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <>
       <Header />
@@ -240,31 +275,101 @@ export default function AboutEgyptLanding(): JSX.Element {
           </div>
         </section>
 
-        {/* Pricing */}
+        {/* Categories Section */}
         <section className="py-20 bg-gradient-to-b from-white to-gray-50">
-          <div className="max-w-6xl mx-auto px-6 lg:px-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Packages</h2>
-            <p className="text-gray-600 mb-10">Flexible packages for solo travelers, couples, and VIP groups.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {PLANS.map((plan, idx) => (
-                <motion.div key={idx} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: idx * 0.06 }} className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
-                  <h3 className="text-xl font-bold mb-4">{plan.title}</h3>
-                  <div className="text-3xl font-extrabold text-gray-900 mb-6">{plan.price}</div>
-                  <ul className="mb-6 space-y-2 text-left">
-                    {plan.bullets.map((b, i) => (
-                      <li key={i} className="text-gray-700 flex items-start gap-3">
-                        <CheckCircle className="h-5 w-5 text-amber-400 mt-1 flex-shrink-0" />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href={`/book/${plan.title.toLowerCase()}`} className="inline-block w-full text-center px-6 py-3 rounded-full bg-amber-400 text-black font-semibold shadow hover:scale-[1.02] transition">
-                    Book {plan.title}
-                  </Link>
-                </motion.div>
-              ))}
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Explore by Category</h2>
+              <p className="text-gray-600 text-lg">Find the perfect experience tailored to your interests.</p>
             </div>
+
+            {isLoadingCategories ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl p-6 shadow-lg animate-pulse">
+                    <div className="h-12 w-12 bg-gray-200 rounded-full mb-4 mx-auto" />
+                    <div className="h-4 bg-gray-200 rounded mb-2" />
+                    <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto" />
+                  </div>
+                ))}
+              </div>
+            ) : categories.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {categories.map((category) => (
+                  <Link
+                    key={category._id}
+                    href={`/categories/${category.slug}`}
+                    className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100"
+                  >
+                    <div className="text-center">
+                      <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-amber-100 text-amber-600 text-2xl group-hover:bg-amber-400 group-hover:text-white transition-colors duration-300">
+                        {category.icon || '🎯'}
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-amber-600 transition-colors duration-300">
+                        {category.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {category.tourCount || 0} {category.tourCount === 1 ? 'tour' : 'tours'}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No categories available at the moment.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Tour Listings Section */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Featured Tours & Experiences</h2>
+              <p className="text-gray-600 text-lg">Discover authentic Egyptian experiences curated for you.</p>
+            </div>
+
+            {isLoadingTours ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden animate-pulse">
+                    <div className="h-56 bg-gray-200" />
+                    <div className="p-6 space-y-4">
+                      <div className="h-6 bg-gray-200 rounded" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4" />
+                      <div className="flex justify-between items-center">
+                        <div className="h-4 bg-gray-200 rounded w-1/3" />
+                        <div className="h-8 bg-gray-200 rounded w-1/4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : tours.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {tours.map((tour, idx) => (
+                    <TourCard key={tour._id} tour={tour} index={idx} />
+                  ))}
+                </div>
+
+                <div className="text-center mt-12">
+                  <Link
+                    href="/tours"
+                    className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-black font-semibold shadow-2xl hover:scale-[1.02] transition-all duration-300"
+                  >
+                    <span>View All Tours</span>
+                    <ArrowRight size={18} />
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No tours available at the moment. Please check back soon!</p>
+              </div>
+            )}
           </div>
         </section>
 

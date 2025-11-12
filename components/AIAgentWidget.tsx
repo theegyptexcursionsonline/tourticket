@@ -13,12 +13,9 @@ const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
 export default function AIAgentWidget() {
   return (
-    <div className="fixed bottom-6 right-6 z-[9999]">
+    <div className="hidden md:block fixed bottom-6 left-6 z-[45]">
       <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
-        <Chat 
-          agentId={AGENT_ID}
-          placeholder="Ask me about tours..."
-        />
+        <Chat agentId={AGENT_ID} />
       </InstantSearch>
 
       {/* Minimal styling to ensure proper display */}

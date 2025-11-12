@@ -8,7 +8,8 @@
 import { spawn } from 'child_process';
 import detectPort from 'detect-port';
 
-const DEFAULT_PORT = 3000;
+// Check if PORT is set in environment, otherwise use 3021
+const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3021;
 const MAX_PORT_ATTEMPTS = 10;
 
 async function findAvailablePort(startPort: number): Promise<number> {
