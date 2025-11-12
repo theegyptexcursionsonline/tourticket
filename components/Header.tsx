@@ -26,7 +26,18 @@ import AuthModal from '@/components/AuthModal';
 import { Destination, Category, Tour } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useSettings } from '@/hooks/useSettings';
-import AlgoliaSearchModal from '@/components/search/AlgoliaSearchModal';
+import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
+import 'instantsearch.css/themes/satellite.css';
+
+// =================================================================
+// --- ALGOLIA CONFIGURATION ---
+// =================================================================
+const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
+const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
+const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
+
+const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -130,6 +141,221 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 };
 
 // =================================================================
+// --- ALGOLIA SEARCH COMPONENTS ---
+// =================================================================
+function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+  const { refine } = useSearchBox();
+
+  useEffect(() => {
+    refine(searchQuery);
+  }, [searchQuery, refine]);
+
+  return null;
+}
+
+function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+            <Landmark className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
+            Tours ({hits.length})
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/tours/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+              {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
+                <img
+                  src={hit.image || hit.images?.[0] || hit.primaryImage}
+                  alt={hit.title || 'Tour'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Landmark className="w-7 h-7 text-blue-500" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">
+                {hit.title || 'Untitled Tour'}
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                {hit.location && (
+                  <span className="flex items-center gap-1">
+                    <Landmark className="w-3 h-3" />
+                    {hit.location}
+                  </span>
+                )}
+                {hit.duration && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {hit.duration} days
+                    </span>
+                  </>
+                )}
+                {(hit.price || hit.discountPrice) && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="font-bold text-blue-600">
+                      ${hit.discountPrice || hit.price}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+// Mobile Inline Search Component
+const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.memo(({ isOpen, onClose }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useOnClickOutside(containerRef, onClose);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+        className="fixed top-16 left-0 right-0 z-50 bg-white shadow-2xl border-b border-gray-200"
+        ref={containerRef}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="relative">
+            <motion.div
+              whileHover={{ y: -2, scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              transition={{ duration: 0.2 }}
+              className="relative"
+            >
+              <div className="relative bg-white border-2 border-blue-300 rounded-full shadow-xl hover:shadow-2xl hover:border-blue-400 transition-all duration-300">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search tours in Egypt..."
+                    className="w-full pl-14 pr-16 py-4 text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full"
+                    autoFocus
+                  />
+
+                  {/* Left Icon */}
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
+                      <Search className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+
+                  {/* Right Close Button */}
+                  <button
+                    onClick={onClose}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Close search"
+                  >
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Results Dropdown */}
+            <AnimatePresence>
+              {searchQuery && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full mt-3 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] overflow-y-auto"
+                >
+                  <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
+                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    <Index indexName={INDEX_TOURS}>
+                      <Configure hitsPerPage={10} />
+                      <TourHits onHitClick={onClose} limit={10} />
+                    </Index>
+                  </InstantSearch>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Trending when empty */}
+            {!searchQuery && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-4"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Trending Tours
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Pyramids', 'Nile Cruise', 'Luxor', 'Desert Safari', 'Cairo Tours'].map((trend) => (
+                    <button
+                      key={trend}
+                      onClick={() => setSearchQuery(trend)}
+                      className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200"
+                    >
+                      {trend}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+MobileInlineSearch.displayName = 'MobileInlineSearch';
+
+// =================================================================
 // --- SUB-COMPONENTS ---
 // =================================================================
 const SearchSuggestion: FC<{
@@ -171,7 +397,7 @@ const TourResultSkeleton = () => (
   </div>
 );
 
-// SearchModal removed - now using AlgoliaSearchModal
+// SearchModal removed - now using MobileInlineSearch for mobile devices
 
 // =================================================================
 // --- MEGA MENU ---
@@ -463,7 +689,7 @@ HeaderSearchBar.displayName = 'HeaderSearchBar';
 export default function Header({ startSolid = false }: { startSolid?: boolean }) {
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isSearchModalOpen, setSearchModalOpen] = useState(false);
+  const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
@@ -502,8 +728,8 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
 
   // handlers
   const handleMegaMenuToggle = useCallback(() => setMegaMenuOpen(prev => !prev), []);
-  const handleSearchModalOpen = useCallback(() => setSearchModalOpen(true), []);
-  const handleSearchModalClose = useCallback(() => setSearchModalOpen(false), []);
+  const handleMobileSearchOpen = useCallback(() => setMobileSearchOpen(true), []);
+  const handleMobileSearchClose = useCallback(() => setMobileSearchOpen(false), []);
   const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
   const handleMobileMenuClose = useCallback(() => setMobileMenuOpen(false), []);
   const handleAuthModalOpen = useCallback((state: 'login' | 'signup') => { setAuthModalState(state); setAuthModalOpen(true); }, []);
@@ -543,7 +769,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
         </nav>
       </div>
 
-      {isScrolled && <HeaderSearchBar onFocus={handleSearchModalOpen} isTransparent={isTransparent} />}
+      {isScrolled && <HeaderSearchBar onFocus={handleMobileSearchOpen} isTransparent={isTransparent} />}
 
       <div className="flex items-center gap-3 md:gap-5">
         <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
@@ -566,7 +792,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
           )}
         </button>
 
-        <button onClick={handleSearchModalOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
+        <button onClick={handleMobileSearchOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
           <Search size={22} className="group-hover:text-red-500" />
         </button>
 
@@ -598,16 +824,16 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
       <MobileMenu
         isOpen={isMobileMenuOpen}
         onClose={handleMobileMenuClose}
-        onOpenSearch={handleSearchModalOpen}
+        onOpenSearch={handleMobileSearchOpen}
         onOpenAuth={handleAuthModalOpen}
         destinations={destinations}
         categories={categories}
       />
 
-      {/* Search modal (desktop + mobile) */}
-      <AlgoliaSearchModal
-        isOpen={isSearchModalOpen}
-        onClose={handleSearchModalClose}
+      {/* Mobile Inline Search */}
+      <MobileInlineSearch
+        isOpen={isMobileSearchOpen}
+        onClose={handleMobileSearchClose}
       />
 
       {/* Auth modal */}

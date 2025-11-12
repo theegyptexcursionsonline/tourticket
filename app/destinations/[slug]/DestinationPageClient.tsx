@@ -7,7 +7,7 @@ import {
     Check, ShoppingCart, Award, MapPin, CheckCircle2,
     Calendar, Shield, Heart, MessageCircle,
     Sun, DollarSign, Languages, Phone,
-    Search, Plus, Minus
+    Search, Plus, Minus, ChevronUp, X, Sparkles, Compass
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -15,8 +15,10 @@ import { Destination, Tour, Category, CartItem, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import BookingSidebar from '@/components/BookingSidebar';
-import { useRecentSearches } from "@/hooks/useSearch";
-import SearchModal from "@/components/SearchModel";
+import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
+import { motion, AnimatePresence } from 'framer-motion';
+import 'instantsearch.css/themes/satellite.css';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -25,6 +27,15 @@ interface DestinationPageClientProps {
   reviews?: Review[];
   relatedDestinations?: Destination[];
 }
+
+// Algolia Configuration
+const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
+const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
+const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
+const INDEX_DESTINATIONS = 'destinations';
+const INDEX_CATEGORIES = 'categories';
+
+const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
 // --- Hero Helper Hooks ---
 const useIsMobile = (breakpoint = 768) => {
@@ -69,21 +80,296 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
-// --- Hero Search Bar ---
-const HeroSearchBar = ({ onOpenModal, suggestion }: { onOpenModal: () => void; suggestion: string }) => {
+// Custom SearchBox component
+function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+  const { refine } = useSearchBox();
+
+  useEffect(() => {
+    refine(searchQuery);
+  }, [searchQuery, refine]);
+
+  return null;
+}
+
+// Custom Hits component for Tours
+function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
   return (
-    <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0">
-      <button 
-        onClick={onOpenModal} 
-        className="w-full max-w-[280px] sm:max-w-xs md:max-w-md lg:max-w-xl bg-white text-slate-500 rounded-full flex items-center p-2.5 sm:p-3 md:p-4 text-xs sm:text-sm md:text-base shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out transform"
-      >
-        <Search className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 mx-2 md:mx-3 text-red-500 flex-shrink-0" />
-        <div className="flex-1 text-left h-5 sm:h-6 md:h-7 overflow-hidden">
-          <span key={suggestion} className="font-semibold animate-text-slide-in block text-sm sm:text-base md:text-lg">
-            {suggestion}
+    <div>
+      <div className="px-5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+            <MapPin className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
+            Tours ({hits.length})
           </span>
         </div>
-      </button>
+      </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/tours/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+              {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
+                <img
+                  src={hit.image || hit.images?.[0] || hit.primaryImage}
+                  alt={hit.title || 'Tour'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <MapPin className="w-7 h-7 text-blue-500" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">
+                {hit.title || 'Untitled Tour'}
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                {hit.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {hit.location}
+                  </span>
+                )}
+                {hit.duration && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {hit.duration} days
+                    </span>
+                  </>
+                )}
+                {(hit.price || hit.discountPrice) && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="font-bold text-blue-600">
+                      ${hit.discountPrice || hit.price}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+// --- Hero Search Bar ---
+const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
+
+  const handleCloseDropdown = () => {
+    setIsExpanded(false);
+  };
+
+  return (
+    <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0" ref={containerRef}>
+      <div className="relative w-full max-w-[280px] sm:max-w-xs md:max-w-md lg:max-w-xl">
+        <motion.div
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          className="relative group"
+        >
+          {/* Main Search Box - Fully Rounded Capsule */}
+          <div
+            className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
+              isExpanded
+                ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
+                : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
+            }`}
+          >
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsExpanded(true)}
+                placeholder={suggestion}
+                className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-3 md:py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                style={{ cursor: 'text' }}
+              />
+
+              {/* Left Icon with Animation */}
+              <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
+                <motion.div
+                  className="relative"
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isExpanded
+                      ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30'
+                      : 'bg-gradient-to-br from-blue-400 to-purple-400 shadow-md'
+                  }`}>
+                    <Search className={`w-4 h-4 transition-colors duration-300 text-white`} />
+                  </div>
+                  <motion.div
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white shadow-sm"
+                    animate={{
+                      scale: [1, 1.3, 1],
+                      opacity: [1, 0.7, 1]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                </motion.div>
+              </div>
+
+              {/* Right Side Elements with Animation */}
+              <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-10">
+                {searchQuery ? (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setIsExpanded(false);
+                    }}
+                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                ) : isExpanded ? (
+                  <motion.div
+                    initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <ChevronUp className="w-4 h-4 text-white" />
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    animate={{
+                      rotate: [0, 15, -15, 0],
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md"
+                  >
+                    <Star className="w-4 h-4 text-white fill-current" />
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Dropdown Results */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.96 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute top-full mt-3 left-0 right-0 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden z-[9999]"
+              style={{ maxHeight: '65vh' }}
+            >
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {searchQuery ? 'Search Results' : 'Popular Searches'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
+                  >
+                    <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Results Area */}
+              <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
+                {searchQuery ? (
+                  <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
+                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+                    {/* Tours Index */}
+                    <Index indexName={INDEX_TOURS}>
+                      <Configure hitsPerPage={5} />
+                      <TourHits onHitClick={handleCloseDropdown} limit={5} />
+                    </Index>
+                  </InstantSearch>
+                ) : (
+                  // Trending Searches - shown when no search query
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="w-4 h-4 text-blue-500 fill-current" />
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Trending Tours
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend) => (
+                        <button
+                          key={trend}
+                          onClick={() => {
+                            setSearchQuery(trend);
+                          }}
+                          className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
+                        >
+                          {trend}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
@@ -153,9 +439,6 @@ const BackgroundSlideshow = ({
 };
 
 const DestinationHeroSection = ({ destination, tourCount }: { destination: Destination, tourCount: number }) => {
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const { addSearchTerm } = useRecentSearches();
-
   const slides = destination.image
     ? [{ src: destination.image, alt: destination.name }]
     : [{ src: '/hero2.png', alt: destination.name }];
@@ -168,56 +451,44 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
 
   const currentSuggestion = useSlidingText(searchSuggestions, 3000);
 
-  const handleSearch = (term: string) => {
-    addSearchTerm(term);
-  };
-
   return (
-    <>
-<section className="relative w-full min-h-[500px] h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]">        {/* Background */}
-        <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
-        
-        {/* Content */}
-<div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-20 md:pt-0">          <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
-              DISCOVER
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-                {destination.name}
-              </span>
-            </h1>
-            
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 sm:mb-6 max-w-2xl mx-auto md:mx-0 px-4 sm:px-0">
-              {destination.description}
-            </p>
+    <section className="relative w-full min-h-[500px] h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]">
+      {/* Background */}
+      <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
 
-            <HeroSearchBar
-              onOpenModal={() => setIsSearchModalOpen(true)}
-              suggestion={currentSuggestion}
-            />
+      {/* Content */}
+      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-20 md:pt-0">
+        <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
+            DISCOVER
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+              {destination.name}
+            </span>
+          </h1>
 
-            <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 text-white/90 text-xs sm:text-sm px-4 sm:px-0">
-              <span className="flex items-center gap-1.5 sm:gap-2">
-                <Tag size={14} className="sm:w-4 sm:h-4" />
-                <span className="font-semibold">{tourCount}+ Tours</span>
-              </span>
-              <span className="flex items-center gap-1.5 sm:gap-2">
-                <Star size={14} className="sm:w-4 sm:h-4 fill-current text-yellow-400" />
-                <span className="font-semibold">4.8/5 Rating</span>
-              </span>
-              <span className="font-semibold">50K+ Travelers</span>
-            </div>
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 sm:mb-6 max-w-2xl mx-auto md:mx-0 px-4 sm:px-0">
+            {destination.description}
+          </p>
+
+          <HeroSearchBar
+            suggestion={currentSuggestion}
+          />
+
+          <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 text-white/90 text-xs sm:text-sm px-4 sm:px-0">
+            <span className="flex items-center gap-1.5 sm:gap-2">
+              <Tag size={14} className="sm:w-4 sm:h-4" />
+              <span className="font-semibold">{tourCount}+ Tours</span>
+            </span>
+            <span className="flex items-center gap-1.5 sm:gap-2">
+              <Star size={14} className="sm:w-4 sm:h-4 fill-current text-yellow-400" />
+              <span className="font-semibold">4.8/5 Rating</span>
+            </span>
+            <span className="font-semibold">50K+ Travelers</span>
           </div>
         </div>
-      </section>
-
-      {isSearchModalOpen && (
-        <SearchModal
-          onClose={() => setIsSearchModalOpen(false)}
-          onSearch={handleSearch}
-        />
-      )}
-    </>
+      </div>
+    </section>
   );
 };
 
@@ -880,19 +1151,33 @@ export default function DestinationPageClient({
       )}
 
       <style jsx global>{`
-        @keyframes fade-in { 
-          from { opacity: 0; transform: translateY(20px); } 
-          to { opacity: 1; transform: translateY(0); } 
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        
-        @keyframes slide-from-top { 
-          from { opacity: 0; transform: translateY(-30px); } 
-          to { opacity: 1; transform: translateY(0); } 
+
+        @keyframes slide-from-top {
+          from { opacity: 0; transform: translateY(-30px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        
-        @keyframes text-slide-in { 
-          from { opacity: 0; transform: translateY(10px); } 
-          to { opacity: 1; transform: translateY(0); } 
+
+        @keyframes text-slide-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Slow pulse animation */
+        @keyframes pulse-slow {
+          0%, 100% {
+            opacity: 0.4;
+          }
+          50% {
+            opacity: 0.2;
+          }
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
         }
 
         .animate-fade-in { animation: fade-in 0.8s ease-out forwards; }
@@ -902,19 +1187,59 @@ export default function DestinationPageClient({
         .text-shadow { text-shadow: 1px 1px 4px rgb(0 0 0 / 0.5); }
         .text-shadow-lg { text-shadow: 2px 2px 8px rgb(0 0 0 / 0.6); }
 
-        img { 
-          backface-visibility: hidden; 
-          -webkit-backface-visibility: hidden; 
+        img {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #d1d5db, #9ca3af);
+          border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #9ca3af, #6b7280);
         }
 
         [style*="scrollbarWidth"]::-webkit-scrollbar {
           display: none;
         }
 
+        /* Hide default Algolia styling */
+        .ais-InstantSearch {
+          font-family: inherit;
+        }
+
+        .ais-SearchBox {
+          display: none;
+        }
+
+        .ais-Hits-list {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .ais-Hits-item {
+          margin: 0;
+          padding: 0;
+          border: none;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .animate-text-slide-in,
           .animate-fade-in,
-          .animate-slide-from-top {
+          .animate-slide-from-top,
+          .animate-pulse-slow {
             animation: none !important;
           }
         }
