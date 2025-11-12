@@ -9,7 +9,7 @@ import TourDetailClientPage from './TourDetailClientPage';
 import { ITour } from '@/lib/models/Tour';
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 async function getTourBySlug(slug: string): Promise<ITour | null> {
@@ -57,7 +57,8 @@ async function getRelatedTours(categoryIds: string | string[] | any, currentTour
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const tour = await getTourBySlug(params.slug);
+  const { slug } = await params;
+  const tour = await getTourBySlug(slug);
 
   if (!tour) {
     return {
@@ -81,7 +82,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function TourDetailPage({ params }: PageProps) {
-  const tour = await getTourBySlug(params.slug);
+  const { slug } = await params;
+  const tour = await getTourBySlug(slug);
 
   if (!tour) {
     notFound();

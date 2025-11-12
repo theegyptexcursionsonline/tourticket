@@ -79,8 +79,9 @@ async function getPageData(slug: string) {
   };
 }
 
-export default async function DestinationPage({ params }: { params: { slug: string } }) {
-  const { destination, destinationTours, allCategories, reviews, relatedDestinations } = await getPageData(params.slug);
+export default async function DestinationPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const { destination, destinationTours, allCategories, reviews, relatedDestinations } = await getPageData(slug);
 
   if (!destination) {
     notFound();
