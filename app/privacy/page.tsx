@@ -53,79 +53,109 @@ export default function PrivacyPolicyPage() {
               Privacy Policy
             </h1>
             <p className="text-slate-600">
-              Effective Date: September 4, 2025
+              Last updated: 12 November 2025
             </p>
           </section>
 
           <section className="prose prose-lg mx-auto text-slate-700">
+            <div className="mb-6">
+              <p className="font-semibold">Company name: Egypt Excursions Online</p>
+              <p className="font-semibold">Mother company: Excursions Online LLC FZ</p>
+              <p className="font-semibold">Official email: info@egypt-excursionsonline.com</p>
+              <p className="font-semibold">Website: https://www.egypt-excursionsonline.com</p>
+            </div>
+
+            <h2>1. Who we are</h2>
             <p>
-              This Privacy Policy describes how Egypt Excursions Online collects, uses, and protects your personal information when you use our website and services.
+              This Privacy Policy explains how Egypt Excursions Online (operated by Excursions Online LLC FZ) collects, uses, shares, and protects personal data when you visit our website or book our tours and related services (the "Service").
             </p>
 
-            <h2>1. Information We Collect</h2>
+            <h2>2. Scope</h2>
             <p>
-              We collect information that you provide directly to us when you make a booking, create an account, or contact us. This may include:
+              This Policy applies to visitors and customers who access or use the Service, contact us by email/phone/WhatsApp, or interact with our social channels. By using the Service, you agree to the practices described here.
+            </p>
+
+            <h2>3. What data we collect</h2>
+            <p>
+              We collect the following categories of personal data when necessary for the purposes described in Section 4:
             </p>
             <ul>
-              <li><strong>Personal Identification Information:</strong> Name, email address, phone number, and billing information.</li>
-              <li><strong>Booking Information:</strong> Details of your tour bookings, payment history, and preferences.</li>
-              <li><strong>Communication Data:</strong> Records of your correspondence with our customer support team.</li>
+              <li><strong>Identification & contact data:</strong> name, email, phone number, country, hotel/accommodation, room number (where relevant).</li>
+              <li><strong>Booking details:</strong> travel dates, party size, special requests, pickup/dropoff locations, preferred languages.</li>
+              <li><strong>Government ID (where required):</strong> passport number/copy for certain private tours or as required by checkpoints/security regulations.</li>
+              <li><strong>Payment & billing data:</strong> billing address, payment method details (processed by third-party providers; we do not store full card numbers).</li>
+              <li><strong>Communications:</strong> emails, messages, call notes, and feedback.</li>
+              <li><strong>Device & usage data:</strong> IP address, device identifiers, browser type, pages viewed, and interaction data (via cookies and similar technologies).</li>
             </ul>
-            <p>
-              We also automatically collect certain information when you visit our Site, such as your IP address, browser type, device information, and usage data (e.g., pages visited, time spent on the Site).
-            </p>
 
-            <h2>2. How We Use Your Information</h2>
-            <p>
-              We use the information we collect for various purposes, including:
-            </p>
+            <h2>4. Why we use your data (legal bases)</h2>
+            <p>We process personal data for:</p>
             <ul>
-              <li>To <strong>process and fulfill your bookings</strong> and transactions.</li>
-              <li>To <strong>communicate with you</strong> about your bookings, updates, or special offers.</li>
-              <li>To <strong>improve our website and services</strong>, including personalizing your experience.</li>
-              <li>To <strong>analyze usage trends</strong> and user behavior to enhance functionality.</li>
-              <li>To <strong>protect against fraud</strong> and ensure the security of our platform.</li>
+              <li><strong>Booking & operations (Contract):</strong> to confirm bookings, issue vouchers, coordinate pickups, and provide customer support.</li>
+              <li><strong>Safety & compliance (Legal obligation/Legitimate interests):</strong> to meet legal, tax, accounting, and security requirements (e.g., passport checks, police checkpoints).</li>
+              <li><strong>Service improvement & analytics (Legitimate interests/Consent):</strong> to monitor performance, troubleshoot, and enhance user experience.</li>
+              <li><strong>Marketing (Consent/Legitimate interests):</strong> to send offers and updates; you may opt out anytime.</li>
             </ul>
 
-            <h2>3. Sharing Your Information</h2>
+            <h2>5. Cookies and similar technologies</h2>
             <p>
-              We may share your personal information with third parties only when necessary to provide our services. This includes:
+              We use cookies and similar technologies to operate the Service, remember preferences, and perform analytics. Where required, we will request consent. You can manage cookie preferences in your browser settings; some features may not function without certain cookies.
             </p>
+
+            <h2>6. Analytics and measurement</h2>
+            <p>
+              We may use third-party analytics tools (e.g., Google Analytics, ad platforms) to understand usage and performance. These providers process limited data on our behalf under their own privacy terms. We configure dashboards, conversion tracking, and goals/events to measure leads, bookings, and key actions.
+            </p>
+
+            <h2>7. Sharing your data</h2>
+            <p>We share personal data only as needed with:</p>
             <ul>
-              <li><strong>Tour Operators:</strong> We share relevant booking details (e.g., your name) with the tour providers to confirm your reservation.</li>
-              <li><strong>Payment Processors:</strong> Your billing information is shared with secure third-party payment gateways to process transactions.</li>
-              <li><strong>Legal and Compliance:</strong> We may disclose your information if required by law or to protect our rights and safety.</li>
+              <li>Local suppliers/operators, guides, and drivers to deliver the booked services.</li>
+              <li>Payment processors and banks to take payments and prevent fraud.</li>
+              <li>IT/service providers (hosting, email, CRM, analytics) under contractual obligations.</li>
+              <li>Authorities where legally required (e.g., security checkpoints, law enforcement).</li>
+              <li>Business transfers (e.g., merger or acquisition) with appropriate safeguards.</li>
             </ul>
+            <p>We do not sell personal data.</p>
+
+            <h2>8. International transfers</h2>
             <p>
-              We do not sell your personal information to third parties for their own marketing purposes.
+              Data may be processed in countries outside your residence. Where required, we implement safeguards such as contractual clauses to protect your data.
             </p>
 
-            <h2>4. Data Security</h2>
+            <h2>9. Data retention</h2>
             <p>
-              We implement industry-standard security measures to protect your personal information from unauthorized access, alteration, or disclosure. However, no method of transmission over the internet is 100% secure.
+              We retain personal data only for as long as necessary for the purposes described, including legal, accounting, or reporting requirements. Typical retention: booking records and invoices for statutory periods; support communications for operational needs.
             </p>
 
-            <h2>5. Your Rights and Choices</h2>
+            <h2>10. Your choices and rights</h2>
             <p>
-              You have the right to access, update, or request the deletion of your personal information. You can also opt out of receiving marketing communications from us at any time.
+              Depending on your location, you may have rights to access, correct, delete, object to, or restrict processing of your personal data, and to withdraw consent where processing is based on consent. To exercise these rights, contact info@egypt-excursionsonline.com.
             </p>
 
-            <h2>6. Cookies and Tracking</h2>
+            <h2>11. Security</h2>
             <p>
-              We use cookies and similar technologies to enhance your browsing experience, analyze site traffic, and personalize content. You can manage your cookie preferences through your browser settings.
+              We implement administrative, technical, and physical safeguards intended to protect personal data. No method of transmission or storage is 100% secure; we cannot guarantee absolute security.
             </p>
 
-            <h2>7. Changes to This Policy</h2>
+            <h2>12. Children</h2>
             <p>
-              We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Effective Date."
+              The Service is intended for individuals 18+. We do not knowingly collect data from children under 18. If you believe a child has provided us data, contact us to request deletion.
             </p>
 
-            <h2>8. Contact Us</h2>
+            <h2>13. Third-party links</h2>
             <p>
-              If you have any questions or concerns about this Privacy Policy, please contact us at:
+              Our site may contain links to third-party websites or services. We are not responsible for their privacy practices. Review their policies before providing personal data.
             </p>
+
+            <h2>14. Changes to this Policy</h2>
             <p>
-              booking@egypt-excursionsonline.com
+              We may update this Policy from time to time. We will post the updated version with a new effective date. Your continued use of the Service signifies acceptance of the updated Policy.
+            </p>
+
+            <h2>15. Contact</h2>
+            <p>
+              For questions or privacy requests, contact: info@egypt-excursionsonline.com.
             </p>
           </section>
         </div>
