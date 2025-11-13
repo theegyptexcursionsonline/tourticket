@@ -7,6 +7,7 @@ import { Star, Search as SearchIcon, Loader2, SlidersHorizontal, MessageSquare, 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Header from '@/components/Headersearch';
 import Footer from '@/components/Footer';
+import AISearchWidget from '@/components/AISearchWidget';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the AI Chat component (client-side only)
@@ -321,6 +322,9 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
       </main>
 
       <Footer />
+
+      {/* AI Search Widget */}
+      <AISearchWidget />
     </>
   );
   

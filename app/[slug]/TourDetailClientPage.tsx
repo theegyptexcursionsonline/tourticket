@@ -18,6 +18,7 @@ import {
 // Components
 import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
+import AISearchIconWidget from '@/components/AISearchIconWidget';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
@@ -1483,12 +1484,16 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
 
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
-      
+
       <StickyBookButton
         price={tour.discountPrice}
-        currency={'$'} 
+        currency={'$'}
         onClick={openBookingSidebar}
       />
+
+      {/* Compact AI Search Widget for internal pages */}
+      <AISearchIconWidget />
+
       <div className="sr-only" aria-live="polite">
         {liveMessage}
       </div>

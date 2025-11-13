@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Star, Clock, ShoppingCart, Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import AISearchWidget from '@/components/AISearchWidget';
 import { Tour, Category, CartItem } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
@@ -110,10 +111,14 @@ export default function CategoryPageClient({ category, categoryTours }: { catego
                 </div>
             </main>
             <Footer />
-            <BookingSidebar 
-                isOpen={isBookingSidebarOpen} 
-                onClose={closeSidebar} 
-                tour={selectedTour} 
+
+            {/* AI Search Widget */}
+            <AISearchWidget />
+
+            <BookingSidebar
+                isOpen={isBookingSidebarOpen}
+                onClose={closeSidebar}
+                tour={selectedTour}
             />
         </>
     );

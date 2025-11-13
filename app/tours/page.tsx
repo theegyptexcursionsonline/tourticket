@@ -6,6 +6,7 @@ import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import AISearchWidget from '@/components/AISearchWidget';
 import ToursClientPage from './ToursClientPage';
 import { ITour } from '@/lib/models/Tour';
 
@@ -34,6 +35,8 @@ export default async function ToursIndexPage() {
         <ToursClientPage tours={tours} />
       </main>
       <Footer />
+      {/* AI Search Widget */}
+      <AISearchWidget />
     </>
   );
 }

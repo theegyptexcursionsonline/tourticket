@@ -541,7 +541,7 @@ export default function AIAgentWidget() {
   }, []);
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 right-6 z-[9999]">
+    <div ref={containerRef} className="fixed bottom-24 md:bottom-6 right-6 z-[99999]">
       <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
         <Chat
           agentId={AGENT_ID}

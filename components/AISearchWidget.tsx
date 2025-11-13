@@ -353,9 +353,9 @@ export default function AISearchWidget() {
   // Mock recently viewed items
   useEffect(() => {
     setRecentlyViewed([
-      { id: 1, title: 'Pyramids of Giza Tour', type: 'Historical', price: 45, duration: '8 hours' },
-      { id: 2, title: 'Nile River Cruise', type: 'Cruise', price: 120, duration: '3 days' },
-      { id: 3, title: 'Cairo City Tour', type: 'City Tour', price: 35, duration: '6 hours' },
+      { id: 1, title: 'Pyramids of Giza Tour', type: 'Historical', price: 45, duration: '8 hours', slug: 'pyramids-of-giza-tour' },
+      { id: 2, title: 'Nile River Cruise', type: 'Cruise', price: 120, duration: '3 days', slug: 'nile-river-cruise' },
+      { id: 3, title: 'Cairo City Tour', type: 'City Tour', price: 35, duration: '6 hours', slug: 'cairo-city-tour' },
     ]);
   }, []);
 
@@ -539,7 +539,8 @@ export default function AISearchWidget() {
                               recentlyViewed.map((item, index) => (
                                 <motion.a
                                   key={item.id}
-                                  href="#"
+                                  href={`/tours/${item.slug || item.id}`}
+                                  onClick={handleCloseSearch}
                                   initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: index * 0.05, duration: 0.3 }}

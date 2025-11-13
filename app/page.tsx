@@ -22,6 +22,9 @@ import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 // Client-side Elfsight widget (must be a client component)
 import ElfsightWidget from '@/components/ElfsightWidget';
 
+// AI Search Widget for homepage
+import AISearchWidget from '@/components/AISearchWidget';
+
 export default function HomePage() {
   return (
     <main>
@@ -58,6 +61,9 @@ export default function HomePage() {
       {/* FAQ and Footer */}
       <FAQ />
       <Footer />
+
+      {/* AI Search Widget */}
+      <AISearchWidget />
     </main>
   );
 }
