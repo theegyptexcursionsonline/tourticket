@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TourCard from '@/components/shared/TourCard';
+import BookingSidebar from '@/components/BookingSidebar';
 import { CheckCircle, Play, ArrowRight } from 'lucide-react';
 import { Tour, Category } from '@/types';
 
@@ -106,7 +107,7 @@ function EgyptHero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-6 md:px-8 py-28 md:py-40">
+      <div className="relative z-10 container mx-auto px-6 md:px-8 pt-32 md:pt-48 pb-28 md:pb-40">
         <div className="max-w-4xl mx-auto text-center text-white">
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
@@ -162,6 +163,8 @@ export default function AboutEgyptLanding(): JSX.Element {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingTours, setIsLoadingTours] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
 
   // Fetch tours
   useEffect(() => {
@@ -207,11 +210,21 @@ export default function AboutEgyptLanding(): JSX.Element {
     fetchCategories();
   }, []);
 
+  const handleAddToCartClick = (tour: Tour) => {
+    setSelectedTour(tour);
+    setBookingSidebarOpen(true);
+  };
+
+  const closeSidebar = () => {
+    setBookingSidebarOpen(false);
+    setTimeout(() => setSelectedTour(null), 300);
+  };
+
   return (
     <>
       <Header />
 
-      <main className="pt-20 bg-white text-gray-800">
+      <main className="bg-white text-gray-800">
         {/* Hero */}
         <EgyptHero />
 
@@ -351,7 +364,7 @@ export default function AboutEgyptLanding(): JSX.Element {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {tours.map((tour, idx) => (
-                    <TourCard key={tour._id} tour={tour} index={idx} />
+                    <TourCard key={tour._id} tour={tour} index={idx} onAddToCartClick={handleAddToCartClick} />
                   ))}
                 </div>
 
@@ -409,6 +422,15 @@ export default function AboutEgyptLanding(): JSX.Element {
       </main>
 
       <Footer />
+
+      {/* Booking Sidebar */}
+      {selectedTour && (
+        <BookingSidebar
+          isOpen={isBookingSidebarOpen}
+          onClose={closeSidebar}
+          tour={selectedTour as any}
+        />
+      )}
 
       <style jsx global>{`
         .text-shadow { text-shadow: 1px 1px 3px rgba(0,0,0,0.6); }
