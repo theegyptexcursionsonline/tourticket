@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText } from 'lucide-react';
+import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import 'instantsearch.css/themes/satellite.css';
@@ -312,31 +312,36 @@ export default function AISearchWidget() {
         e.preventDefault();
         setIsExpanded(true);
       }
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isExpanded) {
         setIsExpanded(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isExpanded]);
 
-  // Click outside to close
+  // Click outside to close - FIXED
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.ai-search-container')) {
+      // Check if click is outside the ai-search-container
+      if (isExpanded && !target.closest('.ai-search-container')) {
         setIsExpanded(false);
       }
     };
 
     if (isExpanded) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use timeout to avoid immediate closing
+      const timeout = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timeout);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
   }, [isExpanded]);
 
   // Mock recently viewed items
@@ -351,6 +356,15 @@ export default function AISearchWidget() {
   const handleCloseSearch = () => {
     setIsExpanded(false);
     setSearchQuery('');
+  };
+
+  const handleAskAI = () => {
+    // Dispatch custom event to open AI agent with the search query
+    const event = new CustomEvent('openAIAgent', { 
+      detail: { query: searchQuery } 
+    });
+    window.dispatchEvent(event);
+    setIsExpanded(false);
   };
 
   // Don't render anything if not visible
@@ -428,12 +442,30 @@ export default function AISearchWidget() {
                               {searchQuery ? 'Search Results' : 'Recent Activity'}
                             </span>
                           </div>
-                          <button
-                            onClick={() => setIsExpanded(false)}
-                            className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2.5 rounded-2xl hover:bg-white/60 hover:shadow-sm group backdrop-blur-sm"
-                          >
-                            <X className="w-4.5 h-4.5 group-hover:rotate-90 transition-transform duration-300" strokeWidth={2.5} />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {searchQuery && (
+                              <motion.button
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                onClick={handleAskAI}
+                                className="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold text-white transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg group"
+                                style={{
+                                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                  boxShadow: '0 4px 12px -2px rgba(59, 130, 246, 0.4)'
+                                }}
+                              >
+                                <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" strokeWidth={2.5} />
+                                Ask AI Agent
+                              </motion.button>
+                            )}
+                            <button
+                              onClick={() => setIsExpanded(false)}
+                              className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2.5 rounded-2xl hover:bg-white/60 hover:shadow-sm group backdrop-blur-sm"
+                            >
+                              <X className="w-4.5 h-4.5 group-hover:rotate-90 transition-transform duration-300" strokeWidth={2.5} />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -529,6 +561,45 @@ export default function AISearchWidget() {
                           </div>
                         )}
                       </div>
+
+                      {/* Ask AI Button - Shows when there's a search query */}
+                      {searchQuery && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 }}
+                          className="border-t border-white/20 px-7 py-5 backdrop-blur-xl"
+                          style={{
+                            background: 'linear-gradient(to right, rgba(99, 102, 241, 0.03), rgba(168, 85, 247, 0.03))'
+                          }}
+                        >
+                          <button
+                            onClick={handleAskAI}
+                            className="w-full group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                            style={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              boxShadow: '0 8px 24px -6px rgba(102, 126, 234, 0.4)'
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full transition-transform duration-1000" />
+                            <div className="relative px-6 py-4 flex items-center justify-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                                <MessageCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <div className="text-white font-bold text-sm tracking-tight">Ask AI about "{searchQuery}"</div>
+                                <div className="text-white/70 text-xs font-medium mt-0.5">Get personalized recommendations</div>
+                              </div>
+                              <motion.div
+                                animate={{ x: [0, 5, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                              >
+                                <Sparkles className="w-5 h-5 text-white/90" strokeWidth={2.5} />
+                              </motion.div>
+                            </div>
+                          </button>
+                        </motion.div>
+                      )}
 
                       {/* Trending Section */}
                       {!searchQuery && (
