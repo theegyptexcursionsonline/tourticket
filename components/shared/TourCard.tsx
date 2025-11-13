@@ -21,13 +21,15 @@ interface TourCardProps {
   variant?: 'default' | 'compact' | 'featured';
   showQuickAdd?: boolean;
   className?: string;
+  onAddToCartClick?: (tour: Tour) => void;
 }
 
 const TourCard: React.FC<TourCardProps> = ({
   tour,
   index = 0,
   showQuickAdd = true,
-  className = ''
+  className = '',
+  onAddToCartClick
 }) => {
   const { formatPrice, t } = useSettings();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
@@ -63,7 +65,14 @@ const TourCard: React.FC<TourCardProps> = ({
   const handleQuickAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
+    // If onAddToCartClick is provided, use it to open booking sidebar
+    if (onAddToCartClick) {
+      onAddToCartClick(tour);
+      return;
+    }
+
+    // Otherwise, use the default quick add to cart behavior
     if (isAdding) return;
     setIsAdding(true);
 
@@ -79,7 +88,7 @@ const TourCard: React.FC<TourCardProps> = ({
         selectedAddOns: {},
         totalPrice: tour.discountPrice,
       };
-      
+
       addToCart(quickAddCartItem);
       toast.success(t('tourCard.addedToCart'));
     } catch {

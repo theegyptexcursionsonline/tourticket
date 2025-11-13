@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import Image from "next/image";
 import {
     ArrowRight, Star, Tag, Clock, Users, ChevronLeft, ChevronRight,
-    Check, ShoppingCart, Award, MapPin, CheckCircle2,
+    ShoppingCart, Award, MapPin, CheckCircle2,
     Calendar, Shield, Heart, MessageCircle,
     Sun, DollarSign, Languages, Phone,
     Search, Plus, Minus, ChevronUp, X, Sparkles, Compass
@@ -12,9 +12,8 @@ import {
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
-import { Destination, Tour, Category, CartItem, Review } from '@/types';
+import { Destination, Tour, Category, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-import { useCart } from '@/hooks/useCart';
 import BookingSidebar from '@/components/BookingSidebar';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
@@ -494,18 +493,13 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
 };
 
 // --- Card Components ---
-const Top10Card = ({ tour, index }: { tour: Tour, index: number }) => {
+const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: number, onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
-  const { addToCart } = useCart();
-  const [isAdded, setIsAdded] = useState(false);
-  
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isAdded) return;
-    addToCart(tour as CartItem);
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000);
+    onAddToCartClick(tour);
   };
 
   return (
@@ -529,17 +523,12 @@ const Top10Card = ({ tour, index }: { tour: Tour, index: number }) => {
         </div>
       </div>
       <div className="flex sm:flex-col items-center gap-2 ml-auto sm:ml-0">
-        <button  
+        <button
           onClick={handleAddToCart}
-          disabled={isAdded}
-          aria-label={isAdded ? "Added to cart" : "Add to cart"}
-          className={`p-2 sm:p-2.5 rounded-full text-white transition-all duration-300 ease-in-out ${
-            isAdded 
-              ? 'bg-green-500 cursor-not-allowed' 
-              : 'bg-red-600 hover:bg-red-700'
-          }`}
+          aria-label="Book now"
+          className="p-2 sm:p-2.5 rounded-full text-white bg-red-600 hover:bg-red-700 transition-all duration-300 ease-in-out"
         >
-          {isAdded ? <Check size={16} className="sm:w-[18px] sm:h-[18px]" /> : <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />}
+          <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
         </button>
         <ArrowRight className="text-slate-400 group-hover:text-red-500 transition-colors duration-200 w-5 h-5" />
       </div>
@@ -555,35 +544,25 @@ const InterestCard = ({ category, tourCount }: { category: Category, tourCount: 
   </a>
 );
 
-const CombiDealCard = ({ tour }: { tour: Tour }) => {
+const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
-  const { addToCart } = useCart();
-  const [isAdded, setIsAdded] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isAdded) return;
-    addToCart(tour as CartItem);
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000);
+    onAddToCartClick(tour);
   };
 
   return (
     <a href={`/tour/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
       <div className="relative">
         <Image src={tour.image} alt={tour.title} width={320} height={180} className="w-full h-36 sm:h-40 object-cover" />
-        <button  
+        <button
           onClick={handleAddToCart}
-          disabled={isAdded}
-          aria-label={isAdded ? "Added to cart" : "Add to cart"}
-          className={`absolute bottom-3 right-3 sm:bottom-4 sm:right-4 p-2 sm:p-2.5 rounded-full text-white transition-all duration-300 ease-in-out transform group-hover:scale-110 ${
-            isAdded 
-              ? 'bg-green-500 cursor-not-allowed' 
-              : 'bg-red-600 hover:bg-red-700'
-          }`}
+          aria-label="Book now"
+          className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 p-2 sm:p-2.5 rounded-full text-white bg-red-600 hover:bg-red-700 transition-all duration-300 ease-in-out transform group-hover:scale-110"
         >
-          {isAdded ? <Check size={16} className="sm:w-[18px] sm:h-[18px]" /> : <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />}
+          <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
         </button>
       </div>
       <div className="p-3 sm:p-4">
@@ -994,7 +973,7 @@ export default function DestinationPageClient({
   reviews = [],
   relatedDestinations = []
 }: DestinationPageClientProps) {
-  const [selectedTour] = useState<Tour | null>(null);
+  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const combiScrollContainer = useRef<HTMLDivElement | null>(null);
 
@@ -1004,7 +983,17 @@ export default function DestinationPageClient({
       container.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
-  
+
+  const handleAddToCartClick = (tour: Tour) => {
+    setSelectedTour(tour);
+    setBookingSidebarOpen(true);
+  };
+
+  const closeSidebar = () => {
+    setBookingSidebarOpen(false);
+    setTimeout(() => setSelectedTour(null), 300);
+  };
+
   const top10Tours = destinationTours.slice(0, 10);
   const featuredTours = destinationTours.filter(tour => tour.isFeatured).slice(0, 5);
   const destinationCategories = allCategories.map(category => ({
@@ -1055,7 +1044,7 @@ export default function DestinationPageClient({
                 </div>
                 <div className="relative">
                     <div ref={combiScrollContainer} className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scroll-smooth px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        {featuredTours.map(tour => <CombiDealCard key={tour._id} tour={tour} />)}
+                        {featuredTours.map(tour => <CombiDealCard key={tour._id} tour={tour} onAddToCartClick={handleAddToCartClick} />)}
                     </div>
                     <button 
                         onClick={() => scroll(combiScrollContainer, 'left')} 
@@ -1087,7 +1076,7 @@ export default function DestinationPageClient({
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 max-w-6xl mx-auto">
                 {top10Tours.map((tour, index) => (
-                  <Top10Card key={tour._id} tour={tour} index={index} />
+                  <Top10Card key={tour._id} tour={tour} index={index} onAddToCartClick={handleAddToCartClick} />
                 ))}
               </div>
             </div>
@@ -1149,7 +1138,7 @@ export default function DestinationPageClient({
       {selectedTour && (
         <BookingSidebar
           isOpen={isBookingSidebarOpen}
-          onClose={() => setBookingSidebarOpen(false)}
+          onClose={closeSidebar}
           tour={selectedTour as any}
         />
       )}

@@ -322,10 +322,10 @@ export default function AISearchIconWidget() {
       </motion.div>
 
       {/* MOBILE: Icon only (left-aligned) - AI Agent icon is on the right */}
-      <div className="md:hidden ai-search-container fixed bottom-24 left-4 z-[99999] pointer-events-auto">
+      <div className="md:hidden ai-search-container fixed bottom-24 left-4 pointer-events-none" style={{ zIndex: 999999 }}>
         <AnimatePresence>
           {isExpanded && (
-            <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }} className="absolute bottom-20 left-0 w-[90vw] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl z-[99999]" style={{ background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.92))', backdropFilter: 'blur(40px) saturate(180%)', border: '1px solid rgba(255, 255, 255, 0.18)', boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.3)' }}>
+            <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }} className="absolute bottom-20 left-0 w-[90vw] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl pointer-events-auto" style={{ background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.92))', backdropFilter: 'blur(40px) saturate(180%)', border: '1px solid rgba(255, 255, 255, 0.18)', boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.3)', zIndex: 999999 }}>
               <div className="px-4 py-3 border-b border-white/20 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-blue-500" /><span className="text-sm font-semibold text-gray-800">AI Search</span></div>
@@ -353,22 +353,24 @@ export default function AISearchIconWidget() {
 
         {/* Mobile Icon Button - LEFT ALIGNED */}
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsExpanded(!isExpanded);
-          }}
-          className="relative w-14 h-14 rounded-full shadow-2xl flex flex-col items-center justify-center cursor-pointer touch-manipulation active:scale-95 transition-transform"
+          type="button"
+          onClick={handleButtonClick}
+          onTouchStart={handleButtonClick}
+          className="relative w-14 h-14 rounded-full shadow-2xl flex flex-col items-center justify-center cursor-pointer touch-manipulation active:scale-95 transition-transform select-none"
           style={{
             background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
             boxShadow: '0 8px 24px -4px rgba(59, 130, 246, 0.5)',
-            zIndex: 99999,
+            zIndex: 999999,
             pointerEvents: 'auto',
-            WebkitTapHighlightColor: 'transparent'
+            WebkitTapHighlightColor: 'transparent',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+            touchAction: 'manipulation',
+            position: 'relative'
           }}
         >
-          {isExpanded ? <ChevronUp className="w-6 h-6 text-white" strokeWidth={2.5} /> : <Search className="w-6 h-6 text-white" strokeWidth={2.5} />}
-          <span className="text-[8px] text-white font-bold mt-0.5">AI Search</span>
+          {isExpanded ? <ChevronUp className="w-6 h-6 text-white pointer-events-none" strokeWidth={2.5} /> : <Search className="w-6 h-6 text-white pointer-events-none" strokeWidth={2.5} />}
+          <span className="text-[8px] text-white font-bold mt-0.5 pointer-events-none">AI Search</span>
         </button>
       </div>
 
