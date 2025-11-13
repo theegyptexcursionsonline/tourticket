@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Chat } from 'react-instantsearch';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import 'instantsearch.css/themes/satellite.css';
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
@@ -108,23 +110,9 @@ export default function AIAgentWidget() {
       return `msg-${Math.abs(hash)}`;
     };
 
-    const hasVisibleCards = (container: HTMLElement): boolean => {
-      return container.querySelectorAll('.tour-results-wrapper').length > 0;
-    };
-
-    const toggleAIIcon = (hasCards: boolean) => {
-      const chatContainer = containerRef.current?.querySelector('.ais-Chat');
-      if (chatContainer) {
-        if (hasCards) {
-          chatContainer.classList.add('has-tour-cards');
-        } else {
-          chatContainer.classList.remove('has-tour-cards');
-        }
-      }
-    };
-
     // Load closed cards from localStorage
     const closedCards = getClosedCards();
+    console.log('Loaded closed cards from localStorage:', Array.from(closedCards));
 
     // Function to transform JSON messages into tour cards
     const transformMessages = () => {
@@ -215,11 +203,71 @@ export default function AIAgentWidget() {
       return tours;
     };
 
+    // Helper function to render markdown in text messages
+    const renderMarkdownMessage = (element: Element) => {
+      // Skip if already processed for markdown
+      if (element.classList.contains('markdown-processed')) return;
+
+      // Get the message content element
+      const messageContent = element.querySelector('.ais-Chat-message-content');
+      if (!messageContent) return;
+
+      const text = messageContent.textContent || '';
+
+      // Skip empty messages or messages with JSON data
+      if (!text.trim() || text.includes('"title"') && text.includes('"slug"')) return;
+
+      // Mark as processed
+      element.classList.add('markdown-processed');
+
+      // Create a wrapper div for markdown content
+      const markdownWrapper = document.createElement('div');
+      markdownWrapper.className = 'markdown-content';
+
+      // Store the original text and render it with markdown
+      // We'll use innerHTML with proper sanitization via a markdown renderer
+      const lines = text.split('\n');
+      let htmlContent = '';
+
+      lines.forEach((line) => {
+        // Convert markdown-style bold (**text** or __text__)
+        line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        line = line.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+        // Convert markdown-style italic (*text* or _text_)
+        line = line.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        line = line.replace(/_(.+?)_/g, '<em>$1</em>');
+
+        // Convert headings
+        if (line.startsWith('### ')) {
+          htmlContent += `<h3>${line.substring(4)}</h3>`;
+        } else if (line.startsWith('## ')) {
+          htmlContent += `<h2>${line.substring(3)}</h2>`;
+        } else if (line.startsWith('# ')) {
+          htmlContent += `<h1>${line.substring(2)}</h1>`;
+        } else if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+          // Handle list items
+          const itemText = line.trim().substring(2);
+          htmlContent += `<li>${itemText}</li>`;
+        } else if (line.trim()) {
+          htmlContent += `<p>${line}</p>`;
+        } else {
+          htmlContent += '<br/>';
+        }
+      });
+
+      // Wrap list items in ul tags
+      htmlContent = htmlContent.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
+
+      markdownWrapper.innerHTML = htmlContent;
+
+      // Replace the message content
+      messageContent.innerHTML = '';
+      messageContent.appendChild(markdownWrapper);
+    };
+
     // Helper function to process an element
     const processElement = (element: Element) => {
-      // Skip if already processed
-      if (element.classList.contains('tour-cards-processed')) return;
-
       // Check if element is still in the document
       if (!document.contains(element)) return;
 
@@ -227,30 +275,41 @@ export default function AIAgentWidget() {
 
       // Check if element contains tour JSON data
       if (text.includes('"title"') && text.includes('"slug"')) {
+        // Skip if already processed for tour cards
+        if (element.classList.contains('tour-cards-processed')) return;
         try {
           const tours = extractJSONObjects(text);
 
           if (tours.length > 0) {
-            // Generate unique ID for this message based on content hash
-            const messageId = generateMessageId(text);
+            // Generate unique ID based on tour slugs for consistency across reloads
+            const tourSlugs = tours.map((t: any) => t.slug || t.objectID).sort().join('-');
+            const messageId = generateMessageId(tourSlugs);
 
             // Check if this message's cards were previously closed
             if (closedCards.has(messageId)) {
+              console.log('Skipping closed cards with ID:', messageId);
               // Mark as processed but don't show cards
               element.classList.add('tour-cards-processed');
-              (element as HTMLElement).style.display = 'none';
+              // Hide the JSON content but keep the element visible
+              element.textContent = '';
               return;
             }
 
             console.log('Found tours to transform:', tours);
+            console.log('Generated message ID:', messageId);
 
             // Mark as processed first to prevent race conditions
             element.classList.add('tour-cards-processed');
             // Store message ID as data attribute
             (element as HTMLElement).dataset.messageId = messageId;
 
-            // Hide the element immediately to prevent JSON from showing
-            (element as HTMLElement).style.opacity = '0';
+            // Hide only the message content, not the entire chat
+            const messageContent = element.querySelector('.ais-Chat-message-content') as HTMLElement;
+            if (messageContent) {
+              messageContent.style.opacity = '0';
+            } else {
+              (element as HTMLElement).style.opacity = '0';
+            }
 
             // Extract any text before the JSON (like a descriptive message)
             let introText = '';
@@ -310,26 +369,22 @@ export default function AIAgentWidget() {
                     if (msgId) {
                       closedCards.add(msgId);
                       saveClosedCards(closedCards);
+                      console.log('Saved closed card ID to localStorage:', msgId);
+                      console.log('All closed cards:', Array.from(closedCards));
                     }
 
-                    // Animate and remove
+                    // Animate and remove only the tour cards, not the parent message
                     resultsWrapper.style.animation = 'fadeOut 0.2s ease-out';
                     setTimeout(() => {
                       resultsWrapper.remove();
-
-                      // Check if any cards remain visible and toggle AI icon
-                      if (containerRef.current && !hasVisibleCards(containerRef.current)) {
-                        toggleAIIcon(false);
+                      // Clear the parent element content to avoid showing JSON
+                      if (element && document.contains(element)) {
+                        element.textContent = '';
                       }
                     }, 200);
                   }
                 });
               }
-            }, 0);
-
-            // Toggle AI icon to show cards are visible
-            setTimeout(() => {
-              toggleAIIcon(true);
             }, 0);
 
             // Safely replace content - use requestAnimationFrame to avoid conflicts
@@ -342,8 +397,25 @@ export default function AIAgentWidget() {
                   }
                   element.appendChild(wrapper);
                   // Fade in the clean result
-                  (element as HTMLElement).style.opacity = '1';
-                  (element as HTMLElement).style.transition = 'opacity 0.3s ease-in';
+                  const messageContent = element.querySelector('.ais-Chat-message-content') as HTMLElement;
+                  if (messageContent) {
+                    messageContent.style.opacity = '1';
+                    messageContent.style.transition = 'opacity 0.3s ease-in';
+                  } else {
+                    (element as HTMLElement).style.opacity = '1';
+                    (element as HTMLElement).style.transition = 'opacity 0.3s ease-in';
+                  }
+
+                  // Ensure chat trigger remains visible
+                  const chatRoot = containerRef.current;
+                  if (chatRoot) {
+                    const trigger = chatRoot.querySelector('.ais-Chat-trigger') as HTMLElement;
+                    if (trigger) {
+                      trigger.style.display = 'flex';
+                      trigger.style.opacity = '1';
+                      trigger.style.visibility = 'visible';
+                    }
+                  }
                 } catch (err) {
                   console.error('Error replacing content:', err);
                   // Fallback: just set innerHTML
@@ -358,6 +430,9 @@ export default function AIAgentWidget() {
           // If transformation fails, show the element again
           (element as HTMLElement).style.opacity = '1';
         }
+      } else {
+        // This is a regular text message, render it with markdown
+        renderMarkdownMessage(element);
       }
     };
 
@@ -436,16 +511,42 @@ export default function AIAgentWidget() {
     };
   }, []);
 
+  // Ensure trigger button stays visible at all times
+  useEffect(() => {
+    const ensureTriggerVisible = () => {
+      if (containerRef.current) {
+        const trigger = containerRef.current.querySelector('.ais-Chat-trigger') as HTMLElement;
+        if (trigger) {
+          trigger.style.display = 'flex';
+          trigger.style.opacity = '1';
+          trigger.style.visibility = 'visible';
+          trigger.style.pointerEvents = 'auto';
+        }
+      }
+    };
+
+    // Check trigger visibility every second
+    const interval = setInterval(ensureTriggerVisible, 1000);
+
+    // Also check on window resize
+    window.addEventListener('resize', ensureTriggerVisible);
+
+    // Initial check
+    ensureTriggerVisible();
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', ensureTriggerVisible);
+    };
+  }, []);
+
   return (
-    <div ref={containerRef} className="hidden md:block fixed bottom-6 left-6 z-[45]">
+    <div ref={containerRef} className="fixed bottom-6 right-6 z-[9999]">
       <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
         <Chat
           agentId={AGENT_ID}
           classNames={{
-            root: 'ai-chat-root',
-            chatMessage: 'ai-chat-message',
-            userMessage: 'ai-user-message',
-            assistantMessage: 'ai-assistant-message'
+            root: 'ai-chat-root'
           }}
         />
       </InstantSearch>
@@ -457,26 +558,107 @@ export default function AIAgentWidget() {
           font-family: inherit;
           max-width: 380px;
           width: 380px;
+          position: relative;
         }
 
-        /* AI Agent Icon - show by default */
+        /* Mobile chat container */
+        @media (max-width: 768px) {
+          .ais-Chat {
+            max-width: 100vw;
+            width: 100vw;
+          }
+        }
+
+        /* AI Agent Icon - ensure proper positioning */
         .ais-Chat-trigger,
         [class*="Chat-trigger"] {
+          position: fixed !important;
+          bottom: 24px !important;
+          right: 24px !important;
+          z-index: 9999 !important;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           display: flex !important;
           opacity: 1 !important;
-          transition: opacity 0.3s ease;
+          visibility: visible !important;
+          pointer-events: auto !important;
         }
 
-        /* Hide icon when cards are showing */
-        .ais-Chat.has-tour-cards .ais-Chat-trigger,
-        .ais-Chat.has-tour-cards [class*="Chat-trigger"] {
-          display: none !important;
+        /* Mobile: Show as vertical tab on right side */
+        @media (max-width: 768px) {
+          .ais-Chat-trigger,
+          [class*="Chat-trigger"] {
+            top: 50% !important;
+            right: 0 !important;
+            bottom: auto !important;
+            transform: translateY(-50%) !important;
+            border-radius: 12px 0 0 12px !important;
+            padding: 12px 8px !important;
+            min-width: 48px !important;
+            min-height: 64px !important;
+            flex-direction: column !important;
+            gap: 4px !important;
+            box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15) !important;
+            writing-mode: vertical-rl !important;
+            text-orientation: mixed !important;
+          }
+
+          /* Style the icon inside */
+          .ais-Chat-trigger svg,
+          [class*="Chat-trigger"] svg {
+            writing-mode: horizontal-tb !important;
+            transform: rotate(0deg) !important;
+          }
         }
 
-        /* Show icon when cards are closed */
-        .ais-Chat:not(.has-tour-cards) .ais-Chat-trigger,
-        .ais-Chat:not(.has-tour-cards) [class*="Chat-trigger"] {
-          display: flex !important;
+        .ais-Chat-trigger:hover,
+        [class*="Chat-trigger"]:hover {
+          transform: scale(1.05);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Mobile hover effect */
+        @media (max-width: 768px) {
+          .ais-Chat-trigger:hover,
+          [class*="Chat-trigger"]:hover {
+            transform: translateY(-50%) translateX(-4px) !important;
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2) !important;
+          }
+        }
+
+        /* Ensure trigger stays visible even when dialog is open on desktop */
+        @media (min-width: 769px) {
+          .ais-Chat[data-open="true"] .ais-Chat-trigger,
+          .ais-Chat[data-open="true"] [class*="Chat-trigger"] {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+        }
+
+        /* Chat dialog positioning */
+        .ais-Chat-dialog,
+        [class*="Chat-dialog"] {
+          position: fixed !important;
+          bottom: 90px !important;
+          right: 24px !important;
+          max-height: calc(100vh - 120px);
+        }
+
+        /* Mobile-specific dialog positioning */
+        @media (max-width: 768px) {
+          .ais-Chat-dialog,
+          [class*="Chat-dialog"] {
+            top: 50% !important;
+            bottom: auto !important;
+            right: 60px !important;
+            left: 12px !important;
+            transform: translateY(-50%) !important;
+            max-width: calc(100vw - 80px) !important;
+            width: calc(100vw - 80px) !important;
+            max-height: 70vh !important;
+            border-radius: 16px !important;
+          }
         }
 
         /* Message styling */
@@ -526,6 +708,14 @@ export default function AIAgentWidget() {
           cursor: pointer !important;
           position: relative;
           z-index: 1;
+        }
+
+        /* Mobile tour cards - smaller size */
+        @media (max-width: 768px) {
+          .ais-Chat .tour-card-link {
+            width: 200px !important;
+            min-width: 200px !important;
+          }
         }
 
         .ais-Chat .tour-card-link * {
@@ -618,6 +808,169 @@ export default function AIAgentWidget() {
         .ais-Chat-messages::-webkit-scrollbar-thumb:hover,
         [class*="Chat-messages"]::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
+        }
+
+        /* Ensure trigger button is never covered */
+        .ais-Chat-trigger {
+          isolation: isolate;
+        }
+
+        .tour-cards-container,
+        .tour-results-wrapper {
+          isolation: isolate;
+          z-index: 1 !important;
+        }
+
+        /* Ensure dialog doesn't cover trigger */
+        .ais-Chat-dialog {
+          z-index: 9998 !important;
+        }
+
+        /* Override any display:none on trigger */
+        .ais-Chat .ais-Chat-trigger[style*="display: none"] {
+          display: flex !important;
+        }
+
+        /* Markdown content styling for beautiful, readable text */
+        .markdown-content {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+          line-height: 1.7;
+          color: #1e293b;
+        }
+
+        .markdown-content h1 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 1.25rem 0 0.75rem 0;
+          padding-bottom: 0.5rem;
+          border-bottom: 2px solid #e2e8f0;
+          line-height: 1.3;
+        }
+
+        .markdown-content h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 1rem 0 0.6rem 0;
+          padding-bottom: 0.4rem;
+          border-bottom: 1px solid #e2e8f0;
+          line-height: 1.3;
+        }
+
+        .markdown-content h3 {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #334155;
+          margin: 0.875rem 0 0.5rem 0;
+          line-height: 1.4;
+        }
+
+        .markdown-content p {
+          margin: 0.625rem 0;
+          font-size: 0.9375rem;
+          color: #475569;
+          line-height: 1.7;
+        }
+
+        .markdown-content strong {
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .markdown-content em {
+          font-style: italic;
+          color: #334155;
+        }
+
+        .markdown-content ul {
+          margin: 0.75rem 0;
+          padding-left: 1.5rem;
+          list-style-type: disc;
+        }
+
+        .markdown-content ul li {
+          margin: 0.4rem 0;
+          font-size: 0.9375rem;
+          color: #475569;
+          line-height: 1.6;
+          padding-left: 0.25rem;
+        }
+
+        .markdown-content ul li::marker {
+          color: #3b82f6;
+          font-size: 0.875rem;
+        }
+
+        .markdown-content ol {
+          margin: 0.75rem 0;
+          padding-left: 1.5rem;
+          list-style-type: decimal;
+        }
+
+        .markdown-content ol li {
+          margin: 0.4rem 0;
+          font-size: 0.9375rem;
+          color: #475569;
+          line-height: 1.6;
+          padding-left: 0.25rem;
+        }
+
+        .markdown-content ol li::marker {
+          color: #3b82f6;
+          font-weight: 600;
+        }
+
+        .markdown-content br {
+          content: "";
+          display: block;
+          margin: 0.375rem 0;
+        }
+
+        /* First paragraph after heading should have less top margin */
+        .markdown-content h1 + p,
+        .markdown-content h2 + p,
+        .markdown-content h3 + p {
+          margin-top: 0.5rem;
+        }
+
+        /* List items with nested bold text */
+        .markdown-content li strong {
+          color: #1e293b;
+        }
+
+        /* Improve spacing for consecutive headings */
+        .markdown-content h1 + h2,
+        .markdown-content h2 + h3 {
+          margin-top: 0.5rem;
+        }
+
+        /* Better readability for assistant messages with markdown */
+        .ais-Chat-message--assistant .markdown-content {
+          background: linear-gradient(to bottom, #ffffff, #f8fafc);
+          padding: 1rem;
+          border-radius: 0.75rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Mobile responsive text sizes */
+        @media (max-width: 768px) {
+          .markdown-content h1 {
+            font-size: 1.25rem;
+          }
+
+          .markdown-content h2 {
+            font-size: 1.1rem;
+          }
+
+          .markdown-content h3 {
+            font-size: 1rem;
+          }
+
+          .markdown-content p,
+          .markdown-content li {
+            font-size: 0.875rem;
+          }
         }
       `}</style>
     </div>
