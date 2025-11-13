@@ -2050,7 +2050,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex justify-end"
+          className="fixed inset-0 z-[999999] flex justify-end"
           aria-modal="true"
           role="dialog"
           initial={{ opacity: 0 }}

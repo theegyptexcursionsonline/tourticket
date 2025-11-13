@@ -10,7 +10,7 @@ import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
 // import IntercomClient from "@/components/IntercomClient";
-import AISearchWidget from "@/components/AISearchWidget";
+// import AISearchWidget from "@/components/AISearchWidget"; // Moved to specific pages
 import AIAgentWidget from "@/components/AIAgentWidget";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
@@ -43,7 +43,7 @@ export default function RootLayout({
                 {children}
                 <CartSidebar />
                 <WishlistSidebar />
-                <AISearchWidget />
+                {/* AISearchWidget moved to specific pages (homepage, destinations, etc.) */}
                 <AIAgentWidget />
                 <Toaster
                   position="top-right"
