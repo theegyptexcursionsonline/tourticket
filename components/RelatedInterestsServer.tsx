@@ -36,8 +36,9 @@ async function getInterests(): Promise<Interest[]> {
     // Calculate tour counts for categories
     const categoriesWithCounts = await Promise.all(
       categories.map(async (category: any) => {
+        // Category is an array field in Tour model, so we need to use $in
         const tourCount = await Tour.countDocuments({
-          category: category._id,
+          category: { $in: [category._id] },
           isPublished: true,
         });
         return {
