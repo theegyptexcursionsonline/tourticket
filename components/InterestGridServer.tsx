@@ -166,8 +166,8 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
     type: 'category' as const,
     name: cat.name,
     slug: cat.slug,
-    products: 0, // This will be populated by parent component ideally
-    featured: false
+    products: (cat as any).tourCount || 0,
+    featured: (cat as any).featured || false
   }));
 
   // Filter interests based on search

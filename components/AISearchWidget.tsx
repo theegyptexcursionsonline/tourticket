@@ -406,9 +406,9 @@ export default function AISearchWidget() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 100 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="flex fixed bottom-4 md:bottom-8 left-0 right-0 z-[10000] justify-center px-3 md:px-6 pointer-events-none"
+        className="flex fixed bottom-4 md:bottom-6 left-0 right-0 z-[10000] justify-center px-3 md:px-6 pointer-events-none"
       >
-        <div className="w-full max-w-3xl pointer-events-auto">
+        <div className="w-full max-w-2xl pointer-events-auto">
           <div className="ai-search-container relative">
 
             {/* Expanded State - Results Panel Above Search Bar */}
@@ -417,70 +417,57 @@ export default function AISearchWidget() {
                 <>
                   
                   <motion.div
-                    initial={{ opacity: 0, y: 30, scale: 0.94 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 30, scale: 0.94 }}
-                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute bottom-full mb-2 md:mb-4 left-0 right-0 rounded-2xl md:rounded-[28px] overflow-hidden shadow-2xl"
+                    initial={{ opacity: 0, y: 30, scale: 0.94, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: 30, scale: 0.94, filter: 'blur(10px)' }}
+                    transition={{ duration: 0.4, ease: [0.34, 1.26, 0.64, 1] }}
+                    className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl"
                     style={{
                       maxHeight: '60vh',
-                      background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.92))',
-                      backdropFilter: 'blur(40px) saturate(180%)',
-                      WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                      border: '1px solid rgba(255, 255, 255, 0.18)',
-                      boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.3) inset'
+                      background: 'linear-gradient(135deg, rgba(249, 250, 251, 0.99), rgba(243, 244, 246, 0.97))',
+                      backdropFilter: 'blur(28px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+                      border: '1.5px solid rgba(209, 213, 219, 0.4)',
+                      boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.6) inset, 0 2px 4px 0 rgba(255, 255, 255, 0.8) inset'
                     }}
                   >
                     {/* Search Results Content */}
                     <div className="flex flex-col h-full">
-                      {/* Header */}
-                      <div className="px-4 md:px-7 py-3 md:py-5 border-b border-white/20 backdrop-blur-xl"
+                      {/* Header - Compact */}
+                      <div className="px-3 md:px-4 py-2 md:py-2.5 border-b border-gray-200/50 backdrop-blur-xl"
                         style={{
-                          background: 'linear-gradient(to right, rgba(59, 130, 246, 0.03), rgba(139, 92, 246, 0.03))'
+                          background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
                         }}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 md:gap-3">
-                            <motion.div
-                              animate={{
-                                scale: [1, 1.2, 1],
-                                rotate: [0, 5, -5, 0]
-                              }}
-                              transition={{
-                                duration: 3,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                              }}
-                            >
-                              <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4 text-blue-500" strokeWidth={2.5} />
-                            </motion.div>
-                            <span className="text-xs md:text-sm font-semibold text-gray-800 tracking-tight">
+                          <div className="flex items-center gap-1.5 md:gap-2">
+                            <Sparkles className="w-3 md:w-3.5 h-3 md:h-3.5 text-blue-500" strokeWidth={2.5} />
+                            <span className="text-[11px] md:text-xs font-semibold text-gray-700">
                               {searchQuery ? 'Search Results' : 'Recent Activity'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 md:gap-2">
+                          <div className="flex items-center gap-1 md:gap-1.5">
                             {searchQuery && (
                               <motion.button
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
                                 onClick={handleAskAI}
-                                className="hidden sm:flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl text-xs font-semibold text-white transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg group"
+                                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-white transition-all duration-200 hover:scale-105 shadow-sm"
                                 style={{
                                   background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                                  boxShadow: '0 4px 12px -2px rgba(59, 130, 246, 0.4)'
+                                  boxShadow: '0 2px 6px -1px rgba(59, 130, 246, 0.3)'
                                 }}
                               >
-                                <MessageCircle className="w-3.5 md:w-4 h-3.5 md:h-4 group-hover:scale-110 transition-transform" strokeWidth={2.5} />
-                                <span className="hidden md:inline">Ask AI Agent</span>
-                                <span className="md:hidden">Ask AI</span>
+                                <MessageCircle className="w-3 h-3" strokeWidth={2.5} />
+                                <span>Ask AI</span>
                               </motion.button>
                             )}
                             <button
                               onClick={() => setIsExpanded(false)}
-                              className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 md:p-2.5 rounded-2xl hover:bg-white/60 hover:shadow-sm group backdrop-blur-sm"
+                              className="text-gray-400 hover:text-gray-600 transition-all duration-200 p-1.5 rounded-lg hover:bg-white/50"
                             >
-                              <X className="w-4 md:w-4.5 h-4 md:h-4.5 group-hover:rotate-90 transition-transform duration-300" strokeWidth={2.5} />
+                              <X className="w-3.5 md:w-4 h-3.5 md:h-4" strokeWidth={2.5} />
                             </button>
                           </div>
                         </div>
@@ -580,68 +567,58 @@ export default function AISearchWidget() {
                         )}
                       </div>
 
-                      {/* Ask AI Button - Shows when there's a search query */}
+                      {/* Ask AI Button - Compact */}
                       {searchQuery && (
                         <motion.div
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2 }}
-                          className="border-t border-white/20 px-3 md:px-7 py-3 md:py-5 backdrop-blur-xl"
+                          transition={{ delay: 0.15 }}
+                          className="border-t border-gray-200/50 px-3 md:px-4 py-2 md:py-2.5 backdrop-blur-xl"
                           style={{
-                            background: 'linear-gradient(to right, rgba(99, 102, 241, 0.03), rgba(168, 85, 247, 0.03))'
+                            background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
                           }}
                         >
                           <button
                             onClick={handleAskAI}
-                            className="w-full group relative overflow-hidden rounded-xl md:rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                            className="w-full group relative overflow-hidden rounded-lg transition-all duration-200 hover:scale-[1.01] hover:shadow-md"
                             style={{
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              boxShadow: '0 8px 24px -6px rgba(102, 126, 234, 0.4)'
+                              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                              boxShadow: '0 2px 8px -2px rgba(59, 130, 246, 0.3)'
                             }}
                           >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full transition-transform duration-1000" />
-                            <div className="relative px-4 md:px-6 py-3 md:py-4 flex items-center justify-center gap-2 md:gap-3">
-                              <div className="w-8 md:w-10 h-8 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                                <MessageCircle className="w-4 md:w-5 h-4 md:h-5 text-white" strokeWidth={2.5} />
+                            <div className="relative px-3 md:px-4 py-2 md:py-2.5 flex items-center justify-center gap-2">
+                              <MessageCircle className="w-3.5 md:w-4 h-3.5 md:h-4 text-white" strokeWidth={2.5} />
+                              <div className="text-white font-semibold text-[11px] md:text-xs truncate">
+                                Ask AI about "{searchQuery.slice(0, 25)}{searchQuery.length > 25 ? '...' : ''}"
                               </div>
-                              <div className="flex-1 text-left">
-                                <div className="text-white font-bold text-xs md:text-sm tracking-tight line-clamp-1">Ask AI about "{searchQuery}"</div>
-                                <div className="text-white/70 text-[10px] md:text-xs font-medium mt-0.5 hidden sm:block">Get personalized recommendations</div>
-                              </div>
-                              <motion.div
-                                animate={{ x: [0, 5, 0] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                                className="hidden sm:block"
-                              >
-                                <Sparkles className="w-4 md:w-5 h-4 md:h-5 text-white/90" strokeWidth={2.5} />
-                              </motion.div>
+                              <Sparkles className="w-3 md:w-3.5 h-3 md:h-3.5 text-white/80 hidden sm:block" strokeWidth={2.5} />
                             </div>
                           </button>
                         </motion.div>
                       )}
 
-                      {/* Trending Section */}
+                      {/* Trending Section - Compact */}
                       {!searchQuery && (
-                        <div className="border-t border-white/20 px-3 md:px-7 py-3 md:py-5 backdrop-blur-xl"
+                        <div className="border-t border-gray-200/50 px-3 md:px-4 py-2 md:py-2.5 backdrop-blur-xl"
                           style={{
-                            background: 'linear-gradient(to right, rgba(99, 102, 241, 0.03), rgba(168, 85, 247, 0.03))'
+                            background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
                           }}
                         >
-                          <div className="flex items-center gap-2 md:gap-2.5 mb-3 md:mb-4">
-                            <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                              <Sparkles className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <div className="w-4 h-4 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
+                              <Sparkles className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
                             </div>
-                            <span className="text-xs md:text-sm font-semibold text-gray-800 tracking-tight">
-                              Trending Searches
+                            <span className="text-[11px] font-semibold text-gray-700">
+                              Trending
                             </span>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 md:gap-2.5">
+                          <div className="flex flex-wrap gap-1.5">
                             {['Pyramids', 'Nile Cruise', 'Desert Safari', 'Luxor', 'Tours under $100'].map((trend, index) => (
                               <motion.button
                                 key={trend}
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.05, duration: 0.2 }}
+                                transition={{ delay: index * 0.04, duration: 0.15 }}
                                 onClick={() => {
                                   setSearchQuery(trend);
                                   const input = document.querySelector('.ai-search-input') as HTMLInputElement;
@@ -650,19 +627,19 @@ export default function AISearchWidget() {
                                     input.focus();
                                   }
                                 }}
-                                className="px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-semibold text-gray-700 hover:text-blue-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+                                className="px-2 py-1 rounded-lg text-[10px] font-medium text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-105 shadow-sm"
                                 style={{
-                                  background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7))',
-                                  backdropFilter: 'blur(20px)',
-                                  WebkitBackdropFilter: 'blur(20px)',
-                                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.5) inset'
+                                  background: 'rgba(255, 255, 255, 0.8)',
+                                  border: '1px solid rgba(209, 213, 219, 0.3)',
+                                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'linear-gradient(to bottom, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.05))';
+                                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.2)';
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7))';
+                                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)';
+                                  e.currentTarget.style.borderColor = 'rgba(209, 213, 219, 0.3)';
                                 }}
                               >
                                 {trend}
@@ -677,188 +654,293 @@ export default function AISearchWidget() {
               )}
             </AnimatePresence>
 
-            {/* Search Bar with Enhanced Apple-like Glassmorphism */}
+            {/* Search Bar - Ultra Premium Design with Enhanced Animations */}
             <motion.div
-              whileHover={{ y: -4, scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              whileHover={{ y: -4, scale: 1.012 }}
+              whileTap={{ scale: 0.988 }}
+              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
               className="relative group"
             >
-              {/* Main Search Box - Premium Glassmorphism Capsule */}
-              <div
-                className={`relative rounded-full transition-all duration-500 ${
-                  isExpanded
-                    ? 'shadow-2xl'
-                    : 'shadow-xl hover:shadow-2xl'
-                }`}
-                style={{
-                  background: isExpanded 
-                    ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95))'
-                    : 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.92))',
-                  backdropFilter: 'blur(40px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                  border: isExpanded 
-                    ? '2px solid rgba(59, 130, 246, 0.3)'
-                    : '1.5px solid rgba(255, 255, 255, 0.3)',
-                  boxShadow: isExpanded
-                    ? '0 20px 60px -15px rgba(59, 130, 246, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 1px 0 0 rgba(255, 255, 255, 0.6) inset'
-                    : '0 10px 40px -10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 1px 0 0 rgba(255, 255, 255, 0.5) inset'
-                }}
-              >
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => setIsExpanded(true)}
-                    placeholder="Search tours, destinations & more..."
-                    className="ai-search-input w-full pl-12 md:pl-16 pr-14 md:pr-36 py-3.5 md:py-5 text-sm md:text-[15px] font-medium text-gray-900 placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight"
-                    style={{ cursor: 'text' }}
-                  />
-                  
-                  {/* Left Icon with Premium Animation */}
-                  <div className="absolute left-3 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
+              {/* Glow Effect Layer */}
+              <div className="absolute -inset-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div
+                  className="absolute inset-0 rounded-full blur-xl"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%)',
+                  }}
+                />
+              </div>
+
+              {/* Animated Border Wrapper */}
+              <div className="relative rounded-full p-[2px]">
+                {/* Enhanced Animated Gradient Border */}
+                {isExpanded && (
+                  <>
                     <motion.div
-                      className="relative"
+                      className="absolute inset-0 rounded-full opacity-80"
+                      style={{
+                        background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #3b82f6)',
+                        backgroundSize: '300% 100%',
+                      }}
                       animate={{
-                        scale: [1, 1.08, 1],
-                        rotate: [0, 2, -2, 0]
+                        backgroundPosition: ['0% 0%', '300% 0%'],
                       }}
                       transition={{
                         duration: 4,
                         repeat: Infinity,
-                        ease: "easeInOut",
-                        times: [0, 0.5, 1]
+                        ease: 'linear',
                       }}
-                    >
-                      <div
-                        className={`w-8 md:w-10 h-8 md:h-10 rounded-xl md:rounded-[14px] flex items-center justify-center transition-all duration-500 shadow-lg`}
-                        style={{
-                          background: isExpanded
-                            ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
-                            : 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
-                          boxShadow: isExpanded
-                            ? '0 8px 16px -4px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.3) inset'
-                            : '0 4px 12px -2px rgba(96, 165, 250, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset'
-                        }}
-                      >
-                        <Search className="w-4 md:w-5 h-4 md:h-5 text-white" strokeWidth={2.5} />
-                      </div>
-                      <motion.div
-                        className="absolute -bottom-0.5 -right-0.5 w-2.5 md:w-3 h-2.5 md:h-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full border-2 border-white shadow-md"
-                        animate={{
-                          scale: [1, 1.3, 1],
-                          opacity: [1, 0.7, 1]
-                        }}
-                        transition={{
-                          duration: 2.5,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        style={{
-                          boxShadow: '0 2px 6px rgba(34, 197, 94, 0.4)'
-                        }}
-                      />
-                    </motion.div>
-                  </div>
+                    />
+                    {/* Secondary Glow Layer */}
+                    <motion.div
+                      className="absolute -inset-1 rounded-full opacity-50 blur-md"
+                      style={{
+                        background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)',
+                        backgroundSize: '200% 100%',
+                      }}
+                      animate={{
+                        backgroundPosition: ['0% 0%', '200% 0%'],
+                        opacity: [0.3, 0.6, 0.3],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                    />
+                  </>
+                )}
 
-                  {/* Right Side Elements with Premium Design */}
-                  <div className="absolute right-3 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 md:gap-3 z-10">
-                    {isExpanded ? (
+                {/* Main Search Box */}
+                <div
+                  className={`relative rounded-full transition-all duration-700 ${
+                    isExpanded
+                      ? 'shadow-2xl'
+                      : 'shadow-lg hover:shadow-xl'
+                  }`}
+                  style={{
+                    background: isExpanded
+                      ? 'linear-gradient(135deg, rgba(249, 250, 251, 0.99), rgba(243, 244, 246, 0.97))'
+                      : 'linear-gradient(135deg, rgba(249, 250, 251, 0.96), rgba(243, 244, 246, 0.94))',
+                    backdropFilter: 'blur(24px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                    border: isExpanded ? 'none' : '1.5px solid rgba(209, 213, 219, 0.5)',
+                    boxShadow: isExpanded
+                      ? '0 20px 50px -12px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.6) inset, 0 2px 4px 0 rgba(255, 255, 255, 0.8) inset'
+                      : '0 8px 24px -4px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.4) inset'
+                  }}
+                >
+                  {/* Subtle Shimmer Effect */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full overflow-hidden"
+                    initial={false}
+                    animate={isExpanded ? {
+                      background: [
+                        'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                        'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                      ],
+                      backgroundPosition: ['-200% 0%', '200% 0%'],
+                    } : {}}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                    style={{
+                      backgroundSize: '200% 100%',
+                    }}
+                  />
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setIsExpanded(true)}
+                      placeholder="Ask AI to find your perfect tour..."
+                      className="ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight transition-all duration-300"
+                      style={{
+                        cursor: 'text',
+                        letterSpacing: '-0.01em',
+                      }}
+                    />
+
+                    {/* Left Icon - Enhanced */}
+                    <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 z-10">
                       <motion.div
-                        initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
-                        animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex items-center gap-1.5 md:gap-2.5"
+                        animate={isExpanded ? {
+                          scale: [1, 1.05, 1],
+                        } : {}}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
                       >
                         <div
-                          className="hidden sm:flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl shadow-sm"
+                          className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center transition-all duration-500 shadow-lg overflow-hidden"
                           style={{
-                            background: 'linear-gradient(to bottom, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.05))',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(59, 130, 246, 0.15)',
-                            boxShadow: '0 2px 8px -2px rgba(59, 130, 246, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.4) inset'
+                            background: isExpanded
+                              ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
+                              : 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
+                            boxShadow: isExpanded
+                              ? '0 8px 16px -4px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) inset'
+                              : '0 4px 12px -2px rgba(96, 165, 250, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15) inset'
                           }}
                         >
-                          <motion.div
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm shadow-blue-500/50"
-                          />
-                          <span className="text-[10px] md:text-[11px] font-bold text-blue-700 uppercase tracking-wide">Live</span>
+                          {/* Icon Glow */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent" />
+                          <Search className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
                         </div>
-                        <div
-                          className="w-8 md:w-10 h-8 md:h-10 rounded-xl md:rounded-[14px] flex items-center justify-center shadow-lg"
+                      </motion.div>
+                    </div>
+
+                    {/* Right Side Elements - Enhanced */}
+                    <div className="absolute right-3 md:right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 md:gap-2 z-10">
+                      {/* AI Badge - Enhanced with Pulse */}
+                      <motion.div
+                        animate={{
+                          boxShadow: [
+                            '0 0 0 0 rgba(59, 130, 246, 0.4)',
+                            '0 0 0 4px rgba(59, 130, 246, 0)',
+                          ],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                        className="relative flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15))',
+                          border: '1.5px solid rgba(59, 130, 246, 0.3)',
+                          boxShadow: '0 2px 8px -2px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.4) inset',
+                        }}
+                      >
+                        {/* Background Shimmer */}
+                        <motion.div
+                          className="absolute inset-0"
+                          animate={{
+                            background: [
+                              'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
+                              'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
+                            ],
+                            backgroundPosition: ['-100% 0%', '200% 0%'],
+                          }}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: 'linear',
+                          }}
+                          style={{
+                            backgroundSize: '200% 100%',
+                          }}
+                        />
+                        <motion.div
+                          animate={{
+                            rotate: [0, 360],
+                          }}
+                          transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: 'linear',
+                          }}
+                        >
+                          <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4 text-blue-600 relative z-10" strokeWidth={2.5} />
+                        </motion.div>
+                        <span className="text-[11px] md:text-xs font-black text-blue-600 tracking-tight relative z-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          AI
+                        </span>
+                      </motion.div>
+
+                      {/* Expand/Collapse Button */}
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                          animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                          exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
+                          transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+                          className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-lg overflow-hidden"
                           style={{
                             background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                            boxShadow: '0 8px 16px -4px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.3) inset'
+                            boxShadow: '0 8px 16px -4px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) inset'
                           }}
                         >
-                          <ChevronUp className="w-4 md:w-5 h-4 md:h-5 text-white" strokeWidth={2.5} />
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        animate={{
-                          rotate: [0, 10, -10, 0],
-                          scale: [1, 1.1, 1]
-                        }}
-                        transition={{
-                          duration: 5,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        className="w-8 md:w-10 h-8 md:h-10 rounded-xl md:rounded-[14px] flex items-center justify-center shadow-md"
-                        style={{
-                          background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
-                          boxShadow: '0 4px 12px -2px rgba(96, 165, 250, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset'
-                        }}
-                      >
-                        <Sparkles className="w-4 md:w-5 h-4 md:h-5 text-white" strokeWidth={2.5} />
-                      </motion.div>
-                    )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent" />
+                          <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
+                        </motion.div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* Attribution with Glassmorphism */}
+            {/* Attribution - Enhanced */}
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, y: -15, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -15, scale: 0.9 }}
-                transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="mt-2 md:mt-4 text-center hidden md:block"
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                className="mt-3 text-center hidden md:block"
               >
                 <div
-                  className="inline-flex items-center gap-2 md:gap-3 text-[10px] md:text-xs text-gray-600 px-3 md:px-5 py-2 md:py-3 rounded-2xl md:rounded-[18px] shadow-lg"
+                  className="inline-flex items-center gap-2.5 text-[10px] text-gray-600 px-4 py-2 rounded-2xl shadow-lg overflow-hidden relative"
                   style={{
-                    background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))',
-                    backdropFilter: 'blur(30px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.4) inset'
+                    background: 'linear-gradient(135deg, rgba(249, 250, 251, 0.98), rgba(243, 244, 246, 0.95))',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    border: '1.5px solid rgba(209, 213, 219, 0.4)',
+                    boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.5) inset'
                   }}
                 >
-                  <div className="flex items-center gap-1.5 md:gap-2">
-                    <Sparkles className="w-3 md:w-3.5 h-3 md:h-3.5 text-blue-500" strokeWidth={2.5} />
-                    <span className="font-semibold">Powered by AI</span>
-                  </div>
-                  <span className="text-gray-300 hidden sm:inline">•</span>
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <span className="font-medium">Press</span>
+                  {/* Shimmer Effect */}
+                  <motion.div
+                    className="absolute inset-0"
+                    animate={{
+                      background: [
+                        'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
+                        'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
+                      ],
+                      backgroundPosition: ['-200% 0%', '200% 0%'],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                    style={{
+                      backgroundSize: '200% 100%',
+                    }}
+                  />
+                  <motion.div
+                    animate={{
+                      rotate: [0, 360],
+                      scale: [1, 1.2, 1],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-blue-500 relative z-10" strokeWidth={2.5} />
+                  </motion.div>
+                  <span className="font-semibold relative z-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">AI Powered Search</span>
+                  <span className="text-gray-300 relative z-10">•</span>
+                  <div className="flex items-center gap-1.5 relative z-10">
+                    <span className="font-medium text-gray-500">Press</span>
                     <kbd
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold shadow-sm"
+                      className="px-2 py-1 rounded-lg text-[9px] font-bold"
                       style={{
-                        background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(243, 244, 246, 0.9))',
+                        background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(243, 244, 246, 0.8))',
                         border: '1px solid rgba(209, 213, 219, 0.5)',
-                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.5) inset'
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5) inset'
                       }}
                     >
                       ESC
                     </kbd>
-                    <span className="font-medium">to close</span>
+                    <span className="font-medium text-gray-500">to close</span>
                   </div>
                 </div>
               </motion.div>

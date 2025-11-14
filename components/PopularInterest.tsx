@@ -49,7 +49,7 @@ const InterestCard = ({
     ? `/category/${categoryPage.slug}`
     : interest.type === 'attraction'
       ? `/attraction/${interest.slug}`
-      : `/interests/${interest.slug}`;
+      : `/categories/${interest.slug}`;
 
   // Only use actual database images - no mock images
   const imageUrl = categoryPage?.heroImage || interest.image || DEFAULT_CATEGORY_IMAGE;

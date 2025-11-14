@@ -22,7 +22,10 @@ async function getPageData(slug: string) {
     return { category: null, categoryTours: [] };
   }
 
-  const categoryTours = await TourModel.find({ categories: category._id }).populate('destination').lean();
+  const categoryTours = await TourModel.find({
+    category: { $in: [category._id] },
+    isPublished: true
+  }).populate('destination').lean();
   
   const serializedCategory = JSON.parse(JSON.stringify(category));
   const serializedTours = JSON.parse(JSON.stringify(categoryTours));
