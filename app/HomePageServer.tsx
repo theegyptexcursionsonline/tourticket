@@ -55,7 +55,7 @@ async function getHomePageData() {
         .limit(8)
         .lean(),
 
-      // Categories for InterestGrid
+      // Categories for InterestGrid (will add tour counts below)
       Category.find({ isPublished: true })
         .select('name slug icon description')
         .limit(12)
@@ -103,7 +103,21 @@ async function getHomePageData() {
       })
     );
 
-    // Build interests (categories + attractions with tour counts)
+    // Calculate tour counts for InterestGrid categories
+    const interestGridCategories = await Promise.all(
+      categories.map(async (category: any) => {
+        const tourCount = await Tour.countDocuments({
+          category: { $in: [category._id] },
+          isPublished: true
+        });
+        return {
+          ...JSON.parse(JSON.stringify(category)),
+          tourCount
+        };
+      })
+    );
+
+    // Build interests (categories + attractions with tour counts) for PopularInterest
     const categoriesWithCounts = await Promise.all(
       allCategories.map(async (category: any) => {
         // Category is an array field in Tour model, so we need to use $in
@@ -168,7 +182,7 @@ async function getHomePageData() {
     return {
       destinations: destinationsWithCounts,
       tours: JSON.parse(JSON.stringify(tours)),
-      categories: JSON.parse(JSON.stringify(categories)),
+      categories: interestGridCategories,
       featuredInterests,
       categoryPages: JSON.parse(JSON.stringify(categoryPages)),
       headerDestinations: JSON.parse(JSON.stringify(headerDestinations)),

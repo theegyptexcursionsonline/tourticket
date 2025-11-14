@@ -12,7 +12,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
     notFound();
   }
 
-  const tours = await Tour.find({ category: category._id })
+  const tours = await Tour.find({ category: { $in: [category._id] } })
     .populate('destination')
     .lean();
 

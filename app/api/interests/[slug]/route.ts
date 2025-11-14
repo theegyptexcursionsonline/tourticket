@@ -40,7 +40,7 @@ export async function GET(
     if (category) {
       // Find tours in this category
       tours = await Tour.find({
-        category: category._id,
+        category: { $in: [category._id] },
         isPublished: true
       })
       .populate({
@@ -57,7 +57,7 @@ export async function GET(
       .lean();
 
       totalTours = await Tour.countDocuments({
-        category: category._id,
+        category: { $in: [category._id] },
         isPublished: true
       });
     } else {
