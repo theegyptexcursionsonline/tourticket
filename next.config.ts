@@ -18,8 +18,12 @@ const nextConfig = {
   // Server external packages configuration
   serverExternalPackages: ['mongoose'],
 
-  // Image optimization configuration
+  // Image optimization configuration with Cloudflare
   images: {
+    // Use Cloudflare Image Optimization
+    loader: process.env.NODE_ENV === 'production' ? 'custom' : 'default',
+    loaderFile: process.env.NODE_ENV === 'production' ? './lib/cloudflare-image-loader.ts' : undefined,
+
     remotePatterns: [
       // Cloudinary (example)
       {
@@ -75,12 +79,14 @@ const nextConfig = {
 
       // If you have other CDNs or domains, add them similarly.
     ],
-    // Image formats
+    // Image formats (Cloudflare will handle this automatically with format=auto)
     formats: ['image/webp', 'image/avif'],
     // Device sizes for responsive images
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     // Image sizes for different breakpoints
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Disable Next.js built-in optimization in production (Cloudflare will handle it)
+    unoptimized: process.env.CLOUDFLARE_IMAGES === 'true',
   },
 
   // Rewrites for backward compatibility and SEO

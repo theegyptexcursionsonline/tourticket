@@ -56,11 +56,11 @@ const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 // Default fallback settings
 const DEFAULT_SETTINGS: HeroSettings = {
   backgroundImages: [
-    { desktop: '/hero2.png', alt: 'Pyramids of Giza at sunrise', isActive: true },
+    { desktop: '/hero2.jpg', alt: 'Pyramids of Giza at sunrise', isActive: true },
     { desktop: '/hero1.jpg', alt: 'Felucca on the Nile at sunset', isActive: false },
-    { desktop: '/hero3.png', alt: 'Luxor temple columns at golden hour', isActive: false }
+    { desktop: '/hero3.jpg', alt: 'Luxor temple columns at golden hour', isActive: false }
   ],
-  currentActiveImage: '/hero2.png',
+  currentActiveImage: '/hero2.jpg',
   title: {
     main: 'Explore Egypt\'s ',
     highlight: 'Pyramids & Nile',
@@ -550,34 +550,26 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   );
 };
 
-const BackgroundSlideshow = ({ 
-  slides = [], 
-  delay = 6000, 
+const BackgroundSlideshow = ({
+  slides = [],
+  delay = 6000,
   fadeMs = 900,
-  autoplay = true 
-}: { 
-  slides?: Array<{src: string, alt: string, caption?: string}>, 
-  delay?: number, 
+  autoplay = true
+}: {
+  slides?: Array<{src: string, alt: string, caption?: string}>,
+  delay?: number,
   fadeMs?: number,
-  autoplay?: boolean 
+  autoplay?: boolean
 }) => {
   const [index, setIndex] = useState(0);
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Preload images
-    slides.forEach(s => {
-      const img = new window.Image();
-      img.src = s.src;
-    });
-  }, [slides]);
-
-  useEffect(() => {
     if (!autoplay || slides.length <= 1) return;
-    
+
     const next = () => setIndex((i) => (i + 1) % slides.length);
     timeoutRef.current = window.setTimeout(next, delay);
-    
+
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -598,6 +590,7 @@ const BackgroundSlideshow = ({
     <div className="absolute inset-0 z-0 overflow-hidden">
       {slides.map((s, i) => {
         const visible = i === index;
+        const isPriority = i === 0; // First image gets priority loading
         return (
           <div
             key={`${s.src}-${i}`}
@@ -609,8 +602,20 @@ const BackgroundSlideshow = ({
               transform: visible ? 'scale(1)' : 'scale(1.02)',
             }}
           >
-            {/* Using native img to avoid Next Image layout shifting in fullscreen hero */}
-            <img src={s.src} alt={s.alt} className="w-full h-full object-cover" />
+            {/* Using Next.js Image for automatic optimization, WebP/AVIF conversion, and blur placeholder */}
+            <Image
+              src={s.src}
+              alt={s.alt}
+              fill
+              priority={isPriority}
+              quality={85}
+              sizes="100vw"
+              loading={isPriority ? 'eager' : 'lazy'}
+              className="object-cover"
+              style={{
+                objectFit: 'cover',
+              }}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
           </div>
         );

@@ -6,6 +6,12 @@ import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import Discount from '@/lib/models/Discount';
 import { EmailService } from '@/lib/email/emailService';
+import Stripe from 'stripe';
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia',
+});
 
 // Helper function to generate unique booking reference
 async function generateUniqueBookingReference(): Promise<string> {
@@ -125,25 +131,66 @@ export async function POST(request: Request) {
       );
     }
 
-    // Mock payment processing
-    const mockPaymentProcessing = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const isPaymentSuccessful = Math.random() > 0.05;
-      
-      if (!isPaymentSuccessful) {
-        throw new Error('Payment processing failed. Please try a different payment method.');
+    // Process payment with Stripe
+    let paymentResult;
+
+    try {
+      // If paymentIntentId is provided, verify the payment
+      if (paymentDetails?.paymentIntentId) {
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentDetails.paymentIntentId);
+
+        if (paymentIntent.status !== 'succeeded') {
+          throw new Error('Payment has not been completed. Please complete the payment and try again.');
+        }
+
+        // Verify the amount matches
+        const expectedAmount = Math.round(pricing.total * 100);
+        if (paymentIntent.amount !== expectedAmount) {
+          throw new Error('Payment amount mismatch. Please contact support.');
+        }
+
+        paymentResult = {
+          paymentId: paymentIntent.id,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount / 100,
+          currency: paymentIntent.currency.toUpperCase(),
+        };
+      } else {
+        // Fallback: Create and auto-confirm PaymentIntent (for backward compatibility)
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(pricing.total * 100),
+          currency: (pricing.currency || 'USD').toLowerCase(),
+          description: `Booking for ${cart.length} tour${cart.length > 1 ? 's' : ''}`,
+          metadata: {
+            customer_email: customer.email,
+            customer_name: `${customer.firstName} ${customer.lastName}`,
+            tours: cart.map(item => item.title).join(', '),
+            discount_code: discountCode || 'none',
+          },
+          receipt_email: customer.email,
+          confirm: true,
+          automatic_payment_methods: {
+            enabled: true,
+            allow_redirects: 'never',
+          },
+          payment_method: 'pm_card_visa', // Test only - won't work with live keys
+        });
+
+        if (paymentIntent.status !== 'succeeded') {
+          throw new Error('Payment processing failed. Please try a different payment method.');
+        }
+
+        paymentResult = {
+          paymentId: paymentIntent.id,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount / 100,
+          currency: paymentIntent.currency.toUpperCase(),
+        };
       }
-
-      return {
-        paymentId: `mock_payment_${Date.now()}`,
-        status: 'completed',
-        amount: pricing.total,
-        currency: pricing.currency || 'USD',
-      };
-    };
-
-    // Process payment
-    const paymentResult = await mockPaymentProcessing();
+    } catch (stripeError: any) {
+      console.error('Stripe payment error:', stripeError);
+      throw new Error(stripeError.message || 'Payment processing failed. Please try again.');
+    }
 
     // Increment discount usage counter if a discount was applied
     if (discountCode) {
