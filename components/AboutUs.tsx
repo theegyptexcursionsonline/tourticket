@@ -14,7 +14,7 @@ export default function WhyBookWithUs() {
               Why book with Egypt Excursions Online?
             </h2>
             <p className="text-base sm:text-lg text-slate-600 mb-8 sm:mb-10 max-w-lg">
-              With over 35 years of experience, we are the travel experts.
+              With 15 years of experience, we are the travel experts.
             </p>
 
             <ul className="space-y-4 sm:space-y-5 md:space-y-6 mb-8 sm:mb-10">
