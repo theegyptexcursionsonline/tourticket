@@ -5,6 +5,7 @@ import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
+import HeroSettings from '@/lib/models/HeroSettings';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
@@ -38,7 +39,8 @@ async function getHomePageData() {
       attractionPages,
       categoryPages,
       headerDestinations,
-      headerCategories
+      headerCategories,
+      heroSettings
     ] = await Promise.all([
       // Destinations with tour count
       Destination.find({ isPublished: true })
@@ -79,6 +81,11 @@ async function getHomePageData() {
       // Header categories (featured)
       Category.find({ isPublished: true, featured: true })
         .select('name slug icon description')
+        .lean(),
+
+      // Hero settings
+      HeroSettings.findOne({ isActive: true })
+        .select('backgroundImages currentActiveImage title searchSuggestions floatingTags trustIndicators overlaySettings animationSettings metaTitle metaDescription')
         .lean()
     ]);
 
@@ -164,7 +171,8 @@ async function getHomePageData() {
       featuredInterests,
       categoryPages: JSON.parse(JSON.stringify(categoryPages)),
       headerDestinations: JSON.parse(JSON.stringify(headerDestinations)),
-      headerCategories: JSON.parse(JSON.stringify(headerCategories))
+      headerCategories: JSON.parse(JSON.stringify(headerCategories)),
+      heroSettings: heroSettings ? JSON.parse(JSON.stringify(heroSettings)) : null
     };
   } catch (error) {
     console.error('Error fetching homepage data:', error);
@@ -175,7 +183,8 @@ async function getHomePageData() {
       featuredInterests: [],
       categoryPages: [],
       headerDestinations: [],
-      headerCategories: []
+      headerCategories: [],
+      heroSettings: null
     };
   }
 }
@@ -188,7 +197,8 @@ export default async function HomePageServer() {
     featuredInterests,
     categoryPages,
     headerDestinations,
-    headerCategories
+    headerCategories,
+    heroSettings
   } = await getHomePageData();
 
   return (
@@ -198,7 +208,7 @@ export default async function HomePageServer() {
         initialDestinations={headerDestinations}
         initialCategories={headerCategories}
       />
-      <HeroSection />
+      <HeroSection initialSettings={heroSettings} />
 
       {/* Pass pre-fetched data as props */}
       <DestinationsServer destinations={destinations} />
