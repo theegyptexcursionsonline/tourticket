@@ -11,7 +11,7 @@ import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
 // import IntercomClient from "@/components/IntercomClient";
 // import AISearchWidget from "@/components/AISearchWidget"; // Moved to specific pages
-import AIAgentWidget from "@/components/AIAgentWidget";
+import ConditionalAIWidgets from "@/components/ConditionalAIWidgets";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -44,7 +44,7 @@ export default function RootLayout({
                 <CartSidebar />
                 <WishlistSidebar />
                 {/* AISearchWidget moved to specific pages (homepage, destinations, etc.) */}
-                <AIAgentWidget />
+                <ConditionalAIWidgets />
                 <Toaster
                   position="top-right"
                   reverseOrder={false}
