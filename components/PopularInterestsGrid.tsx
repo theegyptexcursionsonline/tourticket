@@ -5,7 +5,36 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ArrowRight, Star, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  Star,
+  Sparkles,
+  Landmark,
+  Building2,
+  Church,
+  Castle,
+  Sunset,
+  Mountain,
+  Waves,
+  Palmtree,
+  Tent,
+  TreePine,
+  Ship,
+  Binoculars,
+  Camera,
+  UtensilsCrossed,
+  Footprints,
+  Calendar,
+  Package,
+  Users,
+  Heart,
+  Compass,
+  Plane,
+  Map,
+  MapPin,
+  Ticket,
+  Globe
+} from 'lucide-react';
 
 interface Interest {
   _id: string;
@@ -56,10 +85,63 @@ const getInterestImage = (name: string): string => {
   return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&h=400&fit=crop';
 };
 
+// Icon mapping function - matches categories with appropriate icons
+const getIconForInterest = (name: string, slug: string) => {
+  const lowerName = name.toLowerCase();
+  const lowerSlug = slug.toLowerCase();
+
+  // Historical & Cultural
+  if (lowerName.includes('pyramid') || lowerName.includes('giza')) return { Icon: Landmark, gradient: 'from-amber-500 to-yellow-600' };
+  if (lowerName.includes('museum') || lowerName.includes('antiquities')) return { Icon: Building2, gradient: 'from-purple-500 to-indigo-600' };
+  if (lowerName.includes('temple') || lowerName.includes('luxor') || lowerName.includes('karnak')) return { Icon: Church, gradient: 'from-orange-500 to-red-600' };
+  if (lowerName.includes('castle') || lowerName.includes('fortress') || lowerName.includes('citadel')) return { Icon: Castle, gradient: 'from-slate-600 to-slate-800' };
+  if (lowerName.includes('historic') || lowerName.includes('ancient') || lowerName.includes('pharaoh')) return { Icon: Landmark, gradient: 'from-amber-600 to-orange-700' };
+  if (lowerName.includes('cultural') || lowerName.includes('city')) return { Icon: Building2, gradient: 'from-slate-500 to-gray-600' };
+
+  // Nature & Adventure
+  if (lowerName.includes('desert') || lowerName.includes('safari') || lowerName.includes('sand') || lowerName.includes('quad')) return { Icon: Sunset, gradient: 'from-orange-400 to-red-500' };
+  if (lowerName.includes('mountain') || lowerName.includes('hiking') || lowerName.includes('trek')) return { Icon: Mountain, gradient: 'from-emerald-500 to-teal-600' };
+  if (lowerName.includes('beach') || lowerName.includes('sea') || lowerName.includes('diving') || lowerName.includes('snorkel')) return { Icon: Waves, gradient: 'from-cyan-500 to-blue-600' };
+  if (lowerName.includes('oasis') || lowerName.includes('palm')) return { Icon: Palmtree, gradient: 'from-green-500 to-emerald-600' };
+  if (lowerName.includes('camping') || lowerName.includes('outdoor')) return { Icon: Tent, gradient: 'from-lime-500 to-green-600' };
+  if (lowerName.includes('wildlife') || lowerName.includes('nature')) return { Icon: TreePine, gradient: 'from-green-600 to-emerald-700' };
+
+  // Activities & Tours
+  if (lowerName.includes('cruise') || lowerName.includes('nile') || lowerName.includes('boat')) return { Icon: Ship, gradient: 'from-blue-500 to-indigo-600' };
+  if (lowerName.includes('tour') || lowerName.includes('sightseeing') || lowerName.includes('guided') || lowerName.includes('day trip')) return { Icon: Binoculars, gradient: 'from-violet-500 to-purple-600' };
+  if (lowerName.includes('photo') || lowerName.includes('photography')) return { Icon: Camera, gradient: 'from-pink-500 to-rose-600' };
+  if (lowerName.includes('food') || lowerName.includes('culinary') || lowerName.includes('dining') || lowerName.includes('dinner')) return { Icon: UtensilsCrossed, gradient: 'from-red-500 to-orange-600' };
+  if (lowerName.includes('walking') || lowerName.includes('walk')) return { Icon: Footprints, gradient: 'from-teal-500 to-cyan-600' };
+  if (lowerName.includes('excursion') || lowerName.includes('multi')) return { Icon: Calendar, gradient: 'from-indigo-500 to-blue-600' };
+  if (lowerName.includes('spa') || lowerName.includes('wellness')) return { Icon: Heart, gradient: 'from-pink-500 to-rose-600' };
+
+  // City & Urban
+  if (lowerName.includes('market') || lowerName.includes('bazaar') || lowerName.includes('shopping')) return { Icon: Package, gradient: 'from-fuchsia-500 to-pink-600' };
+
+  // Special Interests
+  if (lowerName.includes('family') || lowerName.includes('kids') || lowerName.includes('children')) return { Icon: Users, gradient: 'from-yellow-500 to-amber-600' };
+  if (lowerName.includes('romantic') || lowerName.includes('couple') || lowerName.includes('honeymoon')) return { Icon: Heart, gradient: 'from-rose-500 to-red-600' };
+  if (lowerName.includes('luxury') || lowerName.includes('premium') || lowerName.includes('vip')) return { Icon: Star, gradient: 'from-amber-500 to-yellow-600' };
+  if (lowerName.includes('adventure') || lowerName.includes('extreme')) return { Icon: Compass, gradient: 'from-red-500 to-orange-600' };
+  if (lowerName.includes('unique') || lowerName.includes('experience')) return { Icon: Sparkles, gradient: 'from-purple-500 to-pink-600' };
+
+  // Transport related
+  if (lowerName.includes('flight') || lowerName.includes('air') || lowerName.includes('airport')) return { Icon: Plane, gradient: 'from-sky-500 to-blue-600' };
+  if (lowerName.includes('transfer') || lowerName.includes('transport') || lowerName.includes('private')) return { Icon: Map, gradient: 'from-gray-500 to-slate-600' };
+
+  // Attractions
+  if (lowerName.includes('attraction') || lowerName.includes('landmark')) return { Icon: MapPin, gradient: 'from-red-600 to-rose-700' };
+  if (lowerName.includes('ticket') || lowerName.includes('pass')) return { Icon: Ticket, gradient: 'from-purple-500 to-violet-600' };
+
+  // Default
+  return { Icon: Globe, gradient: 'from-blue-500 to-cyan-600' };
+};
+
 const InterestCard = ({ interest }: { interest: Interest }) => {
   const linkUrl =
     interest.type === 'attraction' ? `/attraction/${interest.slug}` : `/interests/${interest.slug}`;
   const imageUrl = interest.image || getInterestImage(interest.name);
+  const { Icon, gradient } = getIconForInterest(interest.name, interest.slug);
 
   return (
     <Link
@@ -92,13 +174,11 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
       {/* Content Overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
         <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg transform transition-all duration-300 group-hover:bg-white">
-          <h3 className="text-lg font-bold text-slate-900 mb-1 uppercase tracking-wide line-clamp-2">
-            {interest.name}
-          </h3>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-700 font-medium">
-              {interest.products} {interest.products === 1 ? 'tour' : 'tours'}
-            </p>
+          {/* Icon Badge */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className={`flex-shrink-0 w-12 h-12 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-all duration-300`}>
+              <Icon className="w-6 h-6 text-white" strokeWidth={2} />
+            </div>
             <span
               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                 interest.type === 'attraction'
@@ -109,6 +189,13 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
               {interest.type === 'attraction' ? 'Attraction' : 'Category'}
             </span>
           </div>
+
+          <h3 className="text-lg font-bold text-slate-900 mb-1 uppercase tracking-wide line-clamp-2">
+            {interest.name}
+          </h3>
+          <p className="text-sm text-slate-700 font-medium">
+            {interest.products} {interest.products === 1 ? 'tour' : 'tours'}
+          </p>
         </div>
       </div>
 
