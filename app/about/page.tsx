@@ -62,7 +62,7 @@ export default function AboutUsPage() {
               About Egypt Excursions Online
             </h1>
             <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-              Your trusted partner for extraordinary travel experiences, with over 35 years of expertise in tourism.
+              Your trusted partner for extraordinary travel experiences, with 15 years of expertise in tourism. Egypt&apos;s biggest collection of things to do, activities, sightseeing tours, snorkeling, Safari tours, Quad biking, Private boats, and much more.
             </p>
           </section>
 
@@ -79,7 +79,7 @@ export default function AboutUsPage() {
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-slate-900">Our Story</h2>
               <p className="text-slate-700 leading-relaxed">
-                Founded with a passion for creating unforgettable memories, Egypt Excursions Online has been a leader in the travel industry for over three and a half decades. We started with a simple goal: to make discovering the world&apos;s most incredible destinations accessible and seamless for everyone.
+                Founded with a passion for creating unforgettable memories, Egypt Excursions Online has been a leader in the travel industry for 15 years. We started with a simple goal: to make discovering the world&apos;s most incredible destinations accessible and seamless for everyone.
               </p>
               <p className="text-slate-700 leading-relaxed">
                 Our journey began by connecting travelers with authentic, high-quality experiences, and today, we continue that tradition. We are proud to be travel experts, dedicated to curating the best tours, tickets, and activities that offer genuine insight and joy.
