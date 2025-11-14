@@ -6,14 +6,14 @@ import AttractionPageTemplate from '@/components/AttractionPageTemplate';
 import { CategoryPageData } from '@/types';
 
 interface CategoryPageProps {
-  params: { 'category-name': string };
+  params: Promise<{ 'category-name': string }>;
 }
 
 async function getCategoryPage(categoryName: string): Promise<CategoryPageData | null> {
   try {
     // Try to find an attraction page that matches this category
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages/${categoryName}`, {
-      cache: 'no-store'
+      next: { revalidate: 3600 } // Revalidate every hour
     });
 
     if (!res.ok) {
@@ -28,8 +28,12 @@ async function getCategoryPage(categoryName: string): Promise<CategoryPageData |
   }
 }
 
+// Enable ISR - revalidate every hour
+export const revalidate = 3600;
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const page = await getCategoryPage(params['category-name']);
+  const resolvedParams = await params;
+  const page = await getCategoryPage(resolvedParams['category-name']);
 
   if (!page) {
     return {
@@ -55,7 +59,8 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const page = await getCategoryPage(params['category-name']);
+  const resolvedParams = await params;
+  const page = await getCategoryPage(resolvedParams['category-name']);
 
   if (!page) {
     notFound();
