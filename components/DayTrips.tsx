@@ -91,8 +91,8 @@ const DayTripCard = ({
         )}
         
         <button
-          className={`absolute top-3 right-3 bg-white/80 p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${
-            tourIsWishlisted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          className={`absolute top-3 right-3 bg-white/90 p-2 rounded-full backdrop-blur-sm transition-all duration-300 shadow-md ${
+            tourIsWishlisted ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
           } hover:bg-white z-10 ${
             tourIsWishlisted ? 'text-red-500' : 'text-slate-600 hover:text-red-500'
           }`}
@@ -112,13 +112,13 @@ const DayTripCard = ({
         >
           <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
         </button>
-        
+
         <button
           onClick={(e) => {
             e.preventDefault();
             onAddToCartClick(trip);
           }}
-          className="absolute bottom-3 right-3 bg-red-600 text-white p-2.5 rounded-full shadow-lg transform translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-in-out hover:bg-red-700 hover:scale-110 z-10"
+          className="absolute bottom-3 right-3 bg-red-600 text-white p-2.5 rounded-full shadow-lg transform opacity-100 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 transition-all duration-300 ease-in-out hover:bg-red-700 active:scale-95 hover:scale-110 z-10"
           aria-label="Add to cart"
         >
           <ShoppingCart size={20} />

@@ -787,19 +787,31 @@ export default function Header({
       <div className="flex items-center gap-3 md:gap-5">
         <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
 
-        <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
-          <Star size={24} className={`${headerText} ${linkHoverColor}`} />
+        <button
+          onClick={openWishlistSidebar}
+          className="relative group p-2 md:p-2 active:scale-95 transition-transform"
+          aria-label="View your wishlist"
+        >
+          <div className="md:bg-transparent bg-white/10 md:backdrop-blur-none backdrop-blur-sm rounded-full p-1 md:p-0">
+            <Star size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
+          </div>
           {wishlist?.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
+            <span className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white shadow-lg">
               {wishlist.length}
             </span>
           )}
         </button>
 
-        <button onClick={openCart} className="relative group p-2" aria-label="Open cart">
-          <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
+        <button
+          onClick={openCart}
+          className="relative group p-2 md:p-2 active:scale-95 transition-transform"
+          aria-label="Open cart"
+        >
+          <div className="md:bg-transparent bg-white/10 md:backdrop-blur-none backdrop-blur-sm rounded-full p-1 md:p-0">
+            <ShoppingCart size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
+          </div>
           {totalItems > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
+            <span className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white shadow-lg">
               {totalItems}
             </span>
           )}

@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Chat } from 'react-instantsearch';
+// ReactMarkdown and remarkGfm are imported but not used in the user's manual-DOM-parser approach.
+// I will leave them in case they are used elsewhere, but they are not used in this component's logic.
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import 'instantsearch.css/themes/satellite.css';
@@ -188,8 +190,8 @@ export default function AIAgentWidget() {
             const jsonStr = text.substring(jsonStart, i + 1);
             try {
               const obj = JSON.parse(jsonStr);
-              // Check if it's a tour object
-              if (obj.title && obj.slug) {
+              // **FIXED:** Check for slug OR objectID
+              if (obj.title && (obj.slug || obj.objectID)) {
                 tours.push(obj);
               }
             } catch (e) {
@@ -203,7 +205,7 @@ export default function AIAgentWidget() {
       return tours;
     };
 
-    // Helper function to render markdown in text messages
+    // **FIXED:** Helper function to render markdown in text messages
     const renderMarkdownMessage = (element: Element) => {
       // Skip if already processed for markdown
       if (element.classList.contains('markdown-processed')) return;
@@ -215,7 +217,7 @@ export default function AIAgentWidget() {
       const text = messageContent.textContent || '';
 
       // Skip empty messages or messages with JSON data
-      if (!text.trim() || text.includes('"title"') && text.includes('"slug"')) return;
+      if (!text.trim() || text.includes('"title"') && (text.includes('"slug"') || text.includes('"objectID"'))) return;
 
       // Mark as processed
       element.classList.add('markdown-processed');
@@ -224,40 +226,56 @@ export default function AIAgentWidget() {
       const markdownWrapper = document.createElement('div');
       markdownWrapper.className = 'markdown-content';
 
-      // Store the original text and render it with markdown
-      // We'll use innerHTML with proper sanitization via a markdown renderer
       const lines = text.split('\n');
       let htmlContent = '';
+      let inList = false; // **FIX:** State for list parsing
 
       lines.forEach((line) => {
         // Convert markdown-style bold (**text** or __text__)
-        line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        line = line.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        let processedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        processedLine = processedLine.replace(/__(.+?)__/g, '<strong>$1</strong>');
 
         // Convert markdown-style italic (*text* or _text_)
-        line = line.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        line = line.replace(/_(.+?)_/g, '<em>$1</em>');
+        processedLine = processedLine.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        processedLine = processedLine.replace(/_(.+?)_/g, '<em>$1</em>');
 
-        // Convert headings
-        if (line.startsWith('### ')) {
-          htmlContent += `<h3>${line.substring(4)}</h3>`;
-        } else if (line.startsWith('## ')) {
-          htmlContent += `<h2>${line.substring(3)}</h2>`;
-        } else if (line.startsWith('# ')) {
-          htmlContent += `<h1>${line.substring(2)}</h1>`;
-        } else if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-          // Handle list items
-          const itemText = line.trim().substring(2);
+        const trimmedLine = processedLine.trim();
+
+        // **FIXED:** Handle lists statefully
+        if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+          const itemText = trimmedLine.substring(2);
+          if (!inList) {
+            htmlContent += '<ul>';
+            inList = true;
+          }
           htmlContent += `<li>${itemText}</li>`;
-        } else if (line.trim()) {
-          htmlContent += `<p>${line}</p>`;
         } else {
-          htmlContent += '<br/>';
+          // If we were in a list and this line is not a list item, close the list
+          if (inList) {
+            htmlContent += '</ul>';
+            inList = false;
+          }
+
+          // Handle headings and paragraphs
+          if (trimmedLine.startsWith('### ')) {
+            htmlContent += `<h3>${trimmedLine.substring(4)}</h3>`;
+          } else if (trimmedLine.startsWith('## ')) {
+            htmlContent += `<h2>${trimmedLine.substring(3)}</h2>`;
+          } else if (trimmedLine.startsWith('# ')) {
+            htmlContent += `<h1>${trimmedLine.substring(2)}</h1>`;
+          } else if (trimmedLine) {
+            htmlContent += `<p>${processedLine}</p>`;
+          } else {
+            // Keep empty lines as breaks
+            htmlContent += '<br/>';
+          }
         }
       });
 
-      // Wrap list items in ul tags
-      htmlContent = htmlContent.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
+      // **FIX:** Close any list that's still open at the end
+      if (inList) {
+        htmlContent += '</ul>';
+      }
 
       markdownWrapper.innerHTML = htmlContent;
 
@@ -274,7 +292,7 @@ export default function AIAgentWidget() {
       const text = element.textContent || '';
 
       // Check if element contains tour JSON data
-      if (text.includes('"title"') && text.includes('"slug"')) {
+      if (text.includes('"title"') && (text.includes('"slug"') || text.includes('"objectID"'))) {
         // Skip if already processed for tour cards
         if (element.classList.contains('tour-cards-processed')) return;
         try {
@@ -336,11 +354,11 @@ export default function AIAgentWidget() {
                 <button class="close-tour-cards absolute -top-1 -right-1 bg-slate-800 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-slate-900 transition-colors z-10 text-xs font-bold" aria-label="Close">×</button>
             `;
             if (introText) {
-              finalHTML += `<p class="text-xs text-slate-600 mb-2">${introText}</p>`;
+              finalHTML += `<p class="text-xs text-slate-600 mb-2 px-2">${introText}</p>`;
             } else if (tours.length > 1) {
-              finalHTML += `<p class="text-xs text-slate-600 mb-2">Found ${tours.length} tours:</p>`;
+              finalHTML += `<p class="text-xs text-slate-600 mb-2 px-2">Found ${tours.length} tours:</p>`;
             }
-            finalHTML += `<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-transparent">${cardsHTML}</div>`;
+            finalHTML += `<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-transparent px-2">${cardsHTML}</div>`;
             finalHTML += `</div>`;
             wrapper.innerHTML = finalHTML;
 
@@ -511,37 +529,11 @@ export default function AIAgentWidget() {
     };
   }, []);
 
-  // Ensure trigger button stays visible at all times
-  useEffect(() => {
-    const ensureTriggerVisible = () => {
-      if (containerRef.current) {
-        const trigger = containerRef.current.querySelector('.ais-Chat-trigger') as HTMLElement;
-        if (trigger) {
-          trigger.style.display = 'flex';
-          trigger.style.opacity = '1';
-          trigger.style.visibility = 'visible';
-          trigger.style.pointerEvents = 'auto';
-        }
-      }
-    };
-
-    // Check trigger visibility every second
-    const interval = setInterval(ensureTriggerVisible, 1000);
-
-    // Also check on window resize
-    window.addEventListener('resize', ensureTriggerVisible);
-
-    // Initial check
-    ensureTriggerVisible();
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('resize', ensureTriggerVisible);
-    };
-  }, []);
+  // **FIXED:** Removed the redundant ensureTriggerVisible useEffect hook
 
   return (
-    <div ref={containerRef} className="fixed bottom-24 md:bottom-6 right-6 z-[99999]">
+    // **FIXED:** Simplified root container classes
+    <div ref={containerRef} className="fixed right-0 bottom-0 z-[99999]">
       <InstantSearch searchClient={searchClient} indexName={INDEX_NAME}>
         <Chat
           agentId={AGENT_ID}
@@ -575,13 +567,14 @@ export default function AIAgentWidget() {
           position: fixed !important;
           bottom: 24px !important;
           right: 24px !important;
-          z-index: 9999 !important;
+          z-index: 99999 !important; /* **FIXED:** Ensure trigger is on top */
           transition: all 0.3s ease;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           display: flex !important;
           opacity: 1 !important;
           visibility: visible !important;
           pointer-events: auto !important;
+          isolation: isolate; /* Create stacking context */
         }
 
         /* Mobile: Show as vertical tab on right side */
@@ -643,21 +636,24 @@ export default function AIAgentWidget() {
           bottom: 90px !important;
           right: 24px !important;
           max-height: calc(100vh - 120px);
+          z-index: 99998 !important; /* Below trigger */
+          isolation: isolate; /* Create stacking context */
         }
 
-        /* Mobile-specific dialog positioning */
+        /* **FIXED:** Mobile-specific dialog positioning (FULL SCREEN) */
         @media (max-width: 768px) {
           .ais-Chat-dialog,
           [class*="Chat-dialog"] {
-            top: 50% !important;
-            bottom: auto !important;
-            right: 60px !important;
-            left: 12px !important;
-            transform: translateY(-50%) !important;
-            max-width: calc(100vw - 80px) !important;
-            width: calc(100vw - 80px) !important;
-            max-height: 70vh !important;
-            border-radius: 16px !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important; /* Use dynamic viewport height */
+            max-width: 100vw !important;
+            max-height: 100dvh !important;
+            transform: none !important;
+            border-radius: 0 !important;
           }
         }
 
@@ -666,16 +662,18 @@ export default function AIAgentWidget() {
           margin-bottom: 1rem;
         }
 
-        /* Assistant messages containing cards */
+        /* **FIXED:** Assistant messages containing cards */
         .ais-Chat-message--assistant .ais-Chat-message-content {
           background: transparent !important;
-          padding: 0.5rem !important;
+          padding: 0 !important; /* Removed padding */
           min-height: auto !important;
+          max-width: 100%; /* Ensure it doesn't overflow */
+          overflow: hidden; /* Contain the scrolling cards */
         }
 
         .ais-Chat-message--assistant .ais-Chat-message-content.tour-cards-processed {
           background: transparent !important;
-          padding: 0.5rem !important;
+          padding: 0 !important; /* Removed padding */
           display: block !important;
           visibility: visible !important;
         }
@@ -733,6 +731,8 @@ export default function AIAgentWidget() {
         .tour-cards-container {
           position: relative;
           z-index: 1;
+          max-width: 100%;
+          box-sizing: border-box;
         }
 
         /* Close button styling */
@@ -749,8 +749,11 @@ export default function AIAgentWidget() {
         /* Tour results wrapper */
         .tour-results-wrapper {
           background: transparent;
-          padding: 0.5rem;
+          padding-top: 0.5rem; /* Add padding here */
+          padding-bottom: 0.5rem;
           border-radius: 0.5rem;
+          max-width: 100%;
+          box-sizing: border-box;
         }
 
         /* Animations */
@@ -808,22 +811,6 @@ export default function AIAgentWidget() {
         .ais-Chat-messages::-webkit-scrollbar-thumb:hover,
         [class*="Chat-messages"]::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
-        }
-
-        /* Ensure trigger button is never covered */
-        .ais-Chat-trigger {
-          isolation: isolate;
-        }
-
-        .tour-cards-container,
-        .tour-results-wrapper {
-          isolation: isolate;
-          z-index: 1 !important;
-        }
-
-        /* Ensure dialog doesn't cover trigger */
-        .ais-Chat-dialog {
-          z-index: 9998 !important;
         }
 
         /* Override any display:none on trigger */
