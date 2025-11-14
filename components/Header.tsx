@@ -686,18 +686,31 @@ HeaderSearchBar.displayName = 'HeaderSearchBar';
 // =================================================================
 // --- MAIN HEADER COMPONENT (EXPORTED) ---
 // =================================================================
-export default function Header({ startSolid = false }: { startSolid?: boolean }) {
+interface HeaderProps {
+  startSolid?: boolean;
+  initialDestinations?: Destination[];
+  initialCategories?: Category[];
+}
+
+export default function Header({
+  startSolid = false,
+  initialDestinations,
+  initialCategories
+}: HeaderProps) {
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
-  const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>(initialDestinations || []);
+  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
   const { t } = useSettings();
 
   useEffect(() => {
+    // Only fetch if data wasn't provided via props
+    if (initialDestinations && initialCategories) return;
+
     const fetchNavData = async () => {
       try {
         // NOTE: using ?featured=true - adjust server-side or remove param if not supported
@@ -714,7 +727,7 @@ export default function Header({ startSolid = false }: { startSolid?: boolean })
       }
     };
     fetchNavData();
-  }, []);
+  }, [initialDestinations, initialCategories]);
 
   const { openCart, totalItems } = useCart();
   const { user, logout } = useAuth();
