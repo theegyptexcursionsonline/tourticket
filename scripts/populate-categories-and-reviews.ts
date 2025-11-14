@@ -248,11 +248,17 @@ async function populateCategoriesAndReviews() {
         try {
           const result = await Review.insertMany(reviews, { ordered: false });
           totalReviewsAdded += result.length;
+          console.log(`  ✓ Added ${result.length} reviews`);
         } catch (error: any) {
-          // Count successful inserts even if some failed
-          if (error.insertedDocs) {
+          // Count successful inserts even if some failed due to duplicates
+          if (error.result && error.result.insertedCount) {
+            totalReviewsAdded += error.result.insertedCount;
+            console.log(`  ⚠️  Added ${error.result.insertedCount} reviews (${error.writeErrors?.length || 0} duplicates skipped)`);
+          } else if (error.insertedDocs) {
             totalReviewsAdded += error.insertedDocs.length;
             console.log(`  ⚠️  Added ${error.insertedDocs.length} reviews (some duplicates skipped)`);
+          } else {
+            console.log(`  ✗ Error adding reviews:`, error.message);
           }
         }
       } else {
