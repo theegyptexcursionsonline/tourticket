@@ -106,8 +106,9 @@ async function getHomePageData() {
     // Build interests (categories + attractions with tour counts)
     const categoriesWithCounts = await Promise.all(
       allCategories.map(async (category: any) => {
+        // Category is an array field in Tour model, so we need to use $in
         const tourCount = await Tour.countDocuments({
-          category: category._id,
+          category: { $in: [category._id] },
           isPublished: true
         });
         return {
