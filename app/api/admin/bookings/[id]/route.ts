@@ -191,7 +191,8 @@ export async function PATCH(
             bookingId,
             refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
             refundProcessingDays: refundAmount > 0 ? 5 : undefined,
-            cancellationReason: 'Status changed to cancelled by administrator'
+            cancellationReason: 'Status changed to cancelled by administrator',
+            baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
           });
 
           console.log(`✅ Cancellation email sent to ${customerEmail}`);
@@ -211,9 +212,10 @@ export async function PATCH(
             bookingId,
             newStatus: status,
             statusMessage: statusMessages[status as keyof typeof statusMessages] || 'Your booking status has been updated.',
-            additionalInfo: status === 'Confirmed' 
+            additionalInfo: status === 'Confirmed'
               ? 'Please make sure to arrive at the meeting point 15 minutes before the scheduled time.'
-              : undefined
+              : undefined,
+            baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
           });
 
           console.log(`✅ Status update email sent to ${customerEmail} - Status: ${status}`);

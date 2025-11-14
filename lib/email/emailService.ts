@@ -120,9 +120,16 @@ export class EmailService {
 
   // ADMIN BOOKING ALERT
   static async sendAdminBookingAlert(data: AdminAlertData): Promise<void> {
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+
+    if (!adminEmail) {
+      console.warn('ADMIN_NOTIFICATION_EMAIL is not set. Skipping admin notification.');
+      return;
+    }
+
     const template = await this.generateEmailTemplate('admin-booking-alert', data);
     await sendEmail({
-      to: process.env.ADMIN_NOTIFICATION_EMAIL!,
+      to: adminEmail,
       subject: template.subject,
       html: template.html,
       type: 'admin-booking-alert'
