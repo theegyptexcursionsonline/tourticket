@@ -487,11 +487,15 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
               </div>
             </div>
 
-            {/* Body */}
-            <div className="bg-white rounded-2xl shadow p-6 prose prose-lg max-w-none">
-              {/* IMPORTANT: sanitize server-side before saving */}
-              <div dangerouslySetInnerHTML={{ __html: blog.content }} />
-            </div>
+            {/* ---
+              FIX #1: Applied prose classes AND content HTML to the SAME element.
+              This is the correct way to apply Tailwind's typography styles.
+              ---
+            */}
+            <div
+              className="bg-white rounded-2xl shadow p-6 md:p-8 lg:p-10 prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: blog.content }}
+            />
 
             {/* Tags */}
             {Array.isArray(blog.tags) && blog.tags.length > 0 && (
@@ -547,6 +551,118 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
           <Sidebar blog={blog} />
         </div>
       </main>
+
+      {/* ---
+        FIX #2: Added global styles to enhance the ".prose" classes.
+        This provides the "perfect markdown blog" look you wanted,
+        styling headings, code, blockquotes, and lists.
+        ---
+      */}
+      <style jsx global>{`
+        /* Enhance Tailwind Prose for a "Perfect" Markdown Blog */
+        
+        .prose h2 {
+          font-size: 1.875rem; /* 3xl */
+          font-weight: 700;
+          letter-spacing: -0.025em;
+          margin-top: 2em;
+          margin-bottom: 1em;
+          padding-bottom: 0.5em;
+          border-bottom: 1px solid #e5e7eb; /* slate-200 */
+        }
+        .prose h3 {
+          font-size: 1.5rem; /* 2xl */
+          font-weight: 600;
+          margin-top: 1.6em;
+          margin-bottom: 0.8em;
+        }
+        .prose h4 {
+          font-size: 1.25rem; /* xl */
+          font-weight: 600;
+          margin-top: 1.5em;
+          margin-bottom: 0.5em;
+        }
+        .prose p {
+          line-height: 1.75;
+          margin-top: 1.25em;
+          margin-bottom: 1.25em;
+        }
+        .prose a {
+          color: #4f46e5; /* indigo-600 */
+          font-weight: 500;
+          text-decoration: none;
+          transition: all 0.2s ease;
+        }
+        .prose a:hover {
+          text-decoration: underline;
+          color: #3730a3; /* indigo-800 */
+        }
+        .prose blockquote {
+          border-left-width: 4px;
+          border-left-color: #6366f1; /* indigo-500 */
+          padding-left: 1.25rem;
+          margin-top: 1.6em;
+          margin-bottom: 1.6em;
+          font-style: italic;
+          color: #475569; /* slate-600 */
+        }
+        .prose blockquote p {
+          margin: 0;
+        }
+        .prose ul,
+        .prose ol {
+          margin-top: 1.25em;
+          margin-bottom: 1.25em;
+          padding-left: 1.75rem;
+        }
+        .prose li {
+          margin-top: 0.5em;
+          margin-bottom: 0.5em;
+        }
+        .prose ul > li::marker {
+          color: #6366f1; /* indigo-500 */
+        }
+        .prose ol > li::marker {
+          color: #6366f1; /* indigo-500 */
+        }
+        .prose code:not(pre > code) {
+          background-color: #f1f5f9; /* slate-100 */
+          color: #e11d48; /* rose-600 */
+          padding: 0.25em 0.5em;
+          border-radius: 0.375rem; /* rounded-md */
+          font-size: 0.9em;
+          font-weight: 500;
+        }
+        .prose pre {
+          background-color: #111827; /* gray-900 */
+          color: #e5e7eb; /* gray-200 */
+          border-radius: 0.75rem; /* rounded-xl */
+          padding: 1.25rem;
+          margin-top: 1.6em;
+          margin-bottom: 1.6em;
+          overflow-x: auto;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .prose pre code {
+          background-color: transparent;
+          color: inherit;
+          padding: 0;
+          font-size: 0.875rem; /* text-sm */
+          line-height: 1.7;
+        }
+        .prose img {
+          border-radius: 0.75rem; /* rounded-xl */
+          margin-top: 2em;
+          margin-bottom: 2em;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .prose hr {
+          border-color: #e5e7eb; /* slate-200 */
+          margin-top: 3em;
+          margin-bottom: 3em;
+        }
+      `}</style>
+
     </div>
   );
 }
