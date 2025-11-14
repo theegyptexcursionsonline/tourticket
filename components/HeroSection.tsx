@@ -287,12 +287,15 @@ const useIsMobile = (breakpoint = 768) => {
   return isMobile;
 };
 
-const useHeroSettings = () => {
-  const [settings, setSettings] = useState<HeroSettings>(DEFAULT_SETTINGS);
+const useHeroSettings = (initialSettings?: HeroSettings | null) => {
+  const [settings, setSettings] = useState<HeroSettings>(initialSettings || DEFAULT_SETTINGS);
   // NOTE: we keep isLoading for internal use, but default it to false so UI doesn't block
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Only fetch if data wasn't provided via props
+    if (initialSettings) return;
+
     const fetchSettings = async () => {
       // If you want a visual indicator while loading, you can set isLoading(true) here
       try {
@@ -313,7 +316,7 @@ const useHeroSettings = () => {
 
     // Fetch in background; UI is shown immediately without spinner
     fetchSettings();
-  }, []);
+  }, [initialSettings]);
 
   return { settings, isLoading };
 };
@@ -617,8 +620,12 @@ const BackgroundSlideshow = ({
 };
 
 // --- Main HeroSection Component ---
-export default function HeroSection() {
-  const { settings } = useHeroSettings();
+interface HeroSectionProps {
+  initialSettings?: HeroSettings | null;
+}
+
+export default function HeroSection({ initialSettings }: HeroSectionProps = {}) {
+  const { settings } = useHeroSettings(initialSettings);
 
   // Create slides from settings
   const slides = settings.backgroundImages.map(img => ({

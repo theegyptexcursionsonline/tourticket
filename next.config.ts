@@ -132,22 +132,39 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Security headers for all routes (no cache-control here)
         source: '/(.*)',
         headers: [
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
       {
+        // ISR pages - allow Next.js to control caching with proper CDN headers
+        source: '/',
+        headers: [
+          { key: 'Cache-Control', value: 's-maxage=60, stale-while-revalidate=3600' },
+          { key: 'CDN-Cache-Control', value: 'max-age=60' },
+        ],
+      },
+      {
+        // API routes - no caching
         source: '/api/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'no-store, max-age=0' },
         ],
       },
       {
+        // Static assets - long-term caching
         source: '/images/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        // Next.js static files - long-term caching
+        source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
