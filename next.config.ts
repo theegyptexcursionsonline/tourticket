@@ -18,26 +18,23 @@ const nextConfig = {
   // Server external packages configuration
   serverExternalPackages: ['mongoose'],
 
-  // Image optimization configuration with Cloudflare
+  // Image optimization configuration - Fixed for Netlify
   images: {
-    // Use Cloudflare Image Optimization
-    loader: process.env.NODE_ENV === 'production' ? 'custom' : 'default',
-    loaderFile: process.env.NODE_ENV === 'production' ? './lib/cloudflare-image-loader.ts' : undefined,
-
+    unoptimized: true, // Enable for Netlify deployment
     remotePatterns: [
-      // Cloudinary (example)
+      // Cloudinary
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
         pathname: '/dm3sxllch/**',
       },
-      // Wikimedia (example)
+      // Wikimedia
       {
         protocol: 'https',
         hostname: 'upload.wikimedia.org',
         pathname: '/wikipedia/en/thumb/4/41/Flag_of_India.svg/**',
       },
-      // Unsplash static CDN (recommended for stable images)
+      // Unsplash static CDN
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
@@ -62,33 +59,21 @@ const nextConfig = {
         hostname: '**.amazonaws.com',
         pathname: '/**',
       },
-
-      // ----------------- Add your CDN host(s) here -----------------
-      // Exact hostname (https://your-cdn.com/...)
+      // Add your CDN host(s) here
       {
         protocol: 'https',
         hostname: 'your-cdn.com',
         pathname: '/**',
       },
-      // Allow any subdomain like https://cdn.your-cdn.com/ or https://images.your-cdn.com/
       {
         protocol: 'https',
         hostname: '**.your-cdn.com',
         pathname: '/**',
       },
-
-      // If you have other CDNs or domains, add them similarly.
     ],
-    // Image formats (Cloudflare will handle this automatically with format=auto)
     formats: ['image/webp', 'image/avif'],
-    // Device sizes for responsive images
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    // Image sizes for different breakpoints
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    // Quality presets for Next.js 16+ compatibility
-    qualities: [75, 85, 90, 95],
-    // Disable Next.js built-in optimization in production (Cloudflare will handle it)
-    unoptimized: process.env.CLOUDFLARE_IMAGES === 'true',
   },
 
   // Rewrites for backward compatibility and SEO
@@ -106,11 +91,6 @@ const nextConfig = {
         source: '/activities/:slug',
         destination: '/:slug',
       },
-     // ❌ Remove this line:
-    // {
-    //   source: '/api/tours/:path*',
-    //   destination: '/api/admin/tours/:path*',
-    // },
     ];
   },
 
@@ -140,7 +120,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Security headers for all routes (no cache-control here)
+        // Security headers for all routes
         source: '/(.*)',
         headers: [
           { key: 'X-Frame-Options', value: 'DENY' },
@@ -211,7 +191,7 @@ const nextConfig = {
   poweredByHeader: false,
   generateEtags: true,
   pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
-  output: 'standalone',
+  // Removed output: 'standalone' for Netlify compatibility
   logging: {
     fetches: {
       fullUrl: true,
