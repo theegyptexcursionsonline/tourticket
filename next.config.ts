@@ -85,6 +85,8 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     // Image sizes for different breakpoints
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Quality presets for Next.js 16+ compatibility
+    qualities: [75, 85, 90, 95],
     // Disable Next.js built-in optimization in production (Cloudflare will handle it)
     unoptimized: process.env.CLOUDFLARE_IMAGES === 'true',
   },
