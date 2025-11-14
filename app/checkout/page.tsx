@@ -26,6 +26,7 @@ import {
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
+import StripePaymentForm from '@/components/StripePaymentForm';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
@@ -376,24 +377,34 @@ type FormDataShape = {
   cvv: string;
 };
 
-const CheckoutFormStep = ({ 
-  onPaymentProcess, 
-  isProcessing, 
-  formData, 
+const CheckoutFormStep = ({
+  onPaymentProcess,
+  isProcessing,
+  formData,
   setFormData,
   customerType,
   setCustomerType,
   onAuthModalOpen,
   user,
-}: { 
-  onPaymentProcess: () => void; 
-  isProcessing: boolean; 
-  formData: FormDataShape; 
+  pricing,
+  cart,
+  promoCode,
+  paymentIntentId,
+  setPaymentIntentId,
+}: {
+  onPaymentProcess: () => void;
+  isProcessing: boolean;
+  formData: FormDataShape;
   setFormData: (v: FormDataShape) => void;
   customerType: 'guest' | 'login' | 'signup';
   setCustomerType: (type: 'guest' | 'login' | 'signup') => void;
   onAuthModalOpen: (mode: 'login' | 'signup') => void;
   user: any;
+  pricing: any;
+  cart: any[];
+  promoCode: string;
+  paymentIntentId: string;
+  setPaymentIntentId: (id: string) => void;
 }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -402,6 +413,13 @@ const CheckoutFormStep = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate that we have a payment intent ID from Stripe
+    if (!paymentIntentId) {
+      toast.error('Please complete the payment before submitting');
+      return;
+    }
+
     onPaymentProcess();
   };
 
@@ -565,61 +583,53 @@ const CheckoutFormStep = ({
           </div>
 
           <AnimatePresence mode="wait">
-            <motion.div 
-              key={paymentMethod} 
-              initial={{ opacity: 0, y: 8 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -8 }} 
+            <motion.div
+              key={paymentMethod}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
             >
               {paymentMethod === 'card' && (
-                <div className="space-y-4 p-6 bg-slate-50 border border-slate-200">
-                  <div className="grid grid-cols-1 gap-4">
-                    <FormInput 
-                      label="Cardholder Name" 
-                      name="cardholderName" 
-                      placeholder="John M. Doe" 
-                      value={formData.cardholderName} 
-                      onChange={handleInputChange} 
-                      disabled={isProcessing} 
-                    />
-                    <FormInput 
-                      label="Card Number" 
-                      name="cardNumber" 
-                      placeholder="1234 5678 9012 3456" 
-                      value={formData.cardNumber} 
-                      onChange={handleInputChange} 
-                      disabled={isProcessing} 
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormInput 
-                      label="Expiry Date" 
-                      name="expiryDate" 
-                      placeholder="MM / YY" 
-                      value={formData.expiryDate} 
-                      onChange={handleInputChange} 
-                      disabled={isProcessing} 
-                    />
-                    <FormInput 
-                      label="CVV" 
-                      name="cvv" 
-                      placeholder="123" 
-                      value={formData.cvv} 
-                      onChange={handleInputChange} 
-                      disabled={isProcessing} 
-                    />
-                  </div>
+                <div className="mt-4">
+                  <StripePaymentForm
+                    amount={pricing.total}
+                    currency={pricing.currency}
+                    customer={{
+                      email: formData.email,
+                      firstName: formData.firstName,
+                      lastName: formData.lastName,
+                    }}
+                    cart={cart}
+                    pricing={pricing}
+                    discountCode={promoCode}
+                    onSuccess={(paymentIntent) => {
+                      setPaymentIntentId(paymentIntent);
+                      toast.success('Payment completed successfully! Now finalizing your booking...');
+                      // Automatically submit the form after successful payment
+                      setTimeout(() => {
+                        const form = document.getElementById('checkout-form') as HTMLFormElement;
+                        if (form) {
+                          form.requestSubmit();
+                        }
+                      }, 500);
+                    }}
+                    onError={(error) => {
+                      toast.error(error);
+                    }}
+                  />
                 </div>
               )}
               {paymentMethod === 'paypal' && (
                 <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
                   <p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p>
+                  <p className="text-sm text-slate-500 mt-2">PayPal integration coming soon. Please use card payment.</p>
                 </div>
               )}
               {paymentMethod === 'bank' && (
                 <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
                   <p className="font-medium">Please follow the instructions in the confirmation email to complete your bank transfer.</p>
+                  <p className="text-sm text-slate-500 mt-2">Bank transfer integration coming soon. Please use card payment.</p>
                 </div>
               )}
             </motion.div>
@@ -896,6 +906,9 @@ export default function CheckoutPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
+  // Stripe payment intent ID
+  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
+
   const [formData, setFormData] = useState<FormDataShape>({
     firstName: '',
     lastName: '',
@@ -1038,10 +1051,10 @@ export default function CheckoutPage() {
         },
         cart: cart || [],
         pricing,
-        paymentMethod: 'card', // Default to card for mock
+        paymentMethod: 'card',
         paymentDetails: {
+          paymentIntentId, // Include the Stripe PaymentIntent ID
           cardholderName: formData.cardholderName,
-          cardNumber: formData.cardNumber ? `****-****-****-${formData.cardNumber.slice(-4)}` : undefined,
         },
         userId: user?._id || user?.id,
         isGuest: !user,
@@ -1123,15 +1136,20 @@ export default function CheckoutPage() {
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 items-start">
                   <div className="lg:col-span-2 order-2 lg:order-1">
-                    <CheckoutFormStep 
-                      onPaymentProcess={handlePaymentProcess} 
-                      isProcessing={isProcessing} 
-                      formData={formData} 
+                    <CheckoutFormStep
+                      onPaymentProcess={handlePaymentProcess}
+                      isProcessing={isProcessing}
+                      formData={formData}
                       setFormData={setFormData}
                       customerType={customerType}
                       setCustomerType={setCustomerType}
                       onAuthModalOpen={handleAuthModalOpen}
                       user={user}
+                      pricing={pricing}
+                      cart={cart}
+                      promoCode={promoCode}
+                      paymentIntentId={paymentIntentId}
+                      setPaymentIntentId={setPaymentIntentId}
                     />
                   </div>
                   <div className="lg:col-span-1 order-1 lg:order-2">
