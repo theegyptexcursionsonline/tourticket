@@ -18,6 +18,7 @@ interface Interest {
 }
 
 interface PopularInterestsGridProps {
+  initialInterests?: Interest[]; // Server-provided data
   limit?: number;
   showFeaturedOnly?: boolean;
   title?: string;
@@ -123,6 +124,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
 };
 
 const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
+  initialInterests,
   limit = 12,
   showFeaturedOnly = false,
   title = 'Popular Interests',
@@ -130,9 +132,30 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
   columns = 4,
 }) => {
   const [interests, setInterests] = useState<Interest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialInterests);
 
   useEffect(() => {
+    // If we have initialInterests, process and use them
+    if (initialInterests) {
+      let filtered = initialInterests.filter((interest: Interest) => interest.products > 0);
+
+      if (showFeaturedOnly) {
+        filtered = filtered.filter((interest: Interest) => interest.featured);
+      }
+
+      // Sort by products count (most popular first)
+      filtered.sort((a: Interest, b: Interest) => {
+        if (a.featured && !b.featured) return -1;
+        if (!a.featured && b.featured) return 1;
+        return b.products - a.products;
+      });
+
+      setInterests(filtered.slice(0, limit));
+      setLoading(false);
+      return;
+    }
+
+    // Otherwise fetch from API (fallback for pages not using server component)
     const fetchInterests = async () => {
       try {
         const response = await fetch('/api/interests');
@@ -167,7 +190,7 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
     };
 
     fetchInterests();
-  }, [limit, showFeaturedOnly]);
+  }, [initialInterests, limit, showFeaturedOnly]);
 
   const gridColsClass = {
     2: 'grid-cols-1 sm:grid-cols-2',

@@ -18,6 +18,7 @@ interface Interest {
 }
 
 interface RelatedInterestsProps {
+  initialInterests?: Interest[]; // Server-provided data
   currentSlug?: string;
   limit?: number;
   title?: string;
@@ -118,15 +119,27 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
 };
 
 const RelatedInterests: React.FC<RelatedInterestsProps> = ({
+  initialInterests,
   currentSlug,
   limit = 6,
   title = 'Explore More Interests',
   subtitle = 'Discover other amazing experiences you might enjoy',
 }) => {
   const [interests, setInterests] = useState<Interest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialInterests);
 
   useEffect(() => {
+    // If we have initialInterests, process and use them
+    if (initialInterests) {
+      const filtered = initialInterests
+        .filter((interest: Interest) => interest.slug !== currentSlug && interest.products > 0)
+        .slice(0, limit);
+      setInterests(filtered);
+      setLoading(false);
+      return;
+    }
+
+    // Otherwise fetch from API (fallback for pages not using server component)
     const fetchRelatedInterests = async () => {
       try {
         const response = await fetch('/api/interests');
@@ -152,7 +165,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
     };
 
     fetchRelatedInterests();
-  }, [currentSlug, limit]);
+  }, [initialInterests, currentSlug, limit]);
 
   if (loading) {
     return (
