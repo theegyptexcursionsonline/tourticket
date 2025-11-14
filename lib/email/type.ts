@@ -16,6 +16,7 @@ export interface BookingEmailData extends BaseEmailData {
   meetingPoint?: string;
   contactNumber?: string;
   tourImage?: string;
+  baseUrl?: string;
 }
 
 export interface PaymentEmailData extends BaseEmailData {
@@ -25,6 +26,7 @@ export interface PaymentEmailData extends BaseEmailData {
   currency: string;
   bookingId: string;
   tourTitle: string;
+  baseUrl?: string;
 }
 
 export interface TripReminderData extends BaseEmailData {
@@ -37,6 +39,7 @@ export interface TripReminderData extends BaseEmailData {
   whatToBring?: string[];
   importantNotes?: string;
   bookingId: string;
+  baseUrl?: string;
 }
 
 export interface TripCompletionData extends BaseEmailData {
@@ -50,6 +53,7 @@ export interface TripCompletionData extends BaseEmailData {
     price: string;
     link: string;
   }>;
+  baseUrl?: string;
 }
 
 export interface CancellationData extends BaseEmailData {
@@ -59,6 +63,7 @@ export interface CancellationData extends BaseEmailData {
   refundAmount?: string;
   refundProcessingDays?: number;
   cancellationReason?: string;
+  baseUrl?: string;
 }
 
 export interface WelcomeEmailData extends BaseEmailData {
@@ -70,6 +75,7 @@ export interface WelcomeEmailData extends BaseEmailData {
     price: string;
     link: string;
   }>;
+  baseUrl?: string;
 }
 
 export interface AdminAlertData {
@@ -82,14 +88,27 @@ export interface AdminAlertData {
   paymentMethod?: string;
   specialRequests?: string;
   adminDashboardLink?: string;
+  baseUrl?: string;
 }
 
-export type EmailType = 
+export interface BookingStatusUpdateData extends BaseEmailData {
+  tourTitle: string;
+  bookingId: string;
+  bookingDate: string;
+  bookingTime: string;
+  newStatus: string;
+  statusMessage: string;
+  additionalInfo?: string;
+  baseUrl?: string;
+}
+
+export type EmailType =
   | 'booking-confirmation'
-  | 'payment-confirmation' 
+  | 'payment-confirmation'
   | 'trip-reminder'
   | 'trip-completion'
   | 'booking-cancellation'
+  | 'booking-update'
   | 'welcome'
   | 'admin-booking-alert';
 

@@ -87,25 +87,31 @@ export async function POST(request: Request) {
           });
           
           // Send Welcome Email for New Guest Users
-          await EmailService.sendWelcomeEmail({
-            customerName: `${customer.firstName} ${customer.lastName}`,
-            customerEmail: customer.email,
-            dashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
-            recommendedTours: [
-              {
-                title: "Pyramids of Giza Tour",
-                image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/pyramids.jpg`,
-                price: "$49",
-                link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/pyramids-giza`
-              },
-              {
-                title: "Nile River Cruise",
-                image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/nile.jpg`,
-                price: "$89",
-                link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/nile-cruise`
-              }
-            ]
-          });
+          try {
+            await EmailService.sendWelcomeEmail({
+              customerName: `${customer.firstName} ${customer.lastName}`,
+              customerEmail: customer.email,
+              dashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
+              recommendedTours: [
+                {
+                  title: "Pyramids of Giza Tour",
+                  image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/pyramids.jpg`,
+                  price: "$49",
+                  link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/pyramids-giza`
+                },
+                {
+                  title: "Nile River Cruise",
+                  image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/nile.jpg`,
+                  price: "$89",
+                  link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/nile-cruise`
+                }
+              ],
+              baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+            });
+          } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // Don't fail user creation if welcome email fails
+          }
         } catch (userError: any) {
           if (userError.code === 11000) {
             user = await User.findOne({ email: customer.email });
@@ -206,16 +212,22 @@ export async function POST(request: Request) {
     }
 
     // Send Payment Confirmation
-    await EmailService.sendPaymentConfirmation({
-      customerName: `${customer.firstName} ${customer.lastName}`,
-      customerEmail: customer.email,
-      paymentId: paymentResult.paymentId,
-      paymentMethod: paymentMethod,
-      amount: `$${pricing.total.toFixed(2)}`,
-      currency: paymentResult.currency,
-      bookingId: `BOOKING-${Date.now()}`,
-      tourTitle: cart.length === 1 ? cart[0].title : `${cart.length} Tours`
-    });
+    try {
+      await EmailService.sendPaymentConfirmation({
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        customerEmail: customer.email,
+        paymentId: paymentResult.paymentId,
+        paymentMethod: paymentMethod,
+        amount: `$${pricing.total.toFixed(2)}`,
+        currency: paymentResult.currency,
+        bookingId: `BOOKING-${Date.now()}`,
+        tourTitle: cart.length === 1 ? cart[0].title : `${cart.length} Tours`,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+      });
+    } catch (emailError) {
+      console.error('Failed to send payment confirmation email:', emailError);
+      // Don't fail the booking if email fails
+    }
 
     // Create bookings with generated references
     const createdBookings = [];
@@ -273,38 +285,50 @@ export async function POST(request: Request) {
     const bookingId = createdBookings.length === 1 ? mainBooking.bookingReference : `MULTI-${Date.now()}`;
     
     // Send Enhanced Booking Confirmation
-    await EmailService.sendBookingConfirmation({
-      customerName: `${customer.firstName} ${customer.lastName}`,
-      customerEmail: customer.email,
-      tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
-      bookingDate: mainBooking.date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      bookingTime: mainBooking.time,
-      participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
-      totalPrice: `$${pricing.total.toFixed(2)}`,
-      bookingId: bookingId,
-      specialRequests: customer.specialRequests,
-      meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
-      contactNumber: "+20 11 42255624",
-      tourImage: mainTour?.image
-    });
+    try {
+      await EmailService.sendBookingConfirmation({
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        customerEmail: customer.email,
+        tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
+        bookingDate: mainBooking.date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        bookingTime: mainBooking.time,
+        participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
+        totalPrice: `$${pricing.total.toFixed(2)}`,
+        bookingId: bookingId,
+        specialRequests: customer.specialRequests,
+        meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
+        contactNumber: "+20 11 42255624",
+        tourImage: mainTour?.image,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+      });
+    } catch (emailError) {
+      console.error('Failed to send booking confirmation email:', emailError);
+      // Don't fail the booking if email fails
+    }
 
     // Send Admin Alert
-    await EmailService.sendAdminBookingAlert({
-      customerName: `${customer.firstName} ${customer.lastName}`,
-      customerEmail: customer.email,
-      tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
-      bookingId: bookingId,
-      bookingDate: mainBooking.date.toLocaleDateString('en-US'),
-      totalPrice: `$${pricing.total.toFixed(2)}`,
-      paymentMethod: paymentMethod,
-      specialRequests: customer.specialRequests,
-      adminDashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/bookings/${bookingId}`
-    });
+    try {
+      await EmailService.sendAdminBookingAlert({
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        customerEmail: customer.email,
+        tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
+        bookingId: bookingId,
+        bookingDate: mainBooking.date.toLocaleDateString('en-US'),
+        totalPrice: `$${pricing.total.toFixed(2)}`,
+        paymentMethod: paymentMethod,
+        specialRequests: customer.specialRequests,
+        adminDashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/bookings/${bookingId}`,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+      });
+    } catch (emailError) {
+      console.error('Failed to send admin alert email:', emailError);
+      // Don't fail the booking if admin email fails
+    }
 
     // Return success response
     return NextResponse.json({

@@ -70,21 +70,27 @@ export async function POST(
     await booking.save();
 
     // 🆕 Send Cancellation Confirmation Email
-    await EmailService.sendCancellationConfirmation({
-      customerName: `${booking.user.firstName} ${booking.user.lastName}`,
-      customerEmail: booking.user.email,
-      tourTitle: booking.tour.title,
-      bookingDate: booking.date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      bookingId: booking._id.toString(),
-      refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
-      refundProcessingDays: refundAmount > 0 ? 5 : undefined,
-      cancellationReason: reason
-    });
+    try {
+      await EmailService.sendCancellationConfirmation({
+        customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+        customerEmail: booking.user.email,
+        tourTitle: booking.tour.title,
+        bookingDate: booking.date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        bookingId: booking._id.toString(),
+        refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
+        refundProcessingDays: refundAmount > 0 ? 5 : undefined,
+        cancellationReason: reason,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+      });
+    } catch (emailError) {
+      console.error('Failed to send cancellation email:', emailError);
+      // Don't fail the cancellation if email fails
+    }
 
     return NextResponse.json({
       success: true,
