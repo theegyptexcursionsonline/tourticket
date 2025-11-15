@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ArrowLeft, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star, Send } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
@@ -588,6 +588,60 @@ export default function AISearchWidget() {
     setInput('');
   };
 
+  // State for detected tours
+  const [detectedTours, setDetectedTours] = useState<any[]>([]);
+
+  // Parse tour information from text and fetch from Algolia
+  const detectAndFetchTours = async (text: string) => {
+    try {
+      // Try to extract tour titles using regex patterns
+      const tourPatterns = [
+        /(?:From |)([\w\s:,-]+?)(?:\s+\(\$\d+\))/g, // Matches "Tour Name ($price)"
+        /(?:^|\n)([A-Z][\w\s:,-]+?Tour[\w\s]*?)(?:\s+\(\$\d+\)|\n|$)/gm, // Matches lines starting with tour names
+      ];
+
+      const potentialTours = new Set<string>();
+
+      for (const pattern of tourPatterns) {
+        const matches = text.matchAll(pattern);
+        for (const match of matches) {
+          if (match[1]) {
+            potentialTours.add(match[1].trim());
+          }
+        }
+      }
+
+      if (potentialTours.size > 0) {
+        // Search Algolia for these tours
+        const toursArray = Array.from(potentialTours).slice(0, 5); // Limit to 5 tours
+        const searchPromises = toursArray.map(async (tourTitle) => {
+          try {
+            const response = await searchClient.search([{
+              indexName: INDEX_TOURS,
+              query: tourTitle,
+              params: {
+                hitsPerPage: 1,
+              }
+            }]);
+            return response.results[0]?.hits[0];
+          } catch (error) {
+            console.error('Error searching for tour:', tourTitle, error);
+            return null;
+          }
+        });
+
+        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        if (tours.length > 0) {
+          setDetectedTours(tours);
+          return tours;
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting tours:', error);
+    }
+    return [];
+  };
+
   // Render tool outputs (tours)
   const renderToolOutput = (obj: any) => {
     if (Array.isArray(obj)) {
@@ -605,6 +659,20 @@ export default function AISearchWidget() {
       </pre>
     );
   };
+
+  // Detect tours in messages
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.role === 'assistant') {
+      const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
+      const fullText = textParts.map((p: any) => p.text).join(' ');
+      const hasTourPattern = /(?:Tour|tour).*?\$\d+/i.test(fullText);
+
+      if (hasTourPattern) {
+        detectAndFetchTours(fullText);
+      }
+    }
+  }, [messages]);
 
   // Render message content
   const renderContent = (parts: any[]) => {
@@ -770,20 +838,27 @@ export default function AISearchWidget() {
                             </div>
                           )}
 
-                          {messages.map((m) => (
-                            <div
-                              key={m.id}
-                              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
+                          {messages.map((m, mIdx) => (
+                            <div key={m.id}>
                               <div
-                                className={`max-w-[85%] px-2.5 py-2 rounded-xl text-[11px] ${
-                                  m.role === 'user'
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
-                                    : 'bg-white text-gray-800 border shadow-sm'
-                                }`}
+                                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                               >
-                                {renderContent(m.parts)}
+                                <div
+                                  className={`max-w-[85%] px-2.5 py-2 rounded-xl text-[11px] ${
+                                    m.role === 'user'
+                                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-800 border shadow-sm'
+                                  }`}
+                                >
+                                  {renderContent(m.parts)}
+                                </div>
                               </div>
+                              {/* Show detected tours after last assistant message */}
+                              {m.role === 'assistant' && mIdx === messages.length - 1 && detectedTours.length > 0 && (
+                                <div className="mt-2">
+                                  <TourSlider tours={detectedTours} />
+                                </div>
+                              )}
                             </div>
                           ))}
 
