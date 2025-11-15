@@ -1,11 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import AIAgentWidget from './AIAgentWidget';
 
 /**
  * Wrapper component that conditionally renders AI widgets
  * based on the current page. Hides widgets on checkout/booking pages.
+ *
+ * Note: AI chat is now integrated into the AISearchWidget.
+ * Access it by clicking the AI icon in the search bar.
  */
 export default function ConditionalAIWidgets() {
   const pathname = usePathname();
@@ -19,5 +21,6 @@ export default function ConditionalAIWidgets() {
     return null;
   }
 
-  return <AIAgentWidget />;
+  // No widgets to render - AI is now part of the unified search widget
+  return null;
 }

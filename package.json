@@ -16,11 +16,13 @@
     "algolia:sync-all": "tsx scripts/sync-all-algolia.ts"
   },
   "dependencies": {
+    "@ai-sdk/react": "^2.0.93",
     "@algolia/client-search": "^5.43.0",
     "@intercom/messenger-js-sdk": "^0.0.18",
     "@sentry/nextjs": "^10.12.0",
     "@stripe/react-stripe-js": "^4.0.2",
     "@stripe/stripe-js": "^7.9.0",
+    "ai": "^5.0.93",
     "algoliasearch": "^5.43.0",
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
@@ -55,6 +57,8 @@
     "react-markdown": "^10.1.0",
     "react-toastify": "^11.0.5",
     "recharts": "^3.2.0",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "stripe": "^18.5.0",
     "swiper": "^11.2.10",
