@@ -307,6 +307,7 @@ export default function AIAgentModal() {
             <div
               ref={containerRef}
               className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-50 to-white space-y-3"
+              style={{ minHeight: 0 }}
             >
               {/* Welcome message */}
               {messages.length === 0 && (
@@ -364,7 +365,7 @@ export default function AIAgentModal() {
             {/* Input */}
             <form
               onSubmit={handleSubmit}
-              className="border-t p-3 bg-white flex items-center gap-2"
+              className="border-t p-3 bg-white flex items-center gap-2 flex-shrink-0"
             >
               <input
                 value={input}
