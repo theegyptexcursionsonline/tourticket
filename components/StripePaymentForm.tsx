@@ -120,6 +120,24 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Validate customer data before creating PaymentIntent
+    if (!customer.email || !customer.firstName || !customer.lastName) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate cart has items
+    if (!cart || cart.length === 0) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate pricing
+    if (!pricing || pricing.total <= 0) {
+      setIsLoading(false);
+      return;
+    }
+
     // Create PaymentIntent when component mounts
     const createPaymentIntent = async () => {
       try {
@@ -159,6 +177,19 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       <div className="flex items-center justify-center py-12">
         <Loader2 className="animate-spin text-red-600" size={32} />
         <span className="ml-3 text-slate-600">Initializing payment...</span>
+      </div>
+    );
+  }
+
+  // Show message if customer data is incomplete
+  if (!customer.email || !customer.firstName || !customer.lastName) {
+    return (
+      <div className="bg-slate-50 p-6 border border-slate-200 rounded-lg">
+        <div className="text-center py-8">
+          <Lock className="mx-auto text-slate-400 mb-3" size={40} />
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Payment Details</h3>
+          <p className="text-slate-600">Please fill in your contact information above to initialize payment.</p>
+        </div>
       </div>
     );
   }

@@ -678,7 +678,8 @@ export default function AISearchWidget() {
                   transition={{ duration: 0.4, ease: [0.34, 1.26, 0.64, 1] }}
                   className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl motion-div-results"
                   style={{
-                    maxHeight: '60vh',
+                    height: chatMode ? '70vh' : '60vh',
+                    maxHeight: chatMode ? '70vh' : '60vh',
                     background: 'linear-gradient(135deg, rgba(249, 250, 251, 0.99), rgba(243, 244, 246, 0.97))',
                     backdropFilter: 'blur(28px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(28px) saturate(180%)',
@@ -687,7 +688,7 @@ export default function AISearchWidget() {
                   }}
                 >
                   {/* Search Results Content */}
-                  <div className="flex flex-col h-full">
+                  <div className="flex flex-col" style={{ height: '100%' }}>
                     {/* Header */}
                     <div className="px-3 md:px-4 py-2 md:py-2.5 border-b border-gray-200/50 backdrop-blur-xl"
                       style={{
@@ -747,10 +748,10 @@ export default function AISearchWidget() {
                     </div>
 
                     {/* Results Area */}
-                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto apple-scrollbar">
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto apple-scrollbar" style={{ minHeight: 0 }}>
                       {chatMode ? (
                         /* Chat Interface */
-                        <div className="p-3 space-y-2.5">
+                        <div className="p-3 space-y-2.5 min-h-0">
                           {messages.length === 0 && (
                             <div className="bg-white p-3 rounded-xl border border-blue-100">
                               <div className="flex items-start gap-2 mb-2">
@@ -884,7 +885,7 @@ export default function AISearchWidget() {
                     {chatMode ? (
                       <form
                         onSubmit={handleChatSubmit}
-                        className="border-t border-gray-200/50 p-2 backdrop-blur-xl flex items-center gap-2"
+                        className="border-t border-gray-200/50 p-2 backdrop-blur-xl flex items-center gap-2 flex-shrink-0"
                         style={{
                           background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
                         }}
