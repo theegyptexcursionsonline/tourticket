@@ -2,11 +2,16 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Search, MapPin, Clock, Compass, Tag, FileText, X, Sparkles, ChevronUp } from "lucide-react";
+import { Search, MapPin, Clock, Compass, Tag, FileText, X, Sparkles, ChevronUp, Bot, Loader2, ArrowLeft, Send, ChevronLeft, ChevronRight, DollarSign, Star } from "lucide-react";
 import Image from "next/image";
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Types and Constants ---
@@ -50,6 +55,7 @@ const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technol
 const INDEX_DESTINATIONS = 'destinations';
 const INDEX_CATEGORIES = 'categories';
 const INDEX_BLOGS = 'blogs';
+const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
@@ -336,11 +342,121 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
+// --- AI Chat Components ---
+const TourCard = ({ tour }: { tour: any }) => (
+  <motion.a
+    href={`/tours/${tour.slug}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+    whileHover={{ y: -4 }}
+  >
+    {tour.image && (
+      <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+        <img
+          src={tour.image}
+          alt={tour.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+        />
+        {tour.duration && (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
+            {tour.duration}
+          </div>
+        )}
+      </div>
+    )}
+    <div className="p-2.5">
+      <h3 className="font-semibold text-xs mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+        {tour.title}
+      </h3>
+      {tour.location && (
+        <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1.5">
+          <MapPin className="w-2.5 h-2.5" />
+          <span className="line-clamp-1">{tour.location}</span>
+        </div>
+      )}
+      {tour.rating && (
+        <div className="flex items-center gap-1 mb-1.5">
+          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+          <span className="text-[10px] font-medium">{tour.rating}</span>
+          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
+        </div>
+      )}
+      {tour.price && (
+        <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
+          <DollarSign className="w-3 h-3" />
+          <span>{tour.price}</span>
+        </div>
+      )}
+    </div>
+  </motion.a>
+);
+
+const TourSlider = ({ tours }: { tours: any[] }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 260;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="relative w-full">
+      {tours.length > 1 && (
+        <>
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+      <div
+        ref={sliderRef}
+        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+      >
+        {tours.map((tour, idx) => (
+          <TourCard key={idx} tour={tour} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // --- Reusable Components ---
 const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState(''); // Unified input for both search and chat
   const [isExpanded, setIsExpanded] = useState(false);
+  const [chatMode, setChatMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // AI SDK Chat Setup
+  const {
+    messages,
+    sendMessage,
+    isLoading,
+    stop,
+  } = useChat({
+    transport: new DefaultChatTransport({
+      api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
+      headers: {
+        'x-algolia-application-id': ALGOLIA_APP_ID,
+        'x-algolia-api-key': ALGOLIA_SEARCH_KEY,
+      },
+    }),
+  });
 
   // Click outside to close
   useEffect(() => {
@@ -361,6 +477,81 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
 
   const handleCloseDropdown = () => {
     setIsExpanded(false);
+    setChatMode(false);
+  };
+
+  const handleOpenAIChat = () => {
+    setChatMode(true);
+    if (query) {
+      setTimeout(() => sendMessage({ text: query }), 300);
+      setQuery(''); // Clear input after sending
+    }
+  };
+
+  const handleBackToSearch = () => {
+    setChatMode(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    if (chatMode) {
+      // Send as chat message
+      sendMessage({ text: query });
+      setQuery(''); // Clear input after sending
+    }
+    // For search mode, just let it show results (no submit action needed)
+  };
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (!chatContainerRef.current) return;
+    setTimeout(() => {
+      chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
+    }, 100);
+  }, [messages, isLoading]);
+
+  // Render tool outputs (tours)
+  const renderToolOutput = (obj: any) => {
+    if (Array.isArray(obj)) {
+      const tours = obj.filter(item => item.title && item.slug);
+      if (tours.length > 0) return <TourSlider tours={tours} />;
+    }
+    if (obj.title && obj.slug) return <TourSlider tours={[obj]} />;
+    if (obj.hits && Array.isArray(obj.hits)) {
+      const tours = obj.hits.filter((item: any) => item.title && item.slug);
+      if (tours.length > 0) return <TourSlider tours={tours} />;
+    }
+    return (
+      <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
+        {JSON.stringify(obj, null, 2)}
+      </pre>
+    );
+  };
+
+  // Render message content
+  const renderContent = (parts: any[]) => {
+    return parts.map((p: any, idx: number) => {
+      if (p.type === 'tool-result') {
+        try {
+          const obj = JSON.parse(p.text);
+          return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
+        } catch {
+          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+        }
+      }
+      if (p.type === 'text') {
+        return (
+          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[11px]">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {p.text}
+            </ReactMarkdown>
+          </div>
+        );
+      }
+      return null;
+    });
   };
 
   return (
@@ -372,24 +563,26 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="relative group"
         >
-          {/* Main Search Box - Fully Rounded Capsule */}
-          <div
-            className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
-              isExpanded
-                ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
-                : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
-            }`}
-          >
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsExpanded(true)}
-                placeholder={suggestion}
-                className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
-                style={{ cursor: 'text' }}
-              />
+          {/* Main Search/Chat Input Box - Unified */}
+          <form onSubmit={handleSubmit}>
+            <div
+              className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
+                isExpanded
+                  ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
+                  : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
+              }`}
+            >
+              <div className="relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setIsExpanded(true)}
+                  placeholder={chatMode ? "Ask AI anything about Egypt tours..." : suggestion}
+                  className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                  style={{ cursor: 'text' }}
+                  disabled={isLoading}
+                />
 
               {/* Left Icon with Animation */}
               <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
@@ -422,10 +615,11 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
 
               {/* Right Side Elements with Animation */}
               <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-10">
-                {searchQuery ? (
+                {query ? (
                   <button
+                    type="button"
                     onClick={() => {
-                      setSearchQuery('');
+                      setQuery('');
                       setIsExpanded(false);
                     }}
                     className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
@@ -444,7 +638,12 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.div
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      setIsExpanded(true);
+                      handleOpenAIChat();
+                    }}
                     animate={{
                       rotate: [0, 15, -15, 0],
                       scale: [1, 1.1, 1]
@@ -454,14 +653,18 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       repeat: Infinity,
                       ease: "easeInOut"
                     }}
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md"
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:from-blue-500 hover:to-purple-600 transition-all"
+                    aria-label="Open AI Assistant"
                   >
                     <Sparkles className="w-4 h-4 text-white" />
-                  </motion.div>
+                  </motion.button>
                 )}
               </div>
             </div>
           </div>
+        </form>
         </motion.div>
 
         {/* Dropdown Results - Using absolute positioning with z-index */}
@@ -479,13 +682,36 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               <div className="px-6 py-4 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      {searchQuery ? 'Search Results' : 'Popular Searches'}
-                    </span>
+                    {chatMode && (
+                      <button
+                        onClick={handleBackToSearch}
+                        className="mr-1 p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4 text-gray-600" />
+                      </button>
+                    )}
+                    {chatMode ? (
+                      <>
+                        <Bot className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          AI Travel Assistant
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          {query ? 'Search Results' : 'Popular Searches'}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <button
-                    onClick={() => setIsExpanded(false)}
+                    onClick={() => {
+                      setIsExpanded(false);
+                      setChatMode(false);
+                      setQuery('');
+                    }}
                     className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
                   >
                     <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -494,10 +720,66 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               </div>
 
               {/* Results Area */}
-              <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
-                {searchQuery ? (
+              <div ref={chatContainerRef} className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
+                {chatMode ? (
+                  /* Chat Interface */
+                  <div className="p-4 space-y-3">
+                    {messages.length === 0 && (
+                      <div className="bg-white p-4 rounded-xl border border-blue-100">
+                        <div className="flex items-start gap-2.5 mb-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Bot className="text-white" size={16} />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800 text-sm mb-1">
+                              Hi! I'm your AI Egypt Travel Assistant
+                            </p>
+                            <p className="text-gray-500 text-xs leading-relaxed">
+                              Ask me anything — I'll help you find tours, trips, prices, destinations & more.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {["Find me the best Nile Cruise under $300", "Plan a 7-day Egypt itinerary", "Top tours near Cairo?"].map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => sendMessage({ text: s })}
+                              className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-100 rounded-lg text-xs font-medium text-gray-700 transition-all"
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {messages.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] px-3.5 py-2.5 rounded-xl text-sm ${
+                            m.role === 'user'
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
+                              : 'bg-white text-gray-800 border shadow-sm'
+                          }`}
+                        >
+                          {renderContent(m.parts)}
+                        </div>
+                      </div>
+                    ))}
+
+                    {isLoading && (
+                      <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2.5 rounded-lg border">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">AI is thinking...</span>
+                      </div>
+                    )}
+                  </div>
+                ) : query ? (
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    <CustomSearchBox searchQuery={query} onSearchChange={setQuery} />
 
                     {/* Tours Index */}
                     <Index indexName={INDEX_TOURS}>
@@ -531,13 +813,24 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                         <button
                           key={trend}
                           onClick={() => {
-                            setSearchQuery(trend);
+                            setQuery(trend);
                           }}
                           className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
                         >
                           {trend}
                         </button>
                       ))}
+                    </div>
+
+                    {/* AI Assistant CTA */}
+                    <div className="mt-6 pt-6 border-t border-gray-200/50">
+                      <button
+                        onClick={handleOpenAIChat}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] group"
+                      >
+                        <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                        <span className="text-sm font-semibold">Ask AI Travel Assistant</span>
+                      </button>
                     </div>
                   </div>
                 )}
