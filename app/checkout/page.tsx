@@ -423,7 +423,7 @@ const CheckoutFormStep = ({
     onPaymentProcess();
   };
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'bank'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
 
   // Auto-fill form if user is logged in
   useEffect(() => {
@@ -544,7 +544,7 @@ const CheckoutFormStep = ({
         <section>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-6">
             <button
               type="button"
               onClick={() => setPaymentMethod('card')}
@@ -557,28 +557,19 @@ const CheckoutFormStep = ({
               <span className="text-xs sm:text-sm font-medium text-slate-700">Card</span>
             </button>
 
-            <button 
-              type="button" 
-              onClick={() => setPaymentMethod('paypal')} 
-              aria-pressed={paymentMethod === 'paypal'} 
-              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('paypal')}
+              aria-pressed={paymentMethod === 'paypal'}
+              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow relative ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
             >
+              <span className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                COMING SOON
+              </span>
               <div className="h-10 flex items-center">
                 <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
               </div>
               <span className="text-sm font-medium text-slate-700">PayPal</span>
-            </button>
-
-            <button 
-              type="button" 
-              onClick={() => setPaymentMethod('bank')} 
-              aria-pressed={paymentMethod === 'bank'} 
-              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow ${paymentMethod === 'bank' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
-            >
-              <div className="h-10 flex items-center">
-                <Image src="/payment/bank.png" alt="Bank transfer" width={48} height={30} className="object-contain" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Bank Transfer</span>
             </button>
           </div>
 
@@ -621,15 +612,9 @@ const CheckoutFormStep = ({
                 </div>
               )}
               {paymentMethod === 'paypal' && (
-                <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
-                  <p className="font-medium">You will be redirected to PayPal to complete your payment securely.</p>
-                  <p className="text-sm text-slate-500 mt-2">PayPal integration coming soon. Please use card payment.</p>
-                </div>
-              )}
-              {paymentMethod === 'bank' && (
-                <div className="p-6 bg-slate-50 border border-slate-200 text-center text-slate-700">
-                  <p className="font-medium">Please follow the instructions in the confirmation email to complete your bank transfer.</p>
-                  <p className="text-sm text-slate-500 mt-2">Bank transfer integration coming soon. Please use card payment.</p>
+                <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-700">
+                  <p className="font-medium">PayPal integration is coming soon!</p>
+                  <p className="text-sm text-slate-500 mt-2">Please use card payment for now.</p>
                 </div>
               )}
             </motion.div>
