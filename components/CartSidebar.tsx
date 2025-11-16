@@ -45,7 +45,13 @@ const CartSidebar: FC = () => {
 
     const handleCheckout = () => {
         closeCart();
-        router.push('/checkout');
+        // Create a descriptive tour name from cart items
+        const tourCount = cart.length;
+        const tourName = tourCount === 1 
+            ? cart[0].title 
+            : `${tourCount} Amazing Experiences`;
+        const encodedTourName = encodeURIComponent(tourName);
+        router.push(`/redirecting?to=/checkout&tour=${encodedTourName}`);
     };
 
     const handleStartExploring = () => {

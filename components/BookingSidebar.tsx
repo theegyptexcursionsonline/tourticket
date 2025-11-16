@@ -1571,7 +1571,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
           duration: 1500,
           style: { background: '#10B981', color: 'white' }
         });
-        router.push('/checkout');
+        // Redirect to intermediate loading page with tour name
+        const tourTitle = encodeURIComponent(tourDisplayData.title || 'Your Adventure');
+        router.push(`/redirecting?to=/checkout&tour=${tourTitle}`);
       } else {
         toast.success('🎉 Added to Cart! Ready for more adventures?', {
           duration: 6000,

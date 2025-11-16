@@ -120,8 +120,20 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Helper function to validate email format
+    const isValidEmail = (email: string) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+
     // Validate customer data before creating PaymentIntent
     if (!customer.email || !customer.firstName || !customer.lastName) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate email format
+    if (!isValidEmail(customer.email)) {
       setIsLoading(false);
       return;
     }
@@ -138,38 +150,43 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       return;
     }
 
-    // Create PaymentIntent when component mounts
-    const createPaymentIntent = async () => {
-      try {
-        const response = await fetch('/api/checkout/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer,
-            pricing,
-            cart,
-            discountCode,
-          }),
-        });
+    // Debounce payment intent creation to avoid creating it while user is typing
+    const timeoutId = setTimeout(() => {
+      const createPaymentIntent = async () => {
+        try {
+          const response = await fetch('/api/checkout/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer,
+              pricing,
+              cart,
+              discountCode,
+            }),
+          });
 
-        const data = await response.json();
+          const data = await response.json();
 
-        if (data.success && data.clientSecret) {
-          setClientSecret(data.clientSecret);
-        } else {
-          onError(data.message || 'Failed to initialize payment');
-          toast.error('Failed to initialize payment. Please try again.');
+          if (data.success && data.clientSecret) {
+            setClientSecret(data.clientSecret);
+          } else {
+            // Don't show error toast here, just log it
+            console.error('Failed to create payment intent:', data.message);
+            onError(data.message || 'Failed to initialize payment');
+          }
+        } catch (error) {
+          // Don't show error toast here, just log it
+          console.error('Error creating payment intent:', error);
+          onError('Failed to initialize payment');
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error creating payment intent:', error);
-        onError('Failed to initialize payment');
-        toast.error('Failed to initialize payment. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      };
 
-    createPaymentIntent();
+      createPaymentIntent();
+    }, 1000); // Wait 1 second after user stops typing
+
+    return () => clearTimeout(timeoutId);
   }, [amount, currency, customer, cart, pricing, discountCode, onError]);
 
   if (isLoading) {
@@ -181,14 +198,24 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     );
   }
 
-  // Show message if customer data is incomplete
-  if (!customer.email || !customer.firstName || !customer.lastName) {
+  // Helper function to validate email format
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Show message if customer data is incomplete or invalid
+  if (!customer.email || !customer.firstName || !customer.lastName || !isValidEmail(customer.email)) {
     return (
       <div className="bg-slate-50 p-6 border border-slate-200 rounded-lg">
         <div className="text-center py-8">
           <Lock className="mx-auto text-slate-400 mb-3" size={40} />
           <h3 className="text-lg font-bold text-slate-900 mb-2">Payment Details</h3>
-          <p className="text-slate-600">Please fill in your contact information above to initialize payment.</p>
+          <p className="text-slate-600">
+            {!customer.email || !customer.firstName || !customer.lastName
+              ? 'Please fill in your contact information above to continue.'
+              : 'Please enter a valid email address to continue.'}
+          </p>
         </div>
       </div>
     );
