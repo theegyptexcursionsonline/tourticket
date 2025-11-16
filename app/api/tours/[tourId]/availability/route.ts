@@ -6,10 +6,11 @@ import Booking from '@/lib/models/Booking';
 
 export async function GET(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   await dbConnect();
   try {
+    const { tourId } = await params;
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month'); // e.g., "2025-09"
 
@@ -17,7 +18,7 @@ export async function GET(
       return NextResponse.json({ message: 'Month parameter is required' }, { status: 400 });
     }
 
-    const tour = await Tour.findById(params.tourId).select('availability');
+    const tour = await Tour.findById(tourId).select('availability');
     if (!tour || !tour.availability) {
       return NextResponse.json({ message: 'Tour or availability rules not found' }, { status: 404 });
     }
@@ -31,7 +32,7 @@ Date(Date.UTC(year, monthIndex, 0, 23, 59, 59));
 
     // --- Get all bookings for the tour in the given month ---
     const existingBookings = await Booking.find({
-      tour: params.tourId,
+      tour: tourId,
       date: { $gte: startDate, $lte: endDate },
     }).select('date time guests');
 

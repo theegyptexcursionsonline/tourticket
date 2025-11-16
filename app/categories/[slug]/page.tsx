@@ -36,8 +36,9 @@ async function getPageData(slug: string) {
   };
 }
 
-export default async function CategoryPage({ params }: { params: { slug: string } }) {
-  const { category, categoryTours } = await getPageData(params.slug);
+export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = await params;
+  const { category, categoryTours } = await getPageData(resolvedParams.slug);
 
   if (!category) {
     notFound();

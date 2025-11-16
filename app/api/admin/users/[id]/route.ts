@@ -7,12 +7,12 @@ import mongoose from 'mongoose';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {

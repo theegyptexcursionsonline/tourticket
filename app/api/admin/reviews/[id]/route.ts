@@ -6,9 +6,9 @@ import Review from '@/lib/models/Review';
 // --- PATCH: Update a specific review (e.g., approve it) ---
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   await dbConnect();
 
   try {
@@ -34,9 +34,9 @@ export async function PATCH(
 // --- DELETE: Remove a specific review ---
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   await dbConnect();
 
   try {

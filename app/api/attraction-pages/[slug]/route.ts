@@ -9,12 +9,12 @@ import User from '@/lib/models/user';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     await dbConnect();
 
-    const slug = params.slug;
+    const { slug } = await params;
     console.log('Fetching attraction page with slug:', slug);
     
     // Find the attraction page by slug

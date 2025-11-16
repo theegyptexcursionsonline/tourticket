@@ -61,8 +61,11 @@ export async function GET(
       );
     }
 
+    const bookingUser = booking.user as any;
+    const bookingTour = booking.tour as any;
+
     // Verify ownership
-    if (booking.user._id.toString() !== userId) {
+    if (bookingUser._id.toString() !== userId) {
       return NextResponse.json(
         { success: false, message: 'Not authorized to view this booking' },
         { status: 403 }
@@ -76,14 +79,14 @@ export async function GET(
       bookingDate: booking.date,
       bookingTime: booking.time,
       participants: booking.guests,
-      tour: booking.tour ? {
-        ...booking.tour,
-        id: booking.tour._id,
+      tour: bookingTour ? {
+        ...bookingTour,
+        id: bookingTour._id,
       } : null,
-      user: booking.user ? {
-        ...booking.user,
-        id: booking.user._id,
-        name: booking.user.name || `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim(),
+      user: bookingUser ? {
+        ...bookingUser,
+        id: bookingUser._id,
+        name: bookingUser.name || `${bookingUser.firstName || ''} ${bookingUser.lastName || ''}`.trim(),
       } : null,
     };
 

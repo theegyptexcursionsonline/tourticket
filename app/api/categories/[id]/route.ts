@@ -6,19 +6,20 @@ import mongoose from 'mongoose';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
         error: 'Invalid category ID'
       }, { status: 400 });
     }
 
-    const category = await Category.findById(params.id).lean();
+    const category = await Category.findById(id).lean();
 
     if (!category) {
       return NextResponse.json({
@@ -42,12 +43,13 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
         error: 'Invalid category ID'
@@ -60,7 +62,7 @@ export async function PUT(
     if (body.slug) {
       const existingCategory = await Category.findOne({ 
         slug: body.slug,
-        _id: { $ne: params.id }
+        _id: { $ne: id }
       });
       
       if (existingCategory) {
@@ -72,7 +74,7 @@ export async function PUT(
     }
 
     const category = await Category.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     );
@@ -108,19 +110,20 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
         error: 'Invalid category ID'
       }, { status: 400 });
     }
 
-    const category = await Category.findByIdAndDelete(params.id);
+    const category = await Category.findByIdAndDelete(id);
 
     if (!category) {
       return NextResponse.json({

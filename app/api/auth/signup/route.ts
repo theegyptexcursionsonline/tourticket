@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
 
     // Prepare user data (keep existing)
     const userPayload = {
-      id: newUser._id.toString(),
-      _id: newUser._id.toString(),
+      id: (newUser._id as any).toString(),
+      _id: (newUser._id as any).toString(),
       email: newUser.email,
       firstName: newUser.firstName,
       lastName: newUser.lastName,
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Generate JWT (keep existing)
     const token = await signToken({
-      sub: newUser._id.toString(),
+      sub: (newUser._id as any).toString(),
       email: newUser.email,
       given_name: newUser.firstName,
       family_name: newUser.lastName,

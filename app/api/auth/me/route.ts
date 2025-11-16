@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = {
-      id: user._id.toString(),
-      _id: user._id.toString(),
+      id: (user._id as any).toString(),
+      _id: (user._id as any).toString(),
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,

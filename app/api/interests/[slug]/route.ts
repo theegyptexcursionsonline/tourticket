@@ -9,12 +9,13 @@ import User from '@/lib/models/user';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     await dbConnect();
 
-    const slug = params.slug;
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug;
     
     // Convert slug back to name (adventure-tour -> Adventure Tour)
     const interestName = slug

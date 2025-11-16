@@ -4,9 +4,9 @@ import Tour from '@/lib/models/Tour';
 
 export async function GET(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
-  const { tourId } = params;
+  const { tourId } = await params;
 
   if (!tourId) {
     return NextResponse.json({ message: 'Tour ID is required' }, { status: 400 });

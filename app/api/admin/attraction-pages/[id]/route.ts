@@ -6,20 +6,21 @@ import mongoose from 'mongoose';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
+    const { id } = await params;
     // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
         error: 'Invalid page ID'
       }, { status: 400 });
     }
 
-    const page = await AttractionPage.findById(params.id)
+    const page = await AttractionPage.findById(id)
       .populate({
         path: 'categoryId',
         model: Category,
@@ -49,13 +50,14 @@ export async function GET(
 }
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
+    const { id } = await params;
     // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
         error: 'Invalid page ID'
@@ -73,7 +75,7 @@ export async function PUT(
     if (body.slug) {
       const existingPage = await AttractionPage.findOne({ 
         slug: body.slug,
-        _id: { $ne: params.id }
+        _id: { $ne: id }
       });
       
       if (existingPage) {
@@ -108,7 +110,7 @@ export async function PUT(
     console.log('💾 Final update data:', JSON.stringify(updateData, null, 2));
 
     const page = await AttractionPage.findByIdAndUpdate(
-      params.id,
+      id,
       updateData, // Use processed data instead of raw body
       { new: true, runValidators: true }
     )
@@ -154,20 +156,21 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
 
+    const { id } = await params;
     // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
         error: 'Invalid page ID'
       }, { status: 400 });
     }
 
-    const page = await AttractionPage.findByIdAndDelete(params.id);
+    const page = await AttractionPage.findByIdAndDelete(id);
 
     if (!page) {
       return NextResponse.json({
@@ -176,7 +179,7 @@ export async function DELETE(
       }, { status: 404 });
     }
 
-    console.log('Attraction page deleted successfully:', params.id);
+    console.log('Attraction page deleted successfully:', id);
 
     return NextResponse.json({
       success: true,

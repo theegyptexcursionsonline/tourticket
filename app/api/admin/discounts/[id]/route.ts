@@ -3,7 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
 // import { isAdmin } from '@/lib/auth';
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   // if (!isAdmin(request)) {
   //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   // }
@@ -11,7 +11,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   await dbConnect();
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const updatedDiscount = await Discount.findByIdAndUpdate(id, body, {
       new: true,
@@ -29,7 +29,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   // if (!isAdmin(request)) {
   //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   // }
@@ -37,7 +37,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   await dbConnect();
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const deletedDiscount = await Discount.findByIdAndDelete(id);
 
     if (!deletedDiscount) {

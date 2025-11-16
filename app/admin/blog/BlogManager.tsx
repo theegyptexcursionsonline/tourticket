@@ -586,7 +586,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredBlogs.map((blog, index) => (
           <motion.div
-            key={blog._id}
+            key={blog._id as any}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -613,7 +613,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   <Edit size={16} />
                 </button>
                 <button
-                  onClick={() => handleDelete(blog._id, blog.title)}
+                  onClick={() => handleDelete(blog._id as any, blog.title)}
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Delete blog post"
                 >

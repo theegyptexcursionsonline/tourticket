@@ -4,12 +4,12 @@ import Blog from '@/lib/models/Blog';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     await dbConnect();
     
-    const { slug } = params;
+    const { slug } = await params;
     
     const blog = await Blog.findOne({ slug, status: 'published' });
     

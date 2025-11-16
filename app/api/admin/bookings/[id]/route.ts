@@ -42,20 +42,22 @@ export async function GET(
     }
 
     // Transform the booking data
+    const tour = booking.tour as any;
+    const user = booking.user as any;
     const transformedBooking = {
       ...booking,
       id: booking._id,
       bookingDate: booking.date,
       bookingTime: booking.time,
       participants: booking.guests,
-      tour: booking.tour ? {
-        ...booking.tour,
-        id: booking.tour._id,
+      tour: tour ? {
+        ...tour,
+        id: tour._id,
       } : null,
-      user: booking.user ? {
-        ...booking.user,
-        id: booking.user._id,
-        name: booking.user.name || `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim(),
+      user: user ? {
+        ...user,
+        id: user._id,
+        name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
       } : null,
     };
 
@@ -153,13 +155,15 @@ export async function PATCH(
     }
 
     // Send email notifications based on status change
-    if (oldStatus !== status && updatedBooking.user && updatedBooking.tour) {
+    const updatedUser = updatedBooking.user as any;
+    const updatedTour = updatedBooking.tour as any;
+    if (oldStatus !== status && updatedUser && updatedTour) {
       try {
-        const customerName = updatedBooking.user.name || 
-          `${updatedBooking.user.firstName || ''} ${updatedBooking.user.lastName || ''}`.trim() || 
+        const customerName = updatedUser.name || 
+          `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() || 
           'Valued Customer';
-        const customerEmail = updatedBooking.user.email;
-        const tourTitle = updatedBooking.tour.title || 'Tour';
+        const customerEmail = updatedUser.email;
+        const tourTitle = updatedTour.title || 'Tour';
         const bookingDate = new Date(updatedBooking.date).toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
@@ -228,20 +232,22 @@ export async function PATCH(
     }
 
     // Transform the booking data
+    const finalTour = updatedBooking.tour as any;
+    const finalUser = updatedBooking.user as any;
     const transformedBooking = {
       ...updatedBooking,
       id: updatedBooking._id,
       bookingDate: updatedBooking.date,
       bookingTime: updatedBooking.time,
       participants: updatedBooking.guests,
-      tour: updatedBooking.tour ? {
-        ...updatedBooking.tour,
-        id: updatedBooking.tour._id,
+      tour: finalTour ? {
+        ...finalTour,
+        id: finalTour._id,
       } : null,
-      user: updatedBooking.user ? {
-        ...updatedBooking.user,
-        id: updatedBooking.user._id,
-        name: updatedBooking.user.name || `${updatedBooking.user.firstName || ''} ${updatedBooking.user.lastName || ''}`.trim(),
+      user: finalUser ? {
+        ...finalUser,
+        id: finalUser._id,
+        name: finalUser.name || `${finalUser.firstName || ''} ${finalUser.lastName || ''}`.trim(),
       } : null,
     };
 

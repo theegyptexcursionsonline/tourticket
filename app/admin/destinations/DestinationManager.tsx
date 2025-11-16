@@ -222,7 +222,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
             const toursForThisDestination = data.data
               .filter((tour: any) => {
                 const tourDestId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;
-                return tourDestId === dest._id.toString();
+                return tourDestId === (dest._id as any).toString();
               })
               .map((tour: any) => tour._id);
 
@@ -408,7 +408,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 ? tourData.data.destination 
                 : tourData.data.destination?._id;
 
-              if (tourDestId === editingDestination._id.toString()) {
+              if (tourDestId === (editingDestination._id as any).toString()) {
                 return fetch(`/api/admin/tours/${tour._id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },

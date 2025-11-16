@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const destination = typeof tour.destination === 'object' ? tour.destination : null;
+  const destination = typeof tour.destination === 'object' ? (tour.destination as any) : null;
 
   return {
     title: tour.metaTitle || `${tour.title} | ${destination?.name || 'Travel'} Tours`,
@@ -89,7 +89,7 @@ export default async function TourDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const relatedTours = await getRelatedTours(tour.category, tour._id);
+  const relatedTours = await getRelatedTours(tour.category, (tour._id as any)?.toString());
 
   return (
     <>
@@ -97,7 +97,7 @@ export default async function TourDetailPage({ params }: PageProps) {
       <TourDetailClientPage
         tour={tour}
         relatedTours={relatedTours}
-        initialReviews={tour.reviews || []}
+        initialReviews={(tour.reviews as any) || []}
       />
       <Footer />
     </>

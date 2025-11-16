@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Explicitly select the password field as it's excluded by default in the schema
     const user = await User.findOne({ email }).select('+password');
 
-    if (!user) {
+    if (!user || !user.password) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     
     // --- Prepare User Data for Token and Response ---
     const userPayload = {
-      id: user._id.toString(),
-      _id: user._id.toString(),
+      id: (user._id as any).toString(),
+      _id: (user._id as any).toString(),
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // --- Generate JWT ---
     const token = await signToken({
-      sub: user._id.toString(), // Convert ObjectId to string
+      sub: (user._id as any).toString(), // Convert ObjectId to string
       email: user.email,
       given_name: user.firstName,
       family_name: user.lastName,

@@ -119,7 +119,7 @@ function cleanBookingOptions(bookingOptions: any[]): any[] {
 // GET a single tour by ID or Slug
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
@@ -153,7 +153,7 @@ export async function GET(
 // UPDATE a tour by ID or Slug
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
@@ -317,7 +317,7 @@ export async function PUT(
 // DELETE a tour by ID or Slug
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();

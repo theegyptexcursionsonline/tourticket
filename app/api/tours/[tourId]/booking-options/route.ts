@@ -4,13 +4,13 @@ import Tour from '@/lib/models/Tour';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   try {
     await dbConnect();
     
     const { index, option } = await request.json();
-    const { tourId } = params;
+    const { tourId } = await params;
 
     const tour = await Tour.findById(tourId);
     if (!tour) {

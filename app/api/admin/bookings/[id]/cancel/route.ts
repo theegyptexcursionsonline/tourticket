@@ -9,7 +9,7 @@ import { EmailService } from '@/lib/email/emailService';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -28,7 +28,7 @@ export async function POST(
     }
 
     const userId = decodedPayload.sub as string;
-    const bookingId = params.id;
+    const { id: bookingId } = await params;
 
     // Find the booking
     const booking = await Booking.findById(bookingId).populate([
@@ -40,8 +40,11 @@ export async function POST(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
+    const user = booking.user as any;
+    const tour = booking.tour as any;
+
     // Verify ownership
-    if (booking.user._id.toString() !== userId) {
+    if (user._id.toString() !== userId) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
@@ -72,16 +75,16 @@ export async function POST(
     // 🆕 Send Cancellation Confirmation Email
     try {
       await EmailService.sendCancellationConfirmation({
-        customerName: `${booking.user.firstName} ${booking.user.lastName}`,
-        customerEmail: booking.user.email,
-        tourTitle: booking.tour.title,
+        customerName: `${user.firstName} ${user.lastName}`,
+        customerEmail: user.email,
+        tourTitle: tour.title,
         bookingDate: booking.date.toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
           day: 'numeric',
         }),
-        bookingId: booking._id.toString(),
+        bookingId: (booking._id as any).toString(),
         refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
         refundProcessingDays: refundAmount > 0 ? 5 : undefined,
         cancellationReason: reason,

@@ -15,10 +15,11 @@ export async function generateStaticParams() {
   return blogs.map((b: any) => ({ slug: b.slug }));
 }
 
-export async function generateMetadata({ params }: { params: Params }) {
+export async function generateMetadata({ params }: { params: Promise<Params> }) {
   try {
     await dbConnect();
-    const blog = await Blog.findOne({ slug: params.slug, status: 'published' }).lean();
+    const { slug } = await params;
+    const blog = await Blog.findOne({ slug, status: 'published' }).lean();
 
     if (!blog) return { title: 'Blog Post Not Found' };
 
@@ -79,8 +80,9 @@ async function getBlogPost(slug: string) {
   };
 }
 
-export default async function BlogPostPage({ params }: { params: Params }) {
-  const { blog, relatedPosts } = await getBlogPost(params.slug);
+export default async function BlogPostPage({ params }: { params: Promise<Params> }) {
+  const { slug } = await params;
+  const { blog, relatedPosts } = await getBlogPost(slug);
 
   if (!blog) {
     notFound();

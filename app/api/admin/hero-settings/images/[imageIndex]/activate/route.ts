@@ -5,11 +5,12 @@ import HeroSettings from '@/lib/models/HeroSettings';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { imageIndex: string } }
+  { params }: { params: Promise<{ imageIndex: string }> }
 ) {
   try {
     await dbConnect();
     
+    const { imageIndex: imageIndexStr } = await params;
     const heroSettings = await HeroSettings.findOne({ isActive: true });
     
     if (!heroSettings) {
@@ -19,7 +20,7 @@ export async function PUT(
       );
     }
 
-    const imageIndex = parseInt(params.imageIndex);
+    const imageIndex = parseInt(imageIndexStr);
     
     if (imageIndex < 0 || imageIndex >= heroSettings.backgroundImages.length) {
       return NextResponse.json(

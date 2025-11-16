@@ -258,7 +258,7 @@ export default function CategoryManager({ initialCategories }: { initialCategori
                             {categories.length > 0 ? (
                                 categories.map(cat => (
                                     <motion.tr 
-                                        key={cat._id} 
+                                        key={cat._id as any} 
                                         className="hover:bg-slate-50 transition-colors duration-150"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -323,7 +323,7 @@ export default function CategoryManager({ initialCategories }: { initialCategori
                                                     <Edit size={20} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(cat._id, cat.name)} 
+                                                    onClick={() => handleDelete(cat._id as any, cat.name)} 
                                                     disabled={isDeleting === cat._id}
                                                     className="p-2 text-slate-500 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     aria-label={`Delete ${cat.name}`}

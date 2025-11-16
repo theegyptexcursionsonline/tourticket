@@ -1,38 +1,59 @@
 'use client';
 
 import React, { useState } from "react";
-import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, Loader2 } from "lucide-react";
+import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, Loader2, MapPin, Clock, Send } from "lucide-react";
 import Image from "next/image";
 import toast, { Toaster } from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 // Reusable Header and Footer components
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 // =================================================================
-// --- DARK HERO SECTION COMPONENT ---
+// --- MODERN HERO SECTION COMPONENT ---
 // =================================================================
-function DarkHero() {
+function ModernHero() {
   return (
-    <div className="relative h-96 bg-slate-900 flex items-center justify-center text-white text-center px-4 overflow-hidden">
-      {/* Background Image/Overlay for Visuals */}
-      <div className="absolute inset-0 z-0 opacity-20">
-        <Image
-          src="/about.png" // Using the about.png as specified
-          alt="Abstract dark background"
-          layout="fill"
-          objectFit="cover"
-        />
+    <div className="relative h-[500px] bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 flex items-center justify-center text-white text-center px-4 overflow-hidden">
+      {/* Animated Background Pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 bg-[url('/about.png')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-gradient-to-br from-red-600/20 to-transparent" />
       </div>
 
-      <div className="relative z-10">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
-          Your Best Travel Buddy
+      {/* Decorative Elements */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-red-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 max-w-4xl mx-auto"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring" }}
+          className="inline-block mb-4"
+        >
+          <span className="px-4 py-2 bg-red-600/20 border border-red-500/30 rounded-full text-sm font-medium backdrop-blur-sm">
+            24/7 Support Available
+          </span>
+        </motion.div>
+        
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6">
+          Get in <span className="text-red-500">Touch</span>
         </h1>
-        <p className="mt-4 text-lg sm:text-xl max-w-2xl mx-auto opacity-80">
-          Discover hidden gems and unforgettable experiences with our expert guidance.
+        <p className="mt-4 text-lg sm:text-xl max-w-2xl mx-auto opacity-90 leading-relaxed">
+          Have a question? We're here to help you plan your perfect Egyptian adventure. 
+          Our travel experts are ready to assist you.
         </p>
-      </div>
+      </motion.div>
+
+      {/* Decorative bottom wave */}
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
     </div>
   );
 }
@@ -104,129 +125,263 @@ export default function ContactUsPage() {
 
 
   return (
-    <div className="bg-white text-slate-800">
+    <div className="bg-gradient-to-b from-white to-slate-50 text-slate-800">
       <Toaster position="top-center" />
-      <DarkHero />
-      <Header />
+      <Header startSolid />
+      <ModernHero />
 
       {/* Main Contact Section */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-center text-slate-900 mb-4">
-            Get in touch with us
-          </h1>
-          <p className="text-center text-slate-600 max-w-2xl mx-auto mb-12">
-            We're here to help! Whether you have questions about a booking, need support, or just want to say hello, feel free to reach out.
-          </p>
+      <main className="container mx-auto px-4 py-20 -mt-10">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Quick Contact Cards */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
+          >
+            {/* Phone Card */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-slate-100 group">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-red-50 rounded-xl group-hover:bg-red-100 transition-colors">
+                  <Phone size={24} className="text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-900 mb-1">Call Us</h3>
+                  <a href="tel:+201142255624" className="text-red-600 font-semibold hover:text-red-700 text-lg">
+                    +20 11 42255624
+                  </a>
+                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                    <Clock size={12} /> Available 24/7
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Contact Information Column */}
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Contact Information</h2>
-                <ul className="space-y-4 text-slate-700">
-                  <li className="flex gap-4 items-start">
-                    <Phone size={24} className="text-red-600 flex-shrink-0" />
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="font-semibold">+20 11 42255624</div>
-                      <span className="text-sm text-slate-500">(24*7)</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-4 items-start">
-                    <Mail size={24} className="text-red-600 flex-shrink-0" />
+            {/* Email Card */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-slate-100 group">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
+                  <Mail size={24} className="text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-900 mb-1">Email Us</h3>
+                  <a 
+                    href="mailto:booking@egypt-excursionsonline.com" 
+                    className="text-blue-600 font-semibold hover:text-blue-700 text-sm break-all"
+                  >
+                    booking@egypt-excursionsonline.com
+                  </a>
+                  <p className="text-xs text-slate-500 mt-1">Reply within 1 hour</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Chat Card */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-slate-100 group cursor-pointer" onClick={openChatbot}>
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors">
+                  <MessageSquare size={24} className="text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-900 mb-1">Live Chat</h3>
+                  <p className="text-green-600 font-semibold">Start a conversation</p>
+                  <p className="text-xs text-slate-500 mt-1">Instant support</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Contact Form - Takes 2 columns */}
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="lg:col-span-2"
+            >
+              <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-10 border border-slate-100">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-red-50 rounded-lg">
+                    <Send size={24} className="text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Send us a Message</h2>
+                    <p className="text-slate-600 text-sm">We'll get back to you within 24 hours</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <a
-                        href="mailto:booking@egypt-excursionsonline.com"
-                        className="font-semibold text-blue-600 hover:underline break-all"
-                      >
-                        booking@egypt-excursionsonline.com
-                      </a>
-                      <div className="text-sm text-slate-500">Replies within 1 hour</div>
+                      <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="John Doe"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                        required
+                      />
                     </div>
-                  </li>
-                  <li className="flex gap-4 items-center">
-                    <MessageSquare size={24} className="text-red-600 flex-shrink-0" />
-                    <button
-                      onClick={openChatbot}
-                      className="font-semibold text-slate-700 hover:text-red-600 transition-colors text-left"
-                    >
-                      Chat with us
-                    </button>
-                  </li>
-                </ul>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="john@example.com"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-semibold text-slate-700 mb-2">
+                      Your Message *
+                    </label>
+                    <textarea
+                      id="message"
+                      rows={6}
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      placeholder="Tell us how we can help you..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all resize-none"
+                      required
+                    ></textarea>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-14 px-8 rounded-xl text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:from-red-400 disabled:to-red-400 disabled:cursor-not-allowed group"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <>
+                        Send Message
+                        <Send size={18} className="group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-xs text-slate-500 text-center">
+                    By submitting this form, you agree to our privacy policy and terms of service.
+                  </p>
+                </form>
+              </div>
+            </motion.div>
+
+            {/* Sidebar - Additional Info */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="space-y-6"
+            >
+              {/* Office Hours */}
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <Clock size={24} className="text-red-400" />
+                  <h3 className="font-bold text-xl">Office Hours</h3>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-700">
+                    <span className="text-slate-300">Monday - Friday</span>
+                    <span className="font-semibold">9:00 AM - 6:00 PM</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-700">
+                    <span className="text-slate-300">Saturday</span>
+                    <span className="font-semibold">10:00 AM - 4:00 PM</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-slate-300">Sunday</span>
+                    <span className="font-semibold text-red-400">Closed</span>
+                  </div>
+                </div>
+                <div className="mt-6 p-4 bg-red-500/10 rounded-xl border border-red-500/20">
+                  <p className="text-xs text-red-200">
+                    🌟 Emergency support available 24/7 via phone and chat
+                  </p>
+                </div>
               </div>
 
-              {/* Social Media Links */}
-              <div>
-                <h3 className="font-bold text-lg text-slate-900 mb-4">Follow us on social media</h3>
+              {/* Location */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <MapPin size={24} className="text-red-600" />
+                  <h3 className="font-bold text-xl text-slate-900">Visit Us</h3>
+                </div>
+                <p className="text-slate-600 leading-relaxed mb-4">
+                  Egypt Excursions Online<br />
+                  Cairo, Egypt
+                </p>
+                <p className="text-sm text-slate-500">
+                  We're located in the heart of Cairo, ready to help you plan your perfect Egyptian adventure.
+                </p>
+              </div>
+
+              {/* Social Media */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-100">
+                <h3 className="font-bold text-xl text-slate-900 mb-4">Connect With Us</h3>
+                <p className="text-slate-600 text-sm mb-6">Follow us for travel inspiration and updates</p>
                 <div className="flex gap-3">
                   {socialLinks.map(({ icon: Icon, href }, i) => (
                     <a
                       key={i}
                       href={href}
-                      className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-700 text-white flex items-center justify-center hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg hover:scale-110 transform"
                       aria-label={`Follow us on ${Icon.displayName || 'social media'}`}
                     >
-                      <Icon size={18} />
+                      <Icon size={20} />
                     </a>
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Contact Form Column */}
-            <div className="bg-slate-50 p-6 sm:p-8 rounded-lg shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">Send us a message</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                    Your Email
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-1">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    rows={4}
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                    required
-                  ></textarea>
-                </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-12 px-6 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors font-semibold shadow-md flex items-center justify-center disabled:bg-red-400 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? <Loader2 className="animate-spin" /> : 'Send Message'}
-                </button>
-              </form>
-            </div>
+            </motion.div>
           </div>
+
+          {/* FAQ Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-20 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl p-8 lg:p-12 border border-red-100"
+          >
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold text-slate-900 mb-3">Frequently Asked Questions</h2>
+              <p className="text-slate-600">Quick answers to common questions</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-2">How quickly will I get a response?</h4>
+                <p className="text-slate-600 text-sm">We typically respond to emails within 1 hour during business hours and within 24 hours on weekends.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-2">Can I modify my booking?</h4>
+                <p className="text-slate-600 text-sm">Yes! Contact us at least 24 hours before your tour for modifications. Some tours offer free cancellation.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-2">Do you offer group discounts?</h4>
+                <p className="text-slate-600 text-sm">Absolutely! We offer special rates for groups of 10 or more. Contact us for a custom quote.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-2">What payment methods do you accept?</h4>
+                <p className="text-slate-600 text-sm">We accept all major credit cards, PayPal, and bank transfers. Payment is secure and encrypted.</p>
+              </div>
+            </div>
+          </motion.div>
+
         </div>
       </main>
 
