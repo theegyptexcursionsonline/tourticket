@@ -16,10 +16,16 @@ import Footer from "@/components/Footer";
 function ModernHero() {
   return (
     <div className="relative h-[500px] bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 flex items-center justify-center text-white text-center px-4 overflow-hidden">
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[url('/about.png')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-gradient-to-br from-red-600/20 to-transparent" />
+      {/* Background Image with Overlay */}
+      <div className="absolute inset-0">
+        <Image
+          src="/about.png"
+          alt="Contact us background"
+          fill
+          className="object-cover opacity-20"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-800/70 to-red-900/80" />
       </div>
 
       {/* Decorative Elements */}
