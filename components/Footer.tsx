@@ -243,18 +243,18 @@ export default function Footer() {
               {!isSubscribed ? (
                 <>
                   <h4 className="font-bold text-sm mb-3 text-slate-900">Sign up for our newsletter</h4>
-                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
+                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                     <input 
                       type="email" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Your email address" 
-                      className="flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
+                      className="w-full sm:flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
                       disabled={isLoading}
                     />
                     <button 
                       type="submit" 
-                      className="h-11 px-4 sm:px-5 rounded-md text-white bg-slate-800 hover:bg-red-600 transition-colors text-sm font-semibold whitespace-nowrap flex items-center justify-center disabled:bg-slate-500"
+                      className="h-11 w-full sm:w-auto px-4 sm:px-6 rounded-md text-white bg-slate-900 hover:bg-red-600 transition-colors text-sm font-semibold flex items-center justify-center disabled:bg-slate-500"
                       disabled={isLoading}
                     >
                       {isLoading ? <Loader2 className="animate-spin" /> : 'SUBSCRIBE'}

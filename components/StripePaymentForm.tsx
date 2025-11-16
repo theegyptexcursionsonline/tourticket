@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Initialize Stripe
@@ -27,9 +27,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const stripe = useStripe();
   const elements = useElements();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (!stripe || !elements) {
       return;
     }
@@ -61,7 +59,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4">
       <PaymentElement
         options={{
           layout: 'tabs',
@@ -69,8 +67,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       />
 
       <button
-        type="submit"
+        type="button"
         disabled={!stripe || isProcessing}
+        onClick={handleSubmit}
         className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isProcessing ? (
@@ -86,7 +85,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       <p className="text-xs text-slate-500 text-center">
         Your payment is secured by Stripe. We never store your card details.
       </p>
-    </form>
+    </div>
   );
 };
 
@@ -191,9 +190,14 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin text-red-600" size={32} />
-        <span className="ml-3 text-slate-600">Initializing payment...</span>
+      <div className="bg-white/80 border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center space-y-3">
+        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+          <Loader2 className="animate-spin text-red-600" size={28} />
+        </div>
+        <p className="text-lg font-semibold text-slate-900">Preparing secure payment</p>
+        <p className="text-sm text-slate-500 max-w-sm">
+          Please wait while we create a secure connection with our payment partner.
+        </p>
       </div>
     );
   }
@@ -207,15 +211,21 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   // Show message if customer data is incomplete or invalid
   if (!customer.email || !customer.firstName || !customer.lastName || !isValidEmail(customer.email)) {
     return (
-      <div className="bg-slate-50 p-6 border border-slate-200 rounded-lg">
-        <div className="text-center py-8">
-          <Lock className="mx-auto text-slate-400 mb-3" size={40} />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Payment Details</h3>
-          <p className="text-slate-600">
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-6 py-4 flex items-center gap-3">
+          <Lock size={20} className="text-emerald-400" />
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-white/70">Secure Checkout</p>
+            <p className="text-lg font-semibold">Contact details required</p>
+          </div>
+        </div>
+        <div className="px-6 py-8 text-center space-y-3">
+          <p className="text-base text-slate-600">
             {!customer.email || !customer.firstName || !customer.lastName
-              ? 'Please fill in your contact information above to continue.'
-              : 'Please enter a valid email address to continue.'}
+              ? 'Please complete your contact information above to unlock payment.'
+              : 'Please enter a valid email address to continue with payment.'}
           </p>
+          <p className="text-sm text-slate-400">We use your details to send booking confirmations and receipts.</p>
         </div>
       </div>
     );
@@ -244,18 +254,79 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     },
   };
 
+  const displayTotal = pricing?.total ?? amount ?? 0;
+  const displayCurrency = (pricing?.currency || currency || 'USD').toUpperCase();
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: displayCurrency,
+    minimumFractionDigits: 2,
+  });
+  const formattedTotal = formatter.format(displayTotal);
+  const numberOfTours = cart?.length || 1;
+
   return (
-    <div className="bg-slate-50 p-6 border border-slate-200 rounded-lg">
-      <h3 className="text-lg font-bold text-slate-900 mb-4">Payment Details</h3>
-      <Elements stripe={stripePromise} options={options}>
-        <PaymentForm
-          clientSecret={clientSecret}
-          onSuccess={onSuccess}
-          onError={onError}
-          isProcessing={isProcessing}
-          setIsProcessing={setIsProcessing}
-        />
-      </Elements>
+    <div className="bg-white border border-slate-100 rounded-3xl shadow-xl overflow-hidden">
+      <div className="bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 text-white px-6 py-6 md:px-8 md:py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/70 flex items-center gap-2">
+            <ShieldCheck size={16} className="text-emerald-300" />
+            Secure Payment
+          </p>
+          <p className="text-3xl font-extrabold mt-2">{formattedTotal}</p>
+            <p className="text-sm text-white/80">
+              for {numberOfTours} {numberOfTours === 1 ? 'experience' : 'experiences'}
+            </p>
+        </div>
+        <div className="space-y-2 text-sm text-white/90">
+          <div className="flex items-center gap-2">
+            <Lock size={18} className="text-emerald-300" />
+            256-bit SSL encryption
+          </div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-emerald-300" />
+            Fraud detection & buyer protection
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 md:px-8 py-8 space-y-6 bg-slate-50/60">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+          <div className="flex items-center gap-3">
+            <CreditCard size={16} className="text-slate-400" />
+            <span>Visa</span>
+            <span>Mastercard</span>
+            <span>Amex</span>
+            <span>Apple Pay</span>
+          </div>
+          <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs uppercase tracking-wide">
+            <CheckCircle2 size={16} />
+            No hidden fees
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 md:p-6">
+          <Elements stripe={stripePromise} options={options}>
+            <PaymentForm
+              clientSecret={clientSecret}
+              onSuccess={onSuccess}
+              onError={onError}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+            />
+          </Elements>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-3 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={14} className="text-slate-400" />
+            Your card is never stored on our servers
+          </div>
+          <div className="flex items-center gap-2">
+            <Lock size={14} className="text-slate-400" />
+            Powered by Stripe
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
