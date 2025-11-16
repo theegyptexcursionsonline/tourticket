@@ -122,7 +122,7 @@ const TourCard: React.FC<TourCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link href={`/tour/${tour.slug}`} className="block">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-100">
+        <div className="bg-white rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.08)] sm:shadow-[0_15px_45px_rgba(15,23,42,0.12)] overflow-hidden transition-all duration-500 sm:hover:-translate-y-2 sm:hover:shadow-[0_25px_65px_rgba(15,23,42,0.18)] border border-slate-100">
           {/* Image Section */}
           <div className="relative h-56 overflow-hidden">
             <motion.div

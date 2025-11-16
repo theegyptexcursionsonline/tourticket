@@ -26,9 +26,7 @@ export async function GET(
     // --- Date Calculation Logic ---
     const [year, monthIndex] = month.split('-').map(Number);
     const startDate = new Date(Date.UTC(year, monthIndex - 1, 1));
-    const endDate = new
- 
-Date(Date.UTC(year, monthIndex, 0, 23, 59, 59));
+    const endDate = new Date(Date.UTC(year, monthIndex, 0, 23, 59, 59));
 
     // --- Get all bookings for the tour in the given month ---
     const existingBookings = await Booking.find({
@@ -39,7 +37,7 @@ Date(Date.UTC(year, monthIndex, 0, 23, 59, 59));
     // --- Process bookings into a quick-lookup map ---
     // Structure: { 'YYYY-MM-DD': { 'HH:MM AM/PM': totalGuests } }
     const bookingsMap = new Map<string, Map<string, number>>();
-    for (const booking of existingBookions) {
+    for (const booking of existingBookings) {
       const dateString = booking.date.toISOString().split('T')[0];
       if (!bookingsMap.has(dateString)) {
         bookingsMap.set(dateString, new Map());

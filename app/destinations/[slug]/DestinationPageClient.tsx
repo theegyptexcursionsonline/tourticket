@@ -7,7 +7,8 @@ import {
     ShoppingCart, Award, MapPin, CheckCircle2,
     Calendar, Shield, Heart, MessageCircle,
     Sun, DollarSign, Languages, Phone,
-    Search, Plus, Minus, ChevronUp, X, Sparkles, Compass
+    Search, Plus, Minus, ChevronUp, X, Sparkles, Compass,
+    Bot, Loader2, ArrowLeft, Send
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -19,6 +20,11 @@ import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'instantsearch.css/themes/satellite.css';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -174,15 +180,34 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 // --- Hero Search Bar ---
 const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [chatMode, setChatMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Click outside to close
+  const {
+    messages,
+    sendMessage,
+    status,
+    stop,
+  } = useChat({
+    transport: new DefaultChatTransport({
+      api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
+      headers: {
+        'x-algolia-application-id': ALGOLIA_APP_ID,
+        'x-algolia-api-key': ALGOLIA_SEARCH_KEY,
+      },
+    }),
+  });
+  const isGenerating = status === 'submitted' || status === 'streaming';
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsExpanded(false);
+        setChatMode(false);
       }
     };
 
@@ -190,14 +215,70 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded]);
+
+  useEffect(() => {
+    if (isExpanded && containerRef.current) {
+      const timeout = setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+      return () => clearTimeout(timeout);
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (!chatContainerRef.current) return;
+    setTimeout(() => {
+      chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
+    }, 100);
+  }, [messages, isGenerating]);
 
   const handleCloseDropdown = () => {
     setIsExpanded(false);
+    setChatMode(false);
   };
+
+  const handleOpenAIChat = () => {
+    setIsExpanded(true);
+    setChatMode(true);
+    if (query) {
+      setTimeout(() => sendMessage({ text: query }), 300);
+      setQuery('');
+    }
+    setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+  };
+
+  const handleBackToSearch = () => {
+    setChatMode(false);
+    setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    if (chatMode) {
+      sendMessage({ text: query });
+      setQuery('');
+    } else {
+      setIsExpanded(true);
+    }
+  };
+
+  const renderContent = (parts: any[]) =>
+    parts.map((part: any, idx: number) =>
+      part.type === 'text' ? (
+        <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            {part.text}
+          </ReactMarkdown>
+        </div>
+      ) : null
+    );
 
   return (
     <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0" ref={containerRef}>
@@ -208,102 +289,148 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="relative group"
         >
-          {/* Main Search Box - Fully Rounded Capsule */}
-          <div
-            className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
-              isExpanded
-                ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
-                : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
-            }`}
-          >
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsExpanded(true)}
-                placeholder={suggestion}
-                className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-3 md:py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
-                style={{ cursor: 'text' }}
-              />
+          <form onSubmit={handleSubmit}>
+            <div
+              className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
+                isExpanded
+                  ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
+                  : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
+              }`}
+            >
+              <div className="relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setIsExpanded(true)}
+                  onKeyDown={(e) => {
+                    if (chatMode && e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  placeholder={chatMode ? "Ask AI anything about this destination..." : suggestion}
+                  className="w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3 md:py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                  style={{ cursor: 'text' }}
+                  disabled={chatMode && isGenerating}
+                />
 
-              {/* Left Icon with Animation */}
-              <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
-                <motion.div
-                  className="relative"
-                  animate={{ scale: [1, 1.15, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isExpanded
-                      ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30'
-                      : 'bg-gradient-to-br from-blue-400 to-purple-400 shadow-md'
-                  }`}>
-                    <Search className={`w-4 h-4 transition-colors duration-300 text-white`} />
-                  </div>
+                <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
                   <motion.div
-                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white shadow-sm"
-                    animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [1, 0.7, 1]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  />
-                </motion.div>
-              </div>
-
-              {/* Right Side Elements with Animation */}
-              <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-10">
-                {searchQuery ? (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setIsExpanded(false);
-                    }}
-                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-                    aria-label="Clear search"
+                    className="relative"
+                    animate={{ scale: [1, 1.15, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   >
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
-                ) : isExpanded ? (
-                  <motion.div
-                    initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
-                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                  >
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                      <ChevronUp className="w-4 h-4 text-white" />
+                    <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      isExpanded
+                        ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30'
+                        : 'bg-gradient-to-br from-blue-400 to-purple-400 shadow-md'
+                    }`}>
+                      <Search className="w-4 h-4 text-white" />
                     </div>
+                    <motion.div
+                      className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white shadow-sm"
+                      animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    />
                   </motion.div>
-                ) : (
-                  <motion.div
-                    animate={{
-                      rotate: [0, 15, -15, 0],
-                      scale: [1, 1.1, 1]
-                    }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md"
-                  >
-                    <Star className="w-4 h-4 text-white fill-current" />
-                  </motion.div>
-                )}
+                </div>
+
+                <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 md:gap-2.5 z-10">
+                  {query ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuery('');
+                        setIsExpanded(false);
+                        setChatMode(false);
+                      }}
+                      className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4 text-gray-400" />
+                    </button>
+                  ) : null}
+
+                  {chatMode ? (
+                    <>
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          if (isGenerating) {
+                            stop();
+                          } else {
+                            handleSubmit(new Event('submit') as any);
+                          }
+                        }}
+                        className={`px-3 md:px-3.5 py-1.5 md:py-2 rounded-xl font-semibold text-white flex items-center gap-1.5 transition-all ${
+                          isGenerating ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-md'
+                        }`}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                            <span className="text-[11px] md:text-xs">Stop</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 md:w-4 h-3.5 md:h-4" />
+                            <span className="text-[11px] md:text-xs">Send</span>
+                          </>
+                        )}
+                      </motion.button>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                          animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                        >
+                          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                            <ChevronUp className="w-4 h-4 text-white" />
+                          </div>
+                        </motion.div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <motion.button
+                        type="button"
+                        onClick={handleOpenAIChat}
+                        animate={{
+                          rotate: [0, 15, -15, 0],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:from-blue-500 hover:to-purple-600 transition-all"
+                        aria-label="Open AI Assistant"
+                      >
+                        <Sparkles className="w-4 h-4 text-white" />
+                      </motion.button>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                          animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                        >
+                          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                            <ChevronUp className="w-4 h-4 text-white" />
+                          </div>
+                        </motion.div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </form>
         </motion.div>
 
-        {/* Dropdown Results */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
+              ref={dropdownRef}
               initial={{ opacity: 0, y: -10, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.96 }}
@@ -311,17 +438,33 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               className="absolute top-full mt-3 left-0 right-0 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden z-[9999]"
               style={{ maxHeight: '65vh' }}
             >
-              {/* Header */}
               <div className="px-6 py-4 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      {searchQuery ? 'Search Results' : 'Popular Searches'}
-                    </span>
+                    {chatMode ? (
+                      <>
+                        <button
+                          onClick={handleBackToSearch}
+                          className="mr-1 p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+                        >
+                          <ArrowLeft className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <Bot className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          AI Destination Assistant
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          {query ? 'Search Results' : 'Popular Searches'}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <button
-                    onClick={() => setIsExpanded(false)}
+                    onClick={handleCloseDropdown}
                     className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
                   >
                     <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -329,41 +472,65 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 </div>
               </div>
 
-              {/* Results Area */}
-              <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
-                {searchQuery ? (
-                  <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-
-                    {/* Tours Index */}
-                    <Index indexName={INDEX_TOURS}>
-                      <Configure hitsPerPage={5} />
-                      <TourHits onHitClick={handleCloseDropdown} limit={5} />
-                    </Index>
-                  </InstantSearch>
-                ) : (
-                  // Trending Searches - shown when no search query
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Star className="w-4 h-4 text-blue-500 fill-current" />
-                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Trending Tours
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend) => (
-                        <button
-                          key={trend}
-                          onClick={() => {
-                            setSearchQuery(trend);
-                          }}
-                          className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
-                        >
-                          {trend}
-                        </button>
-                      ))}
-                    </div>
+              <div ref={chatContainerRef} className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
+                {chatMode ? (
+                  <div className="p-4 sm:p-6 space-y-4">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Bot className="w-12 h-12 text-blue-400 mx-auto mb-3 opacity-60" />
+                        <p className="text-gray-500 text-sm">Ask me anything about this destination!</p>
+                      </div>
+                    ) : (
+                      messages.map((msg) => (
+                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3' : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200'}`}>
+                            {msg.role === 'user' ? (
+                              <p className="text-sm leading-relaxed">{msg.content}</p>
+                            ) : (
+                              renderContent(msg.parts)
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {isGenerating && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-50 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200">
+                          <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                        </div>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  query ? (
+                    <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
+                      <CustomSearchBox searchQuery={query} onSearchChange={setQuery} />
+                      <Index indexName={INDEX_TOURS}>
+                        <Configure hitsPerPage={5} />
+                        <TourHits onHitClick={handleCloseDropdown} limit={5} />
+                      </Index>
+                    </InstantSearch>
+                  ) : (
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Star className="w-4 h-4 text-blue-500 fill-current" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Trending Tours
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend) => (
+                          <button
+                            key={trend}
+                            onClick={() => setQuery(trend)}
+                            className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
+                          >
+                            {trend}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             </motion.div>
@@ -410,9 +577,7 @@ const BackgroundSlideshow = ({
   }, [index, slides.length, delay, autoplay]);
 
   if (slides.length === 0) {
-    return (
-      <div className="absolute inset-0 z-0 overflow-hidden bg-slate-800" />
-    );
+    return null;
   }
 
   return (

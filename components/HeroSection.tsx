@@ -441,12 +441,13 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const [chatMode, setChatMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // AI SDK Chat Setup
   const {
     messages,
     sendMessage,
-    isLoading,
+    status,
     stop,
   } = useChat({
     transport: new DefaultChatTransport({
@@ -457,6 +458,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
       },
     }),
   });
+  const isGenerating = status === 'submitted' || status === 'streaming';
 
   // Click outside to close
   useEffect(() => {
@@ -475,21 +477,37 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     };
   }, [isExpanded]);
 
+  useEffect(() => {
+    if (isExpanded && containerRef.current) {
+      const timeout = setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+      return () => clearTimeout(timeout);
+    }
+  }, [isExpanded]);
+
   const handleCloseDropdown = () => {
     setIsExpanded(false);
     setChatMode(false);
   };
 
   const handleOpenAIChat = () => {
+    setIsExpanded(true);
     setChatMode(true);
     if (query) {
       setTimeout(() => sendMessage({ text: query }), 300);
-      setQuery(''); // Clear input after sending
+      setQuery('');
     }
+    setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
   };
 
   const handleBackToSearch = () => {
     setChatMode(false);
+    setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -497,11 +515,11 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     if (!query.trim()) return;
 
     if (chatMode) {
-      // Send as chat message
       sendMessage({ text: query });
-      setQuery(''); // Clear input after sending
+      setQuery('');
+    } else {
+      setIsExpanded(true);
     }
-    // For search mode, just let it show results (no submit action needed)
   };
 
   // Auto-scroll chat to bottom
@@ -510,7 +528,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     setTimeout(() => {
       chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
     }, 100);
-  }, [messages, isLoading]);
+  }, [messages, isGenerating]);
 
   // Render tool outputs (tours)
   const renderToolOutput = (obj: any) => {
@@ -543,7 +561,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
       }
       if (p.type === 'text') {
         return (
-          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[11px]">
+          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
               {p.text}
             </ReactMarkdown>
@@ -581,7 +599,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   placeholder={chatMode ? "Ask AI anything about Egypt tours..." : suggestion}
                   className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
                   style={{ cursor: 'text' }}
-                  disabled={isLoading}
+                  disabled={chatMode && isGenerating}
                 />
 
               {/* Left Icon with Animation */}
@@ -671,6 +689,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         <AnimatePresence>
           {isExpanded && (
             <motion.div
+              ref={dropdownRef}
               initial={{ opacity: 0, y: -10, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.96 }}
@@ -759,7 +778,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                         className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[85%] px-3.5 py-2.5 rounded-xl text-sm ${
+                          className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm sm:text-[15px] ${
                             m.role === 'user'
                               ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
                               : 'bg-white text-gray-800 border shadow-sm'
@@ -770,7 +789,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       </div>
                     ))}
 
-                    {isLoading && (
+                    {isGenerating && (
                       <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2.5 rounded-lg border">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="text-sm">AI is thinking...</span>
@@ -814,6 +833,8 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                           key={trend}
                           onClick={() => {
                             setQuery(trend);
+                            setIsExpanded(true);
+                            setChatMode(false);
                           }}
                           className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
                         >

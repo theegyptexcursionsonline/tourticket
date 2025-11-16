@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ArrowLeft, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star, Send } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import type { SearchResponse } from 'algoliasearch';
 import { InstantSearch, Index, useSearchBox, useHits, Configure, Chat } from 'react-instantsearch';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
@@ -456,18 +457,18 @@ const TourSlider = ({ tours }: { tours: any[] }) => {
 export default function AISearchWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [algoliaError, setAlgoliaError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [chatMode, setChatMode] = useState(false);
-  const [input, setInput] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // AI SDK Chat Setup
   const {
     messages,
     sendMessage,
-    isLoading,
+    status,
     stop,
   } = useChat({
     transport: new DefaultChatTransport({
@@ -478,6 +479,7 @@ export default function AISearchWidget() {
       },
     }),
   });
+  const isGenerating = status === 'submitted' || status === 'streaming';
 
   // Scroll detection - show widget after scrolling past hero section
   useEffect(() => {
@@ -548,7 +550,7 @@ export default function AISearchWidget() {
     setTimeout(() => {
       chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
     }, 100);
-  }, [messages, isLoading]);
+  }, [messages, isGenerating]);
 
   // Listen for floating button click (openAIAgent event)
   useEffect(() => {
@@ -568,24 +570,36 @@ export default function AISearchWidget() {
   const handleCloseSearch = () => {
     setIsExpanded(false);
     setSearchQuery('');
+    setInputValue('');
   };
 
   const handleAskAI = () => {
     setChatMode(true);
     if (searchQuery) {
       setTimeout(() => sendMessage({ text: searchQuery }), 300);
+      setInputValue('');
+    } else {
+      setInputValue('');
+    }
+  };
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+    if (!chatMode) {
+      setSearchQuery(value);
     }
   };
 
   const handleBackToSearch = () => {
     setChatMode(false);
+    setInputValue(searchQuery);
   };
 
-  const handleChatSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    sendMessage({ text: input });
-    setInput('');
+  const handleChatSubmit = () => {
+    const message = inputValue.trim();
+    if (!message) return;
+    sendMessage({ text: message });
+    setInputValue('');
   };
 
   // State for detected tours
@@ -618,12 +632,13 @@ export default function AISearchWidget() {
           try {
             const response = await searchClient.search([{
               indexName: INDEX_TOURS,
-              query: tourTitle,
               params: {
+                query: tourTitle,
                 hitsPerPage: 1,
               }
             }]);
-            return response.results[0]?.hits[0];
+            const firstResult = response.results[0] as SearchResponse<any>;
+            return firstResult?.hits?.[0];
           } catch (error) {
             console.error('Error searching for tour:', tourTitle, error);
             return null;
@@ -687,7 +702,7 @@ export default function AISearchWidget() {
       }
       if (p.type === 'text') {
         return (
-          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[11px]">
+          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
               {p.text}
             </ReactMarkdown>
@@ -821,16 +836,16 @@ export default function AISearchWidget() {
                         /* Chat Interface */
                         <div className="p-3 space-y-2.5 min-h-0">
                           {messages.length === 0 && (
-                            <div className="bg-white p-3 rounded-xl border border-blue-100">
+                            <div className="bg-white p-4 rounded-2xl border border-blue-100">
                               <div className="flex items-start gap-2 mb-2">
                                 <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
                                   <Bot className="text-white" size={12} />
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-800 text-[11px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 text-sm sm:text-[15px] mb-0.5">
                                     Hi! I'm your AI Egypt Travel Assistant
                                   </p>
-                                  <p className="text-gray-500 text-[10px] leading-relaxed">
+                                  <p className="text-gray-500 text-xs leading-relaxed">
                                     Ask me anything — I'll help you find tours, trips, prices, destinations & more.
                                   </p>
                                 </div>
@@ -844,7 +859,7 @@ export default function AISearchWidget() {
                                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                               >
                                 <div
-                                  className={`max-w-[85%] px-2.5 py-2 rounded-xl text-[11px] ${
+                                  className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm sm:text-[15px] ${
                                     m.role === 'user'
                                       ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
                                       : 'bg-white text-gray-800 border shadow-sm'
@@ -862,10 +877,10 @@ export default function AISearchWidget() {
                             </div>
                           ))}
 
-                          {isLoading && (
-                            <div className="flex items-center gap-2 text-gray-500 bg-white px-3 py-2 rounded-lg border">
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              <span className="text-[10px]">AI is thinking</span>
+                          {isGenerating && (
+                            <div className="flex items-center gap-2.5 text-gray-500 bg-white px-3.5 py-2 rounded-xl border shadow-sm">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span className="text-xs font-medium">AI is thinking…</span>
                             </div>
                           )}
                         </div>
@@ -957,30 +972,7 @@ export default function AISearchWidget() {
                     </div>
 
                     {/* Chat Input OR Ask AI Button */}
-                    {chatMode ? (
-                      <form
-                        onSubmit={handleChatSubmit}
-                        className="border-t border-gray-200/50 p-2 backdrop-blur-xl flex items-center gap-2 flex-shrink-0"
-                        style={{
-                          background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
-                        }}
-                      >
-                        <input
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          placeholder="Ask about tours, destinations, prices..."
-                          disabled={isLoading}
-                          className="flex-1 px-2.5 py-2 rounded-lg border bg-gray-50 text-[11px] outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all disabled:opacity-50"
-                        />
-                        <button
-                          type="submit"
-                          disabled={isLoading || !input.trim()}
-                          className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm hover:shadow-md hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </form>
-                    ) : searchQuery && !chatMode ? (
+                    {!chatMode && searchQuery ? (
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1033,6 +1025,7 @@ export default function AISearchWidget() {
                               transition={{ delay: index * 0.04, duration: 0.15 }}
                               onClick={() => {
                                 setSearchQuery(trend);
+                                setInputValue(trend);
                               }}
                               className="px-2 py-1 rounded-lg text-[10px] font-medium text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-105 shadow-sm"
                               style={{
@@ -1126,10 +1119,16 @@ export default function AISearchWidget() {
                   <div className="relative">
                     <input
                       type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={inputValue}
+                      onChange={(e) => handleInputChange(e.target.value)}
                       onFocus={() => setIsExpanded(true)}
-                      placeholder="Ask AI to find your perfect tour..."
+                      onKeyDown={(e) => {
+                        if (chatMode && e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleChatSubmit();
+                        }
+                      }}
+                      placeholder={chatMode ? 'Ask anything about Egypt, tours, prices…' : 'Ask AI to find your perfect tour...'}
                       className="ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight"
                     />
 
@@ -1161,58 +1160,101 @@ export default function AISearchWidget() {
                     </div>
 
                     <div className="absolute right-3 md:right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 md:gap-2 z-10">
-                      <motion.button
-                        onClick={() => {
-                          setIsExpanded(true);
-                          setChatMode(true);
-                        }}
-                        animate={{
-                          boxShadow: [
-                            '0 0 0 0 rgba(59, 130, 246, 0.4)',
-                            '0 0 0 4px rgba(59, 130, 246, 0)',
-                          ],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                        className="relative flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15))',
-                          border: '1.5px solid rgba(59, 130, 246, 0.3)',
-                        }}
-                      >
-                        <motion.div
-                          animate={{
-                            rotate: [0, 360],
-                          }}
-                          transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: 'linear',
-                          }}
-                        >
-                          <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4 text-blue-600 relative z-10" strokeWidth={2.5} />
-                        </motion.div>
-                        <span className="text-[11px] md:text-xs font-black text-blue-600 tracking-tight relative z-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                          AI
-                        </span>
-                      </motion.button>
+                      {chatMode ? (
+                        <>
+                          <motion.button
+                            onClick={() => {
+                              if (isGenerating) {
+                                stop();
+                              } else {
+                                handleChatSubmit();
+                              }
+                            }}
+                            className={`px-3 md:px-3.5 py-1.5 md:py-2 rounded-xl font-semibold text-white flex items-center gap-1.5 transition-all ${isGenerating ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-md'}`}
+                          >
+                            {isGenerating ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                                <span className="text-[11px] md:text-xs">Stop</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-3.5 md:w-4 h-3.5 md:h-4" />
+                                <span className="text-[11px] md:text-xs">Send</span>
+                              </>
+                            )}
+                          </motion.button>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                              exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
+                              transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-lg"
+                              style={{
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                              }}
+                            >
+                              <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
+                            </motion.div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <motion.button
+                            onClick={() => {
+                              setIsExpanded(true);
+                              setChatMode(true);
+                            }}
+                            animate={{
+                              boxShadow: [
+                                '0 0 0 0 rgba(59, 130, 246, 0.4)',
+                                '0 0 0 4px rgba(59, 130, 246, 0)',
+                              ],
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                            }}
+                            className="relative flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15))',
+                              border: '1.5px solid rgba(59, 130, 246, 0.3)',
+                            }}
+                          >
+                            <motion.div
+                              animate={{
+                                rotate: [0, 360],
+                              }}
+                              transition={{
+                                duration: 4,
+                                repeat: Infinity,
+                                ease: 'linear',
+                              }}
+                            >
+                              <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4 text-blue-600 relative z-10" strokeWidth={2.5} />
+                            </motion.div>
+                            <span className="text-[11px] md:text-xs font-black text-blue-600 tracking-tight relative z-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                              AI
+                            </span>
+                          </motion.button>
 
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
-                          animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                          exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
-                          transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-                          className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-lg"
-                          style={{
-                            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                          }}
-                        >
-                          <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
-                        </motion.div>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
+                              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                              exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
+                              transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-lg"
+                              style={{
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                              }}
+                            >
+                              <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
+                            </motion.div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

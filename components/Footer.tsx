@@ -136,12 +136,12 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#E9ECEE] text-slate-700">
+    <footer className="bg-white text-slate-700">
       <Toaster position="top-center" />
-      <div className="container mx-auto px-4 py-8">
-        
+      <div className="container mx-auto px-4 py-12">
+
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-6 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-6 items-start bg-slate-50 border border-slate-100 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)]">
           
           {/* Column 1: Brand Info */}
           <div className="space-y-6">
@@ -160,15 +160,16 @@ export default function Footer() {
           </div>
 
           {/* Column 2: Things To Do */}
-          <div>
-            <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Things to do</h3>
-            <ul className="space-y-2 text-sm">
+          <div className="space-y-4">
+            <h3 className="font-semibold text-base lg:text-lg text-slate-900 tracking-wide">Things to do</h3>
+            <ul className="space-y-2 text-sm text-slate-500">
               {destinations.slice(0, 5).map((destination) => (
                 <li key={destination._id}>
                   <Link 
-                    className="hover:text-red-600 transition-colors" 
+                    className="hover:text-red-600 transition-colors inline-flex items-center gap-2" 
                     href={`/destinations/${destination.slug}`}
                   >
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     Things to do in {destination.name}
                   </Link>
                 </li>
@@ -177,15 +178,16 @@ export default function Footer() {
           </div>
 
           {/* Column 3: Destinations & Company Links */}
-          <div>
-            <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Destinations</h3>
-            <ul className="space-y-2 text-sm">
+          <div className="space-y-4">
+            <h3 className="font-semibold text-base lg:text-lg text-slate-900 tracking-wide">Destinations</h3>
+            <ul className="space-y-2 text-sm text-slate-500">
               {destinations.slice(0, 5).map((destination) => (
                 <li key={destination._id}>
                   <Link 
-                    className="hover:text-red-600 transition-colors" 
+                    className="hover:text-red-600 transition-colors inline-flex items-center gap-2" 
                     href={`/destinations/${destination.slug}`}
                   >
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                     {destination.name}
                   </Link>
                 </li>
@@ -193,43 +195,43 @@ export default function Footer() {
             </ul>
             
             <div className="mt-6">
-              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Tours &amp; Tickets</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link className="hover:text-red-600 transition-colors" href="/contact">Contact</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/about">About us</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/blog">Blog</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/faqs">FAQ</Link></li>
-                <li><Link className="hover:text-red-600 transition-colors" href="/careers">Careers</Link></li>
+              <h3 className="font-semibold text-base lg:text-lg text-slate-900 tracking-wide">Tours &amp; Tickets</h3>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/contact"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />Contact</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/about"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />About us</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/blog"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />Blog</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/faqs"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />FAQ</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/careers"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />Careers</Link></li>
               </ul>
             </div>
           </div>
 
           {/* Column 4: Contact, Newsletter & Social Media */}
           <div className="space-y-6">
-            <div>
-              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Contact information</h3>
-              <ul className="space-y-3 text-sm">
+            <div className="bg-white rounded-2xl border border-slate-100 p-5">
+              <h3 className="font-semibold text-base lg:text-lg mb-4 text-slate-900 tracking-wide">Contact information</h3>
+              <ul className="space-y-3 text-sm text-slate-600">
                 <li className="flex gap-3">
-                  <Phone size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a href="tel:+201142255624" className="font-medium hover:text-red-600">+20 11 42255624</a>
-                    <span className="text-xs text-slate-500">(24*7)</span>
+                  <span className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600"><Phone size={18} /></span>
+                  <div className="flex flex-col">
+                    <a href="tel:+201142255624" className="font-semibold text-slate-900 hover:text-red-600 transition-colors">+20 11 42255624</a>
+                    <span className="text-xs text-slate-500">(24/7 support)</span>
                   </div>
                 </li>
                 <li className="flex gap-3">
-                  <Mail size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
+                  <span className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><Mail size={18} /></span>
                   <div>
-                    <a href="mailto:booking@egypt-excursionsonline.com" className="text-blue-600 hover:underline break-all">
+                    <a href="mailto:booking@egypt-excursionsonline.com" className="font-semibold text-slate-900 hover:text-red-600 transition-colors break-all">
                       booking@egypt-excursionsonline.com
                     </a>
-                    <div className="text-xs text-slate-500">Replies within 1 hour</div>
+                    <p className="text-xs text-slate-500">Replies within 1 hour</p>
                   </div>
                 </li>
-                <li className="flex gap-3 items-center">
-                  <MessageSquare size={18} className="text-red-600 flex-shrink-0" />
+                <li className="flex gap-3">
+                  <span className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><MessageSquare size={18} /></span>
                   <button
                     onClick={openChatbot}
-                    className="text-sm font-medium underline hover:text-red-600 transition-colors"
+                    className="text-sm font-semibold text-slate-900 hover:text-red-600 transition-colors"
                     aria-label="Open chat"
                   >
                     Chat with us
@@ -239,22 +241,23 @@ export default function Footer() {
             </div>
 
             {/* Newsletter */}
-            <div>
+            <div className="bg-white rounded-2xl border border-slate-100 p-5">
               {!isSubscribed ? (
                 <>
-                  <h4 className="font-bold text-sm mb-3 text-slate-900">Sign up for our newsletter</h4>
+                  <h4 className="font-semibold text-base mb-2 text-slate-900">Don’t miss our travel updates</h4>
+                  <p className="text-xs text-slate-500 mb-3">Get curated tips, exclusive offers, and destination guides straight to your inbox.</p>
                   <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                     <input 
                       type="email" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Your email address" 
-                      className="w-full sm:flex-1 h-11 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white min-w-0" 
+                      className="w-full sm:flex-1 h-11 rounded-xl border border-slate-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white shadow-sm" 
                       disabled={isLoading}
                     />
                     <button 
                       type="submit" 
-                      className="h-11 w-full sm:w-auto px-4 sm:px-6 rounded-md text-white bg-slate-900 hover:bg-red-600 transition-colors text-sm font-semibold flex items-center justify-center disabled:bg-slate-500"
+                      className="h-11 w-full sm:w-auto px-4 sm:px-6 rounded-xl text-white bg-gradient-to-r from-red-600 to-slate-900 hover:from-red-700 hover:to-slate-950 transition-colors text-sm font-semibold flex items-center justify-center disabled:bg-slate-500"
                       disabled={isLoading}
                     >
                       {isLoading ? <Loader2 className="animate-spin" /> : 'SUBSCRIBE'}
@@ -270,8 +273,9 @@ export default function Footer() {
             </div>
             
             {/* Social Media */}
-            <div>
-              <h4 className="font-bold text-sm mb-3 text-slate-900">Follow us on social media</h4>
+            <div className="bg-white rounded-2xl border border-slate-100 p-5">
+              <h4 className="font-semibold text-base mb-2 text-slate-900">Follow us on social media</h4>
+              <p className="text-xs text-slate-500 mb-3">Join our community for live updates, reels, and travel inspiration.</p>
               <div className="flex gap-3">
                 {socialLinks.map(({ icon: Icon, href }, i) => (
                   <a 
@@ -279,7 +283,7 @@ export default function Footer() {
                     href={href} 
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors" 
+                    className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-red-600 transition-colors border border-slate-200" 
                     aria-label={`Follow us on social media`}
                   >
                     <Icon size={18} />
