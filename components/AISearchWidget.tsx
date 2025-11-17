@@ -698,12 +698,12 @@ export default function AISearchWidget() {
     setInputValue('');
   };
 
-  // State for detected tours
-  const [detectedTours, setDetectedTours] = useState<any[]>([]);
+  // State for detected tours - stored per message ID
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
 
   // Clear chat function
   const handleClearChat = () => {
-    setDetectedTours([]);
+    setDetectedToursByMessage({});
     setMessages([]);
     // Optionally scroll to top
     if (chatContainerRef.current) {
@@ -793,7 +793,6 @@ export default function AISearchWidget() {
             reviews: tour.reviews,
             price: tour.discountPrice || tour.price,
           }));
-          setDetectedTours(transformedTours);
           return transformedTours;
         }
       }
@@ -825,13 +824,12 @@ export default function AISearchWidget() {
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
 
-    // Clear detected tours when user sends a new message
-    if (lastMessage && lastMessage.role === 'user') {
-      setDetectedTours([]);
+    // Skip if it's a user message
+    if (!lastMessage || lastMessage.role === 'user') {
       return;
     }
 
-    if (lastMessage && lastMessage.role === 'assistant') {
+    if (lastMessage.role === 'assistant') {
       const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
       const fullText = textParts.map((p: any) => p.text).join(' ');
 
@@ -841,12 +839,15 @@ export default function AISearchWidget() {
                             /cairo|luxor|aswan|alexandria|pyramid|sphinx|nile/i.test(fullText);
 
       if (hasTourPattern) {
-        // Clear old tours before detecting new ones
-        setDetectedTours([]);
-        detectAndFetchTours(fullText);
-      } else {
-        // Clear tours if no pattern matched
-        setDetectedTours([]);
+        // Fetch tours and store them for this specific message
+        detectAndFetchTours(fullText).then(tours => {
+          if (tours.length > 0) {
+            setDetectedToursByMessage(prev => ({
+              ...prev,
+              [lastMessage.id]: tours
+            }));
+          }
+        });
       }
     }
   }, [messages]);
@@ -1149,7 +1150,8 @@ export default function AISearchWidget() {
 
                           {messages.map((m, mIdx) => {
                             const isLastAssistantMessage = m.role === 'assistant' && mIdx === messages.length - 1;
-                            const hasDetectedTours = isLastAssistantMessage && detectedTours.length > 0;
+                            const messageTours = detectedToursByMessage[m.id] || [];
+                            const hasDetectedTours = messageTours.length > 0;
                             const isUser = m.role === 'user';
 
                             // Check if this message is currently streaming and has tour patterns
@@ -1176,10 +1178,10 @@ export default function AISearchWidget() {
                                     {renderContent(m.parts, hasDetectedTours, isUser, shouldShowSkeleton)}
                                   </div>
                                 </div>
-                                {/* Show detected tours after last assistant message (only when not streaming) */}
+                                {/* Show detected tours for this message (only when not streaming) */}
                                 {hasDetectedTours && !isStreaming && (
                                   <div className="mt-3 mb-2">
-                                    <TourSlider tours={detectedTours} />
+                                    <TourSlider tours={messageTours} />
                                   </div>
                                 )}
                               </div>
