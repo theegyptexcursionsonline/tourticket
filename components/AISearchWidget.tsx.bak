@@ -32,7 +32,7 @@ const createTourCardHTML = (tour: any): string => {
     : 0;
 
   return `
-    <a href="/${tour.slug || tour.objectID}" target="_blank" rel="noopener noreferrer"
+    <a href="/tour/${tour.slug || tour.objectID}" target="_blank" rel="noopener noreferrer"
        class="tour-card-link group bg-white border border-blue-100 rounded-lg overflow-hidden hover:shadow-md hover:border-blue-300 transition-all duration-300 block cursor-pointer flex-shrink-0 w-[240px]">
       ${(tour.image || tour.images?.[0] || tour.primaryImage) ? `
         <div class="relative w-full h-32 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -181,7 +181,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             {tours.map((tour, idx) => (
               <motion.a
                 key={limitedHits[idx].objectID}
-                href={`/${tour.slug}`}
+                href={`/tour/${tour.slug}`}
                 onClick={onHitClick}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -434,7 +434,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 // Tour Card Component for AI Chat
 const TourCard = ({ tour }: { tour: any }) => (
   <motion.a
-    href={`/${tour.slug}`}
+    href={`/tour/${tour.slug}`}
     target="_blank"
     rel="noopener noreferrer"
     className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
@@ -1430,7 +1430,7 @@ export default function AISearchWidget() {
                             featuredTours.map((tour, index) => (
                               <motion.a
                                 key={tour.objectID}
-                                href={`/${tour.slug || tour.objectID}`}
+                                href={`/tour/${tour.slug || tour.objectID}`}
                                 onClick={handleCloseSearch}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
