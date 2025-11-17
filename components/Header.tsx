@@ -15,7 +15,20 @@ import {
   Menu,
   User,
   LogOut,
-  Calendar
+  Calendar,
+  Sparkles,
+  ChevronUp,
+  Bot,
+  Loader2,
+  ArrowLeft,
+  Send,
+  MapPin,
+  Compass,
+  Tag,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -28,6 +41,11 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { useSettings } from '@/hooks/useSettings';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import 'instantsearch.css/themes/satellite.css';
 
 // =================================================================
@@ -36,6 +54,10 @@ import 'instantsearch.css/themes/satellite.css';
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
 const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
+const INDEX_DESTINATIONS = 'destinations';
+const INDEX_CATEGORIES = 'categories';
+const INDEX_BLOGS = 'blogs';
+const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
@@ -161,25 +183,32 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
   return (
     <div>
-      <div className="px-5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-            <Landmark className="w-3 h-3 text-white" />
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <MapPin className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
-            Tours ({hits.length})
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Tours
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any) => (
-        <a
+      {limitedHits.map((hit: any, index) => (
+        <motion.a
           key={hit.objectID}
           href={`/tours/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05, duration: 0.3 }}
+          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-blue-500/5 hover:via-indigo-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-indigo-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
               {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
                 <img
                   src={hit.image || hit.images?.[0] || hit.primaryImage}
@@ -187,68 +216,427 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
+                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Landmark className="w-7 h-7 text-blue-500" />
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200">
+                  <MapPin className="w-8 h-8 text-blue-600" strokeWidth={2.5} />
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 line-clamp-2 md:truncate group-hover:text-blue-600 transition-colors duration-300">
                 {hit.title || 'Untitled Tour'}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
                 {hit.location && (
-                  <span className="flex items-center gap-1">
-                    <Landmark className="w-3 h-3" />
-                    {hit.location}
+                  <span className="flex items-center gap-1 md:gap-1.5 bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg">
+                    <MapPin className="w-2.5 md:w-3 h-2.5 md:h-3 text-gray-400" strokeWidth={2.5} />
+                    <span className="font-medium">{hit.location}</span>
                   </span>
                 )}
                 {hit.duration && (
-                  <>
-                    <span className="text-gray-300">•</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {hit.duration} days
-                    </span>
-                  </>
+                  <span className="flex items-center gap-1 md:gap-1.5 bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg">
+                    <Clock className="w-2.5 md:w-3 h-2.5 md:h-3 text-gray-400" strokeWidth={2.5} />
+                    <span className="font-medium">{hit.duration} days</span>
+                  </span>
                 )}
                 {(hit.price || hit.discountPrice) && (
-                  <>
-                    <span className="text-gray-300">•</span>
-                    <span className="font-bold text-blue-600">
-                      ${hit.discountPrice || hit.price}
-                    </span>
-                  </>
+                  <span className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-bold text-blue-600 text-[10px] md:text-xs">
+                    ${hit.discountPrice || hit.price}
+                  </span>
                 )}
               </div>
             </div>
           </div>
-        </a>
+        </motion.a>
       ))}
     </div>
   );
 }
 
-// Mobile Inline Search Component
+function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+            <Compass className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Destinations
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any, index) => (
+        <motion.a
+          key={hit.objectID}
+          href={`/destinations/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05, duration: 0.3 }}
+          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <Compass className="w-6 md:w-7 h-6 md:h-7 text-emerald-600" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-emerald-600 transition-colors duration-300">
+                {hit.name || 'Untitled Destination'}
+              </div>
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+                {hit.country && (
+                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.country}</span>
+                )}
+                {hit.tourCount && (
+                  <span className="bg-emerald-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-emerald-700">
+                    {hit.tourCount} tours
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.a>
+      ))}
+    </div>
+  );
+}
+
+function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-purple-500/5 via-fuchsia-500/5 to-pink-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
+            <Tag className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Categories
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any, index) => (
+        <motion.a
+          key={hit.objectID}
+          href={`/categories/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05, duration: 0.3 }}
+          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-fuchsia-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <Tag className="w-6 md:w-7 h-6 md:h-7 text-purple-600" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-purple-600 transition-colors duration-300">
+                {hit.name || 'Untitled Category'}
+              </div>
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5">
+                {hit.tourCount && (
+                  <span className="bg-purple-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-purple-700">
+                    {hit.tourCount} tours
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.a>
+      ))}
+    </div>
+  );
+}
+
+function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-red-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
+            <FileText className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Blog Posts
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
+          </span>
+        </div>
+      </div>
+      {limitedHits.map((hit: any, index) => (
+        <motion.a
+          key={hit.objectID}
+          href={`/blog/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05, duration: 0.3 }}
+          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-amber-500/5 hover:via-orange-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-orange-500/0 to-red-500/0 group-hover:from-amber-500/5 group-hover:via-orange-500/5 group-hover:to-red-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <FileText className="w-6 md:w-7 h-6 md:h-7 text-amber-600" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-amber-600 transition-colors duration-300">
+                {hit.title || 'Untitled Blog Post'}
+              </div>
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+                {hit.category && (
+                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.category}</span>
+                )}
+                {hit.readTime && (
+                  <span className="bg-amber-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-amber-700">
+                    {hit.readTime} min read
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.a>
+      ))}
+    </div>
+  );
+}
+
+// Tour Card Component for AI Chat
+const TourCard = ({ tour }: { tour: any }) => (
+  <motion.a
+    href={`/tours/${tour.slug}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+    whileHover={{ y: -4 }}
+  >
+    {tour.image && (
+      <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+        <img
+          src={tour.image}
+          alt={tour.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+        />
+        {tour.duration && (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
+            {tour.duration}
+          </div>
+        )}
+      </div>
+    )}
+    <div className="p-2.5">
+      <h3 className="font-semibold text-xs mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+        {tour.title}
+      </h3>
+      {tour.location && (
+        <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1.5">
+          <MapPin className="w-2.5 h-2.5" />
+          <span className="line-clamp-1">{tour.location}</span>
+        </div>
+      )}
+      {tour.rating && (
+        <div className="flex items-center gap-1 mb-1.5">
+          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+          <span className="text-[10px] font-medium">{tour.rating}</span>
+          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
+        </div>
+      )}
+      {tour.price && (
+        <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
+          <DollarSign className="w-3 h-3" />
+          <span>{tour.price}</span>
+        </div>
+      )}
+    </div>
+  </motion.a>
+);
+
+// Tour Slider Component for AI Chat
+const TourSlider = ({ tours }: { tours: any[] }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 260;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="relative w-full">
+      {tours.length > 1 && (
+        <>
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+      <div
+        ref={sliderRef}
+        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+      >
+        {tours.map((tour, idx) => (
+          <TourCard key={idx} tour={tour} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Mobile Inline Search Component with AI
 const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.memo(({ isOpen, onClose }) => {
+  const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [chatMode, setChatMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // AI SDK Chat Setup
+  const {
+    messages,
+    sendMessage,
+    status,
+    stop,
+  } = useChat({
+    transport: new DefaultChatTransport({
+      api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
+      headers: {
+        'x-algolia-application-id': ALGOLIA_APP_ID,
+        'x-algolia-api-key': ALGOLIA_SEARCH_KEY,
+      },
+    }),
+  });
+  const isGenerating = status === 'submitted' || status === 'streaming';
 
   useOnClickOutside(containerRef, onClose);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        setChatMode(false);
+      }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (!chatContainerRef.current) return;
+    setTimeout(() => {
+      chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
+    }, 100);
+  }, [messages, isGenerating]);
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+    if (!chatMode) {
+      setSearchQuery(value);
+    }
+  };
+
+  const handleChatSubmit = () => {
+    const message = inputValue.trim();
+    if (!message) return;
+    sendMessage({ text: message });
+    setInputValue('');
+  };
+
+  const handleAskAI = () => {
+    setChatMode(true);
+    if (searchQuery) {
+      setTimeout(() => sendMessage({ text: searchQuery }), 300);
+      setInputValue('');
+      setSearchQuery('');
+    }
+  };
+
+  const handleBackToSearch = () => {
+    setChatMode(false);
+    setInputValue(searchQuery);
+  };
+
+  // Render tool outputs (tours)
+  const renderToolOutput = (obj: any) => {
+    if (Array.isArray(obj)) {
+      const tours = obj.filter(item => item.title && item.slug);
+      if (tours.length > 0) return <TourSlider tours={tours} />;
+    }
+    if (obj.title && obj.slug) return <TourSlider tours={[obj]} />;
+    if (obj.hits && Array.isArray(obj.hits)) {
+      const tours = obj.hits.filter((item: any) => item.title && item.slug);
+      if (tours.length > 0) return <TourSlider tours={tours} />;
+    }
+    return (
+      <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
+        {JSON.stringify(obj, null, 2)}
+      </pre>
+    );
+  };
+
+  // Render message content
+  const renderContent = (parts: any[]) => {
+    return parts.map((p: any, idx: number) => {
+      if (p.type === 'tool-result') {
+        try {
+          const obj = JSON.parse(p.text);
+          return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
+        } catch {
+          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+        }
+      }
+      if (p.type === 'text') {
+        return (
+          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {p.text}
+            </ReactMarkdown>
+          </div>
+        );
+      }
+      return null;
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -258,95 +646,241 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
-        className="fixed top-16 left-0 right-0 z-50 bg-white shadow-2xl border-b border-gray-200"
+        transition={{ duration: 0.3 }}
+        className="fixed top-16 left-0 right-0 z-50"
         ref={containerRef}
       >
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="relative">
+            {/* Search Input */}
             <motion.div
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               transition={{ duration: 0.2 }}
               className="relative"
             >
-              <div className="relative bg-white border-2 border-blue-300 rounded-full shadow-xl hover:shadow-2xl hover:border-blue-400 transition-all duration-300">
+              <div className="relative bg-white/95 backdrop-blur-xl border-2 border-blue-300 rounded-full shadow-2xl hover:shadow-2xl hover:border-blue-400 transition-all duration-300">
                 <div className="relative">
                   <input
                     type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search tours in Egypt..."
-                    className="w-full pl-14 pr-16 py-4 text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full"
+                    value={inputValue}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (chatMode && e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleChatSubmit();
+                      }
+                    }}
+                    placeholder={chatMode ? "Ask AI about Egypt tours..." : "Search tours, destinations..."}
+                    className="w-full pl-14 pr-32 py-4 text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full"
                     autoFocus
+                    disabled={chatMode && isGenerating}
                   />
 
                   {/* Left Icon */}
                   <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
-                      <Search className="w-4 h-4 text-white" />
-                    </div>
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+                        <Search className="w-4 h-4 text-white" />
+                      </div>
+                    </motion.div>
                   </div>
 
-                  {/* Right Close Button */}
-                  <button
-                    onClick={onClose}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    aria-label="Close search"
-                  >
-                    <X className="w-5 h-5 text-gray-400" />
-                  </button>
+                  {/* Right Side Buttons */}
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                    {chatMode ? (
+                      <motion.button
+                        onClick={() => {
+                          if (isGenerating) {
+                            stop();
+                          } else {
+                            handleChatSubmit();
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl font-semibold text-white flex items-center gap-1.5 text-xs ${isGenerating ? 'bg-red-500' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Stop</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Send</span>
+                          </>
+                        )}
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        onClick={handleAskAI}
+                        animate={{ rotate: [0, 15, -15, 0] }}
+                        transition={{ duration: 4, repeat: Infinity }}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:shadow-lg"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI</span>
+                      </motion.button>
+                    )}
+                    <button
+                      onClick={() => {
+                        onClose();
+                        setChatMode(false);
+                        setInputValue('');
+                        setSearchQuery('');
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      aria-label="Close search"
+                    >
+                      <X className="w-5 h-5 text-gray-400" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
 
             {/* Results Dropdown */}
             <AnimatePresence>
-              {searchQuery && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute top-full mt-3 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] overflow-y-auto"
-                >
-                  <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-                    <Index indexName={INDEX_TOURS}>
-                      <Configure hitsPerPage={10} />
-                      <TourHits onHitClick={onClose} limit={10} />
-                    </Index>
-                  </InstantSearch>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Trending when empty */}
-            {!searchQuery && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-4"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+                className="mt-3 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden"
+                style={{ maxHeight: '65vh' }}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-4 h-4 text-blue-500" />
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Trending Tours
-                  </span>
+                {/* Header */}
+                <div className="px-5 py-3 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {chatMode && (
+                        <button
+                          onClick={handleBackToSearch}
+                          className="mr-1 p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+                        >
+                          <ArrowLeft className="w-4 h-4 text-gray-600" />
+                        </button>
+                      )}
+                      {chatMode ? (
+                        <>
+                          <Bot className="w-4 h-4 text-blue-500" />
+                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            AI Travel Assistant
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-blue-500" />
+                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            {searchQuery ? 'Search Results' : 'Popular Searches'}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Pyramids', 'Nile Cruise', 'Luxor', 'Desert Safari', 'Cairo Tours'].map((trend) => (
-                    <button
-                      key={trend}
-                      onClick={() => setSearchQuery(trend)}
-                      className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200"
-                    >
-                      {trend}
-                    </button>
-                  ))}
+
+                {/* Results Area */}
+                <div ref={chatContainerRef} className="overflow-y-auto" style={{ maxHeight: 'calc(65vh - 60px)' }}>
+                  {chatMode ? (
+                    /* Chat Interface */
+                    <div className="p-4 space-y-3">
+                      {messages.length === 0 && (
+                        <div className="bg-white p-4 rounded-xl border border-blue-100">
+                          <div className="flex items-start gap-2.5 mb-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Bot className="text-white" size={16} />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 text-sm mb-1">
+                                Hi! I'm your AI Egypt Travel Assistant
+                              </p>
+                              <p className="text-gray-500 text-xs leading-relaxed">
+                                Ask me anything — I'll help you find tours, trips, prices, destinations & more.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {messages.map((m) => (
+                        <div
+                          key={m.id}
+                          className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm ${
+                              m.role === 'user'
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
+                                : 'bg-white text-gray-800 border shadow-sm'
+                            }`}
+                          >
+                            {renderContent(m.parts)}
+                          </div>
+                        </div>
+                      ))}
+
+                      {isGenerating && (
+                        <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2.5 rounded-lg border">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">AI is thinking...</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : searchQuery ? (
+                    <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
+                      <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+                      <Index indexName={INDEX_TOURS}>
+                        <Configure hitsPerPage={5} />
+                        <TourHits onHitClick={onClose} limit={5} />
+                      </Index>
+
+                      <Index indexName={INDEX_DESTINATIONS}>
+                        <Configure hitsPerPage={3} />
+                        <DestinationHits onHitClick={onClose} limit={3} />
+                      </Index>
+
+                      <Index indexName={INDEX_CATEGORIES}>
+                        <Configure hitsPerPage={3} />
+                        <CategoryHits onHitClick={onClose} limit={3} />
+                      </Index>
+
+                      <Index indexName={INDEX_BLOGS}>
+                        <Configure hitsPerPage={3} />
+                        <BlogHits onHitClick={onClose} limit={3} />
+                      </Index>
+                    </InstantSearch>
+                  ) : (
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Sparkles className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Trending Egypt Tours
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend) => (
+                          <button
+                            key={trend}
+                            onClick={() => {
+                              setSearchQuery(trend);
+                              setInputValue(trend);
+                            }}
+                            className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200"
+                          >
+                            {trend}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
-            )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>
@@ -756,9 +1290,9 @@ export default function Header({
   return (
     <>
      <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full'} ${headerBg} ${headerText}`}>
-  {/* Add backdrop blur for better mobile visibility when transparent */}
+  {/* Fully transparent backdrop on all screen sizes */}
   {isTransparent && (
-    <div className="absolute inset-0 bg-black/10 backdrop-blur-sm md:backdrop-blur-none md:bg-transparent" />
+    <div className="absolute inset-0 bg-transparent" />
   )}
   
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -792,9 +1326,7 @@ export default function Header({
           className="relative group p-2 md:p-2 active:scale-95 transition-transform"
           aria-label="View your wishlist"
         >
-          <div className="md:bg-transparent bg-white/10 md:backdrop-blur-none backdrop-blur-sm rounded-full p-1 md:p-0">
-            <Star size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
-          </div>
+          <Star size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
           {wishlist?.length > 0 && (
             <span className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white shadow-lg">
               {wishlist.length}
@@ -807,9 +1339,7 @@ export default function Header({
           className="relative group p-2 md:p-2 active:scale-95 transition-transform"
           aria-label="Open cart"
         >
-          <div className="md:bg-transparent bg-white/10 md:backdrop-blur-none backdrop-blur-sm rounded-full p-1 md:p-0">
-            <ShoppingCart size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
-          </div>
+          <ShoppingCart size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
           {totalItems > 0 && (
             <span className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white shadow-lg">
               {totalItems}
@@ -863,6 +1393,38 @@ export default function Header({
 
       {/* Auth modal */}
       <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialState={authModalState} />
+
+      {/* Global Styles */}
+      <style jsx global>{`
+        .ais-InstantSearch {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+        }
+
+        .ais-SearchBox {
+          display: none;
+        }
+
+        .ais-Hits-list {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .ais-Hits-item {
+          margin: 0;
+          padding: 0;
+          border: none;
+        }
+
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </>
   );
 }

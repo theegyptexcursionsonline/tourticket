@@ -136,15 +136,15 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-white text-slate-700">
+    <footer className="bg-white text-slate-700 pb-20 md:pb-24">
       <Toaster position="top-center" />
       <div className="container mx-auto px-4 py-12">
 
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-6 items-start bg-slate-50 border border-slate-100 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)]">
-          
-          {/* Column 1: Brand Info */}
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-6 mb-6 items-start bg-slate-50 border border-slate-100 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)]">
+
+          {/* Column 1: Brand Info, Trust Badge & Payment Methods */}
+          <div className="space-y-6 lg:col-span-2">
             <Link href="/" className="inline-block">
               <Image
                 src="/EEO-logo.png"
@@ -157,6 +157,34 @@ export default function Footer() {
             <p className="text-sm text-slate-600 leading-relaxed max-w-xs">
               Book your adventure, skip the lines. Unforgettable tours, tickets, and activities for a memorable journey through Egypt Excursions Online.
             </p>
+
+            {/* Trusted by clients */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-5">
+              <p className="font-semibold text-slate-900 mb-3 text-base">Trusted by our clients</p>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
+                <div className="flex text-xl leading-none text-red-500">
+                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                </div>
+              </div>
+              <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-5">
+              <h3 className="font-bold text-base mb-4 text-slate-900">Ways you can pay</h3>
+              <div className="grid grid-cols-3 gap-2.5">
+                {paymentMethods.map((method, idx) => (
+                  <div
+                    key={idx}
+                    title={method.name}
+                    className="flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 hover:shadow-sm transition-shadow aspect-[5/3]"
+                  >
+                    <method.component />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Column 2: Things To Do */}
@@ -207,7 +235,7 @@ export default function Footer() {
           </div>
 
           {/* Column 4: Contact, Newsletter & Social Media */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             <div className="bg-white rounded-2xl border border-slate-100 p-5">
               <h3 className="font-semibold text-base lg:text-lg mb-4 text-slate-900 tracking-wide">Contact information</h3>
               <ul className="space-y-3 text-sm text-slate-600">
@@ -244,7 +272,7 @@ export default function Footer() {
             <div className="bg-white rounded-2xl border border-slate-100 p-5">
               {!isSubscribed ? (
                 <>
-                  <h4 className="font-semibold text-base mb-2 text-slate-900">Don’t miss our travel updates</h4>
+                  <h4 className="font-semibold text-base mb-2 text-slate-900">Don't miss our travel updates</h4>
                   <p className="text-xs text-slate-500 mb-3">Get curated tips, exclusive offers, and destination guides straight to your inbox.</p>
                   <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                     <input 
@@ -294,40 +322,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Reviews & Payment Methods */}
-        <div className="border-t border-slate-300 pt-6 mb-6">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-            
-            {/* Trusted by clients */}
-            <div className="flex-shrink-0">
-              <p className="font-semibold text-slate-900 mb-2">Trusted by our clients</p>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl font-bold text-slate-900 leading-none">4.9</span>
-              <div className="flex text-xl leading-none text-red-500">
-                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-              </div>
-            </div>
-              <p className="text-sm text-slate-500">Average rating from Tripadvisor</p>
-            </div>
-
-            {/* Payment Methods */}
-            <div className="w-full lg:w-auto lg:max-w-md">
-              <h3 className="font-bold text-base lg:text-lg mb-4 text-slate-900">Ways you can pay</h3>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-                {paymentMethods.map((method, idx) => (
-                  <div 
-                    key={idx} 
-                    title={method.name} 
-                    className="flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 hover:shadow-sm transition-shadow aspect-[5/3]"
-                  >
-                    <method.component />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        
         {/* Currency/Language Switcher */}
         <div className="border-t border-slate-300 pt-4 mb-4">
           <CurrencyLanguageSwitcher variant="footer" />

@@ -40,6 +40,8 @@ const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f4
 const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
 const INDEX_DESTINATIONS = 'destinations';
 const INDEX_CATEGORIES = 'categories';
+const INDEX_BLOGS = 'blogs';
+const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 

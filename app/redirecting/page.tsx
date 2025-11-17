@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 const REDIRECT_DELAY = 3000; // 3 seconds
 
-export default function RedirectingPage() {
+function RedirectingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -94,6 +94,23 @@ export default function RedirectingPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function RedirectingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white px-4 py-16 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Loading...
+          </div>
+        </div>
+      </div>
+    }>
+      <RedirectingContent />
+    </Suspense>
   );
 }
 
