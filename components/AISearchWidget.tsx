@@ -112,8 +112,33 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
   const limitedHits = hits.slice(0, limit);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   if (limitedHits.length === 0) return null;
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 260;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  // Transform hits to tour objects for TourCard
+  const tours = limitedHits.map((hit: any) => ({
+    slug: hit.slug || hit.objectID,
+    title: hit.title || 'Untitled Tour',
+    image: hit.image || hit.images?.[0] || hit.primaryImage,
+    location: hit.location,
+    duration: hit.duration,
+    rating: hit.rating,
+    reviews: hit.reviews,
+    price: hit.discountPrice || hit.price,
+    isFeatured: hit.isFeatured,
+    discountPrice: hit.discountPrice,
+    originalPrice: hit.price,
+  }));
 
   return (
     <div>
@@ -130,62 +155,107 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
-        <motion.a
-          key={hit.objectID}
-          href={`/tours/${hit.slug || hit.objectID}`}
-          onClick={onHitClick}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05, duration: 0.3 }}
-          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-blue-500/5 hover:via-indigo-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-indigo-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
-          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
-            <div className="w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
-              {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
-                <img
-                  src={hit.image || hit.images?.[0] || hit.primaryImage}
-                  alt={hit.title || 'Tour'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200">
-                  <MapPin className="w-8 h-8 text-blue-600" strokeWidth={2.5} />
+
+      <div className="px-4 md:px-6 py-4">
+        <div className="relative w-full">
+          {tours.length > 1 && (
+            <>
+              <button
+                onClick={() => scroll('left')}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => scroll('right')}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <div
+            ref={sliderRef}
+            className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+          >
+            {tours.map((tour, idx) => (
+              <motion.a
+                key={limitedHits[idx].objectID}
+                href={`/tours/${tour.slug}`}
+                onClick={onHitClick}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05, duration: 0.3 }}
+                whileHover={{ y: -4 }}
+              >
+                {tour.image && (
+                  <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+                    <img
+                      src={tour.image}
+                      alt={tour.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    {tour.isFeatured && (
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
+                        <Star className="w-2.5 h-2.5 fill-current" />
+                        Featured
+                      </div>
+                    )}
+                    {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice && (
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md">
+                        -{Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)}%
+                      </div>
+                    )}
+                    {tour.duration && (
+                      <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-medium flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {tour.duration}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="p-3">
+                  <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                    {tour.title}
+                  </h3>
+                  {tour.location && (
+                    <div className="flex items-center gap-1 text-gray-500 text-[11px] mb-2">
+                      <MapPin className="w-3 h-3 text-blue-500" />
+                      <span className="line-clamp-1">{tour.location}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5">
+                      {tour.rating && (
+                        <div className="flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[11px] font-medium">{tour.rating}</span>
+                          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
+                        </div>
+                      )}
+                    </div>
+                    {tour.price && (
+                      <div className="flex items-center gap-1">
+                        {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice ? (
+                          <>
+                            <span className="text-gray-400 text-[10px] line-through">${tour.originalPrice}</span>
+                            <span className="text-blue-600 font-bold text-base">${tour.discountPrice}</span>
+                          </>
+                        ) : (
+                          <span className="text-blue-600 font-bold text-base">${tour.price}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 line-clamp-2 md:truncate group-hover:text-blue-600 transition-colors duration-300">
-                {hit.title || 'Untitled Tour'}
-              </div>
-              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
-                {hit.location && (
-                  <span className="flex items-center gap-1 md:gap-1.5 bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg">
-                    <MapPin className="w-2.5 md:w-3 h-2.5 md:h-3 text-gray-400" strokeWidth={2.5} />
-                    <span className="font-medium">{hit.location}</span>
-                  </span>
-                )}
-                {hit.duration && (
-                  <span className="flex items-center gap-1 md:gap-1.5 bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg">
-                    <Clock className="w-2.5 md:w-3 h-2.5 md:h-3 text-gray-400" strokeWidth={2.5} />
-                    <span className="font-medium">{hit.duration} days</span>
-                  </span>
-                )}
-                {(hit.price || hit.discountPrice) && (
-                  <span className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-bold text-blue-600 text-[10px] md:text-xs">
-                    ${hit.discountPrice || hit.price}
-                  </span>
-                )}
-              </div>
-            </div>
+              </motion.a>
+            ))}
           </div>
-        </motion.a>
-      ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -633,36 +703,56 @@ export default function AISearchWidget() {
   // Parse tour information from text and fetch from Algolia
   const detectAndFetchTours = async (text: string) => {
     try {
-      // Try to extract tour titles using regex patterns
+      // Enhanced patterns to match various tour formats
       const tourPatterns = [
-        /(?:From |)([\w\s:,-]+?)(?:\s+\(\$\d+\))/g, // Matches "Tour Name ($price)"
-        /(?:^|\n)([A-Z][\w\s:,-]+?Tour[\w\s]*?)(?:\s+\(\$\d+\)|\n|$)/gm, // Matches lines starting with tour names
+        /(?:^|\n)\s*(?:\d+\.\s*)?(?:Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)?\s*([^($\n]+?)\s+\(\$(\d+)\)/gm, // Matches "Title ($price)"
+        /(?:^|\n)\s*(?:\d+\.\s*)?([A-Z][^($\n]+?Tour[^($\n]*?)\s+\(\$(\d+)\)/gm, // Matches "Tour Name ($price)"
+        /\*\*([^*]+?)\*\*\s+\(\$(\d+)\)/g, // Matches "**Tour Name** ($price)"
       ];
 
-      const potentialTours = new Set<string>();
+      const potentialTours = new Map<string, number>(); // Map of tour title -> price
 
       for (const pattern of tourPatterns) {
         const matches = text.matchAll(pattern);
         for (const match of matches) {
           if (match[1]) {
-            potentialTours.add(match[1].trim());
+            const title = match[1].trim().replace(/^(Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)\s*/i, '');
+            const price = match[2] ? parseInt(match[2]) : 0;
+            if (title.length > 10) { // Only consider titles longer than 10 chars
+              potentialTours.set(title, price);
+            }
           }
         }
       }
 
       if (potentialTours.size > 0) {
         // Search Algolia for these tours
-        const toursArray = Array.from(potentialTours).slice(0, 5); // Limit to 5 tours
-        const searchPromises = toursArray.map(async (tourTitle) => {
+        const toursArray = Array.from(potentialTours.entries()).slice(0, 6); // Limit to 6 tours
+        const searchPromises = toursArray.map(async ([tourTitle, price]) => {
           try {
-            const response = await searchClient.search([{
+            // First try exact title match
+            let response = await searchClient.search([{
               indexName: INDEX_TOURS,
               params: {
                 query: tourTitle,
-                hitsPerPage: 1,
+                hitsPerPage: 3,
               }
             }]);
-            const firstResult = response.results[0] as SearchResponse<any>;
+            let firstResult = response.results[0] as SearchResponse<any>;
+
+            // If no results, try with just keywords
+            if (!firstResult?.hits?.length) {
+              const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
+              response = await searchClient.search([{
+                indexName: INDEX_TOURS,
+                params: {
+                  query: keywords,
+                  hitsPerPage: 3,
+                }
+              }]);
+              firstResult = response.results[0] as SearchResponse<any>;
+            }
+
             return firstResult?.hits?.[0];
           } catch (error) {
             console.error('Error searching for tour:', tourTitle, error);
@@ -672,8 +762,19 @@ export default function AISearchWidget() {
 
         const tours = (await Promise.all(searchPromises)).filter(Boolean);
         if (tours.length > 0) {
-          setDetectedTours(tours);
-          return tours;
+          // Transform tours to ensure they have the right structure
+          const transformedTours = tours.map((tour: any) => ({
+            slug: tour.slug || tour.objectID,
+            title: tour.title || 'Untitled Tour',
+            image: tour.image || tour.images?.[0] || tour.primaryImage,
+            location: tour.location,
+            duration: tour.duration,
+            rating: tour.rating,
+            reviews: tour.reviews,
+            price: tour.discountPrice || tour.price,
+          }));
+          setDetectedTours(transformedTours);
+          return transformedTours;
         }
       }
     } catch (error) {
@@ -706,7 +807,11 @@ export default function AISearchWidget() {
     if (lastMessage && lastMessage.role === 'assistant') {
       const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
       const fullText = textParts.map((p: any) => p.text).join(' ');
-      const hasTourPattern = /(?:Tour|tour).*?\$\d+/i.test(fullText);
+
+      // More comprehensive pattern matching for tours
+      const hasTourPattern = /\$\d+/i.test(fullText) ||
+                            /tour/i.test(fullText) ||
+                            /cairo|luxor|aswan|alexandria|pyramid|sphinx|nile/i.test(fullText);
 
       if (hasTourPattern) {
         detectAndFetchTours(fullText);
@@ -715,7 +820,7 @@ export default function AISearchWidget() {
   }, [messages]);
 
   // Render message content
-  const renderContent = (parts: any[]) => {
+  const renderContent = (parts: any[], hideDetails: boolean = false, isUser: boolean = false) => {
     return parts.map((p: any, idx: number) => {
       if (p.type === 'tool-result') {
         try {
@@ -726,9 +831,64 @@ export default function AISearchWidget() {
         }
       }
       if (p.type === 'text') {
+        // User message styling
+        if (isUser) {
+          return (
+            <div key={idx} className="text-white text-sm sm:text-base leading-relaxed">
+              {p.text}
+            </div>
+          );
+        }
+
+        // If we have detected tours, show a simplified version of the text
+        if (hideDetails) {
+          // Extract just the intro text before the tour listings
+          const lines = p.text.split('\n');
+          const introLines = [];
+          for (const line of lines) {
+            // Stop when we hit a line that looks like a tour listing
+            if (/^(?:Luxor|Cairo|Aswan|Alexandria|Hurghada|Sharm El Sheikh|Makadi Bay):/i.test(line.trim()) ||
+                /^\d+\.\s+/i.test(line.trim())) {
+              break;
+            }
+            introLines.push(line);
+          }
+          const introText = introLines.join('\n').trim();
+
+          return (
+            <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  p: ({node, ...props}) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
+                  strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                  h1: ({node, ...props}) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
+                }}
+              >
+                {introText}
+              </ReactMarkdown>
+            </div>
+          );
+        }
+
         return (
-          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+          <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={{
+                p: ({node, ...props}) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                h1: ({node, ...props}) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 text-gray-700 text-sm" {...props} />,
+              }}
+            >
               {p.text}
             </ReactMarkdown>
           </div>
@@ -878,29 +1038,35 @@ export default function AISearchWidget() {
                             </div>
                           )}
 
-                          {messages.map((m, mIdx) => (
-                            <div key={m.id}>
-                              <div
-                                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                              >
+                          {messages.map((m, mIdx) => {
+                            const isLastAssistantMessage = m.role === 'assistant' && mIdx === messages.length - 1;
+                            const hasDetectedTours = isLastAssistantMessage && detectedTours.length > 0;
+                            const isUser = m.role === 'user';
+
+                            return (
+                              <div key={m.id}>
                                 <div
-                                  className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-sm sm:text-[15px] ${
-                                    m.role === 'user'
-                                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
-                                      : 'bg-white text-gray-800 border shadow-sm'
-                                  }`}
+                                  className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
                                 >
-                                  {renderContent(m.parts)}
+                                  <div
+                                    className={`max-w-[85%] px-4 py-3 rounded-2xl ${
+                                      isUser
+                                        ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
+                                        : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
+                                    }`}
+                                  >
+                                    {renderContent(m.parts, hasDetectedTours, isUser)}
+                                  </div>
                                 </div>
+                                {/* Show detected tours after last assistant message */}
+                                {hasDetectedTours && (
+                                  <div className="mt-3 mb-2">
+                                    <TourSlider tours={detectedTours} />
+                                  </div>
+                                )}
                               </div>
-                              {/* Show detected tours after last assistant message */}
-                              {m.role === 'assistant' && mIdx === messages.length - 1 && detectedTours.length > 0 && (
-                                <div className="mt-2">
-                                  <TourSlider tours={detectedTours} />
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {isGenerating && (
                             <div className="flex items-center gap-2.5 text-gray-500 bg-white px-3.5 py-2 rounded-xl border shadow-sm">
@@ -1361,6 +1527,15 @@ export default function AISearchWidget() {
         .apple-scrollbar::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(to bottom, rgba(107, 114, 128, 0.6), rgba(75, 85, 99, 0.6));
           background-clip: padding-box;
+        }
+
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
 
         .ai-search-input {
