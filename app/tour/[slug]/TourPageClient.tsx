@@ -1039,7 +1039,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                 Home
               </Link>
               <span className="text-slate-400">/</span>
-              <Link href="/search" className="text-slate-500 hover:text-red-600">
+              <Link href="/tours" className="text-slate-500 hover:text-red-600">
                 Tours
               </Link>
               <span className="text-slate-400">/</span>
@@ -1050,7 +1050,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
 
         <div className="container mx-auto px-4 py-8">
           <Link
-            href="/search"
+            href="/tours"
             className="inline-flex items-center gap-2 text-red-600 font-semibold mb-6 hover:underline transition-colors"
           >
             <ArrowLeft size={20} />
@@ -1149,7 +1149,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                           <Star size={16} className="text-yellow-500 fill-current" />
                           <span className="font-semibold text-slate-800">{tour.rating}</span>
                         </div>
-                        <span className="text-slate-500">({reviews.length} reviews)</span>
+                        <span className="text-slate-500">({tour.reviewCount || reviews.length} reviews)</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
@@ -1284,7 +1284,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     </div>
                     <div className="flex items-center gap-3 text-slate-600">
                       <Star size={20} className="text-yellow-500" />
-                      <span>Rating: {tour.rating} ({reviews.length} reviews)</span>
+                      <span>Rating: {tour.rating} ({tour.reviewCount || reviews.length} reviews)</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-600">
                       <Users size={20} className="text-blue-500" />
