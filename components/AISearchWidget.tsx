@@ -540,6 +540,7 @@ export default function AISearchWidget() {
     sendMessage,
     status,
     stop,
+    setMessages,
   } = useChat({
     transport: new DefaultChatTransport({
       api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
@@ -700,6 +701,16 @@ export default function AISearchWidget() {
   // State for detected tours
   const [detectedTours, setDetectedTours] = useState<any[]>([]);
 
+  // Clear chat function
+  const handleClearChat = () => {
+    setDetectedTours([]);
+    setMessages([]);
+    // Optionally scroll to top
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = 0;
+    }
+  };
+
   // Parse tour information from text and fetch from Algolia
   const detectAndFetchTours = async (text: string) => {
     try {
@@ -726,8 +737,8 @@ export default function AISearchWidget() {
       }
 
       if (potentialTours.size > 0) {
-        // Search Algolia for these tours
-        const toursArray = Array.from(potentialTours.entries()).slice(0, 6); // Limit to 6 tours
+        // Search Algolia for these tours - limit to first 4 mentioned tours
+        const toursArray = Array.from(potentialTours.entries()).slice(0, 4);
         const searchPromises = toursArray.map(async ([tourTitle, price]) => {
           try {
             // First try exact title match
@@ -735,7 +746,7 @@ export default function AISearchWidget() {
               indexName: INDEX_TOURS,
               params: {
                 query: tourTitle,
-                hitsPerPage: 3,
+                hitsPerPage: 1, // Only get 1 result per tour
               }
             }]);
             let firstResult = response.results[0] as SearchResponse<any>;
@@ -747,7 +758,7 @@ export default function AISearchWidget() {
                 indexName: INDEX_TOURS,
                 params: {
                   query: keywords,
-                  hitsPerPage: 3,
+                  hitsPerPage: 1, // Only get 1 result per tour
                 }
               }]);
               firstResult = response.results[0] as SearchResponse<any>;
@@ -762,8 +773,17 @@ export default function AISearchWidget() {
 
         const tours = (await Promise.all(searchPromises)).filter(Boolean);
         if (tours.length > 0) {
+          // Remove duplicates based on slug/objectID
+          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
+            const tourId = tour.slug || tour.objectID;
+            if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
+              acc.push(tour);
+            }
+            return acc;
+          }, []);
+
           // Transform tours to ensure they have the right structure
-          const transformedTours = tours.map((tour: any) => ({
+          const transformedTours = uniqueTours.map((tour: any) => ({
             slug: tour.slug || tour.objectID,
             title: tour.title || 'Untitled Tour',
             image: tour.image || tour.images?.[0] || tour.primaryImage,
@@ -804,6 +824,13 @@ export default function AISearchWidget() {
   // Detect tours in messages
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
+
+    // Clear detected tours when user sends a new message
+    if (lastMessage && lastMessage.role === 'user') {
+      setDetectedTours([]);
+      return;
+    }
+
     if (lastMessage && lastMessage.role === 'assistant') {
       const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
       const fullText = textParts.map((p: any) => p.text).join(' ');
@@ -814,7 +841,12 @@ export default function AISearchWidget() {
                             /cairo|luxor|aswan|alexandria|pyramid|sphinx|nile/i.test(fullText);
 
       if (hasTourPattern) {
+        // Clear old tours before detecting new ones
+        setDetectedTours([]);
         detectAndFetchTours(fullText);
+      } else {
+        // Clear tours if no pattern matched
+        setDetectedTours([]);
       }
     }
   }, [messages]);
@@ -845,15 +877,39 @@ export default function AISearchWidget() {
           // Extract just the intro text before the tour listings
           const lines = p.text.split('\n');
           const introLines = [];
+
           for (const line of lines) {
-            // Stop when we hit a line that looks like a tour listing
-            if (/^(?:Luxor|Cairo|Aswan|Alexandria|Hurghada|Sharm El Sheikh|Makadi Bay):/i.test(line.trim()) ||
-                /^\d+\.\s+/i.test(line.trim())) {
+            const trimmed = line.trim();
+
+            // Stop when we hit tour-related content
+            if (
+              // Lines starting with city names and colon
+              /^(?:Luxor|Cairo|Aswan|Alexandria|Hurghada|Sharm El Sheikh|Makadi Bay|From):/i.test(trimmed) ||
+              // Lines starting with numbers (like "1.", "2.")
+              /^\d+[\.\)]\s+/i.test(trimmed) ||
+              // Lines containing "Duration:", "Highlights:", "Why you'll love it:"
+              /^(?:Duration|Highlights?|Why you'?ll love it|Price|From):/i.test(trimmed) ||
+              // Lines that look like tour names with prices
+              /\(\$\d+\)/.test(trimmed) ||
+              // Lines starting with bold tour names
+              /^\*\*[A-Z]/.test(trimmed)
+            ) {
               break;
             }
+
             introLines.push(line);
           }
+
           const introText = introLines.join('\n').trim();
+
+          // If intro text is too short or empty, show a generic message
+          if (!introText || introText.length < 10) {
+            return (
+              <div key={idx} className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed">
+                Here are some tours I found for you:
+              </div>
+            );
+          }
 
           return (
             <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
@@ -990,6 +1046,17 @@ export default function AISearchWidget() {
                           )}
                         </div>
                         <div className="flex items-center gap-1 md:gap-1.5">
+                          {chatMode && messages.length > 0 && (
+                            <motion.button
+                              initial={{ scale: 0, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              onClick={handleClearChat}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                            >
+                              <Sparkles className="w-3 h-3" strokeWidth={2.5} />
+                              <span className="hidden sm:inline">New Chat</span>
+                            </motion.button>
+                          )}
                           {searchQuery && !chatMode && (
                             <motion.button
                               initial={{ scale: 0, opacity: 0 }}
