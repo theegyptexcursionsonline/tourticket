@@ -852,7 +852,33 @@ export default function AISearchWidget() {
   }, [messages]);
 
   // Render message content
-  const renderContent = (parts: any[], hideDetails: boolean = false, isUser: boolean = false) => {
+  const renderContent = (parts: any[], hideDetails: boolean = false, isUser: boolean = false, showSkeleton: boolean = false) => {
+    // If we should show skeleton, show tour card skeletons
+    if (showSkeleton) {
+      return (
+        <div key="skeleton" className="space-y-3">
+          <div className="text-gray-700 text-sm sm:text-base leading-relaxed">
+            Looking for tours...
+          </div>
+          <div className="flex gap-3 overflow-x-hidden py-1">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm animate-pulse">
+                <div className="h-36 bg-gray-200" />
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div className="flex justify-between items-center pt-2">
+                    <div className="h-3 bg-gray-200 rounded w-12" />
+                    <div className="h-4 bg-gray-200 rounded w-16" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     return parts.map((p: any, idx: number) => {
       if (p.type === 'tool-result') {
         try {
@@ -877,6 +903,7 @@ export default function AISearchWidget() {
           // Extract just the intro text before the tour listings
           const lines = p.text.split('\n');
           const introLines = [];
+          let foundTourContent = false;
 
           for (const line of lines) {
             const trimmed = line.trim();
@@ -885,15 +912,20 @@ export default function AISearchWidget() {
             if (
               // Lines starting with city names and colon
               /^(?:Luxor|Cairo|Aswan|Alexandria|Hurghada|Sharm El Sheikh|Makadi Bay|From):/i.test(trimmed) ||
-              // Lines starting with numbers (like "1.", "2.")
-              /^\d+[\.\)]\s+/i.test(trimmed) ||
-              // Lines containing "Duration:", "Highlights:", "Why you'll love it:"
-              /^(?:Duration|Highlights?|Why you'?ll love it|Price|From):/i.test(trimmed) ||
+              // Lines starting with numbers (like "1.", "2.", "3.", or just "1", "2")
+              /^(\d+[\.\)]\s*|^\d+\s*$)/.test(trimmed) ||
+              // Lines containing "Duration:", "Highlights:", "Why you'll love it:", "Price:", "Perfect for:"
+              /^(?:Duration|Highlights?|Why you'?ll love it|Price|From|Perfect for):/i.test(trimmed) ||
               // Lines that look like tour names with prices
               /\(\$\d+\)/.test(trimmed) ||
-              // Lines starting with bold tour names
-              /^\*\*[A-Z]/.test(trimmed)
+              // Lines starting with bold tour names or headings
+              /^\*\*[A-Z]/.test(trimmed) ||
+              // Lines that are likely tour titles (capitalized, longer than 10 chars)
+              /^[A-Z][a-zA-Z\s]{10,}(?:Tour|Day|Trip|Experience|Adventure)/.test(trimmed) ||
+              // Bullet points with tour info
+              /^[•\-\*]\s*(?:Price|Duration|Highlights|Perfect)/i.test(trimmed)
             ) {
+              foundTourContent = true;
               break;
             }
 
@@ -902,8 +934,8 @@ export default function AISearchWidget() {
 
           const introText = introLines.join('\n').trim();
 
-          // If intro text is too short or empty, show a generic message
-          if (!introText || introText.length < 10) {
+          // If we found tour content but no good intro, or intro is too short, show a generic message
+          if (foundTourContent && (!introText || introText.length < 20)) {
             return (
               <div key={idx} className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed">
                 Here are some tours I found for you:
@@ -911,21 +943,31 @@ export default function AISearchWidget() {
             );
           }
 
+          // If we have a good intro, show it
+          if (introText && introText.length >= 20) {
+            return (
+              <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
+                    p: ({node, ...props}) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
+                    strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                    h1: ({node, ...props}) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
+                  }}
+                >
+                  {introText}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+
+          // Otherwise show generic message
           return (
-            <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
-                components={{
-                  p: ({node, ...props}) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
-                  strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                  h1: ({node, ...props}) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
-                }}
-              >
-                {introText}
-              </ReactMarkdown>
+            <div key={idx} className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed">
+              Here are some tours I found for you:
             </div>
           );
         }
@@ -1110,6 +1152,15 @@ export default function AISearchWidget() {
                             const hasDetectedTours = isLastAssistantMessage && detectedTours.length > 0;
                             const isUser = m.role === 'user';
 
+                            // Check if this message is currently streaming and has tour patterns
+                            const isStreaming = isLastAssistantMessage && isGenerating;
+                            const textParts = m.parts.filter((p: any) => p.type === 'text');
+                            const fullText = textParts.map((p: any) => p.text).join(' ');
+                            const hasTourPattern = /\$\d+/i.test(fullText) ||
+                                                  /tour/i.test(fullText) ||
+                                                  /cairo|luxor|aswan|alexandria|pyramid|sphinx|nile/i.test(fullText);
+                            const shouldShowSkeleton = isStreaming && hasTourPattern;
+
                             return (
                               <div key={m.id}>
                                 <div
@@ -1122,11 +1173,11 @@ export default function AISearchWidget() {
                                         : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
                                     }`}
                                   >
-                                    {renderContent(m.parts, hasDetectedTours, isUser)}
+                                    {renderContent(m.parts, hasDetectedTours, isUser, shouldShowSkeleton)}
                                   </div>
                                 </div>
-                                {/* Show detected tours after last assistant message */}
-                                {hasDetectedTours && (
+                                {/* Show detected tours after last assistant message (only when not streaming) */}
+                                {hasDetectedTours && !isStreaming && (
                                   <div className="mt-3 mb-2">
                                     <TourSlider tours={detectedTours} />
                                   </div>
