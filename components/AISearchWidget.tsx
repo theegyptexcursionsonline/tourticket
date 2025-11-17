@@ -458,7 +458,7 @@ export default function AISearchWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [inputValue, setInputValue] = useState('');
-  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+  const [featuredTours, setFeaturedTours] = useState<any[]>([]);
   const [algoliaError, setAlgoliaError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [chatMode, setChatMode] = useState(false);
@@ -535,13 +535,38 @@ export default function AISearchWidget() {
     }
   }, [isExpanded]);
 
-  // Mock recently viewed items
+  // Fetch featured tours from Algolia
   useEffect(() => {
-    setRecentlyViewed([
-      { id: 1, title: 'Pyramids of Giza Tour', type: 'Historical', price: 45, duration: '8 hours', slug: 'pyramids-of-giza-tour' },
-      { id: 2, title: 'Nile River Cruise', type: 'Cruise', price: 120, duration: '3 days', slug: 'nile-river-cruise' },
-      { id: 3, title: 'Cairo City Tour', type: 'City Tour', price: 35, duration: '6 hours', slug: 'cairo-city-tour' },
-    ]);
+    const fetchFeaturedTours = async () => {
+      try {
+        const response = await searchClient.search([{
+          indexName: INDEX_TOURS,
+          params: {
+            query: '',
+            hitsPerPage: 3,
+            filters: 'isFeatured:true',
+          }
+        }]);
+        const firstResult = response.results[0] as SearchResponse<any>;
+        if (firstResult?.hits && firstResult.hits.length > 0) {
+          setFeaturedTours(firstResult.hits);
+        } else {
+          // Fallback: fetch any tours if no featured tours
+          const fallbackResponse = await searchClient.search([{
+            indexName: INDEX_TOURS,
+            params: {
+              query: '',
+              hitsPerPage: 3,
+            }
+          }]);
+          const fallbackResult = fallbackResponse.results[0] as SearchResponse<any>;
+          setFeaturedTours(fallbackResult?.hits || []);
+        }
+      } catch (error) {
+        console.error('Error fetching featured tours:', error);
+      }
+    };
+    fetchFeaturedTours();
   }, []);
 
   // Auto-scroll chat to bottom
@@ -799,7 +824,7 @@ export default function AISearchWidget() {
                             <>
                               <Sparkles className="w-3 md:w-3.5 h-3 md:h-3.5 text-blue-500" strokeWidth={2.5} />
                               <span className="text-[11px] md:text-xs font-semibold text-gray-700">
-                                {searchQuery ? 'Search Results' : 'Recent Activity'}
+                                {searchQuery ? 'Search Results' : 'Featured Tours'}
                               </span>
                             </>
                           )}
@@ -926,28 +951,58 @@ export default function AISearchWidget() {
                         </InstantSearch>
                       ) : (
                         <div>
-                          {recentlyViewed.length > 0 ? (
-                            recentlyViewed.map((item, index) => (
+                          {featuredTours.length > 0 ? (
+                            featuredTours.map((tour, index) => (
                               <motion.a
-                                key={item.id}
-                                href={`/tours/${item.slug || item.id}`}
+                                key={tour.objectID}
+                                href={`/tours/${tour.slug || tour.objectID}`}
                                 onClick={handleCloseSearch}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05, duration: 0.3 }}
-                                className="block px-6 py-4 hover:bg-gradient-to-r hover:from-orange-500/5 hover:via-amber-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 group relative overflow-hidden"
+                                className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-blue-500/5 hover:via-indigo-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
                               >
-                                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-amber-500/0 to-yellow-500/0 group-hover:from-orange-500/5 group-hover:via-amber-500/5 group-hover:to-yellow-500/5 transition-all duration-500" />
-                                <div className="flex items-center gap-4 relative z-10">
-                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
-                                    <Clock className="w-7 h-7 text-orange-600" strokeWidth={2.5} />
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-indigo-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
+                                <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+                                  <div className="w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+                                    {(tour.image || tour.images?.[0] || tour.primaryImage) ? (
+                                      <img
+                                        src={tour.image || tour.images?.[0] || tour.primaryImage}
+                                        alt={tour.title || 'Tour'}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200">
+                                        <MapPin className="w-8 h-8 text-blue-600" strokeWidth={2.5} />
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="font-semibold text-gray-900 text-[15px] leading-snug mb-1.5 group-hover:text-orange-600 transition-colors duration-300">{item.title}</div>
-                                    <div className="text-xs text-gray-500 flex items-center gap-2.5 flex-wrap">
-                                      <span className="bg-gray-50/80 backdrop-blur-sm px-2.5 py-1 rounded-lg font-medium">{item.type}</span>
-                                      <span className="bg-gray-50/80 backdrop-blur-sm px-2.5 py-1 rounded-lg font-medium">{item.duration}</span>
-                                      <span className="bg-gradient-to-r from-orange-50 to-amber-50 px-2.5 py-1 rounded-lg font-bold text-orange-600">${item.price}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 line-clamp-2 md:truncate group-hover:text-blue-600 transition-colors duration-300">
+                                      {tour.title || 'Untitled Tour'}
+                                    </div>
+                                    <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+                                      {tour.location && (
+                                        <span className="flex items-center gap-1 md:gap-1.5 bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg">
+                                          <MapPin className="w-2.5 md:w-3 h-2.5 md:h-3 text-gray-400" strokeWidth={2.5} />
+                                          <span className="font-medium">{tour.location}</span>
+                                        </span>
+                                      )}
+                                      {tour.duration && (
+                                        <span className="flex items-center gap-1 md:gap-1.5 bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg">
+                                          <Clock className="w-2.5 md:w-3 h-2.5 md:h-3 text-gray-400" strokeWidth={2.5} />
+                                          <span className="font-medium">{tour.duration} days</span>
+                                        </span>
+                                      )}
+                                      {(tour.price || tour.discountPrice) && (
+                                        <span className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-bold text-blue-600 text-[10px] md:text-xs">
+                                          ${tour.discountPrice || tour.price}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -959,12 +1014,12 @@ export default function AISearchWidget() {
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 transition={{ duration: 0.3 }}
-                                className="inline-flex items-center justify-center w-20 h-20 rounded-[22px] bg-gradient-to-br from-gray-50 to-gray-100 mb-5 shadow-lg shadow-gray-500/5"
+                                className="inline-flex items-center justify-center w-20 h-20 rounded-[22px] bg-gradient-to-br from-blue-50 to-indigo-100 mb-5 shadow-lg shadow-blue-500/10"
                               >
-                                <Clock className="w-10 h-10 text-gray-400" strokeWidth={2.5} />
+                                <Sparkles className="w-10 h-10 text-blue-500" strokeWidth={2.5} />
                               </motion.div>
-                              <p className="text-sm font-medium text-gray-600">No recent searches</p>
-                              <p className="text-xs text-gray-400 mt-1">Start exploring to see your history</p>
+                              <p className="text-sm font-medium text-gray-600">No featured tours</p>
+                              <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
                             </div>
                           )}
                         </div>
