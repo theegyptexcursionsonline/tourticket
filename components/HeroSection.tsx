@@ -136,15 +136,15 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
   return (
     <div>
-      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-xl border-b border-white/10">
+      <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 backdrop-blur-xl border-b border-blue-200/30">
         <div className="flex items-center gap-2 md:gap-2.5">
           <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
             <MapPin className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+          <span className="text-xs md:text-sm font-bold text-gray-900 tracking-wide uppercase">
             Tours
           </span>
-          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+          <span className="ml-auto text-[10px] md:text-xs font-semibold text-blue-700 bg-blue-100/90 backdrop-blur-sm px-2.5 md:px-3 py-0.5 md:py-1 rounded-full border border-blue-200/50">
             {hits.length}
           </span>
         </div>
@@ -258,15 +258,15 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 
   return (
     <div>
-      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 backdrop-blur-xl border-b border-white/10">
+      <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-xl border-b border-emerald-200/30">
         <div className="flex items-center gap-2 md:gap-2.5">
           <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
             <Compass className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+          <span className="text-xs md:text-sm font-bold text-gray-900 tracking-wide uppercase">
             Destinations
           </span>
-          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+          <span className="ml-auto text-[10px] md:text-xs font-semibold text-emerald-700 bg-emerald-100/90 backdrop-blur-sm px-2.5 md:px-3 py-0.5 md:py-1 rounded-full border border-emerald-200/50">
             {hits.length}
           </span>
         </div>
@@ -313,15 +313,15 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 
   return (
     <div>
-      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-purple-500/5 via-fuchsia-500/5 to-pink-500/5 backdrop-blur-xl border-b border-white/10">
+      <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-purple-500/10 via-fuchsia-500/10 to-pink-500/10 backdrop-blur-xl border-b border-purple-200/30">
         <div className="flex items-center gap-2 md:gap-2.5">
           <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
             <Tag className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+          <span className="text-xs md:text-sm font-bold text-gray-900 tracking-wide uppercase">
             Categories
           </span>
-          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+          <span className="ml-auto text-[10px] md:text-xs font-semibold text-purple-700 bg-purple-100/90 backdrop-blur-sm px-2.5 md:px-3 py-0.5 md:py-1 rounded-full border border-purple-200/50">
             {hits.length}
           </span>
         </div>
@@ -911,9 +911,9 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               style={{ maxHeight: '65vh' }}
             >
               {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-sm">
+              <div className="px-6 py-4 border-b border-gray-200/60 bg-gradient-to-br from-white via-blue-50/40 to-purple-50/40 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     {chatMode && (
                       <button
                         onClick={handleBackToSearch}
@@ -924,15 +924,17 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                     )}
                     {chatMode ? (
                       <>
-                        <Bot className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
+                          <Bot className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                           AI Travel Assistant
                         </span>
                       </>
                     ) : (
                       <>
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-sm shadow-blue-500/50" />
+                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                           {query ? 'Search Results' : 'Popular Searches'}
                         </span>
                       </>
