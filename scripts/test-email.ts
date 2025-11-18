@@ -1,6 +1,15 @@
 // scripts/test-email.ts
 // Run with: npx tsx scripts/test-email.ts
 
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+// Override admin email for testing
+process.env.ADMIN_NOTIFICATION_EMAIL = 'info@rdmi.in';
+
 import { EmailService } from '../lib/email/emailService';
 
 const TEST_EMAIL = 'info@rdmi.in';
@@ -59,13 +68,15 @@ async function testEmails() {
     await EmailService.sendBookingConfirmation({
       customerName: 'John Smith',
       customerEmail: TEST_EMAIL,
-      tourTitle: 'Pyramids of Giza Private Tour',
+      tourTitle: 'Cairo: Nile Sunset Dinner Cruise, Show & Optional Transfer',
+      bookingOption: 'Traditional Classic Nile Cruise - Entry Ticket Only OP3',
       bookingDate: 'Tuesday, November 19, 2025',
-      bookingTime: '09:00 AM',
+      bookingTime: '08:00 PM',
       participants: '3 participants',
+      participantBreakdown: '2 x Adults ($67.20), 1 x Child ($33.60)',
       totalPrice: '$245.50',
-      bookingId: 'EEO-TEST-12345678',
-      specialRequests: 'Vegetarian meals preferred',
+      bookingId: 'EEO-12345678-ABC',
+      specialRequests: 'Vegetarian meals preferred. Need wheelchair accessible transport.',
       meetingPoint: 'Hotel Lobby - Four Seasons Cairo',
       contactNumber: '+20 11 42255624',
       tourImage: 'https://preview.egypt-excursionsonline.com/pyramid.png',

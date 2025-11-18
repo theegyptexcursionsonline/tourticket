@@ -4,17 +4,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import withAuth from '@/components/admin/withAuth';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  User, 
-  Mail, 
-  Phone, 
-  Users, 
-  Hash, 
-  DollarSign, 
-  Tag, 
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  Users,
+  Hash,
+  DollarSign,
+  Tag,
   MapPin,
   Edit,
   Trash2,
@@ -22,7 +22,8 @@ import {
   CreditCard,
   Download,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Package
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -68,6 +69,17 @@ interface BookingDetails {
   specialRequests?: string;
   emergencyContact?: string;
   selectedAddOns?: { [key: string]: number };
+  selectedBookingOption?: {
+    _id: string;
+    title: string;
+    price: number;
+  };
+  selectedAddOnDetails?: {
+    [key: string]: {
+      title: string;
+      price: number;
+    };
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -430,15 +442,26 @@ const BookingDetailPage = () => {
                     label="Time" 
                     value={booking.time}
                   />
-                  <DetailItem 
-                    icon={Users} 
-                    label="Guests" 
+                  <DetailItem
+                    icon={Users}
+                    label="Guests"
                     value={formatGuestBreakdown(booking)}
                   />
+                  {booking.selectedBookingOption && (
+                    <DetailItem
+                      icon={Package}
+                      label="Booking Option"
+                      value={
+                        <span className="text-blue-600 font-medium">
+                          {booking.selectedBookingOption.title}
+                        </span>
+                      }
+                    />
+                  )}
                   {booking.tour.duration && (
-                    <DetailItem 
-                      icon={Tag} 
-                      label="Duration" 
+                    <DetailItem
+                      icon={Tag}
+                      label="Duration"
                       value={booking.tour.duration}
                     />
                   )}
@@ -507,16 +530,42 @@ const BookingDetailPage = () => {
               {/* Selected Add-ons */}
               {booking.selectedAddOns && Object.keys(booking.selectedAddOns).length > 0 && (
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200">
+                  <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                    <Package className="w-5 h-5 mr-2 text-blue-500" />
                     Selected Add-ons
                   </h3>
-                  <div className="space-y-2">
-                    {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => (
-                      <div key={addOnId} className="flex justify-between items-center bg-slate-50 rounded-lg p-3">
-                        <span className="font-medium text-slate-700">{addOnId}</span>
-                        <span className="text-slate-600">Qty: {quantity}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => {
+                      const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
+                      return quantity > 0 ? (
+                        <div
+                          key={addOnId}
+                          className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200"
+                        >
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                            <div>
+                              <div className="font-medium text-slate-800">
+                                {addOnDetail?.title || addOnId}
+                              </div>
+                              <div className="text-sm text-slate-500">
+                                Quantity: {quantity}
+                              </div>
+                            </div>
+                          </div>
+                          {addOnDetail?.price && (
+                            <div className="text-right">
+                              <div className="font-semibold text-slate-700">
+                                ${(addOnDetail.price * quantity).toFixed(2)}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                ${addOnDetail.price.toFixed(2)} each
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null;
+                    })}
                   </div>
                 </div>
               )}

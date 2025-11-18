@@ -2,6 +2,15 @@
 // Quick test for Admin Booking Alert with detailed tour information
 // Run with: npx tsx scripts/test-admin-email.ts
 
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+// Override admin email for testing
+process.env.ADMIN_NOTIFICATION_EMAIL = 'info@rdmi.in';
+
 import { EmailService } from '../lib/email/emailService';
 
 const TEST_EMAIL = 'info@rdmi.in';

@@ -286,6 +286,29 @@ export async function POST(request: Request) {
     
     // Send Enhanced Booking Confirmation
     try {
+      // Get booking option from first cart item
+      const mainCartItem = cart[0];
+      const bookingOption = mainCartItem?.selectedBookingOption?.title;
+
+      // Calculate participant breakdown for first item
+      const adultCount = mainCartItem?.quantity || 0;
+      const childCount = mainCartItem?.childQuantity || 0;
+      const infantCount = mainCartItem?.infantQuantity || 0;
+
+      const participantParts = [];
+      if (adultCount > 0) {
+        const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
+        participantParts.push(`${adultCount} x Adult${adultCount > 1 ? 's' : ''} ($${basePrice.toFixed(2)})`);
+      }
+      if (childCount > 0) {
+        const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
+        const childPrice = basePrice / 2;
+        participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
+      }
+      if (infantCount > 0) {
+        participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} (Free)`);
+      }
+
       await EmailService.sendBookingConfirmation({
         customerName: `${customer.firstName} ${customer.lastName}`,
         customerEmail: customer.email,
@@ -298,8 +321,10 @@ export async function POST(request: Request) {
         }),
         bookingTime: mainBooking.time,
         participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
+        participantBreakdown: participantParts.join(', '),
         totalPrice: `$${pricing.total.toFixed(2)}`,
         bookingId: bookingId,
+        bookingOption: bookingOption,
         specialRequests: customer.specialRequests,
         meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
         contactNumber: "+20 11 42255624",

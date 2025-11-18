@@ -10,8 +10,10 @@ export interface BookingEmailData extends BaseEmailData {
   bookingDate: string;
   bookingTime: string;
   participants: string;
+  participantBreakdown?: string; // e.g., "2 x Adults (£22.4)"
   totalPrice: string;
   bookingId: string;
+  bookingOption?: string; // Selected booking option name
   specialRequests?: string;
   meetingPoint?: string;
   contactNumber?: string;

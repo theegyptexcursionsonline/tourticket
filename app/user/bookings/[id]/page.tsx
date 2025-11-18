@@ -3,22 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  User, 
-  Mail, 
-  Phone, 
-  Users, 
-  DollarSign, 
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  Users,
+  DollarSign,
   MapPin,
   MessageSquare,
   AlertTriangle,
   RefreshCw,
   XCircle,
   CheckCircle,
-  Download
+  Download,
+  Package
 } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -63,6 +64,17 @@ interface BookingDetails {
   specialRequests?: string;
   emergencyContact?: string;
   selectedAddOns?: { [key: string]: number };
+  selectedBookingOption?: {
+    _id: string;
+    title: string;
+    price: number;
+  };
+  selectedAddOnDetails?: {
+    [key: string]: {
+      title: string;
+      price: number;
+    };
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -437,15 +449,26 @@ const UserBookingDetailPage = () => {
                       label="Time" 
                       value={booking.time}
                     />
-                    <DetailItem 
-                      icon={Users} 
-                      label="Guests" 
+                    <DetailItem
+                      icon={Users}
+                      label="Guests"
                       value={formatGuestBreakdown(booking)}
                     />
+                    {booking.selectedBookingOption && (
+                      <DetailItem
+                        icon={Package}
+                        label="Booking Option"
+                        value={
+                          <span className="text-blue-600 font-medium">
+                            {booking.selectedBookingOption.title}
+                          </span>
+                        }
+                      />
+                    )}
                     {booking.tour.duration && (
-                      <DetailItem 
-                        icon={Clock} 
-                        label="Duration" 
+                      <DetailItem
+                        icon={Clock}
+                        label="Duration"
                         value={booking.tour.duration}
                       />
                     )}
@@ -492,6 +515,49 @@ const UserBookingDetailPage = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Selected Add-ons */}
+                {booking.selectedAddOns && Object.keys(booking.selectedAddOns).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                      <Package className="w-5 h-5 mr-2 text-blue-600" />
+                      Selected Add-ons
+                    </h3>
+                    <div className="space-y-3">
+                      {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => {
+                        const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
+                        return quantity > 0 ? (
+                          <div
+                            key={addOnId}
+                            className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200"
+                          >
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                              <div>
+                                <div className="font-medium text-slate-800">
+                                  {addOnDetail?.title || addOnId}
+                                </div>
+                                <div className="text-sm text-slate-500">
+                                  Quantity: {quantity}
+                                </div>
+                              </div>
+                            </div>
+                            {addOnDetail?.price && (
+                              <div className="text-right">
+                                <div className="font-semibold text-slate-700">
+                                  ${(addOnDetail.price * quantity).toFixed(2)}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  ${addOnDetail.price.toFixed(2)} each
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Special Requests */}
                 {booking.specialRequests && (
