@@ -6,7 +6,9 @@ import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import { Loader2 } from 'lucide-react';
 
-export const revalidate = 3600; // Revalidate filter data every hour
+// NO CACHING - Real-time data from admin panel
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 async function getFilters() {
     await dbConnect();

@@ -18,16 +18,17 @@ export async function GET() {
       }
     ).populate('destination', 'name slug');
     
-    const response = NextResponse.json({ 
-      success: true, 
-      data: tours 
+    const response = NextResponse.json({
+      success: true,
+      data: tours
     });
-    
+
+    // NO CACHING - Real-time data from admin panel
     response.headers.set(
-      'Cache-Control', 
-      'public, max-age=1800, stale-while-revalidate=3600'
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, max-age=0'
     );
-    
+
     return response;
   } catch (error) {
     return NextResponse.json(

@@ -21,16 +21,18 @@ export const useDestinations = () => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch destinations and tours in parallel
+        // Fetch destinations and tours in parallel - NO CACHING
         const [destResponse, toursResponse] = await Promise.all([
           fetch('/api/destinations', {
+            cache: 'no-store',
             headers: {
-              'Cache-Control': 'public, max-age=3600'
+              'Cache-Control': 'no-store, no-cache, must-revalidate'
             }
           }),
           fetch('/api/tours/public', {
+            cache: 'no-store',
             headers: {
-              'Cache-Control': 'public, max-age=1800'
+              'Cache-Control': 'no-store, no-cache, must-revalidate'
             }
           })
         ]);

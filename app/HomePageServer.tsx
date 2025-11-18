@@ -23,8 +23,9 @@ import InterestGridServer from '@/components/InterestGridServer';
 import PopularInterestServer from '@/components/PopularInterestServer';
 import DayTrips from '@/components/DayTrips';
 
-// Enable ISR - revalidate every 60 seconds
-export const revalidate = 60;
+// NO CACHING - Real-time data from admin panel
+export const revalidate = 0; // Force dynamic rendering
+export const dynamic = 'force-dynamic'; // Ensure no caching
 
 async function getHomePageData() {
   try {

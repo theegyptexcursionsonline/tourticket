@@ -6,29 +6,35 @@
     <title>Payment Confirmation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; }
-        .container { max-width: 600px; margin: 0 auto; background: white; }
-        .header { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 30px 20px; text-align: center; }
-        .logo { max-width: 120px; height: auto; margin-bottom: 15px; }
-        .header h1 { font-size: 28px; margin: 0; font-weight: 700; }
-        .header p { font-size: 16px; margin: 10px 0 0; opacity: 0.9; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+        .header { background: white; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+        .logo { max-width: 140px; height: auto; margin-bottom: 20px; }
+        .header h1 { font-size: 32px; margin: 0; font-weight: 700; color: #111827; letter-spacing: -0.5px; }
+        .header p { font-size: 16px; margin: 12px 0 0; color: #6b7280; }
+        .success-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; margin-top: 15px; }
         .content { padding: 40px 30px; }
-        .success-badge { background: #d1fae5; border: 2px solid #10b981; border-radius: 50px; padding: 15px 25px; text-align: center; margin: 25px 0; }
-        .success-badge span { color: #047857; font-weight: 700; font-size: 18px; }
-        .payment-details { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 25px 0; }
-        .detail-header { background: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; }
-        .detail-header h3 { color: #2d3748; margin: 0; font-size: 18px; }
-        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f1f5f9; }
+        .greeting { font-size: 18px; color: #111827; margin-bottom: 20px; font-weight: 500; }
+        .intro-text { color: #4b5563; font-size: 15px; line-height: 1.7; margin-bottom: 30px; }
+        .payment-details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin: 30px 0; }
+        .detail-header { background: #ffffff; padding: 18px 24px; border-bottom: 2px solid #e5e7eb; }
+        .detail-header h3 { color: #111827; margin: 0; font-size: 17px; font-weight: 600; }
+        .detail-row { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
         .detail-row:last-child { border-bottom: none; }
-        .detail-label { font-weight: 600; color: #4a5568; }
-        .detail-value { color: #2d3748; text-align: right; }
-        .amount-row { background: #f0fdf4; font-weight: 700; font-size: 18px; color: #047857; }
-        .footer { background: #2d3748; color: white; padding: 30px 20px; text-align: center; }
-        .footer-logo { max-width: 80px; height: auto; margin-bottom: 15px; opacity: 0.8; }
+        .detail-label { font-weight: 500; color: #6b7280; font-size: 14px; display: block; margin-bottom: 4px; }
+        .detail-value { color: #111827; font-size: 15px; font-weight: 500; }
+        .amount-row { background: #d1fae5; border-top: 2px solid #10b981; }
+        .amount-row .detail-value { font-size: 20px; font-weight: 700; color: #065f46; }
+        .amount-row .detail-label { color: #065f46; font-weight: 600; }
+        .footer { background: #f9fafb; color: #6b7280; padding: 35px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer-logo { max-width: 100px; height: auto; margin-bottom: 15px; opacity: 0.7; }
+        .footer p { margin: 6px 0; font-size: 14px; }
+        .footer strong { color: #374151; }
+        .divider { height: 1px; background: #e5e7eb; margin: 25px 0; }
         @media (max-width: 600px) {
-            .content { padding: 25px 20px; }
-            .detail-row { flex-direction: column; align-items: flex-start; }
-            .detail-value { margin-top: 5px; }
+            .container { margin: 10px; border-radius: 8px; }
+            .content { padding: 30px 20px; }
+            .header { padding: 30px 20px 20px; }
         }
     </style>
 </head>
@@ -37,52 +43,63 @@
         <!-- Header -->
         <div class="header">
             <img src="{{baseUrl}}/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
-            <h1>✅ Payment Confirmed!</h1>
+            <h1>Payment Confirmed</h1>
             <p>Your payment has been processed successfully</p>
+            <div class="success-badge">✓ Payment Successful</div>
         </div>
 
         <!-- Content -->
         <div class="content">
-            <div class="success-badge">
-                <span>🎉 Payment Successful!</span>
+            <div class="greeting">
+                Hello {{customerName}},
             </div>
 
-            <p>Dear {{customerName}},</p>
-
-            <p>Great news! We have successfully received your payment for <strong>{{tourTitle}}</strong>. Your booking is now fully confirmed and secured.</p>
+            <p class="intro-text">Great news! We have successfully received your payment for <strong>{{tourTitle}}</strong>. Your booking is now fully confirmed and secured.</p>
 
             <!-- Payment Details -->
             <div class="payment-details">
                 <div class="detail-header">
-                    <h3>💳 Payment Details</h3>
+                    <h3>Payment Details</h3>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Payment ID:</span>
-                    <span class="detail-value">{{paymentId}}</span>
+                    <div>
+                        <span class="detail-label">Payment ID</span>
+                        <div class="detail-value">{{paymentId}}</div>
+                    </div>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Booking ID:</span>
-                    <span class="detail-value">{{bookingId}}</span>
+                    <div>
+                        <span class="detail-label">Booking ID</span>
+                        <div class="detail-value">{{bookingId}}</div>
+                    </div>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Payment Method:</span>
-                    <span class="detail-value">{{paymentMethod}}</span>
+                    <div>
+                        <span class="detail-label">Payment Method</span>
+                        <div class="detail-value">{{paymentMethod}}</div>
+                    </div>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Currency:</span>
-                    <span class="detail-value">{{currency}}</span>
+                    <div>
+                        <span class="detail-label">Currency</span>
+                        <div class="detail-value">{{currency}}</div>
+                    </div>
                 </div>
                 <div class="detail-row amount-row">
-                    <span class="detail-label">Amount Paid:</span>
-                    <span class="detail-value">{{amount}}</span>
+                    <div>
+                        <span class="detail-label">Amount Paid</span>
+                        <div class="detail-value">{{amount}}</div>
+                    </div>
                 </div>
             </div>
 
-            <p>You will receive a detailed booking confirmation shortly with all the information about your upcoming tour.</p>
+            <p style="color: #6b7280; font-size: 14px; margin-bottom: 15px;">You will receive a detailed booking confirmation shortly with all the information about your upcoming tour.</p>
 
-            <p style="margin-top: 30px;">
+            <div class="divider"></div>
+
+            <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
                 Thank you for your trust in Egypt Excursions Online!<br><br>
-                <strong>The EEO Payment Team</strong>
+                <strong style="color: #111827;">The Egypt Excursions Online Team</strong>
             </p>
         </div>
 
@@ -90,7 +107,9 @@
         <div class="footer">
             <img src="{{baseUrl}}/EEO-logo.png" alt="EEO" class="footer-logo">
             <p><strong>Egypt Excursions Online</strong></p>
-            <p>📧 booking@egypt-excursionsonline.com | 📞 +20 11 42255624</p>
+            <p>Cairo, Egypt</p>
+            <p style="margin-top: 12px;">booking@egypt-excursionsonline.com</p>
+            <p>+20 11 42255624</p>
         </div>
     </div>
 </body>

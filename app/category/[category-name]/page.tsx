@@ -28,8 +28,9 @@ async function getCategoryPage(categoryName: string): Promise<CategoryPageData |
   }
 }
 
-// Enable ISR - revalidate every hour
-export const revalidate = 3600;
+// NO CACHING - Real-time data from admin panel
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const resolvedParams = await params;

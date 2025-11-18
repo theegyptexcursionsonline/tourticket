@@ -6,33 +6,42 @@
     <title>Trip Completion</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; }
-        .container { max-width: 600px; margin: 0 auto; background: white; }
-        .header { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 30px 20px; text-align: center; }
-        .logo { max-width: 120px; height: auto; margin-bottom: 15px; }
-        .header h1 { font-size: 28px; margin: 0; font-weight: 700; }
-        .header p { font-size: 16px; margin: 10px 0 0; opacity: 0.9; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif; line-height: 1.6; color: #1f2937; background-color: #f3f4f6; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+        .header { background: white; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+        .logo { max-width: 140px; height: auto; margin-bottom: 20px; }
+        .header h1 { font-size: 32px; margin: 0; font-weight: 700; color: #111827; letter-spacing: -0.5px; }
+        .header p { font-size: 16px; margin: 12px 0 0; color: #6b7280; }
+        .success-badge { display: inline-block; background: #f3e8ff; color: #6b21a8; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; margin-top: 15px; }
         .content { padding: 40px 30px; }
-        .thank-you-box { background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border: 2px solid #8b5cf6; border-radius: 12px; padding: 30px; text-align: center; margin: 25px 0; }
-        .thank-you-box h2 { color: #6b21a8; font-size: 24px; margin-bottom: 15px; }
-        .thank-you-box p { color: #7c2d92; font-size: 16px; }
-        .review-section { background: #fef7ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 25px; text-align: center; margin: 25px 0; }
-        .review-section h3 { color: #6b21a8; margin-bottom: 15px; }
-        .review-button { display: inline-block; background: #8b5cf6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px; }
-        .review-button:hover { background: #7c3aed; }
+        .greeting { font-size: 18px; color: #111827; margin-bottom: 20px; font-weight: 500; }
+        .intro-text { color: #4b5563; font-size: 15px; line-height: 1.7; margin-bottom: 30px; }
+        .thank-you-box { background: #faf5ff; border: 1px solid #f3e8ff; border-radius: 10px; padding: 30px; text-align: center; margin: 25px 0; }
+        .thank-you-box h2 { color: #6b21a8; font-size: 22px; margin-bottom: 12px; font-weight: 600; }
+        .thank-you-box p { color: #7c2d92; font-size: 15px; }
+        .review-section { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 10px; padding: 25px; text-align: center; margin: 25px 0; }
+        .review-section h3 { color: #1e40af; margin-bottom: 12px; font-size: 18px; font-weight: 600; }
+        .review-section p { color: #1e3a8a; font-size: 14px; margin-bottom: 20px; }
+        .review-button { display: inline-block; background: #111827; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 6px; font-size: 14px; transition: all 0.3s; }
+        .review-button:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
         .recommendations { margin: 30px 0; }
-        .recommendations h3 { color: #2d3748; margin-bottom: 20px; text-align: center; }
-        .tour-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .tour-card { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s; }
-        .tour-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .tour-image { width: 100%; height: 150px; object-fit: cover; }
+        .recommendations h3 { color: #111827; margin-bottom: 20px; text-align: center; font-size: 18px; font-weight: 600; }
+        .tour-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
+        .tour-card { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; text-decoration: none; color: inherit; transition: all 0.3s; background: white; }
+        .tour-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: #d1d5db; }
+        .tour-image { width: 100%; height: 140px; object-fit: cover; }
         .tour-info { padding: 15px; }
-        .tour-title { font-weight: 600; color: #2d3748; margin-bottom: 8px; }
-        .tour-price { color: #dc2626; font-weight: 700; }
-        .footer { background: #2d3748; color: white; padding: 30px 20px; text-align: center; }
-        .footer-logo { max-width: 80px; height: auto; margin-bottom: 15px; opacity: 0.8; }
+        .tour-title { font-weight: 600; color: #111827; margin-bottom: 8px; font-size: 14px; }
+        .tour-price { color: #059669; font-weight: 700; font-size: 15px; }
+        .divider { height: 1px; background: #e5e7eb; margin: 25px 0; }
+        .footer { background: #f9fafb; color: #6b7280; padding: 35px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer-logo { max-width: 100px; height: auto; margin-bottom: 15px; opacity: 0.7; }
+        .footer p { margin: 6px 0; font-size: 14px; }
+        .footer strong { color: #374151; }
         @media (max-width: 600px) {
-            .content { padding: 25px 20px; }
+            .container { margin: 10px; border-radius: 8px; }
+            .content { padding: 30px 20px; }
+            .header { padding: 30px 20px 20px; }
             .tour-grid { grid-template-columns: 1fr; }
         }
     </style>
@@ -42,35 +51,38 @@
         <!-- Header -->
         <div class="header">
             <img src="{{baseUrl}}/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
-            <h1>🌟 Thank You!</h1>
-            <p>Hope you had an amazing Egyptian adventure</p>
+            <h1>Thank You</h1>
+            <p>We hope you had an amazing Egyptian adventure</p>
+            <div class="success-badge">Trip Complete</div>
         </div>
 
         <!-- Content -->
         <div class="content">
+            <div class="greeting">
+                Hello {{customerName}},
+            </div>
+
+            <p class="intro-text">Thank you for choosing Egypt Excursions Online for your Egyptian adventure! We hope you created wonderful memories and experienced the magic of our beautiful country.</p>
+
             <div class="thank-you-box">
-                <h2>🎉 Trip Complete!</h2>
+                <h2>Trip Complete</h2>
                 <p>We hope you had an incredible time exploring <strong>{{tourTitle}}</strong> on {{bookingDate}}.</p>
             </div>
 
-            <p>Dear {{customerName}},</p>
-
-            <p>Thank you for choosing Egypt Excursions Online for your Egyptian adventure! We hope you created wonderful memories and experienced the magic of our beautiful country.</p>
-
             <!-- Review Request -->
             <div class="review-section">
-                <h3>📝 Share Your Experience</h3>
+                <h3>Share Your Experience</h3>
                 <p>Your feedback helps us improve and helps other travelers discover amazing tours!</p>
-                <a href="{{reviewLink}}" class="review-button">⭐ Write a Review</a>
+                <a href="{{reviewLink}}" class="review-button">Write a Review</a>
                 {{#if photoSharingLink}}
-                <a href="{{photoSharingLink}}" class="review-button">📸 Share Photos</a>
+                <a href="{{photoSharingLink}}" class="review-button">Share Photos</a>
                 {{/if}}
             </div>
 
             <!-- Recommendations -->
             {{#if recommendedTours}}
             <div class="recommendations">
-                <h3>🗺️ Your Next Egyptian Adventure Awaits</h3>
+                <h3>Your Next Egyptian Adventure Awaits</h3>
                 <div class="tour-grid">
                     {{#each recommendedTours}}
                     <a href="{{link}}" class="tour-card">
@@ -85,11 +97,13 @@
             </div>
             {{/if}}
 
-            <p>We would love to welcome you back for another Egyptian adventure soon. There's always more to discover in the land of the pharaohs!</p>
+            <div class="divider"></div>
 
-            <p style="margin-top: 30px;">
+            <p style="color: #6b7280; font-size: 14px; margin-bottom: 15px;">We would love to welcome you back for another Egyptian adventure soon. There's always more to discover in the land of the pharaohs!</p>
+
+            <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
                 With warm regards,<br>
-                <strong>The Egypt Excursions Online Family</strong>
+                <strong style="color: #111827;">The Egypt Excursions Online Team</strong>
             </p>
         </div>
 
@@ -97,8 +111,10 @@
         <div class="footer">
             <img src="{{baseUrl}}/EEO-logo.png" alt="EEO" class="footer-logo">
             <p><strong>Egypt Excursions Online</strong></p>
-            <p>📧 booking@egypt-excursionsonline.com | 📞 +20 11 42255624</p>
-            <p>Follow us: Facebook | Instagram | TripAdvisor</p>
+            <p>Cairo, Egypt</p>
+            <p style="margin-top: 12px;">booking@egypt-excursionsonline.com</p>
+            <p>+20 11 42255624</p>
+            <p style="margin-top: 12px;">Follow us: Facebook • Instagram • TripAdvisor</p>
         </div>
     </div>
 </body>

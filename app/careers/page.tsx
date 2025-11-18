@@ -5,7 +5,9 @@ import dbConnect from "@/lib/dbConnect";
 import Job from "@/lib/models/Job";
 import { Job as JobType } from "@/types";
 
-export const revalidate = 3600; // Revalidate job listings every hour
+// NO CACHING - Real-time data from admin panel
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 async function getJobs(): Promise<JobType[]> {
     await dbConnect();

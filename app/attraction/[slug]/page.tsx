@@ -131,8 +131,9 @@ export async function generateMetadata({ params }: AttractionPageProps): Promise
   };
 }
 
-// Keep ISR but remove conflicting cache options
-export const revalidate = 3600;
+// NO CACHING - Real-time data from admin panel
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export default async function AttractionPage({ params }: AttractionPageProps) {
   const { slug } = await params;

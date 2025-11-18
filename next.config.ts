@@ -129,11 +129,10 @@ const nextConfig = {
         ],
       },
       {
-        // ISR pages - allow Next.js to control caching with proper CDN headers
+        // Homepage - NO CACHING for real-time admin updates
         source: '/',
         headers: [
-          { key: 'Cache-Control', value: 's-maxage=60, stale-while-revalidate=3600' },
-          { key: 'CDN-Cache-Control', value: 'max-age=60' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
         ],
       },
       {

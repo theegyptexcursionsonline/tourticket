@@ -9,7 +9,7 @@ const mg = mailgun.client({
 });
 
 const DOMAIN = process.env.MAILGUN_DOMAIN || '';
-const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'noreply@egyptexcursions.com';
+const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'booking@egypt-excursionsonline.com';
 
 interface EmailOptions {
   to: string;

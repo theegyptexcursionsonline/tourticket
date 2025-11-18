@@ -76,8 +76,9 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
   }
 }
 
-// Enable ISR - revalidate every hour
-export const revalidate = 3600;
+// NO CACHING - Real-time data from admin panel
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
 // Generate metadata

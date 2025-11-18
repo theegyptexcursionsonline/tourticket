@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ArrowLeft, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star, Send } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
@@ -179,17 +179,13 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
           >
             {tours.map((tour, idx) => (
-              <motion.a
+              <a
                 key={limitedHits[idx].objectID}
                 href={`/${tour.slug}`}
                 onClick={onHitClick}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.3 }}
-                whileHover={{ y: -4 }}
+                className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
               >
                 {tour.image && (
                   <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
@@ -251,7 +247,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                     )}
                   </div>
                 </div>
-              </motion.a>
+              </a>
             ))}
           </div>
         </div>
@@ -282,13 +278,10 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
-        <motion.a
+        <a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05, duration: 0.3 }}
           className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
@@ -312,7 +305,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
               </div>
             </div>
           </div>
-        </motion.a>
+        </a>
       ))}
     </div>
   );
@@ -340,13 +333,10 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
-        <motion.a
+        <a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05, duration: 0.3 }}
           className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-fuchsia-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
@@ -367,7 +357,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
               </div>
             </div>
           </div>
-        </motion.a>
+        </a>
       ))}
     </div>
   );
@@ -395,13 +385,10 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
-        <motion.a
+        <a
           key={hit.objectID}
           href={`/blog/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05, duration: 0.3 }}
           className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-amber-500/5 hover:via-orange-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-orange-500/0 to-red-500/0 group-hover:from-amber-500/5 group-hover:via-orange-500/5 group-hover:to-red-500/5 transition-all duration-500" />
@@ -425,7 +412,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
               </div>
             </div>
           </div>
-        </motion.a>
+        </a>
       ))}
     </div>
   );
@@ -433,12 +420,11 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 // Tour Card Component for AI Chat
 const TourCard = ({ tour }: { tour: any }) => (
-  <motion.a
+  <a
     href={`/${tour.slug}`}
     target="_blank"
     rel="noopener noreferrer"
-    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-    whileHover={{ y: -4 }}
+    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
   >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
@@ -478,7 +464,7 @@ const TourCard = ({ tour }: { tour: any }) => (
         </div>
       )}
     </div>
-  </motion.a>
+  </a>
 );
 
 // Tour Slider Component for AI Chat
@@ -560,16 +546,12 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
         className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
       >
         {destinations.map((destination, idx) => (
-          <motion.a
+          <a
             key={idx}
             href={`/destinations/${destination.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: idx * 0.05, duration: 0.3 }}
-            whileHover={{ y: -4 }}
+            className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
             {destination.image && (
               <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
@@ -602,7 +584,7 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
                 </div>
               </div>
             </div>
-          </motion.a>
+          </a>
         ))}
       </div>
     </div>
@@ -637,14 +619,22 @@ export default function AISearchWidget() {
   });
   const isGenerating = status === 'submitted' || status === 'streaming';
 
-  // Scroll detection - show widget after scrolling past hero section
+  // Scroll detection - show widget after scrolling past hero section (throttled)
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      const scrollThreshold = window.innerHeight * 0.8;
-      setIsVisible(window.scrollY > scrollThreshold);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollThreshold = window.innerHeight * 0.8;
+          setIsVisible(window.scrollY > scrollThreshold);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
@@ -725,13 +715,19 @@ export default function AISearchWidget() {
     fetchFeaturedTours();
   }, []);
 
-  // Auto-scroll chat to bottom
+  // Auto-scroll chat to bottom (optimized)
   useEffect(() => {
-    if (!chatContainerRef.current) return;
-    setTimeout(() => {
-      chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
-    }, 100);
-  }, [messages, isGenerating]);
+    if (!chatContainerRef.current || !chatMode) return;
+
+    const scrollToBottom = () => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    };
+
+    // Use requestAnimationFrame for smooth scrolling
+    requestAnimationFrame(scrollToBottom);
+  }, [messages.length, chatMode]); // Only re-run when messages count changes
 
   // Listen for floating button click (openAIAgent event)
   useEffect(() => {
@@ -798,14 +794,19 @@ export default function AISearchWidget() {
     }
   };
 
-  // Parse tour information from text and fetch from Algolia
-  const detectAndFetchTours = async (text: string) => {
+  // Parse tour information from text and fetch from Algolia (memoized)
+  const detectAndFetchTours = useCallback(async (text: string) => {
     try {
       // Enhanced patterns to match various tour formats
       const tourPatterns = [
-        /(?:^|\n)\s*(?:\d+\.\s*)?(?:Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)?\s*([^($\n]+?)\s+\(\$(\d+)\)/gm, // Matches "Title ($price)"
-        /(?:^|\n)\s*(?:\d+\.\s*)?([A-Z][^($\n]+?Tour[^($\n]*?)\s+\(\$(\d+)\)/gm, // Matches "Tour Name ($price)"
-        /\*\*([^*]+?)\*\*\s+\(\$(\d+)\)/g, // Matches "**Tour Name** ($price)"
+        // Matches "Title ($price)" or "Title — $price"
+        /(?:^|\n)\s*(?:\d+\.\s*)?(?:Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)?\s*([^($\n—]+?)\s+(?:\(\$|—\s*\$)(\d+)\)?/gm,
+        // Matches "Tour Name ($price)" or "Tour Name — $price"
+        /(?:^|\n)\s*(?:\d+\.\s*)?([A-Z][^($\n—]+?Tour[^($\n—]*?)\s+(?:\(\$|—\s*\$)(\d+)\)?/gm,
+        // Matches "**Tour Name** ($price)" or "**Tour Name** — $price"
+        /\*\*([^*]+?)\*\*\s+(?:\(\$|—\s*\$)(\d+)\)?/g,
+        // Matches any tour-like line with em-dash price like "from Hurghada by Bus — $55"
+        /(?:^|\n)\s*(?:\d+\.\s*)?([^—\n]{15,}?)\s+—\s*\$(\d+)/gm,
       ];
 
       const potentialTours = new Map<string, number>(); // Map of tour title -> price
@@ -887,10 +888,10 @@ export default function AISearchWidget() {
       console.error('Error detecting tours:', error);
     }
     return [];
-  };
+  }, []); // No dependencies - function is stable
 
-  // Parse destination information from text and fetch from Algolia
-  const detectAndFetchDestinations = async (text: string) => {
+  // Parse destination information from text and fetch from Algolia (memoized)
+  const detectAndFetchDestinations = useCallback(async (text: string) => {
     try {
       // Pattern to match destinations mentioned in the response
       const destinationNames = new Map<string, boolean>();
@@ -961,10 +962,10 @@ export default function AISearchWidget() {
       console.error('Error detecting destinations:', error);
     }
     return [];
-  };
+  }, []); // No dependencies - function is stable
 
   // Render tool outputs (tours)
-  const renderToolOutput = (obj: any) => {
+  const renderToolOutput = useCallback((obj: any) => {
     if (Array.isArray(obj)) {
       const tours = obj.filter(item => item.title && item.slug);
       if (tours.length > 0) return <TourSlider tours={tours} />;
@@ -979,10 +980,12 @@ export default function AISearchWidget() {
         {JSON.stringify(obj, null, 2)}
       </pre>
     );
-  };
+  }, []);
 
-  // Detect tours and destinations in messages
+  // Detect tours and destinations in messages (optimized to avoid lag)
   useEffect(() => {
+    // Skip if currently generating to avoid processing incomplete messages
+    if (isGenerating) return;
     const lastMessage = messages[messages.length - 1];
 
     // Skip if it's a user message
@@ -991,6 +994,12 @@ export default function AISearchWidget() {
     }
 
     if (lastMessage.role === 'assistant') {
+      // Skip if we've already processed this message
+      const messageId = lastMessage.id;
+      if (detectedToursByMessage[messageId] || detectedDestinationsByMessage[messageId]) {
+        return;
+      }
+
       const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
       const fullText = textParts.map((p: any) => p.text).join(' ');
 
@@ -1010,7 +1019,7 @@ export default function AISearchWidget() {
           if (destinations.length > 0) {
             setDetectedDestinationsByMessage(prev => ({
               ...prev,
-              [lastMessage.id]: destinations
+              [messageId]: destinations
             }));
           }
         });
@@ -1020,16 +1029,27 @@ export default function AISearchWidget() {
           if (tours.length > 0) {
             setDetectedToursByMessage(prev => ({
               ...prev,
-              [lastMessage.id]: tours
+              [messageId]: tours
             }));
           }
         });
       }
     }
-  }, [messages]);
+  }, [messages, isGenerating, detectAndFetchTours, detectAndFetchDestinations, detectedToursByMessage, detectedDestinationsByMessage]);
 
-  // Render message content
-  const renderContent = (parts: any[], hideDetails: boolean = false, isUser: boolean = false, showSkeleton: boolean = false) => {
+  // Memoize ReactMarkdown components to avoid recreation on every render
+  const markdownComponents = useMemo(() => ({
+    p: ({node, ...props}: any) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-semibold text-gray-900" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal list-inside space-y-1 text-gray-700 text-sm" {...props} />,
+  }), []);
+
+  // Render message content (memoized)
+  const renderContent = useCallback((parts: any[], hideDetails: boolean = false, isUser: boolean = false, showSkeleton: boolean = false) => {
     // If we should show skeleton, show tour card skeletons
     if (showSkeleton) {
       return (
@@ -1127,13 +1147,7 @@ export default function AISearchWidget() {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}
-                  components={{
-                    p: ({node, ...props}) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
-                    strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                    h1: ({node, ...props}) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
-                  }}
+                  components={markdownComponents}
                 >
                   {introText}
                 </ReactMarkdown>
@@ -1154,15 +1168,7 @@ export default function AISearchWidget() {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
-              components={{
-                p: ({node, ...props}) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
-                strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                h1: ({node, ...props}) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
-                h2: ({node, ...props}) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
-                h3: ({node, ...props}) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
-                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm" {...props} />,
-                ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 text-gray-700 text-sm" {...props} />,
-              }}
+              components={markdownComponents}
             >
               {p.text}
             </ReactMarkdown>
@@ -1171,7 +1177,7 @@ export default function AISearchWidget() {
       }
       return null;
     });
-  };
+  }, [markdownComponents]);
 
   // Don't render anything if not visible
   if (!isVisible) return null;
@@ -1428,13 +1434,10 @@ export default function AISearchWidget() {
                         <div>
                           {featuredTours.length > 0 ? (
                             featuredTours.map((tour, index) => (
-                              <motion.a
+                              <a
                                 key={tour.objectID}
                                 href={`/${tour.slug || tour.objectID}`}
                                 onClick={handleCloseSearch}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05, duration: 0.3 }}
                                 className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-blue-500/5 hover:via-indigo-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
                               >
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-indigo-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
@@ -1481,7 +1484,7 @@ export default function AISearchWidget() {
                                     </div>
                                   </div>
                                 </div>
-                              </motion.a>
+                              </a>
                             ))
                           ) : (
                             <div className="p-16 text-center">
