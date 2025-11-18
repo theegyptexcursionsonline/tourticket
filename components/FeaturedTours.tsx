@@ -98,7 +98,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   return (
     <Link
       href={`/tour/${tour.slug || '#'}`}
-      className="block w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[400px] bg-white rounded-3xl overflow-hidden shadow-2xl shadow-red-500/10 border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
+      className="block w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[400px] bg-white rounded-3xl overflow-hidden border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
       aria-label={`Open tour ${tour.title || 'tour'}`}
     >
       <div className="relative">

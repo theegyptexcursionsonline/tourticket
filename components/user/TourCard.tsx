@@ -28,7 +28,7 @@ const TourCard: React.FC<{ tour: Tour }> = ({ tour }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden transition-all duration-300 group">
       <Link href={`/tour/${tour.slug}`}>
         <div className="relative w-full h-52">
           <Image
@@ -84,7 +84,7 @@ export const UserTourCard: React.FC<TourCardProps> = ({ tour, onRemove }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden transition-all duration-300 group">
       <div className="flex flex-col sm:flex-row">
         <div className="relative w-full h-48 sm:w-48 sm:h-auto flex-shrink-0">
           <Link href={`/tour/${tour.slug}`}>

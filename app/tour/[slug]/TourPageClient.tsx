@@ -1378,7 +1378,30 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     Need help?
                   </h3>
                   <div className="space-y-3">
-                    <button className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        try {
+                          if (typeof (window as any).openIntercom === 'function') {
+                            (window as any).openIntercom();
+                            return;
+                          }
+                          if (typeof (window as any).Intercom === 'function') {
+                            (window as any).Intercom('show');
+                            return;
+                          }
+                          if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('open-chatbot'));
+                          }
+                        } catch (err) {
+                          console.error('Failed to open Intercom:', err);
+                          if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('open-chatbot'));
+                          }
+                        }
+                      }}
+                      className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left"
+                    >
                       <MessageCircle size={18} />
                       <span>Chat with us</span>
                     </button>
