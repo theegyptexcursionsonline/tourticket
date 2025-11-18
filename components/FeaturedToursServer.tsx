@@ -255,9 +255,9 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
   return (
     <>
       <section className="featured-tours-section bg-gradient-to-b from-white to-gray-50 py-8 sm:py-12 md:py-16 lg:py-20">
-        <div className="container mx-auto px-4 md:px-8">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 sm:mb-10 md:mb-12 gap-4 sm:gap-6">
+        {/* Header with container */}
+        <div className="container mx-auto px-4 md:px-8 mb-8 sm:mb-10 md:mb-12">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6">
             <div className="max-w-2xl">
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 tracking-tight leading-tight">
                 Canal Cruises Perfect For You
@@ -279,7 +279,10 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
               </Link>
             </div>
           </div>
+        </div>
 
+        {/* Full-width carousel */}
+        <div className="w-full">
           {/* Auto-scrolling carousel with 2 rows - Manual scroll enabled */}
           <div className="relative w-full overflow-x-auto group py-4 sm:py-6 scrollbar-hide">
             {/* Very subtle gradient masks - minimal on mobile */}
