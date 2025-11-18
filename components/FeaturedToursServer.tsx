@@ -283,25 +283,16 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
 
         {/* Full-width carousel */}
         <div className="w-full">
-          {/* Auto-scrolling carousel with 2 rows - Manual scroll enabled */}
+          {/* Auto-scrolling carousel with 1 row - Manual scroll enabled */}
           <div className="relative w-full overflow-x-auto group py-4 sm:py-6 scrollbar-hide">
             {/* Very subtle gradient masks - minimal on mobile */}
             <div className="absolute top-0 left-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-r from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
             <div className="absolute top-0 right-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-l from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
 
-            {/* First row - scrolls left */}
-            <div className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused] mb-3 sm:mb-4" style={{ width: 'max-content' }}>
+            {/* Single row - scrolls left */}
+            <div className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]" style={{ width: 'max-content' }}>
               {duplicatedTours.map((tour, idx) => (
-                <div key={`row1-${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
-                  <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
-                </div>
-              ))}
-            </div>
-
-            {/* Second row - scrolls right */}
-            <div className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee-reverse group-hover:[animation-play-state:paused]" style={{ width: 'max-content' }}>
-              {duplicatedTours.map((tour, idx) => (
-                <div key={`row2-${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
+                <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
                   <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
                 </div>
               ))}
@@ -333,11 +324,6 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
           to { transform: translateX(-50%); }
         }
 
-        @keyframes marquee-reverse {
-          from { transform: translateX(-50%); }
-          to { transform: translateX(0); }
-        }
-
         .animate-marquee {
           animation: marquee 40s linear infinite;
           will-change: transform;
@@ -345,16 +331,8 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
           perspective: 1000px;
         }
 
-        .animate-marquee-reverse {
-          animation: marquee-reverse 40s linear infinite;
-          will-change: transform;
-          backface-visibility: hidden;
-          perspective: 1000px;
-        }
-
         @media (max-width: 640px) {
           .animate-marquee { animation-duration: 32s; }
-          .animate-marquee-reverse { animation-duration: 32s; }
         }
 
         /* NO SHADOWS - Remove all shadows from featured tours section */
