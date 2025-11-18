@@ -1149,7 +1149,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                           <Star size={16} className="text-yellow-500 fill-current" />
                           <span className="font-semibold text-slate-800">{tour.rating}</span>
                         </div>
-                        <span className="text-slate-500">({tour.reviewCount || reviews.length} reviews)</span>
+                        <span className="text-slate-500">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
@@ -1284,7 +1284,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     </div>
                     <div className="flex items-center gap-3 text-slate-600">
                       <Star size={20} className="text-yellow-500" />
-                      <span>Rating: {tour.rating} ({tour.reviewCount || reviews.length} reviews)</span>
+                      <span>Rating: {tour.rating} ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-600">
                       <Users size={20} className="text-blue-500" />
