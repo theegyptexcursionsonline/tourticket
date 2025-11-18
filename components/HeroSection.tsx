@@ -106,79 +106,146 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
   const limitedHits = hits.slice(0, limit);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   if (limitedHits.length === 0) return null;
 
+  const scroll = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 260;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  // Transform hits to tour objects
+  const tours = limitedHits.map((hit: any) => ({
+    slug: hit.slug || hit.objectID,
+    title: hit.title || 'Untitled Tour',
+    image: hit.image || hit.images?.[0] || hit.primaryImage,
+    location: hit.location,
+    duration: hit.duration,
+    rating: hit.rating,
+    reviews: hit.reviews,
+    price: hit.discountPrice || hit.price,
+    isFeatured: hit.isFeatured,
+    discountPrice: hit.discountPrice,
+    originalPrice: hit.price,
+  }));
+
   return (
     <div>
-      <div className="px-5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-            <MapPin className="w-3 h-3 text-white" />
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <MapPin className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
-            Tours ({hits.length})
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Tours
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any) => (
-        <a
-          key={hit.objectID}
-          href={`/tours/${hit.slug || hit.objectID}`}
-          onClick={onHitClick}
-          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
-              {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
-                <img
-                  src={hit.image || hit.images?.[0] || hit.primaryImage}
-                  alt={hit.title || 'Tour'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <MapPin className="w-7 h-7 text-blue-500" />
+
+      <div className="px-4 md:px-6 py-4">
+        <div className="relative w-full">
+          {tours.length > 1 && (
+            <>
+              <button
+                onClick={() => scroll('left')}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => scroll('right')}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <div
+            ref={sliderRef}
+            className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+          >
+            {tours.map((tour, idx) => (
+              <a
+                key={limitedHits[idx].objectID}
+                href={`/${tour.slug}`}
+                onClick={onHitClick}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                {tour.image && (
+                  <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+                    <img
+                      src={tour.image}
+                      alt={tour.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    {tour.isFeatured && (
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
+                        <Star className="w-2.5 h-2.5 fill-current" />
+                        Featured
+                      </div>
+                    )}
+                    {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice && (
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md">
+                        -{Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)}%
+                      </div>
+                    )}
+                    {tour.duration && (
+                      <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-medium flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {tour.duration}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="p-3">
+                  <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                    {tour.title}
+                  </h3>
+                  {tour.location && (
+                    <div className="flex items-center gap-1 text-gray-500 text-[11px] mb-2">
+                      <MapPin className="w-3 h-3 text-blue-500" />
+                      <span className="line-clamp-1">{tour.location}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5">
+                      {tour.rating && (
+                        <div className="flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[11px] font-medium">{tour.rating}</span>
+                          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
+                        </div>
+                      )}
+                    </div>
+                    {tour.price && (
+                      <div className="flex items-center gap-1">
+                        {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice ? (
+                          <>
+                            <span className="text-gray-400 text-[10px] line-through">${tour.originalPrice}</span>
+                            <span className="text-blue-600 font-bold text-base">${tour.discountPrice}</span>
+                          </>
+                        ) : (
+                          <span className="text-blue-600 font-bold text-base">${tour.price}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">
-                {hit.title || 'Untitled Tour'}
-              </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
-                {hit.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {hit.location}
-                  </span>
-                )}
-                {hit.duration && (
-                  <>
-                    <span className="text-gray-300">•</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {hit.duration} days
-                    </span>
-                  </>
-                )}
-                {(hit.price || hit.discountPrice) && (
-                  <>
-                    <span className="text-gray-300">•</span>
-                    <span className="font-bold text-blue-600">
-                      ${hit.discountPrice || hit.price}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
+              </a>
+            ))}
           </div>
-        </a>
-      ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -191,38 +258,43 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 
   return (
     <div>
-      <div className="px-5 py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100/50">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-            <Compass className="w-3 h-3 text-white" />
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+            <Compass className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
-            Destinations ({hits.length})
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Destinations
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any) => (
+      {limitedHits.map((hit: any, index) => (
         <a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
+          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center flex-shrink-0 border-2 border-emerald-100 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
-              <Compass className="w-6 h-6 text-emerald-600" />
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <Compass className="w-6 md:w-7 h-6 md:h-7 text-emerald-600" strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-emerald-600 transition-colors">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-emerald-600 transition-colors duration-300">
                 {hit.name || 'Untitled Destination'}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
-                {hit.country && <span>{hit.country}</span>}
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+                {hit.country && (
+                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.country}</span>
+                )}
                 {hit.tourCount && (
-                  <>
-                    <span className="text-gray-300">•</span>
-                    <span>{hit.tourCount} tours</span>
-                  </>
+                  <span className="bg-emerald-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-emerald-700">
+                    {hit.tourCount} tours
+                  </span>
                 )}
               </div>
             </div>
@@ -241,33 +313,41 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 
   return (
     <div>
-      <div className="px-5 py-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100/50">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
-            <Tag className="w-3 h-3 text-white" />
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-purple-500/5 via-fuchsia-500/5 to-pink-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
+            <Tag className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">
-            Categories ({hits.length})
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Categories
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any) => (
+      {limitedHits.map((hit: any, index) => (
         <a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
+          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center flex-shrink-0 border-2 border-purple-100 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
-              <Tag className="w-6 h-6 text-purple-600" />
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-fuchsia-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <Tag className="w-6 md:w-7 h-6 md:h-7 text-purple-600" strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-purple-600 transition-colors">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-purple-600 transition-colors duration-300">
                 {hit.name || 'Untitled Category'}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
-                {hit.tourCount && <span>{hit.tourCount} tours</span>}
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+                {hit.tourCount && (
+                  <span className="bg-purple-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-purple-700">
+                    {hit.tourCount} tours
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -530,8 +610,100 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     }, 100);
   }, [messages, isGenerating]);
 
-  // Render tool outputs (tours)
-  const renderToolOutput = (obj: any) => {
+  // State for detected content - stored per message ID
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
+  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, any[]>>({});
+
+  // Parse tour information from text and fetch from Algolia
+  const detectAndFetchTours = useCallback(async (text: string) => {
+    try {
+      const tourPatterns = [
+        /(?:^|\n)\s*(?:\d+\.\s*)?(?:Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)?\s*([^($\n—]+?)\s+(?:\(\$|—\s*\$)(\d+)\)?/gm,
+        /(?:^|\n)\s*(?:\d+\.\s*)?([A-Z][^($\n—]+?Tour[^($\n—]*?)\s+(?:\(\$|—\s*\$)(\d+)\)?/gm,
+        /\*\*([^*]+?)\*\*\s+(?:\(\$|—\s*\$)(\d+)\)?/g,
+        /(?:^|\n)\s*(?:\d+\.\s*)?([^—\n]{15,}?)\s+—\s*\$(\d+)/gm,
+      ];
+
+      const potentialTours = new Map<string, number>();
+
+      for (const pattern of tourPatterns) {
+        const matches = text.matchAll(pattern);
+        for (const match of matches) {
+          if (match[1]) {
+            const title = match[1].trim().replace(/^(Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)\s*/i, '');
+            const price = match[2] ? parseInt(match[2]) : 0;
+            if (title.length > 10) {
+              potentialTours.set(title, price);
+            }
+          }
+        }
+      }
+
+      if (potentialTours.size > 0) {
+        const toursArray = Array.from(potentialTours.entries()).slice(0, 4);
+        const searchPromises = toursArray.map(async ([tourTitle]) => {
+          try {
+            let response = await searchClient.search([{
+              indexName: INDEX_TOURS,
+              params: {
+                query: tourTitle,
+                hitsPerPage: 1,
+              }
+            }]);
+            let firstResult = response.results[0] as any;
+
+            if (!firstResult?.hits?.length) {
+              const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
+              response = await searchClient.search([{
+                indexName: INDEX_TOURS,
+                params: {
+                  query: keywords,
+                  hitsPerPage: 1,
+                }
+              }]);
+              firstResult = response.results[0] as any;
+            }
+
+            return firstResult?.hits?.[0];
+          } catch (error) {
+            console.error('Error searching for tour:', tourTitle, error);
+            return null;
+          }
+        });
+
+        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        if (tours.length > 0) {
+          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
+            const tourId = tour.slug || tour.objectID;
+            if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
+              acc.push(tour);
+            }
+            return acc;
+          }, []);
+
+          return uniqueTours.map((tour: any) => ({
+            slug: tour.slug || tour.objectID,
+            title: tour.title || 'Untitled Tour',
+            image: tour.image || tour.images?.[0] || tour.primaryImage,
+            location: tour.location,
+            duration: tour.duration,
+            rating: tour.rating,
+            reviews: tour.reviews,
+            price: tour.discountPrice || tour.price,
+            discountPrice: tour.discountPrice,
+            originalPrice: tour.price,
+            isFeatured: tour.isFeatured,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting tours:', error);
+    }
+    return [];
+  }, []);
+
+  // Render tool outputs (tours) - enhanced version
+  const renderToolOutput = useCallback((obj: any) => {
     if (Array.isArray(obj)) {
       const tours = obj.filter(item => item.title && item.slug);
       if (tours.length > 0) return <TourSlider tours={tours} />;
@@ -546,10 +718,44 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         {JSON.stringify(obj, null, 2)}
       </pre>
     );
-  };
+  }, []);
 
-  // Render message content
-  const renderContent = (parts: any[]) => {
+  // Detect tours in messages
+  useEffect(() => {
+    if (isGenerating) return;
+    const lastMessage = messages[messages.length - 1];
+
+    if (!lastMessage || lastMessage.role === 'user') {
+      return;
+    }
+
+    if (lastMessage.role === 'assistant') {
+      const messageId = lastMessage.id;
+      if (detectedToursByMessage[messageId]) {
+        return;
+      }
+
+      const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
+      const fullText = textParts.map((p: any) => p.text).join(' ');
+
+      const hasTourPattern = /\$\d+/i.test(fullText) ||
+                            (/tour/i.test(fullText) && /\(\$\d+\)/i.test(fullText));
+
+      if (hasTourPattern) {
+        detectAndFetchTours(fullText).then(tours => {
+          if (tours.length > 0) {
+            setDetectedToursByMessage(prev => ({
+              ...prev,
+              [messageId]: tours
+            }));
+          }
+        });
+      }
+    }
+  }, [messages, isGenerating, detectAndFetchTours, detectedToursByMessage]);
+
+  // Render message content - enhanced version
+  const renderContent = useCallback((parts: any[], messageId?: string) => {
     return parts.map((p: any, idx: number) => {
       if (p.type === 'tool-result') {
         try {
@@ -569,8 +775,15 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         );
       }
       return null;
-    });
-  };
+    }).concat(
+      // Add detected tours after the message content
+      messageId && detectedToursByMessage[messageId] ? (
+        <div key={`tours-${messageId}`} className="my-3">
+          <TourSlider tours={detectedToursByMessage[messageId]} />
+        </div>
+      ) : null
+    ).filter(Boolean);
+  }, [renderToolOutput, detectedToursByMessage]);
 
   return (
     <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start" ref={containerRef}>
@@ -784,7 +997,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                               : 'bg-white text-gray-800 border shadow-sm'
                           }`}
                         >
-                          {renderContent(m.parts)}
+                          {renderContent(m.parts, m.id)}
                         </div>
                       </div>
                     ))}
