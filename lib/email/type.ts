@@ -81,6 +81,7 @@ export interface WelcomeEmailData extends BaseEmailData {
 export interface AdminAlertData {
   customerName: string;
   customerEmail: string;
+  customerPhone?: string;
   tourTitle: string;
   bookingId: string;
   bookingDate: string;
@@ -89,6 +90,17 @@ export interface AdminAlertData {
   specialRequests?: string;
   adminDashboardLink?: string;
   baseUrl?: string;
+  tours?: Array<{
+    title: string;
+    date: string;
+    time: string;
+    adults: number;
+    children: number;
+    infants: number;
+    bookingOption?: string;
+    addOns?: string[];
+    price: string;
+  }>;
 }
 
 export interface BookingStatusUpdateData extends BaseEmailData {

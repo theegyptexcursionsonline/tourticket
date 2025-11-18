@@ -39,7 +39,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <img src="{{baseUrl}}/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+            <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
             <h1>🎯 New Booking Alert</h1>
             <p>Admin Notification System</p>
         </div>
@@ -64,12 +64,18 @@
                     <span class="detail-label">Email:</span>
                     <span class="detail-value">{{customerEmail}}</span>
                 </div>
+                {{#if customerPhone}}
+                <div class="detail-row">
+                    <span class="detail-label">Phone:</span>
+                    <span class="detail-value">{{customerPhone}}</span>
+                </div>
+                {{/if}}
                 <div class="detail-row">
                     <span class="detail-label">Booking ID:</span>
                     <span class="detail-value"><strong>{{bookingId}}</strong></span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Tour:</span>
+                    <span class="detail-label">Tour(s):</span>
                     <span class="detail-value">{{tourTitle}}</span>
                 </div>
                 <div class="detail-row">
@@ -87,6 +93,47 @@
                     <span class="detail-value"><strong>{{totalPrice}}</strong></span>
                 </div>
             </div>
+
+            <!-- Tour Details -->
+            {{#if tours}}
+            <div class="booking-details" style="margin-top: 20px;">
+                <div class="detail-header">
+                    <h3>📋 Tour Details</h3>
+                </div>
+                {{#each tours}}
+                <div style="padding: 15px 20px; border-bottom: 1px solid #f3f4f6; background: #fefefe;">
+                    <div style="margin-bottom: 10px;">
+                        <strong style="color: #1f2937; font-size: 15px;">{{this.title}}</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+                        <div><span style="color: #6b7280;">📅 Date:</span> <strong>{{this.date}}</strong></div>
+                        <div><span style="color: #6b7280;">🕐 Time:</span> <strong>{{this.time}}</strong></div>
+                        <div><span style="color: #6b7280;">👨 Adults:</span> <strong>{{this.adults}}</strong></div>
+                        <div><span style="color: #6b7280;">👶 Children:</span> <strong>{{this.children}}</strong></div>
+                        {{#if this.infants}}
+                        <div style="grid-column: 1 / -1;"><span style="color: #6b7280;">🍼 Infants:</span> <strong>{{this.infants}}</strong></div>
+                        {{/if}}
+                        {{#if this.bookingOption}}
+                        <div style="grid-column: 1 / -1;"><span style="color: #6b7280;">📦 Option:</span> <strong style="color: #2563eb;">{{this.bookingOption}}</strong></div>
+                        {{/if}}
+                        {{#if this.addOns}}
+                        <div style="grid-column: 1 / -1;">
+                            <span style="color: #6b7280;">➕ Add-ons:</span>
+                            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                                {{#each this.addOns}}
+                                <li style="color: #059669;">{{this}}</li>
+                                {{/each}}
+                            </ul>
+                        </div>
+                        {{/if}}
+                        <div style="grid-column: 1 / -1; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                            <span style="color: #6b7280;">💰 Price:</span> <strong style="color: #dc2626; font-size: 15px;">{{this.price}}</strong>
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+            {{/if}}
 
             {{#if specialRequests}}
             <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 15px; margin: 20px 0;">
@@ -110,7 +157,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            <img src="{{baseUrl}}/EEO-logo.png" alt="EEO" class="footer-logo">
+            <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="EEO" class="footer-logo">
             <p><strong>Egypt Excursions Online - Admin System</strong></p>
             <p>This is an automated notification. Do not reply to this email.</p>
         </div>

@@ -313,9 +313,65 @@ export async function POST(request: Request) {
 
     // Send Admin Alert
     try {
+      // Prepare detailed tour information
+      const tourDetails = await Promise.all(cart.map(async (item) => {
+        const tour = await Tour.findById(item._id || item.id);
+
+        // Get add-ons details
+        const addOns: string[] = [];
+        if (item.selectedAddOns && item.selectedAddOnDetails) {
+          Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+            const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+            if (addOnDetail && quantity > 0) {
+              addOns.push(addOnDetail.title);
+            }
+          });
+        }
+
+        // Calculate item price
+        const getItemTotal = (item: any) => {
+          const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
+          const adultPrice = basePrice * (item.quantity || 1);
+          const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+          let tourTotal = adultPrice + childPrice;
+
+          let addOnsTotal = 0;
+          if (item.selectedAddOns && item.selectedAddOnDetails) {
+            Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+              const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+              if (addOnDetail && quantity > 0) {
+                const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+                const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+                addOnsTotal += addOnDetail.price * addOnQuantity;
+              }
+            });
+          }
+
+          return tourTotal + addOnsTotal;
+        };
+
+        return {
+          title: tour?.title || item.title,
+          date: new Date(item.selectedDate).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }),
+          time: item.selectedTime || '10:00',
+          adults: item.quantity || 0,
+          children: item.childQuantity || 0,
+          infants: item.infantQuantity || 0,
+          bookingOption: item.selectedBookingOption?.title,
+          addOns: addOns.length > 0 ? addOns : undefined,
+          price: `$${getItemTotal(item).toFixed(2)}`
+        };
+      }));
+
       await EmailService.sendAdminBookingAlert({
         customerName: `${customer.firstName} ${customer.lastName}`,
         customerEmail: customer.email,
+        customerPhone: customer.phone,
         tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
         bookingId: bookingId,
         bookingDate: mainBooking.date.toLocaleDateString('en-US'),
@@ -323,7 +379,8 @@ export async function POST(request: Request) {
         paymentMethod: paymentMethod,
         specialRequests: customer.specialRequests,
         adminDashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/bookings/${bookingId}`,
-        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+        tours: tourDetails
       });
     } catch (emailError) {
       console.error('Failed to send admin alert email:', emailError);
