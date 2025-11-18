@@ -45,14 +45,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       if (error) {
         onError(error.message || 'Payment failed');
-        toast.error(error.message || 'Payment failed');
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         onSuccess(paymentIntent.id);
       }
     } catch (err: any) {
       console.error('Payment error:', err);
       onError(err.message || 'An unexpected error occurred');
-      toast.error('Payment failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
