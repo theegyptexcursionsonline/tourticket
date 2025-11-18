@@ -84,8 +84,26 @@ export default function ContactUsPage() {
 
   const openChatbot = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('open-chatbot'));
+    // Try to open Intercom directly
+    try {
+      if (typeof (window as any).openIntercom === 'function') {
+        (window as any).openIntercom();
+        return;
+      }
+      if (typeof (window as any).Intercom === 'function') {
+        (window as any).Intercom('show');
+        return;
+      }
+      // Fallback to event dispatch
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-chatbot'));
+      }
+    } catch (err) {
+      console.error('Failed to open Intercom:', err);
+      // Fallback to event dispatch
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-chatbot'));
+      }
     }
   };
   

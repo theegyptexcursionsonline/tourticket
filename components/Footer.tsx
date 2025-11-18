@@ -67,7 +67,7 @@ export default function Footer() {
   // Listen for open-chatbot events (dispatched by openChatbot)
   useEffect(() => {
     const handler = () => {
-      // Prefer openIntercom helper if available, then window.Intercom("show"), then fallback
+      // Prefer openIntercom helper if available, then window.Intercom("show")
       try {
         if (typeof (window as any).openIntercom === 'function') {
           (window as any).openIntercom();
@@ -77,9 +77,12 @@ export default function Footer() {
           (window as any).Intercom('show');
           return;
         }
-        // fallback: open Intercom inbox in new tab (rare)
-        const appId = 'o5up1xz3'; // keep in sync with your Intercom ID or read from env
-        window.open(`https://app.intercom.com/a/apps/${appId}/inbox`, '_blank', 'noopener,noreferrer');
+        // Try messenger instance directly
+        if ((window as any).__intercomMessenger && typeof (window as any).__intercomMessenger.showMessenger === 'function') {
+          (window as any).__intercomMessenger.showMessenger();
+          return;
+        }
+        console.warn('Intercom not initialized yet');
       } catch (err) {
         console.error('Failed to open Intercom:', err);
       }
@@ -130,8 +133,97 @@ export default function Footer() {
 
   const openChatbot = (e?: React.MouseEvent) => {
     e?.preventDefault();
-    if (typeof window !== 'undefined') {
+    e?.stopPropagation();
+    
+    console.log('🔵 Footer: Chat button clicked');
+    
+    // Try to open Intercom directly
+    try {
+      if (typeof window === 'undefined') {
+        console.warn('🔴 Footer: window is undefined');
+        return;
+      }
+      
+      const win = window as any;
+      
+      console.log('🔵 Footer: Checking Intercom availability...');
+      console.log('  - openIntercom:', typeof win.openIntercom);
+      console.log('  - Intercom:', typeof win.Intercom);
+      console.log('  - __intercomMessenger:', !!win.__intercomMessenger);
+      
+      // Method 1: Try openIntercom helper
+      if (typeof win.openIntercom === 'function') {
+        console.log('✅ Footer: Using openIntercom()');
+        win.openIntercom();
+        return;
+      }
+      
+      // Method 2: Try window.Intercom('show')
+      if (typeof win.Intercom === 'function') {
+        console.log('✅ Footer: Using Intercom("show")');
+        win.Intercom('show');
+        return;
+      }
+      
+      // Method 3: Try messenger instance directly
+      if (win.__intercomMessenger) {
+        console.log('🔵 Footer: Found __intercomMessenger, checking methods...');
+        console.log('  - showMessenger:', typeof win.__intercomMessenger.showMessenger);
+        console.log('  - show:', typeof win.__intercomMessenger.show);
+        console.log('  - Methods:', Object.keys(win.__intercomMessenger));
+        
+        if (typeof win.__intercomMessenger.showMessenger === 'function') {
+          console.log('✅ Footer: Using __intercomMessenger.showMessenger()');
+          win.__intercomMessenger.showMessenger();
+          return;
+        }
+        if (typeof win.__intercomMessenger.show === 'function') {
+          console.log('✅ Footer: Using __intercomMessenger.show()');
+          win.__intercomMessenger.show();
+          return;
+        }
+      }
+      
+      console.warn('⚠️ Footer: Intercom not available, will retry...');
+      
+      // Method 4: Wait a bit and retry (in case Intercom is still loading)
+      setTimeout(() => {
+        console.log('🔵 Footer: Retrying after 500ms...');
+        if (typeof win.openIntercom === 'function') {
+          console.log('✅ Footer: Retry - Using openIntercom()');
+          win.openIntercom();
+          return;
+        }
+        if (typeof win.Intercom === 'function') {
+          console.log('✅ Footer: Retry - Using Intercom("show")');
+          win.Intercom('show');
+          return;
+        }
+        if (win.__intercomMessenger) {
+          if (typeof win.__intercomMessenger.showMessenger === 'function') {
+            console.log('✅ Footer: Retry - Using __intercomMessenger.showMessenger()');
+            win.__intercomMessenger.showMessenger();
+            return;
+          }
+          if (typeof win.__intercomMessenger.show === 'function') {
+            console.log('✅ Footer: Retry - Using __intercomMessenger.show()');
+            win.__intercomMessenger.show();
+            return;
+          }
+        }
+        console.warn('⚠️ Footer: All methods failed, dispatching event');
+        window.dispatchEvent(new CustomEvent('open-chatbot'));
+      }, 500);
+      
+      // Also dispatch event immediately as fallback
       window.dispatchEvent(new CustomEvent('open-chatbot'));
+      
+    } catch (err) {
+      console.error('🔴 Footer: Failed to open Intercom:', err);
+      // Fallback to event dispatch
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-chatbot'));
+      }
     }
   };
 
@@ -258,8 +350,9 @@ export default function Footer() {
                 <li className="flex gap-3">
                   <span className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><MessageSquare size={18} /></span>
                   <button
+                    type="button"
                     onClick={openChatbot}
-                    className="text-sm font-semibold text-slate-900 hover:text-red-600 transition-colors"
+                    className="text-sm font-semibold text-slate-900 hover:text-red-600 transition-colors cursor-pointer text-left"
                     aria-label="Open chat"
                   >
                     Chat with us

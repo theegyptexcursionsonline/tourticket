@@ -9,7 +9,7 @@ import { WishlistProvider } from "@/contexts/WishlistContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
-// import IntercomClient from "@/components/IntercomClient";
+import IntercomClient from "@/components/IntercomClient";
 // import AISearchWidget from "@/components/AISearchWidget"; // Moved to specific pages
 import ConditionalAIWidgets from "@/components/ConditionalAIWidgets";
 
@@ -35,7 +35,7 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className={`${inter.variable} ${almarai.variable} font-sans`}>
-        {/* <IntercomClient /> */}
+        <IntercomClient />
         <AuthProvider>
           <SettingsProvider>
             <CartProvider>
