@@ -143,16 +143,16 @@ async function testEmails() {
       dashboardLink: 'https://preview.egypt-excursionsonline.com/user/dashboard',
       recommendedTours: [
         {
-          title: 'Pyramids of Giza Tour',
+          title: 'Egypt Pyramids & Nile Cruise: Ancient Wonders Discovery',
           image: 'https://preview.egypt-excursionsonline.com/pyramid.png',
-          price: '$49',
-          link: 'https://preview.egypt-excursionsonline.com/tour/pyramids-giza'
+          price: 'From $199',
+          link: 'https://preview.egypt-excursionsonline.com/tour/egypt-pyramids-nile-cruise-ancient-wonders'
         },
         {
-          title: 'Nile River Cruise',
+          title: 'Hurghada: Luxury VIP Hammam & Spa with Transfer',
           image: 'https://preview.egypt-excursionsonline.com/pyramid.png',
-          price: '$89',
-          link: 'https://preview.egypt-excursionsonline.com/tour/nile-cruise'
+          price: 'From $89',
+          link: 'https://preview.egypt-excursionsonline.com/tour/hurghada-luxury-vip-hammam-spa'
         }
       ],
       baseUrl: 'https://preview.egypt-excursionsonline.com'

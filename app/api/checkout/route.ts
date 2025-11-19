@@ -86,27 +86,40 @@ export async function POST(request: Request) {
             password: 'guest-' + Math.random().toString(36).substring(2, 15),
           });
           
-          // Send Welcome Email for New Guest Users
+          // Send Welcome Email for New Guest Users with real tours
           try {
+            // Fetch recommended tours from database
+            const Tour = (await import('@/lib/models/tour')).default;
+            const recommendedTours = await Tour.find({})
+              .select('title slug images pricing')
+              .limit(3)
+              .lean();
+
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+            const tourRecommendations = recommendedTours.map((tour: any) => ({
+              title: tour.title,
+              image: tour.images?.[0]?.url || `${baseUrl}/pyramid.png`,
+              price: tour.pricing?.adult ? `From $${tour.pricing.adult}` : 'From $99',
+              link: `${baseUrl}/tour/${tour.slug}`
+            }));
+
+            // Fallback if no tours found
+            if (tourRecommendations.length === 0) {
+              tourRecommendations.push({
+                title: "Browse All Tours",
+                image: `${baseUrl}/pyramid.png`,
+                price: "Explore",
+                link: `${baseUrl}/tours`
+              });
+            }
+
             await EmailService.sendWelcomeEmail({
               customerName: `${customer.firstName} ${customer.lastName}`,
               customerEmail: customer.email,
-              dashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
-              recommendedTours: [
-                {
-                  title: "Pyramids of Giza Tour",
-                  image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/pyramids.jpg`,
-                  price: "$49",
-                  link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/pyramids-giza`
-                },
-                {
-                  title: "Nile River Cruise",
-                  image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/nile.jpg`,
-                  price: "$89",
-                  link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/nile-cruise`
-                }
-              ],
-              baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+              dashboardLink: `${baseUrl}/user/dashboard`,
+              recommendedTours: tourRecommendations,
+              baseUrl
             });
           } catch (emailError) {
             console.error('Failed to send welcome email:', emailError);

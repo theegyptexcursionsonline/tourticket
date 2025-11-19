@@ -70,32 +70,40 @@ export async function POST(request: NextRequest) {
       permissions: assignedPermissions,
     });
 
-    // 🆕 Send Welcome Email
+    // 🆕 Send Welcome Email with real recommended tours
     try {
+      // Fetch recommended tours from database
+      const Tour = (await import('@/lib/models/tour')).default;
+      const recommendedTours = await Tour.find({})
+        .select('title slug images pricing')
+        .limit(3)
+        .lean();
+
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+      const tourRecommendations = recommendedTours.map((tour: any) => ({
+        title: tour.title,
+        image: tour.images?.[0]?.url || `${baseUrl}/pyramid.png`,
+        price: tour.pricing?.adult ? `From $${tour.pricing.adult}` : 'From $99',
+        link: `${baseUrl}/tour/${tour.slug}`
+      }));
+
+      // Fallback if no tours found
+      if (tourRecommendations.length === 0) {
+        tourRecommendations.push({
+          title: "Browse All Tours",
+          image: `${baseUrl}/pyramid.png`,
+          price: "Explore",
+          link: `${baseUrl}/tours`
+        });
+      }
+
       await EmailService.sendWelcomeEmail({
         customerName: `${firstName} ${lastName}`,
         customerEmail: email,
-        dashboardLink: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
-        recommendedTours: [
-          {
-            title: "Pyramids of Giza Day Tour",
-            image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/pyramids.jpg`,
-            price: "$49",
-            link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/pyramids-giza`
-          },
-          {
-            title: "Luxor Temple & Valley of Kings",
-            image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/luxor.jpg`,
-            price: "$89",
-            link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/luxor-temples`
-          },
-          {
-            title: "Nile River Dinner Cruise",
-            image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/nile-cruise.jpg`,
-            price: "$65",
-            link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/nile-dinner-cruise`
-          }
-        ]
+        dashboardLink: `${baseUrl}/user/dashboard`,
+        recommendedTours: tourRecommendations,
+        baseUrl
       });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
