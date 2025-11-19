@@ -9,7 +9,7 @@ Add these variables to your `.env` file:
 ```env
 # Admin Bootstrap Login (temporary, for first-time setup)
 ADMIN_USERNAME=admin@yourcompany.com
-ADMIN_PASSWORD=YourSecurePassword123!
+ADMIN_PASSWORD=create-a-strong-password-here
 
 # Email Configuration (for sending invites)
 SUPPORT_EMAIL=support@yourcompany.com
@@ -17,7 +17,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Make sure these are also configured:
 MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
+JWT_SECRET=generate-a-random-jwt-secret
 MAILGUN_API_KEY=your_mailgun_api_key
 MAILGUN_DOMAIN=your_mailgun_domain
 ```
@@ -49,19 +49,20 @@ Once logged in:
    - First Name
    - Last Name  
    - Email (their work email)
-   - Temporary Password (they can change later)
    - Role (Operations, Content, etc.)
    - Permissions (what they can access)
 4. Click **"Send Invitation"**
-5. The team member will receive an email with their credentials
+5. The team member will receive an email with a secure invitation link
 
-### 5. Team Member Login
+### 5. Team Member Accepts Invitation
 
-New team members can:
+New team members will:
 
-1. Go to: `http://localhost:3000/admin`
-2. Login with the email + temporary password from the invite
-3. They'll only see sections they have permission for
+1. Receive an email with an invitation link (expires in 7 days)
+2. Click the link to open the acceptance page
+3. Set their own secure password
+4. Their account is activated automatically
+5. They can then log in at `http://localhost:3000/admin`
 
 ## Roles & Permissions
 

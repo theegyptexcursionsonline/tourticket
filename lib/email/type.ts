@@ -133,7 +133,7 @@ export interface AdminAccessUpdateEmailData {
   inviteeName: string;
   inviteeEmail: string;
   updatedBy?: string;
-  action: 'activated' | 'deactivated';
+  action: 'activated' | 'deactivated' | 'permissions_updated' | 'deleted';
   portalLink: string;
   supportEmail?: string;
   isActivated?: boolean;

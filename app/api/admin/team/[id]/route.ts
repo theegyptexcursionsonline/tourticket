@@ -142,7 +142,6 @@ export async function PATCH(
       updatedBy: auth.email || 'Admin Team',
       action: 'permissions_updated',
       isActivated: user.isActive,
-      permissions: user.permissions,
       portalLink: getPortalLink(),
       supportEmail: getSupportEmail(),
     }).catch((error) => {
