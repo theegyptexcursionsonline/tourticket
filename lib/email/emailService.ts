@@ -1,6 +1,7 @@
 // lib/email/emailService.ts
 import { TemplateEngine } from './templateEngine';
 import { sendEmail } from '../mailgun';
+import { generateQRCode, generateBookingVerificationURL } from '@/lib/utils/qrcode';
 import type {
   EmailType,
   BookingEmailData,
@@ -47,13 +48,39 @@ export class EmailService {
 
   // BOOKING CONFIRMATION
   static async sendBookingConfirmation(data: BookingEmailData): Promise<void> {
-    const template = await this.generateEmailTemplate('booking-confirmation', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'booking-confirmation'
-    });
+    try {
+      // Generate QR code for booking verification
+      const verificationUrl = generateBookingVerificationURL(data.bookingId);
+      const qrCodeDataUrl = await generateQRCode(verificationUrl, {
+        width: 300,
+        margin: 2,
+      });
+
+      // Add QR code data to email
+      const emailData = {
+        ...data,
+        verificationUrl,
+        qrCodeDataUrl,
+      };
+
+      const template = await this.generateEmailTemplate('booking-confirmation', emailData);
+      await sendEmail({
+        to: data.customerEmail,
+        subject: template.subject,
+        html: template.html,
+        type: 'booking-confirmation'
+      });
+    } catch (error) {
+      console.error('Error sending booking confirmation with QR code:', error);
+      // Fallback: send email without QR code
+      const template = await this.generateEmailTemplate('booking-confirmation', data);
+      await sendEmail({
+        to: data.customerEmail,
+        subject: template.subject,
+        html: template.html,
+        type: 'booking-confirmation'
+      });
+    }
   }
 
   // PAYMENT CONFIRMATION

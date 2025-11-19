@@ -19,6 +19,8 @@ export interface BookingEmailData extends BaseEmailData {
   contactNumber?: string;
   tourImage?: string;
   baseUrl?: string;
+  qrCodeDataUrl?: string; // QR code as data URL for embedding in email
+  verificationUrl?: string; // URL that the QR code points to
 }
 
 export interface PaymentEmailData extends BaseEmailData {
