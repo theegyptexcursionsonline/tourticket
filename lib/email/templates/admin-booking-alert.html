@@ -3,252 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>New Booking Alert</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #eef2f7; color: #0f172a; -webkit-font-smoothing: antialiased; }
-        table { border-collapse: collapse; width: 100%; }
-        .wrapper { width: 100%; background-color: #eef2f7; padding: 30px 0; }
-        .container { max-width: 660px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 45px rgba(15,23,42,0.15); }
-        
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #eef2f7; color: #0f172a; -webkit-font-smoothing: antialiased; width: 100% !important; }
+        table { border-collapse: collapse; }
+        img { border: 0; outline: none; text-decoration: none; }
+        .wrapper { width: 100%; background-color: #eef2f7; }
+        .container { max-width: 660px; background-color: #ffffff; border-radius: 16px; overflow: hidden; }
+
         /* Header */
         .header { background: linear-gradient(120deg, #0f172a 0%, #1e293b 60%, #312e81 100%); padding: 26px 32px; }
-        .header-top { display: flex; align-items: center; justify-content: space-between; }
-        .brand { display: flex; align-items: center; color: #e2e8f0; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-size: 13px; }
-        .brand-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 10px; }
-        .header-meta { color: #cbd5f5; font-size: 13px; }
-        .header-badges { margin-top: 16px; }
-        .header-chip { display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; margin-right: 10px; text-transform: uppercase; letter-spacing: 0.8px; }
+        .brand { color: #e2e8f0; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-size: 13px; }
+        .brand-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; margin-right: 10px; }
+        .header-meta { color: #cbd5f5; font-size: 13px; text-align: right; }
+        .header-chip { display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; margin-right: 10px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.8px; }
 
         /* KPI Cards */
-        .kpi-section { padding: 22px 32px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; gap: 16px; box-sizing: border-box; }
-        .kpi-card { flex: 1; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; }
+        .kpi-section { padding: 22px 32px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .kpi-card { padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; vertical-align: top; }
         .kpi-label { font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
-        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
-        
+        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 6px; }
+
         /* Main Content */
         .content { padding: 32px; }
-        .split-grid { display: flex; gap: 24px; }
-        .panel { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(15,23,42,0.05); margin-bottom: 28px; }
-        .section-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
-        
-        /* Data Grid */
+        .panel { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #ffffff; }
+        .section-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px; }
+
+        /* Data Table */
         .data-table { width: 100%; }
         .data-table td { padding: 10px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top; font-size: 14px; }
-        .data-table tr:last-child td { border-bottom: none; }
         .label-col { width: 35%; color: #6b7280; font-weight: 500; }
         .value-col { color: #111827; font-weight: 600; }
-        
-        /* Tour Item */
+
+        /* Tour Card */
         .tour-card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 15px; }
-        .tour-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px; }
         .tour-name { font-weight: 700; font-size: 15px; color: #111827; }
-        .tour-price { font-weight: 700; color: #059669; font-size: 15px; }
-        .tour-meta { font-size: 13px; color: #4b5563; line-height: 1.6; }
-        .meta-row { display: flex; margin-bottom: 4px; }
-        .meta-label { width: 80px; color: #9ca3af; font-size: 12px; }
-        
+        .tour-price { font-weight: 700; color: #059669; font-size: 15px; text-align: right; }
+        .tour-meta { font-size: 13px; color: #4b5563; line-height: 1.8; margin-top: 10px; }
+        .meta-label { color: #9ca3af; font-size: 12px; font-weight: 600; }
+
         /* Special Requests */
         .alert-box { background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 18px; margin-bottom: 30px; }
-        .alert-title { color: #be123c; font-size: 13px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.6px; }
+        .alert-title { color: #be123c; font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.6px; }
         .alert-content { color: #9f1239; font-size: 14px; line-height: 1.5; }
 
         /* Actions */
         .action-checklist { border: 1px dashed #cbd5f5; border-radius: 12px; padding: 18px 20px; margin-bottom: 30px; }
-        .action-item { display: flex; align-items: center; margin-bottom: 10px; }
-        .action-item:last-child { margin-bottom: 0; }
-        .action-bullet { width: 18px; height: 18px; border: 2px solid #6366f1; border-radius: 50%; margin-right: 12px; }
-        .action-text { font-size: 13px; color: #1f2937; }
+        .action-item { font-size: 13px; color: #1f2937; margin-bottom: 10px; padding-left: 26px; position: relative; }
 
-        .action-bar { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
-        .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; }
-        .btn-primary { background-color: #2563eb; color: white; border: 1px solid #1d4ed8; box-shadow: 0 8px 18px rgba(37,99,235,0.25); }
-        .btn-secondary { background-color: white; color: #374151; border: 1px solid #d1d5db; }
+        .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; }
+        .btn-primary { background-color: #2563eb; color: white !important; }
+        .btn-secondary { background-color: white; color: #374151 !important; border: 1px solid #d1d5db; }
 
-        /* Responsive */
-        @media (max-width: 640px) {
-            .header, .kpi-section, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
-            .split-grid { flex-direction: column; }
-            .kpi-section { flex-direction: column; }
-            .kpi-card { width: 100%; }
-            .action-bar { flex-direction: column; }
-            .action-bar .btn { width: 100%; text-align: center; }
-        }
-        
         /* Footer */
         .footer { background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }
     </style>
 </head>
-<body>
-    <div class="wrapper">
-        <div class="container">
-            <!-- Header -->
-            <div class="header">
-                <div class="header-top">
-                    <div class="brand">
-                        <span class="brand-dot"></span>
-                        Egypt Excursions Online
-                    </div>
-                    <div class="header-meta">New booking received • {{bookingDate}}</div>
-                </div>
-                <div class="header-badges">
-                    <span class="header-chip">New Booking</span>
-                    <span class="header-chip">Priority • Immediate Review</span>
-                    {{#if paymentMethod}}
-                    <span class="header-chip">Payment Logged</span>
-                    {{else}}
-                    <span class="header-chip">Payment Pending</span>
-                    {{/if}}
-                </div>
-            </div>
-            
-            <!-- KPI Stats -->
-            <div class="kpi-section">
-                <div class="kpi-card">
-                    <div class="kpi-label">Booking ID</div>
-                    <div class="kpi-value" style="font-family: 'SFMono-Regular', Menlo, monospace; font-size: 15px;">{{bookingId}}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Total Value</div>
-                    <div class="kpi-value" style="color: #059669;">{{totalPrice}}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Travel Date</div>
-                    <div class="kpi-value" style="font-size: 16px;">{{bookingDate}}</div>
-                </div>
-            </div>
+<body style="margin: 0; padding: 0; background-color: #eef2f7;">
+    <table role="presentation" class="wrapper" width="100%" cellpadding="0" cellspacing="0" style="background-color: #eef2f7;">
+        <tr>
+            <td align="center" style="padding: 30px 0;">
+                <table role="presentation" class="container" width="660" cellpadding="0" cellspacing="0" style="max-width: 660px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 25px 45px rgba(15,23,42,0.15);">
 
-            <div class="content">
-                <div class="split-grid">
-                    <div class="panel">
-                        <span class="section-title">Customer Details</span>
-                        <table class="data-table">
-                            <tr>
-                                <td class="label-col">Name</td>
-                                <td class="value-col">{{customerName}}</td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Email</td>
-                                <td class="value-col"><a href="mailto:{{customerEmail}}" style="color: #2563eb;">{{customerEmail}}</a></td>
-                            </tr>
-                            {{#if customerPhone}}
-                            <tr>
-                                <td class="label-col">Phone</td>
-                                <td class="value-col">{{customerPhone}}</td>
-                            </tr>
-                            {{/if}}
-                            {{#if paymentMethod}}
-                            <tr>
-                                <td class="label-col">Payment</td>
-                                <td class="value-col">{{paymentMethod}}</td>
-                            </tr>
-                            {{/if}}
-                        </table>
-                    </div>
-                    <div class="panel">
-                        <span class="section-title">Booking Summary</span>
-                        <table class="data-table">
-                            <tr>
-                                <td class="label-col">Tour</td>
-                                <td class="value-col">{{tourTitle}}</td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Date & Time</td>
-                                <td class="value-col">{{bookingDate}}{{#if bookingTime}}, {{bookingTime}}{{/if}}</td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Reference</td>
-                                <td class="value-col" style="font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</td>
-                            </tr>
-                            <tr>
-                                <td class="label-col">Value</td>
-                                <td class="value-col">{{totalPrice}}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
+                    <!-- Header -->
+                    <tr>
+                        <td class="header" style="background: linear-gradient(120deg, #0f172a 0%, #1e293b 60%, #312e81 100%); padding: 26px 32px;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td class="brand" style="color: #e2e8f0; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-size: 13px;">
+                                        <span class="brand-dot" style="display: inline-block; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 10px;"></span>
+                                        EGYPT EXCURSIONS ONLINE
+                                    </td>
+                                    <td class="header-meta" style="color: #cbd5f5; font-size: 13px; text-align: right;">
+                                        New booking received • {{bookingDate}}
+                                    </td>
+                                </tr>
+                            </table>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 16px;">
+                                <tr>
+                                    <td>
+                                        <span class="header-chip" style="display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; margin-right: 10px; text-transform: uppercase; letter-spacing: 0.8px;">NEW BOOKING</span>
+                                        <span class="header-chip" style="display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; margin-right: 10px; text-transform: uppercase; letter-spacing: 0.8px;">PRIORITY • IMMEDIATE REVIEW</span>
+                                        {{#if paymentMethod}}
+                                        <span class="header-chip" style="display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; text-transform: uppercase; letter-spacing: 0.8px;">PAYMENT LOGGED</span>
+                                        {{else}}
+                                        <span class="header-chip" style="display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; text-transform: uppercase; letter-spacing: 0.8px;">PAYMENT PENDING</span>
+                                        {{/if}}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-                <div class="panel">
-                    <span class="section-title">Tour Information</span>
-                    {{#if tours}}
-                        {{#each tours}}
-                        <div class="tour-card">
-                            <div class="tour-header">
-                                <div class="tour-name">{{this.title}}</div>
-                                <div class="tour-price">{{this.price}}</div>
-                            </div>
-                            <div class="tour-meta">
-                                <div class="meta-row">
-                                    <div class="meta-label">DATE</div>
-                                    <div>{{this.date}} at {{this.time}}</div>
-                                </div>
-                                <div class="meta-row">
-                                    <div class="meta-label">PAX</div>
-                                    <div>{{this.adults}} Adults, {{this.children}} Children{{#if this.infants}}, {{this.infants}} Infants{{/if}}</div>
-                                </div>
-                                {{#if this.bookingOption}}
-                                <div class="meta-row">
-                                    <div class="meta-label">OPTION</div>
-                                    <div>{{this.bookingOption}}</div>
-                                </div>
+                    <!-- KPI Stats -->
+                    <tr>
+                        <td class="kpi-section" style="padding: 22px 32px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td class="kpi-card" width="32%" style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                                        <div class="kpi-label" style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">BOOKING ID</div>
+                                        <div class="kpi-value" style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 6px; font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</div>
+                                    </td>
+                                    <td width="2%"></td>
+                                    <td class="kpi-card" width="32%" style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                                        <div class="kpi-label" style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">TOTAL VALUE</div>
+                                        <div class="kpi-value" style="font-size: 20px; font-weight: 700; color: #059669; margin-top: 6px;">{{totalPrice}}</div>
+                                    </td>
+                                    <td width="2%"></td>
+                                    <td class="kpi-card" width="32%" style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                                        <div class="kpi-label" style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">TRAVEL DATE</div>
+                                        <div class="kpi-value" style="font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 6px;">{{bookingDate}}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td class="content" style="padding: 32px;">
+
+                            <!-- Two Column Layout -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="48%" valign="top">
+                                        <div class="panel" style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; background: #ffffff;">
+                                            <div class="section-title" style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px;">CUSTOMER DETAILS</div>
+                                            <table class="data-table" width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">Name</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">{{customerName}}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">Email</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;"><a href="mailto:{{customerEmail}}" style="color: #2563eb; text-decoration: underline;">{{customerEmail}}</a></td>
+                                                </tr>
+                                                {{#if customerPhone}}
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">Phone</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">{{customerPhone}}</td>
+                                                </tr>
+                                                {{/if}}
+                                                {{#if paymentMethod}}
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; font-size: 14px;">Payment</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; font-size: 14px;">{{paymentMethod}}</td>
+                                                </tr>
+                                                {{/if}}
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td width="4%"></td>
+                                    <td width="48%" valign="top">
+                                        <div class="panel" style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; background: #ffffff;">
+                                            <div class="section-title" style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px;">BOOKING SUMMARY</div>
+                                            <table class="data-table" width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">Tour</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">{{tourTitle}}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">Date & Time</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">{{bookingDate}}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px;">Reference</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="label-col" style="width: 35%; color: #6b7280; font-weight: 500; padding: 10px 0; font-size: 14px;">Value</td>
+                                                    <td class="value-col" style="color: #111827; font-weight: 600; padding: 10px 0; font-size: 14px;">{{totalPrice}}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Tour Information -->
+                            <div class="panel" style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-top: 20px; background: #ffffff;">
+                                <div class="section-title" style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px;">TOUR INFORMATION</div>
+
+                                {{#if tours}}
+                                    {{#each tours}}
+                                    <div class="tour-card" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 15px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td class="tour-name" style="font-weight: 700; font-size: 15px; color: #111827; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px;">{{this.title}}</td>
+                                                <td class="tour-price" style="font-weight: 700; color: #059669; font-size: 15px; text-align: right; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px;">{{this.price}}</td>
+                                            </tr>
+                                        </table>
+                                        <div class="tour-meta" style="font-size: 13px; color: #4b5563; line-height: 1.8; margin-top: 10px;">
+                                            <div><span class="meta-label" style="color: #9ca3af; font-size: 12px; font-weight: 600;">DATE:</span> {{this.date}} at {{this.time}}</div>
+                                            <div><span class="meta-label" style="color: #9ca3af; font-size: 12px; font-weight: 600;">PAX:</span> {{this.adults}} Adults, {{this.children}} Children{{#if this.infants}}, {{this.infants}} Infants{{/if}}</div>
+                                            {{#if this.bookingOption}}
+                                            <div><span class="meta-label" style="color: #9ca3af; font-size: 12px; font-weight: 600;">OPTION:</span> {{this.bookingOption}}</div>
+                                            {{/if}}
+                                            {{#if this.addOns}}
+                                            <div><span class="meta-label" style="color: #9ca3af; font-size: 12px; font-weight: 600;">ADD-ONS:</span> {{this.addOns}}</div>
+                                            {{/if}}
+                                        </div>
+                                    </div>
+                                    {{/each}}
+                                {{else}}
+                                    <div class="tour-card" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td class="tour-name" style="font-weight: 700; font-size: 15px; color: #111827;">{{tourTitle}}</td>
+                                                <td class="tour-price" style="font-weight: 700; color: #059669; font-size: 15px; text-align: right;">{{totalPrice}}</td>
+                                            </tr>
+                                        </table>
+                                        <div class="tour-meta" style="font-size: 13px; color: #4b5563; margin-top: 10px;">{{bookingDate}}</div>
+                                    </div>
                                 {{/if}}
-                                {{#if this.addOns}}
-                                <div class="meta-row">
-                                    <div class="meta-label">ADD-ONS</div>
-                                    <div>{{this.addOns}}</div>
-                                </div>
-                                {{/if}}
                             </div>
-                        </div>
-                        {{/each}}
-                    {{else}}
-                        <div class="tour-card">
-                            <div class="tour-header">
-                                <div class="tour-name">{{tourTitle}}</div>
-                                <div class="tour-price">{{totalPrice}}</div>
+
+                            <!-- Special Requests -->
+                            {{#if specialRequests}}
+                            <div class="alert-box" style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 18px; margin-top: 20px; margin-bottom: 30px;">
+                                <div class="alert-title" style="color: #be123c; font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.6px;">⚠️ SPECIAL REQUESTS</div>
+                                <div class="alert-content" style="color: #9f1239; font-size: 14px; line-height: 1.5;">{{specialRequests}}</div>
                             </div>
-                            <div class="tour-meta">
-                                <div>{{bookingDate}}{{#if bookingTime}} • {{bookingTime}}{{/if}}</div>
+                            {{/if}}
+
+                            <!-- Checklist -->
+                            <div class="action-checklist" style="border: 1px dashed #cbd5f5; border-radius: 12px; padding: 18px 20px; margin-bottom: 30px;">
+                                <div class="section-title" style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px;">CHECKLIST</div>
+                                <div class="action-item" style="font-size: 13px; color: #1f2937; margin-bottom: 10px;">○ Verify tour availability and logistics</div>
+                                <div class="action-item" style="font-size: 13px; color: #1f2937; margin-bottom: 10px;">○ Confirm special requests with the operations team</div>
+                                <div class="action-item" style="font-size: 13px; color: #1f2937;">○ Send any additional instructions to the customer if needed</div>
                             </div>
-                        </div>
-                    {{/if}}
-                </div>
 
-                {{#if specialRequests}}
-                <div class="alert-box">
-                    <div class="alert-title">⚠️ Special Requests</div>
-                    <div class="alert-content">{{specialRequests}}</div>
-                </div>
-                {{/if}}
+                            <!-- Action Buttons -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                                <tr>
+                                    <td align="right">
+                                        <a href="mailto:{{customerEmail}}" class="btn btn-secondary" style="display: inline-block; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; background-color: white; color: #374151; border: 1px solid #d1d5db; margin: 5px;">Email Customer</a>
+                                        {{#if adminDashboardLink}}
+                                        <a href="{{adminDashboardLink}}" class="btn btn-primary" style="display: inline-block; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; background-color: #2563eb; color: white; margin: 5px;">Open in Dashboard</a>
+                                        {{/if}}
+                                    </td>
+                                </tr>
+                            </table>
 
-                <div class="action-checklist">
-                    <span class="section-title">Checklist</span>
-                    <div class="action-item">
-                        <div class="action-bullet"></div>
-                        <div class="action-text">Verify tour availability and logistics.</div>
-                    </div>
-                    <div class="action-item">
-                        <div class="action-bullet"></div>
-                        <div class="action-text">Confirm special requests with the operations team.</div>
-                    </div>
-                    <div class="action-item">
-                        <div class="action-bullet"></div>
-                        <div class="action-text">Send any additional instructions to the customer if needed.</div>
-                    </div>
-                </div>
+                        </td>
+                    </tr>
 
-                <div class="action-bar">
-                    <a href="mailto:{{customerEmail}}" class="btn btn-secondary">Email Customer</a>
-                    {{#if adminDashboardLink}}
-                    <a href="{{adminDashboardLink}}" class="btn btn-primary">Open in Dashboard</a>
-                    {{/if}}
-                </div>
-            </div>
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer" style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
+                            System Notification • Egypt Excursions Online Admin
+                        </td>
+                    </tr>
 
-            <!-- Footer -->
-            <div class="footer">
-                System Notification • Egypt Excursions Online Admin
-            </div>
-        </div>
-    </div>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
