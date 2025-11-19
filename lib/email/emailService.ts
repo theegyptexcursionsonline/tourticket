@@ -1,7 +1,7 @@
 // lib/email/emailService.ts
 import { TemplateEngine } from './templateEngine';
 import { sendEmail } from '../mailgun';
-import { generateQRCode, generateBookingVerificationURL } from '@/lib/utils/qrcode';
+import { generateBookingVerificationURL } from '@/lib/utils/qrcode';
 import type {
   EmailType,
   BookingEmailData,
@@ -51,16 +51,19 @@ export class EmailService {
     try {
       // Generate QR code for booking verification
       const verificationUrl = generateBookingVerificationURL(data.bookingId);
-      const qrCodeDataUrl = await generateQRCode(verificationUrl, {
+
+      // Import the buffer generation function
+      const { generateQRCodeBuffer } = await import('@/lib/utils/qrcode');
+      const qrCodeBuffer = await generateQRCodeBuffer(verificationUrl, {
         width: 300,
         margin: 2,
       });
 
-      // Add QR code data to email
+      // Add QR code CID reference to email data
       const emailData = {
         ...data,
         verificationUrl,
-        qrCodeDataUrl,
+        qrCodeCid: 'booking-qr-code', // Content-ID for inline attachment
       };
 
       const template = await this.generateEmailTemplate('booking-confirmation', emailData);
@@ -68,7 +71,14 @@ export class EmailService {
         to: data.customerEmail,
         subject: template.subject,
         html: template.html,
-        type: 'booking-confirmation'
+        type: 'booking-confirmation',
+        inlineAttachments: [
+          {
+            filename: 'qr-code.png',
+            data: qrCodeBuffer,
+            cid: 'booking-qr-code'
+          }
+        ]
       });
     } catch (error) {
       console.error('Error sending booking confirmation with QR code:', error);

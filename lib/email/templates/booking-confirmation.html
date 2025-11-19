@@ -192,10 +192,10 @@
                         </table>
                         
                         <!-- QR Code Section -->
-                        {{#if qrCodeDataUrl}}
+                        {{#if qrCodeCid}}
                         <div style="border-top: 1px dashed #d1d5db; padding-top: 24px; margin-top: 24px; text-align: center;">
                             <div style="font-size: 13px; font-weight: 700; color: #6b7280; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">Your Digital Pass</div>
-                            <img src="{{qrCodeDataUrl}}" alt="Booking QR Code" style="width: 200px; height: 200px; margin: 0 auto; display: block; border: 4px solid #f0f0f0; border-radius: 12px; padding: 8px; background: white;">
+                            <img src="cid:qr-code.png" alt="Booking QR Code" style="width: 200px; height: 200px; margin: 0 auto; display: block; border: 4px solid #f0f0f0; border-radius: 12px; padding: 8px; background: white;">
                             <p style="font-size: 12px; color: #888888; margin-top: 12px; line-height: 1.5;">
                                 Scan this QR code at the meeting point or <a href="{{verificationUrl}}" style="color: #0066ff; text-decoration: underline;">view your booking online</a>
                             </p>

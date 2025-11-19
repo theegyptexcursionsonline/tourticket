@@ -11,6 +11,12 @@ const mg = mailgun.client({
 const DOMAIN = process.env.MAILGUN_DOMAIN || '';
 const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'booking@egypt-excursionsonline.com';
 
+interface InlineAttachment {
+  filename: string;
+  data: Buffer;
+  cid: string;
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
@@ -19,11 +25,12 @@ interface EmailOptions {
   cc?: string;
   bcc?: string;
   replyTo?: string;
+  inlineAttachments?: InlineAttachment[];
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
-    await mg.messages.create(DOMAIN, {
+    const messageData: any = {
       from: `Egypt Excursions Online <${FROM_EMAIL}>`,
       to: [options.to],
       subject: options.subject,
@@ -32,8 +39,26 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       ...(options.bcc && { bcc: [options.bcc] }),
       ...(options.replyTo && { 'h:Reply-To': options.replyTo }),
       'h:X-Mailgun-Tag': options.type, // For analytics
-    });
-    
+    };
+
+    // Add inline attachments if present
+    if (options.inlineAttachments && options.inlineAttachments.length > 0) {
+      // Mailgun expects inline attachments as an array of file-like objects
+      messageData.inline = options.inlineAttachments.map(attachment => {
+        console.log(`📎 Adding inline attachment: ${attachment.cid}, size: ${attachment.data.length} bytes`);
+        // Return a proper file object with the buffer data
+        return {
+          filename: attachment.filename,
+          data: attachment.data,
+          knownLength: attachment.data.length
+        };
+      });
+    }
+
+    console.log(`📧 Sending email with inline attachments: ${messageData.inline ? messageData.inline.length : 0}`);
+    const result = await mg.messages.create(DOMAIN, messageData);
+    console.log(`📮 Mailgun response ID: ${result.id}`);
+
     console.log(`✅ Email sent successfully: ${options.type} to ${options.to}`);
   } catch (error) {
     console.error(`❌ Failed to send email: ${options.type}`, error);
