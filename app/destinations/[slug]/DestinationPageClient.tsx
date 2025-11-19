@@ -176,7 +176,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                 onClick={onHitClick}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                className="group block flex-shrink-0 w-[260px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
               >
                 {tour.image && (
                   <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
