@@ -72,37 +72,42 @@
         <p class="muted">Private invite</p>
         <h1>Hi {{inviteeName}},</h1>
         <p>
-          {{inviterName}} just invited you to help manage Egypt Excursions Online. Use the button
-          below to enter the admin portal, then change your password right away.
+          {{inviterName}} just invited you to help manage Egypt Excursions Online. Click the button
+          below to accept your invitation and set your password.
         </p>
 
         <div class="credentials">
           <div>
-            <strong>Work email</strong>
+            <strong>Your email</strong>
             <span>{{inviteeEmail}}</span>
           </div>
           <div style="margin-top: 12px;">
-            <strong>Temporary password</strong>
-            <span>{{temporaryPassword}}</span>
+            <strong>Role</strong>
+            <span style="text-transform: capitalize;">{{role}}</span>
           </div>
         </div>
 
-        <p>
+        <p style="margin: 32px 0;">
           <a class="btn" href="{{portalLink}}" target="_blank" rel="noopener noreferrer">
-            Open admin portal
+            Accept Invitation & Set Password
           </a>
         </p>
 
-        <p>Your role: <strong>{{role}}</strong></p>
-        <p class="muted" style="margin-bottom: 8px;">You currently have access to:</p>
+        <p class="muted" style="margin-bottom: 8px;">Your access permissions:</p>
         <div>
           {{#each permissions}}
           <span class="pill">{{this}}</span>
           {{/each}}
         </div>
 
-        <p style="margin-top: 24px;">
-          Need a hand? Reply to this email or contact {{supportEmail}} so we can help.
+        <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 16px; margin-top: 24px;">
+          <p style="color: #9a3412; font-size: 14px; margin: 0;">
+            <strong>⚠️ Security Notice:</strong> This invitation link expires in 7 days. For security reasons, please accept it as soon as possible.
+          </p>
+        </div>
+
+        <p style="margin-top: 24px; font-size: 14px; color: #64748b;">
+          Need help? Reply to this email or contact {{supportEmail}}.
         </p>
       </div>
 

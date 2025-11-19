@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
@@ -85,18 +86,11 @@ export async function POST(request: NextRequest) {
   await dbConnect();
 
   const body = await request.json();
-  const { firstName, lastName, email, password, role = 'operations', permissions } = body;
+  const { firstName, lastName, email, role = 'operations', permissions } = body;
 
-  if (!firstName || !lastName || !email || !password) {
+  if (!firstName || !lastName || !email) {
     return NextResponse.json(
-      { success: false, error: 'First name, last name, email, and password are required.' },
-      { status: 400 },
-    );
-  }
-
-  if (password.length < 8) {
-    return NextResponse.json(
-      { success: false, error: 'Password must be at least 8 characters long.' },
+      { success: false, error: 'First name, last name, and email are required.' },
       { status: 400 },
     );
   }
@@ -111,9 +105,16 @@ export async function POST(request: NextRequest) {
   }
 
   const normalizedRole = normalizeRole(role);
-
-  const hashedPassword = await bcrypt.hash(password, 10);
   const effectivePermissions = normalizePermissions(permissions, normalizedRole);
+
+  // Generate invitation token
+  const invitationToken = crypto.randomBytes(32).toString('hex');
+  const invitationExpires = new Date();
+  invitationExpires.setDate(invitationExpires.getDate() + 7); // 7 days from now
+
+  // Create a temporary password - user must set their own via invitation link
+  const temporaryPassword = crypto.randomBytes(16).toString('hex');
+  const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
   const user = await User.create({
     firstName,
@@ -122,20 +123,27 @@ export async function POST(request: NextRequest) {
     password: hashedPassword,
     role: normalizedRole,
     permissions: effectivePermissions,
-    isActive: true,
+    isActive: false, // Inactive until they accept invitation
+    invitationToken,
+    invitationExpires,
+    requirePasswordChange: true,
   });
 
   const inviteeName = `${firstName} ${lastName}`.trim();
   const inviterName = auth.email || 'Admin Team';
+  
+  // Generate invitation link
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://tourticket.app';
+  const invitationLink = `${baseUrl.replace(/\/$/, '')}/admin/accept-invitation?token=${invitationToken}`;
 
   EmailService.sendAdminInviteEmail({
     inviteeName: inviteeName || normalizedEmail,
     inviteeEmail: normalizedEmail,
     inviterName,
-    temporaryPassword: password,
+    temporaryPassword: '', // No longer sending password
     role: normalizedRole,
     permissions: effectivePermissions,
-    portalLink: getPortalLink(),
+    portalLink: invitationLink,
     supportEmail: getSupportEmail(),
   }).catch((error) => {
     console.error('Failed to send admin invite email', error);

@@ -47,7 +47,6 @@ const TeamPage = () => {
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
     role: 'operations',
     permissions: ['manageBookings'],
   });
@@ -98,13 +97,12 @@ const TeamPage = () => {
         throw new Error(data.error || 'Failed to create team member');
       }
 
-      toast.success('Team member added');
+      toast.success('Invitation sent! Team member will receive an email to set their password.');
       setMembers((prev) => [data.data, ...prev]);
       setFormData({
         firstName: '',
         lastName: '',
         email: '',
-        password: '',
         role: 'operations',
         permissions: ['manageBookings'],
       });
@@ -245,7 +243,7 @@ const TeamPage = () => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Invite teammate</h2>
-              <p className="text-sm text-slate-500">Create secure access for someone new</p>
+              <p className="text-sm text-slate-500">They'll receive an email to set their password</p>
             </div>
           </div>
 
@@ -285,19 +283,6 @@ const TeamPage = () => {
                 placeholder="teammate@company.com"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-slate-500 font-medium">Temporary password</label>
-            <input
-              value={formData.password}
-              onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-              type="password"
-              required
-              minLength={8}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
-              placeholder="Minimum 8 characters"
-            />
           </div>
 
           <div>
