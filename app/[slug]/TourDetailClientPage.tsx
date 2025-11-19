@@ -504,7 +504,7 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
               loading="lazy"
               allowFullScreen
               referrerPolicy="no-referrer-when-downgrade"
-              src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(mapQuery)}&zoom=12`}
+              src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(mapQuery)}&zoom=12`}
             ></iframe>
           </div>
 
@@ -1287,12 +1287,33 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
               {tour.meetingPoint && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
-                  <div className="flex items-start gap-4">
-                    <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
-                      <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
-                      <button className="text-red-600 hover:underline text-sm font-medium mt-2">View on map</button>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
+                      <div>
+                        <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
+                        <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
+                        <button
+                          onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(tour.meetingPoint)}`, '_blank')}
+                          className="text-red-600 hover:underline text-sm font-medium mt-2 inline-flex items-center gap-1"
+                        >
+                          <Navigation size={14} />
+                          Open in Google Maps
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Embedded Map */}
+                    <div className="relative w-full h-[300px] rounded-lg overflow-hidden shadow-md border border-slate-200">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(tour.meetingPoint)}&zoom=15`}
+                      ></iframe>
                     </div>
                   </div>
                 </div>

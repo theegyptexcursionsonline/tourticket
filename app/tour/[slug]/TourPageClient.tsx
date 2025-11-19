@@ -384,59 +384,115 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   return icons[iconType || 'location'] || icons.location;
 };
 
-// FIXED ItinerarySection - Now properly displays the correct icons
-const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
-  <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
-    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-      <Clock size={24} className="text-red-600" />
-      Detailed Itinerary
-    </h3>
-    <div className="relative">
-      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
-      {itinerary.map((item, index) => (
-        <div key={index} className="relative flex items-start gap-4 pb-8">
-          <div className="flex-shrink-0 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm relative z-10">
-            <ItineraryIcon iconType={item.icon} className="w-6 h-6" />
+// FIXED ItinerarySection - Now properly displays the correct icons with map support
+const ItinerarySection = ({ itinerary, tour, sectionRef }: { itinerary: ItineraryItem[], tour: Tour, sectionRef: React.RefObject<HTMLDivElement> }) => {
+  const [showMap, setShowMap] = useState(false);
+
+  // Get all locations from itinerary for the map
+  const itineraryLocations = itinerary
+    .filter(item => item.location)
+    .map(item => item.location)
+    .join(' | ');
+
+  const mapQuery = itineraryLocations || tour.title || 'Tour Route';
+
+  return (
+    <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <Clock size={24} className="text-red-600" />
+          Detailed Itinerary
+        </h3>
+        {itineraryLocations && (
+          <button
+            onClick={() => setShowMap(!showMap)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <MapPin size={16} />
+            {showMap ? 'Hide Map' : 'View Map'}
+          </button>
+        )}
+      </div>
+
+      {/* Map View */}
+      {showMap && itineraryLocations && (
+        <div className="relative w-full h-[400px] rounded-xl overflow-hidden shadow-lg mb-6 border border-slate-200">
+          <iframe
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(mapQuery)}&zoom=12`}
+          ></iframe>
+
+          {/* Map Controls Overlay */}
+          <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Navigation size={16} className="text-blue-600" />
+                <span className="text-sm font-medium text-slate-800">Tour Route</span>
+              </div>
+              <button
+                onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(mapQuery)}`, '_blank')}
+                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1"
+              >
+                <Navigation size={12} />
+                Open in Maps
+              </button>
+            </div>
           </div>
-          <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full">
-                  {item.time}
-                </span>
-                {item.duration && (
-                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                    {item.duration}
+        </div>
+      )}
+
+      <div className="relative">
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+        {itinerary.map((item, index) => (
+          <div key={index} className="relative flex items-start gap-4 pb-8">
+            <div className="flex-shrink-0 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm relative z-10">
+              <ItineraryIcon iconType={item.icon} className="w-6 h-6" />
+            </div>
+            <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full">
+                    {item.time}
                   </span>
+                  {item.duration && (
+                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                      {item.duration}
+                    </span>
+                  )}
+                </div>
+                {item.location && (
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <MapPin size={14} />
+                    {item.location}
+                  </div>
                 )}
               </div>
-              {item.location && (
-                <div className="flex items-center gap-1 text-xs text-slate-500">
-                  <MapPin size={14} />
-                  {item.location}
+              <h4 className="font-bold text-slate-800 mb-2">{item.title}</h4>
+              <p className="text-slate-600 text-sm leading-relaxed mb-3">{item.description}</p>
+              {item.includes && item.includes.length > 0 && (
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">Includes:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {item.includes.map((include, i) => (
+                      <span key={i} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                        {include}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-            <h4 className="font-bold text-slate-800 mb-2">{item.title}</h4>
-            <p className="text-slate-600 text-sm leading-relaxed mb-3">{item.description}</p>
-            {item.includes && item.includes.length > 0 && (
-              <div className="border-t border-slate-100 pt-3">
-                <p className="text-xs font-semibold text-slate-700 mb-2">Includes:</p>
-                <div className="flex flex-wrap gap-2">
-                  {item.includes.map((include, i) => (
-                    <span key={i} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
-                      {include}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
@@ -1138,38 +1194,85 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                   </div>
                 )}
 
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1 pr-6">
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-3">
-                      {tour.title}
-                    </h1>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-4">
+                <div className="mb-6">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-4">
+                    {tour.title}
+                  </h1>
+
+                  {/* Tour Info Card - New Design */}
+                  <div className="bg-[#FEF7F5] border-l-4 border-red-500 rounded-lg p-5 mb-4">
+                    {/* Max Participants Row */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <Users size={20} className="text-slate-700" />
+                      <span className="font-semibold text-slate-800">Max {enhancement.groupSize?.max || 18}</span>
+                    </div>
+
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <Star size={16} className="text-yellow-500 fill-current" />
-                          <span className="font-semibold text-slate-800">{tour.rating}</span>
+                        <Clock size={18} className="text-slate-600" />
+                        <div>
+                          <p className="text-slate-500 text-xs">Duration</p>
+                          <p className="font-medium text-slate-800">{tour.duration}</p>
                         </div>
-                        <span className="text-slate-500">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock size={16} />
-                        <span>{tour.duration}</span>
+                      <div className="flex items-center gap-2">
+                        <Languages size={18} className="text-slate-600" />
+                        <div>
+                          <p className="text-slate-500 text-xs">Languages</p>
+                          <p className="font-medium text-slate-800">English, Arabic</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin size={16} />
-                        <span>{typeof tour.destination === 'string' ? tour.destination : tour.destination?.name || 'Destination'}</span>
+                      <div className="flex items-center gap-2">
+                        <Mountain size={18} className="text-slate-600" />
+                        <div>
+                          <p className="text-slate-500 text-xs">Difficulty</p>
+                          <p className="font-medium text-slate-800">Easy</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="mt-4 pt-4 border-t border-slate-200">
+                      <div
+                        className="text-sm text-slate-700 leading-relaxed"
+                        dangerouslySetInnerHTML={{
+                          __html: (tour.longDescription || tour.description || '').replace(/<p>/g, '').replace(/<\/p>/g, '<br/>')
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing Card */}
+                  <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-600 mb-1">1 Adult</p>
+                        <p className="text-sm text-slate-500">
+                          Per person: {formatPrice(tour.discountPrice)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-slate-900">
+                          {formatPrice(tour.discountPrice)}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="text-right flex-shrink-0">
-                    {tour.originalPrice && (
-                      <p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>
-                    )}
-                    <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
-                      {formatPrice(tour.discountPrice)}
-                    </p>
-                    <p className="text-sm text-slate-500">per person</p>
+                  {/* Rating and Location */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Star size={16} className="text-yellow-500 fill-current" />
+                        <span className="font-semibold text-slate-800">{tour.rating}</span>
+                      </div>
+                      <span className="text-slate-500">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MapPin size={16} />
+                      <span>{typeof tour.destination === 'string' ? tour.destination : tour.destination?.name || 'Destination'}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1185,7 +1288,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
               
               {/* Only show itinerary if we have real data */}
               {enhancement.itinerary && enhancement.itinerary.length > 0 && (
-                <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />
+                <ItinerarySection itinerary={enhancement.itinerary} tour={tour} sectionRef={itineraryRef} />
               )}
               
               <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />
@@ -1205,12 +1308,33 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
               {tour.meetingPoint && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
-                  <div className="flex items-start gap-4">
-                    <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
-                      <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
-                      <button className="text-red-600 hover:underline text-sm font-medium mt-2">View on map</button>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
+                      <div>
+                        <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
+                        <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
+                        <button
+                          onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(tour.meetingPoint)}`, '_blank')}
+                          className="text-red-600 hover:underline text-sm font-medium mt-2 inline-flex items-center gap-1"
+                        >
+                          <Navigation size={14} />
+                          Open in Google Maps
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Embedded Map */}
+                    <div className="relative w-full h-[300px] rounded-lg overflow-hidden shadow-md border border-slate-200">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(tour.meetingPoint)}&zoom=15`}
+                      ></iframe>
                     </div>
                   </div>
                 </div>
