@@ -13,7 +13,10 @@ async function getCategoryPage(categoryName: string): Promise<CategoryPageData |
   try {
     // Try to find an attraction page that matches this category
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages/${categoryName}`, {
-      next: { revalidate: 3600 } // Revalidate every hour
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate'
+      }
     });
 
     if (!res.ok) {

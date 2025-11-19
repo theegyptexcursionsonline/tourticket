@@ -31,11 +31,11 @@ async function getAttractionPage(slug: string): Promise<CategoryPageData | null>
     
     console.log('Fetching from URL:', url);
     
-    // Remove no-store for static generation
     const res = await fetch(url, {
-      next: { revalidate: 3600 }, // Use Next.js cache with revalidation
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
 
@@ -55,41 +55,6 @@ async function getAttractionPage(slug: string): Promise<CategoryPageData | null>
   } catch (error) {
     console.error('Error fetching attraction page:', error);
     return null;
-  }
-}
-
-export async function generateStaticParams() {
-  try {
-    console.log('Generating static params for attractions...');
-    
-    const baseUrl = getBaseUrl();
-    const res = await fetch(`${baseUrl}/api/attraction-pages`, {
-      next: { revalidate: 3600 }, // Use Next.js cache
-    });
-    
-    if (!res.ok) {
-      console.error('Failed to fetch attraction pages for static generation');
-      return [];
-    }
-    
-    const data = await res.json();
-    
-    if (!data.success || !Array.isArray(data.data)) {
-      console.error('Invalid response format for static generation');
-      return [];
-    }
-    
-    const params = data.data
-      .filter((page: any) => page.pageType === 'attraction' && page.isPublished)
-      .map((page: any) => ({
-        slug: page.slug,
-      }));
-
-    console.log('Generated static params for attractions:', params);
-    return params;
-  } catch (error) {
-    console.error('Error generating static params for attractions:', error);
-    return [];
   }
 }
 

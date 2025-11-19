@@ -104,12 +104,6 @@ export default async function TourDetailPage({ params }: PageProps) {
   );
 }
 
-export async function generateStaticParams() {
-  try {
-    await dbConnect();
-    const tours = await Tour.find({ isPublished: true }).select('slug').lean();
-    return tours.map((tour) => ({ slug: tour.slug }));
-  } catch {
-    return [];
-  }
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const dynamicParams = true;

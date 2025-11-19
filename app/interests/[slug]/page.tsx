@@ -51,9 +51,10 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
     const url = `${baseUrl}/api/interests/${slug}`;
     
     const res = await fetch(url, {
-      next: { revalidate: 3600 },
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
 

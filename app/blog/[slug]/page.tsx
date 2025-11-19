@@ -9,11 +9,9 @@ import type { IBlog } from '@/lib/models/Blog';
 
 type Params = { slug: string };
 
-export async function generateStaticParams() {
-  await dbConnect();
-  const blogs = await Blog.find({ status: 'published' }).select('slug').lean();
-  return blogs.map((b: any) => ({ slug: b.slug }));
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: { params: Promise<Params> }) {
   try {

@@ -6,13 +6,9 @@ import CategoryModel from '@/lib/models/Category';
 import { Tour, Category } from '@/types';
 import CategoryPageClient from './CategoryPageClient'; // We will create this client component
 
-export async function generateStaticParams() {
-  await dbConnect();
-  const categories = await CategoryModel.find({}).select('slug').lean();
-  return categories.map((category) => ({
-    slug: category.slug,
-  }));
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const dynamicParams = true;
 
 async function getPageData(slug: string) {
   await dbConnect();

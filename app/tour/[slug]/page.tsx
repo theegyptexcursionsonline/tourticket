@@ -10,19 +10,9 @@ import UserModel from '@/lib/models/user';
 import { Tour, Review } from '@/types';
 import TourPageClient from './TourPageClient';
 
-// Generate static params for pre-building
-export async function generateStaticParams() {
-  try {
-    await dbConnect();
-    const tours = await TourModel.find({ isPublished: true }).select('slug').lean();
-    return tours.map((tour) => ({
-      slug: tour.slug,
-    }));
-  } catch (error) {
-    console.error('Error generating static params:', error);
-    return [];
-  }
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const dynamicParams = true;
 
 // Fetch tour data and reviews from database
 async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTours: Tour[]; reviews: Review[] }> {
