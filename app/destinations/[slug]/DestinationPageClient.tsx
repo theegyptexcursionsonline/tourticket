@@ -94,7 +94,7 @@ const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) 
     target="_blank"
     rel="noopener noreferrer"
     onClick={onHitClick}
-    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+    className="group block flex-shrink-0 w-[240px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
     whileHover={{ y: -4 }}
   >
     {tour.image && (

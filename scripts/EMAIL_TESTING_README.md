@@ -55,7 +55,7 @@ npx tsx scripts/test-admin-email.ts
 ### Logo Loading Fixed ✅
 All email templates now use absolute URLs for the logo:
 ```
-https://preview.egypt-excursionsonline.com/EEO-logo.png
+https://egypt-excursionsonline.com/EEO-logo.png
 ```
 
 ### Admin Email Enhanced ✅
@@ -110,7 +110,7 @@ Before deploying to production:
 
 ## Notes
 
-- Test emails are sent to `info@rdmi.in` by default
-- Logo URL is hardcoded to production domain: `preview.egypt-excursionsonline.com`
+- Test emails are sent to `booking@egypt-excursionsonline.com` by default
+- Logo URL is hardcoded to production domain: `egypt-excursionsonline.com`
 - Scripts use sample booking data that represents typical use cases
 - All prices and booking IDs in test emails are fake/sample data

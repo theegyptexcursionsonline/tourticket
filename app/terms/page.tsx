@@ -61,7 +61,7 @@ export default function TermsAndConditionsPage() {
             {/* Company Information Box */}
             <div className="bg-slate-50 border-l-4 border-blue-600 p-6 mb-10 rounded-r-lg">
               <p className="text-lg mb-2"><strong className="text-slate-900">Company name:</strong> Egypt Excursions Online</p>
-              <p className="text-lg mb-2"><strong className="text-slate-900">Mother company:</strong> Excursions Online LLC FZ</p>
+              <p className="text-lg mb-2"><strong className="text-slate-900">Mother company:</strong> <a href="https://www.excursions.online" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">Excursions Online LLC FZ</a></p>
               <p className="text-lg mb-2"><strong className="text-slate-900">Official email:</strong> info@egypt-excursionsonline.com</p>
               <p className="text-lg mb-0"><strong className="text-slate-900">Website:</strong> https://www.egypt-excursionsonline.com</p>
             </div>
@@ -73,7 +73,7 @@ export default function TermsAndConditionsPage() {
                 Welcome to <strong>Egypt Excursions Online</strong> (<strong>"Company"</strong>, <strong>"we"</strong>, <strong>"our"</strong>, <strong>"us"</strong>). These Terms of Service (<strong>"Terms"</strong>) govern your access to and use of our website located at www.egypt-excursionsonline.com and any related pages, content, features, or services we operate (collectively, the <strong>"Service"</strong>).
               </p>
               <p className="leading-relaxed mb-4">
-                Egypt Excursions Online is operated by <strong>Excursions Online LLC FZ</strong> (the <strong>"Mother Company"</strong>).
+                Egypt Excursions Online is operated by <a href="https://www.excursions.online" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-bold">Excursions Online LLC FZ</a> (the <strong>"Mother Company"</strong>).
               </p>
               <p className="leading-relaxed">
                 Our Privacy Policy (published on a separate page) explains how we collect, safeguard, and disclose personal data. These Terms of Service govern your access to and use of the Service. <strong>By accessing or using the Service you agree to be bound by these Terms.</strong> For privacy matters, please refer to the Privacy Policy. If you have questions, contact us at <strong>info@egypt-excursionsonline.com</strong>.

@@ -29,8 +29,8 @@ async function testAdminEmail() {
       totalPrice: '$2.16',
       paymentMethod: 'card',
       specialRequests: 'Please arrange early morning pickup. Need vegetarian meal options.',
-      adminDashboardLink: 'https://preview.egypt-excursionsonline.com/admin/bookings/MULTI-1763493312278',
-      baseUrl: 'https://preview.egypt-excursionsonline.com',
+      adminDashboardLink: 'https://egypt-excursionsonline.com/admin/bookings/MULTI-1763493312278',
+      baseUrl: 'https://egypt-excursionsonline.com',
       tours: [
         {
           title: 'Half-Day Pyramids Tour',

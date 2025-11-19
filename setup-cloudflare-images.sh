@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Cloudflare Image Optimization Setup Script
-# Domain: preview.egypt-excursionsonline.com
+# Domain: egypt-excursionsonline.com
 # Zone ID: 31d54dcc6b58753e7184a2f8d6213a9e
 
 echo "🚀 Cloudflare Image Optimization Setup"
@@ -25,7 +25,7 @@ fi
 
 API_TOKEN="$1"
 ZONE_ID="31d54dcc6b58753e7184a2f8d6213a9e"
-DOMAIN="preview.egypt-excursionsonline.com"
+DOMAIN="egypt-excursionsonline.com"
 
 echo "Domain: $DOMAIN"
 echo "Zone ID: $ZONE_ID"
@@ -93,7 +93,7 @@ RESPONSE=$(curl -s -X PATCH \
       \"allowed_origins\": [
         \"$DOMAIN\",
         \"www.$DOMAIN\",
-        \"preview.egypt-excursionsonline.com\",
+        \"egypt-excursionsonline.com\",
         \"theegyptexcursionsonline.netlify.app\"
       ]
     }

@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
             {/* Company Information Box */}
             <div className="bg-slate-50 border-l-4 border-blue-600 p-6 mb-10 rounded-r-lg">
               <p className="text-lg mb-2"><strong className="text-slate-900">Company name:</strong> Egypt Excursions Online</p>
-              <p className="text-lg mb-2"><strong className="text-slate-900">Mother company:</strong> Excursions Online LLC FZ</p>
+              <p className="text-lg mb-2"><strong className="text-slate-900">Mother company:</strong> <a href="https://www.excursions.online" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">Excursions Online LLC FZ</a></p>
               <p className="text-lg mb-2"><strong className="text-slate-900">Official email:</strong> info@egypt-excursionsonline.com</p>
               <p className="text-lg mb-0"><strong className="text-slate-900">Website:</strong> https://www.egypt-excursionsonline.com</p>
             </div>
