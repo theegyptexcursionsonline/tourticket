@@ -9,17 +9,17 @@ import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
 
 // 2. Create a component for the protected content
 const ProtectedAdminContent = ({ children }: { children: React.ReactNode }) => {
-    return (
-        <div className="flex h-screen bg-gray-100">
-            <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Header />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 md:p-8">
-                    {children}
-                </main>
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 md:p-8">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
 };
 
 // 3. Wrap the content component with the withAuth HOC

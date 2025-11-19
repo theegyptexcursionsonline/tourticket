@@ -11,6 +11,7 @@ import {
   Tag,
   Menu,
   ChevronLeft,
+  ChevronRight,
   FileText,
   ListPlus,
   Percent,
@@ -49,16 +50,21 @@ const AdminSidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
-  const showLabel = isOpen || isMobile;
+  const showLabel = isOpen || (isMobile && isMobileOpen);
   const { hasAnyPermission } = useAdminAuth();
 
-  // Handle mobile detection
+  // Handle mobile detection & keep sidebar responsive
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth < 1024) {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+
+      if (mobile) {
+        // drawer should stay closed by default on mobile
         setIsOpen(false);
       } else {
+        // when returning to desktop make sure sidebar is visible and drawer closed
+        setIsOpen(true);
         setIsMobileOpen(false);
       }
     };
@@ -75,7 +81,7 @@ const AdminSidebar = () => {
 
   // Prevent scroll when mobile menu is open
   useEffect(() => {
-    if (isMobileOpen) {
+    if (isMobile && isMobileOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -83,7 +89,30 @@ const AdminSidebar = () => {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isMobileOpen]);
+  }, [isMobileOpen, isMobile]);
+
+  // Keyboard shortcuts (Ctrl+/ to toggle, Esc to close drawer)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isShortcut = (event.metaKey || event.ctrlKey) && event.key === "/";
+      if (isShortcut) {
+        event.preventDefault();
+        if (isMobile) {
+          setIsMobileOpen((prev) => !prev);
+        } else {
+          setIsOpen((prev) => !prev);
+        }
+        return;
+      }
+
+      if (event.key === "Escape" && isMobile && isMobileOpen) {
+        setIsMobileOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobile, isMobileOpen]);
 
   const toggleSidebar = () => {
     if (isMobile) {
@@ -93,12 +122,12 @@ const AdminSidebar = () => {
     }
   };
 
-  const sidebarWidth = isOpen ? "w-72" : "w-20";
+  const sidebarWidth = isMobile ? "w-72" : isOpen ? "w-72" : "w-20";
   const mobileClass = isMobile
     ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`
-    : "";
+    : "lg:sticky lg:top-0";
 
   return (
     <>
@@ -122,9 +151,9 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`h-screen bg-white border-r border-slate-200/60 backdrop-blur-sm flex flex-col transition-all duration-300 ease-out shadow-lg overflow-hidden ${sidebarWidth} ${mobileClass} ${
-          isMobile ? "w-72" : ""
-        }`}
+        className={`relative bg-white border-r border-slate-200/60 backdrop-blur-sm flex flex-col transition-all duration-300 ease-out shadow-lg overflow-hidden flex-shrink-0 min-h-screen ${sidebarWidth} ${mobileClass}`}
+        aria-label="Admin navigation"
+        aria-expanded={isMobile ? isMobileOpen : isOpen}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-6 border-b border-slate-100 flex-shrink-0">
@@ -162,12 +191,13 @@ const AdminSidebar = () => {
           {!isMobile && (
             <button
               onClick={toggleSidebar}
+              aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
               className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all duration-200 hover:scale-105 active:scale-95 border border-slate-200/50 flex-shrink-0"
             >
               {isOpen ? (
                 <ChevronLeft className="h-4 w-4 text-slate-600" />
               ) : (
-                <Menu className="h-4 w-4 text-slate-600" />
+                <ChevronRight className="h-4 w-4 text-slate-600" />
               )}
             </button>
           )}
@@ -299,6 +329,17 @@ const AdminSidebar = () => {
           )}
         </div>
       </aside>
+
+      {/* Floating expand toggle for collapsed desktop */}
+      {!isMobile && !isOpen && (
+        <button
+          onClick={toggleSidebar}
+          aria-label="Expand sidebar"
+          className="hidden lg:flex items-center justify-center h-10 w-10 rounded-full bg-white border border-slate-200 shadow-lg absolute top-6 left-16 z-30 hover:bg-slate-50 transition-all duration-200"
+        >
+          <ChevronRight className="h-4 w-4 text-slate-600" />
+        </button>
+      )}
     </>
   );
 };
