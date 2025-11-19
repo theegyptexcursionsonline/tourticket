@@ -73,13 +73,13 @@
         <div class="container">
             <div class="hero">
                 <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
-                <div class="hero-eyebrow">Booking {{bookingId}}</div>
+                <div class="hero-eyebrow">Booking EEO-99887766</div>
                 <div class="hero-title">Cancellation confirmed</div>
-                <div class="hero-meta">{{tourTitle}} · {{bookingDate}}</div>
+                <div class="hero-meta">Private Sunset Camel Ride · Sunday, 16 February 2025</div>
             </div>
 
             <div class="content">
-                <div class="greeting">Hi {{customerName}},</div>
+                <div class="greeting">Hi Maya Collins,</div>
                 <p class="intro">We’ve finalized your cancellation request. Below is a snapshot of what was cancelled and how any refund will be handled.</p>
 
                 <div class="alert">
@@ -96,34 +96,30 @@
                         <table class="detail-grid">
                             <tr>
                                 <td class="detail-label">Tour</td>
-                                <td class="detail-value">{{tourTitle}}</td>
+                                <td class="detail-value">Private Sunset Camel Ride</td>
                             </tr>
                             <tr>
                                 <td class="detail-label">Original date</td>
-                                <td class="detail-value">{{bookingDate}}</td>
+                                <td class="detail-value">Sunday, 16 February 2025</td>
                             </tr>
                             <tr>
                                 <td class="detail-label">Booking ID</td>
-                                <td class="detail-value" style="font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</td>
+                                <td class="detail-value" style="font-family: 'SFMono-Regular', Menlo, monospace;">EEO-99887766</td>
                             </tr>
-                            {{#if cancellationReason}}
                             <tr>
                                 <td class="detail-label">Reason provided</td>
-                                <td class="detail-value">{{cancellationReason}}</td>
+                                <td class="detail-value">Travel dates changed</td>
                             </tr>
-                            {{/if}}
                         </table>
                     </div>
                 </div>
 
-                {{#if refundAmount}}
                 <div class="refund-box">
                     <div class="refund-title">Refund status</div>
-                    <div class="refund-row"><strong>Amount:</strong> {{refundAmount}}</div>
-                    <div class="refund-row"><strong>Processing time:</strong> {{refundProcessingDays}} business days</div>
+                    <div class="refund-row"><strong>Amount:</strong> $180.00</div>
+                    <div class="refund-row"><strong>Processing time:</strong> 5 business days</div>
                     <div class="refund-row">Funds return to your original payment method automatically.</div>
                 </div>
-                {{/if}}
 
                 <div class="options">
                     <div class="option-title">Need to travel soon?</div>
@@ -138,7 +134,7 @@
                 </div>
 
                 <div class="cta">
-                    <a class="cta-button" href="{{baseUrl}}/user/bookings">Explore other tours</a>
+                    <a class="cta-button" href="https://egypt-excursionsonline.com/user/bookings">Explore other tours</a>
                 </div>
 
                 <div class="support">
@@ -149,11 +145,11 @@
 
             <div class="footer">
                 <div class="footer-links">
-                    <a href="{{baseUrl}}/user/bookings">My Bookings</a>
-                    <a href="{{baseUrl}}/help">Help Center</a>
-                    <a href="{{baseUrl}}/terms">Terms</a>
+                    <a href="https://egypt-excursionsonline.com/user/bookings">My Bookings</a>
+                    <a href="https://egypt-excursionsonline.com/help">Help Center</a>
+                    <a href="https://egypt-excursionsonline.com/terms">Terms</a>
                 </div>
-                <p>© {{year}} Egypt Excursions Online • Cairo, Egypt</p>
+                <p>©  Egypt Excursions Online • Cairo, Egypt</p>
             </div>
         </div>
     </div>

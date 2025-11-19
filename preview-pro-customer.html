@@ -131,13 +131,11 @@
 
             <!-- Hero Image with Overlay (Optional) -->
             <div class="hero">
-                {{#if tourImage}}
-                <img src="{{tourImage}}" alt="{{tourTitle}}" class="hero-image">
-                {{/if}}
+                <img src="https://images.unsplash.com/photo-1539650116455-29e6ddd575dc?auto&#x3D;format&amp;fit&#x3D;crop&amp;w&#x3D;900&amp;q&#x3D;80" alt="Private Pyramids of Giza &amp; Sphinx Tour" class="hero-image">
                 <div class="hero-content">
-                    <div class="hero-eyebrow">Booking {{bookingId}}</div>
-                    <div class="hero-title">{{tourTitle}}</div>
-                    <div class="hero-meta">Happening {{bookingDate}} · {{bookingTime}}</div>
+                    <div class="hero-eyebrow">Booking EEO-88229911-XYZ</div>
+                    <div class="hero-title">Private Pyramids of Giza &amp; Sphinx Tour</div>
+                    <div class="hero-meta">Happening Saturday, 21 December 2024 · 09:00 AM</div>
                 </div>
             </div>
 
@@ -145,50 +143,44 @@
                 <div style="text-align: center; margin-bottom: 32px;">
                     <div class="status-badge">Booking Confirmed</div>
                     <h1 class="greeting">You're going to Egypt!</h1>
-                    <p class="intro">Hi {{customerName}}, everything is set. Below is your digital travel pass with every detail you’ll need.</p>
+                    <p class="intro">Hi Alexander Hamilton, everything is set. Below is your digital travel pass with every detail you’ll need.</p>
                 </div>
 
                 <!-- Digital Ticket Card -->
                 <div class="ticket-card">
                     <div class="ticket-header">
-                        <div class="tour-title">{{tourTitle}}</div>
-                        {{#if bookingOption}}
-                        <div class="tour-option">{{bookingOption}}</div>
-                        {{/if}}
+                        <div class="tour-title">Private Pyramids of Giza &amp; Sphinx Tour</div>
+                        <div class="tour-option">Sunrise Access + Egyptologist</div>
                     </div>
                     <div class="ticket-body">
                         <table class="info-grid">
                             <tr>
                                 <td class="info-col">
                                     <div class="info-label">Date & Time</div>
-                                    <div class="info-value">{{bookingDate}}<br>{{bookingTime}}</div>
+                                    <div class="info-value">Saturday, 21 December 2024<br>09:00 AM</div>
                                 </td>
                                 <td class="info-col">
                                     <div class="info-label">Reference</div>
-                                    <div class="info-value" style="font-family: monospace; letter-spacing: 1px;">{{bookingId}}</div>
+                                    <div class="info-value" style="font-family: monospace; letter-spacing: 1px;">EEO-88229911-XYZ</div>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="info-col">
                                     <div class="info-label">Guests</div>
-                                    <div class="info-value">{{participants}}</div>
-                                    {{#if participantBreakdown}}
-                                    <div style="font-size: 12px; color: #888; margin-top: 2px;">{{participantBreakdown}}</div>
-                                    {{/if}}
+                                    <div class="info-value">2 Adults</div>
+                                    <div style="font-size: 12px; color: #888; margin-top: 2px;">2 × Adults ($80.00)</div>
                                 </td>
                                 <td class="info-col">
                                     <div class="info-label">Total Price</div>
-                                    <div class="price-large">{{totalPrice}}</div>
+                                    <div class="price-large">$160.00 USD</div>
                                 </td>
                             </tr>
-                            {{#if meetingPoint}}
                             <tr>
                                 <td class="info-col" colspan="2" style="padding-top: 8px; border-top: 1px solid #f0f0f0;">
                                     <div class="info-label">Meeting Point</div>
-                                    <div class="info-value">📍 {{meetingPoint}}</div>
+                                    <div class="info-value">📍 Grand Hyatt Cairo Lobby</div>
                                 </td>
                             </tr>
-                            {{/if}}
                         </table>
                     </div>
                 </div>
@@ -213,45 +205,41 @@
                 </div>
 
                 <!-- Special Requests -->
-                {{#if specialRequests}}
                 <div class="special-req">
                     <div class="special-req-title">Special Requests Included</div>
-                    <div class="special-req-text">"{{specialRequests}}"</div>
+                    <div class="special-req-text">"No spicy food for lunch please."</div>
                 </div>
-                {{/if}}
 
                 <!-- Essentials -->
                 <div class="essentials-card">
-                    {{#if meetingPoint}}
                     <div class="essentials-item">
                         <div class="essentials-icon">📍</div>
                         <div class="essentials-body">
                             <strong>Meeting point</strong>
-                            {{meetingPoint}}
+                            Grand Hyatt Cairo Lobby
                         </div>
                     </div>
-                    {{/if}}
                     <div class="essentials-item">
                         <div class="essentials-icon">🆔</div>
                         <div class="essentials-body">
                             <strong>Booking reference</strong>
-                            {{bookingId}}
+                            EEO-88229911-XYZ
                         </div>
                     </div>
                     <div class="essentials-item">
                         <div class="essentials-icon">🤝</div>
                         <div class="essentials-body">
                             <strong>Guests</strong>
-                            {{participants}}
+                            2 Adults
                         </div>
                     </div>
                 </div>
 
                 <!-- CTA -->
                 <div class="cta-container">
-                    <a href="{{baseUrl}}/user/bookings/{{bookingId}}" class="btn-primary">Manage My Booking</a>
+                    <a href="https://egypt-excursionsonline.com/user/bookings/EEO-88229911-XYZ" class="btn-primary">Manage My Booking</a>
                     <div style="margin-top: 16px; font-size: 13px; color: #666;">
-                        <a href="{{baseUrl}}/contact" style="color: #666; text-decoration: underline;">Need to make changes?</a>
+                        <a href="https://egypt-excursionsonline.com/contact" style="color: #666; text-decoration: underline;">Need to make changes?</a>
                     </div>
                 </div>
 
@@ -263,7 +251,7 @@
                         <p>
                             WhatsApp: +20 11 42255624 &nbsp;•&nbsp;
                             Email: booking@egypt-excursionsonline.com
-                            {{#if contactNumber}} &nbsp;•&nbsp; Emergency: {{contactNumber}}{{/if}}
+                             &nbsp;•&nbsp; Emergency: +20 11 42255624
                         </p>
                     </div>
                 </div>
@@ -287,11 +275,11 @@
             <!-- Footer -->
             <div class="footer">
                 <div class="footer-links">
-                    <a href="{{baseUrl}}/user/bookings" class="footer-link">My Bookings</a>
-                    <a href="{{baseUrl}}/help" class="footer-link">Help Center</a>
-                    <a href="{{baseUrl}}/terms" class="footer-link">Terms</a>
+                    <a href="https://egypt-excursionsonline.com/user/bookings" class="footer-link">My Bookings</a>
+                    <a href="https://egypt-excursionsonline.com/help" class="footer-link">Help Center</a>
+                    <a href="https://egypt-excursionsonline.com/terms" class="footer-link">Terms</a>
                 </div>
-                <p class="footer-text">© {{year}} Egypt Excursions Online. All rights reserved.</p>
+                <p class="footer-text">©  Egypt Excursions Online. All rights reserved.</p>
                 <p class="footer-text">Cairo, Egypt</p>
             </div>
         </div>

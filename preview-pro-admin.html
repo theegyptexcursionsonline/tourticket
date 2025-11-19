@@ -88,16 +88,12 @@
                         <span class="brand-dot"></span>
                         Egypt Excursions Online
                     </div>
-                    <div class="header-meta">New booking received • {{bookingDate}}</div>
+                    <div class="header-meta">New booking received • Saturday, 21 December 2024</div>
                 </div>
                 <div class="header-badges">
                     <span class="header-chip">New Booking</span>
                     <span class="header-chip">Priority • Immediate Review</span>
-                    {{#if paymentMethod}}
                     <span class="header-chip">Payment Logged</span>
-                    {{else}}
-                    <span class="header-chip">Payment Pending</span>
-                    {{/if}}
                 </div>
             </div>
             
@@ -105,15 +101,15 @@
             <div class="kpi-section">
                 <div class="kpi-card">
                     <div class="kpi-label">Booking ID</div>
-                    <div class="kpi-value" style="font-family: 'SFMono-Regular', Menlo, monospace; font-size: 15px;">{{bookingId}}</div>
+                    <div class="kpi-value" style="font-family: 'SFMono-Regular', Menlo, monospace; font-size: 15px;">EEO-88229911-XYZ</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">Total Value</div>
-                    <div class="kpi-value" style="color: #059669;">{{totalPrice}}</div>
+                    <div class="kpi-value" style="color: #059669;">$160.00 USD</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">Travel Date</div>
-                    <div class="kpi-value" style="font-size: 16px;">{{bookingDate}}</div>
+                    <div class="kpi-value" style="font-size: 16px;">Saturday, 21 December 2024</div>
                 </div>
             </div>
 
@@ -124,24 +120,20 @@
                         <table class="data-table">
                             <tr>
                                 <td class="label-col">Name</td>
-                                <td class="value-col">{{customerName}}</td>
+                                <td class="value-col">Alexander Hamilton</td>
                             </tr>
                             <tr>
                                 <td class="label-col">Email</td>
-                                <td class="value-col"><a href="mailto:{{customerEmail}}" style="color: #2563eb;">{{customerEmail}}</a></td>
+                                <td class="value-col"><a href="mailto:alex.hamilton@example.com" style="color: #2563eb;">alex.hamilton@example.com</a></td>
                             </tr>
-                            {{#if customerPhone}}
                             <tr>
                                 <td class="label-col">Phone</td>
-                                <td class="value-col">{{customerPhone}}</td>
+                                <td class="value-col">+1 555 0199</td>
                             </tr>
-                            {{/if}}
-                            {{#if paymentMethod}}
                             <tr>
                                 <td class="label-col">Payment</td>
-                                <td class="value-col">{{paymentMethod}}</td>
+                                <td class="value-col">Stripe (Visa **** 4242)</td>
                             </tr>
-                            {{/if}}
                         </table>
                     </div>
                     <div class="panel">
@@ -149,19 +141,19 @@
                         <table class="data-table">
                             <tr>
                                 <td class="label-col">Tour</td>
-                                <td class="value-col">{{tourTitle}}</td>
+                                <td class="value-col">Private Pyramids of Giza &amp; Sphinx Tour</td>
                             </tr>
                             <tr>
                                 <td class="label-col">Date & Time</td>
-                                <td class="value-col">{{bookingDate}}{{#if bookingTime}}, {{bookingTime}}{{/if}}</td>
+                                <td class="value-col">Saturday, 21 December 2024</td>
                             </tr>
                             <tr>
                                 <td class="label-col">Reference</td>
-                                <td class="value-col" style="font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</td>
+                                <td class="value-col" style="font-family: 'SFMono-Regular', Menlo, monospace;">EEO-88229911-XYZ</td>
                             </tr>
                             <tr>
                                 <td class="label-col">Value</td>
-                                <td class="value-col">{{totalPrice}}</td>
+                                <td class="value-col">$160.00 USD</td>
                             </tr>
                         </table>
                     </div>
@@ -169,56 +161,36 @@
 
                 <div class="panel">
                     <span class="section-title">Tour Information</span>
-                    {{#if tours}}
-                        {{#each tours}}
                         <div class="tour-card">
                             <div class="tour-header">
-                                <div class="tour-name">{{this.title}}</div>
-                                <div class="tour-price">{{this.price}}</div>
+                                <div class="tour-name">Private Pyramids of Giza &amp; Sphinx Tour</div>
+                                <div class="tour-price">$160.00 USD</div>
                             </div>
                             <div class="tour-meta">
                                 <div class="meta-row">
                                     <div class="meta-label">DATE</div>
-                                    <div>{{this.date}} at {{this.time}}</div>
+                                    <div>Saturday, 21 December 2024 at 09:00 AM</div>
                                 </div>
                                 <div class="meta-row">
                                     <div class="meta-label">PAX</div>
-                                    <div>{{this.adults}} Adults, {{this.children}} Children{{#if this.infants}}, {{this.infants}} Infants{{/if}}</div>
+                                    <div>2 Adults, 0 Children</div>
                                 </div>
-                                {{#if this.bookingOption}}
                                 <div class="meta-row">
                                     <div class="meta-label">OPTION</div>
-                                    <div>{{this.bookingOption}}</div>
+                                    <div>Sunrise Access + Egyptologist</div>
                                 </div>
-                                {{/if}}
-                                {{#if this.addOns}}
                                 <div class="meta-row">
                                     <div class="meta-label">ADD-ONS</div>
-                                    <div>{{this.addOns}}</div>
+                                    <div>VIP Fast Track,Traditional Lunch</div>
                                 </div>
-                                {{/if}}
                             </div>
                         </div>
-                        {{/each}}
-                    {{else}}
-                        <div class="tour-card">
-                            <div class="tour-header">
-                                <div class="tour-name">{{tourTitle}}</div>
-                                <div class="tour-price">{{totalPrice}}</div>
-                            </div>
-                            <div class="tour-meta">
-                                <div>{{bookingDate}}{{#if bookingTime}} • {{bookingTime}}{{/if}}</div>
-                            </div>
-                        </div>
-                    {{/if}}
                 </div>
 
-                {{#if specialRequests}}
                 <div class="alert-box">
                     <div class="alert-title">⚠️ Special Requests</div>
-                    <div class="alert-content">{{specialRequests}}</div>
+                    <div class="alert-content">No spicy food for lunch please.</div>
                 </div>
-                {{/if}}
 
                 <div class="action-checklist">
                     <span class="section-title">Checklist</span>
@@ -237,10 +209,8 @@
                 </div>
 
                 <div class="action-bar">
-                    <a href="mailto:{{customerEmail}}" class="btn btn-secondary">Email Customer</a>
-                    {{#if adminDashboardLink}}
-                    <a href="{{adminDashboardLink}}" class="btn btn-primary">Open in Dashboard</a>
-                    {{/if}}
+                    <a href="mailto:alex.hamilton@example.com" class="btn btn-secondary">Email Customer</a>
+                    <a href="https://admin.egypt-excursionsonline.com/bookings/EEO-88229911-XYZ" class="btn btn-primary">Open in Dashboard</a>
                 </div>
             </div>
 

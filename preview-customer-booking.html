@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Your booking is confirmed! - Egypt Excursions Online</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Helvetica Neue', Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #191919; 
+            background-color: #f7f7f7; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .email-wrapper { 
+            width: 100%; 
+            background-color: #f7f7f7; 
+            padding: 0; 
+        }
+        .email-container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: #ffffff; 
+        }
+        
+        /* Header Section */
+        .header { 
+            background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+            padding: 32px 24px; 
+            text-align: center; 
+        }
+        .logo { 
+            max-width: 140px; 
+            height: auto; 
+            margin-bottom: 20px; 
+            filter: brightness(0) invert(1);
+        }
+        .header-title { 
+            font-size: 32px; 
+            font-weight: 700; 
+            color: #ffffff; 
+            margin: 0 0 8px 0; 
+            letter-spacing: -0.5px; 
+        }
+        .header-subtitle { 
+            font-size: 18px; 
+            color: rgba(255, 255, 255, 0.9); 
+            margin: 0; 
+            font-weight: 400;
+        }
+        
+        /* Success Banner */
+        .success-banner { 
+            background: #00d084; 
+            color: #ffffff; 
+            padding: 20px 24px; 
+            text-align: center; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .success-icon {
+            width: 28px;
+            height: 28px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d084;
+        }
+        .success-text { 
+            font-size: 18px; 
+            font-weight: 600; 
+            margin: 0;
+        }
+        
+        /* Content Section */
+        .content { 
+            padding: 40px 24px; 
+        }
+        .greeting { 
+            font-size: 24px; 
+            color: #191919; 
+            margin-bottom: 16px; 
+            font-weight: 600; 
+        }
+        .intro-text { 
+            color: #767676; 
+            font-size: 16px; 
+            line-height: 1.7; 
+            margin-bottom: 32px; 
+        }
+        
+        /* Tour Card */
+        .tour-card {
+            background: #f7f7f7;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 32px;
+            border: 1px solid #e6e6e6;
+        }
+        .tour-card-header {
+            padding: 20px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        .tour-title { 
+            font-size: 20px; 
+            font-weight: 700; 
+            color: #191919; 
+            margin-bottom: 8px; 
+            line-height: 1.3;
+        }
+        .tour-option { 
+            font-size: 15px; 
+            color: #0066ff; 
+            font-weight: 500;
+        }
+        
+        /* Booking Details Card */
+        .booking-details { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            margin: 32px 0;
+            border: 1px solid #e6e6e6;
+        }
+        .section-header {
+            background: #f7f7f7;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        .section-title { 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: #191919; 
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 13px;
+        }
+        .detail-row { 
+            padding: 20px 24px; 
+            border-bottom: 1px solid #f0f0f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
+            gap: 16px;
+        }
+        .detail-row:last-child { 
+            border-bottom: none; 
+        }
+        .detail-label { 
+            font-weight: 500; 
+            color: #767676; 
+            font-size: 15px; 
+            flex: 0 0 auto;
+        }
+        .detail-value { 
+            color: #191919; 
+            font-size: 15px; 
+            font-weight: 600; 
+            text-align: right; 
+            flex: 1 1 auto;
+        }
+        .detail-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        
+        /* Price Row */
+        .price-row { 
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            border-top: 2px solid #ffc107;
+            padding: 24px !important;
+        }
+        .price-row .detail-label { 
+            color: #191919; 
+            font-weight: 700; 
+            font-size: 16px;
+        }
+        .price-row .detail-value { 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: #191919;
+        }
+        
+        /* CTA Button */
+        .cta-section { 
+            text-align: center; 
+            margin: 32px 0; 
+        }
+        .cta-button { 
+            display: inline-block; 
+            background: #0066ff;
+            color: #ffffff; 
+            padding: 16px 48px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            font-size: 16px; 
+            box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover { 
+            background: #0052cc;
+            box-shadow: 0 6px 20px rgba(0, 102, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        /* Info Boxes */
+        .info-box { 
+            background: #f0f9ff; 
+            border-left: 4px solid #0066ff; 
+            border-radius: 8px; 
+            padding: 20px 24px; 
+            margin: 24px 0; 
+        }
+        .info-box-title { 
+            color: #0052cc; 
+            margin-bottom: 12px; 
+            font-size: 15px; 
+            font-weight: 700; 
+        }
+        .info-box p { 
+            margin: 8px 0; 
+            color: #191919; 
+            font-size: 14px; 
+            line-height: 1.6;
+        }
+        .info-box strong {
+            color: #191919;
+            font-weight: 600;
+        }
+        
+        /* Special Requests */
+        .special-requests { 
+            background: #fff8f0; 
+            border-left: 4px solid #ff9800; 
+            border-radius: 8px; 
+            padding: 20px 24px; 
+            margin: 24px 0; 
+        }
+        .special-requests-title { 
+            color: #e65100; 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px; 
+            font-size: 15px; 
+            font-weight: 700; 
+        }
+        .special-requests p { 
+            color: #191919; 
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        /* Tips Section */
+        .tips-section {
+            background: #f7f7f7;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 32px 0;
+        }
+        .tips-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #191919;
+            margin-bottom: 16px;
+        }
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #191919;
+            line-height: 1.6;
+        }
+        .tip-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        /* Contact Card */
+        .contact-card {
+            background: linear-gradient(135deg, #00d084 0%, #00b871 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 32px 0;
+            text-align: center;
+            color: #ffffff;
+        }
+        .contact-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .contact-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .contact-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .contact-item strong {
+            font-weight: 700;
+        }
+        
+        /* Divider */
+        .divider { 
+            height: 1px; 
+            background: #e6e6e6; 
+            margin: 32px 0; 
+        }
+        
+        /* Footer */
+        .footer { 
+            background: #191919; 
+            color: #ffffff; 
+            padding: 40px 24px; 
+            text-align: center; 
+        }
+        .footer-logo { 
+            max-width: 120px; 
+            height: auto; 
+            margin-bottom: 20px; 
+            opacity: 0.9;
+            filter: brightness(0) invert(1);
+        }
+        .footer-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+        .footer p { 
+            margin: 6px 0; 
+            font-size: 14px; 
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+        .social-links { 
+            margin: 24px 0 0 0;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+        .social-link { 
+            color: #ffffff; 
+            text-decoration: none; 
+            font-size: 14px; 
+            font-weight: 500;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        .social-link:hover { 
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Participant Details */
+        .participant-detail { 
+            font-size: 13px; 
+            color: #767676; 
+            margin-top: 4px; 
+            font-weight: 400;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            .email-wrapper { padding: 0; }
+            .header { padding: 24px 16px; }
+            .content { padding: 32px 16px; }
+            .header-title { font-size: 26px; }
+            .greeting { font-size: 20px; }
+            .tour-title { font-size: 18px; }
+            .detail-row { 
+                flex-direction: column; 
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .detail-value { 
+                text-align: left; 
+            }
+            .price-row .detail-value {
+                font-size: 20px;
+            }
+            .cta-button {
+                display: block;
+                width: 100%;
+                padding: 16px 24px;
+            }
+            .social-links {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+                <h1 class="header-title">Your booking is confirmed!</h1>
+                <p class="header-subtitle">Reference: EEO-20241119-ABC123XYZ</p>
+            </div>
+
+            <!-- Success Banner -->
+            <div class="success-banner">
+                <span class="success-icon">✓</span>
+                <p class="success-text">Booking Confirmed - Get Ready for an Amazing Experience!</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                    Hi Sarah Johnson! 👋
+            </div>
+
+                <p class="intro-text">
+                    Great news! Your booking has been confirmed and we can't wait to welcome you to this incredible experience. All the important details are below.
+                </p>
+
+                <!-- Tour Card -->
+                <div class="tour-card">
+                    <div class="tour-card-header">
+            <div class="tour-title">Full-Day Pyramids of Giza, Sphinx &amp; Egyptian Museum Tour</div>
+                        <div class="tour-option">Private Tour with Lunch Included</div>
+                    </div>
+                </div>
+
+                <!-- CTA Button -->
+            <div class="cta-section">
+                    <a href="https://egypt-excursionsonline.com/user/bookings/EEO-20241119-ABC123XYZ" class="cta-button">
+                        View Full Booking Details
+                </a>
+            </div>
+
+                <!-- Booking Details -->
+            <div class="booking-details">
+                    <div class="section-header">
+                        <h3 class="section-title">📋 Booking Information</h3>
+                    </div>
+                <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">📅</span>Date & Time</span>
+                    <span class="detail-value">Saturday, December 21, 2024 9:00 AM</span>
+                </div>
+                <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">👥</span>Participants</span>
+                    <span class="detail-value">
+                        4 participants
+                        <div class="participant-detail">2 × Adults ($75.00 each) • 2 × Children ($45.00 each)</div>
+                    </span>
+                </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">🔖</span>Reference Number</span>
+                        <span class="detail-value">EEO-20241119-ABC123XYZ</span>
+                    </div>
+                <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">📍</span>Meeting Point</span>
+                    <span class="detail-value">Hotel Lobby - Marriott Mena House, Cairo</span>
+                </div>
+                    <div class="detail-row price-row">
+                        <span class="detail-label">Total Price</span>
+                        <span class="detail-value">$240.00 USD</span>
+                    </div>
+            </div>
+
+                <!-- Special Requests -->
+                <div class="special-requests">
+                    <div class="special-requests-title">
+                        <span>⚠️</span>
+                        <span>Your Special Requests</span>
+                    </div>
+                <p>We would like vegetarian meal options and need a child seat for a 3-year-old. Also, please note that one of our group members uses a wheelchair.</p>
+            </div>
+
+                <!-- Tips Section -->
+                <div class="tips-section">
+                    <div class="tips-title">💡 Helpful Tips</div>
+                    <div class="tip-item">
+                        <span class="tip-icon">⏰</span>
+                        <span>We'll send you a reminder email 24 hours before your experience with all the final details.</span>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon">📱</span>
+                        <span>Save your booking reference number for easy check-in on the day.</span>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon">🌤️</span>
+                        <span>Check the weather forecast a day before and dress accordingly.</span>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon">💬</span>
+                        <span>Have questions? Our support team is available 24/7 to help you.</span>
+                    </div>
+            </div>
+
+                <!-- Contact Card -->
+                <div class="contact-card">
+                    <div class="contact-title">Need Help? We're Here 24/7</div>
+                    <div class="contact-methods">
+                        <div class="contact-item">
+                            <strong>📞 Emergency Contact:</strong> +20 11 42255624
+                        </div>
+                        <div class="contact-item">
+                            <strong>💬 WhatsApp:</strong> +20 11 42255624
+                        </div>
+                        <div class="contact-item">
+                            <strong>✉️ Email:</strong> booking@egypt-excursionsonline.com
+                        </div>
+                    </div>
+            </div>
+
+            <div class="divider"></div>
+
+                <!-- Info Box -->
+                <div class="info-box">
+                    <div class="info-box-title">📍 What's Next?</div>
+                    <p><strong>1. Check your email:</strong> You'll receive a reminder 24 hours before your experience.</p>
+                    <p><strong>2. Prepare for your trip:</strong> Review the meeting point and bring any required items.</p>
+                    <p><strong>3. Enjoy your experience:</strong> Arrive 15 minutes early and have an amazing time!</p>
+                </div>
+
+                <p style="color: #191919; font-size: 15px; line-height: 1.7; margin-top: 32px;">
+                    Thank you for choosing Egypt Excursions Online. We're excited to show you the wonders of Egypt and create unforgettable memories!
+                </p>
+
+                <p style="margin-top: 24px; color: #767676; font-size: 15px; line-height: 1.6;">
+                Best regards,<br>
+                    <strong style="color: #191919;">The Egypt Excursions Online Team</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="EEO" class="footer-logo">
+                <p class="footer-title">Egypt Excursions Online</p>
+                <p>Your trusted partner for unforgettable experiences in Egypt</p>
+                <p style="margin-top: 16px;">Cairo, Egypt</p>
+                <p>booking@egypt-excursionsonline.com • +20 11 42255624</p>
+            <div class="social-links">
+                    <a href="#" class="social-link">Facebook</a>
+                    <a href="#" class="social-link">Instagram</a>
+                    <a href="#" class="social-link">WhatsApp</a>
+                </div>
+                <p style="margin-top: 24px; font-size: 12px; opacity: 0.6;">
+                    You're receiving this email because you made a booking with Egypt Excursions Online.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

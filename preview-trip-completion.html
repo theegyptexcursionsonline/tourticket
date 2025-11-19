@@ -67,11 +67,11 @@
                 <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
                 <div class="hero-eyebrow">Trip completed</div>
                 <div class="hero-title">Thank you for traveling with us</div>
-                <div class="hero-meta">{{tourTitle}} · {{bookingDate}}</div>
+                <div class="hero-meta">Giza Plateau Sunrise Experience · Tuesday, 4 February 2025</div>
             </div>
 
             <div class="content">
-                <div class="greeting">Hi {{customerName}},</div>
+                <div class="greeting">Hi Isabella Rossi,</div>
                 <p class="intro">We’re honored you experienced Egypt with us. We hope the memories stay vibrant and the stories last forever.</p>
 
                 <div class="gratitude-card">
@@ -82,10 +82,8 @@
                 <div class="review-card">
                     <h3>Share your experience</h3>
                     <p>Your review helps other travelers discover trusted adventures.</p>
-                    <a class="btn btn-dark" href="{{reviewLink}}">Leave a review</a>
-                    {{#if photoSharingLink}}
-                    <a class="btn btn-light" href="{{photoSharingLink}}">Share photos</a>
-                    {{/if}}
+                    <a class="btn btn-dark" href="https://egypt-excursionsonline.com/review/EEO-1122">Leave a review</a>
+                    <a class="btn btn-light" href="https://photos.app.goo.gl/sample">Share photos</a>
                 </div>
 
                 <div class="revisit">
@@ -100,31 +98,34 @@
                     </div>
                 </div>
 
-                {{#if recommendedTours}}
                 <div class="recommendations">
                     <h3>Your next Egyptian story</h3>
                     <div class="tour-grid">
-                        {{#each recommendedTours}}
-                        <a href="{{link}}" class="tour-card">
-                            <img src="{{image}}" alt="{{title}}">
+                        <a href="https://egypt-excursionsonline.com/tours/alexandria-seaside" class="tour-card">
+                            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto&#x3D;format&amp;fit&#x3D;crop&amp;w&#x3D;600&amp;q&#x3D;80" alt="Alexandria Seaside Escape">
                             <div class="tour-info">
-                                <div class="tour-title">{{title}}</div>
-                                <div class="tour-price">From {{price}}</div>
+                                <div class="tour-title">Alexandria Seaside Escape</div>
+                                <div class="tour-price">From $210</div>
                             </div>
                         </a>
-                        {{/each}}
+                        <a href="https://egypt-excursionsonline.com/tours/abu-simbel" class="tour-card">
+                            <img src="https://images.unsplash.com/photo-1504355080015-bba52674577b?auto&#x3D;format&amp;fit&#x3D;crop&amp;w&#x3D;600&amp;q&#x3D;80" alt="Abu Simbel &amp; Nubian Culture">
+                            <div class="tour-info">
+                                <div class="tour-title">Abu Simbel &amp; Nubian Culture</div>
+                                <div class="tour-price">From $320</div>
+                            </div>
+                        </a>
                     </div>
                 </div>
-                {{/if}}
             </div>
 
             <div class="footer">
                 <div class="footer-links">
-                    <a href="{{baseUrl}}/user/bookings">My Bookings</a>
-                    <a href="{{baseUrl}}/help">Help Center</a>
-                    <a href="{{baseUrl}}/terms">Terms</a>
+                    <a href="https://egypt-excursionsonline.com/user/bookings">My Bookings</a>
+                    <a href="https://egypt-excursionsonline.com/help">Help Center</a>
+                    <a href="https://egypt-excursionsonline.com/terms">Terms</a>
                 </div>
-                <p>© {{year}} Egypt Excursions Online • Cairo, Egypt</p>
+                <p>©  Egypt Excursions Online • Cairo, Egypt</p>
             </div>
         </div>
     </div>

@@ -68,11 +68,11 @@
                 <img src="https://preview.egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
                 <div class="hero-eyebrow">Account activated</div>
                 <div class="hero-title">Welcome to Egypt Excursions Online</div>
-                <div class="hero-meta">Your dashboard is ready · {{dashboardLink}}</div>
+                <div class="hero-meta">Your dashboard is ready · https://egypt-excursionsonline.com/user/dashboard</div>
             </div>
 
             <div class="content">
-                <div class="greeting">Hi {{customerName}},</div>
+                <div class="greeting">Hi Daniel Green,</div>
                 <p class="intro">You’re officially part of our explorer community. Here’s what you can do next and how to make the most of your account.</p>
 
                 <div class="pill-grid">
@@ -107,28 +107,29 @@
                 </div>
 
                 <div class="cta">
-                    <a class="cta-button" href="{{dashboardLink}}">Open my dashboard</a>
-                    {{#if verificationLink}}
-                    <div class="cta-secondary">Need to verify your email? <a href="{{verificationLink}}" style="color:#2563eb;text-decoration:none;">Click here</a></div>
-                    {{/if}}
+                    <a class="cta-button" href="https://egypt-excursionsonline.com/user/dashboard">Open my dashboard</a>
+                    <div class="cta-secondary">Need to verify your email? <a href="https://egypt-excursionsonline.com/verify-account" style="color:#2563eb;text-decoration:none;">Click here</a></div>
                 </div>
 
-                {{#if recommendedTours}}
                 <div class="card">
                     <div class="card-title">Handpicked for you</div>
                     <div class="tour-grid">
-                        {{#each recommendedTours}}
-                        <a href="{{link}}" class="tour-card">
-                            <img src="{{image}}" alt="{{title}}">
+                        <a href="https://egypt-excursionsonline.com/tours/classic-cairo" class="tour-card">
+                            <img src="https://images.unsplash.com/photo-1544986581-efac024faf62?auto&#x3D;format&amp;fit&#x3D;crop&amp;w&#x3D;600&amp;q&#x3D;80" alt="Classic Cairo in a Day">
                             <div class="tour-info">
-                                <div class="tour-title">{{title}}</div>
-                                <div class="tour-price">From {{price}}</div>
+                                <div class="tour-title">Classic Cairo in a Day</div>
+                                <div class="tour-price">From $150</div>
                             </div>
                         </a>
-                        {{/each}}
+                        <a href="https://egypt-excursionsonline.com/tours/red-sea-snorkeling" class="tour-card">
+                            <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto&#x3D;format&amp;fit&#x3D;crop&amp;w&#x3D;600&amp;q&#x3D;80" alt="Red Sea Snorkeling Adventure">
+                            <div class="tour-info">
+                                <div class="tour-title">Red Sea Snorkeling Adventure</div>
+                                <div class="tour-price">From $180</div>
+                            </div>
+                        </a>
                     </div>
                 </div>
-                {{/if}}
 
                 <div class="checklist">
                     <div class="checklist-title">Make the most of today</div>
@@ -140,11 +141,11 @@
 
             <div class="footer">
                 <div class="footer-links">
-                    <a href="{{baseUrl}}/user/bookings">My Bookings</a>
-                    <a href="{{baseUrl}}/help">Help Center</a>
-                    <a href="{{baseUrl}}/terms">Terms</a>
+                    <a href="https://egypt-excursionsonline.com/user/bookings">My Bookings</a>
+                    <a href="https://egypt-excursionsonline.com/help">Help Center</a>
+                    <a href="https://egypt-excursionsonline.com/terms">Terms</a>
                 </div>
-                <p>© {{year}} Egypt Excursions Online • Cairo, Egypt</p>
+                <p>©  Egypt Excursions Online • Cairo, Egypt</p>
             </div>
         </div>
     </div>
