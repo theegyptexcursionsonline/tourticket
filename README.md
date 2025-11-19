@@ -102,6 +102,9 @@ NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY=your_algolia_search_api_key
 ALGOLIA_ADMIN_API_KEY=your_algolia_admin_api_key
 NEXT_PUBLIC_ALGOLIA_INDEX_NAME=tours
 
+# Google Maps (required for tour map embeds)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+
 # Sentry (optional)
 SENTRY_DSN=your_sentry_dsn
 
