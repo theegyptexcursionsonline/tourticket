@@ -206,24 +206,24 @@ const TeamPage = () => {
   );
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600">
-              <Shield className="h-6 w-6" />
+    <div className="p-4 md:p-6 bg-slate-50 min-h-screen space-y-6 md:space-y-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 md:p-3 rounded-2xl bg-indigo-100 text-indigo-600 flex-shrink-0">
+              <Shield className="h-5 w-5 md:h-6 md:w-6" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Team access</h1>
-              <p className="text-slate-500">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">Team access</h1>
+              <p className="text-sm md:text-base text-slate-500 mt-1">
                 Grant granular permissions to your operations and content teams.
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-4 text-right">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 md:px-6 py-3 md:py-4 w-full sm:w-auto text-center sm:text-right flex-shrink-0">
           <p className="text-xs uppercase tracking-wide text-slate-400">Active team</p>
-          <p className="text-2xl font-semibold text-slate-900">
+          <p className="text-xl md:text-2xl font-semibold text-slate-900">
             {activeMembers.length} <span className="text-sm text-slate-500">/ {members.length}</span>
           </p>
           <p className="text-xs text-slate-400">
@@ -232,18 +232,18 @@ const TeamPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <form
           onSubmit={handleInvite}
-          className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4 lg:col-span-1"
+          className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 md:p-6 space-y-4 lg:col-span-1"
         >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-500">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-500 flex-shrink-0">
               <UserPlus className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Invite teammate</h2>
-              <p className="text-sm text-slate-500">They'll receive an email to set their password</p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base md:text-lg font-semibold text-slate-900">Invite teammate</h2>
+              <p className="text-xs md:text-sm text-slate-500">They'll receive an email to set their password</p>
             </div>
           </div>
 
@@ -332,11 +332,11 @@ const TeamPage = () => {
           </button>
         </form>
 
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm lg:col-span-2 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">Current team</h2>
-              <p className="text-sm text-slate-500">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm lg:col-span-2 p-4 md:p-6">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg md:text-xl font-semibold text-slate-900">Current team</h2>
+              <p className="text-xs md:text-sm text-slate-500">
                 {members.length} total · {activeMembers.length} currently active
               </p>
             </div>
@@ -351,38 +351,38 @@ const TeamPage = () => {
               Invite your first teammate to get started.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {members.map((member) => (
                 <div
                   key={member._id}
-                  className="border border-slate-200 rounded-2xl p-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+                  className="border border-slate-200 rounded-2xl p-3 md:p-4 flex flex-col gap-3 md:gap-4"
                 >
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold">
-                        {member.firstName?.charAt(0).toUpperCase() || 'T'}
-                      </div>
-                      <div>
-                        <p className="text-slate-900 font-semibold">
-                          {member.firstName} {member.lastName}
-                        </p>
-                        <p className="text-sm text-slate-500">{member.email}</p>
-                      </div>
+                  {/* Member Info */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold flex-shrink-0">
+                      {member.firstName?.charAt(0).toUpperCase() || 'T'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm md:text-base text-slate-900 font-semibold truncate">
+                        {member.firstName} {member.lastName}
+                      </p>
+                      <p className="text-xs md:text-sm text-slate-500 truncate">{member.email}</p>
                     </div>
                   </div>
 
-                  <div className="flex-1">
+                  {/* Permissions */}
+                  <div>
                     <p className="text-xs font-medium uppercase text-slate-400 mb-2">
                       Permissions
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
                       {ADMIN_PERMISSIONS.map((permission) => {
                         const active = member.permissions.includes(permission);
                         return (
                           <button
                             key={permission}
                             onClick={() => togglePermission(member, permission)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                            className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-full text-xs font-medium border transition ${
                               active
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                 : 'border-slate-200 text-slate-500 hover:border-slate-300'
@@ -395,10 +395,11 @@ const TeamPage = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => toggleStatus(member)}
-                      className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border transition ${
+                      className={`inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-xl border transition ${
                         member.isActive
                           ? 'border-red-200 text-red-600 hover:bg-red-50'
                           : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
@@ -407,20 +408,24 @@ const TeamPage = () => {
                     >
                       {member.isActive ? (
                         <>
-                          <Lock className="h-4 w-4" /> Revoke access
+                          <Lock className="h-3.5 w-3.5 md:h-4 md:w-4" /> 
+                          <span className="hidden sm:inline">Revoke access</span>
+                          <span className="sm:hidden">Revoke</span>
                         </>
                       ) : (
                         <>
-                          <Unlock className="h-4 w-4" /> Restore
+                          <Unlock className="h-3.5 w-3.5 md:h-4 md:w-4" /> 
+                          <span>Restore</span>
                         </>
                       )}
                     </button>
                     <button
                       onClick={() => deleteMember(member)}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition"
+                      className="inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition"
                       title="Permanently delete this team member"
                     >
-                      <Trash2 className="h-4 w-4" /> Delete
+                      <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> 
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
