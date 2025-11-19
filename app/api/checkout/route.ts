@@ -264,6 +264,8 @@ export async function POST(request: Request) {
           childGuests: cartItem.childQuantity || 0,
           infantGuests: cartItem.infantQuantity || 0,
           selectedAddOns: cartItem.selectedAddOns || {},
+          selectedBookingOption: cartItem.selectedBookingOption,
+          selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
         });
 
         createdBookings.push(booking);

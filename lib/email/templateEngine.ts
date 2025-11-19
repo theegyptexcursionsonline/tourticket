@@ -28,31 +28,67 @@ export class TemplateEngine {
   static replaceVariables(template: string, data: Record<string, unknown> | any): string {
     let result = template;
 
-    // Handle conditional sections {{#if variable}}...{{/if}} first
-    result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (match, variable, content) => {
+    // Handle conditional sections {{#if variable}}...{{/if}} and {{#if this.variable}}...{{/if}}
+    result = result.replace(/{{#if\s+(this\.)?(\w+)}}([\s\S]*?){{\/if}}/g, (match, thisPrefix, variable, content) => {
       const value = data[variable];
       // Check for truthy values (not null, not undefined, not empty string, not 0, not false)
       const isTruthy = value !== null &&
                        value !== undefined &&
                        value !== '' &&
                        value !== false &&
-                       !(typeof value === 'number' && value === 0);
+                       !(typeof value === 'number' && value === 0) &&
+                       !(Array.isArray(value) && value.length === 0);
       return isTruthy ? content : '';
     });
 
-    // Handle arrays {{#each array}}...{{/each}}
-    result = result.replace(/{{#each\s+(\w+)}}([\s\S]*?){{\/each}}/g, (match, arrayName, itemTemplate) => {
+    // Handle arrays {{#each array}}...{{/each}} and {{#each this.array}}...{{/each}}
+    result = result.replace(/{{#each\s+(this\.)?(\w+)}}([\s\S]*?){{\/each}}/g, (match, thisPrefix, arrayName, itemTemplate) => {
       const array = data[arrayName];
       if (!Array.isArray(array) || array.length === 0) return '';
 
       return array.map(item => {
         let itemHtml = itemTemplate;
+
         if (typeof item === 'object' && item !== null) {
-          Object.entries(item).forEach(([key, value]) => {
-            const regex = new RegExp(`{{${key}}}`, 'g');
-            itemHtml = itemHtml.replace(regex, String(value ?? ''));
+          // First handle nested conditionals {{#if this.property}}...{{/if}}
+          itemHtml = itemHtml.replace(/{{#if\s+this\.(\w+)}}([\s\S]*?){{\/if}}/g, (m, prop, content) => {
+            const val = item[prop];
+            const isTruthy = val !== null &&
+                           val !== undefined &&
+                           val !== '' &&
+                           val !== false &&
+                           !(typeof val === 'number' && val === 0) &&
+                           !(Array.isArray(val) && val.length === 0);
+            return isTruthy ? content : '';
           });
+
+          // Handle nested {{#each this.array}}...{{/each}}
+          itemHtml = itemHtml.replace(/{{#each\s+this\.(\w+)}}([\s\S]*?){{\/each}}/g, (m, nestedArrayName, nestedItemTemplate) => {
+            const nestedArray = item[nestedArrayName];
+            if (!Array.isArray(nestedArray) || nestedArray.length === 0) return '';
+
+            return nestedArray.map(nestedItem => {
+              // For string arrays, replace {{this}} with the string value
+              if (typeof nestedItem === 'string') {
+                return nestedItemTemplate.replace(/{{this}}/g, nestedItem);
+              }
+              return nestedItemTemplate;
+            }).join('');
+          });
+
+          // Replace {{this.property}} and {{property}} with values
+          Object.entries(item).forEach(([key, value]) => {
+            const thisRegex = new RegExp(`{{this\\.${key}}}`, 'g');
+            const plainRegex = new RegExp(`{{${key}}}`, 'g');
+            const stringValue = String(value ?? '');
+            itemHtml = itemHtml.replace(thisRegex, stringValue);
+            itemHtml = itemHtml.replace(plainRegex, stringValue);
+          });
+        } else {
+          // For primitive values in arrays, replace {{this}}
+          itemHtml = itemHtml.replace(/{{this}}/g, String(item ?? ''));
         }
+
         return itemHtml;
       }).join('');
     });

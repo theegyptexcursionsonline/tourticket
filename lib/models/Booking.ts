@@ -19,6 +19,23 @@ export interface IBooking extends Document {
   childGuests?: number;
   infantGuests?: number;
   selectedAddOns?: { [key: string]: number };
+  selectedBookingOption?: {
+    id: string;
+    title: string;
+    price: number;
+    originalPrice?: number;
+    duration?: string;
+    badge?: string;
+  };
+  selectedAddOnDetails?: {
+    [key: string]: {
+      id: string;
+      title: string;
+      price: number;
+      category?: string;
+      perGuest?: boolean;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -125,7 +142,31 @@ const BookingSchema: Schema<IBooking> = new Schema({
     of: Number,
     default: new Map(),
   },
-}, { 
+
+  selectedBookingOption: {
+    type: {
+      id: String,
+      title: String,
+      price: Number,
+      originalPrice: Number,
+      duration: String,
+      badge: String,
+    },
+    required: false,
+  },
+
+  selectedAddOnDetails: {
+    type: Map,
+    of: {
+      id: String,
+      title: String,
+      price: Number,
+      category: String,
+      perGuest: Boolean,
+    },
+    default: new Map(),
+  },
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
