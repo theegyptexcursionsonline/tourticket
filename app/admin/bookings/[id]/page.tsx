@@ -23,9 +23,14 @@ import {
   Download,
   RefreshCw,
   AlertTriangle,
-  Package
+  Package,
+  Receipt,
+  QrCode,
+  Ticket,
+  Info
 } from 'lucide-react';
 import Image from 'next/image';
+import QRCode from 'qrcode';
 
 // Enhanced interfaces matching your booking model
 interface BookingUser {
@@ -34,6 +39,7 @@ interface BookingUser {
   lastName?: string;
   name?: string;
   email: string;
+  phone?: string;
 }
 
 interface BookingTour {
@@ -49,10 +55,12 @@ interface BookingTour {
   };
   rating?: number;
   discountPrice?: number;
+  meetingPoint?: string;
 }
 
 interface BookingDetails {
   _id: string;
+  bookingReference?: string;
   tour: BookingTour;
   user: BookingUser;
   date: string;
@@ -73,11 +81,15 @@ interface BookingDetails {
     _id: string;
     title: string;
     price: number;
+    originalPrice?: number;
+    duration?: string;
+    badge?: string;
   };
   selectedAddOnDetails?: {
     [key: string]: {
       title: string;
       price: number;
+      perGuest?: boolean;
     };
   };
   createdAt: string;
@@ -89,10 +101,30 @@ const BookingDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+
+  // Generate QR Code
+  useEffect(() => {
+    if (booking?.bookingReference || booking?._id) {
+      const bookingId = booking.bookingReference || booking._id;
+      const verificationUrl = `${window.location.origin}/booking/verify/${bookingId}`;
+      
+      QRCode.toDataURL(verificationUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      })
+        .then(setQrCodeUrl)
+        .catch((err) => console.error('Error generating QR code:', err));
+    }
+  }, [booking]);
 
   const fetchBooking = async () => {
     setLoading(true);
@@ -179,9 +211,44 @@ const BookingDetailPage = () => {
     return parts.length > 0 ? parts.join(', ') : `${booking.guests} Guest${booking.guests > 1 ? 's' : ''}`;
   };
 
+  // Calculate pricing breakdown
+  const calculatePricing = () => {
+    if (!booking) return null;
+
+    const basePrice = booking.selectedBookingOption?.price || 0;
+    const adultPrice = basePrice * (booking.adultGuests || 1);
+    const childPrice = (basePrice / 2) * (booking.childGuests || 0);
+    const subtotal = adultPrice + childPrice;
+
+    let addOnsTotal = 0;
+    if (booking.selectedAddOns && booking.selectedAddOnDetails) {
+      Object.entries(booking.selectedAddOns).forEach(([addOnId, quantity]) => {
+        const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
+        if (addOnDetail && quantity > 0) {
+          const totalGuests = (booking.adultGuests || 0) + (booking.childGuests || 0);
+          const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+          addOnsTotal += addOnDetail.price * addOnQuantity;
+        }
+      });
+    }
+
+    const serviceFee = subtotal * 0.03;
+    const tax = subtotal * 0.05;
+    
+    return {
+      adultPrice,
+      childPrice,
+      subtotal,
+      addOnsTotal,
+      serviceFee,
+      tax,
+      total: booking.totalPrice
+    };
+  };
+
   if (loading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto">
         <div className="h-8 w-1/4 bg-gray-200 rounded animate-pulse mb-6"></div>
         <div className="bg-white p-8 rounded-lg shadow-sm animate-pulse">
           <div className="h-6 w-1/2 bg-gray-300 rounded mb-4"></div>
@@ -206,7 +273,7 @@ const BookingDetailPage = () => {
 
   if (error) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center mb-4">
             <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
@@ -235,7 +302,7 @@ const BookingDetailPage = () => {
 
   if (!booking) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto">
         <div className="text-center py-12">
           <h3 className="text-lg font-semibold text-slate-700 mb-2">Booking not found</h3>
           <p className="text-slate-500 mb-4">This booking may have been deleted or the ID is incorrect.</p>
@@ -249,6 +316,8 @@ const BookingDetailPage = () => {
       </div>
     );
   }
+
+  const pricing = calculatePricing();
 
   // Helper component for displaying details
   const DetailItem = ({ 
@@ -272,7 +341,7 @@ const BookingDetailPage = () => {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
@@ -284,7 +353,13 @@ const BookingDetailPage = () => {
           </button>
           <div>
             <h1 className="text-3xl font-bold text-slate-800">Booking Details</h1>
-            <p className="text-slate-500 text-sm">ID: {booking._id}</p>
+            <p className="text-slate-500 text-sm">
+              {booking.bookingReference ? (
+                <>Reference: <span className="font-mono font-semibold">{booking.bookingReference}</span></>
+              ) : (
+                <>ID: {booking._id}</>
+              )}
+            </p>
           </div>
         </div>
         
@@ -303,273 +378,389 @@ const BookingDetailPage = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        {/* Header Section */}
-        <div className="p-6 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold text-slate-800 truncate">
-                {booking.tour.title}
-              </h2>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Tour & QR */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Tour Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="aspect-video rounded-t-lg overflow-hidden bg-slate-100">
+              <Image
+                src={booking.tour.image || booking.tour.images?.[0] || '/bg.png'}
+                alt={booking.tour.title}
+                width={500}
+                height={300}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="p-4">
+              <h2 className="text-lg font-bold text-slate-900 mb-2">{booking.tour.title}</h2>
               {booking.tour.destination && (
-                <div className="flex items-center mt-1 text-slate-500">
+                <div className="flex items-center text-sm text-slate-600 mb-4">
                   <MapPin size={14} className="mr-1" />
                   {booking.tour.destination.name}
                 </div>
               )}
-              <div className="flex items-center mt-2 text-sm text-slate-500">
-                <Calendar size={14} className="mr-1" />
-                Booked on {new Date(booking.createdAt).toLocaleDateString('en-US', {
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xl font-bold text-slate-900">${booking.totalPrice.toFixed(2)}</div>
+                  <div className="text-xs text-slate-500">Total Price</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xl font-bold text-slate-900">{booking.guests}</div>
+                  <div className="text-xs text-slate-500">Guests</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* QR Code Card */}
+          {qrCodeUrl && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <QrCode className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900">QR Code</h3>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4 mb-4">
+                <Image 
+                  src={qrCodeUrl} 
+                  alt="Booking QR Code" 
+                  width={300} 
+                  height={300}
+                  className="w-full h-auto"
+                />
+              </div>
+              <p className="text-xs text-slate-600 text-center">
+                Verification code for tour operator
+              </p>
+            </div>
+          )}
+
+          {/* Status Management */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Status Management</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Current Status:</span>
+                <span className={getStatusBadge(booking.status)}>
+                  {booking.status}
+                </span>
+              </div>
+              
+              <select
+                value={booking.status}
+                onChange={(e) => updateBookingStatus(e.target.value)}
+                disabled={updating}
+                className="w-full appearance-none bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              >
+                <option value="Confirmed">Confirmed</option>
+                <option value="Pending">Pending</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Customer Information */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+              <User className="w-5 h-5 mr-2 text-blue-500" />
+              Customer Information
+            </h3>
+            <div className="space-y-4">
+              <DetailItem 
+                icon={User} 
+                label="Name" 
+                value={formatUserName(booking.user)} 
+              />
+              <DetailItem 
+                icon={Mail} 
+                label="Email" 
+                value={
+                  <a 
+                    href={`mailto:${booking.user.email}`}
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    {booking.user.email}
+                  </a>
+                }
+              />
+              {booking.user.phone && (
+                <DetailItem 
+                  icon={Phone} 
+                  label="Phone" 
+                  value={
+                    <a 
+                      href={`tel:${booking.user.phone}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {booking.user.phone}
+                    </a>
+                  } 
+                />
+              )}
+              {booking.emergencyContact && (
+                <DetailItem 
+                  icon={Phone} 
+                  label="Emergency Contact" 
+                  value={booking.emergencyContact} 
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Booking Details */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+              <Calendar className="w-5 h-5 mr-2 text-green-500" />
+              Booking Details
+            </h3>
+            <div className="space-y-4">
+              <DetailItem 
+                icon={Calendar} 
+                label="Date" 
+                value={new Date(booking.date).toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
                 })}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 mt-4 sm:mt-0">
-              <span className={getStatusBadge(booking.status)}>
-                {booking.status}
-              </span>
-              
-              {/* Status Update Dropdown */}
-              <div className="relative">
-                <select
-                  value={booking.status}
-                  onChange={(e) => updateBookingStatus(e.target.value)}
-                  disabled={updating}
-                  className="appearance-none bg-white border border-slate-300 rounded-lg px-3 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                >
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+              />
+              <DetailItem 
+                icon={Clock} 
+                label="Time" 
+                value={booking.time}
+              />
+              <DetailItem
+                icon={Users}
+                label="Participants"
+                value={formatGuestBreakdown(booking)}
+              />
+              {booking.selectedBookingOption && (
+                <DetailItem
+                  icon={Package}
+                  label="Booking Option"
+                  value={
+                    <div>
+                      <span className="text-blue-600 font-medium block">
+                        {booking.selectedBookingOption.title}
+                      </span>
+                      {booking.selectedBookingOption.duration && (
+                        <span className="text-sm text-slate-500">
+                          Duration: {booking.selectedBookingOption.duration}
+                        </span>
+                      )}
+                      {booking.selectedBookingOption.badge && (
+                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full ml-2">
+                          {booking.selectedBookingOption.badge}
+                        </span>
+                      )}
+                    </div>
+                  }
+                />
+              )}
+              {booking.tour.duration && !booking.selectedBookingOption?.duration && (
+                <DetailItem
+                  icon={Tag}
+                  label="Duration"
+                  value={booking.tour.duration}
+                />
+              )}
+              {booking.tour.meetingPoint && (
+                <DetailItem
+                  icon={MapPin}
+                  label="Meeting Point"
+                  value={booking.tour.meetingPoint}
+                />
+              )}
+              <DetailItem 
+                icon={Calendar} 
+                label="Booked On" 
+                value={new Date(booking.createdAt).toLocaleString()}
+              />
+              <DetailItem 
+                icon={Calendar} 
+                label="Last Updated" 
+                value={new Date(booking.updatedAt).toLocaleString()}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Content Grid */}
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            {/* Tour Image */}
-            <div className="lg:col-span-2">
-              <div className="aspect-w-16 aspect-h-12 rounded-lg overflow-hidden bg-slate-100">
-                <Image
-                  src={booking.tour.image || booking.tour.images?.[0] || '/bg.png'}
-                  alt={booking.tour.title}
-                  width={500}
-                  height={375}
-                  className="w-full h-full object-cover"
+          {/* Pricing Breakdown */}
+          {pricing && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                <Receipt className="w-5 h-5 mr-2 text-green-500" />
+                Pricing Breakdown
+              </h3>
+              <div className="space-y-3">
+                {booking.adultGuests && booking.adultGuests > 0 && (
+                  <div className="flex justify-between text-slate-700">
+                    <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} (${(booking.selectedBookingOption?.price || 0).toFixed(2)})</span>
+                    <span className="font-semibold">${pricing.adultPrice.toFixed(2)}</span>
+                  </div>
+                )}
+                {booking.childGuests && booking.childGuests > 0 && (
+                  <div className="flex justify-between text-slate-700">
+                    <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} (${((booking.selectedBookingOption?.price || 0) / 2).toFixed(2)})</span>
+                    <span className="font-semibold">${pricing.childPrice.toFixed(2)}</span>
+                  </div>
+                )}
+                {booking.infantGuests && booking.infantGuests > 0 && (
+                  <div className="flex justify-between text-slate-700">
+                    <span>{booking.infantGuests} x Infant{booking.infantGuests > 1 ? 's' : ''}</span>
+                    <span className="font-semibold text-green-600">FREE</span>
+                  </div>
+                )}
+                
+                {pricing.addOnsTotal > 0 && (
+                  <>
+                    <div className="border-t pt-3 mt-3"></div>
+                    <div className="flex justify-between text-slate-700">
+                      <span>Add-ons</span>
+                      <span className="font-semibold">${pricing.addOnsTotal.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+                
+                <div className="border-t pt-3 mt-3"></div>
+                <div className="flex justify-between text-slate-700">
+                  <span>Subtotal</span>
+                  <span className="font-semibold">${(pricing.subtotal + pricing.addOnsTotal).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600 text-sm">
+                  <span>Service Fee (3%)</span>
+                  <span>${pricing.serviceFee.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600 text-sm">
+                  <span>Tax (5%)</span>
+                  <span>${pricing.tax.toFixed(2)}</span>
+                </div>
+                
+                <div className="border-t-2 border-slate-300 pt-3 mt-3 flex justify-between">
+                  <span className="text-lg font-bold text-slate-900">Total</span>
+                  <span className="text-lg font-bold text-green-600">${pricing.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Information */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+              <DollarSign className="w-5 h-5 mr-2 text-green-500" />
+              Payment Information
+            </h3>
+            <div className="space-y-4">
+              {booking.paymentMethod && (
+                <DetailItem 
+                  icon={CreditCard} 
+                  label="Payment Method" 
+                  value={
+                    <span className="capitalize bg-slate-100 px-2 py-1 rounded text-sm">
+                      {booking.paymentMethod}
+                    </span>
+                  }
                 />
-              </div>
-              
-              {/* Tour Stats */}
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-slate-900">${booking.totalPrice.toFixed(2)}</div>
-                  <div className="text-sm text-slate-500">Total Price</div>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-slate-900">{booking.guests}</div>
-                  <div className="text-sm text-slate-500">Total Guests</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Details Sections */}
-            <div className="lg:col-span-3 space-y-8">
-              {/* Customer Information */}
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                  <User className="w-5 h-5 mr-2 text-blue-500" />
-                  Customer Information
-                </h3>
-                <div className="space-y-4">
-                  <DetailItem 
-                    icon={User} 
-                    label="Name" 
-                    value={formatUserName(booking.user)} 
-                  />
-                  <DetailItem 
-                    icon={Mail} 
-                    label="Email" 
-                    value={
-                      <a 
-                        href={`mailto:${booking.user.email}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {booking.user.email}
-                      </a>
-                    }
-                  />
-                  {booking.emergencyContact && (
-                    <DetailItem 
-                      icon={Phone} 
-                      label="Emergency Contact" 
-                      value={booking.emergencyContact} 
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Booking Details */}
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                  <Calendar className="w-5 h-5 mr-2 text-green-500" />
-                  Booking Details
-                </h3>
-                <div className="space-y-4">
-                  <DetailItem 
-                    icon={Calendar} 
-                    label="Date" 
-                    value={new Date(booking.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  />
-                  <DetailItem 
-                    icon={Clock} 
-                    label="Time" 
-                    value={booking.time}
-                  />
-                  <DetailItem
-                    icon={Users}
-                    label="Guests"
-                    value={formatGuestBreakdown(booking)}
-                  />
-                  {booking.selectedBookingOption && (
-                    <DetailItem
-                      icon={Package}
-                      label="Booking Option"
-                      value={
-                        <span className="text-blue-600 font-medium">
-                          {booking.selectedBookingOption.title}
-                        </span>
-                      }
-                    />
-                  )}
-                  {booking.tour.duration && (
-                    <DetailItem
-                      icon={Tag}
-                      label="Duration"
-                      value={booking.tour.duration}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Payment Information */}
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                  <DollarSign className="w-5 h-5 mr-2 text-green-500" />
-                  Payment Information
-                </h3>
-                <div className="space-y-4">
-                  <DetailItem 
-                    icon={DollarSign} 
-                    label="Total Price" 
-                    value={
-                      <span className="text-lg font-semibold text-green-600">
-                        ${booking.totalPrice.toFixed(2)}
-                      </span>
-                    }
-                  />
-                  {booking.paymentMethod && (
-                    <DetailItem 
-                      icon={CreditCard} 
-                      label="Payment Method" 
-                      value={
-                        <span className="capitalize bg-slate-100 px-2 py-1 rounded text-sm">
-                          {booking.paymentMethod}
-                        </span>
-                      }
-                    />
-                  )}
-                  {booking.paymentId && (
-                    <DetailItem 
-                      icon={Hash} 
-                      label="Payment ID" 
-                      value={
-                        <code className="bg-slate-100 px-2 py-1 rounded text-sm">
-                          {booking.paymentId}
-                        </code>
-                      }
-                    />
-                  )}
-                  <DetailItem 
-                    icon={Calendar} 
-                    label="Booked On" 
-                    value={new Date(booking.createdAt).toLocaleString()}
-                  />
-                </div>
-              </div>
-
-              {/* Special Requests */}
-              {booking.specialRequests && (
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                    <MessageSquare className="w-5 h-5 mr-2 text-purple-500" />
-                    Special Requests
-                  </h3>
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <p className="text-slate-700">{booking.specialRequests}</p>
-                  </div>
-                </div>
               )}
+              {booking.paymentId && (
+                <DetailItem 
+                  icon={Hash} 
+                  label="Payment ID" 
+                  value={
+                    <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">
+                      {booking.paymentId}
+                    </code>
+                  }
+                />
+              )}
+            </div>
+          </div>
 
-              {/* Selected Add-ons */}
-              {booking.selectedAddOns && Object.keys(booking.selectedAddOns).length > 0 && (
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                    <Package className="w-5 h-5 mr-2 text-blue-500" />
-                    Selected Add-ons
-                  </h3>
-                  <div className="space-y-3">
-                    {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => {
-                      const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
-                      return quantity > 0 ? (
-                        <div
-                          key={addOnId}
-                          className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200"
-                        >
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                            <div>
-                              <div className="font-medium text-slate-800">
-                                {addOnDetail?.title || addOnId}
-                              </div>
-                              <div className="text-sm text-slate-500">
-                                Quantity: {quantity}
-                              </div>
-                            </div>
+          {/* Selected Add-ons */}
+          {booking.selectedAddOns && Object.keys(booking.selectedAddOns).length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                <Package className="w-5 h-5 mr-2 text-blue-500" />
+                Selected Add-ons
+              </h3>
+              <div className="space-y-3">
+                {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => {
+                  const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
+                  if (!addOnDetail || quantity === 0) return null;
+                  
+                  const totalGuests = (booking.adultGuests || 0) + (booking.childGuests || 0);
+                  const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+                  const addOnTotal = addOnDetail.price * addOnQuantity;
+                  
+                  return (
+                    <div
+                      key={addOnId}
+                      className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200"
+                    >
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <div>
+                          <div className="font-medium text-slate-800">
+                            {addOnDetail.title}
                           </div>
-                          {addOnDetail?.price && (
-                            <div className="text-right">
-                              <div className="font-semibold text-slate-700">
-                                ${(addOnDetail.price * quantity).toFixed(2)}
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                ${addOnDetail.price.toFixed(2)} each
-                              </div>
-                            </div>
-                          )}
+                          <div className="text-sm text-slate-500">
+                            {addOnDetail.perGuest ? `Per guest (${totalGuests} guests)` : 'Per booking'}
+                          </div>
                         </div>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-slate-700">
+                          ${addOnTotal.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          ${addOnDetail.price.toFixed(2)} {addOnDetail.perGuest ? 'per guest' : 'total'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+          )}
+
+          {/* Special Requests */}
+          {booking.specialRequests && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+              <h3 className="font-bold text-amber-900 mb-3 flex items-center">
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Special Requests
+              </h3>
+              <p className="text-amber-800">{booking.specialRequests}</p>
+            </div>
+          )}
+
+          {/* Admin Notes */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="font-bold text-blue-900 mb-3 flex items-center">
+              <Info className="w-5 h-5 mr-2" />
+              Important Notes
+            </h3>
+            <ul className="space-y-2 text-sm text-blue-800">
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>Customer should arrive 15 minutes before departure</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>Verify booking reference or QR code before tour starts</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>Contact customer: {booking.user.email}</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>Support hotline: +20 11 42255624</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>

@@ -19,10 +19,16 @@ import {
   XCircle,
   CheckCircle,
   Download,
-  Package
+  Package,
+  Receipt,
+  QrCode,
+  CreditCard,
+  Ticket,
+  Info
 } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import QRCode from 'qrcode';
 
 interface BookingUser {
   _id: string;
@@ -45,10 +51,12 @@ interface BookingTour {
   };
   rating?: number;
   slug?: string;
+  meetingPoint?: string;
 }
 
 interface BookingDetails {
   _id: string;
+  bookingReference?: string;
   tour: BookingTour;
   user: BookingUser;
   date: string;
@@ -68,11 +76,15 @@ interface BookingDetails {
     _id: string;
     title: string;
     price: number;
+    originalPrice?: number;
+    duration?: string;
+    badge?: string;
   };
   selectedAddOnDetails?: {
     [key: string]: {
       title: string;
       price: number;
+      perGuest?: boolean;
     };
   };
   createdAt: string;
@@ -86,11 +98,31 @@ const UserBookingDetailPage = () => {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   
   const params = useParams();
   const router = useRouter();
   const { token } = useAuth();
   const id = params.id as string;
+
+  // Generate QR Code
+  useEffect(() => {
+    if (booking?.bookingReference || booking?._id) {
+      const bookingId = booking.bookingReference || booking._id;
+      const verificationUrl = `${window.location.origin}/booking/verify/${bookingId}`;
+      
+      QRCode.toDataURL(verificationUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      })
+        .then(setQrCodeUrl)
+        .catch((err) => console.error('Error generating QR code:', err));
+    }
+  }, [booking]);
 
   const fetchBooking = async () => {
     if (!token) {
@@ -215,10 +247,45 @@ const UserBookingDetailPage = () => {
     return hoursUntilBooking > 24;
   };
 
+  // Calculate pricing breakdown
+  const calculatePricing = () => {
+    if (!booking) return null;
+
+    const basePrice = booking.selectedBookingOption?.price || 0;
+    const adultPrice = basePrice * (booking.adultGuests || 1);
+    const childPrice = (basePrice / 2) * (booking.childGuests || 0);
+    const subtotal = adultPrice + childPrice;
+
+    let addOnsTotal = 0;
+    if (booking.selectedAddOns && booking.selectedAddOnDetails) {
+      Object.entries(booking.selectedAddOns).forEach(([addOnId, quantity]) => {
+        const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
+        if (addOnDetail && quantity > 0) {
+          const totalGuests = (booking.adultGuests || 0) + (booking.childGuests || 0);
+          const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+          addOnsTotal += addOnDetail.price * addOnQuantity;
+        }
+      });
+    }
+
+    const serviceFee = subtotal * 0.03;
+    const tax = subtotal * 0.05;
+    
+    return {
+      adultPrice,
+      childPrice,
+      subtotal,
+      addOnsTotal,
+      serviceFee,
+      tax,
+      total: booking.totalPrice
+    };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="h-8 w-1/4 bg-gray-200 rounded animate-pulse mb-6"></div>
           <div className="bg-white p-8 rounded-2xl shadow-sm animate-pulse">
             <div className="h-6 w-1/2 bg-gray-300 rounded mb-4"></div>
@@ -245,7 +312,7 @@ const UserBookingDetailPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
@@ -276,7 +343,7 @@ const UserBookingDetailPage = () => {
   if (!booking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold text-slate-700 mb-2">Booking not found</h3>
             <p className="text-slate-500 mb-4">This booking may have been deleted or you don't have access to it.</p>
@@ -291,6 +358,8 @@ const UserBookingDetailPage = () => {
       </div>
     );
   }
+
+  const pricing = calculatePricing();
 
   const DetailItem = ({ 
     icon: Icon, 
@@ -314,7 +383,7 @@ const UserBookingDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
@@ -326,7 +395,13 @@ const UserBookingDetailPage = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Booking Details</h1>
-              <p className="text-slate-600 text-sm">Booking ID: {booking._id}</p>
+              <p className="text-slate-600 text-sm">
+                {booking.bookingReference ? (
+                  <>Booking Reference: <span className="font-mono font-semibold">{booking.bookingReference}</span></>
+                ) : (
+                  <>Booking ID: {booking._id}</>
+                )}
+              </p>
             </div>
           </div>
           
@@ -341,263 +416,355 @@ const UserBookingDetailPage = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {/* Header Section */}
-          <div className="p-6 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-slate-900 truncate mb-2">
-                  {booking.tour.title}
-                </h2>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Tour & QR */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Tour Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="aspect-video rounded-t-2xl overflow-hidden bg-slate-100">
+                <Image
+                  src={booking.tour.image || booking.tour.images?.[0] || '/bg.png'}
+                  alt={booking.tour.title}
+                  width={500}
+                  height={300}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <h2 className="text-lg font-bold text-slate-900 mb-2">{booking.tour.title}</h2>
                 {booking.tour.destination && (
-                  <div className="flex items-center mt-1 text-slate-600">
+                  <div className="flex items-center text-sm text-slate-600 mb-4">
                     <MapPin size={14} className="mr-1" />
                     {booking.tour.destination.name}
                   </div>
                 )}
-                <div className="flex items-center mt-2 text-sm text-slate-500">
-                  <Calendar size={14} className="mr-1" />
-                  Booked on {new Date(booking.createdAt).toLocaleDateString('en-US', {
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-xl font-bold text-slate-900">${booking.totalPrice.toFixed(2)}</div>
+                    <div className="text-xs text-slate-500">Total Paid</div>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-xl font-bold text-slate-900">{booking.guests}</div>
+                    <div className="text-xs text-slate-500">Guests</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code Card */}
+            {qrCodeUrl && booking.status === 'Confirmed' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <QrCode className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-bold text-slate-900">Your Ticket</h3>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4 mb-4">
+                  <Image 
+                    src={qrCodeUrl} 
+                    alt="Booking QR Code" 
+                    width={300} 
+                    height={300}
+                    className="w-full h-auto"
+                  />
+                </div>
+                <p className="text-xs text-slate-600 text-center">
+                  Show this QR code at the tour meeting point
+                </p>
+              </div>
+            )}
+
+            {/* Status Badge */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+              <span className={`${getStatusBadge(booking.status)} w-full justify-center`}>
+                {booking.status === 'Confirmed' && <CheckCircle size={16} />}
+                {booking.status === 'Cancelled' && <XCircle size={16} />}
+                {booking.status}
+              </span>
+              
+              {canCancelBooking() && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 text-sm border-2 border-red-300 text-red-600 rounded-full hover:bg-red-50 transition-colors font-semibold"
+                >
+                  <XCircle size={16} />
+                  Cancel Booking
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Booking Information */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                <Ticket className="w-5 h-5 mr-2 text-blue-600" />
+                Booking Information
+              </h3>
+              <div className="space-y-4">
+                <DetailItem 
+                  icon={Calendar} 
+                  label="Date" 
+                  value={new Date(booking.date).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                   })}
+                />
+                <DetailItem 
+                  icon={Clock} 
+                  label="Time" 
+                  value={booking.time}
+                />
+                <DetailItem
+                  icon={Users}
+                  label="Participants"
+                  value={formatGuestBreakdown(booking)}
+                />
+                {booking.selectedBookingOption && (
+                  <DetailItem
+                    icon={Package}
+                    label="Booking Option"
+                    value={
+                      <div>
+                        <span className="text-blue-600 font-medium block">
+                          {booking.selectedBookingOption.title}
+                        </span>
+                        {booking.selectedBookingOption.duration && (
+                          <span className="text-sm text-slate-500">
+                            Duration: {booking.selectedBookingOption.duration}
+                          </span>
+                        )}
+                      </div>
+                    }
+                  />
+                )}
+                {booking.tour.duration && !booking.selectedBookingOption?.duration && (
+                  <DetailItem
+                    icon={Clock}
+                    label="Duration"
+                    value={booking.tour.duration}
+                  />
+                )}
+                {booking.tour.meetingPoint && (
+                  <DetailItem
+                    icon={MapPin}
+                    label="Meeting Point"
+                    value={booking.tour.meetingPoint}
+                  />
+                )}
+                <DetailItem 
+                  icon={Calendar} 
+                  label="Booked On" 
+                  value={new Date(booking.createdAt).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                />
+              </div>
+            </div>
+
+            {/* Pricing Breakdown */}
+            {pricing && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                  <Receipt className="w-5 h-5 mr-2 text-green-600" />
+                  Pricing Breakdown
+                </h3>
+                <div className="space-y-3">
+                  {booking.adultGuests && booking.adultGuests > 0 && (
+                    <div className="flex justify-between text-slate-700">
+                      <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} (${(booking.selectedBookingOption?.price || 0).toFixed(2)})</span>
+                      <span className="font-semibold">${pricing.adultPrice.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {booking.childGuests && booking.childGuests > 0 && (
+                    <div className="flex justify-between text-slate-700">
+                      <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} (${((booking.selectedBookingOption?.price || 0) / 2).toFixed(2)})</span>
+                      <span className="font-semibold">${pricing.childPrice.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {booking.infantGuests && booking.infantGuests > 0 && (
+                    <div className="flex justify-between text-slate-700">
+                      <span>{booking.infantGuests} x Infant{booking.infantGuests > 1 ? 's' : ''}</span>
+                      <span className="font-semibold text-green-600">FREE</span>
+                    </div>
+                  )}
+                  
+                  {pricing.addOnsTotal > 0 && (
+                    <>
+                      <div className="border-t pt-3 mt-3"></div>
+                      <div className="flex justify-between text-slate-700">
+                        <span>Add-ons</span>
+                        <span className="font-semibold">${pricing.addOnsTotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="border-t pt-3 mt-3"></div>
+                  <div className="flex justify-between text-slate-700">
+                    <span>Subtotal</span>
+                    <span className="font-semibold">${(pricing.subtotal + pricing.addOnsTotal).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600 text-sm">
+                    <span>Service Fee (3%)</span>
+                    <span>${pricing.serviceFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600 text-sm">
+                    <span>Tax (5%)</span>
+                    <span>${pricing.tax.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="border-t-2 border-slate-300 pt-3 mt-3 flex justify-between">
+                    <span className="text-lg font-bold text-slate-900">Total Paid</span>
+                    <span className="text-lg font-bold text-green-600">${pricing.total.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex flex-col items-end gap-3 mt-4 sm:mt-0">
-                <span className={getStatusBadge(booking.status)}>
-                  {booking.status === 'Confirmed' && <CheckCircle size={16} />}
-                  {booking.status === 'Cancelled' && <XCircle size={16} />}
-                  {booking.status}
-                </span>
-                
-                {canCancelBooking() && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm border border-red-300 text-red-600 rounded-full hover:bg-red-50 transition-colors"
-                  >
-                    <XCircle size={16} />
-                    Cancel Booking
-                  </button>
+            )}
+
+            {/* Payment Information */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                <CreditCard className="w-5 h-5 mr-2 text-green-600" />
+                Payment Information
+              </h3>
+              <div className="space-y-4">
+                {booking.paymentMethod && (
+                  <DetailItem 
+                    icon={CreditCard} 
+                    label="Payment Method" 
+                    value={
+                      <span className="capitalize bg-slate-100 px-3 py-1 rounded-full text-sm font-medium">
+                        {booking.paymentMethod}
+                      </span>
+                    }
+                  />
+                )}
+                {booking.paymentId && (
+                  <DetailItem 
+                    icon={Receipt} 
+                    label="Payment ID" 
+                    value={
+                      <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">
+                        {booking.paymentId}
+                      </code>
+                    }
+                  />
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Content Grid */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-              {/* Tour Image */}
-              <div className="lg:col-span-2">
-                <div className="aspect-w-16 aspect-h-12 rounded-lg overflow-hidden bg-slate-100 mb-4">
-                  <Image
-                    src={booking.tour.image || booking.tour.images?.[0] || '/bg.png'}
-                    alt={booking.tour.title}
-                    width={500}
-                    height={375}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-slate-900">${booking.totalPrice.toFixed(2)}</div>
-                    <div className="text-sm text-slate-500">Total Price</div>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-slate-900">{booking.guests}</div>
-                    <div className="text-sm text-slate-500">Total Guests</div>
-                  </div>
-                </div>
-
-                {/* View Tour Button */}
-                {booking.tour.slug && (
-                  <button
-                    onClick={() => router.push(`/tour/${booking.tour.slug}`)}
-                    className="w-full mt-4 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    View Tour Details
-                  </button>
-                )}
-              </div>
-              
-              {/* Details Sections */}
-              <div className="lg:col-span-3 space-y-8">
-                {/* Booking Details */}
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                    <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                    Booking Information
-                  </h3>
-                  <div className="space-y-4">
-                    <DetailItem 
-                      icon={Calendar} 
-                      label="Date" 
-                      value={new Date(booking.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    />
-                    <DetailItem 
-                      icon={Clock} 
-                      label="Time" 
-                      value={booking.time}
-                    />
-                    <DetailItem
-                      icon={Users}
-                      label="Guests"
-                      value={formatGuestBreakdown(booking)}
-                    />
-                    {booking.selectedBookingOption && (
-                      <DetailItem
-                        icon={Package}
-                        label="Booking Option"
-                        value={
-                          <span className="text-blue-600 font-medium">
-                            {booking.selectedBookingOption.title}
-                          </span>
-                        }
-                      />
-                    )}
-                    {booking.tour.duration && (
-                      <DetailItem
-                        icon={Clock}
-                        label="Duration"
-                        value={booking.tour.duration}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Payment Information */}
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                    <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                    Payment Information
-                  </h3>
-                  <div className="space-y-4">
-                    <DetailItem 
-                      icon={DollarSign} 
-                      label="Total Paid" 
-                      value={
-                        <span className="text-xl font-semibold text-green-600">
-                          ${booking.totalPrice.toFixed(2)}
-                        </span>
-                      }
-                    />
-                    {booking.paymentMethod && (
-                      <DetailItem 
-                        icon={DollarSign} 
-                        label="Payment Method" 
-                        value={
-                          <span className="capitalize bg-slate-100 px-3 py-1 rounded-full text-sm">
-                            {booking.paymentMethod}
-                          </span>
-                        }
-                      />
-                    )}
-                    {booking.paymentId && (
-                      <DetailItem 
-                        icon={DollarSign} 
-                        label="Payment ID" 
-                        value={
-                          <code className="bg-slate-100 px-2 py-1 rounded text-sm">
-                            {booking.paymentId}
-                          </code>
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Selected Add-ons */}
-                {booking.selectedAddOns && Object.keys(booking.selectedAddOns).length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                      <Package className="w-5 h-5 mr-2 text-blue-600" />
-                      Selected Add-ons
-                    </h3>
-                    <div className="space-y-3">
-                      {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => {
-                        const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
-                        return quantity > 0 ? (
-                          <div
-                            key={addOnId}
-                            className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200"
-                          >
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                              <div>
-                                <div className="font-medium text-slate-800">
-                                  {addOnDetail?.title || addOnId}
-                                </div>
-                                <div className="text-sm text-slate-500">
-                                  Quantity: {quantity}
-                                </div>
-                              </div>
+            {/* Selected Add-ons */}
+            {booking.selectedAddOns && Object.keys(booking.selectedAddOns).length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                  <Package className="w-5 h-5 mr-2 text-blue-600" />
+                  Selected Add-ons
+                </h3>
+                <div className="space-y-3">
+                  {Object.entries(booking.selectedAddOns).map(([addOnId, quantity]) => {
+                    const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
+                    if (!addOnDetail || quantity === 0) return null;
+                    
+                    const totalGuests = (booking.adultGuests || 0) + (booking.childGuests || 0);
+                    const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+                    const addOnTotal = addOnDetail.price * addOnQuantity;
+                    
+                    return (
+                      <div
+                        key={addOnId}
+                        className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200"
+                      >
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                          <div>
+                            <div className="font-medium text-slate-800">
+                              {addOnDetail.title}
                             </div>
-                            {addOnDetail?.price && (
-                              <div className="text-right">
-                                <div className="font-semibold text-slate-700">
-                                  ${(addOnDetail.price * quantity).toFixed(2)}
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  ${addOnDetail.price.toFixed(2)} each
-                                </div>
-                              </div>
-                            )}
+                            <div className="text-sm text-slate-500">
+                              {addOnDetail.perGuest ? `Per guest (${totalGuests} guests)` : 'Per booking'}
+                            </div>
                           </div>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Special Requests */}
-                {booking.specialRequests && (
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                      <MessageSquare className="w-5 h-5 mr-2 text-purple-600" />
-                      Special Requests
-                    </h3>
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <p className="text-slate-700">{booking.specialRequests}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Emergency Contact */}
-                {booking.emergencyContact && (
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center">
-                      <Phone className="w-5 h-5 mr-2 text-red-600" />
-                      Emergency Contact
-                    </h3>
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <p className="text-slate-700">{booking.emergencyContact}</p>
-                    </div>
-                  </div>
-                )}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-slate-700">
+                            ${addOnTotal.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            ${addOnDetail.price.toFixed(2)} {addOnDetail.perGuest ? 'per guest' : 'total'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+            )}
+
+            {/* Special Requests */}
+            {booking.specialRequests && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+                <h3 className="font-bold text-amber-900 mb-3 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Special Requests
+                </h3>
+                <p className="text-amber-800">{booking.specialRequests}</p>
+              </div>
+            )}
+
+            {/* Emergency Contact */}
+            {booking.emergencyContact && (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6">
+                <h3 className="font-bold text-rose-900 mb-3 flex items-center">
+                  <Phone className="w-5 h-5 mr-2" />
+                  Emergency Contact
+                </h3>
+                <p className="text-rose-800">{booking.emergencyContact}</p>
+              </div>
+            )}
+
+            {/* Important Information */}
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+              <h3 className="font-bold text-blue-900 mb-3 flex items-center">
+                <Info className="w-5 h-5 mr-2" />
+                Important Information
+              </h3>
+              <ul className="space-y-2 text-sm text-blue-800">
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Please arrive at the meeting point 15 minutes before departure</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Bring a printed or digital copy of this booking confirmation</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Contact us at +20 11 42255624 if you have any questions</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Free cancellation up to 24 hours before the tour starts</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
 
-        {/* Cancellation Policy Notice */}
-        {booking.status !== 'Cancelled' && (
-          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6">
-            <h3 className="font-semibold text-amber-900 mb-2">Cancellation Policy</h3>
-            <p className="text-amber-800 text-sm">
-              • Free cancellation up to 24 hours before the tour<br />
-              • Cancellations within 24 hours may not be eligible for refund<br />
-              • No-shows are not eligible for refunds
-            </p>
+        {/* View Tour Button */}
+        {booking.tour.slug && (
+          <div className="mt-6">
+            <button
+              onClick={() => router.push(`/tour/${booking.tour.slug}`)}
+              className="w-full px-6 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-sm"
+            >
+              View Tour Details
+            </button>
           </div>
         )}
       </div>

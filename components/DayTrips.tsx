@@ -162,15 +162,24 @@ const DayTripCard = ({
 };
 
 // --- Main Component ---
-export default function DayTripsSection() {
+interface DayTripsSectionProps {
+  initialTours?: Tour[];
+}
+
+export default function DayTripsSection({ initialTours }: DayTripsSectionProps = {}) {
   const scrollContainer = useRef<HTMLDivElement>(null);
-  const [tours, setTours] = useState<Tour[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [tours, setTours] = useState<Tour[]>(initialTours || []);
+  const [isLoading, setIsLoading] = useState(!initialTours);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Skip fetching if initialTours are provided (SSR case)
+    if (initialTours && initialTours.length > 0) {
+      return;
+    }
+
     let aborted = false;
     const controller = new AbortController();
 
@@ -282,7 +291,7 @@ export default function DayTripsSection() {
       aborted = true;
       controller.abort();
     };
-  }, []);
+  }, [initialTours]);
 
   const handleAddToCartClick = (tour: Tour) => {
     setSelectedTour(tour);

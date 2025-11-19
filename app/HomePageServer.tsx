@@ -21,7 +21,7 @@ import DestinationsServer from '@/components/DestinationsServer';
 import FeaturedToursServer from '@/components/FeaturedToursServer';
 import InterestGridServer from '@/components/InterestGridServer';
 import PopularInterestServer from '@/components/PopularInterestServer';
-import DayTrips from '@/components/DayTrips';
+import DayTripsServer from '@/components/DayTripsServer';
 
 // NO CACHING - Real-time data from admin panel
 export const revalidate = 0; // Force dynamic rendering
@@ -41,7 +41,8 @@ async function getHomePageData() {
       categoryPages,
       headerDestinations,
       headerCategories,
-      heroSettings
+      heroSettings,
+      dayTrips
     ] = await Promise.all([
       // Destinations with tour count
       Destination.find({ isPublished: true })
@@ -87,6 +88,12 @@ async function getHomePageData() {
       // Hero settings
       HeroSettings.findOne({ isActive: true })
         .select('backgroundImages currentActiveImage title searchSuggestions floatingTags trustIndicators overlaySettings animationSettings metaTitle metaDescription')
+        .lean(),
+
+      // Day trips (all published tours, limited to 12)
+      Tour.find({ isPublished: true })
+        .select('title slug image discountPrice originalPrice duration rating bookings tags')
+        .limit(12)
         .lean()
     ]);
 
@@ -188,7 +195,8 @@ async function getHomePageData() {
       categoryPages: JSON.parse(JSON.stringify(categoryPages)),
       headerDestinations: JSON.parse(JSON.stringify(headerDestinations)),
       headerCategories: JSON.parse(JSON.stringify(headerCategories)),
-      heroSettings: heroSettings ? JSON.parse(JSON.stringify(heroSettings)) : null
+      heroSettings: heroSettings ? JSON.parse(JSON.stringify(heroSettings)) : null,
+      dayTrips: JSON.parse(JSON.stringify(dayTrips))
     };
   } catch (error) {
     console.error('Error fetching homepage data:', error);
@@ -200,7 +208,8 @@ async function getHomePageData() {
       categoryPages: [],
       headerDestinations: [],
       headerCategories: [],
-      heroSettings: null
+      heroSettings: null,
+      dayTrips: []
     };
   }
 }
@@ -214,7 +223,8 @@ export default async function HomePageServer() {
     categoryPages,
     headerDestinations,
     headerCategories,
-    heroSettings
+    heroSettings,
+    dayTrips
   } = await getHomePageData();
 
   return (
@@ -232,7 +242,7 @@ export default async function HomePageServer() {
       <FeaturedToursServer tours={tours} />
       <PopularInterestServer interests={featuredInterests} categoryPages={categoryPages} />
       <InterestGridServer categories={categories} />
-      <DayTrips />
+      <DayTripsServer tours={dayTrips} />
 
       <AboutUs />
       <Reviews />
