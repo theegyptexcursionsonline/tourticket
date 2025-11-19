@@ -379,6 +379,7 @@ type FormDataShape = {
 
 const CheckoutFormStep = ({
   onPaymentProcess,
+  onPaymentProcessWithIntent,
   isProcessing,
   formData,
   setFormData,
@@ -393,6 +394,7 @@ const CheckoutFormStep = ({
   setPaymentIntentId,
 }: {
   onPaymentProcess: () => void;
+  onPaymentProcessWithIntent: (intentId: string) => void;
   isProcessing: boolean;
   formData: FormDataShape;
   setFormData: (v: FormDataShape) => void;
@@ -595,15 +597,13 @@ const CheckoutFormStep = ({
                     pricing={pricing}
                     discountCode={promoCode}
                     onSuccess={(paymentIntent) => {
+                      // Set the payment intent ID immediately
                       setPaymentIntentId(paymentIntent);
-                      toast.success('Payment completed successfully! Now finalizing your booking...');
-                      // Automatically submit the form after successful payment
-                      setTimeout(() => {
-                        const form = document.getElementById('checkout-form') as HTMLFormElement;
-                        if (form) {
-                          form.requestSubmit();
-                        }
-                      }, 500);
+                      toast.success('Payment completed successfully! Finalizing your booking...');
+                      
+                      // Process the booking immediately after payment succeeds
+                      // We need to call this directly to avoid state update race conditions
+                      onPaymentProcessWithIntent(paymentIntent);
                     }}
                     onError={(error) => {
                       toast.error(error);
@@ -758,103 +758,147 @@ const handleDownloadReceipt = async () => {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white p-4 sm:p-6 md:p-10 shadow-xl max-w-3xl mx-auto text-center border border-slate-200"
+      className="bg-white rounded-lg shadow-lg max-w-4xl mx-auto border border-slate-200 overflow-hidden"
     >
-      <div className="mx-auto w-fit mb-4 sm:mb-6 p-3 sm:p-4 bg-emerald-100 rounded-full">
-        <CheckCircle size={36} className="sm:w-12 sm:h-12 text-emerald-600" />
+      {/* Success Icon and Message */}
+      <div className="text-center pt-12 pb-6 px-6">
+        <div className="mx-auto w-fit mb-6 p-4 bg-green-100 rounded-full">
+          <CheckCircle size={48} className="text-green-600" />
+        </div>
+        <h1 className="text-3xl font-bold text-slate-900 mb-3">Thank you — your booking is confirmed!</h1>
+        <p className="text-base text-slate-600">We've sent a booking confirmation and receipt to your email address.</p>
       </div>
-      <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-2">Thank you — your booking is confirmed!</h1>
-      <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">We've sent a booking confirmation and receipt to your email address.</p>
 
-      <div className="text-left bg-slate-50 p-4 sm:p-6 border border-slate-200 mb-4 sm:mb-6">
-        <h3 className="font-bold text-lg text-slate-800 mb-4">Your Receipt</h3>
-      <div className="space-y-3 mb-4 divide-y divide-slate-200">
-  {orderedItems.map((item, index) => {
-    // Use the same calculation logic
-    const getItemTotal = (item: CartItem) => {
-      const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-      const adultPrice = basePrice * (item.quantity || 1);
-      const childPrice = (basePrice / 2) * (item.childQuantity || 0);
-      let tourTotal = adultPrice + childPrice;
+      {/* Receipt Section */}
+      <div className="px-6 sm:px-12 pb-12">
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <h3 className="font-bold text-xl text-slate-900 mb-6">Your Receipt</h3>
+          
+          {/* Items List */}
+          <div className="space-y-6 mb-6">
+            {orderedItems.map((item, index) => {
+              // Use the same calculation logic
+              const getItemTotal = (item: CartItem) => {
+                const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
+                const adultPrice = basePrice * (item.quantity || 1);
+                const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+                let tourTotal = adultPrice + childPrice;
 
-      let addOnsTotal = 0;
-      if (item.selectedAddOns && item.selectedAddOnDetails) {
-        Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
-          const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-          if (addOnDetail && quantity > 0) {
-            const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
-            const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
-            addOnsTotal += addOnDetail.price * addOnQuantity;
-          }
-        });
-      }
+                let addOnsTotal = 0;
+                if (item.selectedAddOns && item.selectedAddOnDetails) {
+                  Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
+                    const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+                    if (addOnDetail && quantity > 0) {
+                      const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+                      const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+                      addOnsTotal += addOnDetail.price * addOnQuantity;
+                    }
+                  });
+                }
 
-      return tourTotal + addOnsTotal;
-    };
+                return tourTotal + addOnsTotal;
+              };
 
-    const itemTotal = getItemTotal(item);
+              const itemTotal = getItemTotal(item);
 
-    return (
-      <div key={`${item._id ?? index}-${index}`} className="flex items-center justify-between pt-3 first:pt-0">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 overflow-hidden rounded">
-            {item.image ? <Image src={item.image} alt={item.title} width={48} height={48} className="object-cover" /> : <div className="w-12 h-12 bg-slate-100" />}
+              return (
+                <div key={`${item._id ?? index}-${index}`} className="flex items-start gap-4">
+                  {/* Tour Image */}
+                  <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200">
+                    {item.image ? (
+                      <Image src={item.image} alt={item.title} width={80} height={80} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-100" />
+                    )}
+                  </div>
+                  
+                  {/* Tour Details */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-base text-slate-900 mb-1">{item.title}</h4>
+                    {item.selectedBookingOption && (
+                      <p className="text-sm text-blue-600 font-medium mb-2">{item.selectedBookingOption.title}</p>
+                    )}
+                    <p className="text-sm text-slate-600">
+                      {item.quantity} Adult{item.quantity > 1 ? 's' : ''}
+                      {item.childQuantity > 0 && `, ${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
+                      {item.infantQuantity > 0 && `, ${item.infantQuantity} Infant${item.infantQuantity > 1 ? 's' : ''}`}
+                    </p>
+                    {/* Show add-ons */}
+                    {item.selectedAddOns && item.selectedAddOnDetails && Object.keys(item.selectedAddOns).length > 0 && (
+                      <div className="text-xs text-slate-500 mt-1">
+                        Add-ons: {Object.entries(item.selectedAddOns).map(([addOnId]) => {
+                          const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+                          return addOnDetail?.title;
+                        }).filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Price */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-semibold text-lg text-slate-900">{formatPrice(itemTotal)}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div>
-            <p className="font-semibold text-slate-800">{item.title}</p>
-            {item.selectedBookingOption && (
-              <p className="text-xs text-blue-600 font-medium">{item.selectedBookingOption.title}</p>
-            )}
-            <p className="text-sm text-slate-500">
-              {item.quantity} Adult{item.quantity > 1 ? 's' : ''}
-              {item.childQuantity > 0 && `, ${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
-            </p>
-            {/* Show add-ons in receipt */}
-            {item.selectedAddOns && item.selectedAddOnDetails && Object.keys(item.selectedAddOns).length > 0 && (
-              <div className="text-xs text-slate-500 mt-1">
-                Add-ons: {Object.entries(item.selectedAddOns).map(([addOnId]) => {
-                  const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-                  return addOnDetail?.title;
-                }).filter(Boolean).join(', ')}
+
+          {/* Pricing Summary */}
+          <div className="border-t border-slate-200 pt-4 space-y-3">
+            <div className="flex justify-between text-base text-slate-700">
+              <span>Subtotal</span>
+              <span>{formatPrice(pricing.subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-base text-slate-700">
+              <span>Fees & Taxes</span>
+              <span>{formatPrice(pricing.serviceFee + pricing.tax)}</span>
+            </div>
+            {pricing.discount > 0 && (
+              <div className="flex justify-between text-base text-green-700 font-medium">
+                <span>Discount</span>
+                <span>-{formatPrice(pricing.discount)}</span>
               </div>
             )}
+            <div className="flex justify-between text-xl font-bold text-slate-900 pt-3 border-t border-slate-200">
+              <span>Total Paid</span>
+              <span>{formatPrice(pricing.total)}</span>
+            </div>
           </div>
         </div>
-        <div className="text-slate-700 font-medium">{formatPrice(itemTotal)}</div>
-      </div>
-    );
-  })}
-</div>
 
-        <div className="border-t border-slate-200 pt-3 space-y-1">
-          <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
-          {pricing.discount > 0 && <div className="flex justify-between text-sm text-emerald-700"><span>Discount</span><span>-{formatPrice(pricing.discount)}</span></div>}
-          <div className="flex justify-between text-sm text-slate-600"><span>Fees & Taxes</span><span>{formatPrice(pricing.serviceFee + pricing.tax)}</span></div>
-          <div className="flex justify-between text-lg font-bold text-slate-900 mt-2"><span>Total Paid</span><span>{formatPrice(pricing.total)}</span></div>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
+          <button
+            onClick={() => window.location.assign('/')}
+            className="px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-base font-semibold rounded-lg text-slate-700"
+          >
+            Go to homepage
+          </button>
+          <button
+            onClick={handleDownloadReceipt}
+            disabled={isDownloading}
+            className="px-6 py-3 bg-slate-900 text-white text-base font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isDownloading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download size={18} />
+                Download Receipt
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-base font-semibold rounded-lg text-slate-700 flex items-center justify-center gap-2"
+          >
+            <Printer size={18} />
+            Print
+          </button>
         </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
-        <button
-          onClick={() => window.location.assign('/')}
-          className="px-4 sm:px-5 py-2.5 sm:py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors text-sm sm:text-base font-semibold rounded-lg"
-        >
-          Go to homepage
-        </button>
-        <button
-          onClick={handleDownloadReceipt}
-          disabled={isDownloading}
-          className="px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-900 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 flex items-center justify-center gap-2"
-        >
-          {isDownloading ? <Loader2 className="animate-spin" size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Download size={16} className="sm:w-[18px] sm:h-[18px]" />}
-          Download Receipt
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="px-4 sm:px-5 py-2.5 sm:py-3 border border-slate-300 bg-white hover:bg-slate-50 transition-colors text-sm sm:text-base font-semibold rounded-lg flex items-center justify-center gap-2"
-        >
-          <Printer size={16} className="sm:w-[18px] sm:h-[18px]" /> Print
-        </button>
       </div>
     </motion.div>
   );
@@ -1007,7 +1051,8 @@ export default function CheckoutPage() {
     toast.success('Great! You can now complete your booking.');
   };
 
-  const handlePaymentProcess = async () => {
+  // Handler that accepts payment intent ID directly to avoid race conditions
+  const handlePaymentProcessWithIntent = async (intentId: string) => {
     setIsProcessing(true);
 
     try {
@@ -1038,7 +1083,7 @@ export default function CheckoutPage() {
         pricing,
         paymentMethod: 'card',
         paymentDetails: {
-          paymentIntentId, // Include the Stripe PaymentIntent ID
+          paymentIntentId: intentId, // Use the directly passed payment intent ID
           cardholderName: formData.cardholderName,
         },
         userId: user?._id || user?.id,
@@ -1075,6 +1120,16 @@ export default function CheckoutPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handlePaymentProcess = async () => {
+    // This is called when form is manually submitted
+    if (!paymentIntentId) {
+      toast.error('Please complete the payment before submitting');
+      return;
+    }
+    
+    await handlePaymentProcessWithIntent(paymentIntentId);
   };
 
   useEffect(() => {
@@ -1123,6 +1178,7 @@ export default function CheckoutPage() {
                   <div className="lg:col-span-2 order-2 lg:order-1">
                     <CheckoutFormStep
                       onPaymentProcess={handlePaymentProcess}
+                      onPaymentProcessWithIntent={handlePaymentProcessWithIntent}
                       isProcessing={isProcessing}
                       formData={formData}
                       setFormData={setFormData}

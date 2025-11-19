@@ -88,6 +88,98 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
+const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) => (
+  <motion.a
+    href={`/tours/${tour.slug}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    onClick={onHitClick}
+    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+    whileHover={{ y: -4 }}
+  >
+    {tour.image && (
+      <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+        <img
+          src={tour.image}
+          alt={tour.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+        />
+        {tour.duration && (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
+            {tour.duration}
+          </div>
+        )}
+      </div>
+    )}
+    <div className="p-2.5">
+      <h3 className="font-semibold text-xs mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+        {tour.title}
+      </h3>
+      {tour.location && (
+        <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1.5">
+          <MapPin className="w-2.5 h-2.5" />
+          <span className="line-clamp-1">{tour.location}</span>
+        </div>
+      )}
+      {tour.rating && (
+        <div className="flex items-center gap-1 mb-1.5">
+          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+          <span className="text-[10px] font-medium">{tour.rating}</span>
+          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
+        </div>
+      )}
+      {tour.price && (
+        <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
+          <DollarSign className="w-3 h-3" />
+          <span>{tour.price}</span>
+        </div>
+      )}
+    </div>
+  </motion.a>
+);
+
+const TourSlider = ({ tours, onHitClick }: { tours: any[]; onHitClick?: () => void }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 260;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="relative w-full">
+      {tours.length > 1 && (
+        <>
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+      <div
+        ref={sliderRef}
+        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+      >
+        {tours.map((tour, idx) => (
+          <TourCard key={`${tour.slug}-${idx}`} tour={tour} onHitClick={onHitClick} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Custom SearchBox component
 function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
   const { refine } = useSearchBox();
@@ -103,18 +195,8 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
   const limitedHits = hits.slice(0, limit);
-  const sliderRef = useRef<HTMLDivElement>(null);
 
   if (limitedHits.length === 0) return null;
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (!sliderRef.current) return;
-    const scrollAmount = 260;
-    sliderRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
 
   // Transform hits to tour objects
   const tours = limitedHits.map((hit: any) => ({
@@ -148,101 +230,117 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
       </div>
 
       <div className="px-4 md:px-6 py-4">
-        <div className="relative w-full">
-          {tours.length > 1 && (
-            <>
-              <button
-                onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </>
-          )}
-          <div
-            ref={sliderRef}
-            className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
-          >
-            {tours.map((tour, idx) => (
-              <a
-                key={limitedHits[idx].objectID}
-                href={`/${tour.slug}`}
-                onClick={onHitClick}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block flex-shrink-0 w-[260px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-              >
-                {tour.image && (
-                  <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-                    <img
-                      src={tour.image}
-                      alt={tour.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    {tour.isFeatured && (
-                      <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
-                        <Star className="w-2.5 h-2.5 fill-current" />
-                        Featured
-                      </div>
-                    )}
-                    {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice && (
-                      <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md">
-                        -{Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)}%
-                      </div>
-                    )}
-                    {tour.duration && (
-                      <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-medium flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        {tour.duration}
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div className="p-3">
-                  <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
-                    {tour.title}
-                  </h3>
-                  {tour.location && (
-                    <div className="flex items-center gap-1 text-gray-500 text-[11px] mb-2">
-                      <MapPin className="w-3 h-3 text-blue-500" />
-                      <span className="line-clamp-1">{tour.location}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5">
-                      {tour.rating && (
-                        <div className="flex items-center gap-0.5">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-[11px] font-medium">{tour.rating}</span>
-                          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
-                        </div>
-                      )}
-                    </div>
-                    {tour.price && (
-                      <div className="flex items-center gap-1">
-                        {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice ? (
-                          <>
-                            <span className="text-gray-400 text-[10px] line-through">${tour.originalPrice}</span>
-                            <span className="text-blue-600 font-bold text-base">${tour.discountPrice}</span>
-                          </>
-                        ) : (
-                          <span className="text-blue-600 font-bold text-base">${tour.price}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </a>
-            ))}
+        <TourSlider tours={tours} onHitClick={onHitClick} />
+      </div>
+    </div>
+  );
+}
+
+function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+            <Compass className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Destinations
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
+          </span>
         </div>
       </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/destinations/${hit.slug || hit.objectID}`}
+                onClick={onHitClick}
+          className="block px-4 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <Compass className="w-6 md:w-7 h-6 md:h-7 text-emerald-600" strokeWidth={2.5} />
+                      </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-emerald-600 transition-colors duration-300">
+                {hit.name || 'Untitled Destination'}
+                      </div>
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+                {hit.country && (
+                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">
+                    {hit.country}
+                  </span>
+                )}
+                {hit.tourCount && (
+                  <span className="bg-emerald-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-emerald-700">
+                    {hit.tourCount} tours
+                  </span>
+                    )}
+                  </div>
+                    </div>
+                        </div>
+        </a>
+      ))}
+                    </div>
+  );
+}
+
+function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
+  const { hits } = useHits();
+  const limitedHits = hits.slice(0, limit);
+
+  if (limitedHits.length === 0) return null;
+
+  return (
+    <div>
+      <div className="px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-purple-500/5 via-fuchsia-500/5 to-pink-500/5 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
+            <Tag className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+                      </div>
+          <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">
+            Categories
+          </span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
+            {hits.length}
+          </span>
+                  </div>
+                </div>
+      {limitedHits.map((hit: any) => (
+        <a
+          key={hit.objectID}
+          href={`/categories/${hit.slug || hit.objectID}`}
+          onClick={onHitClick}
+          className="block px-4 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-fuchsia-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
+          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
+            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+              <Tag className="w-6 md:w-7 h-6 md:h-7 text-purple-600" strokeWidth={2.5} />
+          </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-purple-600 transition-colors duration-300">
+                {hit.name || 'Untitled Category'}
+        </div>
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5">
+                {hit.tourCount && (
+                  <span className="bg-purple-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-purple-700">
+                    {hit.tourCount} tours
+                  </span>
+                )}
+      </div>
+            </div>
+          </div>
+        </a>
+      ))}
     </div>
   );
 }
@@ -255,6 +353,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
 
   const {
     messages,
@@ -338,16 +437,195 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     }
   };
 
-  const renderContent = (parts: any[]) =>
-    parts.map((part: any, idx: number) =>
-      part.type === 'text' ? (
+  const detectAndFetchTours = useCallback(async (text: string) => {
+    try {
+      const tourPatterns = [
+        /(?:^|\n)\s*(?:\d+\.\s*)?(?:Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)?\s*([^($\n—]+?)\s+(?:\(\$|—\s*\$)(\d+)\)?/gm,
+        /(?:^|\n)\s*(?:\d+\.\s*)?([A-Z][^($\n—]+?Tour[^($\n—]*?)\s+(?:\(\$|—\s*\$)(\d+)\)?/gm,
+        /\*\*([^*]+?)\*\*\s+(?:\(\$|—\s*\$)(\d+)\)?/g,
+        /(?:^|\n)\s*(?:\d+\.\s*)?([^—\n]{15,}?)\s+—\s*\$(\d+)/gm,
+      ];
+
+      const potentialTours = new Map<string, number>();
+
+      for (const pattern of tourPatterns) {
+        const matches = text.matchAll(pattern);
+        for (const match of matches) {
+          if (match[1]) {
+            const title = match[1].trim().replace(/^(Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)\s*/i, '');
+            const price = match[2] ? parseInt(match[2]) : 0;
+            if (title.length > 10) {
+              potentialTours.set(title, price);
+            }
+          }
+        }
+      }
+
+      if (potentialTours.size > 0) {
+        const toursArray = Array.from(potentialTours.entries()).slice(0, 4);
+        const searchPromises = toursArray.map(async ([tourTitle]) => {
+          try {
+            let response = await searchClient.search([{
+              indexName: INDEX_TOURS,
+              params: {
+                query: tourTitle,
+                hitsPerPage: 1,
+              }
+            }]);
+            let firstResult = response.results[0] as any;
+
+            if (!firstResult?.hits?.length) {
+              const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
+              response = await searchClient.search([{
+                indexName: INDEX_TOURS,
+                params: {
+                  query: keywords,
+                  hitsPerPage: 1,
+                }
+              }]);
+              firstResult = response.results[0] as any;
+            }
+
+            return firstResult?.hits?.[0];
+          } catch (error) {
+            console.error('Error searching for tour:', tourTitle, error);
+            return null;
+          }
+        });
+
+        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        if (tours.length > 0) {
+          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
+            const tourId = tour.slug || tour.objectID;
+            if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
+              acc.push(tour);
+            }
+            return acc;
+          }, []);
+
+          return uniqueTours.map((tour: any) => ({
+            slug: tour.slug || tour.objectID,
+            title: tour.title || 'Untitled Tour',
+            image: tour.image || tour.images?.[0] || tour.primaryImage,
+            location: tour.location,
+            duration: tour.duration,
+            rating: tour.rating,
+            reviews: tour.reviews,
+            price: tour.discountPrice || tour.price,
+            discountPrice: tour.discountPrice,
+            originalPrice: tour.price,
+            isFeatured: tour.isFeatured,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting tours:', error);
+    }
+    return [];
+  }, []);
+
+  const renderToolOutput = useCallback((obj: any) => {
+    if (Array.isArray(obj)) {
+      const tours = obj
+        .map((item) => ({
+          slug: item.slug || item.objectID,
+          title: item.title,
+          image: item.image || item.images?.[0] || item.primaryImage,
+          location: item.location,
+          duration: item.duration,
+          rating: item.rating,
+          reviews: item.reviews,
+          price: item.discountPrice || item.price,
+        }))
+        .filter((item) => item.title && item.slug);
+      if (tours.length > 0) return <TourSlider tours={tours} onHitClick={handleCloseDropdown} />;
+    }
+    if (obj?.hits && Array.isArray(obj.hits)) {
+      const tours = obj.hits
+        .map((item: any) => ({
+          slug: item.slug || item.objectID,
+          title: item.title,
+          image: item.image || item.images?.[0] || item.primaryImage,
+          location: item.location,
+          duration: item.duration,
+          rating: item.rating,
+          reviews: item.reviews,
+          price: item.discountPrice || item.price,
+        }))
+        .filter((item: any) => item.title && item.slug);
+      if (tours.length > 0) return <TourSlider tours={tours} onHitClick={handleCloseDropdown} />;
+    }
+    if (obj?.title && obj?.slug) {
+      return <TourSlider tours={[obj]} onHitClick={handleCloseDropdown} />;
+    }
+    return (
+      <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
+        {JSON.stringify(obj, null, 2)}
+      </pre>
+    );
+  }, [handleCloseDropdown]);
+
+  useEffect(() => {
+    if (isGenerating) return;
+    const lastMessage = messages[messages.length - 1];
+
+    if (!lastMessage || lastMessage.role === 'user') {
+      return;
+    }
+
+    if (lastMessage.role === 'assistant') {
+      const messageId = lastMessage.id;
+      if (detectedToursByMessage[messageId]) {
+        return;
+      }
+
+      const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
+      const fullText = textParts.map((p: any) => p.text).join(' ');
+
+      const hasTourPattern = /\$\d+/i.test(fullText) ||
+                            (/tour/i.test(fullText) && /\(\$\d+\)/i.test(fullText));
+
+      if (hasTourPattern) {
+        detectAndFetchTours(fullText).then(tours => {
+          if (tours.length > 0) {
+            setDetectedToursByMessage(prev => ({
+              ...prev,
+              [messageId]: tours
+            }));
+          }
+        });
+      }
+    }
+  }, [messages, isGenerating, detectAndFetchTours, detectedToursByMessage]);
+
+  const renderContent = useCallback((parts: any[], messageId?: string) => {
+    return parts.map((part: any, idx: number) => {
+      if (part.type === 'tool-result') {
+        try {
+          const obj = JSON.parse(part.text);
+          return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
+        } catch {
+          return <pre key={idx} className="text-[10px]">{part.text}</pre>;
+        }
+      }
+      if (part.type === 'text') {
+        return (
         <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {part.text}
           </ReactMarkdown>
         </div>
+        );
+      }
+      return null;
+    }).concat(
+      messageId && detectedToursByMessage[messageId] ? (
+        <div key={`tours-${messageId}`} className="my-3">
+          <TourSlider tours={detectedToursByMessage[messageId]} onHitClick={handleCloseDropdown} />
+        </div>
       ) : null
-    );
+    ).filter(Boolean);
+  }, [renderToolOutput, detectedToursByMessage, handleCloseDropdown]);
 
   return (
     <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0" ref={containerRef}>
@@ -556,7 +834,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                             {msg.role === 'user' ? (
                               <p className="text-sm leading-relaxed">{msg.content}</p>
                             ) : (
-                              renderContent(msg.parts)
+                              renderContent(msg.parts, msg.id)
                             )}
                           </div>
                         </div>
@@ -574,9 +852,20 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   query ? (
                     <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
                       <CustomSearchBox searchQuery={query} onSearchChange={setQuery} />
+
                       <Index indexName={INDEX_TOURS}>
                         <Configure hitsPerPage={5} />
                         <TourHits onHitClick={handleCloseDropdown} limit={5} />
+                      </Index>
+
+                      <Index indexName={INDEX_DESTINATIONS}>
+                        <Configure hitsPerPage={3} />
+                        <DestinationHits onHitClick={handleCloseDropdown} limit={3} />
+                      </Index>
+
+                      <Index indexName={INDEX_CATEGORIES}>
+                        <Configure hitsPerPage={3} />
+                        <CategoryHits onHitClick={handleCloseDropdown} limit={3} />
                       </Index>
                     </InstantSearch>
                   ) : (

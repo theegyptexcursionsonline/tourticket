@@ -8,11 +8,11 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 // Override admin email for testing
-process.env.ADMIN_NOTIFICATION_EMAIL = 'info@rdmi.in';
+process.env.ADMIN_NOTIFICATION_EMAIL = 'booking@egypt-excursionsonline.com';
 
 import { EmailService } from '../lib/email/emailService';
 
-const TEST_EMAIL = 'info@rdmi.in';
+const TEST_EMAIL = 'booking@egypt-excursionsonline.com';
 
 async function testEmails() {
   console.log('🚀 Starting email template tests...\n');
@@ -30,8 +30,8 @@ async function testEmails() {
       totalPrice: '$245.50',
       paymentMethod: 'card',
       specialRequests: 'Vegetarian meals preferred. Need wheelchair accessible transport.',
-      adminDashboardLink: 'https://preview.egypt-excursionsonline.com/admin/bookings/EEO-TEST-12345678',
-      baseUrl: 'https://preview.egypt-excursionsonline.com',
+      adminDashboardLink: 'https://egypt-excursionsonline.com/admin/bookings/EEO-TEST-12345678',
+      baseUrl: 'https://egypt-excursionsonline.com',
       tours: [
         {
           title: 'Pyramids of Giza Private Tour',
@@ -79,8 +79,8 @@ async function testEmails() {
       specialRequests: 'Vegetarian meals preferred. Need wheelchair accessible transport.',
       meetingPoint: 'Hotel Lobby - Four Seasons Cairo',
       contactNumber: '+20 11 42255624',
-      tourImage: 'https://preview.egypt-excursionsonline.com/pyramid.png',
-      baseUrl: 'https://preview.egypt-excursionsonline.com'
+      tourImage: 'https://egypt-excursionsonline.com/pyramid.png',
+      baseUrl: 'https://egypt-excursionsonline.com'
     });
     console.log('✅ Booking Confirmation sent successfully!\n');
   } catch (error) {
@@ -99,7 +99,7 @@ async function testEmails() {
       currency: 'USD',
       bookingId: 'EEO-TEST-12345678',
       tourTitle: 'Pyramids of Giza Private Tour',
-      baseUrl: 'https://preview.egypt-excursionsonline.com'
+      baseUrl: 'https://egypt-excursionsonline.com'
     });
     console.log('✅ Payment Confirmation sent successfully!\n');
   } catch (error) {
@@ -127,7 +127,7 @@ async function testEmails() {
       ],
       importantNotes: 'Please arrive 15 minutes early. Our guide will be wearing a blue Egypt Excursions Online shirt.',
       bookingId: 'EEO-TEST-12345678',
-      baseUrl: 'https://preview.egypt-excursionsonline.com'
+      baseUrl: 'https://egypt-excursionsonline.com'
     });
     console.log('✅ Trip Reminder sent successfully!\n');
   } catch (error) {
@@ -140,22 +140,22 @@ async function testEmails() {
     await EmailService.sendWelcomeEmail({
       customerName: 'John Smith',
       customerEmail: TEST_EMAIL,
-      dashboardLink: 'https://preview.egypt-excursionsonline.com/user/dashboard',
+      dashboardLink: 'https://egypt-excursionsonline.com/user/dashboard',
       recommendedTours: [
         {
           title: 'Egypt Pyramids & Nile Cruise: Ancient Wonders Discovery',
-          image: 'https://preview.egypt-excursionsonline.com/pyramid.png',
+          image: 'https://egypt-excursionsonline.com/pyramid.png',
           price: 'From $199',
-          link: 'https://preview.egypt-excursionsonline.com/tour/egypt-pyramids-nile-cruise-ancient-wonders'
+          link: 'https://egypt-excursionsonline.com/tour/egypt-pyramids-nile-cruise-ancient-wonders'
         },
         {
           title: 'Hurghada: Luxury VIP Hammam & Spa with Transfer',
-          image: 'https://preview.egypt-excursionsonline.com/pyramid.png',
+          image: 'https://egypt-excursionsonline.com/pyramid.png',
           price: 'From $89',
-          link: 'https://preview.egypt-excursionsonline.com/tour/hurghada-luxury-vip-hammam-spa'
+          link: 'https://egypt-excursionsonline.com/tour/hurghada-luxury-vip-hammam-spa'
         }
       ],
-      baseUrl: 'https://preview.egypt-excursionsonline.com'
+      baseUrl: 'https://egypt-excursionsonline.com'
     });
     console.log('✅ Welcome Email sent successfully!\n');
   } catch (error) {
