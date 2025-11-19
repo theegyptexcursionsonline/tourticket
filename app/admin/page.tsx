@@ -474,4 +474,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default withAuth(AdminDashboard);
+export default withAuth(AdminDashboard, { permissions: ['manageDashboard'] });

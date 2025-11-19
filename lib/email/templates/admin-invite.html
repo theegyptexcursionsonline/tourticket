@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Invitation</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f4f6fb;
+        margin: 0;
+        padding: 0;
+        color: #0f172a;
+      }
+      .wrapper {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 32px 20px;
+      }
+      .card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+      }
+      .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+        background: linear-gradient(135deg, #f97316, #ef4444);
+        color: #fff;
+      }
+      .muted {
+        color: #475569;
+        font-size: 14px;
+      }
+      .pill {
+        display: inline-block;
+        background: #f1f5f9;
+        color: #475569;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        margin: 4px 6px 0 0;
+      }
+      .credentials {
+        background: #0f172a;
+        color: #fff;
+        border-radius: 16px;
+        padding: 18px 24px;
+        margin: 24px 0;
+      }
+      .credentials strong {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <p class="muted">Private invite</p>
+        <h1>Hi {{inviteeName}},</h1>
+        <p>
+          {{inviterName}} just invited you to help manage Egypt Excursions Online. Use the button
+          below to enter the admin portal, then change your password right away.
+        </p>
+
+        <div class="credentials">
+          <div>
+            <strong>Work email</strong>
+            <span>{{inviteeEmail}}</span>
+          </div>
+          <div style="margin-top: 12px;">
+            <strong>Temporary password</strong>
+            <span>{{temporaryPassword}}</span>
+          </div>
+        </div>
+
+        <p>
+          <a class="btn" href="{{portalLink}}" target="_blank" rel="noopener noreferrer">
+            Open admin portal
+          </a>
+        </p>
+
+        <p>Your role: <strong>{{role}}</strong></p>
+        <p class="muted" style="margin-bottom: 8px;">You currently have access to:</p>
+        <div>
+          {{#each permissions}}
+          <span class="pill">{{this}}</span>
+          {{/each}}
+        </div>
+
+        <p style="margin-top: 24px;">
+          Need a hand? Reply to this email or contact {{supportEmail}} so we can help.
+        </p>
+      </div>
+
+      <footer>
+        © Egypt Excursions Online · Secure admin access only
+      </footer>
+    </div>
+  </body>
+</html>
+

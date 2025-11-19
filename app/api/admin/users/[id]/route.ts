@@ -4,12 +4,18 @@ import User from '@/lib/models/user';
 import Booking from '@/lib/models/Booking';
 import Review from '@/lib/models/Review';
 import mongoose from 'mongoose';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminAuth(request, { permissions: ['manageUsers'] });
+    if (auth instanceof NextResponse) {
+      return auth;
+    }
+
     await dbConnect();
 
     const { id: userId } = await params;

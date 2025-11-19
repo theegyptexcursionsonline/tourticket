@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface User {
   _id: string;
@@ -33,15 +34,23 @@ const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAdminAuth();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (token) {
+      fetchUsers();
+    }
+  }, [token]);
 
   const fetchUsers = async () => {
+    if (!token) return;
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/users');
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
@@ -98,8 +107,16 @@ const UsersPage = () => {
     setDeletingUserId(userId);
 
     try {
+      if (!token) {
+        toast.error('Missing admin token');
+        return;
+      }
+
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -368,4 +385,4 @@ const UsersPage = () => {
   );
 };
 
-export default withAuth(UsersPage);
+export default withAuth(UsersPage, { permissions: ['manageUsers'] });

@@ -1,19 +1,19 @@
-// app/api/admin/users/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import Booking from '@/lib/models/Booking';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
-// GET all users with their booking count
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminAuth(request, { permissions: ['manageUsers'] });
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   await dbConnect();
   try {
-    // Fetch all users
-    const users = await User.find({}).select('name email createdAt').lean();
+    const users = await User.find({}).select('name firstName lastName email createdAt').lean();
 
-    // For each user, count their bookings.
-    // This is done in a loop for simplicity; for very large user bases,
-    // a more optimized aggregation pipeline would be better.
     const usersWithBookingCounts = await Promise.all(
       users.map(async (user) => {
         const bookingCount = await Booking.countDocuments({ user: user._id });
@@ -21,11 +21,14 @@ export async function GET() {
           ...user,
           bookingCount,
         };
-      })
+      }),
     );
 
     return NextResponse.json(usersWithBookingCounts);
   } catch (error) {
-    return NextResponse.json({ message: 'Failed to fetch users', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Failed to fetch users', error: (error as Error).message },
+      { status: 500 },
+    );
   }
 }

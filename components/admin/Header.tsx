@@ -3,26 +3,20 @@ import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LogOut, Home, ChevronRight, User, Shield, DollarSign, Euro } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import { currencies } from '@/utils/localization';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 const AdminHeader = () => {
     const pathname = usePathname();
     const router = useRouter();
     const pathSegments = pathname.split('/').filter(i => i);
     
-    // Settings context for currency
     const { selectedCurrency, setSelectedCurrency } = useSettings();
+    const { user, logout } = useAdminAuth();
 
     const handleLogout = () => {
-        // Remove the token from local storage
-        localStorage.removeItem('admin-auth-token');
-        
-        // Show a confirmation toast
-        toast.success('You have been logged out.');
-        
-        // Redirect to the homepage and refresh the page state
+        logout();
         router.push('/');
         router.refresh();
     };
@@ -136,8 +130,12 @@ const AdminHeader = () => {
                                 <Shield className="h-4 w-4 text-white" />
                             </div>
                             <div>
-                                <div className="text-sm font-semibold text-slate-700">Admin User</div>
-                                <div className="text-xs text-slate-500">Administrator</div>
+                                <div className="text-sm font-semibold text-slate-700">
+                                    {user?.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : 'Admin User'}
+                                </div>
+                                <div className="text-xs text-slate-500 capitalize">
+                                    {user?.role?.replace('_', ' ') || 'Administrator'}
+                                </div>
                             </div>
                         </div>
 

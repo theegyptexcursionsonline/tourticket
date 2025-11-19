@@ -529,4 +529,4 @@ const BookingsPage = () => {
   );
 };
 
-export default withAuth(BookingsPage);
+export default withAuth(BookingsPage, { permissions: ['manageBookings'] });

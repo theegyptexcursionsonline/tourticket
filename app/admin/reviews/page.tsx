@@ -374,4 +374,4 @@ const ReviewsPage = () => {
   );
 };
 
-export default withAuth(ReviewsPage);
+export default withAuth(ReviewsPage, { permissions: ['manageContent'] });

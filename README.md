@@ -110,6 +110,11 @@ INTERCOM_APP_ID=your_intercom_app_id
 
 # Application
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Admin bootstrap login (use an email address)
+ADMIN_USERNAME=admin@youcompany.com
+ADMIN_PASSWORD=super-secure-password
+SUPPORT_EMAIL=support@yourcompany.com
 ```
 
 ### Installation

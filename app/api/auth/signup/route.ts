@@ -5,6 +5,7 @@ import User from '@/lib/models/user';
 import { signToken } from '@/lib/jwt';
 import bcrypt from 'bcryptjs';
 import { EmailService } from '@/lib/email/emailService'; // 🆕 Add this import
+import { getDefaultPermissions } from '@/lib/constants/adminPermissions';
 
 export async function POST(request: NextRequest) {
   await dbConnect();
@@ -41,6 +42,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Prepare user data (keep existing)
+    const effectiveRole = (newUser as any).role || 'customer';
+    const assignedPermissions =
+      (newUser as any).permissions && (newUser as any).permissions.length > 0
+        ? (newUser as any).permissions
+        : getDefaultPermissions(effectiveRole);
+
     const userPayload = {
       id: (newUser._id as any).toString(),
       _id: (newUser._id as any).toString(),
@@ -48,6 +55,8 @@ export async function POST(request: NextRequest) {
       firstName: newUser.firstName,
       lastName: newUser.lastName,
       name: `${newUser.firstName} ${newUser.lastName}`,
+      role: effectiveRole,
+      permissions: assignedPermissions,
     };
 
     // Generate JWT (keep existing)
@@ -57,6 +66,8 @@ export async function POST(request: NextRequest) {
       given_name: newUser.firstName,
       family_name: newUser.lastName,
       iat: Math.floor(Date.now() / 1000),
+      role: effectiveRole,
+      permissions: assignedPermissions,
     });
 
     // 🆕 Send Welcome Email

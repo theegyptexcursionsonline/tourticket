@@ -20,25 +20,28 @@ import {
   PenSquare,
   Sparkles,
   X,
-  Layout, // ✅ For Attraction
-  ImageIcon, // ✅ For Hero Settings
+  Layout,
+  ImageIcon,
+  Shield,
 } from "lucide-react";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
 
 // ✅ Updated navItems with Hero Settings added
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/hero-settings", label: "Hero Settings", icon: ImageIcon },
-  { href: "/admin/bookings", label: "Bookings", icon: FileText },
-  { href: "/admin/manifests", label: "Manifest", icon: ListPlus },
-  { href: "/admin/discounts", label: "Discounts", icon: Percent },
-  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
-  { href: "/admin/reports", label: "Reports", icon: TrendingUp },
-  { href: "/admin/tours", label: "Tours", icon: Compass },
-  { href: "/admin/destinations", label: "Destination", icon: Map },
-  { href: "/admin/attraction-pages", label: "Attraction", icon: Layout },
-  { href: "/admin/categories", label: "Category", icon: Tag },
-  { href: "/admin/blog", label: "Blog", icon: PenSquare },
-  { href: "/admin/users", label: "User", icon: Users },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permissions: ["manageDashboard"] },
+  { href: "/admin/hero-settings", label: "Hero Settings", icon: ImageIcon, permissions: ["manageContent"] },
+  { href: "/admin/bookings", label: "Bookings", icon: FileText, permissions: ["manageBookings"] },
+  { href: "/admin/manifests", label: "Manifest", icon: ListPlus, permissions: ["manageBookings"] },
+  { href: "/admin/discounts", label: "Discounts", icon: Percent, permissions: ["manageDiscounts"] },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare, permissions: ["manageContent"] },
+  { href: "/admin/reports", label: "Reports", icon: TrendingUp, permissions: ["manageReports"] },
+  { href: "/admin/tours", label: "Tours", icon: Compass, permissions: ["manageTours"] },
+  { href: "/admin/destinations", label: "Destination", icon: Map, permissions: ["manageContent"] },
+  { href: "/admin/attraction-pages", label: "Attraction", icon: Layout, permissions: ["manageContent"] },
+  { href: "/admin/categories", label: "Category", icon: Tag, permissions: ["manageContent"] },
+  { href: "/admin/blog", label: "Blog", icon: PenSquare, permissions: ["manageContent"] },
+  { href: "/admin/users", label: "User", icon: Users, permissions: ["manageUsers"] },
+  { href: "/admin/team", label: "Team Access", icon: Shield, permissions: ["manageUsers"] },
 ];
 
 const AdminSidebar = () => {
@@ -47,6 +50,7 @@ const AdminSidebar = () => {
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
   const showLabel = isOpen || isMobile;
+  const { hasAnyPermission } = useAdminAuth();
 
   // Handle mobile detection
   useEffect(() => {
@@ -172,7 +176,9 @@ const AdminSidebar = () => {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-6 px-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
           <ul className="space-y-2">
-            {navItems.map(({ href, label, icon: Icon }, index) => {
+            {navItems
+              .filter(({ permissions }) => !permissions || hasAnyPermission(permissions))
+              .map(({ href, label, icon: Icon }, index) => {
               const active =
                 pathname === href ||
                 (href !== "/admin" && pathname.startsWith(href));

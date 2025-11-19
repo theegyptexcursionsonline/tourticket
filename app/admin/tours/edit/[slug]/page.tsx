@@ -358,4 +358,4 @@ const EditTourPage = () => {
     );
 };
 
-export default withAuth(EditTourPage);
+export default withAuth(EditTourPage, { permissions: ['manageTours'] });

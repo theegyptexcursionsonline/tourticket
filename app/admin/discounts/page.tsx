@@ -563,4 +563,4 @@ const DiscountsPage = () => {
   );
 };
 
-export default withAuth(DiscountsPage);
+export default withAuth(DiscountsPage, { permissions: ['manageDiscounts'] });

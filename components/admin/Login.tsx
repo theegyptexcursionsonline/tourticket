@@ -3,45 +3,29 @@
 
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { User, Lock } from 'lucide-react'; // Import icons
+import { Mail, Lock } from 'lucide-react';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface LoginProps {
   onLoginSuccess: () => void;
 }
 
 export default function Login({ onLoginSuccess }: LoginProps) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isLoading } = useAdminAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    toast.dismiss(); // Dismiss any existing toasts
+    toast.dismiss();
 
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Send both username and password in the request
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        localStorage.setItem('admin-auth-token', data.token);
-        toast.success('Login successful!');
-        onLoginSuccess();
-      } else {
-        throw new Error(data.error || 'Invalid username or password');
-      }
+      await login(email, password);
+      // Login success is handled by the AdminAuthContext
+      // The component will automatically re-render when isAuthenticated changes
     } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setIsLoading(false);
+      // Error is already shown by toast in the context
+      console.error('Login error:', err);
     }
   };
 
@@ -52,28 +36,28 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           Admin Portal Access
         </h1>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Username Input */}
+          {/* Email Input */}
           <div>
             <label
-              htmlFor="username"
+              htmlFor="email"
               className="block text-sm font-semibold text-slate-700"
             >
-              Username
+              Work Email
             </label>
             <div className="relative mt-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="username"
+                  autoComplete="email"
                   className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
-                  placeholder="admin"
+                  placeholder="team@company.com"
                 />
             </div>
           </div>

@@ -11,8 +11,10 @@ import type {
   WelcomeEmailData,
   AdminAlertData,
   BookingStatusUpdateData,
+  AdminInviteEmailData,
+  AdminAccessUpdateEmailData,
   EmailTemplate
-} from './types';
+} from './type';
 
 export class EmailService {
   private static readonly subjects: Record<EmailType, string> = {
@@ -23,7 +25,9 @@ export class EmailService {
     'booking-cancellation': '❌ Booking Cancelled - {{tourTitle}}',
     'booking-update': '📢 Booking Status Update - {{tourTitle}}',
     'welcome': '🎊 Welcome to Egypt Excursions Online!',
-    'admin-booking-alert': '📋 New Booking Alert - {{tourTitle}}'
+    'admin-booking-alert': '📋 New Booking Alert - {{tourTitle}}',
+    'admin-invite': 'You’ve been invited to manage Egypt Excursions Online',
+    'admin-access-update': 'Your admin access has been {{action}}'
   };
 
   private static async generateEmailTemplate(
@@ -133,6 +137,26 @@ export class EmailService {
       subject: template.subject,
       html: template.html,
       type: 'admin-booking-alert'
+    });
+  }
+
+  static async sendAdminInviteEmail(data: AdminInviteEmailData): Promise<void> {
+    const template = await this.generateEmailTemplate('admin-invite', data);
+    await sendEmail({
+      to: data.inviteeEmail,
+      subject: template.subject,
+      html: template.html,
+      type: 'admin-invite'
+    });
+  }
+
+  static async sendAdminAccessUpdateEmail(data: AdminAccessUpdateEmailData): Promise<void> {
+    const template = await this.generateEmailTemplate('admin-access-update', data);
+    await sendEmail({
+      to: data.inviteeEmail,
+      subject: template.subject,
+      html: template.html,
+      type: 'admin-access-update'
     });
   }
 }

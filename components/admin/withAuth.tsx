@@ -1,42 +1,57 @@
 // components/admin/withAuth.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Login from './Login';
+import AccessDenied from './AccessDenied';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
-const withAuth = <P extends object>(WrappedComponent: React.ComponentType<P>) => {
+interface WithAuthOptions {
+  permissions?: string[];
+  requireAll?: boolean;
+}
+
+const withAuth = <P extends object>(
+  WrappedComponent: React.ComponentType<P>,
+  options: WithAuthOptions = {},
+) => {
   const WithAuthComponent: React.FC<P> = (props) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const {
+      isAuthenticated,
+      isLoading,
+      refreshUser,
+      hasPermission,
+      hasAnyPermission,
+    } = useAdminAuth();
 
-    useEffect(() => {
-      // Check for the auth token in local storage
-      const token = localStorage.getItem('admin-auth-token');
-      if (token === 'secret-auth-token-for-admin-access') {
-        setIsAuthenticated(true);
-      }
-      setIsLoading(false);
-    }, []);
-    
-    const handleLoginSuccess = () => {
-      setIsAuthenticated(true);
-    };
+    const { permissions = [], requireAll = true } = options;
+
+    const hasRequiredPermissions =
+      permissions.length === 0
+        ? true
+        : requireAll
+          ? permissions.every((permission) => hasPermission(permission))
+          : hasAnyPermission(permissions);
 
     if (isLoading) {
       return (
         <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600"></div>
+          <div className="animate-spin rounded-full h-20 w-20 border-b-2 border-red-600" />
         </div>
       );
     }
 
     if (!isAuthenticated) {
-      return <Login onLoginSuccess={handleLoginSuccess} />;
+      return <Login onLoginSuccess={() => {}} />;
+    }
+
+    if (!hasRequiredPermissions) {
+      return <AccessDenied requiredPermissions={permissions} />;
     }
 
     return <WrappedComponent {...props} />;
   };
-  
+
   return WithAuthComponent;
 };
 

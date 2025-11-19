@@ -577,4 +577,4 @@ const BookingDetailPage = () => {
   );
 };
 
-export default withAuth(BookingDetailPage);
+export default withAuth(BookingDetailPage, { permissions: ['manageBookings'] });

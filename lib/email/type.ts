@@ -116,6 +116,27 @@ export interface BookingStatusUpdateData extends BaseEmailData {
   baseUrl?: string;
 }
 
+export interface AdminInviteEmailData {
+  inviteeName: string;
+  inviteeEmail: string;
+  inviterName: string;
+  temporaryPassword: string;
+  role: string;
+  permissions: string[];
+  portalLink: string;
+  supportEmail?: string;
+}
+
+export interface AdminAccessUpdateEmailData {
+  inviteeName: string;
+  inviteeEmail: string;
+  updatedBy?: string;
+  action: 'activated' | 'deactivated';
+  portalLink: string;
+  supportEmail?: string;
+  isActivated?: boolean;
+}
+
 export type EmailType =
   | 'booking-confirmation'
   | 'payment-confirmation'
@@ -124,7 +145,9 @@ export type EmailType =
   | 'booking-cancellation'
   | 'booking-update'
   | 'welcome'
-  | 'admin-booking-alert';
+  | 'admin-booking-alert'
+  | 'admin-invite'
+  | 'admin-access-update';
 
 export interface EmailTemplate {
   subject: string;

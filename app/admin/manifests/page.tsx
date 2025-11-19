@@ -376,4 +376,4 @@ const ManifestsPage = () => {
   );
 };
 
-export default withAuth(ManifestsPage);
+export default withAuth(ManifestsPage, { permissions: ['manageBookings'] });

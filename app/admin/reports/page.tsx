@@ -142,4 +142,4 @@ const ReportsPage = () => {
   );
 };
 
-export default withAuth(ReportsPage);
+export default withAuth(ReportsPage, { permissions: ['manageReports'] });

@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { signToken } from '@/lib/jwt';
 import bcrypt from 'bcryptjs';
+import { getDefaultPermissions } from '@/lib/constants/adminPermissions';
 
 export async function POST(request: NextRequest) {
   await dbConnect();
@@ -31,6 +32,12 @@ export async function POST(request: NextRequest) {
     }
     
     // --- Prepare User Data for Token and Response ---
+    const effectiveRole = (user as any).role || 'customer';
+    const assignedPermissions =
+      (user as any).permissions && (user as any).permissions.length > 0
+        ? (user as any).permissions
+        : getDefaultPermissions(effectiveRole);
+
     const userPayload = {
       id: (user._id as any).toString(),
       _id: (user._id as any).toString(),
@@ -38,6 +45,8 @@ export async function POST(request: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
       name: `${user.firstName} ${user.lastName}`,
+      role: effectiveRole,
+      permissions: assignedPermissions,
     };
 
     // --- Generate JWT ---
@@ -47,6 +56,8 @@ export async function POST(request: NextRequest) {
       given_name: user.firstName,
       family_name: user.lastName,
       iat: Math.floor(Date.now() / 1000),
+      role: effectiveRole,
+      permissions: assignedPermissions,
     });
 
     // --- Success Response ---

@@ -16,6 +16,10 @@ export interface User {
   bookings?: Booking[];
   createdAt?: string;
   updatedAt?: string;
+  role?: string;
+  permissions?: string[];
+  isActive?: boolean;
+  lastLoginAt?: string;
 }
 
 export interface Destination {
