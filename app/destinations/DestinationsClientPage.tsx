@@ -49,19 +49,19 @@ const TourCard = ({ tour }: { tour: any }) => (
       </div>
     )}
     <div className="p-2.5">
-      <h3 className="font-semibold text-xs mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+      <h3 className="font-semibold text-xs text-gray-900 mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
         {tour.title}
       </h3>
       {tour.location && (
-        <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1.5">
-          <MapPin className="w-2.5 h-2.5" />
-          <span className="line-clamp-1">{tour.location}</span>
+        <div className="flex items-center gap-1 text-[10px] mb-1.5">
+          <MapPin className="w-2.5 h-2.5 text-gray-400" />
+          <span className="line-clamp-1 text-gray-600">{tour.location}</span>
         </div>
       )}
       {tour.rating && (
         <div className="flex items-center gap-1 mb-1.5">
           <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-[10px] font-medium">{tour.rating}</span>
+          <span className="text-[10px] font-medium text-gray-900">{tour.rating}</span>
           {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
         </div>
       )}
@@ -193,13 +193,53 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
     // For search mode, just filter results (no submit action needed)
   };
 
-  // Auto-scroll chat to bottom
+  // Track if user has manually scrolled away from bottom
+  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  const isScrollingRef = useRef(false);
+  
+  // Auto-scroll only when user hasn't manually scrolled up
   useEffect(() => {
-    if (!chatContainerRef.current) return;
+    if (!chatContainerRef.current || userHasScrolledUp) return;
+    
+    const container = chatContainerRef.current;
     setTimeout(() => {
-      chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
+      if (!userHasScrolledUp && container) {
+        container.scrollTop = container.scrollHeight;
+      }
     }, 100);
-  }, [messages, isLoading]);
+  }, [messages, isLoading, userHasScrolledUp]);
+  
+  // Track manual scrolling - let user scroll freely
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container || !showAIChat) return;
+    
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      // Don't interfere if this is a programmatic scroll
+      if (isScrollingRef.current) return;
+      
+      clearTimeout(scrollTimeout);
+      
+      // Check if user is at the bottom
+      const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
+      
+      if (isAtBottom) {
+        // User scrolled back to bottom - re-enable auto-scroll
+        setUserHasScrolledUp(false);
+      } else {
+        // User scrolled away from bottom - disable auto-scroll
+        setUserHasScrolledUp(true);
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [showAIChat]);
 
   // Render tool outputs (tours)
   const renderToolOutput = (obj: any) => {
@@ -267,7 +307,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={showAIChat ? "Ask AI anything about Egypt tours..." : "Search destinations..."}
-                    className="w-full pl-14 md:pl-16 pr-24 md:pr-28 py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                    className="w-full pl-14 md:pl-16 pr-24 md:pr-28 py-4 text-sm md:text-base text-gray-900 placeholder:text-gray-400/70 placeholder:font-normal font-medium bg-transparent outline-none rounded-full relative z-10"
                     disabled={isLoading && showAIChat}
                   />
 

@@ -441,19 +441,19 @@ const TourCard = ({ tour }: { tour: any }) => (
       </div>
     )}
     <div className="p-2.5">
-      <h3 className="font-semibold text-xs mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+      <h3 className="font-semibold text-xs text-gray-900 mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
         {tour.title}
       </h3>
       {tour.location && (
-        <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1.5">
-          <MapPin className="w-2.5 h-2.5" />
-          <span className="line-clamp-1">{tour.location}</span>
+        <div className="flex items-center gap-1 text-[10px] mb-1.5">
+          <MapPin className="w-2.5 h-2.5 text-gray-400" />
+          <span className="line-clamp-1 text-gray-600">{tour.location}</span>
         </div>
       )}
       {tour.rating && (
         <div className="flex items-center gap-1 mb-1.5">
           <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-[10px] font-medium">{tour.rating}</span>
+          <span className="text-[10px] font-medium text-gray-900">{tour.rating}</span>
           {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
         </div>
       )}
@@ -735,19 +735,48 @@ export default function AISearchWidget() {
     fetchFeaturedTours();
   }, []);
 
-  // Auto-scroll chat to bottom (optimized)
+  // Smart auto-scroll: only scroll if user is already near bottom
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  
   useEffect(() => {
     if (!chatContainerRef.current || !chatMode) return;
-
-    const scrollToBottom = () => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
+    
+    const container = chatContainerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    
+    // Only auto-scroll if user hasn't manually scrolled up or if they're near the bottom
+    if (!isUserScrolling || isNearBottom) {
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+    }
+  }, [messages.length, chatMode, isUserScrolling]);
+  
+  // Track manual scrolling
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container || !chatMode) return;
+    
+    let scrollTimeout: NodeJS.Timeout;
+    const handleScroll = () => {
+      setIsUserScrolling(true);
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 10;
+        if (isAtBottom) {
+          setIsUserScrolling(false);
+        }
+      }, 150);
     };
-
-    // Use requestAnimationFrame for smooth scrolling
-    requestAnimationFrame(scrollToBottom);
-  }, [messages.length, chatMode]); // Only re-run when messages count changes
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [chatMode]);
 
   // Listen for floating button click (openAIAgent event)
   useEffect(() => {

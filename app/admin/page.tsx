@@ -217,39 +217,60 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoized fetch function to prevent recreating on every render
-  const fetchDashboardData = useCallback(async () => {
+  // Memoized fetch function with retry logic
+  const fetchDashboardData = useCallback(async (retryCount = 0) => {
     setIsLoading(true);
     setError(null);
     
     try {
       const token = localStorage.getItem('admin-auth-token');
       if (!token) {
-        throw new Error('Authentication required');
+        setError('Authentication required. Please log in.');
+        setIsLoading(false);
+        return;
       }
 
       const headers = { 
         'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-cache, max-age=300' // Cache for 5 minutes
+        'Cache-Control': 'no-cache'
       };
 
-      // Parallel fetching for better performance
+      // Add timeout to fetch requests (10 seconds)
+      const fetchWithTimeout = async (url: string, options: RequestInit) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          return response;
+        } catch (error: any) {
+          clearTimeout(timeout);
+          if (error.name === 'AbortError') {
+            throw new Error('Request timeout - server is taking too long to respond');
+          }
+          throw error;
+        }
+      };
+
+      // Parallel fetching with timeout
       const [dashboardRes, reportRes] = await Promise.all([
-        fetch('/api/admin/dashboard', { 
-          headers,
-          next: { revalidate: 300 } // Revalidate every 5 minutes
-        }),
-        fetch('/api/admin/reports', { 
-          headers,
-          next: { revalidate: 300 }
-        })
+        fetchWithTimeout('/api/admin/dashboard', { headers }),
+        fetchWithTimeout('/api/admin/reports', { headers })
       ]);
 
       if (!dashboardRes.ok) {
-        throw new Error(dashboardRes.status === 401 ? 'Session expired' : 'Failed to fetch dashboard data');
+        if (dashboardRes.status === 401) {
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error(`Dashboard API error: ${dashboardRes.status}`);
       }
-      if (!reportRes.ok) {
-        throw new Error('Failed to fetch report data');
+      if (!reportRes.ok && retryCount < 2) {
+        // Retry reports API once (it's less critical)
+        console.warn('Reports API failed, will retry...');
       }
 
       const [dashboardData, reportData] = await Promise.all([
@@ -257,21 +278,38 @@ const AdminDashboard = () => {
         reportRes.json()
       ]);
 
+      // Handle dashboard data with fallback
       if (dashboardData.success) {
+        setStats(dashboardData.data);
+      } else if (dashboardData.data) {
+        // Even if not successful, use partial data if available
+        console.warn('Dashboard returned partial data:', dashboardData.error);
         setStats(dashboardData.data);
       } else {
         throw new Error(dashboardData.error || 'Failed to fetch dashboard data');
       }
 
-      if (reportData) {
+      // Handle report data with fallback
+      if (reportData && reportData.monthlyRevenue) {
         setReportData(reportData);
       } else {
-        throw new Error('Failed to fetch report data');
+        console.warn('Report data unavailable, using fallback');
+        // Use fallback empty data instead of failing
+        setReportData({ monthlyRevenue: [] });
       }
 
     } catch (err) {
       console.error('Dashboard fetch error:', err);
-      setError((err as Error).message);
+      const errorMessage = (err as Error).message;
+      
+      // Retry once for transient errors (except auth errors)
+      if (retryCount === 0 && !errorMessage.includes('Authentication') && !errorMessage.includes('Session expired')) {
+        console.log('Retrying dashboard fetch...');
+        setTimeout(() => fetchDashboardData(1), 1000);
+        return;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

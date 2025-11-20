@@ -545,13 +545,13 @@ const TourCard = ({ tour }: { tour: any }) => (
       </div>
     )}
     <div className="p-3.5">
-      <h3 className="font-bold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug min-h-[38px]">
+      <h3 className="font-bold text-sm text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug min-h-[38px]">
         {tour.title}
       </h3>
       {tour.location && (
-        <div className="flex items-center gap-1.5 text-gray-500 text-[11px] mb-2.5">
+        <div className="flex items-center gap-1.5 text-[11px] mb-2.5">
           <MapPin className="w-3.5 h-3.5 text-blue-500" strokeWidth={2} />
-          <span className="line-clamp-1 font-medium">{tour.location}</span>
+          <span className="line-clamp-1 font-medium text-gray-600">{tour.location}</span>
         </div>
       )}
       <div className="flex items-center justify-between pt-2.5 border-t-2 border-gray-50">
@@ -860,13 +860,53 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     }
   };
 
-  // Auto-scroll chat to bottom
+  // Track if user has manually scrolled away from bottom
+  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  const isScrollingRef = useRef(false);
+  
+  // Auto-scroll only when user hasn't manually scrolled up
   useEffect(() => {
-    if (!chatContainerRef.current) return;
+    if (!chatContainerRef.current || userHasScrolledUp) return;
+    
+    const container = chatContainerRef.current;
     setTimeout(() => {
-      chatContainerRef.current!.scrollTop = chatContainerRef.current!.scrollHeight;
+      if (!userHasScrolledUp && container) {
+        container.scrollTop = container.scrollHeight;
+      }
     }, 100);
-  }, [messages, isGenerating]);
+  }, [messages, isGenerating, userHasScrolledUp]);
+  
+  // Track manual scrolling - let user scroll freely
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container || !chatMode) return;
+    
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      // Don't interfere if this is a programmatic scroll
+      if (isScrollingRef.current) return;
+      
+      clearTimeout(scrollTimeout);
+      
+      // Check if user is at the bottom
+      const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
+      
+      if (isAtBottom) {
+        // User scrolled back to bottom - re-enable auto-scroll
+        setUserHasScrolledUp(false);
+      } else {
+        // User scrolled away from bottom - disable auto-scroll
+        setUserHasScrolledUp(true);
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [chatMode]);
 
   // State for detected content - stored per message ID
   const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
@@ -1223,7 +1263,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   }}
                   onBlur={() => setIsFocused(false)}
                   placeholder={chatMode ? "Ask AI anything about Egypt tours..." : suggestion}
-                  className="w-full pl-16 md:pl-[70px] pr-14 md:pr-20 py-4 md:py-5 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10 transition-all duration-300"
+                  className="w-full pl-16 md:pl-[70px] pr-14 md:pr-20 py-4 md:py-5 text-sm md:text-base text-gray-900 placeholder:text-gray-400/70 placeholder:font-normal font-medium bg-transparent outline-none rounded-full relative z-10 transition-all duration-300"
                   style={{ cursor: 'text' }}
                   disabled={chatMode && isGenerating}
                   autoComplete="off"
@@ -1479,7 +1519,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               </div>
 
               {/* Results Area */}
-              <div ref={chatContainerRef} className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
+              <div ref={chatContainerRef} className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 {chatMode ? (
                   /* Enhanced Chat Interface */
                   <motion.div 
