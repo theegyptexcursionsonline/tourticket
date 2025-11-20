@@ -81,6 +81,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+// Pre-generate static pages for popular tours at build time
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    
+    // Get the most popular tours to pre-generate
+    const popularTours = await Tour.find({ isPublished: true })
+      .sort({ bookings: -1 })
+      .limit(50)
+      .select('slug')
+      .lean();
+
+    return popularTours.map((tour) => ({
+      slug: tour.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    return [];
+  }
+}
+
 export default async function TourDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const tour = await getTourBySlug(slug);
@@ -104,6 +125,6 @@ export default async function TourDetailPage({ params }: PageProps) {
   );
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
 export const dynamicParams = true;

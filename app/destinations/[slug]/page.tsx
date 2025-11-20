@@ -7,6 +7,63 @@ import CategoryModel from '@/lib/models/Category';
 import ReviewModel from '@/lib/models/Review';
 import DestinationPageClient from './DestinationPageClient';
 
+// Enable ISR with 60 second revalidation for fast page loads
+export const revalidate = 60;
+export const dynamicParams = true;
+
+// Pre-generate static pages for all published destinations
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    
+    const destinations = await DestinationModel.find({ isPublished: true })
+      .select('slug')
+      .lean();
+
+    return destinations.map((dest) => ({
+      slug: dest.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for destinations:', error);
+    return [];
+  }
+}
+
+// Generate metadata for SEO
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  try {
+    const { slug } = await params;
+    await dbConnect();
+    const destination = await DestinationModel.findOne({ slug })
+      .select('name description image country')
+      .lean();
+
+    if (!destination) {
+      return {
+        title: 'Destination Not Found',
+        description: 'The destination you are looking for does not exist.',
+      };
+    }
+
+    return {
+      title: `${destination.name}, ${destination.country} - Tours & Activities | Egypt Excursions Online`,
+      description: destination.description?.substring(0, 160) || `Discover the best tours and activities in ${destination.name}`,
+      openGraph: {
+        title: `${destination.name}, ${destination.country}`,
+        description: destination.description?.substring(0, 160),
+        images: destination.image ? [destination.image] : [],
+        type: 'website',
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return {
+      title: 'Destination - Egypt Excursions Online',
+      description: 'Explore amazing destinations in Egypt',
+    };
+  }
+}
+
 async function getPageData(slug: string) {
   await dbConnect();
 

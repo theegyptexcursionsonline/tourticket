@@ -10,9 +10,32 @@ import UserModel from '@/lib/models/user';
 import { Tour, Review } from '@/types';
 import TourPageClient from './TourPageClient';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const dynamicParams = true;
+// Enable ISR (Incremental Static Regeneration) with 60 second revalidation
+// This makes pages load instantly with automatic background updates
+export const revalidate = 60; // Revalidate every 60 seconds
+export const dynamicParams = true; // Allow dynamic routes not in generateStaticParams
+
+// Pre-generate static pages for popular tours at build time
+// This enables instant page loads and automatic prefetching
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    
+    // Get the most popular tours (by bookings) to pre-generate
+    const popularTours = await TourModel.find({ isPublished: true })
+      .sort({ bookings: -1 }) // Sort by most popular
+      .limit(50) // Pre-generate top 50 tours
+      .select('slug')
+      .lean();
+
+    return popularTours.map((tour) => ({
+      slug: tour.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for tours:', error);
+    return []; // Return empty array if error, pages will be generated on-demand
+  }
+}
 
 // Fetch tour data and reviews from database
 async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTours: Tour[]; reviews: Review[] }> {
@@ -71,6 +94,47 @@ async function getTourData(slug: string): Promise<{ tour: Tour | null; relatedTo
   } catch (error) {
     console.error('Error fetching tour data:', error);
     return { tour: null, relatedTours: [], reviews: [] };
+  }
+}
+
+// Generate metadata for SEO and social sharing
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  try {
+    await dbConnect();
+    const tour = await TourModel.findOne({ slug: params.slug })
+      .select('title description image discountPrice originalPrice')
+      .lean();
+
+    if (!tour) {
+      return {
+        title: 'Tour Not Found',
+        description: 'The tour you are looking for does not exist.',
+      };
+    }
+
+    const price = tour.discountPrice || tour.originalPrice || 0;
+    return {
+      title: `${tour.title} - Egypt Excursions Online`,
+      description: tour.description?.substring(0, 160) || `Book ${tour.title} with Egypt Excursions Online`,
+      openGraph: {
+        title: tour.title,
+        description: tour.description?.substring(0, 160),
+        images: tour.image ? [tour.image] : [],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: tour.title,
+        description: tour.description?.substring(0, 160),
+        images: tour.image ? [tour.image] : [],
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return {
+      title: 'Tour - Egypt Excursions Online',
+      description: 'Discover amazing tours and experiences in Egypt',
+    };
   }
 }
 
