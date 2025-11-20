@@ -75,7 +75,7 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
 
   // component logic state
   const [tours, setTours] = useState<TourType[]>(initialTours || []);
-  const [isLoading, setIsLoading] = useState(true); // Start true on initial load
+  const [isLoading, setIsLoading] = useState(true); // Always start with loading true
   const [isMobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const isFirstMount = useRef(true);
@@ -142,10 +142,23 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
     const controller = new AbortController();
     
     const fetchTours = async () => {
-      // Don't fetch on the very first render if there are no params
+      // On first mount with no params, fetch ALL published tours
       if (isFirstMount.current && searchParams.toString() === '') {
-          setIsLoading(false);
+          setIsLoading(true);
           isFirstMount.current = false;
+          try {
+            const res = await fetch('/api/search/tours', { signal: controller.signal });
+            if (!res.ok) throw new Error('Failed to fetch tours');
+            const data = await res.json();
+            setTours(Array.isArray(data) ? data : []);
+          } catch (err: any) {
+            if (err.name !== 'AbortError') {
+              console.error('Initial tours fetch error:', err);
+              setTours([]);
+            }
+          } finally {
+            setIsLoading(false);
+          }
           return;
       }
       
@@ -168,19 +181,8 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
       router.replace(`${pathname}?${newQuery}`, { scroll: false });
 
       try {
-        // Try Algolia search first
-        const algoliaRes = await fetch(`/api/search/algolia?${newQuery}`, { signal: controller.signal });
-
-        if (algoliaRes.ok) {
-          const algoliaData = await algoliaRes.json();
-          if (algoliaData.hits && algoliaData.hits.length > 0) {
-            setTours(algoliaData.hits);
-            setIsLoading(false);
-            return;
-          }
-        }
-
-        // Fallback to MongoDB search if Algolia fails or returns no results
+        // Use MongoDB search directly for better performance and complete results
+        // This shows ALL published tours (not limited by Algolia's caps)
         const res = await fetch(`/api/search/tours?${newQuery}`, { signal: controller.signal });
         if (!res.ok) throw new Error('Failed to fetch tours');
         const data = await res.json();
@@ -385,10 +387,10 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
   
   function TourGrid() {
     if (isLoading) {
-      // Return the skeleton grid when loading
+      // Show skeleton loaders while loading (12 skeletons for better UX)
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, index) => (
+          {Array.from({ length: 12 }).map((_, index) => (
             <TourCardSkeleton key={index} />
           ))}
         </div>
@@ -398,6 +400,7 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
     if (!tours || tours.length === 0) {
       return (
         <div className="py-24 text-center">
+          <SearchIcon className="h-16 w-16 text-slate-300 mb-4 mx-auto" />
           <h3 className="text-2xl font-bold text-slate-800">No tours found</h3>
           <p className="text-slate-500 mt-2 max-w-md mx-auto">We couldn't find any tours matching your criteria. Try adjusting or clearing your filters.</p>
           <button onClick={clearAllFilters} className="mt-6 px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow-sm">

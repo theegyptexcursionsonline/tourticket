@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     // Get search parameters
     const query = searchParams.get('q') || '';
     const page = parseInt(searchParams.get('page') || '0');
-    const hitsPerPage = parseInt(searchParams.get('hitsPerPage') || '20');
+    const hitsPerPage = parseInt(searchParams.get('hitsPerPage') || '100'); // Increased to 100 to show more results
 
     // Build filters
     const filters: string[] = ['isPublished:true'];

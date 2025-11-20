@@ -1,14 +1,25 @@
 // app/search/page.tsx
 import { Suspense } from 'react';
+import { Metadata } from 'next';
 import SearchClient from './SearchClient';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import { Loader2 } from 'lucide-react';
 
-// NO CACHING - Real-time data from admin panel
-export const revalidate = 0;
-export const dynamic = 'force-dynamic';
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
+
+// Generate metadata for SEO
+export const metadata: Metadata = {
+  title: 'Search Tours & Activities | Egypt Excursions Online',
+  description: 'Search and filter through our extensive collection of tours and experiences in Egypt. Find your perfect adventure.',
+  openGraph: {
+    title: 'Search Tours & Activities | Egypt Excursions Online',
+    description: 'Search and filter through our extensive collection of tours and experiences in Egypt.',
+    type: 'website',
+  },
+};
 
 async function getFilters() {
     await dbConnect();

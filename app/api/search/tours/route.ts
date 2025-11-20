@@ -97,8 +97,10 @@ export async function GET(request: Request) {
         await dbConnect();
         const { searchParams } = new URL(request.url);
 
-        // Build additional filters
-        const additionalFilters: any = {};
+        // Build additional filters - ALWAYS filter for published tours only
+        const additionalFilters: any = {
+            isPublished: true  // Only show published tours
+        };
 
         // Categories Filter
         const categories = searchParams.get('categories');
@@ -172,8 +174,8 @@ export async function GET(request: Request) {
             // Perform text search
             tours = await performTextSearch(searchQuery.trim(), additionalFilters);
         } else {
-            // No search query, just apply filters
-            let sortOption: any = { bookings: -1, rating: -1 };
+            // No search query, just apply filters and show all published tours
+            let sortOption: any = { featured: -1, bookings: -1, rating: -1 }; // Featured first, then popular
             const sortBy = searchParams.get('sortBy');
             
             if (sortBy === 'price-asc') {
@@ -181,14 +183,14 @@ export async function GET(request: Request) {
             } else if (sortBy === 'price-desc') {
                 sortOption = { discountPrice: -1, price: -1 };
             } else if (sortBy === 'rating') {
-                sortOption = { rating: -1 };
+                sortOption = { rating: -1, bookings: -1 };
             }
 
             tours = await Tour.find(additionalFilters)
                 .populate('category', 'name')
                 .populate('destination', 'name')
                 .sort(sortOption)
-                .limit(50)
+                .limit(100) // Show up to 100 tours (increased from 50)
                 .lean();
         }
 

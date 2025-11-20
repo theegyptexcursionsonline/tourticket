@@ -139,6 +139,24 @@ export async function generateMetadata({ params }) {
 - ✅ Changed from API fetch to direct DB query (faster!)
 - ✅ Removed force-dynamic and cache: 'no-store'
 
+### 8. `/app/blog/[slug]/page.tsx`
+- ✅ Added ISR with 60s revalidation
+- ✅ Added generateStaticParams for top 100 blog posts
+- ✅ SEO metadata already present
+- ✅ Removed force-dynamic
+
+### 9. `/app/tours/page.tsx`
+- ✅ Added ISR with 60s revalidation
+- ✅ Added SEO metadata
+- ✅ Optimized query to show published tours only
+- ✅ Shows featured tours first
+
+### 10. `/app/search/page.tsx`
+- ✅ Added ISR with 60s revalidation
+- ✅ Added SEO metadata
+- ✅ Removed force-dynamic
+- ✅ Filter data cached for faster loads
+
 ## How Next.js Link Prefetching Works Now
 
 ### Before (Broken) 🐌

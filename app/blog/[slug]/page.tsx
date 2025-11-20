@@ -9,9 +9,29 @@ import type { IBlog } from '@/lib/models/Blog';
 
 type Params = { slug: string };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
 export const dynamicParams = true;
+
+// Pre-generate static pages for all published blog posts
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    
+    const blogs = await Blog.find({ status: 'published' })
+      .select('slug')
+      .sort({ publishedAt: -1 })
+      .limit(100) // Pre-generate top 100 most recent posts
+      .lean();
+
+    return blogs.map((blog) => ({
+      slug: blog.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for blogs:', error);
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }: { params: Promise<Params> }) {
   try {
