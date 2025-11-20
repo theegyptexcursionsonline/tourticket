@@ -1,9 +1,10 @@
 // app/admin/dashboard/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { 
   Plus, 
   List, 
@@ -20,7 +21,18 @@ import {
   Calendar,
   Zap
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
+
+// Lazy load charts for better initial load performance
+const AreaChart = dynamic(
+  () => import('recharts').then(mod => mod.AreaChart),
+  { ssr: false, loading: () => <div className="h-80 bg-slate-100 rounded-2xl animate-pulse" /> }
+);
+const Area = dynamic(() => import('recharts').then(mod => mod.Area), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
 
 interface DashboardStats {
   totalBookings: number;
@@ -87,7 +99,7 @@ const DashboardSkeleton = () => (
   </div>
 );
 
-const StatCard = ({ 
+const StatCard = React.memo(({ 
   title, 
   value, 
   icon: Icon, 
@@ -100,12 +112,12 @@ const StatCard = ({
   color?: string;
   trend?: { value: number; isPositive: boolean };
 }) => {
-  const colorClasses = {
+  const colorClasses = useMemo(() => ({
     blue: "from-blue-500 to-blue-600 shadow-blue-500/25",
     green: "from-emerald-500 to-emerald-600 shadow-emerald-500/25",
     purple: "from-purple-500 to-purple-600 shadow-purple-500/25",
     orange: "from-orange-500 to-orange-600 shadow-orange-500/25",
-  }[color];
+  }[color]), [color]);
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300 group">
@@ -130,9 +142,10 @@ const StatCard = ({
       </div>
     </div>
   );
-};
+});
+StatCard.displayName = 'StatCard';
 
-const QuickActionCard = ({ 
+const QuickActionCard = React.memo(({ 
   href, 
   icon: Icon, 
   title, 
@@ -149,12 +162,12 @@ const QuickActionCard = ({
   badge?: string;
   disabled?: boolean;
 }) => {
-  const colorClasses = {
+  const colorClasses = useMemo(() => ({
     blue: "from-blue-50 to-blue-100 text-blue-600 border-blue-200",
     green: "from-emerald-50 to-emerald-100 text-emerald-600 border-emerald-200",
     purple: "from-purple-50 to-purple-100 text-purple-600 border-purple-200",
     gray: "from-slate-50 to-slate-100 text-slate-400 border-slate-200",
-  }[disabled ? 'gray' : color];
+  }[disabled ? 'gray' : color]), [disabled, color]);
 
   const Component = disabled ? 'div' : Link;
 
@@ -195,7 +208,8 @@ const QuickActionCard = ({
       </div>
     </Component>
   );
-};
+});
+QuickActionCard.displayName = 'QuickActionCard';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -203,42 +217,73 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        const token = localStorage.getItem('admin-auth-token');
-        const [dashboardRes, reportRes] = await Promise.all([
-            fetch('/api/admin/dashboard', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('/api/admin/reports', { headers: { 'Authorization': `Bearer ${token}` } })
-        ]);
-
-        if (!dashboardRes.ok) throw new Error('Failed to fetch dashboard data');
-        if (!reportRes.ok) throw new Error('Failed to fetch report data');
-
-        const dashboardData = await dashboardRes.json();
-        const reportData = await reportRes.json();
-
-        if (dashboardData.success) {
-          setStats(dashboardData.data);
-        } else {
-          throw new Error(dashboardData.error || 'Failed to fetch dashboard data');
-        }
-
-        if (reportData) {
-          setReportData(reportData);
-        } else {
-          throw new Error('Failed to fetch report data');
-        }
-
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setIsLoading(false);
+  // Memoized fetch function to prevent recreating on every render
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('admin-auth-token');
+      if (!token) {
+        throw new Error('Authentication required');
       }
-    };
-    fetchDashboardData();
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-cache, max-age=300' // Cache for 5 minutes
+      };
+
+      // Parallel fetching for better performance
+      const [dashboardRes, reportRes] = await Promise.all([
+        fetch('/api/admin/dashboard', { 
+          headers,
+          next: { revalidate: 300 } // Revalidate every 5 minutes
+        }),
+        fetch('/api/admin/reports', { 
+          headers,
+          next: { revalidate: 300 }
+        })
+      ]);
+
+      if (!dashboardRes.ok) {
+        throw new Error(dashboardRes.status === 401 ? 'Session expired' : 'Failed to fetch dashboard data');
+      }
+      if (!reportRes.ok) {
+        throw new Error('Failed to fetch report data');
+      }
+
+      const [dashboardData, reportData] = await Promise.all([
+        dashboardRes.json(),
+        reportRes.json()
+      ]);
+
+      if (dashboardData.success) {
+        setStats(dashboardData.data);
+      } else {
+        throw new Error(dashboardData.error || 'Failed to fetch dashboard data');
+      }
+
+      if (reportData) {
+        setReportData(reportData);
+      } else {
+        throw new Error('Failed to fetch report data');
+      }
+
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+    
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(fetchDashboardData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
