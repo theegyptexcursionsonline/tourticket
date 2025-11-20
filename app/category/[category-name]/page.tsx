@@ -4,36 +4,66 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AttractionPageTemplate from '@/components/AttractionPageTemplate';
 import { CategoryPageData } from '@/types';
+import dbConnect from '@/lib/dbConnect';
+import AttractionPageModel from '@/lib/models/AttractionPage';
+import Category from '@/lib/models/Category';
 
 interface CategoryPageProps {
   params: Promise<{ 'category-name': string }>;
 }
 
+// Fetch category page directly from database
 async function getCategoryPage(categoryName: string): Promise<CategoryPageData | null> {
   try {
-    // Try to find an attraction page that matches this category
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/attraction-pages/${categoryName}`, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate'
-      }
-    });
+    await dbConnect();
+    
+    const page = await AttractionPageModel.findOne({ 
+      slug: categoryName, 
+      pageType: 'category',
+      isPublished: true 
+    })
+    .populate({
+      path: 'categoryId',
+      model: Category,
+      select: 'name slug'
+    })
+    .lean();
 
-    if (!res.ok) {
+    if (!page) {
       return null;
     }
 
-    const data = await res.json();
-    return data.success ? data.data : null;
+    return JSON.parse(JSON.stringify(page));
   } catch (error) {
     console.error('Error fetching category page:', error);
     return null;
   }
 }
 
-// NO CACHING - Real-time data from admin panel
-export const revalidate = 0;
-export const dynamic = 'force-dynamic';
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
+export const dynamicParams = true;
+
+// Pre-generate static pages for all published category pages
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    
+    const categoryPages = await AttractionPageModel.find({ 
+      pageType: 'category',
+      isPublished: true 
+    })
+      .select('slug')
+      .lean();
+
+    return categoryPages.map((page) => ({
+      'category-name': page.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for category pages:', error);
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const resolvedParams = await params;

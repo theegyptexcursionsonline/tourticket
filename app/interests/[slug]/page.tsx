@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import InterestLandingPage from '@/components/InterestLandingPage';
+import dbConnect from '@/lib/dbConnect';
+import Category from '@/lib/models/Category';
+import AttractionPage from '@/lib/models/AttractionPage';
 
 // Types
 interface InterestPageProps {
@@ -31,56 +34,69 @@ interface InterestData {
   };
 }
 
-// Helper function to get base URL
-function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_BASE_URL) {
-    return process.env.NEXT_PUBLIC_BASE_URL;
-  }
-  
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  
-  return 'http://localhost:3000';
-}
-
-// Fetch interest data
+// Fetch interest data directly from database (faster!)
 async function getInterestData(slug: string): Promise<InterestData | null> {
   try {
-    const baseUrl = getBaseUrl();
-    const url = `${baseUrl}/api/interests/${slug}`;
+    await dbConnect();
     
-    const res = await fetch(url, {
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-      },
-    });
-
-    if (!res.ok) {
-      console.error('Failed to fetch interest data:', res.status);
-      return null;
-    }
-
-    const data = await res.json();
+    // The API uses /api/interests/${slug} which returns data from Category or AttractionPage
+    // Let's fetch directly from database instead
+    const category = await Category.findOne({ slug }).lean();
     
-    if (!data.success || !data.data) {
-      console.error('Invalid API response');
-      return null;
+    if (category) {
+      // Return category-based interest data
+      const serialized = JSON.parse(JSON.stringify(category));
+      return {
+        name: serialized.name,
+        slug: serialized.slug,
+        description: serialized.description || '',
+        longDescription: serialized.longDescription,
+        category: serialized,
+        tours: [], // Will be fetched by InterestLandingPage component
+        totalTours: 0,
+        reviews: [],
+        relatedCategories: [],
+        heroImage: serialized.heroImage || '',
+        type: 'category',
+        highlights: serialized.highlights || [],
+        features: serialized.features || [],
+        stats: {
+          totalTours: 0,
+          totalReviews: 0,
+          averageRating: '0',
+          happyCustomers: 0,
+        },
+      };
     }
-
-    return data.data;
+    
+    return null;
   } catch (error) {
     console.error('Error fetching interest data:', error);
     return null;
   }
 }
 
-// NO CACHING - Real-time data from admin panel
-export const revalidate = 0;
-export const dynamic = 'force-dynamic';
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
 export const dynamicParams = true;
+
+// Pre-generate static pages for all published categories
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    
+    const categories = await Category.find({ isPublished: true })
+      .select('slug')
+      .lean();
+
+    return categories.map((cat) => ({
+      slug: cat.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for interests:', error);
+    return [];
+  }
+}
 
 // Generate metadata
 export async function generateMetadata(
