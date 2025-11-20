@@ -50,7 +50,9 @@ export async function POST(request: NextRequest) {
     user.invitationToken = undefined;
     user.invitationExpires = undefined;
     user.requirePasswordChange = false;
-    await user.save();
+    
+    // Bypass validation since we're just updating password and flags
+    await user.save({ validateBeforeSave: false });
 
     return NextResponse.json({
       success: true,
