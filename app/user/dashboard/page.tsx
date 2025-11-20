@@ -105,7 +105,7 @@ const BookingCard = ({ booking }: { booking: PopulatedBooking }) => {
 
           <div className="flex justify-end pt-3 border-t border-slate-100 md:border-0 md:pt-0">
             <Link 
-              href={`/tour/${booking.tour.slug}`} 
+              href={`/${booking.tour.slug}`} 
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 active:bg-red-800 transition-colors touch-manipulation"
             >
               View Details

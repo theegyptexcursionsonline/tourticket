@@ -1,22 +1,10 @@
-import { Metadata } from 'next';
-import ForgotPasswordClient from './ForgotPasswordClient';
+'use client';
 
-// Enable static generation for fast page loads
-export const dynamic = 'force-static';
+import React, { useState } from "react";
+import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
 
-// Generate metadata for SEO
-export const metadata: Metadata = {
-  title: 'Forgot Password | Egypt Excursions Online',
-  description: 'Reset your password to regain access to your account. Enter your email and we'll send you a password reset link.',
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
-
-export default function ForgotPasswordPage() {
-  return <ForgotPasswordClient />;
-}
+export default function ForgotPasswordClient() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -173,3 +161,4 @@ export default function ForgotPasswordPage() {
     </main>
   );
 }
+
