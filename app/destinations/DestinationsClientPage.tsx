@@ -27,13 +27,11 @@ interface DestinationsClientPageProps {
 
 // Tour Card Component for AI Chat
 const TourCard = ({ tour }: { tour: any }) => (
-  <motion.a
-    href={`/tours/${tour.slug}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-    whileHover={{ y: -4 }}
-  >
+  <motion.div whileHover={{ y: -4 }}>
+    <Link
+      href={`/${tour.slug}`}
+      className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+    >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
         <img
@@ -72,7 +70,8 @@ const TourCard = ({ tour }: { tour: any }) => (
         </div>
       )}
     </div>
-  </motion.a>
+    </Link>
+  </motion.div>
 );
 
 // Tour Slider Component for AI Chat

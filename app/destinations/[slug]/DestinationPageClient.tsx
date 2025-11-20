@@ -90,14 +90,12 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 };
 
 const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) => (
-  <motion.a
-    href={`/tours/${tour.slug}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    onClick={onHitClick}
-    className="group block flex-shrink-0 w-[240px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-    whileHover={{ y: -4 }}
-  >
+  <motion.div whileHover={{ y: -4 }}>
+    <Link
+      href={`/${tour.slug}`}
+      onClick={onHitClick}
+      className="group block flex-shrink-0 w-[240px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+    >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
         <img
@@ -136,7 +134,8 @@ const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) 
         </div>
       )}
     </div>
-  </motion.a>
+    </Link>
+  </motion.div>
 );
 
 const TourSlider = ({ tours, onHitClick }: { tours: any[]; onHitClick?: () => void }) => {
@@ -1343,7 +1342,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
   };
 
   return (
-    <Link href={`/tour/${tour.slug}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
+    <Link href={`/${tour.slug}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
       <span className="hidden sm:block text-3xl md:text-4xl font-extrabold text-slate-200 group-hover:text-red-500 transition-colors duration-200">{index + 1}.</span>
       <div className="relative w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 flex-shrink-0 rounded-md overflow-hidden">
         <Image src={tour.image} alt={tour.title} fill className="object-cover" />
@@ -1394,7 +1393,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
   };
 
   return (
-    <Link href={`/tour/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
+    <Link href={`/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
       <div className="relative">
         <Image src={tour.image} alt={tour.title} width={320} height={180} className="w-full h-36 sm:h-40 object-cover" />
         <button
