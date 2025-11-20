@@ -360,36 +360,11 @@ function Sidebar({ blog }: { blog: IBlog }) {
             <div className="text-sm text-slate-500 mb-4">No direct tours linked — browse all tours <Link href="/tours" className="text-indigo-600 font-medium">here</Link>.</div>
           )}
 
-          <Link href="/contact" className="block text-center w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
-            Contact Travel Team
+          <Link href="/tours" className="block text-center w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
+            Browse All Tours
           </Link>
 
           <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-indigo-600" href="tel:+912345678900"><Phone className="inline h-3 w-3 mr-1" /> +91 234 567 8900</a></div>
-        </div>
-
-        {/* Quick Booking Widget (simulate) */}
-        <div className="bg-white rounded-2xl shadow p-5">
-          <h4 className="font-semibold mb-3">Quick Book</h4>
-          <form className="space-y-3">
-            <div>
-              <label className="text-xs text-slate-600">Destination</label>
-              <select className="w-full mt-1 px-3 py-2 rounded border bg-white text-sm">
-                <option>{blog.relatedDestinations?.[0]?.name || 'Cairo'}</option>
-                <option>Luxor</option>
-                <option>Aswan</option>
-                <option>Hurghada</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="date" className="px-3 py-2 rounded border text-sm" />
-              <select className="px-3 py-2 rounded border text-sm">
-                <option>1 pax</option>
-                <option>2 pax</option>
-                <option>3 pax</option>
-              </select>
-            </div>
-            <button type="button" className="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition">Check Availability</button>
-          </form>
         </div>
 
         {/* Popular Destinations */}
