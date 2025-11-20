@@ -3,6 +3,17 @@ import fs from 'fs/promises';
 import path from 'path';
 import Handlebars from 'handlebars';
 
+// Register Handlebars helpers
+Handlebars.registerHelper('eq', function(a, b) {
+  return a === b;
+});
+
+Handlebars.registerHelper('or', function(...args) {
+  // Remove options object (last argument)
+  const values = args.slice(0, -1);
+  return values.some(value => !!value);
+});
+
 export class TemplateEngine {
   private static templateCache = new Map<string, HandlebarsTemplateDelegate>();
   private static templatesPath = path.join(process.cwd(), 'lib/email/templates');

@@ -599,7 +599,18 @@ export default function AISearchWidget() {
   const [algoliaError, setAlgoliaError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [chatMode, setChatMode] = useState(false);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic placeholder texts for AI
+  const placeholderTexts = [
+    'Try "Best Tours in Cairo"',
+    'Ask "Tours under $200 Budget"',
+    'Search "Luxury Nile Cruise"',
+    'Find "Day trips from Cairo"',
+    'Explore "Desert Safari Adventures"',
+    'Discover "Family-friendly tours"',
+  ];
 
   // AI SDK Chat Setup
   const {
@@ -618,6 +629,15 @@ export default function AISearchWidget() {
     }),
   });
   const isGenerating = status === 'submitted' || status === 'streaming';
+
+  // Rotate placeholder text every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholderTexts.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [placeholderTexts.length]);
 
   // Scroll detection - show widget after scrolling past hero section (throttled)
   useEffect(() => {
@@ -1196,7 +1216,7 @@ export default function AISearchWidget() {
               e.stopPropagation();
               setIsExpanded(false);
             }}
-            className="fixed inset-0 z-[9999] cursor-pointer"
+            className="fixed inset-0 z-[40] cursor-pointer"
             style={{
               backdropFilter: 'blur(8px)',
               background: 'rgba(0, 0, 0, 0.15)',
@@ -1212,7 +1232,7 @@ export default function AISearchWidget() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 100 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="flex fixed bottom-4 md:bottom-6 left-0 right-0 z-[10000] justify-center px-3 md:px-6 pointer-events-none"
+        className="flex fixed bottom-4 md:bottom-6 left-0 right-0 z-[45] justify-center px-3 md:px-6 pointer-events-none"
       >
         <div className="w-full max-w-2xl pointer-events-auto">
           <div className="ai-search-container relative">
@@ -1220,30 +1240,49 @@ export default function AISearchWidget() {
             {/* Search Results Panel Above Search Bar */}
             <AnimatePresence>
               {isExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, y: 30, scale: 0.94, filter: 'blur(10px)' }}
-                  animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, y: 30, scale: 0.94, filter: 'blur(10px)' }}
-                  transition={{ duration: 0.4, ease: [0.34, 1.26, 0.64, 1] }}
-                  className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl motion-div-results"
+                <div className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden motion-div-results"
                   style={{
-                    height: chatMode ? '70vh' : '60vh',
-                    maxHeight: chatMode ? '70vh' : '60vh',
-                    background: 'linear-gradient(135deg, rgba(249, 250, 251, 0.99), rgba(243, 244, 246, 0.97))',
-                    backdropFilter: 'blur(28px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-                    border: '1.5px solid rgba(209, 213, 219, 0.4)',
-                    boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.6) inset'
+                    padding: '2px',
+                    background: 'linear-gradient(135deg, #3b82f6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899, #8b5cf6)',
+                    backgroundSize: '400% 400%',
+                    animation: 'gradientBorder 8s ease infinite',
                   }}
                 >
+                  <motion.div
+                    initial={{ opacity: 0, y: 30, scale: 0.94 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 30, scale: 0.94 }}
+                    transition={{ duration: 0.4, ease: [0.34, 1.26, 0.64, 1] }}
+                    className="rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl"
+                    style={{
+                      height: chatMode ? '70vh' : '60vh',
+                      maxHeight: chatMode ? '70vh' : '60vh',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.96))',
+                      backdropFilter: 'blur(40px) saturate(200%)',
+                      WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+                      boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 0 rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
                   {/* Search Results Content */}
                   <div className="flex flex-col" style={{ height: '100%' }}>
                     {/* Header */}
-                    <div className="px-3 md:px-4 py-2 md:py-2.5 border-b border-gray-200/50 backdrop-blur-xl"
+                    <div className="px-3 md:px-4 py-2.5 md:py-3 border-b backdrop-blur-xl relative overflow-hidden"
                       style={{
-                        background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
+                        borderColor: 'rgba(229, 231, 235, 0.5)',
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(249, 250, 251, 0.5))',
+                        boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.05)'
                       }}
                     >
+                      {/* Animated gradient underline - CSS only */}
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-[1px] animated-underline"
+                        style={{
+                          background: 'linear-gradient(90deg, transparent, #3b82f6, #ef4444, #8b5cf6, transparent)',
+                          backgroundSize: '200% 100%',
+                          opacity: 0.3,
+                          willChange: 'background-position'
+                        }}
+                      />
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 md:gap-2">
                           {chatMode && (
@@ -1276,7 +1315,15 @@ export default function AISearchWidget() {
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               onClick={handleClearChat}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-semibold transition-all duration-200 relative overflow-hidden"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(249, 250, 251, 0.6))',
+                                border: '1px solid rgba(229, 231, 235, 0.6)',
+                                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)',
+                                color: '#3b82f6'
+                              }}
                             >
                               <Sparkles className="w-3 h-3" strokeWidth={2.5} />
                               <span className="hidden sm:inline">New Chat</span>
@@ -1287,10 +1334,12 @@ export default function AISearchWidget() {
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               onClick={handleAskAI}
-                              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-white transition-all duration-200 hover:scale-105 shadow-sm"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold text-white transition-all duration-200"
                               style={{
                                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                                boxShadow: '0 2px 6px -1px rgba(59, 130, 246, 0.3)'
+                                boxShadow: '0 4px 12px -2px rgba(59, 130, 246, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
                               }}
                             >
                               <MessageCircle className="w-3 h-3" strokeWidth={2.5} />
@@ -1313,20 +1362,93 @@ export default function AISearchWidget() {
                         /* Chat Interface */
                         <div className="p-3 space-y-2.5 min-h-0">
                           {messages.length === 0 && (
-                            <div className="bg-white p-4 rounded-2xl border border-blue-100">
-                              <div className="flex items-start gap-2 mb-2">
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <Bot className="text-white" size={12} />
+                            <div className="space-y-3">
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.3 }}
+                                className="relative rounded-2xl overflow-hidden"
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
+                                  border: '1px solid rgba(229, 231, 235, 0.6)',
+                                  boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
+                                }}
+                              >
+                                <div className="p-4">
+                                  <div className="flex items-start gap-2.5 mb-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                      <Bot className="text-white" size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="font-bold text-gray-900 text-sm sm:text-base mb-1">
+                                        Hi! I'm your AI Egypt Travel Assistant
+                                      </p>
+                                      <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
+                                        Ask me anything — I'll help you find tours, trips, prices, destinations & more.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 text-sm sm:text-[15px] mb-0.5">
-                                    Hi! I'm your AI Egypt Travel Assistant
-                                  </p>
-                                  <p className="text-gray-500 text-xs leading-relaxed">
-                                    Ask me anything — I'll help you find tours, trips, prices, destinations & more.
-                                  </p>
+                                {/* Decorative gradient line */}
+                                <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+                              </motion.div>
+
+                              {/* Ready-to-use Prompt Cards */}
+                              <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.1 }}
+                              >
+                                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
+                                  ✨ Try these prompts
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {[
+                                    { icon: '🏛️', text: 'Best tours in Cairo under $100', category: 'Budget' },
+                                    { icon: '🚢', text: 'Luxury Nile cruise packages', category: 'Luxury' },
+                                    { icon: '🏜️', text: 'Desert safari adventures', category: 'Adventure' },
+                                    { icon: '👨‍👩‍👧', text: 'Family-friendly Egypt tours', category: 'Family' },
+                                    { icon: '⏱️', text: 'Day trips from Cairo', category: 'Quick' },
+                                    { icon: '🌟', text: 'Most popular tours this month', category: 'Popular' }
+                                  ].map((prompt, idx) => (
+                                    <motion.button
+                                      key={idx}
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ duration: 0.2, delay: 0.15 + (idx * 0.05) }}
+                                      onClick={() => sendMessage({ text: prompt.text })}
+                                      whileHover={{ scale: 1.02, y: -2 }}
+                                      whileTap={{ scale: 0.98 }}
+                                      className="group relative p-3 rounded-xl text-left transition-all duration-200"
+                                      style={{
+                                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.8))',
+                                        border: '1px solid rgba(229, 231, 235, 0.6)',
+                                        boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
+                                      }}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-lg leading-none">{prompt.icon}</span>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-semibold text-gray-800 mb-0.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                                            {prompt.text}
+                                          </p>
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-blue-50 text-blue-600">
+                                            {prompt.category}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {/* Hover arrow */}
+                                      <motion.div
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+                                        initial={{ x: -5 }}
+                                        whileHover={{ x: 0 }}
+                                      >
+                                        <ChevronRight className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.5} />
+                                      </motion.div>
+                                    </motion.button>
+                                  ))}
                                 </div>
-                              </div>
+                              </motion.div>
                             </div>
                           )}
 
@@ -1355,11 +1477,23 @@ export default function AISearchWidget() {
                                   className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
                                 >
                                   <div
-                                    className={`max-w-[85%] px-4 py-3 rounded-2xl ${
+                                    className={`max-w-[85%] px-4 py-3 rounded-2xl relative ${
                                       isUser
-                                        ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
-                                        : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
+                                        ? 'text-white shadow-xl'
+                                        : 'bg-white text-gray-800 shadow-md'
                                     }`}
+                                    style={
+                                      isUser
+                                        ? {
+                                            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                            boxShadow: '0 8px 24px -4px rgba(59, 130, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                                          }
+                                        : {
+                                            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
+                                            border: '1px solid rgba(229, 231, 235, 0.6)',
+                                            boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
+                                          }
+                                    }
                                   >
                                     {renderContent(m.parts, hasDetectedContent, isUser, shouldShowSkeleton)}
                                   </div>
@@ -1384,10 +1518,19 @@ export default function AISearchWidget() {
                           })}
 
                           {isGenerating && (
-                            <div className="flex items-center gap-2.5 text-gray-500 bg-white px-3.5 py-2 rounded-xl border shadow-sm">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <span className="text-xs font-medium">AI is thinking…</span>
-                            </div>
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
+                                border: '1px solid rgba(229, 231, 235, 0.6)',
+                                boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
+                              }}
+                            >
+                              <Loader2 className="w-4 h-4 text-blue-500 animate-spin" strokeWidth={2.5} />
+                              <span className="text-xs font-semibold text-gray-700">AI is thinking…</span>
+                            </motion.div>
                           )}
                         </div>
                       ) : algoliaError ? (
@@ -1510,25 +1653,27 @@ export default function AISearchWidget() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 }}
-                        className="border-t border-gray-200/50 px-3 md:px-4 py-2 md:py-2.5 backdrop-blur-xl"
+                        className="border-t px-3 md:px-4 py-2.5 md:py-3 backdrop-blur-xl relative overflow-hidden"
                         style={{
-                          background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
+                          borderColor: 'rgba(229, 231, 235, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(249, 250, 251, 0.5))',
+                          boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
                         }}
                       >
                         <button
                           onClick={handleAskAI}
-                          className="w-full group relative overflow-hidden rounded-lg transition-all duration-200 hover:scale-[1.01] hover:shadow-md"
+                          className="w-full group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
                           style={{
                             background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                            boxShadow: '0 2px 8px -2px rgba(59, 130, 246, 0.3)'
+                            boxShadow: '0 8px 24px -4px rgba(59, 130, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
                           }}
                         >
-                          <div className="relative px-3 md:px-4 py-2 md:py-2.5 flex items-center justify-center gap-2">
-                            <MessageCircle className="w-3.5 md:w-4 h-3.5 md:h-4 text-white" strokeWidth={2.5} />
-                            <div className="text-white font-semibold text-[11px] md:text-xs truncate">
+                          <div className="relative px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-center gap-2">
+                            <MessageCircle className="w-4 md:w-4.5 h-4 md:h-4.5 text-white" strokeWidth={2.5} />
+                            <div className="text-white font-bold text-xs md:text-sm truncate">
                               Ask AI about "{searchQuery.slice(0, 25)}{searchQuery.length > 25 ? '...' : ''}"
                             </div>
-                            <Sparkles className="w-3 md:w-3.5 h-3 md:h-3.5 text-white/80 hidden sm:block" strokeWidth={2.5} />
+                            <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4 text-white/90 hidden sm:block" strokeWidth={2.5} />
                           </div>
                         </button>
                       </motion.div>
@@ -1536,35 +1681,40 @@ export default function AISearchWidget() {
 
                     {/* Trending Section */}
                     {!searchQuery && !chatMode && (
-                      <div className="border-t border-gray-200/50 px-3 md:px-4 py-2 md:py-2.5 backdrop-blur-xl"
+                      <div className="border-t px-3 md:px-4 py-2.5 md:py-3 backdrop-blur-xl relative overflow-hidden"
                         style={{
-                          background: 'linear-gradient(to right, rgba(59, 130, 246, 0.02), rgba(139, 92, 246, 0.02))'
+                          borderColor: 'rgba(229, 231, 235, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(249, 250, 251, 0.5))',
+                          boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
                         }}
                       >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <div className="w-4 h-4 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
+                        <div className="flex items-center gap-1.5 mb-2.5">
+                          <div className="w-4 h-4 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
                             <Sparkles className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
                           </div>
-                          <span className="text-[11px] font-semibold text-gray-700">
-                            Trending
+                          <span className="text-[11px] font-bold text-gray-800">
+                            Trending Searches
                           </span>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {['Pyramids', 'Nile Cruise', 'Desert Safari', 'Luxor', 'Tours under $100'].map((trend, index) => (
                             <motion.button
                               key={trend}
                               initial={{ opacity: 0, scale: 0.9 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: index * 0.04, duration: 0.15 }}
+                              whileHover={{ scale: 1.05, y: -2 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => {
                                 setSearchQuery(trend);
                                 setInputValue(trend);
                               }}
-                              className="px-2 py-1 rounded-lg text-[10px] font-medium text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-105 shadow-sm"
+                              className="px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all duration-200"
                               style={{
-                                background: 'rgba(255, 255, 255, 0.8)',
-                                border: '1px solid rgba(209, 213, 219, 0.3)',
-                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.8))',
+                                border: '1px solid rgba(229, 231, 235, 0.6)',
+                                boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)',
+                                color: '#4b5563'
                               }}
                             >
                               {trend}
@@ -1574,7 +1724,8 @@ export default function AISearchWidget() {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               )}
             </AnimatePresence>
 
@@ -1594,38 +1745,26 @@ export default function AISearchWidget() {
                 />
               </div>
 
-              <div className="relative rounded-full p-[2px]">
+              <div className="relative rounded-full" style={{ padding: isExpanded ? '2px' : '0' }}>
                 {isExpanded && (
                   <>
-                    <motion.div
-                      className="absolute inset-0 rounded-full opacity-80"
+                    {/* Animated Gradient Border - Apple/Google Style - Optimized */}
+                    <div
+                      className="absolute inset-0 rounded-full animated-gradient-border"
                       style={{
-                        background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #3b82f6)',
-                        backgroundSize: '300% 100%',
-                      }}
-                      animate={{
-                        backgroundPosition: ['0% 0%', '300% 0%'],
-                      }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: 'linear',
+                        background: 'linear-gradient(90deg, #3b82f6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899, #8b5cf6, #3b82f6)',
+                        backgroundSize: '400% 100%',
+                        willChange: 'background-position',
                       }}
                     />
-                    <motion.div
-                      className="absolute -inset-1 rounded-full opacity-50 blur-md"
+                    {/* Outer Glow Effect - Simplified */}
+                    <div
+                      className="absolute -inset-1 rounded-full blur-lg animated-glow"
                       style={{
-                        background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)',
-                        backgroundSize: '200% 100%',
-                      }}
-                      animate={{
-                        backgroundPosition: ['0% 0%', '200% 0%'],
-                        opacity: [0.3, 0.6, 0.3],
-                      }}
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
+                        background: 'linear-gradient(90deg, rgba(59,130,246,0.4), rgba(239,68,68,0.4), rgba(139,92,246,0.4))',
+                        backgroundSize: '300% 100%',
+                        opacity: 0.5,
+                        willChange: 'background-position',
                       }}
                     />
                   </>
@@ -1661,35 +1800,25 @@ export default function AISearchWidget() {
                           handleChatSubmit();
                         }
                       }}
-                      placeholder={chatMode ? 'Ask anything about Egypt, tours, prices…' : 'Ask AI to find your perfect tour...'}
+                      placeholder={chatMode ? 'Ask anything about Egypt, tours, prices…' : placeholderTexts[placeholderIndex]}
                       className="ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight"
                     />
 
                     <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 z-10">
-                      <motion.div
-                        animate={isExpanded ? {
-                          scale: [1, 1.05, 1],
-                        } : {}}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
+                      <div
+                        className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center transition-all duration-500 shadow-xl"
+                        style={{
+                          background: isExpanded
+                            ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
+                            : 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
+                          boxShadow: isExpanded
+                            ? '0 8px 20px -4px rgba(59, 130, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                            : '0 4px 12px -2px rgba(96, 165, 250, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
+                          willChange: isExpanded ? 'transform' : 'auto'
                         }}
                       >
-                        <div
-                          className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center transition-all duration-500 shadow-lg"
-                          style={{
-                            background: isExpanded
-                              ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
-                              : 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
-                            boxShadow: isExpanded
-                              ? '0 8px 16px -4px rgba(59, 130, 246, 0.5)'
-                              : '0 4px 12px -2px rgba(96, 165, 250, 0.4)'
-                          }}
-                        >
-                          <Search className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
-                        </div>
-                      </motion.div>
+                        <Search className="w-4.5 md:w-5 h-4.5 md:h-5 text-white" strokeWidth={2.5} />
+                      </div>
                     </div>
 
                     <div className="absolute right-3 md:right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 md:gap-2 z-10">
@@ -1703,7 +1832,15 @@ export default function AISearchWidget() {
                                 handleChatSubmit();
                               }
                             }}
-                            className={`px-3 md:px-3.5 py-1.5 md:py-2 rounded-xl font-semibold text-white flex items-center gap-1.5 transition-all ${isGenerating ? 'bg-red-500 hover:bg-red-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-md'}`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className={`px-3 md:px-3.5 py-1.5 md:py-2 rounded-xl font-bold text-white flex items-center gap-1.5 transition-all ${isGenerating ? 'bg-gradient-to-r from-red-500 to-red-600' : ''}`}
+                            style={!isGenerating ? {
+                              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                              boxShadow: '0 4px 12px -2px rgba(59, 130, 246, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                            } : {
+                              boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                            }}
                           >
                             {isGenerating ? (
                               <>
@@ -1719,59 +1856,56 @@ export default function AISearchWidget() {
                           </motion.button>
                           {isExpanded && (
                             <motion.div
-                              initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
-                              animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                              exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
-                              transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-lg"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              transition={{ duration: 0.2 }}
+                              className="w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-xl"
                               style={{
                                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                boxShadow: '0 8px 20px -4px rgba(59, 130, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
                               }}
                             >
-                              <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
+                              <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white" strokeWidth={2.5} />
                             </motion.div>
                           )}
                         </>
                       ) : (
                         <>
-                          <motion.button
-                            onClick={() => {
-                              setIsExpanded(true);
-                              setChatMode(true);
-                            }}
-                            animate={{
-                              boxShadow: [
-                                '0 0 0 0 rgba(59, 130, 246, 0.4)',
-                                '0 0 0 4px rgba(59, 130, 246, 0)',
-                              ],
-                            }}
-                            transition={{
-                              duration: 2,
-                              repeat: Infinity,
-                              ease: 'easeInOut',
-                            }}
-                            className="relative flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                            style={{
-                              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15))',
-                              border: '1.5px solid rgba(59, 130, 246, 0.3)',
-                            }}
-                          >
-                            <motion.div
-                              animate={{
-                                rotate: [0, 360],
+                          <div className="relative" style={{ padding: '1.5px' }}>
+                            {/* Animated gradient border - CSS only */}
+                            <div
+                              className="absolute inset-0 rounded-xl animated-ai-border"
+                              style={{
+                                background: 'linear-gradient(135deg, #3b82f6, #ef4444, #8b5cf6, #3b82f6)',
+                                backgroundSize: '300% 300%',
+                                willChange: 'background-position'
                               }}
-                              transition={{
-                                duration: 4,
-                                repeat: Infinity,
-                                ease: 'linear',
+                            />
+                            <motion.button
+                              onClick={() => {
+                                setIsExpanded(true);
+                                setChatMode(true);
+                              }}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="relative flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl cursor-pointer transition-all"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
+                                boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.8)'
                               }}
                             >
-                              <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4 text-blue-600 relative z-10" strokeWidth={2.5} />
-                            </motion.div>
-                            <span className="text-[11px] md:text-xs font-black text-blue-600 tracking-tight relative z-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                              AI
-                            </span>
-                          </motion.button>
+                              <Sparkles className="w-3.5 md:w-4 h-3.5 md:h-4" style={{ 
+                                background: 'linear-gradient(135deg, #3b82f6, #ef4444, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text'
+                              }} strokeWidth={2.5} />
+                              <span className="text-[11px] md:text-xs font-black tracking-tight bg-gradient-to-r from-blue-600 via-red-500 to-purple-600 bg-clip-text text-transparent">
+                                AI
+                              </span>
+                            </motion.button>
+                          </div>
 
                           {isExpanded && (
                             <motion.div
@@ -1779,11 +1913,27 @@ export default function AISearchWidget() {
                               animate={{ rotate: 0, opacity: 1, scale: 1 }}
                               exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
                               transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-lg"
+                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-xl overflow-hidden"
                               style={{
                                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                boxShadow: '0 8px 20px -4px rgba(59, 130, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
                               }}
                             >
+                              <motion.div
+                                className="absolute inset-0"
+                                style={{
+                                  background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+                                  backgroundSize: '200% 200%',
+                                }}
+                                animate={{
+                                  backgroundPosition: ['0% 0%', '200% 200%'],
+                                }}
+                                transition={{
+                                  duration: 2,
+                                  repeat: Infinity,
+                                  ease: 'linear',
+                                }}
+                              />
                               <ChevronUp className="w-4.5 md:w-5 h-4.5 md:h-5 text-white relative z-10" strokeWidth={2.5} />
                             </motion.div>
                           )}
@@ -1856,6 +2006,88 @@ export default function AISearchWidget() {
 
         .ai-search-input:focus {
           outline: none;
+        }
+
+        /* Animated Gradient Border - Apple/Google Style - Optimized with GPU */
+        @keyframes gradientBorder {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+
+        .animated-gradient-border {
+          animation: gradientBorder 6s linear infinite;
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          perspective: 1000px;
+        }
+
+        .animated-glow {
+          animation: gradientGlow 4s ease-in-out infinite;
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          perspective: 1000px;
+        }
+
+        .animated-ai-border {
+          animation: gradientBorder 4s linear infinite;
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          perspective: 1000px;
+        }
+
+        .animated-underline {
+          animation: gradientSlide 3s linear infinite;
+          transform: translateZ(0);
+          backface-visibility: hidden;
+        }
+
+        @keyframes gradientGlow {
+          0%, 100% {
+            background-position: 0% 50%;
+            opacity: 0.4;
+          }
+          50% {
+            background-position: 100% 50%;
+            opacity: 0.6;
+          }
+        }
+
+        @keyframes gradientSlide {
+          0% {
+            background-position: 0% 50%;
+          }
+          100% {
+            background-position: 200% 50%;
+          }
+        }
+
+        /* Professional smooth animations */
+        @keyframes shimmer {
+          0% {
+            background-position: -200% center;
+          }
+          100% {
+            background-position: 200% center;
+          }
+        }
+
+        /* Enhanced focus states */
+        .ai-search-input:focus-visible {
+          outline: none;
+        }
+
+        /* Performance optimizations */
+        .motion-div-results {
+          will-change: transform, opacity;
+          transform: translateZ(0);
+          backface-visibility: hidden;
         }
       `}</style>
     </>

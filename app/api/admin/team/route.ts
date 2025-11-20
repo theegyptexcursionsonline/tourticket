@@ -134,20 +134,32 @@ export async function POST(request: NextRequest) {
   
   // Generate invitation link
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://tourticket.app';
-  const invitationLink = `${baseUrl.replace(/\/$/, '')}/admin/accept-invitation?token=${invitationToken}`;
+  const invitationLink = `${baseUrl.replace(/\/$/, '')}/accept-invitation?token=${invitationToken}`;
 
-  EmailService.sendAdminInviteEmail({
-    inviteeName: inviteeName || normalizedEmail,
-    inviteeEmail: normalizedEmail,
-    inviterName,
-    temporaryPassword: '', // No longer sending password
-    role: normalizedRole,
-    permissions: effectivePermissions,
-    portalLink: invitationLink,
-    supportEmail: getSupportEmail(),
-  }).catch((error) => {
-    console.error('Failed to send admin invite email', error);
-  });
+  // Try to send invitation email - rollback if it fails
+  try {
+    await EmailService.sendAdminInviteEmail({
+      inviteeName: inviteeName || normalizedEmail,
+      inviteeEmail: normalizedEmail,
+      inviterName,
+      temporaryPassword: '', // No longer sending password
+      role: normalizedRole,
+      permissions: effectivePermissions,
+      portalLink: invitationLink,
+      supportEmail: getSupportEmail(),
+    });
+  } catch (emailError) {
+    console.error('Failed to send admin invite email, rolling back user creation:', emailError);
+    // Rollback: delete the user that was just created
+    await User.findByIdAndDelete(user._id);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to send invitation email. Please check email configuration and try again.' 
+      },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json(
     { success: true, data: sanitize(user) },

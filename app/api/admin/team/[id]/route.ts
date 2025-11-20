@@ -81,6 +81,11 @@ export async function PATCH(
   }
 
   const updates = await request.json();
+  
+  // NOTE: Using findById + save pattern for email notification logic.
+  // While this has a theoretical race condition risk, it's acceptable for this use case
+  // since team updates are infrequent and we need pre/post values for email notifications.
+  // For high-frequency updates, consider using findByIdAndUpdate with versioning.
   const user = await User.findById(id).select('+password');
 
   if (!user || user.role === 'customer') {

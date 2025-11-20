@@ -79,7 +79,10 @@ const TeamPage = () => {
   };
 
   useEffect(() => {
-    fetchMembers();
+    if (token) {
+      fetchMembers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleInvite = async (e: React.FormEvent) => {

@@ -16,46 +16,73 @@ export async function POST(request: NextRequest) {
   await dbConnect();
 
   try {
-    // Find all inactive admin/team users (not customers)
-    const inactiveUsers = await User.find({
+    // Find all inactive admin/team users with expired invitations
+    const expiredInvitationsUsers = await User.find({
       role: { $ne: 'customer' },
       isActive: false,
+      invitationExpires: { $lt: new Date() }, // Invitation has expired
     })
+      .select('firstName lastName email invitationExpires createdAt')
       .sort({ createdAt: 1 })
       .lean();
 
-    if (inactiveUsers.length === 0) {
+    // Find other inactive users (no invitation or still valid)
+    const otherInactiveUsers = await User.find({
+      role: { $ne: 'customer' },
+      isActive: false,
+      $or: [
+        { invitationExpires: { $exists: false } },
+        { invitationExpires: null },
+        { invitationExpires: { $gte: new Date() } },
+      ],
+    })
+      .select('firstName lastName email invitationExpires createdAt')
+      .sort({ createdAt: 1 })
+      .lean();
+
+    let deletedCount = 0;
+    const results = {
+      expiredInvitations: 0,
+      excessInactive: 0,
+    };
+
+    // Always delete users with expired invitations
+    if (expiredInvitationsUsers.length > 0) {
+      const expiredIds = expiredInvitationsUsers.map((u) => u._id);
+      const expiredResult = await User.deleteMany({
+        _id: { $in: expiredIds },
+      });
+      results.expiredInvitations = expiredResult.deletedCount || 0;
+      deletedCount += results.expiredInvitations;
+    }
+
+    // Keep the first 2 other inactive users as demo examples, delete the rest
+    if (otherInactiveUsers.length > 2) {
+      const usersToDelete = otherInactiveUsers.slice(2);
+      const idsToDelete = usersToDelete.map((u) => u._id);
+      const excessResult = await User.deleteMany({
+        _id: { $in: idsToDelete },
+      });
+      results.excessInactive = excessResult.deletedCount || 0;
+      deletedCount += results.excessInactive;
+    }
+
+    if (deletedCount === 0) {
       return NextResponse.json({
         success: true,
         message: 'No inactive team members to clean up',
         deleted: 0,
+        kept: otherInactiveUsers.length,
       });
     }
-
-    // Keep the first 2 as demo examples, delete the rest
-    const usersToKeep = inactiveUsers.slice(0, 2);
-    const usersToDelete = inactiveUsers.slice(2);
-
-    if (usersToDelete.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: `Only ${usersToKeep.length} inactive members found, nothing to delete`,
-        deleted: 0,
-      });
-    }
-
-    // Delete the excess inactive users
-    const idsToDelete = usersToDelete.map((u) => u._id);
-    const result = await User.deleteMany({
-      _id: { $in: idsToDelete },
-    });
 
     return NextResponse.json({
       success: true,
-      message: `Cleaned up ${result.deletedCount} inactive team members`,
-      deleted: result.deletedCount,
-      kept: usersToKeep.length,
-      keptUsers: usersToKeep.map((u) => ({
+      message: `Cleaned up ${deletedCount} inactive team members (${results.expiredInvitations} expired invitations, ${results.excessInactive} excess inactive)`,
+      deleted: deletedCount,
+      details: results,
+      kept: Math.min(2, otherInactiveUsers.length),
+      keptUsers: otherInactiveUsers.slice(0, 2).map((u) => ({
         email: u.email,
         name: `${u.firstName} ${u.lastName}`,
       })),
