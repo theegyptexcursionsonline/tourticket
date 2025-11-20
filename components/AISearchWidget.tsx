@@ -1216,7 +1216,7 @@ export default function AISearchWidget() {
               e.stopPropagation();
               setIsExpanded(false);
             }}
-            className="fixed inset-0 z-[40] cursor-pointer"
+            className="fixed inset-0 z-[10] cursor-pointer"
             style={{
               backdropFilter: 'blur(8px)',
               background: 'rgba(0, 0, 0, 0.15)',
@@ -1232,7 +1232,7 @@ export default function AISearchWidget() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 100 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="flex fixed bottom-4 md:bottom-6 left-0 right-0 z-[45] justify-center px-3 md:px-6 pointer-events-none"
+        className="flex fixed bottom-4 md:bottom-6 left-0 right-0 z-[15] justify-center px-3 md:px-6 pointer-events-none"
       >
         <div className="w-full max-w-2xl pointer-events-auto">
           <div className="ai-search-container relative">
