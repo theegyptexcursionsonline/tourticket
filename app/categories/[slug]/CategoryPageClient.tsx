@@ -265,7 +265,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col group">
       <div className="relative">
-        <Link href={`/tour/${tour.slug}`}>
+        <Link href={`/${tour.slug}`}>
           <Image
             src={tour.image}
             alt={tour.title}
@@ -287,7 +287,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
       </div>
       <div className="p-4 flex-grow flex flex-col">
         <h3 className="font-bold text-lg text-slate-900 mb-2 line-clamp-2 flex-grow">
-          <Link href={`/tour/${tour.slug}`} className="hover:text-red-600 transition-colors">
+          <Link href={`/${tour.slug}`} className="hover:text-red-600 transition-colors">
             {tour.title}
           </Link>
         </h3>
@@ -302,7 +302,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             )}
             <span className="text-xl font-bold text-red-600">{formatPrice(tour.discountPrice)}</span>
           </div>
-          <Link href={`/tour/${tour.slug}`} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+          <Link href={`/${tour.slug}`} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
             View Details
           </Link>
         </div>

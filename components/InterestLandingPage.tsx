@@ -51,7 +51,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
       transition={{ delay: index * 0.1 }}
     >
       <Link
-        href={`/tour/${tour.slug}`}
+        href={`/${tour.slug}`}
         className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 block border border-gray-200"
       >
         <div className="relative h-48 overflow-hidden">
