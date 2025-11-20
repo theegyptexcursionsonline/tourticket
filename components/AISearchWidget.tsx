@@ -1205,13 +1205,13 @@ export default function AISearchWidget() {
   return (
     <>
       {/* Backdrop Blur Overlay */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isExpanded && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.15 }}
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(false);
@@ -1238,9 +1238,14 @@ export default function AISearchWidget() {
           <div className="ai-search-container relative">
 
             {/* Search Results Panel Above Search Bar */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {isExpanded && (
-                <div className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden motion-div-results"
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 30, scale: 0.94 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden motion-div-results"
                   style={{
                     padding: '2px',
                     background: 'linear-gradient(135deg, #3b82f6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899, #8b5cf6)',
@@ -1248,11 +1253,7 @@ export default function AISearchWidget() {
                     animation: 'gradientBorder 8s ease infinite',
                   }}
                 >
-                  <motion.div
-                    initial={{ opacity: 0, y: 30, scale: 0.94 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 30, scale: 0.94 }}
-                    transition={{ duration: 0.4, ease: [0.34, 1.26, 0.64, 1] }}
+                  <div
                     className="rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl"
                     style={{
                       height: chatMode ? '70vh' : '60vh',
@@ -1724,8 +1725,8 @@ export default function AISearchWidget() {
                       </div>
                     )}
                   </div>
-                  </motion.div>
                 </div>
+                </motion.div>
               )}
             </AnimatePresence>
 
