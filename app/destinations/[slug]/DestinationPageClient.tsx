@@ -180,6 +180,87 @@ const TourSlider = ({ tours, onHitClick }: { tours: any[]; onHitClick?: () => vo
   );
 };
 
+// Destination Slider Component for AI Chat
+const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 280;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="relative w-full my-3">
+      {destinations.length > 1 && (
+        <>
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+      <div
+        ref={sliderRef}
+        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+      >
+        {destinations.map((destination, idx) => (
+          <a
+            key={idx}
+            href={`/destinations/${destination.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          >
+            {destination.image && (
+              <div className="relative h-36 bg-gradient-to-br from-emerald-100 to-teal-100 overflow-hidden">
+                <img
+                  src={destination.image}
+                  alt={destination.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+                {destination.isFeatured && (
+                  <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
+                    <Star className="w-2.5 h-2.5 fill-current" />
+                    Featured
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="p-3">
+              <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors leading-tight">
+                {destination.name}
+              </h3>
+              {destination.description && (
+                <p className="text-gray-500 text-[11px] mb-2 line-clamp-2">
+                  {destination.description}
+                </p>
+              )}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-1 text-gray-500 text-[11px]">
+                  <MapPin className="w-3 h-3 text-emerald-500" />
+                  <span>{destination.tourCount || 0} tours</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Custom SearchBox component
 function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
   const { refine } = useSearchBox();
@@ -354,12 +435,14 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
+  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, any[]>>({});
 
   const {
     messages,
     sendMessage,
     status,
     stop,
+    setMessages,
   } = useChat({
     transport: new DefaultChatTransport({
       api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
@@ -405,6 +488,17 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const handleCloseDropdown = () => {
     setIsExpanded(false);
     setChatMode(false);
+  };
+
+  const handleClearChat = () => {
+    setDetectedToursByMessage({});
+    setDetectedDestinationsByMessage({});
+    setMessages([]);
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = 0;
+      }
+    }, 100);
   };
 
   const handleOpenAIChat = () => {
@@ -524,6 +618,69 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     return [];
   }, []);
 
+  const detectAndFetchDestinations = useCallback(async (text: string) => {
+    try {
+      const destinationNames = new Map<string, boolean>();
+
+      const egyptDestinations = ['Cairo', 'Luxor', 'Aswan', 'Alexandria', 'Hurghada', 'Sharm El Sheikh', 'Dahab', 'Makadi Bay', 'Marsa Alam', 'El Gouna'];
+
+      for (const dest of egyptDestinations) {
+        const patterns = [
+          new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*)?${dest}:`, 'im'),
+          new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*\\n)?\\s*${dest}\\s*(?:\\n|$)`, 'im'),
+          new RegExp(`\\*\\*${dest}\\*\\*`, 'im')
+        ];
+
+        if (patterns.some(pattern => pattern.test(text))) {
+          destinationNames.set(dest, true);
+        }
+      }
+
+      if (destinationNames.size > 0) {
+        const destsArray = Array.from(destinationNames.keys()).slice(0, 4);
+        const searchPromises = destsArray.map(async (destName) => {
+          try {
+            const response = await searchClient.search([{
+              indexName: INDEX_DESTINATIONS,
+              params: {
+                query: destName,
+                hitsPerPage: 1,
+              }
+            }]);
+            const firstResult = response.results[0] as any;
+            return firstResult?.hits?.[0];
+          } catch (error) {
+            console.error('Error searching for destination:', destName, error);
+            return null;
+          }
+        });
+
+        const destinations = (await Promise.all(searchPromises)).filter(Boolean);
+        if (destinations.length > 0) {
+          const uniqueDestinations = destinations.reduce((acc: any[], dest: any) => {
+            const destId = dest.slug || dest.objectID;
+            if (!acc.find(d => (d.slug || d.objectID) === destId)) {
+              acc.push(dest);
+            }
+            return acc;
+          }, []);
+
+          return uniqueDestinations.map((dest: any) => ({
+            slug: dest.slug || dest.objectID,
+            name: dest.name || 'Untitled Destination',
+            image: dest.image || dest.images?.[0] || dest.primaryImage,
+            description: dest.description,
+            tourCount: dest.tourCount || 0,
+            isFeatured: dest.isFeatured,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting destinations:', error);
+    }
+    return [];
+  }, []);
+
   const renderToolOutput = useCallback((obj: any) => {
     if (Array.isArray(obj)) {
       const tours = obj
@@ -575,17 +732,33 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
 
     if (lastMessage.role === 'assistant') {
       const messageId = lastMessage.id;
-      if (detectedToursByMessage[messageId]) {
+      if (detectedToursByMessage[messageId] || detectedDestinationsByMessage[messageId]) {
         return;
       }
 
       const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
       const fullText = textParts.map((p: any) => p.text).join(' ');
 
+      // Detect if it's a destination-focused response (no prices, mentions destinations)
+      const hasDestinationPattern = /destination/i.test(fullText) &&
+                                    !(/\$\d+/i.test(fullText)) &&
+                                    (/(?:^|\n)\s*(?:\d+\.\s*)?\s*(?:Cairo|Luxor|Aswan|Alexandria|Hurghada|Sharm|Dahab)/im.test(fullText) ||
+                                     /\*\*(?:Cairo|Luxor|Aswan|Alexandria|Hurghada|Sharm|Dahab)\*\*/i.test(fullText));
+
+      // Detect if it's a tour-focused response (has prices)
       const hasTourPattern = /\$\d+/i.test(fullText) ||
                             (/tour/i.test(fullText) && /\(\$\d+\)/i.test(fullText));
 
-      if (hasTourPattern) {
+      if (hasDestinationPattern) {
+        detectAndFetchDestinations(fullText).then(destinations => {
+          if (destinations.length > 0) {
+            setDetectedDestinationsByMessage(prev => ({
+              ...prev,
+              [messageId]: destinations
+            }));
+          }
+        });
+      } else if (hasTourPattern) {
         detectAndFetchTours(fullText).then(tours => {
           if (tours.length > 0) {
             setDetectedToursByMessage(prev => ({
@@ -596,9 +769,12 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         });
       }
     }
-  }, [messages, isGenerating, detectAndFetchTours, detectedToursByMessage]);
+  }, [messages, isGenerating, detectAndFetchTours, detectAndFetchDestinations, detectedToursByMessage, detectedDestinationsByMessage]);
 
-  const renderContent = useCallback((parts: any[], messageId?: string) => {
+  const renderContent = useCallback((parts: any[], messageId?: string, hideDetails: boolean = false, isUser: boolean = false) => {
+    const hasDetectedTours = messageId && detectedToursByMessage[messageId];
+    const hasDetectedDestinations = messageId && detectedDestinationsByMessage[messageId];
+
     return parts.map((part: any, idx: number) => {
       if (part.type === 'tool-result') {
         try {
@@ -609,6 +785,67 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         }
       }
       if (part.type === 'text') {
+        // User message styling
+        if (isUser) {
+          return (
+            <div key={idx} className="leading-relaxed font-medium">
+              {part.text}
+            </div>
+          );
+        }
+
+        // If we have detected tours/destinations, show a simplified version of the text
+        if (hideDetails) {
+          const lines = part.text.split('\n');
+          const introLines = [];
+          let foundTourContent = false;
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+
+            if (
+              /^(?:Luxor|Cairo|Aswan|Alexandria|Hurghada|Sharm El Sheikh|Makadi Bay|From):/i.test(trimmed) ||
+              /^(\d+[\.\)]\s*|^\d+\s*$)/.test(trimmed) ||
+              /^(?:Duration|Highlights?|Why you'?ll love it|Price|From|Perfect for):/i.test(trimmed) ||
+              /\(\$\d+\)/.test(trimmed) ||
+              /^\*\*[A-Z]/.test(trimmed) ||
+              /^[A-Z][a-zA-Z\s]{10,}(?:Tour|Day|Trip|Experience|Adventure)/.test(trimmed) ||
+              /^[•\-\*]\s*(?:Price|Duration|Highlights|Perfect)/i.test(trimmed)
+            ) {
+              foundTourContent = true;
+              break;
+            }
+
+            introLines.push(line);
+          }
+
+          const introText = introLines.join('\n').trim();
+
+          if (foundTourContent && (!introText || introText.length < 20)) {
+            return (
+              <div key={idx} className="text-gray-800 text-sm leading-relaxed">
+                {hasDetectedTours ? 'Here are some tours I found for you:' : 'Here are some destinations I found for you:'}
+              </div>
+            );
+          }
+
+          if (introText && introText.length >= 20) {
+            return (
+              <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                  {introText}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+
+          return (
+            <div key={idx} className="text-gray-800 text-sm leading-relaxed">
+              {hasDetectedTours ? 'Here are some tours I found for you:' : 'Here are some destinations I found for you:'}
+            </div>
+          );
+        }
+
         return (
         <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -618,14 +855,8 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         );
       }
       return null;
-    }).concat(
-      messageId && detectedToursByMessage[messageId] ? (
-        <div key={`tours-${messageId}`} className="my-3">
-          <TourSlider tours={detectedToursByMessage[messageId]} onHitClick={handleCloseDropdown} />
-        </div>
-      ) : null
-    ).filter(Boolean);
-  }, [renderToolOutput, detectedToursByMessage, handleCloseDropdown]);
+    }).filter(Boolean);
+  }, [renderToolOutput, detectedToursByMessage, detectedDestinationsByMessage, handleCloseDropdown]);
 
   return (
     <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0" ref={containerRef}>
@@ -810,12 +1041,27 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       </>
                     )}
                   </div>
-                  <button
-                    onClick={handleCloseDropdown}
-                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
-                  >
-                    <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {chatMode && messages.length > 0 && (
+                      <motion.button
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={handleClearChat}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all duration-200 bg-white/80 border border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span className="hidden sm:inline">New Chat</span>
+                      </motion.button>
+                    )}
+                    <button
+                      onClick={handleCloseDropdown}
+                      className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
+                    >
+                      <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -828,17 +1074,46 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                         <p className="text-gray-500 text-sm">Ask me anything about this destination!</p>
                       </div>
                     ) : (
-                      messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3' : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200'}`}>
-                            {msg.role === 'user' ? (
-                              <p className="text-sm leading-relaxed">{msg.content}</p>
-                            ) : (
-                              renderContent(msg.parts, msg.id)
+                      messages.map((msg, idx) => {
+                        const messageTours = detectedToursByMessage[msg.id] || [];
+                        const messageDestinations = detectedDestinationsByMessage[msg.id] || [];
+                        const hasDetectedTours = messageTours.length > 0;
+                        const hasDetectedDestinations = messageDestinations.length > 0;
+                        const hasDetectedContent = hasDetectedTours || hasDetectedDestinations;
+                        const isUser = msg.role === 'user';
+                        const isLastAssistantMessage = msg.role === 'assistant' && idx === messages.length - 1;
+                        const isStreaming = isLastAssistantMessage && isGenerating;
+
+                        return (
+                          <div key={msg.id}>
+                            <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[85%] ${isUser ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3' : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200'}`}>
+                                {isUser ? (
+                                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                                ) : (
+                                  renderContent(msg.parts, msg.id, hasDetectedContent, isUser)
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Show detected tours or destinations for this message (only when not streaming) */}
+                            {!isStreaming && (
+                              <>
+                                {hasDetectedTours && (
+                                  <div className="mt-3 mb-2">
+                                    <TourSlider tours={messageTours} onHitClick={handleCloseDropdown} />
+                                  </div>
+                                )}
+                                {hasDetectedDestinations && (
+                                  <div className="mt-3 mb-2">
+                                    <DestinationSlider destinations={messageDestinations} />
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                     {isGenerating && (
                       <div className="flex justify-start">

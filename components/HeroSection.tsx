@@ -651,6 +651,126 @@ const TourSlider = ({ tours }: { tours: any[] }) => {
   );
 };
 
+// Destination Slider Component for AI Chat
+const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  const scroll = useCallback((direction: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const scrollAmount = 280;
+    sliderRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  }, []);
+
+  const checkScrollPosition = useCallback(() => {
+    if (!sliderRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+    setShowLeftArrow(scrollLeft > 10);
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+  }, []);
+
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (slider) {
+      slider.addEventListener('scroll', checkScrollPosition);
+      checkScrollPosition();
+      return () => slider.removeEventListener('scroll', checkScrollPosition);
+    }
+  }, [destinations.length, checkScrollPosition]);
+
+  return (
+    <div className="relative w-full my-3">
+      {destinations.length > 1 && (
+        <>
+          <AnimatePresence>
+            {showLeftArrow && (
+              <motion.button
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                onClick={() => scroll('left')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-xl flex items-center justify-center hover:bg-white transition-all border border-gray-100"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {showRightArrow && (
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                onClick={() => scroll('right')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-xl flex items-center justify-center hover:bg-white transition-all border border-gray-100"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+      <div
+        ref={sliderRef}
+        className="flex gap-3.5 overflow-x-auto scrollbar-hide scroll-smooth py-2 px-1"
+      >
+        {destinations.map((destination, idx) => (
+          <a
+            key={idx}
+            href={`/destinations/${destination.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group block flex-shrink-0 w-[280px] bg-white rounded-2xl overflow-hidden border-2 border-gray-100 shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300"
+          >
+            {destination.image && (
+              <div className="relative h-40 bg-gradient-to-br from-emerald-100 to-teal-100 overflow-hidden">
+                <img
+                  src={destination.image}
+                  alt={destination.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+                {destination.isFeatured && (
+                  <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
+                    <Star className="w-3 h-3 fill-current" />
+                    Featured
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="p-4">
+              <h3 className="font-bold text-base mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors leading-tight">
+                {destination.name}
+              </h3>
+              {destination.description && (
+                <p className="text-gray-500 text-xs mb-3 line-clamp-2 leading-relaxed">
+                  {destination.description}
+                </p>
+              )}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 text-gray-500 text-xs">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
+                  <span className="font-medium">{destination.tourCount || 0} tours</span>
+                </div>
+                <span className="text-emerald-600 text-xs font-semibold group-hover:translate-x-1 transition-transform">
+                  Explore →
+                </span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // --- Reusable Components ---
 const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const [query, setQuery] = useState(''); // Unified input for both search and chat
@@ -752,6 +872,18 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
   const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, any[]>>({});
 
+  // Clear chat function
+  const handleClearChat = () => {
+    setDetectedToursByMessage({});
+    setDetectedDestinationsByMessage({});
+    sendMessage({ text: '' }); // Reset chat messages
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = 0;
+      }
+    }, 100);
+  };
+
   // Parse tour information from text and fetch from Algolia
   const detectAndFetchTours = useCallback(async (text: string) => {
     try {
@@ -840,6 +972,71 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     return [];
   }, []);
 
+  // Parse destination information from text and fetch from Algolia
+  const detectAndFetchDestinations = useCallback(async (text: string) => {
+    try {
+      const destinationNames = new Map<string, boolean>();
+
+      // Common Egypt destinations to look for
+      const egyptDestinations = ['Cairo', 'Luxor', 'Aswan', 'Alexandria', 'Hurghada', 'Sharm El Sheikh', 'Dahab', 'Makadi Bay', 'Marsa Alam', 'El Gouna'];
+
+      for (const dest of egyptDestinations) {
+        const patterns = [
+          new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*)?${dest}:`, 'im'),
+          new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*\\n)?\\s*${dest}\\s*(?:\\n|$)`, 'im'),
+          new RegExp(`\\*\\*${dest}\\*\\*`, 'im')
+        ];
+
+        if (patterns.some(pattern => pattern.test(text))) {
+          destinationNames.set(dest, true);
+        }
+      }
+
+      if (destinationNames.size > 0) {
+        const destsArray = Array.from(destinationNames.keys()).slice(0, 4);
+        const searchPromises = destsArray.map(async (destName) => {
+          try {
+            const response = await searchClient.search([{
+              indexName: INDEX_DESTINATIONS,
+              params: {
+                query: destName,
+                hitsPerPage: 1,
+              }
+            }]);
+            const firstResult = response.results[0] as any;
+            return firstResult?.hits?.[0];
+          } catch (error) {
+            console.error('Error searching for destination:', destName, error);
+            return null;
+          }
+        });
+
+        const destinations = (await Promise.all(searchPromises)).filter(Boolean);
+        if (destinations.length > 0) {
+          const uniqueDestinations = destinations.reduce((acc: any[], dest: any) => {
+            const destId = dest.slug || dest.objectID;
+            if (!acc.find(d => (d.slug || d.objectID) === destId)) {
+              acc.push(dest);
+            }
+            return acc;
+          }, []);
+
+          return uniqueDestinations.map((dest: any) => ({
+            slug: dest.slug || dest.objectID,
+            name: dest.name || 'Untitled Destination',
+            image: dest.image || dest.images?.[0] || dest.primaryImage,
+            description: dest.description,
+            tourCount: dest.tourCount || 0,
+            isFeatured: dest.isFeatured,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting destinations:', error);
+    }
+    return [];
+  }, []);
+
   // Render tool outputs (tours) - enhanced version
   const renderToolOutput = useCallback((obj: any) => {
     if (Array.isArray(obj)) {
@@ -858,7 +1055,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     );
   }, []);
 
-  // Detect tours in messages
+  // Detect tours and destinations in messages
   useEffect(() => {
     if (isGenerating) return;
     const lastMessage = messages[messages.length - 1];
@@ -869,17 +1066,33 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
 
     if (lastMessage.role === 'assistant') {
       const messageId = lastMessage.id;
-      if (detectedToursByMessage[messageId]) {
+      if (detectedToursByMessage[messageId] || detectedDestinationsByMessage[messageId]) {
         return;
       }
 
       const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
       const fullText = textParts.map((p: any) => p.text).join(' ');
 
+      // Detect if it's a destination-focused response (no prices, mentions destinations)
+      const hasDestinationPattern = /destination/i.test(fullText) &&
+                                    !(/\$\d+/i.test(fullText)) &&
+                                    (/(?:^|\n)\s*(?:\d+\.\s*)?\s*(?:Cairo|Luxor|Aswan|Alexandria|Hurghada|Sharm|Dahab)/im.test(fullText) ||
+                                     /\*\*(?:Cairo|Luxor|Aswan|Alexandria|Hurghada|Sharm|Dahab)\*\*/i.test(fullText));
+
+      // Detect if it's a tour-focused response (has prices)
       const hasTourPattern = /\$\d+/i.test(fullText) ||
                             (/tour/i.test(fullText) && /\(\$\d+\)/i.test(fullText));
 
-      if (hasTourPattern) {
+      if (hasDestinationPattern) {
+        detectAndFetchDestinations(fullText).then(destinations => {
+          if (destinations.length > 0) {
+            setDetectedDestinationsByMessage(prev => ({
+              ...prev,
+              [messageId]: destinations
+            }));
+          }
+        });
+      } else if (hasTourPattern) {
         detectAndFetchTours(fullText).then(tours => {
           if (tours.length > 0) {
             setDetectedToursByMessage(prev => ({
@@ -890,10 +1103,13 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         });
       }
     }
-  }, [messages, isGenerating, detectAndFetchTours, detectedToursByMessage]);
+  }, [messages, isGenerating, detectAndFetchTours, detectAndFetchDestinations, detectedToursByMessage, detectedDestinationsByMessage]);
 
-  // Render message content - enhanced version
-  const renderContent = useCallback((parts: any[], messageId?: string) => {
+  // Render message content - enhanced version with hide details option
+  const renderContent = useCallback((parts: any[], messageId?: string, hideDetails: boolean = false, isUser: boolean = false) => {
+    const hasDetectedTours = messageId && detectedToursByMessage[messageId];
+    const hasDetectedDestinations = messageId && detectedDestinationsByMessage[messageId];
+
     return parts.map((p: any, idx: number) => {
       if (p.type === 'tool-result') {
         try {
@@ -904,6 +1120,68 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         }
       }
       if (p.type === 'text') {
+        // User message styling
+        if (isUser) {
+          return (
+            <div key={idx} className="leading-relaxed font-medium">
+              {p.text}
+            </div>
+          );
+        }
+
+        // If we have detected tours/destinations, show a simplified version of the text
+        if (hideDetails) {
+          const lines = p.text.split('\n');
+          const introLines = [];
+          let foundTourContent = false;
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+
+            // Stop when we hit tour-related content
+            if (
+              /^(?:Luxor|Cairo|Aswan|Alexandria|Hurghada|Sharm El Sheikh|Makadi Bay|From):/i.test(trimmed) ||
+              /^(\d+[\.\)]\s*|^\d+\s*$)/.test(trimmed) ||
+              /^(?:Duration|Highlights?|Why you'?ll love it|Price|From|Perfect for):/i.test(trimmed) ||
+              /\(\$\d+\)/.test(trimmed) ||
+              /^\*\*[A-Z]/.test(trimmed) ||
+              /^[A-Z][a-zA-Z\s]{10,}(?:Tour|Day|Trip|Experience|Adventure)/.test(trimmed) ||
+              /^[•\-\*]\s*(?:Price|Duration|Highlights|Perfect)/i.test(trimmed)
+            ) {
+              foundTourContent = true;
+              break;
+            }
+
+            introLines.push(line);
+          }
+
+          const introText = introLines.join('\n').trim();
+
+          if (foundTourContent && (!introText || introText.length < 20)) {
+            return (
+              <div key={idx} className="text-gray-800 text-sm sm:text-base leading-relaxed">
+                {hasDetectedTours ? 'Here are some tours I found for you:' : 'Here are some destinations I found for you:'}
+              </div>
+            );
+          }
+
+          if (introText && introText.length >= 20) {
+            return (
+              <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                  {introText}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+
+          return (
+            <div key={idx} className="text-gray-800 text-sm sm:text-base leading-relaxed">
+              {hasDetectedTours ? 'Here are some tours I found for you:' : 'Here are some destinations I found for you:'}
+            </div>
+          );
+        }
+
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -913,15 +1191,8 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         );
       }
       return null;
-    }).concat(
-      // Add detected tours after the message content
-      messageId && detectedToursByMessage[messageId] ? (
-        <div key={`tours-${messageId}`} className="my-3">
-          <TourSlider tours={detectedToursByMessage[messageId]} />
-        </div>
-      ) : null
-    ).filter(Boolean);
-  }, [renderToolOutput, detectedToursByMessage]);
+    }).filter(Boolean);
+  }, [renderToolOutput, detectedToursByMessage, detectedDestinationsByMessage]);
 
   return (
     <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start pointer-events-auto" ref={containerRef} style={{ position: 'relative', zIndex: 1000 }}>
@@ -1177,18 +1448,33 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       </motion.div>
                     )}
                   </div>
-                  <motion.button
-                    onClick={() => {
-                      setIsExpanded(false);
-                      setChatMode(false);
-                      setQuery('');
-                    }}
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2.5 rounded-xl hover:bg-gray-100 hover:shadow-lg group"
-                  >
-                    <X className="w-4 h-4 transition-transform duration-300" strokeWidth={2.5} />
-                  </motion.button>
+                  <div className="flex items-center gap-2">
+                    {chatMode && messages.length > 0 && (
+                      <motion.button
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={handleClearChat}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 bg-white/80 border-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md"
+                      >
+                        <Sparkles className="w-3 h-3" strokeWidth={2.5} />
+                        <span>New Chat</span>
+                      </motion.button>
+                    )}
+                    <motion.button
+                      onClick={() => {
+                        setIsExpanded(false);
+                        setChatMode(false);
+                        setQuery('');
+                      }}
+                      whileHover={{ scale: 1.1, rotate: 90 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2.5 rounded-xl hover:bg-gray-100 hover:shadow-lg group"
+                    >
+                      <X className="w-4 h-4 transition-transform duration-300" strokeWidth={2.5} />
+                    </motion.button>
+                  </div>
                 </div>
               </div>
 
@@ -1252,31 +1538,55 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       </motion.div>
                     )}
 
-                    {messages.map((m, idx) => (
-                      <motion.div
-                        key={m.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[88%] px-4 py-3 rounded-2xl text-sm sm:text-[15px] ${
-                            m.role === 'user'
-                              ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20'
-                              : 'bg-white text-gray-800 border-2 border-gray-100 shadow-md'
-                          }`}
-                        >
-                          {m.role === 'user' ? (
-                            <p className="leading-relaxed font-medium">{renderContent(m.parts, m.id)}</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {renderContent(m.parts, m.id)}
+                    {messages.map((m, idx) => {
+                      const messageTours = detectedToursByMessage[m.id] || [];
+                      const messageDestinations = detectedDestinationsByMessage[m.id] || [];
+                      const hasDetectedTours = messageTours.length > 0;
+                      const hasDetectedDestinations = messageDestinations.length > 0;
+                      const hasDetectedContent = hasDetectedTours || hasDetectedDestinations;
+                      const isUser = m.role === 'user';
+                      const isLastAssistantMessage = m.role === 'assistant' && idx === messages.length - 1;
+                      const isStreaming = isLastAssistantMessage && isGenerating;
+
+                      return (
+                        <div key={m.id}>
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[88%] px-4 py-3 rounded-2xl text-sm sm:text-[15px] ${
+                                isUser
+                                  ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                  : 'bg-white text-gray-800 border-2 border-gray-100 shadow-md'
+                              }`}
+                            >
+                              <div className="space-y-2">
+                                {renderContent(m.parts, m.id, hasDetectedContent, isUser)}
+                              </div>
                             </div>
+                          </motion.div>
+                          
+                          {/* Show detected tours or destinations for this message (only when not streaming) */}
+                          {!isStreaming && (
+                            <>
+                              {hasDetectedTours && (
+                                <div className="mt-3 mb-2">
+                                  <TourSlider tours={messageTours} />
+                                </div>
+                              )}
+                              {hasDetectedDestinations && (
+                                <div className="mt-3 mb-2">
+                                  <DestinationSlider destinations={messageDestinations} />
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
-                      </motion.div>
-                    ))}
+                      );
+                    })}
 
                     {isGenerating && (
                       <motion.div 
