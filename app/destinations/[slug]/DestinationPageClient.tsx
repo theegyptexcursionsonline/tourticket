@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
     ArrowRight, Star, Tag, Clock, Users, ChevronLeft, ChevronRight,
     ShoppingCart, Award, MapPin, CheckCircle2,
@@ -1342,7 +1343,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
   };
 
   return (
-    <a href={`/tour/${tour.slug}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
+    <Link href={`/tour/${tour.slug}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
       <span className="hidden sm:block text-3xl md:text-4xl font-extrabold text-slate-200 group-hover:text-red-500 transition-colors duration-200">{index + 1}.</span>
       <div className="relative w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 flex-shrink-0 rounded-md overflow-hidden">
         <Image src={tour.image} alt={tour.title} fill className="object-cover" />
@@ -1371,16 +1372,16 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
         </button>
         <ArrowRight className="text-slate-400 group-hover:text-red-500 transition-colors duration-200 w-5 h-5" />
       </div>
-    </a>
+    </Link>
   );
 };
 
 const InterestCard = ({ category, tourCount }: { category: Category, tourCount: number }) => (
-  <a href={`/categories/${category.slug}`} className="flex flex-col items-center p-4 sm:p-6 bg-white shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 rounded-lg">
+  <Link href={`/categories/${category.slug}`} className="flex flex-col items-center p-4 sm:p-6 bg-white shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 rounded-lg">
     <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">{category.icon}</div>
     <h3 className="text-sm sm:text-base font-bold text-slate-900 uppercase text-center">{category.name}</h3>
     <p className="text-xs sm:text-sm text-slate-500">{tourCount} tours</p>
-  </a>
+  </Link>
 );
 
 const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClick: (tour: Tour) => void }) => {
@@ -1393,7 +1394,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
   };
 
   return (
-    <a href={`/tour/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
+    <Link href={`/tour/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
       <div className="relative">
         <Image src={tour.image} alt={tour.title} width={320} height={180} className="w-full h-36 sm:h-40 object-cover" />
         <button
@@ -1420,7 +1421,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
           <span className="text-lg sm:text-xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
         </div>
       </div>
-    </a>
+    </Link>
   );
 };
 
@@ -1514,10 +1515,10 @@ const AboutUsSection = ({ destination }: { destination: Destination }) => {
             <p className="text-base sm:text-lg text-slate-600 mb-4 sm:mb-6">
               {destination.longDescription || `Discover the best of ${destination.name} with our expert local guides. We'll show you hidden gems, share fascinating stories, and create unforgettable memories that will last a lifetime.`}
             </p>
-            <a href="/about" className="inline-flex items-center gap-2 text-red-600 font-bold hover:text-red-700 transition-colors text-sm sm:text-base">
+            <Link href="/about" className="inline-flex items-center gap-2 text-red-600 font-bold hover:text-red-700 transition-colors text-sm sm:text-base">
               <span>Learn more about us</span>
               <ArrowRight size={18} className="sm:w-5 sm:h-5" />
-            </a>
+            </Link>
           </div>
           <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
             <div className="bg-slate-50 p-6 sm:p-8 shadow-sm hover:shadow-xl transition-shadow duration-300 rounded-lg">
