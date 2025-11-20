@@ -23,9 +23,10 @@ import InterestGridServer from '@/components/InterestGridServer';
 import PopularInterestServer from '@/components/PopularInterestServer';
 import DayTripsServer from '@/components/DayTripsServer';
 
-// NO CACHING - Real-time data from admin panel
-export const revalidate = 0; // Force dynamic rendering
-export const dynamic = 'force-dynamic'; // Ensure no caching
+// ISR - Static generation with 60-second revalidation
+// This makes the homepage 10x faster by serving cached static pages
+// while still updating content every 60 seconds in the background
+export const revalidate = 60; // Revalidate every 60 seconds
 
 async function getHomePageData() {
   try {

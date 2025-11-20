@@ -1,6 +1,7 @@
 // app/page.tsx
-// Using optimized server-side rendering with ISR (60s revalidation)
-// This makes the homepage 10x faster by pre-rendering with cached data
+// Using ISR (Incremental Static Regeneration) with 60-second revalidation
+// Benefits: Lightning-fast page loads + Fresh content every 60 seconds
+// The page is statically generated and cached, then revalidated in the background
 
 import { Metadata } from 'next';
 
