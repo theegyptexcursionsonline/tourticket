@@ -6,8 +6,10 @@ import User from '@/lib/models/user';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[ACCEPT-INVITATION] Step 1: Connecting to database...');
     await dbConnect();
 
+    console.log('[ACCEPT-INVITATION] Step 2: Parsing request body...');
     const body = await request.json();
     const { token, password } = body;
 
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('[ACCEPT-INVITATION] Step 3: Finding user by token...');
     // Find user with this invitation token
     const user = await User.findOne({
       invitationToken: token,
@@ -32,6 +35,7 @@ export async function POST(request: NextRequest) {
     }).select('+invitationToken +invitationExpires +password');
 
     if (!user) {
+      console.log('[ACCEPT-INVITATION] User not found or token expired');
       return NextResponse.json(
         {
           success: false,
@@ -41,18 +45,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('[ACCEPT-INVITATION] Step 4: User found:', user.email);
+    console.log('[ACCEPT-INVITATION] Current isActive:', user.isActive);
+    console.log('[ACCEPT-INVITATION] Current role:', user.role);
+    console.log('[ACCEPT-INVITATION] Has password:', !!user.password);
+
     // Hash the new password
+    console.log('[ACCEPT-INVITATION] Step 5: Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Update user: set password, activate account, clear invitation token
+    console.log('[ACCEPT-INVITATION] Step 6: Updating user fields...');
     user.password = hashedPassword;
     user.isActive = true;
     user.invitationToken = undefined;
     user.invitationExpires = undefined;
     user.requirePasswordChange = false;
     
+    console.log('[ACCEPT-INVITATION] Step 7: Saving user...');
+    console.log('[ACCEPT-INVITATION] About to save - isActive:', user.isActive, 'role:', user.role);
     // Bypass validation since we're just updating password and flags
     await user.save({ validateBeforeSave: false });
+    
+    console.log('[ACCEPT-INVITATION] Step 8: User saved successfully');
+    console.log('[ACCEPT-INVITATION] Final isActive:', user.isActive);
 
     return NextResponse.json({
       success: true,
@@ -60,7 +76,8 @@ export async function POST(request: NextRequest) {
       email: user.email,
     });
   } catch (error) {
-    console.error('Error accepting invitation:', error);
+    console.error('[ACCEPT-INVITATION] Error accepting invitation:', error);
+    console.error('[ACCEPT-INVITATION] Error details:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       {
         success: false,
