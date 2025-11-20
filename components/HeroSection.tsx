@@ -107,17 +107,35 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
   const { hits } = useHits();
   const limitedHits = hits.slice(0, limit);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
 
-  if (limitedHits.length === 0) return null;
-
-  const scroll = (direction: 'left' | 'right') => {
+  const scroll = useCallback((direction: 'left' | 'right') => {
     if (!sliderRef.current) return;
-    const scrollAmount = 260;
+    const scrollAmount = 280;
     sliderRef.current.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth',
     });
-  };
+  }, []);
+
+  const checkScrollPosition = useCallback(() => {
+    if (!sliderRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+    setShowLeftArrow(scrollLeft > 10);
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+  }, []);
+
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (slider && limitedHits.length > 0) {
+      slider.addEventListener('scroll', checkScrollPosition);
+      checkScrollPosition();
+      return () => slider.removeEventListener('scroll', checkScrollPosition);
+    }
+  }, [limitedHits.length, checkScrollPosition]);
+
+  if (limitedHits.length === 0) return null;
 
   // Transform hits to tour objects
   const tours = limitedHits.map((hit: any) => ({
@@ -135,118 +153,154 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
   }));
 
   return (
-    <div>
-      <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 backdrop-blur-xl border-b border-blue-200/30">
-        <div className="flex items-center gap-2 md:gap-2.5">
-          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <MapPin className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="px-5 md:px-6 py-3.5 md:py-4 bg-white/15 backdrop-blur-lg border-b border-white/20">
+        <div className="flex items-center gap-2.5 md:gap-3">
+          <div className="w-6 md:w-7 h-6 md:h-7 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/30">
+            <MapPin className="w-3.5 md:w-4 h-3.5 md:h-4 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs md:text-sm font-bold text-gray-900 tracking-wide uppercase">
-            Tours
-          </span>
-          <span className="ml-auto text-[10px] md:text-xs font-semibold text-blue-700 bg-blue-100/90 backdrop-blur-sm px-2.5 md:px-3 py-0.5 md:py-1 rounded-full border border-blue-200/50">
-            {hits.length}
+          <div>
+            <span className="text-xs md:text-sm font-bold text-gray-900 tracking-tight block drop-shadow-sm">
+              Tours & Experiences
+            </span>
+            <span className="text-[10px] text-gray-600 font-medium drop-shadow-sm">
+              Hand-picked for you
+            </span>
+          </div>
+          <span className="ml-auto text-[10px] md:text-xs font-bold text-blue-700 bg-white/50 backdrop-blur-md px-3 md:px-3.5 py-1 md:py-1.5 rounded-full border border-white/40 shadow-sm">
+            {hits.length} found
           </span>
         </div>
       </div>
 
-      <div className="px-4 md:px-6 py-4">
+      <div className="px-4 md:px-6 py-5">
         <div className="relative w-full">
           {tours.length > 1 && (
             <>
-              <button
-                onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all hover:scale-110"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <AnimatePresence>
+                {showLeftArrow && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    onClick={() => scroll('left')}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-xl flex items-center justify-center hover:bg-white transition-all hover:scale-110 active:scale-95 border border-gray-100"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {showRightArrow && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    onClick={() => scroll('right')}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-xl flex items-center justify-center hover:bg-white transition-all hover:scale-110 active:scale-95 border border-gray-100"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </>
           )}
           <div
             ref={sliderRef}
-            className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+            className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
           >
             {tours.map((tour, idx) => (
-              <a
+              <motion.a
                 key={limitedHits[idx].objectID}
                 href={`/${tour.slug}`}
                 onClick={onHitClick}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block flex-shrink-0 w-[260px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.05 }}
+                whileHover={{ y: -6, scale: 1.02 }}
+                className="group block flex-shrink-0 w-[270px] bg-white text-gray-900 rounded-2xl overflow-hidden border-2 border-gray-100 shadow-lg hover:shadow-2xl hover:border-blue-200 transition-all duration-300"
               >
                 {tour.image && (
-                  <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+                  <div className="relative h-40 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-hidden">
                     <img
                       src={tour.image}
                       alt={tour.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     {tour.isFeatured && (
-                      <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
-                        <Star className="w-2.5 h-2.5 fill-current" />
+                      <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg"
+                      >
+                        <Star className="w-3 h-3 fill-current" strokeWidth={2} />
                         Featured
-                      </div>
+                      </motion.div>
                     )}
                     {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice && (
-                      <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md">
-                        -{Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)}%
-                      </div>
+                      <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg"
+                      >
+                        -{Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)}% OFF
+                      </motion.div>
                     )}
                     {tour.duration && (
-                      <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-medium flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
+                      <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md text-white px-2.5 py-1.5 rounded-xl text-[10px] font-semibold flex items-center gap-1.5 shadow-lg">
+                        <Clock className="w-3 h-3" strokeWidth={2.5} />
                         {tour.duration}
                       </div>
                     )}
                   </div>
                 )}
-                <div className="p-3">
-                  <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                <div className="p-4">
+                  <h3 className="font-bold text-sm mb-2.5 line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug min-h-[40px]">
                     {tour.title}
                   </h3>
                   {tour.location && (
-                    <div className="flex items-center gap-1 text-gray-500 text-[11px] mb-2">
-                      <MapPin className="w-3 h-3 text-blue-500" />
-                      <span className="line-clamp-1">{tour.location}</span>
+                    <div className="flex items-center gap-1.5 text-gray-500 text-[11px] mb-3">
+                      <MapPin className="w-3.5 h-3.5 text-blue-500" strokeWidth={2} />
+                      <span className="line-clamp-1 font-medium">{tour.location}</span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between pt-3 border-t-2 border-gray-50">
                     <div className="flex items-center gap-1.5">
                       {tour.rating && (
-                        <div className="flex items-center gap-0.5">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-[11px] font-medium">{tour.rating}</span>
+                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                          <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" strokeWidth={2} />
+                          <span className="text-[11px] font-bold text-gray-900">{tour.rating}</span>
                           {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
                         </div>
                       )}
                     </div>
                     {tour.price && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-col items-end">
                         {tour.originalPrice && tour.discountPrice && tour.discountPrice < tour.originalPrice ? (
                           <>
-                            <span className="text-gray-400 text-[10px] line-through">${tour.originalPrice}</span>
-                            <span className="text-blue-600 font-bold text-base">${tour.discountPrice}</span>
+                            <span className="text-gray-400 text-[10px] line-through font-medium">${tour.originalPrice}</span>
+                            <span className="text-blue-600 font-black text-lg leading-none">${tour.discountPrice}</span>
                           </>
                         ) : (
-                          <span className="text-blue-600 font-bold text-base">${tour.price}</span>
+                          <span className="text-blue-600 font-black text-lg">${tour.price}</span>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
-              </a>
+              </motion.a>
             ))}
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -257,51 +311,70 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
   if (limitedHits.length === 0) return null;
 
   return (
-    <div>
-      <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-xl border-b border-emerald-200/30">
-        <div className="flex items-center gap-2 md:gap-2.5">
-          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-            <Compass className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.1 }}
+    >
+      <div className="px-5 md:px-6 py-3.5 md:py-4 bg-white/15 backdrop-blur-lg border-b border-white/20">
+        <div className="flex items-center gap-2.5 md:gap-3">
+          <div className="w-6 md:w-7 h-6 md:h-7 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 ring-1 ring-white/30">
+            <Compass className="w-3.5 md:w-4 h-3.5 md:h-4 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs md:text-sm font-bold text-gray-900 tracking-wide uppercase">
-            Destinations
-          </span>
-          <span className="ml-auto text-[10px] md:text-xs font-semibold text-emerald-700 bg-emerald-100/90 backdrop-blur-sm px-2.5 md:px-3 py-0.5 md:py-1 rounded-full border border-emerald-200/50">
-            {hits.length}
+          <div>
+            <span className="text-xs md:text-sm font-bold text-gray-900 tracking-tight block drop-shadow-sm">
+              Destinations
+            </span>
+            <span className="text-[10px] text-gray-600 font-medium drop-shadow-sm">
+              Explore new places
+            </span>
+          </div>
+          <span className="ml-auto text-[10px] md:text-xs font-bold text-emerald-700 bg-white/50 backdrop-blur-md px-3 md:px-3.5 py-1 md:py-1.5 rounded-full border border-white/40 shadow-sm">
+            {hits.length} found
           </span>
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
-        <a
+        <motion.a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.05 }}
+          whileHover={{ x: 4, backgroundColor: 'rgba(16, 185, 129, 0.03)' }}
+          className="block px-4 md:px-6 py-4 md:py-4.5 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-gray-50 last:border-0 group relative overflow-hidden"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
-          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
-            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
-              <Compass className="w-6 md:w-7 h-6 md:h-7 text-emerald-600" strokeWidth={2.5} />
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/8 group-hover:via-teal-500/8 group-hover:to-cyan-500/8 transition-all duration-500" />
+          <div className="flex items-center gap-3 md:gap-4 relative z-10">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="w-14 md:w-16 h-14 md:h-16 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-xl transition-all duration-300 border-2 border-emerald-100/50"
+            >
+              <Compass className="w-7 md:w-8 h-7 md:h-8 text-emerald-600" strokeWidth={2.5} />
+            </motion.div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-emerald-600 transition-colors duration-300">
+              <div className="font-bold text-gray-900 text-sm md:text-base leading-snug mb-1.5 truncate group-hover:text-emerald-600 transition-colors duration-300">
                 {hit.name || 'Untitled Destination'}
               </div>
-              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                 {hit.country && (
-                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.country}</span>
+                  <span className="bg-gray-100 backdrop-blur-sm px-2.5 py-1 rounded-lg font-semibold text-gray-700">
+                    {hit.country}
+                  </span>
                 )}
                 {hit.tourCount && (
-                  <span className="bg-emerald-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-emerald-700">
+                  <span className="bg-emerald-100 backdrop-blur-sm px-2.5 py-1 rounded-lg font-semibold text-emerald-700">
                     {hit.tourCount} tours
                   </span>
                 )}
               </div>
             </div>
+            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all duration-300" strokeWidth={2.5} />
           </div>
-        </a>
+        </motion.a>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -312,48 +385,65 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
   if (limitedHits.length === 0) return null;
 
   return (
-    <div>
-      <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-purple-500/10 via-fuchsia-500/10 to-pink-500/10 backdrop-blur-xl border-b border-purple-200/30">
-        <div className="flex items-center gap-2 md:gap-2.5">
-          <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
-            <Tag className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.2 }}
+    >
+      <div className="px-5 md:px-6 py-3.5 md:py-4 bg-white/15 backdrop-blur-lg border-b border-white/20">
+        <div className="flex items-center gap-2.5 md:gap-3">
+          <div className="w-6 md:w-7 h-6 md:h-7 rounded-xl bg-gradient-to-br from-purple-500 via-fuchsia-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/30 ring-1 ring-white/30">
+            <Tag className="w-3.5 md:w-4 h-3.5 md:h-4 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-xs md:text-sm font-bold text-gray-900 tracking-wide uppercase">
-            Categories
-          </span>
-          <span className="ml-auto text-[10px] md:text-xs font-semibold text-purple-700 bg-purple-100/90 backdrop-blur-sm px-2.5 md:px-3 py-0.5 md:py-1 rounded-full border border-purple-200/50">
-            {hits.length}
+          <div>
+            <span className="text-xs md:text-sm font-bold text-gray-900 tracking-tight block drop-shadow-sm">
+              Categories
+            </span>
+            <span className="text-[10px] text-gray-600 font-medium drop-shadow-sm">
+              Browse by interest
+            </span>
+          </div>
+          <span className="ml-auto text-[10px] md:text-xs font-bold text-purple-700 bg-white/50 backdrop-blur-md px-3 md:px-3.5 py-1 md:py-1.5 rounded-full border border-white/40 shadow-sm">
+            {hits.length} found
           </span>
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
-        <a
+        <motion.a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.05 }}
+          whileHover={{ x: 4, backgroundColor: 'rgba(168, 85, 247, 0.03)' }}
+          className="block px-4 md:px-6 py-4 md:py-4.5 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-gray-50 last:border-0 group relative overflow-hidden"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-fuchsia-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
-          <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
-            <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
-              <Tag className="w-6 md:w-7 h-6 md:h-7 text-purple-600" strokeWidth={2.5} />
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/8 group-hover:via-fuchsia-500/8 group-hover:to-pink-500/8 transition-all duration-500" />
+          <div className="flex items-center gap-3 md:gap-4 relative z-10">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="w-14 md:w-16 h-14 md:h-16 rounded-2xl bg-gradient-to-br from-purple-50 via-fuchsia-50 to-pink-50 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-xl transition-all duration-300 border-2 border-purple-100/50"
+            >
+              <Tag className="w-7 md:w-8 h-7 md:h-8 text-purple-600" strokeWidth={2.5} />
+            </motion.div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-purple-600 transition-colors duration-300">
+              <div className="font-bold text-gray-900 text-sm md:text-base leading-snug mb-1.5 truncate group-hover:text-purple-600 transition-colors duration-300">
                 {hit.name || 'Untitled Category'}
               </div>
-              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+              <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                 {hit.tourCount && (
-                  <span className="bg-purple-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-purple-700">
+                  <span className="bg-purple-100 backdrop-blur-sm px-2.5 py-1 rounded-lg font-semibold text-purple-700">
                     {hit.tourCount} tours
                   </span>
                 )}
               </div>
             </div>
+            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all duration-300" strokeWidth={2.5} />
           </div>
-        </a>
+        </motion.a>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -422,89 +512,136 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
-// --- AI Chat Components ---
+// --- Enhanced AI Chat Components ---
 const TourCard = ({ tour }: { tour: any }) => (
   <motion.a
     href={`/tours/${tour.slug}`}
     target="_blank"
     rel="noopener noreferrer"
-    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-    whileHover={{ y: -4 }}
+    className="group block flex-shrink-0 w-[260px] bg-white rounded-2xl overflow-hidden border-2 border-gray-100 shadow-md hover:shadow-2xl hover:border-blue-200 transition-all duration-300"
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    whileHover={{ y: -6, scale: 1.02 }}
   >
     {tour.image && (
-      <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
+      <div className="relative h-36 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-hidden">
         <img
           src={tour.image}
           alt={tour.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         {tour.duration && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
+          <div className="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-md text-white px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-lg flex items-center gap-1">
+            <Clock className="w-3 h-3" strokeWidth={2.5} />
             {tour.duration}
+          </div>
+        )}
+        {tour.isFeatured && (
+          <div className="absolute top-2.5 left-2.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow-md">
+            ⭐ Featured
           </div>
         )}
       </div>
     )}
-    <div className="p-2.5">
-      <h3 className="font-semibold text-xs mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+    <div className="p-3.5">
+      <h3 className="font-bold text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug min-h-[38px]">
         {tour.title}
       </h3>
       {tour.location && (
-        <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1.5">
-          <MapPin className="w-2.5 h-2.5" />
-          <span className="line-clamp-1">{tour.location}</span>
+        <div className="flex items-center gap-1.5 text-gray-500 text-[11px] mb-2.5">
+          <MapPin className="w-3.5 h-3.5 text-blue-500" strokeWidth={2} />
+          <span className="line-clamp-1 font-medium">{tour.location}</span>
         </div>
       )}
-      {tour.rating && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-[10px] font-medium">{tour.rating}</span>
-          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
-        </div>
-      )}
-      {tour.price && (
-        <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
-          <DollarSign className="w-3 h-3" />
-          <span>{tour.price}</span>
-        </div>
-      )}
+      <div className="flex items-center justify-between pt-2.5 border-t-2 border-gray-50">
+        {tour.rating && (
+          <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" strokeWidth={2} />
+            <span className="text-[11px] font-bold text-gray-900">{tour.rating}</span>
+            {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
+          </div>
+        )}
+        {tour.price && (
+          <div className="flex items-center gap-0.5 text-blue-600 font-black text-base">
+            <DollarSign className="w-4 h-4" strokeWidth={3} />
+            <span>{tour.price}</span>
+          </div>
+        )}
+      </div>
     </div>
   </motion.a>
 );
 
 const TourSlider = ({ tours }: { tours: any[] }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
 
-  const scroll = (direction: 'left' | 'right') => {
+  const scroll = useCallback((direction: 'left' | 'right') => {
     if (!sliderRef.current) return;
-    const scrollAmount = 260;
+    const scrollAmount = 280;
     sliderRef.current.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth',
     });
-  };
+  }, []);
+
+  const checkScrollPosition = useCallback(() => {
+    if (!sliderRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+    setShowLeftArrow(scrollLeft > 10);
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+  }, []);
+
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (slider && tours.length > 0) {
+      slider.addEventListener('scroll', checkScrollPosition);
+      checkScrollPosition();
+      return () => slider.removeEventListener('scroll', checkScrollPosition);
+    }
+  }, [tours.length, checkScrollPosition]);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full my-3">
       {tours.length > 1 && (
         <>
-          <button
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <AnimatePresence>
+            {showLeftArrow && (
+              <motion.button
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                onClick={() => scroll('left')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-xl flex items-center justify-center hover:bg-white transition-all border border-gray-100"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {showRightArrow && (
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                onClick={() => scroll('right')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-xl flex items-center justify-center hover:bg-white transition-all border border-gray-100"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </>
       )}
       <div
         ref={sliderRef}
-        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
+        className="flex gap-3.5 overflow-x-auto scrollbar-hide scroll-smooth py-2 px-1"
       >
         {tours.map((tour, idx) => (
           <TourCard key={idx} tour={tour} />
@@ -519,6 +656,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const [query, setQuery] = useState(''); // Unified input for both search and chat
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatMode, setChatMode] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -786,21 +924,21 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   }, [renderToolOutput, detectedToursByMessage]);
 
   return (
-    <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start" ref={containerRef}>
-      <div className="relative w-full max-w-sm md:max-w-xl">
+    <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start pointer-events-auto" ref={containerRef} style={{ position: 'relative', zIndex: 1000 }}>
+      <div className="relative w-full max-w-sm md:max-w-xl pointer-events-auto" style={{ zIndex: 1000 }}>
         <motion.div
           whileHover={{ y: -2, scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="relative group"
         >
-          {/* Main Search/Chat Input Box - Unified */}
+          {/* Main Search/Chat Input Box - Enhanced */}
           <form onSubmit={handleSubmit}>
             <div
-              className={`relative bg-white/95 backdrop-blur-xl rounded-full transition-all duration-300 ${
-                isExpanded
-                  ? 'shadow-2xl shadow-blue-500/25 border-2 border-blue-400/50'
-                  : 'shadow-xl hover:shadow-2xl border-2 border-blue-300/30 hover:border-blue-400/50'
+              className={`relative bg-white/98 backdrop-blur-2xl rounded-full transition-all duration-500 ease-out ${
+                isExpanded || isFocused
+                  ? 'shadow-[0_20px_60px_-15px_rgba(59,130,246,0.5)] border-2 border-blue-400 ring-4 ring-blue-100/50'
+                  : 'shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border-2 border-white/40 hover:border-blue-300 hover:shadow-[0_20px_50px_-15px_rgba(59,130,246,0.4)]'
               }`}
             >
               <div className="relative">
@@ -808,35 +946,43 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  onFocus={() => setIsExpanded(true)}
+                  onFocus={() => {
+                    setIsExpanded(true);
+                    setIsFocused(true);
+                  }}
+                  onBlur={() => setIsFocused(false)}
                   placeholder={chatMode ? "Ask AI anything about Egypt tours..." : suggestion}
-                  className="w-full pl-14 md:pl-16 pr-12 md:pr-16 py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                  className="w-full pl-16 md:pl-[70px] pr-14 md:pr-20 py-4 md:py-5 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10 transition-all duration-300"
                   style={{ cursor: 'text' }}
                   disabled={chatMode && isGenerating}
+                  autoComplete="off"
                 />
 
-              {/* Left Icon with Animation */}
+              {/* Left Icon with Enhanced Animation */}
               <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
                 <motion.div
                   className="relative"
-                  animate={{ scale: [1, 1.15, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  animate={!isExpanded ? { 
+                    scale: [1, 1.08, 1],
+                    rotate: [0, 5, -5, 0]
+                  } : {}}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isExpanded
-                      ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30'
-                      : 'bg-gradient-to-br from-blue-400 to-purple-400 shadow-md'
+                  <div className={`w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                    isExpanded || isFocused
+                      ? 'bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600 shadow-xl shadow-blue-500/40 scale-110'
+                      : 'bg-gradient-to-br from-blue-500 via-blue-400 to-purple-500 shadow-lg shadow-blue-400/30'
                   }`}>
-                    <Search className={`w-4 h-4 transition-colors duration-300 text-white`} />
+                    <Search className={`w-4 h-4 md:w-5 md:h-5 transition-all duration-300 text-white ${isExpanded ? 'scale-110' : ''}`} strokeWidth={2.5} />
                   </div>
                   <motion.div
-                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white shadow-sm"
+                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full border-2 border-white shadow-md"
                     animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [1, 0.7, 1]
+                      scale: [1, 1.25, 1],
+                      opacity: [1, 0.8, 1]
                     }}
                     transition={{
-                      duration: 2,
+                      duration: 2.5,
                       repeat: Infinity,
                       ease: "easeInOut"
                     }}
@@ -844,28 +990,32 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 </motion.div>
               </div>
 
-              {/* Right Side Elements with Animation */}
-              <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-10">
+              {/* Right Side Elements with Enhanced Animation */}
+              <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 md:gap-2.5 z-10">
                 {query ? (
-                  <button
+                  <motion.button
                     type="button"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    exit={{ scale: 0, rotate: 180 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     onClick={() => {
                       setQuery('');
                       setIsExpanded(false);
                     }}
-                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 group"
                     aria-label="Clear search"
                   >
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
+                    <X className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" strokeWidth={2.5} />
+                  </motion.button>
                 ) : isExpanded ? (
                   <motion.div
                     initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
                     animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                    transition={{ duration: 0.5, type: "spring", stiffness: 200 }}
                   >
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                      <ChevronUp className="w-4 h-4 text-white" />
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 flex items-center justify-center shadow-xl shadow-blue-500/40">
+                      <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={2.5} />
                     </div>
                   </motion.div>
                 ) : (
@@ -876,20 +1026,20 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       handleOpenAIChat();
                     }}
                     animate={{
-                      rotate: [0, 15, -15, 0],
-                      scale: [1, 1.1, 1]
+                      rotate: [0, 12, -12, 0],
+                      scale: [1, 1.12, 1]
                     }}
                     transition={{
-                      duration: 4,
+                      duration: 4.5,
                       repeat: Infinity,
                       ease: "easeInOut"
                     }}
-                    whileHover={{ scale: 1.15 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-md cursor-pointer hover:shadow-lg hover:from-blue-500 hover:to-purple-600 transition-all"
+                    whileHover={{ scale: 1.2, rotate: 15 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center shadow-lg shadow-purple-400/40 cursor-pointer hover:shadow-2xl hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 transition-all duration-300"
                     aria-label="Open AI Assistant"
                   >
-                    <Sparkles className="w-4 h-4 text-white" />
+                    <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={2.5} />
                   </motion.button>
                 )}
               </div>
@@ -898,119 +1048,255 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         </form>
         </motion.div>
 
-        {/* Dropdown Results - Using absolute positioning with z-index */}
+        {/* Enhanced Glassmorphism Dropdown with Background */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
               ref={dropdownRef}
-              initial={{ opacity: 0, y: -10, scale: 0.96 }}
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.96 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute top-full mt-3 left-0 right-0 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden z-[9999]"
-              style={{ maxHeight: '65vh' }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ 
+                duration: 0.35, 
+                ease: [0.34, 1.56, 0.64, 1],
+                opacity: { duration: 0.25 }
+              }}
+              className="absolute top-full mt-4 left-0 right-0 backdrop-blur-[40px] rounded-[28px] shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] border border-white/30 overflow-hidden glass-dropdown"
+              style={{ 
+                maxHeight: '70vh',
+                boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.3)',
+                zIndex: 99999,
+                position: 'absolute'
+              }}
             >
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-200/60 bg-gradient-to-br from-white via-blue-50/40 to-purple-50/40 backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+              {/* Vibrant Background Layer for Glassmorphism */}
+              <div className="absolute inset-0 z-0 opacity-90">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/30 via-purple-400/30 to-pink-400/30" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-300/20 via-transparent to-orange-300/20" />
+                {/* Animated mesh gradient */}
+                <motion.div
+                  className="absolute inset-0 opacity-60"
+                  animate={{
+                    background: [
+                      'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
+                      'radial-gradient(circle at 80% 50%, rgba(168, 85, 247, 0.3) 0%, transparent 50%)',
+                      'radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.3) 0%, transparent 50%)',
+                      'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                />
+                {/* Decorative circles */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-400/20 to-transparent rounded-full blur-3xl" />
+              </div>
+              
+              {/* Content with glass effect */}
+              <div className="relative z-10 bg-white/10 backdrop-blur-md"
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+                }}
+              >
+              {/* Enhanced Header with Glass Effect */}
+              <div className="px-6 py-4 border-b border-white/20 bg-white/20 backdrop-blur-lg relative overflow-hidden">
+                {/* Animated shimmer effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                  animate={{
+                    x: ['-100%', '200%'],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear",
+                    repeatDelay: 1
+                  }}
+                />
+                
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center gap-3">
                     {chatMode && (
-                      <button
+                      <motion.button
+                        initial={{ x: -10, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
                         onClick={handleBackToSearch}
-                        className="mr-1 p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+                        className="mr-1 p-2 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 group"
                       >
-                        <ArrowLeft className="w-4 h-4 text-gray-600" />
-                      </button>
+                        <ArrowLeft className="w-4 h-4 text-gray-600 group-hover:text-gray-900 transition-colors" strokeWidth={2.5} />
+                      </motion.button>
                     )}
                     {chatMode ? (
-                      <>
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
-                          <Bot className="w-3.5 h-3.5 text-white" />
+                      <motion.div 
+                        className="flex items-center gap-2.5"
+                        initial={{ x: -10, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                      >
+                        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/30">
+                          <Bot className="w-4 h-4 text-white" strokeWidth={2.5} />
                         </div>
-                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
-                          AI Travel Assistant
-                        </span>
-                      </>
+                        <div>
+                          <span className="text-sm font-bold text-gray-900 tracking-tight block drop-shadow-sm">
+                            AI Travel Assistant
+                          </span>
+                          <span className="text-[10px] text-gray-600 font-medium drop-shadow-sm">
+                            Powered by AI
+                          </span>
+                        </div>
+                      </motion.div>
                     ) : (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-sm shadow-blue-500/50" />
-                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
-                          {query ? 'Search Results' : 'Popular Searches'}
-                        </span>
-                      </>
+                      <motion.div 
+                        className="flex items-center gap-3"
+                        initial={{ x: -10, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                      >
+                        <motion.div 
+                          className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-md shadow-blue-500/50"
+                          animate={{
+                            scale: [1, 1.4, 1],
+                            opacity: [1, 0.7, 1]
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                        <div>
+                          <span className="text-sm font-bold text-gray-900 tracking-tight block drop-shadow-sm">
+                            {query ? 'Search Results' : 'Discover Egypt'}
+                          </span>
+                          <span className="text-[10px] text-gray-600 font-medium drop-shadow-sm">
+                            {query ? 'Best matches for you' : 'Trending searches'}
+                          </span>
+                        </div>
+                      </motion.div>
                     )}
                   </div>
-                  <button
+                  <motion.button
                     onClick={() => {
                       setIsExpanded(false);
                       setChatMode(false);
                       setQuery('');
                     }}
-                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2 rounded-full hover:bg-white/80 hover:shadow-md group"
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="text-gray-400 hover:text-gray-700 transition-all duration-200 p-2.5 rounded-xl hover:bg-gray-100 hover:shadow-lg group"
                   >
-                    <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-                  </button>
+                    <X className="w-4 h-4 transition-transform duration-300" strokeWidth={2.5} />
+                  </motion.button>
                 </div>
               </div>
 
               {/* Results Area */}
               <div ref={chatContainerRef} className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)' }}>
                 {chatMode ? (
-                  /* Chat Interface */
-                  <div className="p-4 space-y-3">
+                  /* Enhanced Chat Interface */
+                  <motion.div 
+                    className="p-5 space-y-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
                     {messages.length === 0 && (
-                      <div className="bg-white p-4 rounded-xl border border-blue-100">
-                        <div className="flex items-start gap-2.5 mb-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Bot className="text-white" size={16} />
-                          </div>
+                      <motion.div 
+                        className="bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 p-5 rounded-2xl border-2 border-blue-100 shadow-sm"
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                      >
+                        <div className="flex items-start gap-3 mb-4">
+                          <motion.div 
+                            className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/30"
+                            animate={{ 
+                              rotate: [0, 5, -5, 0],
+                              scale: [1, 1.05, 1]
+                            }}
+                            transition={{ 
+                              duration: 3,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          >
+                            <Bot className="text-white" size={20} strokeWidth={2.5} />
+                          </motion.div>
                           <div>
-                            <p className="font-semibold text-gray-800 text-sm mb-1">
-                              Hi! I'm your AI Egypt Travel Assistant
+                            <p className="font-bold text-gray-900 text-sm mb-1.5">
+                              Hi! I'm your AI Egypt Travel Assistant 👋
                             </p>
-                            <p className="text-gray-500 text-xs leading-relaxed">
+                            <p className="text-gray-600 text-xs leading-relaxed">
                               Ask me anything — I'll help you find tours, trips, prices, destinations & more.
                             </p>
                           </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {["Find me the best Nile Cruise under $300", "Plan a 7-day Egypt itinerary", "Top tours near Cairo?"].map((s) => (
-                            <button
+                        <div className="flex flex-wrap gap-2.5">
+                          {["Find me the best Nile Cruise under $300", "Plan a 7-day Egypt itinerary", "Top tours near Cairo?"].map((s, idx) => (
+                            <motion.button
                               key={s}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              whileHover={{ scale: 1.05, y: -2 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => sendMessage({ text: s })}
-                              className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-100 rounded-lg text-xs font-medium text-gray-700 transition-all"
+                              className="px-3.5 py-2 bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 border-2 border-blue-100 hover:border-blue-300 rounded-xl text-xs font-semibold text-gray-700 hover:text-blue-700 transition-all shadow-sm hover:shadow-md"
                             >
                               {s}
-                            </button>
+                            </motion.button>
                           ))}
                         </div>
-                      </div>
+                      </motion.div>
                     )}
 
-                    {messages.map((m) => (
-                      <div
+                    {messages.map((m, idx) => (
+                      <motion.div
                         key={m.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
                         className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm sm:text-[15px] ${
+                          className={`max-w-[88%] px-4 py-3 rounded-2xl text-sm sm:text-[15px] ${
                             m.role === 'user'
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
-                              : 'bg-white text-gray-800 border shadow-sm'
+                              ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20'
+                              : 'bg-white text-gray-800 border-2 border-gray-100 shadow-md'
                           }`}
                         >
-                          {renderContent(m.parts, m.id)}
+                          {m.role === 'user' ? (
+                            <p className="leading-relaxed font-medium">{renderContent(m.parts, m.id)}</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {renderContent(m.parts, m.id)}
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
 
                     {isGenerating && (
-                      <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2.5 rounded-lg border">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">AI is thinking...</span>
-                      </div>
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex items-center gap-3 text-gray-600 bg-white px-4 py-3 rounded-2xl border-2 border-gray-100 shadow-md"
+                      >
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        >
+                          <Loader2 className="w-5 h-5 text-blue-500" strokeWidth={2.5} />
+                        </motion.div>
+                        <div>
+                          <span className="text-sm font-semibold text-gray-900">AI is thinking...</span>
+                          <p className="text-[10px] text-gray-500">Finding the best options for you</p>
+                        </div>
+                      </motion.div>
                     )}
-                  </div>
+                  </motion.div>
                 ) : query ? (
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
                     <CustomSearchBox searchQuery={query} onSearchChange={setQuery} />
@@ -1034,42 +1320,101 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                     </Index>
                   </InstantSearch>
                 ) : (
-                  // Trending Searches - shown when no search query
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Sparkles className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Trending Egypt Tours
-                      </span>
+                  // Enhanced Trending Searches
+                  <motion.div 
+                    className="p-6 md:p-7"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="flex items-center gap-2.5 mb-5">
+                      <motion.div
+                        animate={{ 
+                          rotate: [0, 10, -10, 0],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{ 
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Sparkles className="w-5 h-5 text-blue-500" strokeWidth={2.5} />
+                      </motion.div>
+                      <div>
+                        <span className="text-sm font-bold text-gray-900 tracking-tight block">
+                          Trending Egypt Tours
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          Most searched this week
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend) => (
-                        <button
+                    <div className="flex flex-wrap gap-2.5">
+                      {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'].map((trend, idx) => (
+                        <motion.button
                           key={trend}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.05 }}
+                          whileHover={{ scale: 1.05, y: -2 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setQuery(trend);
                             setIsExpanded(true);
                             setChatMode(false);
                           }}
-                          className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-200 hover:text-blue-700 hover:shadow-md transition-all duration-200 hover:scale-105"
+                          className="px-4 py-2.5 bg-gradient-to-br from-white to-gray-50 backdrop-blur-sm border-2 border-gray-100 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:border-blue-300 hover:text-blue-700 hover:shadow-lg transition-all duration-300 group"
                         >
-                          {trend}
-                        </button>
+                          <span className="flex items-center gap-1.5">
+                            <Search className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" strokeWidth={2.5} />
+                            {trend}
+                          </span>
+                        </motion.button>
                       ))}
                     </div>
 
-                    {/* AI Assistant CTA */}
-                    <div className="mt-6 pt-6 border-t border-gray-200/50">
-                      <button
+                    {/* Enhanced AI Assistant CTA */}
+                    <motion.div 
+                      className="mt-7 pt-6 border-t-2 border-gray-100"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <motion.button
                         onClick={handleOpenAIChat}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] group"
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full relative overflow-hidden flex items-center justify-center gap-2.5 px-5 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group"
                       >
-                        <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                        <span className="text-sm font-semibold">Ask AI Travel Assistant</span>
-                      </button>
-                    </div>
-                  </div>
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"
+                          animate={{
+                            x: ['-100%', '200%'],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "linear"
+                          }}
+                        />
+                        <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform relative z-10" strokeWidth={2.5} />
+                        <span className="text-sm font-bold relative z-10">Ask AI Travel Assistant</span>
+                        <motion.div
+                          animate={{ x: [0, 4, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="relative z-10"
+                        >
+                          <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
+                        </motion.div>
+                      </motion.button>
+                      <p className="text-center text-[11px] text-gray-500 mt-3 font-medium">
+                        Get personalized tour recommendations instantly
+                      </p>
+                    </motion.div>
+                  </motion.div>
                 )}
+              </div>
               </div>
             </motion.div>
           )}
@@ -1174,7 +1519,7 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
   // NOTE: no early return with spinner — UI renders immediately
   return (
     <>
-      <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white overflow-visible font-sans">
+      <section className="relative h-screen min-h-[600px] max-h-[900px] w-full flex items-center justify-center text-white font-sans" style={{ overflow: 'visible' }}>
         <BackgroundSlideshow
           slides={slides}
           delay={settings.animationSettings.slideshowSpeed * 1000}
@@ -1184,7 +1529,7 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
 
         {/* Overlay with settings */}
         <div
-          className="absolute inset-0 z-1"
+          className="absolute inset-0 z-1 pointer-events-none"
           style={{
             background: settings.overlaySettings.gradientType === 'custom'
               ? settings.overlaySettings.customGradient
@@ -1194,8 +1539,8 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
           }}
         />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left">
-          <div className="max-w-xl">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center h-full text-center md:items-start md:text-left" style={{ overflow: 'visible' }}>
+          <div className="max-w-xl" style={{ overflow: 'visible', position: 'relative' }}>
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold uppercase leading-tight tracking-wide text-shadow-lg">
               {settings.title.main}
               {settings.title.highlight && (
@@ -1228,54 +1573,132 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
       </section>
 
       <style jsx global>{`
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slide-from-top { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade-in { 
+          from { opacity: 0; } 
+          to { opacity: 1; } 
+        }
+        
+        @keyframes slide-from-top { 
+          from { opacity: 0; transform: translateY(-30px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+        
         @keyframes text-slide-in {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Slow pulse animation */
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+
+        /* Smooth pulse animation */
         @keyframes pulse-slow {
-          0%, 100% {
-            opacity: 0.4;
-          }
-          50% {
-            opacity: 0.2;
-          }
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.2; }
+        }
+
+        /* Gradient shift animation */
+        @keyframes gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
 
         .animate-pulse-slow {
           animation: pulse-slow 4s ease-in-out infinite;
         }
 
-        /* Custom scrollbar */
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        /* Enhanced Custom scrollbar */
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
+
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
+          height: 8px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #d1d5db, #9ca3af);
           border-radius: 10px;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #9ca3af, #6b7280);
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
+          border-radius: 10px;
+          border: 2px solid transparent;
+          background-clip: content-box;
         }
 
-        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-        .animate-slide-from-top { animation: slide-from-top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        .animate-text-slide-in { animation: text-slide-in 0.5s ease-out forwards; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #94a3b8, #64748b);
+          background-clip: content-box;
+        }
 
-        .text-shadow { text-shadow: 1px 1px 4px rgb(0 0 0 / 0.5); }
-        .text-shadow-lg { text-shadow: 2px 2px 8px rgb(0 0 0 / 0.6); }
-        .font-sans { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        /* Hide scrollbar but keep functionality */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
 
-        img { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+
+        .animate-fade-in { 
+          animation: fade-in 0.3s ease-out forwards; 
+        }
+        
+        .animate-slide-from-top { 
+          animation: slide-from-top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
+        }
+        
+        .animate-text-slide-in { 
+          animation: text-slide-in 0.5s ease-out forwards; 
+        }
+
+        /* Enhanced text shadows */
+        .text-shadow { 
+          text-shadow: 1px 1px 6px rgb(0 0 0 / 0.5), 0 0 20px rgb(0 0 0 / 0.3); 
+        }
+        
+        .text-shadow-lg { 
+          text-shadow: 2px 2px 10px rgb(0 0 0 / 0.6), 0 0 30px rgb(0 0 0 / 0.4); 
+        }
+        
+        .font-sans { 
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Image optimization */
+        img { 
+          backface-visibility: hidden; 
+          -webkit-backface-visibility: hidden;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+        }
+
+        /* Smooth transitions */
+        * {
+          scroll-behavior: smooth;
+        }
 
         /* Hide default Algolia styling */
         .ais-InstantSearch {
@@ -1298,9 +1721,109 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
           border: none;
         }
 
+        /* Glassmorphism dropdown effect */
+        .glass-dropdown {
+          -webkit-backdrop-filter: saturate(180%) blur(40px);
+          backdrop-filter: saturate(180%) blur(40px);
+          position: relative;
+        }
+
+        .glass-dropdown::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 28px;
+          padding: 1px;
+          background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.4) 0%, 
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0.4) 100%
+          );
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        /* Subtle noise texture for realism */
+        .glass-dropdown::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 28px;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+          opacity: 0.5;
+          mix-blend-mode: overlay;
+          pointer-events: none;
+          z-index: 2;
+        }
+
+        /* Enhanced markdown prose styles */
+        .prose {
+          max-width: none;
+        }
+
+        .prose p {
+          margin-bottom: 0.75em;
+          line-height: 1.7;
+        }
+
+        .prose ul, .prose ol {
+          margin-top: 0.5em;
+          margin-bottom: 0.75em;
+          padding-left: 1.5em;
+        }
+
+        .prose li {
+          margin-bottom: 0.25em;
+        }
+
+        .prose strong {
+          color: #1f2937;
+          font-weight: 600;
+        }
+
+        .prose code {
+          background-color: #f3f4f6;
+          padding: 0.125rem 0.375rem;
+          border-radius: 0.375rem;
+          font-size: 0.875em;
+          font-weight: 500;
+        }
+
+        /* Accessibility improvements */
         @media (prefers-reduced-motion: reduce) {
-          .animate-text-slide-in { animation: none; }
-          .animate-pulse-slow { animation: none; }
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+          
+          .animate-text-slide-in,
+          .animate-pulse-slow,
+          .animate-shimmer,
+          .animate-float {
+            animation: none;
+          }
+        }
+
+        /* Focus visible for keyboard navigation */
+        *:focus-visible {
+          outline: 2px solid #3b82f6;
+          outline-offset: 2px;
+        }
+
+        /* Ensure hero section allows dropdown overflow */
+        section {
+          overflow: visible !important;
+        }
+
+        /* Ensure dropdown stays in hero section */
+        .glass-dropdown {
+          position: absolute !important;
         }
       `}</style>
     </>
