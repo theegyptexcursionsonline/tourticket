@@ -1,13 +1,24 @@
 // app/careers/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import CareersClientPage from "./CareersClientPage";
 import dbConnect from "@/lib/dbConnect";
 import Job from "@/lib/models/Job";
 import { Job as JobType } from "@/types";
 
-// NO CACHING - Real-time data from admin panel
-export const revalidate = 0;
-export const dynamic = 'force-dynamic';
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
+
+// Generate metadata for SEO
+export const metadata: Metadata = {
+  title: 'Careers - Join Our Team | Egypt Excursions Online',
+  description: 'Explore exciting career opportunities at Egypt Excursions Online. Join our team and help create unforgettable travel experiences.',
+  openGraph: {
+    title: 'Careers - Join Our Team | Egypt Excursions Online',
+    description: 'Explore exciting career opportunities at Egypt Excursions Online.',
+    type: 'website',
+  },
+};
 
 async function getJobs(): Promise<JobType[]> {
     await dbConnect();

@@ -12,9 +12,8 @@ import CategoryModel from '@/lib/models/Category';
 import EgyptHeroClient from './EgyptHeroClient';
 import EgyptToursClient from './EgyptToursClient';
 
-// Force dynamic rendering (no static generation)
-export const dynamic = 'force-dynamic';
-export const revalidate = 0; // Always fetch fresh data for immediate updates
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
 
 /* ---------- Page Data ---------- */
 const FEATURES = [

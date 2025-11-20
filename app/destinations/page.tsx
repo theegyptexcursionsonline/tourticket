@@ -1,4 +1,5 @@
 import React from 'react';
+import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
@@ -7,6 +8,20 @@ import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
 import DestinationsClientPage from './DestinationsClientPage';
 import { IDestination } from '@/lib/models/Destination';
+
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
+
+// Generate metadata for SEO
+export const metadata: Metadata = {
+  title: 'All Destinations | Egypt Excursions Online',
+  description: 'Explore amazing destinations across Egypt. Discover tours and activities in Cairo, Luxor, Aswan, Hurghada, Sharm El Sheikh, and more.',
+  openGraph: {
+    title: 'All Destinations | Egypt Excursions Online',
+    description: 'Explore amazing destinations across Egypt.',
+    type: 'website',
+  },
+};
 
 // Server-side function to fetch all destinations and their tour counts
 async function getDestinationsWithTourCounts(): Promise<IDestination[]> {

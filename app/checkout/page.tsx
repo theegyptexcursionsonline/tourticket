@@ -869,7 +869,7 @@ const handleDownloadReceipt = async () => {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
           <button
-            onClick={() => window.location.assign('/')}
+            onClick={() => router.push('/')}
             className="px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-base font-semibold rounded-lg text-slate-700"
           >
             Go to homepage

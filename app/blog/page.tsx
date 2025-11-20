@@ -1,10 +1,25 @@
 import React from 'react';
+import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
 import { IBlog } from '@/lib/models/Blog';
+
+// Enable ISR with 60 second revalidation for instant page loads
+export const revalidate = 60;
+
+// Generate metadata for SEO
+export const metadata: Metadata = {
+  title: 'Travel Blog - Tips, Guides & Stories | Egypt Excursions Online',
+  description: 'Discover travel tips, destination guides, and inspiring stories from Egypt. Expert advice for planning your perfect Egyptian adventure.',
+  openGraph: {
+    title: 'Travel Blog | Egypt Excursions Online',
+    description: 'Discover travel tips, destination guides, and inspiring stories from Egypt.',
+    type: 'website',
+  },
+};
 
 const categories = [
   { value: 'travel-tips', label: 'Travel Tips' },
