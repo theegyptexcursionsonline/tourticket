@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -278,15 +279,18 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
-        <motion.a
+        <Link
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05, duration: 0.3 }}
-          className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+          className="block"
         >
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+            className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
+          >
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
           <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
             <div className="w-12 md:w-14 h-12 md:h-14 rounded-lg md:rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
@@ -308,7 +312,8 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
               </div>
             </div>
           </div>
-        </motion.a>
+        </motion.div>
+        </Link>
       ))}
     </div>
   );
@@ -1011,14 +1016,14 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">{t('header.destinations')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {destinations.slice(0, 6).map((dest) => (
-                    <a key={dest._id} href={`/destinations/${dest.slug}`} className="group block">
+                    <Link key={dest._id} href={`/destinations/${dest.slug}`} className="group block">
                       <div className="aspect-square w-full rounded-lg overflow-hidden relative bg-slate-200">
                         <Image src={dest.image} alt={dest.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
                       </div>
                       <h4 className="mt-2 font-bold text-gray-900 group-hover:text-red-500">{dest.name.toUpperCase()}</h4>
                       <p className="text-xs text-gray-500">{(dest as any).country || ''}</p>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -1030,10 +1035,10 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                     const Icon = activityIcons[activity.slug] || Ticket;
                     return (
                       <li key={activity._id}>
-                        <a href={`/categories/${activity.slug}`} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group">
+                        <Link href={`/categories/${activity.slug}`} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group">
                           <Icon size={20} className="text-gray-400 group-hover:text-red-500" />
                           <span className="font-semibold">{activity.name}</span>
-                        </a>
+                        </Link>
                       </li>
                     );
                   })}
@@ -1044,7 +1049,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                 <Star size={32} className="text-yellow-500 mb-2" />
                 <h3 className="font-bold text-lg text-gray-800">{t('header.specialOffers')}</h3>
                 <p className="text-sm text-gray-600 my-2">{t('offers.save')}</p>
-                <a href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">{t('header.deals')}</a>
+                <Link href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">{t('header.deals')}</Link>
               </div>
             </div>
           </div>
@@ -1087,9 +1092,9 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             </div>
 
             <div className="py-2">
-              <a href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>{t('header.myProfile')}</span></a>
-              <a href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>{t('header.myBookings')}</span></a>
-              <a href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Star size={16} /><span>{t('header.favorites')}</span></a>
+              <Link href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>{t('header.myProfile')}</span></Link>
+              <Link href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>{t('header.myBookings')}</span></Link>
+              <Link href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Star size={16} /><span>{t('header.favorites')}</span></Link>
             </div>
 
             <div className="border-t py-2">
@@ -1178,16 +1183,16 @@ const MobileMenu: FC<{
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <a href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myProfile')}</a>
-                    <a href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myBookings')}</a>
+                    <Link href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myProfile')}</Link>
+                    <Link href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myBookings')}</Link>
                     <button onClick={() => { logout(); onClose(); }} className="block py-2 text-red-600 hover:text-red-700 w-full text-left">{t('header.signOut')}</button>
                   </div>
                 </div>
               ) : (
                 <div className="p-6 border-b">
                   <div className="space-y-3">
-                    <a href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">{t('header.login')}</a>
-                    <a href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">{t('header.signup')}</a>
+                    <Link href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">{t('header.login')}</Link>
+                    <Link href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">{t('header.signup')}</Link>
                   </div>
                 </div>
               )}
@@ -1338,9 +1343,9 @@ export default function Header({
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
     <div className="flex items-center justify-between h-16 md:h-20">
       <div className="flex items-center gap-4 lg:gap-8">
-        <a href="/" className="flex items-center h-full">
+        <Link href="/" className="flex items-center h-full">
           <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
-        </a>
+        </Link>
 
         <nav className="hidden md:flex items-center relative">
           <button
@@ -1395,8 +1400,8 @@ export default function Header({
           <UserMenu user={user} onLogout={logout} />
         ) : (
           <div className="hidden md:flex items-center gap-3">
-            <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>{t('header.login')}</a>
-            <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">{t('header.signup')}</a>
+            <Link href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>{t('header.login')}</Link>
+            <Link href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">{t('header.signup')}</Link>
           </div>
         )}
 
