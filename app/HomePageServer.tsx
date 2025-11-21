@@ -54,7 +54,7 @@ async function getHomePageData() {
       // Featured tours
       Tour.find({ isPublished: true, isFeatured: true })
         .populate('destination', 'name')
-        .select('title slug image discountPrice originalPrice duration rating bookings')
+        .select('title slug image discountPrice originalPrice duration rating reviewCount bookings')
         .limit(8)
         .lean(),
 
@@ -93,7 +93,7 @@ async function getHomePageData() {
 
       // Day trips (all published tours, limited to 12)
       Tour.find({ isPublished: true })
-        .select('title slug image discountPrice originalPrice duration rating bookings tags')
+        .select('title slug image discountPrice originalPrice duration rating reviewCount bookings tags')
         .limit(12)
         .lean()
     ]);
