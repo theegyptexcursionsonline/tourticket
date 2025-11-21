@@ -5,6 +5,7 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { verifyToken } from '@/lib/jwt';
+import { verifyFirebaseToken } from '@/lib/firebase/admin';
 
 // GET - Fetch a single booking by ID (user must own the booking)
 export async function GET(
@@ -14,7 +15,7 @@ export async function GET(
   await dbConnect();
 
   try {
-    // Verify user authentication
+    // Verify user authentication - Try Firebase first, fallback to JWT
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -24,16 +25,37 @@ export async function GET(
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = await verifyToken(token);
+    let userId: string;
 
-    if (!payload || !payload.sub) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid or expired token' },
-        { status: 401 }
-      );
+    // Try Firebase authentication first
+    const firebaseResult = await verifyFirebaseToken(token);
+
+    if (firebaseResult.success && firebaseResult.uid) {
+      // Find user by Firebase UID
+      const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+
+      if (!user) {
+        return NextResponse.json(
+          { success: false, message: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      userId = user._id.toString();
+    } else {
+      // Fallback to JWT (for backwards compatibility)
+      const payload = await verifyToken(token);
+
+      if (!payload || !payload.sub) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid or expired token' },
+          { status: 401 }
+        );
+      }
+
+      userId = payload.sub as string;
     }
 
-    const userId = payload.sub as string;
     const { id } = await params;
 
     const booking = await Booking.findById(id)

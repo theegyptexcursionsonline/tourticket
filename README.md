@@ -12,7 +12,7 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 ## ✨ Features
 
 ### User Features
-- 🔐 **Authentication & Authorization** - Secure JWT-based authentication with bcrypt password hashing
+- 🔐 **Authentication & Authorization** - Firebase authentication with Google OAuth + JWT for admins
 - 🔍 **Advanced Search & Filtering** - Search tours by destination, category, interests with Fuse.js
 - 📅 **Smart Booking System** - Date selection, participant management, and add-ons
 - 🛒 **Shopping Cart & Wishlist** - Multi-tour cart and favorites management
@@ -55,7 +55,7 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 - **Runtime:** Node.js 20+
 - **Database:** [MongoDB](https://www.mongodb.com/) with [Mongoose ODM](https://mongoosejs.com/)
 - **Search:** [Algolia](https://www.algolia.com/) for instant search
-- **Authentication:** JWT (Jose), bcryptjs
+- **Authentication:** [Firebase Authentication](https://firebase.google.com/products/auth) + JWT (Jose), bcryptjs
 - **Payment:** [Stripe](https://stripe.com/)
 - **Email:** [Mailgun](https://www.mailgun.com/)
 - **Storage:** [Cloudinary](https://cloudinary.com/)
@@ -98,6 +98,20 @@ CLOUDINARY_API_SECRET=your_api_secret
 # Mailgun
 MAILGUN_API_KEY=your_mailgun_api_key
 MAILGUN_DOMAIN=your_mailgun_domain
+
+# Firebase (User Authentication)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Firebase Admin SDK (Server-side token verification)
+# Use individual credentials to reduce environment variable size (AWS Lambda has 4KB limit)
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project_id.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour_Private_Key_Here\n-----END PRIVATE KEY-----"
 
 # Algolia Search (optional but recommended)
 NEXT_PUBLIC_ALGOLIA_APP_ID=your_algolia_app_id
@@ -203,12 +217,23 @@ tourticket/
 
 ## 🔐 Authentication
 
-The application uses JWT-based authentication with the following flow:
-1. User signs up/logs in with email and password
+The application supports dual authentication methods:
+
+### Firebase Authentication (Primary - User Accounts)
+1. User signs up/logs in with email and password (or Google OAuth)
+2. Firebase handles authentication and returns ID token
+3. Server verifies Firebase token using Firebase Admin SDK
+4. User data synced with MongoDB
+5. Role-based access control (user/admin)
+
+### JWT Authentication (Admin Accounts & Legacy)
+1. Admin signs in with email and password
 2. Password is hashed using bcryptjs
 3. JWT token is generated and stored in HTTP-only cookies
 4. Middleware validates tokens for protected routes
-5. Role-based access control (user/admin)
+5. Used for admin dashboard authentication
+
+**Note**: API routes automatically detect authentication method - Firebase tokens are tried first, with JWT fallback for backward compatibility.
 
 ## 💳 Payment Flow
 
@@ -338,6 +363,71 @@ pnpm algolia:clear-sync
 # Trigger sync via API
 POST /api/algolia/sync
 ```
+
+## 🔥 Firebase Authentication Setup
+
+This application uses Firebase for user authentication, providing secure email/password and Google OAuth login.
+
+### Setting up Firebase
+
+1. **Create a Firebase project** at [firebase.google.com](https://firebase.google.com/)
+
+2. **Enable Authentication:**
+   - Go to Authentication → Sign-in method
+   - Enable Email/Password provider
+   - (Optional) Enable Google provider for OAuth
+
+3. **Get your Firebase config:**
+   - Go to Project Settings → General
+   - Scroll to "Your apps" and click the web icon (</>)
+   - Copy the Firebase configuration
+
+4. **Add client-side credentials to `.env`:**
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   ```
+
+5. **Generate Admin SDK credentials:**
+   - Go to Project Settings → Service Accounts
+   - Click "Generate new private key"
+   - Download the JSON file
+
+6. **Extract individual credentials from the JSON:**
+   - Open the downloaded JSON file
+   - Extract `project_id`, `client_email`, and `private_key`
+
+7. **Add server-side credentials to `.env`:**
+   ```env
+   FIREBASE_PROJECT_ID=your_project_id
+   FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project_id.iam.gserviceaccount.com
+   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+   Your_Private_Key_Here
+   -----END PRIVATE KEY-----"
+   ```
+
+### Why Individual Credentials?
+
+AWS Lambda (used by Netlify and Vercel) has a 4KB limit for environment variables. The full Firebase service account JSON is ~3KB, which combined with other variables exceeds this limit. By splitting the credentials into individual environment variables, we stay well under the limit (~1.7KB for Firebase credentials).
+
+### Firebase Features
+
+- **Email/Password Authentication** - Traditional signup/login
+- **Google OAuth** - One-click Google sign-in
+- **Token Verification** - Secure server-side token validation with Firebase Admin SDK
+- **Automatic User Sync** - User data automatically synced with MongoDB
+- **Dual Auth Support** - Works alongside JWT for admin accounts
+
+### Important Notes
+
+- Firebase credentials are split into client-side (`NEXT_PUBLIC_*`) and server-side (`FIREBASE_*`) variables
+- Client-side variables are safe to expose (used in browser)
+- Server-side variables must be kept secret (never expose private key)
+- The application automatically detects Firebase tokens and falls back to JWT for backward compatibility
 
 ## 🧪 Testing
 

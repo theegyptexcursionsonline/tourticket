@@ -5,6 +5,7 @@ import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { NextResponse, NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { verifyFirebaseToken } from '@/lib/firebase/admin';
 import mongoose from 'mongoose';
 
 interface Params {
@@ -27,37 +28,53 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid Tour ID' }, { status: 400 });
     }
 
-    // Get auth token
+    // Get auth token - Try Firebase first, fallback to JWT
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const token = authHeader.split(' ')[1];
-    
-    // Verify token
-    const payload = await verifyToken(token);
-    if (!payload || !payload.sub) {
-      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
-    }
+    let userId: string;
+    let user;
 
-    const userId = payload.sub as string;
+    // Try Firebase authentication first
+    const firebaseResult = await verifyFirebaseToken(token);
 
-    // Validate userId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: 'Invalid User ID' }, { status: 400 });
+    if (firebaseResult.success && firebaseResult.uid) {
+      // Find user by Firebase UID
+      user = await User.findOne({ firebaseUid: firebaseResult.uid });
+
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      userId = user._id.toString();
+    } else {
+      // Fallback to JWT (for backwards compatibility)
+      const payload = await verifyToken(token);
+      if (!payload || !payload.sub) {
+        return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+      }
+
+      userId = payload.sub as string;
+
+      // Validate userId
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return NextResponse.json({ error: 'Invalid User ID' }, { status: 400 });
+      }
+
+      // Get user info
+      user = await User.findById(userId);
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
     }
 
     // Check if tour exists
     const tour = await Tour.findById(tourId);
     if (!tour) {
       return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
-    }
-
-    // Get user info
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Parse request body
