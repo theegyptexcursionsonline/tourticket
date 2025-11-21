@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     // 🆕 Send Welcome Email with real recommended tours
     try {
       // Fetch recommended tours from database
-      const Tour = (await import('@/lib/models/tour')).default;
+      const Tour = (await import('@/lib/models/Tour')).default;
       const recommendedTours = await Tour.find({})
         .select('title slug images pricing')
         .limit(3)
