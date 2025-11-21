@@ -185,13 +185,13 @@ export default function CurrencyLanguageSwitcher({
     <>
       <div className={variant === 'header' ? 'flex items-center gap-2 font-semibold text-sm' : 'flex items-center gap-4'}>
         {/* Currency Button */}
-        <button 
-          onClick={() => setCurrencyModalOpen(true)} 
+        <button
+          onClick={() => setCurrencyModalOpen(true)}
           disabled={isLoading}
           className={
-            variant === 'header' 
-              ? `${headerLinkClasses} ${baseButtonClasses} hidden sm:inline-flex items-center gap-1.5 ${isTransparent ? transparentBgClasses : ''} disabled:opacity-50` 
-              : "inline-flex h-8 items-center rounded-md border border-slate-300 px-3 hover:bg-slate-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            variant === 'header'
+              ? `${headerLinkClasses} ${baseButtonClasses} hidden sm:inline-flex items-center gap-1.5 ${isTransparent ? transparentBgClasses : ''} disabled:opacity-50`
+              : "inline-flex h-8 items-center rounded-md border border-slate-300 px-3 hover:bg-slate-200 text-slate-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           }
         >
           {isLoading ? (
@@ -205,18 +205,18 @@ export default function CurrencyLanguageSwitcher({
         </button>
         
         {/* Language Button */}
-        <button 
-          onClick={() => setLanguageModalOpen(true)} 
+        <button
+          onClick={() => setLanguageModalOpen(true)}
           className={
-            variant === 'header' 
-              ? `${headerLinkClasses} ${baseButtonClasses} flex items-center gap-1.5 group ${isTransparent ? transparentBgClasses : ''}` 
-              : "inline-flex h-8 items-center rounded-md border border-slate-300 px-3 hover:bg-slate-200 text-sm"
+            variant === 'header'
+              ? `${headerLinkClasses} ${baseButtonClasses} flex items-center gap-1.5 group ${isTransparent ? transparentBgClasses : ''}`
+              : "inline-flex h-8 items-center rounded-md border border-slate-300 px-3 hover:bg-slate-200 text-slate-700 text-sm"
           }
         >
           {variant === 'header' && <Globe size={20} className="group-hover:text-red-500" />}
           <span>
-            {variant === 'header' 
-              ? selectedLanguage.code.toUpperCase() 
+            {variant === 'header'
+              ? selectedLanguage.code.toUpperCase()
               : `${selectedLanguage.name} (${selectedLanguage.code.toUpperCase()})`
             }
           </span>

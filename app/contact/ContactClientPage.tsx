@@ -76,10 +76,10 @@ export default function ContactClientPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const socialLinks = [
-    { icon: Facebook, href: "#" },
-    { icon: Instagram, href: "#" },
-    { icon: Twitter, href: "#" },
-    { icon: Youtube, href: "#" },
+    { icon: Facebook, href: "https://web.facebook.com/EGexcursionsonline/?_rdc=1&_rdr#" },
+    { icon: Instagram, href: "https://www.instagram.com/egyptexcursionsonline/" },
+    { icon: Twitter, href: "https://x.com/excursiononline" },
+    { icon: Youtube, href: "https://www.youtube.com/@egyptexcursionsonline6859" },
   ];
 
   const openChatbot = (e: React.MouseEvent) => {
@@ -363,6 +363,8 @@ export default function ContactClientPage() {
                     <a
                       key={i}
                       href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-700 text-white flex items-center justify-center hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg hover:scale-110 transform"
                       aria-label={`Follow us on ${Icon.displayName || 'social media'}`}
                     >
