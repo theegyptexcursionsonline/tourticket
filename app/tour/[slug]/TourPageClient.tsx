@@ -1125,21 +1125,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <div className="relative">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {tour.tags?.map((tag, index) => (
-                    <span
-                      key={index}
-                      className={`px-3 py-1 text-xs font-semibold uppercase rounded-full tracking-wide leading-none ${tag.includes('%') || tag === 'Online only deal'
-                          ? 'bg-red-600 text-white'
-                          : tag === 'Staff favourite'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 text-slate-800'
-                        }`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {/* Tags section removed */}
 
                 <div 
                   className="relative rounded-xl overflow-hidden shadow-lg mb-6 group cursor-pointer"

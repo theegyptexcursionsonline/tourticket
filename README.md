@@ -7,6 +7,8 @@
 
 A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScript, and MongoDB. Features include user authentication, tour management, booking system, payment processing, and a powerful admin dashboard.
 
+> **For Developers**: See [CLAUDE.md](CLAUDE.md) for detailed architecture, development patterns, and coding conventions.
+
 ## ✨ Features
 
 ### User Features
@@ -34,6 +36,7 @@ A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScr
 - 📱 **Responsive Design** - Mobile-first approach with Tailwind CSS
 - 🎨 **Modern UI/UX** - Framer Motion animations, Lucide React icons
 - 🔍 **Advanced Search** - Algolia-powered instant search with typo tolerance
+- 🤖 **AI-Powered Search** - Intelligent tour recommendations with Vercel AI SDK
 - 🛡️ **Error Tracking** - Sentry integration for monitoring
 - 💬 **Customer Support** - Intercom integration
 - 🔒 **Security** - Protected routes, input validation, secure sessions
@@ -154,32 +157,48 @@ SUPPORT_EMAIL=support@yourcompany.com
 ## 📜 Available Scripts
 
 ```bash
-pnpm dev                # Start development server with Turbopack
-pnpm build              # Build for production
-pnpm start              # Start production server
-pnpm lint               # Run ESLint
-pnpm algolia:sync       # Sync all tours to Algolia search index
-pnpm algolia:clear-sync # Clear and resync Algolia index
+# Development
+pnpm dev                 # Start dev server with auto port detection (3000+)
+pnpm dev:original        # Start dev server on port 3000 with Turbopack
+pnpm build               # Build for production
+pnpm start               # Start production server
+pnpm lint                # Run ESLint
+
+# Testing
+pnpm test                # Run Jest tests
+pnpm test:watch          # Run tests in watch mode
+pnpm test:coverage       # Run tests with coverage
+
+# Algolia Search
+pnpm algolia:sync        # Sync all published tours to Algolia
+pnpm algolia:clear-sync  # Clear index and resync all tours
+pnpm algolia:sync-all    # Sync all tours (including unpublished)
 ```
+
+> **Note**: The dev server automatically detects available ports starting from 3000, preventing port conflicts.
 
 ## 📁 Project Structure
 
 ```
 tourticket/
 ├── app/                    # Next.js App Router pages
-│   ├── admin/             # Admin dashboard routes
-│   ├── user/              # User dashboard routes
-│   ├── tour/              # Tour pages
-│   ├── api/               # API routes
-│   └── ...
-├── components/            # Reusable React components
-├── contexts/              # React Context providers
+│   ├── [slug]/            # Dynamic tour detail pages (catch-all route)
+│   ├── admin/             # Admin dashboard routes (protected)
+│   ├── user/              # User dashboard routes (protected)
+│   ├── api/               # API routes (Route Handlers)
+│   └── ...                # Other routes (about, contact, etc.)
+├── components/            # React components (Server + Client)
+├── contexts/              # React Context providers (Client)
 ├── hooks/                 # Custom React hooks
-├── lib/                   # Database models & utilities
-├── utils/                 # Helper functions
-├── public/                # Static assets
+├── lib/                   # Backend logic and Mongoose models
+│   ├── models/           # Database schemas
+│   ├── email/            # Email templates
+│   └── ...               # Utilities, auth, integrations
+├── scripts/               # Maintenance and utility scripts
+├── utils/                 # Frontend helper functions
 ├── types/                 # TypeScript type definitions
-└── middleware.ts          # Next.js middleware
+├── public/                # Static assets
+└── middleware.ts          # Route protection and middleware
 ```
 
 ## 🔐 Authentication
@@ -204,11 +223,11 @@ The application uses JWT-based authentication with the following flow:
 ## 🎨 UI/UX Features
 
 - **Responsive Design** - Works seamlessly on all devices
-- **Dark Mode Support** - (If implemented)
-- **Smooth Animations** - Framer Motion transitions
+- **Smooth Animations** - Framer Motion transitions and micro-interactions
 - **Toast Notifications** - React Hot Toast for user feedback
-- **Loading States** - Skeleton screens and spinners
-- **Error Handling** - User-friendly error messages
+- **Loading States** - Skeleton screens and spinners for better perceived performance
+- **Error Handling** - User-friendly error messages with fallback UI
+- **AI Assistant** - Interactive AI-powered tour search and recommendations
 
 ## 🔒 Security Features
 
@@ -323,9 +342,12 @@ POST /api/algolia/sync
 ## 🧪 Testing
 
 ```bash
-# Run tests (if configured)
-pnpm test
+pnpm test                # Run all tests
+pnpm test:watch          # Run tests in watch mode
+pnpm test:coverage       # Generate coverage report
 ```
+
+Tests are located in `__tests__` directories alongside the code they test. The project uses Jest with React Testing Library.
 
 ## 📝 API Documentation
 
@@ -354,9 +376,19 @@ Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+3. Read [CLAUDE.md](CLAUDE.md) for architecture and coding conventions
+4. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+5. Push to the branch (`git push origin feature/AmazingFeature`)
+6. Open a Pull Request
+
+### Development Guidelines
+
+- Follow the patterns documented in [CLAUDE.md](CLAUDE.md)
+- Always call `dbConnect()` before database operations
+- Use Server Components by default; add `'use client'` only when needed
+- Sync tours to Algolia after database updates
+- Write tests for new features
+- Ensure TypeScript types are properly defined
 
 ## 📄 License
 
@@ -366,8 +398,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Ranjit Rajput**
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@ranjitrajput](https://github.com/ranjitrajput)
+- Project: [Tour Ticket](https://github.com/ranjitrajput/tourticket)
 
 ## 🙏 Acknowledgments
 
@@ -379,11 +411,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email your.email@example.com or join our Discord channel.
+For technical questions and development help, see [CLAUDE.md](CLAUDE.md) for architecture details and common gotchas.
 
 ## 🐛 Bug Reports
 
-Found a bug? Please open an issue on [GitHub Issues](https://github.com/yourusername/tourticket/issues).
+Found a bug? Please open an issue on [GitHub Issues](https://github.com/ranjitrajput/tourticket/issues) with:
+- Clear description of the issue
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (Node version, browser, etc.)
 
 ---
 

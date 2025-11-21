@@ -10,6 +10,7 @@ import {
   Landmark,
   Ticket,
   Star,
+  Heart,
   Clock,
   Zap,
   Menu,
@@ -1094,7 +1095,7 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             <div className="py-2">
               <Link href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>{t('header.myProfile')}</span></Link>
               <Link href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>{t('header.myBookings')}</span></Link>
-              <Link href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Star size={16} /><span>{t('header.favorites')}</span></Link>
+              <Link href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Heart size={16} /><span>{t('header.favorites')}</span></Link>
             </div>
 
             <div className="border-t py-2">
@@ -1371,7 +1372,7 @@ export default function Header({
           className="relative group p-2 md:p-2 active:scale-95 transition-transform"
           aria-label="View your wishlist"
         >
-          <Star size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
+          <Heart size={24} className={`${headerText} ${linkHoverColor} transition-colors`} />
           {wishlist?.length > 0 && (
             <span className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white shadow-lg">
               {wishlist.length}
