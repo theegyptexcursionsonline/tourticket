@@ -1,0 +1,56 @@
+#!/bin/bash
+# Upload Firebase service account to Cloudinary
+
+# Your Cloudinary credentials (from .env)
+CLOUD_NAME="dm3sxllch"
+API_KEY="253887322258635"
+API_SECRET="XQ_KZz4YDV1ICMhJJ05u2jVP0gQ"
+
+# Create temp Firebase JSON from base64
+FIREBASE_BASE64="ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiZWd5cHQtZXhjdXJzaW9uc29ubGluZSIsCiAgInByaXZhdGVfa2V5X2lkIjogIiIsCiAgInByaXZhdGVfa2V5IjogIi0tLS0tQkVHSU4gUFJJVkFURSBLRVktLS0tLVxuTUlJRXZnSUJBREFOQmdrcWhraUc5dzBCQVFFRkFBU0NCS2d3Z2dTa0FnRUFBb0lCQVFEVVhtTStKRlVwQXBtRVxuOW1ZZDRuZkZOV1A2Y0RLZ0pCUzdWS2QrQzUrekJZancvMEhPb0xReUVVZVVXd05ZUkEzYUZ5eDg4dTdGQ3pOMVxuMlZhYUU4L0hHd3JrYStBbzZwNWdrZE1WUjVydmsySTJiOWV4d3V2cnBIaDRpZGpRcnR0by9BVEZHRmFqanpwSlxuU3B3bUVHeE9nRkZ1TEI1dGdYakNkMklxeXBESDhBbnVwRFdPZHk5cHUwT21lbVloaVIreU5QenIrREg3QjM2aVxuZVVEeFF6QXFJWWQ1SktEOG9RS0hJckpTdW05VnFOQW1qQWZkbmRubjE3bWZHYXhYUmVNRWNEN0txb1Btd3hTM1xucGo1cWFqb05JZ1ZmTGx1aXRHd2FTQmdmS2NnMFBDdnFXdGpDb2loNmxJUGdHTDNIMy8xTHlGSjR3U2VrTXZEZFxuSVI0QWNoOWhBZ01CQUFFQ2dnRUFDbXpQRldGYmpEQlVVSi9NalN5dFhDWjRwU0RMTTJ1aUF1ZUVjMTVuQ3JibVxuVitKSDhqaVhCVVdEaklldFBJWXNESktLVWd0QTU3WmE0b1JMODk0RGNLUTdYdEdNTWFZQmUvOGNscitxODVZa1xud2tSYVE4cUJvZnlJYk1PNDVpeE1tVitVYlFmUC82WjJkNFpCNzcwVnBxMkxrY3Q0KzVUWlZKUGZZMHkwcjhQYVxuRkxVazQ2UlpDQmd4emhFNGRxaXAxdTFwYWdKelltOTlFa1FzdEYwZGdaOVg3V21xTnZBc3hHQkJLQnQzYzIzVFxueG1pbDVKbGRHNVBQNjVBOHg5YnVBQVhvaFV3UnNKUzdrTlpqenVCUWtZajFMOTRpMTBua1dFRHJjY09CcHVlVFxuMTJBOHNZMEFid0N4YjZUMVVWR3hObDA5Um9mWVhjVzdvOGxvZVloZG13S0JnUUR3RlVLdU84K0thZ0ZZdWRyRVxuVnVQdHd1WHVweUVac2lETUxUcmxKSThWSEJrcXU4QThjcHViUGNGMm92S1VWYXpQZnB5blRvQm9SMEhaREZCUlxuYk11dXp4TTNSNFAzZTIzN281cFBMWVM4Y25Bb3hDOC9VN0hlcm8vNXdaVis3SnRmMkZ3TmJxMWxnUlRjaDRIOVxuZm9DUitIRnRuZ0tBVnI1RTdZQzMrYXF1aHdLQmdRRGljc0RuRFpmU2VzU2cxWXVhaUpPRVJjSWVLY3ZOek5TS1xuWmk5SUpGcTZsK0RuUGpOUUFFYUxWRWVVMi95c2s4dTlEWmlKOVFxQWxCWHBIR0hvd3h5WlVyaEwxZ1RTNVZaaVxuejN3UmFCaEtDaUtGQmNqVE9nbUVpV3N5Q0RPQmFaWnJlT1B1eTI3UWxNMVNhaWdLbVY2VXlycS9RdDZ0T0sza1xuUmJIQVRwRVUxd0tCZ1FES1JTOUR1aEoyREMrTVFER0hQNm1TMUtTQjkvOFVOaFlaejNXU1BzWHB4QjJUK2xEUVxuM01JcS9kRzBFVDhOS0UyTEY2SUY5MGFLRkpidXRjZ3BnZDd0TFh1RUZGV2p1VE1GVW1ZY2xUNEN3dXVwL1BmTlxuZzhjVTFMOXFiZVYwNVFWV3IrT0dVWnYzSzlTV28vZ3B5VjJySGNUNjFLaEkxa3hCcUZQTkxLVFhtd0tCZ0JPMFxubHJMRWpReWs0RTE2cDc1WDJqWnRkNW4yV3lUYWlUaE44aGxlQ0lNcVNrajFNYlBwZ2pvSHFINzhzYjAyMDBqdFxuVVBQWVhnU1lYbHU5dTR0c3h5VlVmSE1rK2FCOGtvcmdzVlEyY2I2bnFSOVlSSVNWRFZUNlBGakxPK2dzRHdubFxuS0RpVWZWMHJSYjdCUENESC9lSUd6ajlzaTBJWnA1QXd2R29XckN0YkFvR0JBTnFzc2k0bmwvdDY0ODI0TmJERVxuQUs3MXo5RHBGbFpFbzFXU2JwdWR3R2tobWxXUzlRaDhiaVgrQXlOLzZzQnBoc01DVFoydmxmRjNIMDdxb29WZlxuQStWbFhSQU0rbXNvYjY3MkZ3QnNwaEpXZXhHMkEvRWZhUUNid1NwUldpZ0VNRkE1RklHeVNSUGVRVDZjVE50aFxuOHJ2NUM0Q2Y3V0RneG1TVHFGRjJFL0ZVXG4tLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tXG4iLAogICJjbGllbnRfZW1haWwiOiAiZmlyZWJhc2UtYWRtaW5zZGstZmJzdmNAZWd5cHQtZXhjdXJzaW9uc29ubGluZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICIiLAogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsCiAgInRva2VuX3VyaSI6ICJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2ZpcmViYXNlLWFkbWluc2RrLWZic3ZjJTQwZWd5cHQtZXhjdXJzaW9uc29ubGluZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIKfQo="
+
+echo "$FIREBASE_BASE64" | base64 -d > /tmp/firebase-service-account.json
+
+echo "📤 Uploading to Cloudinary..."
+
+# Generate timestamp and signature for authenticated upload
+TIMESTAMP=$(date +%s)
+PUBLIC_ID="config/firebase-service-account"
+
+# Create signature string
+STRING_TO_SIGN="public_id=${PUBLIC_ID}&timestamp=${TIMESTAMP}${API_SECRET}"
+SIGNATURE=$(echo -n "$STRING_TO_SIGN" | openssl dgst -sha1 -hex | sed 's/^.* //')
+
+# Upload to Cloudinary as raw file (signed)
+RESPONSE=$(curl -s -X POST "https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload" \
+  -F "file=@/tmp/firebase-service-account.json" \
+  -F "public_id=${PUBLIC_ID}" \
+  -F "timestamp=${TIMESTAMP}" \
+  -F "api_key=${API_KEY}" \
+  -F "signature=${SIGNATURE}")
+
+# Extract URL from response
+URL=$(echo $RESPONSE | grep -o '"secure_url":"[^"]*"' | cut -d'"' -f4)
+
+if [ -z "$URL" ]; then
+  echo "❌ Upload failed. Response:"
+  echo "$RESPONSE"
+  exit 1
+fi
+
+echo "✅ Upload successful!"
+echo ""
+echo "🔗 Your Firebase JSON URL:"
+echo "$URL"
+echo ""
+echo "📋 Add this to Netlify environment variables:"
+echo "FIREBASE_SERVICE_ACCOUNT_URL=$URL"
+echo ""
+echo "🗑️  Remove these from Netlify:"
+echo "  - FIREBASE_SERVICE_ACCOUNT_BASE64"
+echo "  - FIREBASE_PROJECT_ID"
+echo "  - FIREBASE_CLIENT_EMAIL"
+echo "  - FIREBASE_PRIVATE_KEY"
+
+# Cleanup
+rm /tmp/firebase-service-account.json

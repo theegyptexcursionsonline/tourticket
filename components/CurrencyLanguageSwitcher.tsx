@@ -132,9 +132,9 @@ const SettingsModal = <T extends Item>({
                       onClose(); 
                     }} 
                     className={`p-4 rounded-lg text-left transition-colors duration-200 ${
-                      selectedItem.code === item.code 
-                        ? 'bg-red-500 text-white shadow' 
-                        : 'bg-slate-100 hover:bg-slate-200'
+                      selectedItem.code === item.code
+                        ? 'bg-red-500 text-white shadow'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                     }`}
                   >
                     {renderItem(item)}

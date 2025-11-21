@@ -61,19 +61,19 @@ const SettingsModal = <T extends Item>({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          exit={{ opacity: 0 }} 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4" 
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-md flex items-start justify-center p-4"
           onClick={onClose}
         >
-          <motion.div 
-            initial={{ y: -50, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
-            exit={{ y: -50, opacity: 0 }} 
-            transition={{ duration: 0.3, ease: 'easeInOut' }} 
-            className="relative bg-white shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] rounded-lg overflow-hidden mt-20" 
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="relative bg-white text-slate-900 shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] rounded-lg overflow-hidden mt-20"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -123,9 +123,9 @@ const SettingsModal = <T extends Item>({
                         key={item.code} 
                         onClick={() => { onSelectItem(item); onClose(); }} 
                         className={`p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 ${
-                          selectedItem.code === item.code 
-                            ? 'bg-red-500 text-white shadow-lg transform scale-105' 
-                            : 'bg-slate-100 hover:bg-slate-200 hover:shadow-md'
+                          selectedItem.code === item.code
+                            ? 'bg-red-500 text-white shadow-lg transform scale-105'
+                            : 'bg-slate-100 hover:bg-slate-200 hover:shadow-md text-slate-800'
                         }`}
                       >
                         <div className="space-y-2">
@@ -242,7 +242,7 @@ export default function CurrencyLanguageSwitcher({
                 <Loader2 size={14} className="animate-spin" />
               )}
             </div>
-            <div className="text-sm opacity-80 line-clamp-1">{item.name}</div>
+            <div className="text-sm text-slate-600 line-clamp-1">{item.name}</div>
           </div>
         )}
       />
@@ -260,7 +260,7 @@ export default function CurrencyLanguageSwitcher({
         renderItem={(item) => (
           <div>
             <div className="font-bold mb-1">{item.name}</div>
-            <div className="text-sm opacity-80 line-clamp-1">{item.nativeName}</div>
+            <div className="text-sm text-slate-600 line-clamp-1">{item.nativeName}</div>
           </div>
         )}
       />

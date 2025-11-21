@@ -14,10 +14,10 @@ import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitch
 // --- FOOTER-SPECIFIC DATA ---
 // =================================================================
 const socialLinks = [
-  { icon: Facebook, href: "https://facebook.com" },
-  { icon: Instagram, href: "https://instagram.com" },
-  { icon: Twitter, href: "https://twitter.com" },
-  { icon: Youtube, href: "https://youtube.com" },
+  { icon: Facebook, href: "https://web.facebook.com/EGexcursionsonline/?_rdc=1&_rdr#" },
+  { icon: Instagram, href: "https://www.instagram.com/egyptexcursionsonline/" },
+  { icon: Twitter, href: "https://x.com/excursiononline" },
+  { icon: Youtube, href: "https://www.youtube.com/@egyptexcursionsonline6859" },
 ];
 
 const PaymentIcons = {

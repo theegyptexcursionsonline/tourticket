@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import Review from '@/lib/models/Review';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 import TourDetailClientPage from './TourDetailClientPage';
@@ -12,19 +13,27 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-async function getTourBySlug(slug: string): Promise<ITour | null> {
+async function getTourBySlug(slug: string): Promise<{ tour: ITour; reviews: any[] } | null> {
   await dbConnect();
   const tour = await Tour.findOne({ slug })
     .populate('destination', 'name slug')
     .populate('category', 'name slug')
-    .populate('reviews')
     .lean();
 
   if (!tour) {
     return null;
   }
 
-  return JSON.parse(JSON.stringify(tour));
+  // Fetch reviews separately
+  const reviews = await Review.find({ tour: tour._id })
+    .populate('user', 'firstName lastName picture')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return {
+    tour: JSON.parse(JSON.stringify(tour)),
+    reviews: JSON.parse(JSON.stringify(reviews))
+  };
 }
 
 async function getRelatedTours(categoryIds: string | string[] | any, currentTourId: string): Promise<ITour[]> {
@@ -58,14 +67,15 @@ async function getRelatedTours(categoryIds: string | string[] | any, currentTour
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const tour = await getTourBySlug(slug);
+  const result = await getTourBySlug(slug);
 
-  if (!tour) {
+  if (!result) {
     return {
       title: 'Tour Not Found',
     };
   }
 
+  const { tour } = result;
   const destination = typeof tour.destination === 'object' ? (tour.destination as any) : null;
 
   return {
@@ -104,12 +114,13 @@ export async function generateStaticParams() {
 
 export default async function TourDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const tour = await getTourBySlug(slug);
+  const result = await getTourBySlug(slug);
 
-  if (!tour) {
+  if (!result) {
     notFound();
   }
 
+  const { tour, reviews } = result;
   const relatedTours = await getRelatedTours(tour.category, (tour._id as any)?.toString());
 
   return (
@@ -118,7 +129,7 @@ export default async function TourDetailPage({ params }: PageProps) {
       <TourDetailClientPage
         tour={tour}
         relatedTours={relatedTours}
-        initialReviews={(tour.reviews as any) || []}
+        initialReviews={reviews}
       />
       <Footer />
     </>

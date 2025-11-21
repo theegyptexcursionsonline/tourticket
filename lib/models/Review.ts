@@ -8,7 +8,7 @@ export interface IReview extends Document {
   userEmail: string;
   rating: number;
   title?: string;
-  comment: string;
+  comment?: string;  // Made optional - customers can leave just star rating
   images?: string[];
   verified: boolean;
   helpful: number;
@@ -51,7 +51,7 @@ const ReviewSchema: Schema<IReview> = new Schema({
   },
   comment: {
     type: String,
-    required: true,
+    required: false,  // Made optional - customers can leave just star rating
     trim: true,
     maxlength: 1000
   },

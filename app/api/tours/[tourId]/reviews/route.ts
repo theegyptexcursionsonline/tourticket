@@ -86,12 +86,9 @@ export async function POST(
       return NextResponse.json({ error: 'Valid rating (1-5) is required' }, { status: 400 });
     }
 
-    if (!comment || !comment.trim()) {
-      return NextResponse.json({ error: 'Review comment is required' }, { status: 400 });
-    }
-
-    if (comment.trim().length < 10) {
-      return NextResponse.json({ error: 'Review comment must be at least 10 characters' }, { status: 400 });
+    // Comment is optional, but if provided, must be at least 10 characters
+    if (comment && comment.trim() && comment.trim().length < 10) {
+      return NextResponse.json({ error: 'Review comment must be at least 10 characters if provided' }, { status: 400 });
     }
 
     // Check if user already reviewed this tour
@@ -111,8 +108,8 @@ export async function POST(
       userName: `${user.firstName} ${user.lastName}`,
       userEmail: user.email,
       rating: Number(rating),
-      title: title?.trim() || 'Great experience!',
-      comment: comment.trim(),
+      title: title?.trim() || undefined,
+      comment: comment?.trim() || undefined,
       verified: false,
       helpful: 0
     });

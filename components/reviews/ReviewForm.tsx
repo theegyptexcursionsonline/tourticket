@@ -61,14 +61,10 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
       toast.error('Please select a rating.');
       return;
     }
-    
-    if (!comment.trim()) {
-      toast.error('Please write a review comment.');
-      return;
-    }
-    
-    if (comment.trim().length < 10) {
-      toast.error('Review comment must be at least 10 characters long.');
+
+    // Comment is optional, but if provided, must be at least 10 characters
+    if (comment.trim() && comment.trim().length < 10) {
+      toast.error('Review comment must be at least 10 characters if provided.');
       return;
     }
 
@@ -334,7 +330,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
         {/* Comment Section */}
         <div>
           <label htmlFor="comment" className="block text-sm font-semibold text-gray-700 mb-2">
-            Your Review *
+            Your Review (Optional)
           </label>
           <textarea
             id="comment"
@@ -343,14 +339,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-            placeholder="Tell us about your experience with this tour. What did you enjoy most? Any tips for future travelers?"
-            required
-            minLength={10}
+            placeholder="Tell us about your experience with this tour. What did you enjoy most? Any tips for future travelers? (Optional - you can submit just a star rating)"
             maxLength={1000}
             disabled={isSubmitting}
           />
           <div className="mt-1 flex justify-between items-center">
-            <p className="text-xs text-gray-500">Minimum 10 characters</p>
+            <p className="text-xs text-gray-500">Optional - minimum 10 characters if provided</p>
             <p className="text-xs text-gray-500">{comment.length}/1000 characters</p>
           </div>
         </div>
@@ -359,7 +353,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
         <div>
           <button
             type="submit"
-            disabled={isSubmitting || rating === 0 || comment.trim().length < 10}
+            disabled={isSubmitting || rating === 0 || (comment.trim().length > 0 && comment.trim().length < 10)}
             className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {isSubmitting ? (

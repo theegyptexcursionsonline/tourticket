@@ -1,29 +1,66 @@
-// Firebase Admin SDK for server-side operations
+// Firebase Admin SDK with remote JSON file support
 import * as admin from 'firebase-admin';
-import * as path from 'path';
-import * as fs from 'fs';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   let initialized = false;
 
-  // Strategy 1: Try to load from service account file (best for deployment)
-  const serviceAccountPath = path.join(process.cwd(), '.firebase', 'service-account.json');
+  // Strategy 1: Try base64 from environment (primary)
+  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 
-  if (fs.existsSync(serviceAccountPath)) {
+  if (serviceAccountBase64) {
     try {
-      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      const serviceAccountJSON = JSON.parse(
+        Buffer.from(serviceAccountBase64, 'base64').toString('utf8')
+      );
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(serviceAccountJSON),
       });
-      console.log('✅ Firebase Admin initialized from service account file');
+      console.log('✅ Firebase Admin initialized from base64 env variable');
       initialized = true;
     } catch (error) {
-      console.error('❌ Error loading Firebase service account from file:', error);
+      console.error('❌ Error decoding base64 service account:', error);
     }
   }
 
-  // Strategy 2: Try individual environment variables (fallback)
+  // Strategy 2: Fetch from remote URL (Cloudinary, S3, etc.)
+  if (!initialized) {
+    const remoteJsonUrl = process.env.FIREBASE_SERVICE_ACCOUNT_URL;
+
+    if (remoteJsonUrl) {
+      try {
+        console.log('🔄 Fetching Firebase service account from remote URL...');
+
+        // Use dynamic import to avoid bundling fetch polyfill
+        const fetchServiceAccount = async () => {
+          const response = await fetch(remoteJsonUrl, {
+            headers: {
+              'Cache-Control': 'max-age=3600', // Cache for 1 hour
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch service account: ${response.status} ${response.statusText}`);
+          }
+
+          return response.json();
+        };
+
+        // Note: This is a top-level await, requires Node.js 14.8+ and ES modules
+        const serviceAccountJSON = await fetchServiceAccount();
+
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccountJSON),
+        });
+        console.log('✅ Firebase Admin initialized from remote URL');
+        initialized = true;
+      } catch (error) {
+        console.error('❌ Error fetching remote service account:', error);
+      }
+    }
+  }
+
+  // Strategy 3: Individual credentials (fallback)
   if (!initialized) {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
@@ -46,48 +83,10 @@ if (!admin.apps.length) {
     }
   }
 
-  // Strategy 3: Try base64-encoded JSON from environment variable (common for deployment)
-  if (!initialized) {
-    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-
-    if (serviceAccountBase64) {
-      try {
-        const serviceAccountJSON = JSON.parse(
-          Buffer.from(serviceAccountBase64, 'base64').toString('utf8')
-        );
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountJSON),
-        });
-        console.log('✅ Firebase Admin initialized from base64 env variable');
-        initialized = true;
-      } catch (error) {
-        console.error('❌ Error decoding base64 service account:', error);
-      }
-    }
-  }
-
-  // Strategy 4: Try full JSON from environment variable (legacy fallback)
-  if (!initialized) {
-    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-    if (serviceAccountEnv) {
-      try {
-        const serviceAccountJSON = JSON.parse(serviceAccountEnv);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountJSON),
-        });
-        console.log('⚠️ Firebase Admin initialized with full JSON from env');
-        initialized = true;
-      } catch (error) {
-        console.error('❌ Error parsing Firebase service account from env:', error);
-      }
-    }
-  }
-
   if (!initialized) {
     throw new Error(
       'Firebase Admin SDK credentials not found. ' +
-      'Either create .firebase/service-account.json or set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY'
+      'Set FIREBASE_SERVICE_ACCOUNT_BASE64, FIREBASE_SERVICE_ACCOUNT_URL, or individual credentials'
     );
   }
 }
@@ -95,11 +94,6 @@ if (!admin.apps.length) {
 export const adminAuth = admin.auth();
 export const adminDb = admin.firestore();
 
-/**
- * Verify Firebase ID token from client
- * @param idToken - Firebase ID token from client
- * @returns Decoded token with user info
- */
 export async function verifyFirebaseToken(idToken: string) {
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
@@ -119,10 +113,6 @@ export async function verifyFirebaseToken(idToken: string) {
   }
 }
 
-/**
- * Get Firebase user by UID
- * @param uid - Firebase user ID
- */
 export async function getFirebaseUser(uid: string) {
   try {
     const user = await adminAuth.getUser(uid);
@@ -136,11 +126,6 @@ export async function getFirebaseUser(uid: string) {
   }
 }
 
-/**
- * Create or update Firebase user
- * @param uid - Firebase user ID
- * @param data - User data to update
- */
 export async function updateFirebaseUser(uid: string, data: {
   email?: string;
   displayName?: string;
@@ -159,10 +144,6 @@ export async function updateFirebaseUser(uid: string, data: {
   }
 }
 
-/**
- * Delete Firebase user
- * @param uid - Firebase user ID
- */
 export async function deleteFirebaseUser(uid: string) {
   try {
     await adminAuth.deleteUser(uid);

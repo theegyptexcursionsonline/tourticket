@@ -288,7 +288,13 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-3 text-gray-700 leading-relaxed text-sm">{review.comment}</p>
+                  <>
+                    {review.comment ? (
+                      <p className="mt-3 text-gray-700 leading-relaxed text-sm">{review.comment}</p>
+                    ) : (
+                      <p className="mt-3 text-gray-500 italic text-sm">⭐ Rated this experience</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
