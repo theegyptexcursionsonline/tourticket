@@ -27,7 +27,7 @@ interface FallbackSearchProps {
 // Custom Hit Component for displaying tour results
 function TourHit({ hit }: { hit: any }) {
   return (
-    <Link href={`/tours/${hit.slug}`} className="block">
+    <Link href={`/${hit.slug}`} className="block">
       <div className="bg-white rounded-xl border-2 border-slate-200 hover:border-blue-400 transition-all hover:shadow-lg p-4 group">
         {/* Tour Image */}
         {hit.image && (

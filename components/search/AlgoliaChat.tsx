@@ -45,7 +45,7 @@ const NoResultsBoundary = ({ children, fallback }: { children: React.ReactNode; 
 const CompactHit = ({ hit }: any) => {
   return (
     <a
-      href={`/tours/${hit.slug}`}
+      href={`/${hit.slug}`}
       className="block p-3 hover:bg-slate-50 transition-colors"
     >
       <div className="flex items-start gap-3">

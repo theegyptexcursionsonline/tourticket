@@ -168,7 +168,7 @@ export default function AIAgentModal() {
   /** ---------- TOUR CARD COMPONENT ---------- **/
   const TourCard = ({ tour }: { tour: any }) => (
     <motion.a
-      href={`/tours/${tour.slug}`}
+      href={`/${tour.slug}`}
       target="_blank"
       rel="noopener noreferrer"
       className="group block flex-shrink-0 w-[280px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"

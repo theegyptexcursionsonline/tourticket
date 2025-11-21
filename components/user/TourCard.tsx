@@ -29,7 +29,7 @@ const TourCard: React.FC<{ tour: Tour }> = ({ tour }) => {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden transition-all duration-300 group">
-      <Link href={`/tour/${tour.slug}`}>
+      <Link href={`/${tour.slug}`}>
         <div className="relative w-full h-52">
           <Image
             src={tour.image}
@@ -87,7 +87,7 @@ export const UserTourCard: React.FC<TourCardProps> = ({ tour, onRemove }) => {
     <div className="bg-white rounded-xl border border-slate-100 overflow-hidden transition-all duration-300 group">
       <div className="flex flex-col sm:flex-row">
         <div className="relative w-full h-48 sm:w-48 sm:h-auto flex-shrink-0">
-          <Link href={`/tour/${tour.slug}`}>
+          <Link href={`/${tour.slug}`}>
             <Image
               src={tour.image}
               alt={tour.title}
@@ -99,7 +99,7 @@ export const UserTourCard: React.FC<TourCardProps> = ({ tour, onRemove }) => {
         </div>
         <div className="p-4 sm:p-5 flex flex-col flex-grow">
           <h3 className="text-lg font-semibold text-slate-900 leading-tight mb-2 line-clamp-2">
-            <Link href={`/tour/${tour.slug}`} className="hover:text-red-600 transition-colors">
+            <Link href={`/${tour.slug}`} className="hover:text-red-600 transition-colors">
               {tour.title}
             </Link>
           </h3>

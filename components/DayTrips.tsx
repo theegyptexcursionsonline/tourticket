@@ -74,7 +74,7 @@ const DayTripCard = ({
 
   return (
     <Link
-      href={`/tour/${trip.slug}`}
+      href={`/${trip.slug}`}
       className="flex-shrink-0 w-[200px] xs:w-[220px] sm:w-[260px] md:w-[270px] bg-white rounded-xl shadow-lg overflow-hidden snap-start group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
     >
       <div className="relative h-32 sm:h-36 md:h-40">

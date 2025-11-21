@@ -69,7 +69,7 @@ export default function AlgoliaSearch() {
   const Hit = ({ hit }: any) => {
     return (
       <a
-        href={`/tours/${hit.slug}`}
+        href={`/${hit.slug}`}
         className="group bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300 transition-all duration-300 hover:-translate-y-1"
       >
         {/* Image */}

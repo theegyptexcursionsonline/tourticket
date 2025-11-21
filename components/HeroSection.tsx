@@ -515,7 +515,7 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 // --- Enhanced AI Chat Components ---
 const TourCard = ({ tour }: { tour: any }) => (
   <motion.a
-    href={`/tours/${tour.slug}`}
+    href={`/${tour.slug}`}
     target="_blank"
     rel="noopener noreferrer"
     className="group block flex-shrink-0 w-[260px] bg-white rounded-2xl overflow-hidden border-2 border-gray-100 shadow-md hover:shadow-2xl hover:border-blue-200 transition-all duration-300"

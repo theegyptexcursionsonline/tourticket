@@ -201,7 +201,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
       {limitedHits.map((hit: any, index) => (
         <motion.a
           key={hit.objectID}
-          href={`/tours/${hit.slug || hit.objectID}`}
+          href={`/${hit.slug || hit.objectID}`}
           onClick={onHitClick}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -436,7 +436,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 // Tour Card Component for AI Chat
 const TourCard = ({ tour }: { tour: any }) => (
   <motion.a
-    href={`/tours/${tour.slug}`}
+    href={`/${tour.slug}`}
     target="_blank"
     rel="noopener noreferrer"
     className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
