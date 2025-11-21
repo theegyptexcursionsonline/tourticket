@@ -39,15 +39,17 @@ echo "📤 Uploading to Cloudinary..."
 # Generate timestamp and signature for authenticated upload
 TIMESTAMP=$(date +%s)
 PUBLIC_ID="config/firebase-service-account"
+TYPE="authenticated"  # Make resource private (requires authentication to access)
 
-# Create signature string
-STRING_TO_SIGN="public_id=${PUBLIC_ID}&timestamp=${TIMESTAMP}${API_SECRET}"
+# Create signature string (must include all parameters in alphabetical order)
+STRING_TO_SIGN="public_id=${PUBLIC_ID}&timestamp=${TIMESTAMP}&type=${TYPE}${API_SECRET}"
 SIGNATURE=$(echo -n "$STRING_TO_SIGN" | openssl dgst -sha1 -hex | sed 's/^.* //')
 
-# Upload to Cloudinary as raw file (signed)
+# Upload to Cloudinary as PRIVATE raw file (requires signed URLs to access)
 RESPONSE=$(curl -s -X POST "https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload" \
   -F "file=@/tmp/firebase-service-account.json" \
   -F "public_id=${PUBLIC_ID}" \
+  -F "type=${TYPE}" \
   -F "timestamp=${TIMESTAMP}" \
   -F "api_key=${API_KEY}" \
   -F "signature=${SIGNATURE}")
@@ -61,13 +63,16 @@ if [ -z "$URL" ]; then
   exit 1
 fi
 
-echo "✅ Upload successful!"
+echo "✅ Upload successful as PRIVATE resource!"
 echo ""
-echo "🔗 Your Firebase JSON URL:"
+echo "🔗 Cloudinary URL (⚠️  PRIVATE - requires signed URLs to access):"
 echo "$URL"
 echo ""
-echo "📋 Add this to Netlify environment variables:"
-echo "FIREBASE_SERVICE_ACCOUNT_URL=$URL"
+echo "📋 Add these to Netlify environment variables:"
+echo "FIREBASE_CLOUDINARY_PUBLIC_ID=${PUBLIC_ID}"
+echo ""
+echo "⚠️  NOTE: The uploaded file is PRIVATE and cannot be accessed directly."
+echo "The application will generate signed URLs at runtime using your Cloudinary credentials."
 echo ""
 echo "🗑️  Remove these from Netlify:"
 echo "  - FIREBASE_SERVICE_ACCOUNT_BASE64"
