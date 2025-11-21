@@ -307,8 +307,8 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
 
   return (
     <div
-      className={`sticky ${stickyTop} z-20 -mx-4 sm:mx-0 transition-all duration-300 
-        bg-white/30 backdrop-blur-md border-b border-white/20 shadow-lg`}
+      className={`sticky ${stickyTop} z-20 -mx-4 sm:mx-0 transition-all duration-300
+        bg-white/30 backdrop-blur-md border-b border-white/20 shadow-lg rounded-xl`}
     >
       <div className="container mx-auto px-2 sm:px-4">
         <div className="relative">
@@ -1088,9 +1088,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
       </AnimatePresence>
 
       <main className="bg-white pt-20">
-        <div className="bg-slate-50 py-4">
+        <div className="pt-6 pb-2">
           <div className="container mx-auto px-4">
-            <nav className="flex items-center gap-2 text-sm">
+            <nav className="flex items-center gap-1.5 text-xs">
               <Link href="/" className="text-slate-500 hover:text-red-600">
                 Home
               </Link>
