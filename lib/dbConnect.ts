@@ -31,16 +31,22 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      // Additional connection options for better performance and reliability
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      // Increased timeouts for build process (handles 300+ concurrent static pages)
+      maxPoolSize: 50, // Increased for build-time concurrent connections
+      serverSelectionTimeoutMS: 30000, // 30 seconds (was 5s - too short for builds)
       socketTimeoutMS: 45000,
+      connectTimeoutMS: 30000, // Add explicit connect timeout
       family: 4, // Use IPv4, skip trying IPv6
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
       console.log('Database connected successfully');
       return mongoose;
+    }).catch((error) => {
+      // Reset promise on connection failure to allow retry
+      cached.promise = null;
+      console.error('Failed to connect to MongoDB:', error);
+      throw error;
     });
   }
 
