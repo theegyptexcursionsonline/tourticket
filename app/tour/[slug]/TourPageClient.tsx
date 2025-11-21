@@ -847,34 +847,40 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
 // Overview Section Component
 const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.RefObject<HTMLDivElement> }) => (
   <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-24">
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">About this experience</h2>
+    <div className="bg-gradient-to-br from-white via-white to-slate-50/30 p-8 md:p-10 rounded-3xl shadow-xl border border-slate-200/80 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl">
+      <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 pb-4 border-b border-slate-200">About this experience</h2>
       <div
-        className="prose prose-slate max-w-none mb-6"
+        className="prose prose-slate max-w-none mb-8 text-slate-700 leading-relaxed"
         dangerouslySetInnerHTML={{ __html: tour.longDescription || tour.description }}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {tour.includes && tour.includes.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-3">What's included</h3>
-            <ul className="space-y-2">
+          <div className="bg-white/60 p-6 rounded-2xl border border-slate-100 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <CheckCircle size={20} className="text-green-600" />
+              What's included
+            </h3>
+            <ul className="space-y-3">
               {tour.includes.map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-slate-600">
+                <li key={index} className="flex items-start gap-3 text-slate-600 hover:text-slate-900 transition-colors">
                   <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{item}</span>
+                  <span className="text-sm leading-relaxed">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
         {tour.highlights && tour.highlights.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-3">Highlights</h3>
-            <ul className="space-y-2">
+          <div className="bg-white/60 p-6 rounded-2xl border border-slate-100 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <Star size={20} className="text-yellow-500" />
+              Highlights
+            </h3>
+            <ul className="space-y-3">
               {tour.highlights.map((highlight, index) => (
-                <li key={index} className="flex items-start gap-2 text-slate-600">
-                  <Star size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{highlight}</span>
+                <li key={index} className="flex items-start gap-3 text-slate-600 hover:text-slate-900 transition-colors">
+                  <Star size={16} className="text-yellow-500 mt-0.5 flex-shrink-0 fill-current" />
+                  <span className="text-sm leading-relaxed">{highlight}</span>
                 </li>
               ))}
             </ul>
@@ -882,21 +888,21 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
         )}
       </div>
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-        <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Free Cancellation</h3>
-        <p className="text-sm text-slate-600">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="bg-gradient-to-br from-white to-slate-50 p-6 rounded-2xl text-center border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+        <Calendar className="w-10 h-10 text-red-600 mx-auto mb-3" />
+        <h3 className="font-semibold text-slate-900 mb-2">Free Cancellation</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
       </div>
-      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-        <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Group Friendly</h3>
-        <p className="text-sm text-slate-600">Perfect for all group sizes</p>
+      <div className="bg-gradient-to-br from-white to-slate-50 p-6 rounded-2xl text-center border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+        <Users className="w-10 h-10 text-red-600 mx-auto mb-3" />
+        <h3 className="font-semibold text-slate-900 mb-2">Group Friendly</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">Perfect for all group sizes</p>
       </div>
-      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-        <Smartphone className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Mobile Ticket</h3>
-        <p className="text-sm text-slate-600">Show on your smartphone</p>
+      <div className="bg-gradient-to-br from-white to-slate-50 p-6 rounded-2xl text-center border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+        <Smartphone className="w-10 h-10 text-red-600 mx-auto mb-3" />
+        <h3 className="font-semibold text-slate-900 mb-2">Mobile Ticket</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">Show on your smartphone</p>
       </div>
     </div>
   </div>
@@ -1088,30 +1094,33 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
       </AnimatePresence>
 
       <main className="bg-white pt-20">
-        <div className="pt-6 pb-2">
+        <div className="bg-slate-50/50 py-3 border-b border-slate-200/50">
           <div className="container mx-auto px-4">
-            <nav className="flex items-center gap-1.5 text-xs">
-              <Link href="/" className="text-slate-500 hover:text-red-600">
-                Home
+            <div className="flex items-center justify-between gap-4">
+              <nav className="flex items-center gap-1.5 text-xs">
+                <Link href="/" className="text-slate-500 hover:text-red-600 transition-colors">
+                  Home
+                </Link>
+                <span className="text-slate-400">/</span>
+                <Link href="/tours" className="text-slate-500 hover:text-red-600 transition-colors">
+                  Tours
+                </Link>
+                <span className="text-slate-400">/</span>
+                <span className="text-slate-800 font-medium truncate max-w-[200px] md:max-w-none">{tour.title}</span>
+              </nav>
+              <Link
+                href="/tours"
+                className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm hover:underline transition-colors whitespace-nowrap"
+              >
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">Back to all tours</span>
+                <span className="sm:hidden">Back</span>
               </Link>
-              <span className="text-slate-400">/</span>
-              <Link href="/tours" className="text-slate-500 hover:text-red-600">
-                Tours
-              </Link>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-800 font-medium">{tour.title}</span>
-            </nav>
+            </div>
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-8">
-          <Link
-            href="/tours"
-            className="inline-flex items-center gap-2 text-red-600 font-semibold mb-6 hover:underline transition-colors"
-          >
-            <ArrowLeft size={20} />
-            <span>Back to all tours</span>
-          </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">

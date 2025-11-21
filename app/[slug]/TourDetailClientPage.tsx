@@ -1117,29 +1117,34 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         )}
       </AnimatePresence>
 
-<main className="bg-white pt-16 md:pt-20">          <div className="pt-6 pb-2">
-  <div className="container mx-auto px-4">
-    <nav className="flex items-center gap-1.5 text-xs">
-              <Link href="/" className="text-slate-500 hover:text-red-600">
-                Home
+<main className="bg-white pt-16 md:pt-20">
+        <div className="bg-slate-50/50 py-3 border-b border-slate-200/50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between gap-4">
+              <nav className="flex items-center gap-1.5 text-xs">
+                <Link href="/" className="text-slate-500 hover:text-red-600 transition-colors">
+                  Home
+                </Link>
+                <span className="text-slate-400">/</span>
+                <Link href="/search" className="text-slate-500 hover:text-red-600 transition-colors">
+                  Tours
+                </Link>
+                <span className="text-slate-400">/</span>
+                <span className="text-slate-800 font-medium truncate max-w-[200px] md:max-w-none">{tour.title}</span>
+              </nav>
+              <Link
+                href="/search"
+                className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm hover:underline transition-colors whitespace-nowrap"
+              >
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">Back to all tours</span>
+                <span className="sm:hidden">Back</span>
               </Link>
-              <span className="text-slate-400">/</span>
-              <Link href="/search" className="text-slate-500 hover:text-red-600">
-                Tours
-              </Link>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-800 font-medium">{tour.title}</span>
-            </nav>
+            </div>
           </div>
         </div>
 
-<div className="container mx-auto px-4 py-4">          <Link
-            href="/search"
-            className="inline-flex items-center gap-2 text-red-600 font-semibold mb-6 hover:underline transition-colors"
-          >
-            <ArrowLeft size={20} />
-            <span>Back to all tours</span>
-          </Link>
+        <div className="container mx-auto px-4 py-4">
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
