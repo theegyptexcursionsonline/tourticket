@@ -10,6 +10,7 @@ import {
   Landmark,
   Ticket,
   Star,
+  Heart,
   Clock,
   Zap,
   Menu,
@@ -677,7 +678,7 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             <div className="py-2">
               <a href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>My Profile</span></a>
               <a href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>My Bookings</span></a>
-              <a href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Star size={16} /><span>Favorites</span></a>
+              <a href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Heart size={16} /><span>Favorites</span></a>
             </div>
 
             <div className="border-t py-2">
@@ -928,7 +929,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
               <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
 
               <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
-                <Star size={24} className={`${headerText} ${linkHoverColor}`} />
+                <Heart size={24} className={`${headerText} ${linkHoverColor}`} />
                 {wishlist?.length > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
                     {wishlist.length}

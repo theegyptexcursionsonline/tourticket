@@ -216,12 +216,12 @@ const DashboardContent = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between md:gap-8">
           <div className="flex items-center gap-4 min-w-0 flex-1 mb-6 md:mb-0">
             <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-slate-100">
-              {user?.picture ? (
-                <Image 
-                  src={user.picture} 
-                  alt={userName || 'User avatar'} 
-                  fill 
-                  className="object-cover" 
+              {user?.picture || user?.photoURL ? (
+                <Image
+                  src={user.picture || user.photoURL || ''}
+                  alt={userName || 'User avatar'}
+                  fill
+                  className="object-cover"
                   sizes="80px"
                 />
               ) : (

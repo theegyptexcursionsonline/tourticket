@@ -13,6 +13,10 @@ export interface IUser extends Document {
   lastName: string;
   email: string;
   password?: string; // Password is required for creation, but shouldn't be sent to client
+  firebaseUid?: string; // Firebase user ID for Firebase Auth users
+  authProvider?: 'firebase' | 'jwt' | 'google'; // Authentication provider
+  photoURL?: string; // Profile photo URL (from Google or Firebase)
+  emailVerified?: boolean; // Email verification status (from Firebase)
   createdAt: Date;
   role: AdminRole;
   permissions: AdminPermission[];
@@ -46,9 +50,27 @@ const UserSchema: Schema<IUser> = new Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please provide a password.'],
+    required: false, // Optional - Firebase users won't have passwords
     minlength: 8,
     select: false, // Do not send password field in query results by default
+  },
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true, // Allows null values while maintaining uniqueness for non-null values
+    select: false, // Don't include in queries by default
+  },
+  authProvider: {
+    type: String,
+    enum: ['firebase', 'jwt', 'google'],
+    default: 'jwt', // Default to JWT for backward compatibility with admin users
+  },
+  photoURL: {
+    type: String,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
   },
   role: {
     type: String,

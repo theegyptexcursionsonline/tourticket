@@ -334,16 +334,18 @@ export default function ProfilePage() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <div className="flex items-center gap-6">
           <div className="relative w-20 h-20">
-            {user?.picture ? (
+            {user?.picture || user?.photoURL ? (
               <Image
-                src={user.picture}
+                src={user.picture || user.photoURL || ''}
                 alt={user.name || 'User'}
                 fill
                 className="object-cover rounded-full border-2 border-slate-100"
               />
             ) : (
               <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center border-2 border-slate-100">
-                <User size={32} className="text-white" />
+                <span className="text-white text-3xl font-bold uppercase">
+                  {(user?.name || user?.firstName || 'U')[0]}
+                </span>
               </div>
             )}
           </div>

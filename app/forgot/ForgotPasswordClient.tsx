@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
 
 export default function ForgotPasswordClient() {
   const [email, setEmail] = useState('');
@@ -29,23 +31,38 @@ export default function ForgotPasswordClient() {
     setIsSubmitting(true);
 
     try {
-      // This is a mock API call for demonstration.
-      // Replace with your actual API call.
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // const response = await fetch('/api/auth/forgot-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email }),
-      // });
-      // const data = await response.json();
-      // if (!response.ok) throw new Error(data.error || 'Something went wrong.');
-      
+      // Send password reset email using Firebase
+      await sendPasswordResetEmail(auth, email, {
+        url: window.location.origin + '/login',
+        handleCodeInApp: false,
+      });
+
       setIsSuccess(true);
-      setSuccessMessage('If an account with this email exists, a password reset link has been sent.');
+      setSuccessMessage('If an account with this email exists, a password reset link has been sent. Please check your inbox.');
       setEmail('');
 
     } catch (error: any) {
-      setError(error.message || 'An unexpected error occurred.');
+      console.error('Password reset error:', error);
+
+      // Provide user-friendly error messages
+      let errorMessage = 'An unexpected error occurred.';
+
+      if (error.code === 'auth/user-not-found') {
+        // For security, we don't want to reveal if a user exists
+        errorMessage = 'If an account with this email exists, a password reset link has been sent.';
+        setIsSuccess(true);
+        setSuccessMessage(errorMessage);
+        setEmail('');
+        return;
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later.';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled.';
+      }
+
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

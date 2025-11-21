@@ -1074,11 +1074,13 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
   return (
     <div className="relative" ref={menuRef}>
       <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-slate-100 transition-colors">
-        {user.picture ? (
-          <Image src={user.picture} alt={user.name} width={32} height={32} className="rounded-full" />
+        {user.picture || user.photoURL ? (
+          <Image src={user.picture || user.photoURL || ''} alt={user.name} width={32} height={32} className="rounded-full" />
         ) : (
-          <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-            <User size={16} className="text-slate-600" />
+          <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-bold uppercase">
+              {(user.name || user.firstName || 'U')[0]}
+            </span>
           </div>
         )}
         <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -1171,11 +1173,13 @@ const MobileMenu: FC<{
               {user ? (
                 <div className="p-6 border-b">
                   <div className="flex items-center gap-3 mb-4">
-                    {user.picture ? (
-                      <Image src={user.picture} alt={user.name} width={40} height={40} className="rounded-full" />
+                    {user.picture || user.photoURL ? (
+                      <Image src={user.picture || user.photoURL || ''} alt={user.name} width={40} height={40} className="rounded-full" />
                     ) : (
-                      <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                        <User size={20} className="text-slate-600" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-lg font-bold uppercase">
+                          {(user.name || user.firstName || 'U')[0]}
+                        </span>
                       </div>
                     )}
                     <div>

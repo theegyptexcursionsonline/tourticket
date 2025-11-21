@@ -4,12 +4,13 @@ import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
 import { verifyToken } from '@/lib/jwt';
+import { verifyFirebaseToken } from '@/lib/firebase/admin';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔄 Starting bookings fetch...');
-    
+
     // 1. Connect to database
     await dbConnect();
     console.log('✅ Database connected');
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     // 2. Get and validate the JWT from the Authorization header
     const authHeader = request.headers.get('Authorization');
     console.log('📋 Auth header:', authHeader ? 'Present' : 'Missing');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log('❌ No valid auth header');
       return NextResponse.json({ error: 'Not authenticated: No token provided' }, { status: 401 });
@@ -26,17 +27,40 @@ export async function GET(request: NextRequest) {
     const token = authHeader.split(' ')[1];
     console.log('🎫 Token extracted:', token.substring(0, 20) + '...');
 
-    // 3. Verify token
-    const decodedPayload = await verifyToken(token);
-    console.log('🔐 Token decoded:', decodedPayload ? 'Success' : 'Failed');
+    // 3. Verify token - Try Firebase first, fallback to JWT
+    let userId: string;
+    let user;
 
-    if (!decodedPayload || !decodedPayload.sub) {
-      console.log('❌ Invalid token payload');
-      return NextResponse.json({ error: 'Not authenticated: Invalid token' }, { status: 401 });
+    // Try Firebase authentication first (for regular users)
+    console.log('🔥 Trying Firebase token verification...');
+    const firebaseResult = await verifyFirebaseToken(token);
+
+    if (firebaseResult.success && firebaseResult.uid) {
+      console.log('✅ Firebase token verified, UID:', firebaseResult.uid);
+      // Find user by Firebase UID
+      user = await User.findOne({ firebaseUid: firebaseResult.uid });
+
+      if (!user) {
+        console.log('❌ User not found with Firebase UID:', firebaseResult.uid);
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      userId = user._id.toString();
+      console.log('👤 User found via Firebase UID:', userId);
+    } else {
+      console.log('⚠️ Firebase verification failed, trying JWT fallback...');
+      // Fallback to JWT (for backwards compatibility)
+      const decodedPayload = await verifyToken(token);
+      console.log('🔐 JWT Token decoded:', decodedPayload ? 'Success' : 'Failed');
+
+      if (!decodedPayload || !decodedPayload.sub) {
+        console.log('❌ Invalid token payload');
+        return NextResponse.json({ error: 'Not authenticated: Invalid token' }, { status: 401 });
+      }
+
+      userId = decodedPayload.sub as string;
+      console.log('👤 User ID from JWT token:', userId);
     }
-
-    const userId = decodedPayload.sub as string;
-    console.log('👤 User ID from token:', userId);
 
     // 4. Validate MongoDB ObjectId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -44,13 +68,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
     }
 
-    // 5. Find the user in database
-    const user = await User.findById(userId);
-    console.log('👤 User found:', user ? `${user.firstName} ${user.lastName}` : 'Not found');
-    
+    // 5. Find the user in database (if not already found via Firebase)
     if (!user) {
-      console.log('❌ User not found in database');
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      user = await User.findById(userId);
+      console.log('👤 User found via JWT:', user ? `${user.firstName} ${user.lastName}` : 'Not found');
+
+      if (!user) {
+        console.log('❌ User not found in database');
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+    } else {
+      console.log('👤 Using user from Firebase lookup:', `${user.firstName} ${user.lastName}`);
     }
 
     // 6. Check if Booking model is available

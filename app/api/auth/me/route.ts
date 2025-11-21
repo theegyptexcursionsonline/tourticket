@@ -1,59 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
-import dbConnect from '@/lib/dbConnect';
-import User from '@/lib/models/user';
-import mongoose from 'mongoose';
+import { authenticateFirebaseUser, formatUserForClient } from '@/lib/firebase/authHelpers';
 
+/**
+ * GET /api/auth/me
+ * Get current user information
+ * Verifies Firebase ID token and returns user data from MongoDB
+ */
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
+    // Authenticate Firebase user
+    const authResult = await authenticateFirebaseUser(request);
 
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'No authentication token found' }, { status: 401 });
+    if (!authResult.success) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentication failed' },
+        { status: authResult.statusCode || 401 }
+      );
     }
 
-    const token = authHeader.split(' ')[1];
-    const decodedPayload = await verifyToken(token);
-
-    if (!decodedPayload || !decodedPayload.sub) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    }
-
-    const userId = decodedPayload.sub as string;
-
-    // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
-    }
-
-    const user = await User.findById(userId).select('-password');
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const userData = {
-      id: (user._id as any).toString(),
-      _id: (user._id as any).toString(),
-      email: user.email,
-      name: `${user.firstName} ${user.lastName}`,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    };
+    // Format user data for response
+    const userData = formatUserForClient(authResult.user);
 
     return NextResponse.json({
       success: true,
       user: userData,
     });
-
   } catch (error: any) {
     console.error('Get user error:', error);
-    
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    }
-
-    return NextResponse.json({ error: 'Failed to get user information' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to get user information' },
+      { status: 500 }
+    );
   }
 }

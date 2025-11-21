@@ -6,6 +6,7 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { verifyToken } from '@/lib/jwt';
+import { verifyFirebaseToken } from '@/lib/firebase/admin';
 
 export async function GET(request: NextRequest) {
   await dbConnect();
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     let requireAuth = false;
 
     if (isAdmin) {
+      // Admin requests use JWT authentication (unchanged)
       if (status) {
         query.status = status;
       }
@@ -29,27 +31,43 @@ export async function GET(request: NextRequest) {
       query.user = userId;
       requireAuth = true;
     } else {
+      // User requests use Firebase authentication
       requireAuth = true;
-      
+
       const authHeader = request.headers.get('Authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return NextResponse.json(
-          { success: false, message: 'Authentication required' },
+          { success: false, error: 'Authentication required' },
           { status: 401 }
         );
       }
 
       const token = authHeader.split(' ')[1];
-      const payload = await verifyToken(token);
 
-      if (!payload || !payload.sub) {
-        return NextResponse.json(
-          { success: false, message: 'Invalid or expired token' },
-          { status: 401 }
-        );
+      // Try Firebase authentication first (for regular users)
+      const firebaseResult = await verifyFirebaseToken(token);
+
+      if (firebaseResult.success && firebaseResult.uid) {
+        // Find user by Firebase UID
+        const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+        if (!user) {
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+        query.user = user._id;
+      } else {
+        // Fallback to JWT (for backwards compatibility or admin)
+        const payload = await verifyToken(token);
+        if (!payload || !payload.sub) {
+          return NextResponse.json(
+            { success: false, error: 'Not authenticated: Invalid token' },
+            { status: 401 }
+          );
+        }
+        query.user = payload.sub;
       }
-
-      query.user = payload.sub;
     }
 
     const skip = (page - 1) * limit;
@@ -113,10 +131,10 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Failed to fetch bookings:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to fetch bookings',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      {
+        success: false,
+        error: 'Failed to fetch bookings',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
     );
@@ -130,23 +148,39 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { success: false, message: 'Authentication required' },
+        { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = await verifyToken(token);
+    let userId: string;
 
-    if (!payload || !payload.sub) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid or expired token' },
-        { status: 401 }
-      );
+    // Try Firebase authentication first (for regular users)
+    const firebaseResult = await verifyFirebaseToken(token);
+
+    if (firebaseResult.success && firebaseResult.uid) {
+      // Find user by Firebase UID
+      const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      userId = user._id.toString();
+    } else {
+      // Fallback to JWT (for backwards compatibility)
+      const payload = await verifyToken(token);
+      if (!payload || !payload.sub) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid or expired token' },
+          { status: 401 }
+        );
+      }
+      userId = payload.sub as string;
     }
 
-    const userId = payload.sub as string;
-    
     const body = await request.json();
     const {
       tourId,
@@ -162,7 +196,7 @@ export async function POST(request: NextRequest) {
 
     if (!tourId || !date || !time || !totalPrice) {
       return NextResponse.json(
-        { success: false, message: 'Missing required booking information' },
+        { success: false, error: 'Missing required booking information' },
         { status: 400 }
       );
     }
@@ -170,7 +204,7 @@ export async function POST(request: NextRequest) {
     const tour = await Tour.findById(tourId);
     if (!tour) {
       return NextResponse.json(
-        { success: false, message: 'Tour not found' },
+        { success: false, error: 'Tour not found' },
         { status: 404 }
       );
     }
@@ -178,7 +212,7 @@ export async function POST(request: NextRequest) {
     const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json(
-        { success: false, message: 'User not found' },
+        { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
@@ -228,13 +262,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Failed to create booking:', error);
-    
+
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map((err: any) => err.message);
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Booking validation failed',
+        {
+          success: false,
+          error: 'Booking validation failed',
           errors: validationErrors,
         },
         { status: 400 }
@@ -242,10 +276,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to create booking',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      {
+        success: false,
+        error: 'Failed to create booking',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
     );

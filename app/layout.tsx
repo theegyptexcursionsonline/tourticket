@@ -32,9 +32,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${inter.variable} ${almarai.variable} font-sans`}>
+      <body className={`${inter.variable} ${almarai.variable} font-sans`} suppressHydrationWarning>
         <IntercomClient />
         <AuthProvider>
           <SettingsProvider>
