@@ -3,31 +3,45 @@ import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  // Check if we have service account credentials
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  // Try individual credentials first (recommended - smaller env vars for AWS Lambda)
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (serviceAccount) {
-    // Use service account credentials (recommended for production)
+  if (projectId && clientEmail && privateKey) {
+    // Use individual credentials
     try {
-      const serviceAccountJSON = JSON.parse(serviceAccount);
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccountJSON),
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "egypt-excursionsonline",
+        credential: admin.credential.cert({
+          projectId,
+          clientEmail,
+          // Replace escaped newlines in private key
+          privateKey: privateKey.replace(/\\n/g, '\n'),
+        }),
       });
+      console.log('✅ Firebase Admin initialized with individual credentials');
     } catch (error) {
-      console.error('Error parsing Firebase service account:', error);
-      // Fall back to default credentials
-      admin.initializeApp({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "egypt-excursionsonline",
-      });
+      console.error('❌ Error initializing Firebase Admin with individual credentials:', error);
+      throw error;
     }
   } else {
-    // Use default credentials (for development)
-    // This will work if you have GOOGLE_APPLICATION_CREDENTIALS env var set
-    // or if running in a Google Cloud environment
-    admin.initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "egypt-excursionsonline",
-    });
+    // Fallback to full service account JSON (for backwards compatibility)
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+    if (serviceAccount) {
+      try {
+        const serviceAccountJSON = JSON.parse(serviceAccount);
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccountJSON),
+        });
+        console.log('⚠️ Firebase Admin initialized with full JSON (consider using individual credentials)');
+      } catch (error) {
+        console.error('❌ Error parsing Firebase service account:', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Firebase Admin SDK credentials not found. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY');
+    }
   }
 }
 
