@@ -13,11 +13,11 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { isApproved } = body; // Expecting { isApproved: true }
+    const { verified } = body; // Expecting { verified: true }
 
     const updatedReview = await Review.findByIdAndUpdate(
       id,
-      { isApproved },
+      { verified },
       { new: true, runValidators: true }
     );
 

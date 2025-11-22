@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { Star, MessageSquare, User, Map, Trash2, CheckCircle, ShieldCheck, Clock, TrendingUp, Users, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // --- Type Definitions ---
 interface Review {
@@ -16,7 +17,7 @@ interface Review {
   };
   rating: number;
   comment: string;
-  isApproved: boolean;
+  verified: boolean;
   createdAt: string;
 }
 
@@ -57,6 +58,18 @@ const ReviewsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Calculate stats from reviews ---
+  const calculateStats = (reviewsData: Review[]): ReviewStats => {
+    const totalReviews = reviewsData.length;
+    const pendingReviews = reviewsData.filter((r: Review) => !r.verified).length;
+    const approvedReviews = reviewsData.filter((r: Review) => r.verified).length;
+    const averageRating = totalReviews > 0
+      ? Math.round((reviewsData.reduce((sum: number, r: Review) => sum + r.rating, 0) / totalReviews) * 10) / 10
+      : 0;
+
+    return { totalReviews, pendingReviews, approvedReviews, averageRating };
+  };
+
   // --- Fetch all reviews ---
   useEffect(() => {
     const fetchReviews = async () => {
@@ -66,16 +79,7 @@ const ReviewsPage = () => {
         if (!response.ok) throw new Error('Failed to fetch reviews');
         const data = await response.json();
         setReviews(data);
-        
-        // Calculate stats
-        const totalReviews = data.length;
-        const pendingReviews = data.filter((r: Review) => !r.isApproved).length;
-        const approvedReviews = data.filter((r: Review) => r.isApproved).length;
-        const averageRating = totalReviews > 0 
-          ? Math.round((data.reduce((sum: number, r: Review) => sum + r.rating, 0) / totalReviews) * 10) / 10
-          : 0;
-        
-        setStats({ totalReviews, pendingReviews, approvedReviews, averageRating });
+        setStats(calculateStats(data));
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -85,14 +89,19 @@ const ReviewsPage = () => {
     fetchReviews();
   }, []);
 
+  // --- Recalculate stats whenever reviews change ---
+  useEffect(() => {
+    setStats(calculateStats(reviews));
+  }, [reviews]);
+
   // Filter reviews based on active filter
   useEffect(() => {
     switch (activeFilter) {
       case 'pending':
-        setFilteredReviews(reviews.filter(r => !r.isApproved));
+        setFilteredReviews(reviews.filter(r => !r.verified));
         break;
       case 'approved':
-        setFilteredReviews(reviews.filter(r => r.isApproved));
+        setFilteredReviews(reviews.filter(r => r.verified));
         break;
       default:
         setFilteredReviews(reviews);
@@ -101,35 +110,45 @@ const ReviewsPage = () => {
 
   // --- Approve a Review ---
   const handleApprove = async (id: string) => {
+    const loadingToast = toast.loading('Approving review...');
     try {
       const response = await fetch(`/api/admin/reviews/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isApproved: true }),
+        body: JSON.stringify({ verified: true }),
       });
-      if (!response.ok) throw new Error('Failed to approve review');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to approve review');
+      }
       const updatedReview = await response.json();
-      
+
       // Update the review in the local state
       setReviews(reviews.map(r => r._id === id ? updatedReview : r));
+      toast.success('Review approved successfully!', { id: loadingToast });
     } catch (err) {
-      alert(`Error: ${(err as Error).message}`);
+      toast.error(`Error: ${(err as Error).message}`, { id: loadingToast });
     }
   };
 
   // --- Delete a Review ---
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to permanently delete this review?')) return;
+    const loadingToast = toast.loading('Deleting review...');
     try {
       const response = await fetch(`/api/admin/reviews/${id}`, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Failed to delete review');
-      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete review');
+      }
+
       // Remove the review from the local state
       setReviews(reviews.filter(r => r._id !== id));
+      toast.success('Review deleted successfully!', { id: loadingToast });
     } catch (err) {
-      alert(`Error: ${(err as Error).message}`);
+      toast.error(`Error: ${(err as Error).message}`, { id: loadingToast });
     }
   };
 
@@ -282,17 +301,17 @@ const ReviewsPage = () => {
                     <div className="flex items-center justify-between mb-3">
                       <StarRating rating={review.rating} size="lg" />
                       <div className="flex items-center space-x-3">
-                        {!review.isApproved && (
-                          <button 
-                            onClick={() => handleApprove(review._id)} 
+                        {!review.verified && (
+                          <button
+                            onClick={() => handleApprove(review._id)}
                             className="inline-flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium text-sm"
                           >
                             <ShieldCheck className="h-4 w-4 mr-2"/>
                             Approve
                           </button>
                         )}
-                        <button 
-                          onClick={() => handleDelete(review._id)} 
+                        <button
+                          onClick={() => handleDelete(review._id)}
                           className="inline-flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium text-sm"
                         >
                           <Trash2 className="h-4 w-4 mr-2"/>
@@ -300,11 +319,11 @@ const ReviewsPage = () => {
                         </button>
                       </div>
                     </div>
-                    
+
                     <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mb-4 ${
-                      review.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      review.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {review.isApproved ? (
+                      {review.verified ? (
                         <>
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Approved

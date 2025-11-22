@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Star, Loader2, User, AlertCircle, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import LoginModal from '@/components/auth/LoginModal';
+import SignupModal from '@/components/auth/SignupModal';
 
 interface ReviewFormProps {
   tourId: string;
@@ -21,6 +23,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasExistingReview, setHasExistingReview] = useState<any>(null);
   const [isCheckingExisting, setIsCheckingExisting] = useState(true);
+  const [isLoginModalOpen, setLoginModalOpen] = useState(false);
+  const [isSignupModalOpen, setSignupModalOpen] = useState(false);
 
   // Check if user has already reviewed this tour
   useEffect(() => {
@@ -215,31 +219,59 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
   // If not authenticated, show login prompt
   if (!isAuthenticated) {
     return (
-      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-blue-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Share Your Experience</h3>
-          <p className="text-gray-600 mb-4">
-            Please log in to leave a review and help other travelers.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Link
-              href="/login"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              className="inline-flex items-center px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg border border-blue-600 hover:bg-blue-50 transition-colors"
-            >
-              Sign Up
-            </Link>
+      <>
+        <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Share Your Experience</h3>
+            <p className="text-gray-600 mb-4">
+              Please log in to leave a review and help other travelers.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setLoginModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => setSignupModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg border border-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                Sign Up
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Login and Signup Modals */}
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setLoginModalOpen(false)}
+          onSwitchToSignup={() => {
+            setLoginModalOpen(false);
+            setSignupModalOpen(true);
+          }}
+          onSuccess={() => {
+            // Auth state will update automatically
+            toast.success('You can now leave a review!');
+          }}
+        />
+        <SignupModal
+          isOpen={isSignupModalOpen}
+          onClose={() => setSignupModalOpen(false)}
+          onSwitchToLogin={() => {
+            setSignupModalOpen(false);
+            setLoginModalOpen(true);
+          }}
+          onSuccess={() => {
+            // Auth state will update automatically
+            toast.success('Account created! You can now leave a review!');
+          }}
+        />
+      </>
     );
   }
 
