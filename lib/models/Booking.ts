@@ -15,6 +15,13 @@ export interface IBooking extends Document {
   paymentMethod?: string;
   specialRequests?: string;
   emergencyContact?: string;
+  hotelPickupDetails?: string;
+  hotelPickupLocation?: {
+    address: string;
+    lat: number;
+    lng: number;
+    placeId?: string;
+  };
   adultGuests?: number;
   childGuests?: number;
   infantGuests?: number;
@@ -117,6 +124,18 @@ const BookingSchema: Schema<IBooking> = new Schema({
   emergencyContact: {
     type: String,
     maxlength: 200,
+  },
+  
+  hotelPickupDetails: {
+    type: String,
+    maxlength: 300,
+  },
+  
+  hotelPickupLocation: {
+    address: String,
+    lat: Number,
+    lng: Number,
+    placeId: String,
   },
   
   adultGuests: {

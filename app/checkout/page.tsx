@@ -27,6 +27,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import StripePaymentForm from '@/components/StripePaymentForm';
+import HotelPickupMap from '@/components/HotelPickupMap';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
@@ -364,12 +365,21 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
   );
 };
 
+type HotelPickupLocation = {
+  address: string;
+  lat: number;
+  lng: number;
+  placeId?: string;
+} | null;
+
 type FormDataShape = {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   emergencyContact: string;
+  hotelPickupDetails: string;
+  hotelPickupLocation: HotelPickupLocation;
   specialRequests: string;
   cardholderName: string;
   cardNumber: string;
@@ -524,8 +534,32 @@ const CheckoutFormStep = ({
                 disabled={isProcessing} 
               />
             </div>
+          </div>
+        </section>
+      )}
 
-            <div className="md:col-span-2">
+      {/* Hotel Pickup Location (show for guest or authenticated users) */}
+      {(customerType === 'guest' || user) && (
+        <section>
+          <HotelPickupMap
+            onLocationSelect={(location) => {
+              setFormData({
+                ...formData,
+                hotelPickupLocation: location,
+                hotelPickupDetails: location?.address || ''
+              });
+            }}
+            initialLocation={formData.hotelPickupLocation || undefined}
+            tourLocation={cart && cart.length > 0 ? cart[0].title : 'Cairo, Egypt'}
+          />
+        </section>
+      )}
+
+      {/* Special Requests (show for guest or authenticated users) */}
+      {(customerType === 'guest' || user) && (
+        <section>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label>
               <textarea 
                 name="specialRequests" 
@@ -944,6 +978,8 @@ export default function CheckoutPage() {
     email: '',
     phone: '',
     emergencyContact: '',
+    hotelPickupDetails: '',
+    hotelPickupLocation: null,
     specialRequests: '',
     cardholderName: '',
     cardNumber: '',
@@ -1077,6 +1113,8 @@ export default function CheckoutPage() {
           email: formData.email,
           phone: formData.phone,
           emergencyContact: formData.emergencyContact,
+          hotelPickupDetails: formData.hotelPickupDetails,
+          hotelPickupLocation: formData.hotelPickupLocation,
           specialRequests: formData.specialRequests,
         },
         cart: cart || [],

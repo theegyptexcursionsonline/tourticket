@@ -230,9 +230,17 @@
 
                             <!-- Special Requests -->
                             {{#if specialRequests}}
-                            <div class="alert-box" style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 18px; margin-top: 20px; margin-bottom: 30px;">
+                            <div class="alert-box" style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 18px; margin-top: 20px; margin-bottom: 20px;">
                                 <div class="alert-title" style="color: #be123c; font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.6px;">⚠️ SPECIAL REQUESTS</div>
                                 <div class="alert-content" style="color: #9f1239; font-size: 14px; line-height: 1.5;">{{specialRequests}}</div>
+                            </div>
+                            {{/if}}
+
+                            <!-- Hotel Pickup Details -->
+                            {{#if hotelPickupDetails}}
+                            <div class="alert-box" style="background-color: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; padding: 18px; margin-top: 20px; margin-bottom: 30px;">
+                                <div class="alert-title" style="color: #92400e; font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.6px;">🏨 HOTEL PICKUP DETAILS</div>
+                                <div class="alert-content" style="color: #b45309; font-size: 14px; line-height: 1.5; font-weight: 600;">{{hotelPickupDetails}}</div>
                             </div>
                             {{/if}}
 

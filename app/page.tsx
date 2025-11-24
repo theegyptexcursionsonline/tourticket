@@ -10,4 +10,7 @@ export const metadata: Metadata = {
   description: 'Discover Egypt\'s wonders with unforgettable tours and experiences. From Pyramids to Nile cruises, book your adventure today.',
 };
 
+// Ensure Next.js picks up the ISR config for the homepage route.
+export const revalidate = 60;
+
 export { default } from './HomePageServer';

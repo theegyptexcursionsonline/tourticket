@@ -15,6 +15,7 @@ export interface BookingEmailData extends BaseEmailData {
   bookingId: string;
   bookingOption?: string; // Selected booking option name
   specialRequests?: string;
+  hotelPickupDetails?: string;
   meetingPoint?: string;
   contactNumber?: string;
   tourImage?: string;
@@ -92,6 +93,7 @@ export interface AdminAlertData {
   totalPrice: string;
   paymentMethod?: string;
   specialRequests?: string;
+  hotelPickupDetails?: string;
   adminDashboardLink?: string;
   baseUrl?: string;
   tours?: Array<{

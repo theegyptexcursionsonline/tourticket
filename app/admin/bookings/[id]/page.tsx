@@ -76,6 +76,13 @@ interface BookingDetails {
   paymentMethod?: string;
   specialRequests?: string;
   emergencyContact?: string;
+  hotelPickupDetails?: string;
+  hotelPickupLocation?: {
+    address: string;
+    lat: number;
+    lng: number;
+    placeId?: string;
+  };
   selectedAddOns?: { [key: string]: number };
   selectedBookingOption?: {
     _id: string;
@@ -573,6 +580,48 @@ const BookingDetailPage = () => {
                   icon={MapPin}
                   label="Meeting Point"
                   value={booking.tour.meetingPoint}
+                />
+              )}
+              {(booking.hotelPickupDetails || booking.hotelPickupLocation) && (
+                <DetailItem
+                  icon={MapPin}
+                  label="Hotel Pickup Details"
+                  value={
+                    <div className="space-y-2">
+                      <span className="text-red-600 font-semibold block">
+                        {booking.hotelPickupLocation?.address || booking.hotelPickupDetails}
+                      </span>
+                      {booking.hotelPickupLocation && (
+                        <>
+                          <div className="text-xs text-slate-500">
+                            📍 Lat: {booking.hotelPickupLocation.lat.toFixed(6)}, Lng: {booking.hotelPickupLocation.lng.toFixed(6)}
+                          </div>
+                          <div className="mt-3">
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${booking.hotelPickupLocation.lat},${booking.hotelPickupLocation.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                              <MapPin size={14} />
+                              View on Google Maps
+                            </a>
+                          </div>
+                          <div className="mt-2 rounded-lg overflow-hidden border border-slate-200">
+                            <iframe
+                              width="100%"
+                              height="200"
+                              style={{ border: 0 }}
+                              loading="lazy"
+                              allowFullScreen
+                              referrerPolicy="no-referrer-when-downgrade"
+                              src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${booking.hotelPickupLocation.lat},${booking.hotelPickupLocation.lng}&zoom=15`}
+                            ></iframe>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  }
                 />
               )}
               <DetailItem 
