@@ -407,7 +407,7 @@ const CheckoutFormStep = ({
   onPaymentProcessWithIntent: (intentId: string) => void;
   isProcessing: boolean;
   formData: FormDataShape;
-  setFormData: (v: FormDataShape) => void;
+  setFormData: React.Dispatch<React.SetStateAction<FormDataShape>>;
   customerType: 'guest' | 'login' | 'signup';
   setCustomerType: (type: 'guest' | 'login' | 'signup') => void;
   onAuthModalOpen: (mode: 'login' | 'signup') => void;
@@ -440,7 +440,7 @@ const CheckoutFormStep = ({
   // Auto-fill form if user is logged in
   useEffect(() => {
     if (user && customerType !== 'guest') {
-      setFormData(prev => ({
+      setFormData((prev: FormDataShape) => ({
         ...prev,
         firstName: user.firstName || prev.firstName,
         lastName: user.lastName || prev.lastName,
@@ -673,6 +673,7 @@ const ThankYouPage = ({
   discount?: number;
 }) => {
   const { formatPrice } = useSettings();
+  const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
 
 const handleDownloadReceipt = async () => {
@@ -1176,6 +1177,8 @@ export default function CheckoutPage() {
     }
   }, [cart, isConfirmed, router]);
 
+  const showMobileStickyCTA = !isConfirmed && cart && cart.length > 0 && (customerType === 'guest' || user);
+
   if (!cart) {
     return (
       <>
@@ -1193,7 +1196,7 @@ export default function CheckoutPage() {
   return (
     <>
       <Header startSolid={true} />
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-20 sm:pt-24 pb-40 lg:pb-16">
+      <main className={`min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-20 sm:pt-24 ${showMobileStickyCTA ? 'pb-56' : 'pb-40'} lg:pb-16`}>
         <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
           <AnimatePresence mode="wait">
             <motion.div 
@@ -1251,8 +1254,8 @@ export default function CheckoutPage() {
         </div>
       </main>
 
-      {!isConfirmed && cart && cart.length > 0 && (customerType === 'guest' || user) && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+      {showMobileStickyCTA && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50 shadow-[0_-6px_20px_rgba(15,23,42,0.15)]">
           <div className="flex justify-between items-center mb-3">
             <span className="text-slate-600">Total price:</span>
             <span className="font-bold text-xl text-rose-600">{formatPrice(pricing.total)}</span>
