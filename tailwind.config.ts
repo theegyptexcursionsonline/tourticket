@@ -13,6 +13,9 @@ const config: Config = {
         sans: ["var(--font-inter)"],
         mono: ["var(--font-almarai)"],
       },
+      screens: {
+        'xs': '475px',
+      },
     },
   },
   plugins: [scrollbarHide], // Add the plugin here

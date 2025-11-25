@@ -147,19 +147,19 @@ const CustomerTypeSelector = ({
         <motion.button
           type="button"
           onClick={onLoginClick}
-          className="w-full p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-blue-300 hover:bg-blue-50"
+          className="w-full p-3 sm:p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-blue-300 hover:bg-blue-50"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <LogIn size={20} className="text-blue-500" />
-              <div>
-                <div className="font-semibold text-slate-800">Sign In</div>
-                <div className="text-sm text-slate-600">Access your account for faster checkout</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+              <LogIn size={20} className="text-blue-500 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="font-semibold text-sm sm:text-base text-slate-800">Sign In</div>
+                <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">Access your account for faster checkout</div>
               </div>
             </div>
-            <div className="text-blue-500 text-sm font-medium">Sign In →</div>
+            <div className="text-blue-500 text-xs sm:text-sm font-medium flex-shrink-0 hidden xs:block">Sign In →</div>
           </div>
         </motion.button>
 
@@ -167,19 +167,19 @@ const CustomerTypeSelector = ({
         <motion.button
           type="button"
           onClick={onSignupClick}
-          className="w-full p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-green-300 hover:bg-green-50"
+          className="w-full p-3 sm:p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-green-300 hover:bg-green-50"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <UserPlus size={20} className="text-green-500" />
-              <div>
-                <div className="font-semibold text-slate-800">Create Account</div>
-                <div className="text-sm text-slate-600">Save your details for future bookings</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+              <UserPlus size={20} className="text-green-500 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="font-semibold text-sm sm:text-base text-slate-800">Create Account</div>
+                <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">Save your details for future bookings</div>
               </div>
             </div>
-            <div className="text-green-500 text-sm font-medium">Sign Up →</div>
+            <div className="text-green-500 text-xs sm:text-sm font-medium flex-shrink-0 hidden xs:block">Sign Up →</div>
           </div>
         </motion.button>
       </div>
@@ -306,43 +306,44 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
         ))}
       </div>
 
-      <div className="mt-4 p-4 bg-slate-50 border-t border-b border-slate-200">
-        <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
-        <div className="flex justify-between text-sm text-slate-600 mt-2"><span>Service fee</span><span>{formatPrice(pricing.serviceFee)}</span></div>
-        <div className="flex justify-between text-sm text-slate-600"><span>Taxes & fees</span><span>{formatPrice(pricing.tax)}</span></div>
+      <div className="mt-4 p-3 sm:p-4 bg-slate-50 border-t border-b border-slate-200">
+        <div className="flex justify-between text-xs sm:text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
+        <div className="flex justify-between text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2"><span>Service fee</span><span>{formatPrice(pricing.serviceFee)}</span></div>
+        <div className="flex justify-between text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2"><span>Taxes & fees</span><span>{formatPrice(pricing.tax)}</span></div>
         {pricing.discount > 0 && (
-          <div className="flex justify-between text-sm text-emerald-700 font-medium mt-2">
+          <div className="flex justify-between text-xs sm:text-sm text-emerald-700 font-medium mt-1.5 sm:mt-2">
             <span>Discount Applied</span>
             <span>-{formatPrice(pricing.discount)}</span>
           </div>
         )}
-        <div className="border-t pt-3 mt-3 flex justify-between items-center">
-          <p className="text-sm text-slate-600">Total</p>
-          <p className="text-lg font-bold text-rose-600">{formatPrice(pricing.total)}</p>
+        <div className="border-t pt-2 sm:pt-3 mt-2 sm:mt-3 flex justify-between items-center">
+          <p className="text-xs sm:text-sm text-slate-600">Total</p>
+          <p className="text-base sm:text-lg font-bold text-rose-600">{formatPrice(pricing.total)}</p>
         </div>
       </div>
 
       <div className="mt-4">
-        <div className="flex gap-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2 sm:hidden">Promo Code</label>
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Promotional code"
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
             disabled={isApplyingCoupon || pricing.discount > 0}
-            className="flex-1 px-4 py-2 border border-slate-300 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-200 transition disabled:bg-slate-100"
+            className="flex-1 px-4 py-3 sm:py-2 border border-slate-300 rounded-lg sm:rounded placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-200 transition disabled:bg-slate-100 text-base"
           />
           <button
             onClick={applyPromoCode}
             type="button"
             disabled={isApplyingCoupon || pricing.discount > 0}
-            className="px-4 py-2 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition disabled:bg-slate-400 flex items-center justify-center w-24"
+            className="px-4 py-3 sm:py-2 bg-slate-900 text-white font-semibold rounded-lg sm:rounded hover:bg-slate-800 transition disabled:bg-slate-400 flex items-center justify-center w-full sm:w-24"
           >
             {isApplyingCoupon ? <Loader2 className="animate-spin" size={20} /> : 'Apply'}
           </button>
         </div>
         {couponMessage && (
-          <p className={`mt-2 text-sm ${pricing.discount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`mt-2 text-xs sm:text-sm ${pricing.discount > 0 ? 'text-green-600' : 'text-red-600'}`}>
             {couponMessage}
           </p>
         )}
@@ -580,15 +581,15 @@ const CheckoutFormStep = ({
         <section>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-6">
             <button
               type="button"
               onClick={() => setPaymentMethod('card')}
               aria-pressed={paymentMethod === 'card'}
-              className={`flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-2 p-3 sm:p-4 border border-slate-200 transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+              className={`flex flex-col items-center justify-center gap-1 sm:gap-2 p-3 sm:p-4 border border-slate-200 rounded-lg transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
             >
-              <div className="h-8 sm:h-10 flex items-center">
-                <Image src="/payment/visam.png" alt="Card logos" width={60} height={24} className="object-contain sm:w-[72px] sm:h-[28px]" />
+              <div className="h-7 sm:h-10 flex items-center">
+                <Image src="/payment/visam.png" alt="Card logos" width={60} height={24} className="object-contain w-[50px] h-[20px] sm:w-[72px] sm:h-[28px]" />
               </div>
               <span className="text-xs sm:text-sm font-medium text-slate-700">Card</span>
             </button>
@@ -597,15 +598,15 @@ const CheckoutFormStep = ({
               type="button"
               onClick={() => setPaymentMethod('paypal')}
               aria-pressed={paymentMethod === 'paypal'}
-              className={`flex flex-col items-center gap-2 p-4 border border-slate-200 transition-shadow relative ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
+              className={`flex flex-col items-center justify-center gap-1 sm:gap-2 p-3 sm:p-4 border border-slate-200 rounded-lg transition-shadow relative ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
             >
-              <span className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">
-                COMING SOON
+              <span className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-blue-500 text-white text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
+                SOON
               </span>
-              <div className="h-10 flex items-center">
-                <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain" />
+              <div className="h-7 sm:h-10 flex items-center">
+                <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain w-[38px] h-[24px] sm:w-[48px] sm:h-[30px]" />
               </div>
-              <span className="text-sm font-medium text-slate-700">PayPal</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-700">PayPal</span>
             </button>
           </div>
 
@@ -796,21 +797,21 @@ const handleDownloadReceipt = async () => {
       className="bg-white rounded-lg shadow-lg max-w-4xl mx-auto border border-slate-200 overflow-hidden"
     >
       {/* Success Icon and Message */}
-      <div className="text-center pt-12 pb-6 px-6">
-        <div className="mx-auto w-fit mb-6 p-4 bg-green-100 rounded-full">
-          <CheckCircle size={48} className="text-green-600" />
+      <div className="text-center pt-8 sm:pt-12 pb-4 sm:pb-6 px-4 sm:px-6">
+        <div className="mx-auto w-fit mb-4 sm:mb-6 p-3 sm:p-4 bg-green-100 rounded-full">
+          <CheckCircle size={36} className="sm:w-12 sm:h-12 text-green-600" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-3">Thank you — your booking is confirmed!</h1>
-        <p className="text-base text-slate-600">We've sent a booking confirmation and receipt to your email address.</p>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 mb-2 sm:mb-3">Thank you — your booking is confirmed!</h1>
+        <p className="text-sm sm:text-base text-slate-600">We've sent a booking confirmation and receipt to your email address.</p>
       </div>
 
       {/* Receipt Section */}
-      <div className="px-6 sm:px-12 pb-12">
-        <div className="bg-white border border-slate-200 rounded-lg p-6">
-          <h3 className="font-bold text-xl text-slate-900 mb-6">Your Receipt</h3>
+      <div className="px-4 sm:px-6 md:px-12 pb-8 sm:pb-12">
+        <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6">
+          <h3 className="font-bold text-lg sm:text-xl text-slate-900 mb-4 sm:mb-6">Your Receipt</h3>
           
           {/* Items List */}
-          <div className="space-y-6 mb-6">
+          <div className="space-y-4 sm:space-y-6 mb-4 sm:mb-6">
             {orderedItems.map((item, index) => {
               // Use the same calculation logic
               const getItemTotal = (item: CartItem) => {
@@ -837,41 +838,44 @@ const handleDownloadReceipt = async () => {
               const itemTotal = getItemTotal(item);
 
               return (
-                <div key={`${item._id ?? index}-${index}`} className="flex items-start gap-4">
-                  {/* Tour Image */}
-                  <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200">
-                    {item.image ? (
-                      <Image src={item.image} alt={item.title} width={80} height={80} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-slate-100" />
-                    )}
+                <div key={`${item._id ?? index}-${index}`} className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                  {/* Tour Image and Details Row for Mobile */}
+                  <div className="flex items-start gap-3 sm:contents">
+                    {/* Tour Image */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200">
+                      {item.image ? (
+                        <Image src={item.image} alt={item.title} width={80} height={80} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-slate-100" />
+                      )}
+                    </div>
+                    
+                    {/* Tour Details */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm sm:text-base text-slate-900 mb-1 line-clamp-2">{item.title}</h4>
+                      {item.selectedBookingOption && (
+                        <p className="text-xs sm:text-sm text-blue-600 font-medium mb-1 sm:mb-2">{item.selectedBookingOption.title}</p>
+                      )}
+                      <p className="text-xs sm:text-sm text-slate-600">
+                        {item.quantity} Adult{item.quantity > 1 ? 's' : ''}
+                        {item.childQuantity > 0 && `, ${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
+                        {item.infantQuantity > 0 && `, ${item.infantQuantity} Infant${item.infantQuantity > 1 ? 's' : ''}`}
+                      </p>
+                      {/* Show add-ons */}
+                      {item.selectedAddOns && item.selectedAddOnDetails && Object.keys(item.selectedAddOns).length > 0 && (
+                        <div className="text-[11px] sm:text-xs text-slate-500 mt-1">
+                          Add-ons: {Object.entries(item.selectedAddOns).map(([addOnId]) => {
+                            const addOnDetail = item.selectedAddOnDetails?.[addOnId];
+                            return addOnDetail?.title;
+                          }).filter(Boolean).join(', ')}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  {/* Tour Details */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-base text-slate-900 mb-1">{item.title}</h4>
-                    {item.selectedBookingOption && (
-                      <p className="text-sm text-blue-600 font-medium mb-2">{item.selectedBookingOption.title}</p>
-                    )}
-                    <p className="text-sm text-slate-600">
-                      {item.quantity} Adult{item.quantity > 1 ? 's' : ''}
-                      {item.childQuantity > 0 && `, ${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
-                      {item.infantQuantity > 0 && `, ${item.infantQuantity} Infant${item.infantQuantity > 1 ? 's' : ''}`}
-                    </p>
-                    {/* Show add-ons */}
-                    {item.selectedAddOns && item.selectedAddOnDetails && Object.keys(item.selectedAddOns).length > 0 && (
-                      <div className="text-xs text-slate-500 mt-1">
-                        Add-ons: {Object.entries(item.selectedAddOns).map(([addOnId]) => {
-                          const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-                          return addOnDetail?.title;
-                        }).filter(Boolean).join(', ')}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Price */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-semibold text-lg text-slate-900">{formatPrice(itemTotal)}</p>
+                  {/* Price - Full width on mobile */}
+                  <div className="text-right sm:text-right flex-shrink-0 pl-[76px] sm:pl-0 -mt-2 sm:mt-0">
+                    <p className="font-semibold text-base sm:text-lg text-slate-900">{formatPrice(itemTotal)}</p>
                   </div>
                 </div>
               );
@@ -879,22 +883,26 @@ const handleDownloadReceipt = async () => {
           </div>
 
           {/* Pricing Summary */}
-          <div className="border-t border-slate-200 pt-4 space-y-3">
-            <div className="flex justify-between text-base text-slate-700">
+          <div className="border-t border-slate-200 pt-3 sm:pt-4 space-y-2 sm:space-y-3">
+            <div className="flex justify-between text-sm sm:text-base text-slate-700">
               <span>Subtotal</span>
               <span>{formatPrice(pricing.subtotal)}</span>
             </div>
-            <div className="flex justify-between text-base text-slate-700">
-              <span>Fees & Taxes</span>
-              <span>{formatPrice(pricing.serviceFee + pricing.tax)}</span>
+            <div className="flex justify-between text-sm sm:text-base text-slate-700">
+              <span>Service fee</span>
+              <span>{formatPrice(pricing.serviceFee)}</span>
+            </div>
+            <div className="flex justify-between text-sm sm:text-base text-slate-700">
+              <span>Taxes & fees</span>
+              <span>{formatPrice(pricing.tax)}</span>
             </div>
             {pricing.discount > 0 && (
-              <div className="flex justify-between text-base text-green-700 font-medium">
-                <span>Discount</span>
+              <div className="flex justify-between text-sm sm:text-base text-green-700 font-medium">
+                <span>Discount Applied</span>
                 <span>-{formatPrice(pricing.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-xl font-bold text-slate-900 pt-3 border-t border-slate-200">
+            <div className="flex justify-between text-lg sm:text-xl font-bold text-slate-900 pt-2 sm:pt-3 border-t border-slate-200">
               <span>Total Paid</span>
               <span>{formatPrice(pricing.total)}</span>
             </div>
@@ -902,35 +910,36 @@ const handleDownloadReceipt = async () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center sm:gap-3 mt-6 sm:mt-8">
           <button
             onClick={() => router.push('/')}
-            className="px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-base font-semibold rounded-lg text-slate-700"
+            className="w-full sm:w-auto px-5 sm:px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-sm sm:text-base font-semibold rounded-lg text-slate-700 order-3 sm:order-1"
           >
             Go to homepage
           </button>
           <button
             onClick={handleDownloadReceipt}
             disabled={isDownloading}
-            className="px-6 py-3 bg-slate-900 text-white text-base font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-5 sm:px-6 py-3 bg-slate-900 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
           >
             {isDownloading ? (
               <>
-                <Loader2 className="animate-spin" size={18} />
-                Downloading...
+                <Loader2 className="animate-spin" size={16} />
+                <span className="sm:hidden">Downloading...</span>
+                <span className="hidden sm:inline">Downloading...</span>
               </>
             ) : (
               <>
-                <Download size={18} />
+                <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
                 Download Receipt
               </>
             )}
           </button>
           <button
             onClick={() => window.print()}
-            className="px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-base font-semibold rounded-lg text-slate-700 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-5 sm:px-6 py-3 border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors text-sm sm:text-base font-semibold rounded-lg text-slate-700 flex items-center justify-center gap-2 order-2 sm:order-3"
           >
-            <Printer size={18} />
+            <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
             Print
           </button>
         </div>
