@@ -13,6 +13,36 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
 });
 
+// Helper to parse date-only strings as local dates (not UTC)
+// This fixes timezone issues where "2024-11-27" would be interpreted as UTC midnight
+// and then shown as the previous day in timezones behind UTC
+function parseLocalDate(dateString: string | Date | undefined): Date | null {
+  if (!dateString) return null;
+  if (dateString instanceof Date) return dateString;
+
+  // If it's a date-only string (YYYY-MM-DD), parse as local date
+  if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  }
+
+  // Otherwise parse normally (handles ISO strings with time component)
+  return new Date(dateString);
+}
+
+// Format date consistently for display
+function formatBookingDate(dateString: string | Date | undefined): string {
+  const date = parseLocalDate(dateString);
+  if (!date || isNaN(date.getTime())) return '';
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 // Helper function to generate unique booking reference
 async function generateUniqueBookingReference(): Promise<string> {
   const maxAttempts = 10;
@@ -253,7 +283,8 @@ export async function POST(request: Request) {
           throw new Error(`Tour not found: ${cartItem.title}`);
         }
 
-        const bookingDate = new Date(cartItem.selectedDate);
+        // Use parseLocalDate to ensure date-only strings are parsed correctly
+        const bookingDate = parseLocalDate(cartItem.selectedDate) || new Date();
         const bookingTime = cartItem.selectedTime || '10:00';
         const totalGuests = (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0);
 
@@ -330,12 +361,8 @@ export async function POST(request: Request) {
         customerName: `${customer.firstName} ${customer.lastName}`,
         customerEmail: customer.email,
         tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
-        bookingDate: mainBooking.date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
+        // Use formatBookingDate for consistent date formatting across email and invoice
+        bookingDate: formatBookingDate(mainBooking.date),
         bookingTime: mainBooking.time,
         participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
         participantBreakdown: participantParts.join(', '),
@@ -395,12 +422,16 @@ export async function POST(request: Request) {
 
         return {
           title: tour?.title || item.title,
-          date: new Date(item.selectedDate).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          }),
+          // Use parseLocalDate to ensure consistent date parsing
+          date: (() => {
+            const date = parseLocalDate(item.selectedDate);
+            return date ? date.toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            }) : '';
+          })(),
           time: item.selectedTime || '10:00',
           adults: item.quantity || 0,
           children: item.childQuantity || 0,
@@ -417,7 +448,8 @@ export async function POST(request: Request) {
         customerPhone: customer.phone,
         tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
         bookingId: bookingId,
-        bookingDate: mainBooking.date.toLocaleDateString('en-US'),
+        // Use formatBookingDate for consistent date formatting
+        bookingDate: formatBookingDate(mainBooking.date),
         totalPrice: `$${pricing.total.toFixed(2)}`,
         paymentMethod: paymentMethod,
         specialRequests: customer.specialRequests,
