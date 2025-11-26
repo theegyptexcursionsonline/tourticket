@@ -1,516 +1,363 @@
-# 🎫 Tour Ticket - Travel & Tour Booking Platform
+# Egypt Excursions Online - Tour Booking Platform
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.5-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-6.19-green)](https://www.mongodb.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-8.18-green)](https://www.mongodb.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-11.10-orange)](https://firebase.google.com/)
 [![Stripe](https://img.shields.io/badge/Stripe-18.5-purple)](https://stripe.com/)
 
-A comprehensive, full-stack tour booking platform built with Next.js 15, TypeScript, and MongoDB. Features include user authentication, tour management, booking system, payment processing, and a powerful admin dashboard.
+A comprehensive, full-stack tour booking platform for Egypt travel experiences. Built with Next.js 15, TypeScript, MongoDB, and Firebase Authentication. Features include real-time tour search, smart booking with hotel pickup, secure payments, and a powerful admin dashboard.
+
+**Live Site:** [egypt-excursionsonline.com](https://egypt-excursionsonline.com)
 
 > **For Developers**: See [CLAUDE.md](CLAUDE.md) for detailed architecture, development patterns, and coding conventions.
 
-## ✨ Features
+## Features
 
-### User Features
-- 🔐 **Authentication & Authorization** - Firebase authentication with Google OAuth + JWT for admins
-- 🔍 **Advanced Search & Filtering** - Search tours by destination, category, interests with Fuse.js
-- 📅 **Smart Booking System** - Date selection, participant management, and add-ons
-- 🛒 **Shopping Cart & Wishlist** - Multi-tour cart and favorites management
-- 💳 **Stripe Payment Integration** - Secure payment processing with Stripe
-- 📱 **User Dashboard** - View bookings, manage profile, download tickets (PDF/QR)
-- ⭐ **Reviews & Ratings** - User-generated tour reviews and ratings
-- 📧 **Email Notifications** - Automated booking confirmations via Mailgun
+### Customer Features
+- **Firebase Authentication** - Email/password signup and Google OAuth sign-in
+- **Instant Search** - Algolia-powered search with typo tolerance and filters
+- **AI-Powered Recommendations** - Intelligent tour suggestions using Vercel AI SDK
+- **Smart Booking System** - Date/time selection, guest management, and tour add-ons
+- **Hotel Pickup** - Interactive Google Maps for selecting pickup locations
+- **Shopping Cart** - Multi-tour cart with cross-device sync for logged-in users
+- **Wishlist** - Save favorite tours with cross-device sync
+- **Secure Payments** - Stripe integration with multiple payment methods
+- **User Dashboard** - View bookings, download PDF tickets with QR codes
+- **Reviews & Ratings** - Leave reviews and ratings for completed tours
+- **Email Notifications** - Booking confirmations via Mailgun
 
 ### Admin Features
-- 📊 **Analytics Dashboard** - Revenue tracking with Chart.js and Recharts
-- 🎯 **Tour Management** - CRUD operations for tours, destinations, categories
-- 📝 **Booking Management** - View, edit, and manage all bookings
-- 👥 **User Management** - Monitor and manage user accounts
-- 🏷️ **Discount System** - Create and manage promotional codes
-- 📸 **Media Management** - Cloudinary integration for image uploads
-- 🎨 **Dynamic Content** - Attraction pages, blog posts, hero settings
-- 📦 **Bulk Operations** - Import/export data, bulk uploads
+- **Analytics Dashboard** - Revenue tracking, booking statistics with Chart.js/Recharts
+- **Tour Management** - Full CRUD with rich editor, multiple images, itineraries
+- **Booking Management** - View, update status, manage hotel pickup details
+- **User Management** - View customer accounts and booking history
+- **Team Management** - Invite team members with role-based permissions
+- **Discount Codes** - Create percentage or fixed-amount promotional codes
+- **Content Management** - Blog posts, attraction pages, hero banners
+- **Bulk Operations** - Import tours via JSON, bulk image uploads
 
-### Technical Features
-- 🚀 **Server-Side Rendering** - Fast page loads with Next.js App Router
-- 📱 **Responsive Design** - Mobile-first approach with Tailwind CSS
-- 🎨 **Modern UI/UX** - Framer Motion animations, Lucide React icons
-- 🔍 **Advanced Search** - Algolia-powered instant search with typo tolerance
-- 🤖 **AI-Powered Search** - Intelligent tour recommendations with Vercel AI SDK
-- 🛡️ **Error Tracking** - Sentry integration for monitoring
-- 💬 **Customer Support** - Intercom integration
-- 🔒 **Security** - Protected routes, input validation, secure sessions
+### Performance Features
+- **ISR (Incremental Static Regeneration)** - Tour pages cached and revalidated every 60 seconds
+- **Server-Side Rendering** - Fast initial page loads with Next.js App Router
+- **Pre-fetched Booking Options** - Tour options loaded server-side, no client API calls
+- **Image Optimization** - Cloudinary CDN for fast image delivery
+- **Smart Port Detection** - Dev server auto-detects available ports
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
-- **Framework:** [Next.js 15.5](https://nextjs.org/) with App Router
-- **Language:** [TypeScript 5](https://www.typescriptlang.org/)
-- **Styling:** [Tailwind CSS 3.4](https://tailwindcss.com/)
-- **UI Components:** Lucide React, Framer Motion
-- **Charts:** Chart.js, Recharts
+- **Framework:** Next.js 15.5 with App Router & Turbopack
+- **Language:** TypeScript 5
+- **Styling:** Tailwind CSS 3.4
+- **UI:** Lucide React icons, Framer Motion animations
+- **Charts:** Chart.js 4.5, Recharts 3.2
 - **Forms:** React Day Picker, React Hot Toast
 
 ### Backend
-- **Runtime:** Node.js 20+
-- **Database:** [MongoDB](https://www.mongodb.com/) with [Mongoose ODM](https://mongoosejs.com/)
-- **Search:** [Algolia](https://www.algolia.com/) for instant search
-- **Authentication:** [Firebase Authentication](https://firebase.google.com/products/auth) + JWT (Jose), bcryptjs
-- **Payment:** [Stripe](https://stripe.com/)
-- **Email:** [Mailgun](https://www.mailgun.com/)
-- **Storage:** [Cloudinary](https://cloudinary.com/)
+- **Database:** MongoDB with Mongoose 8.18
+- **Search:** Algolia for instant search
+- **Authentication:** Firebase Auth (users) + JWT with Jose (admins)
+- **Payments:** Stripe 18.5
+- **Email:** Mailgun
+- **Storage:** Cloudinary
+- **Maps:** Google Maps JavaScript API, Places API, Geocoding API
 
-### DevOps & Tools
-- **Monitoring:** [Sentry](https://sentry.io/)
-- **Customer Support:** [Intercom](https://www.intercom.com/)
-- **PDF Generation:** jsPDF, PDFKit, PDF-lib
-- **QR Codes:** qrcode
-- **Package Manager:** pnpm
+### Monitoring & Support
+- **Error Tracking:** Sentry
+- **Customer Chat:** Intercom
+- **PDF Generation:** jsPDF, PDFKit
+- **QR Codes:** qrcode library
 
-## 🚀 Getting Started
+## Quick Start
 
 ### Prerequisites
-
-- **Node.js** 20.x or later
-- **pnpm** 8.x or later
-- **MongoDB** 6.x or later (local or Atlas)
-
-### Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-# Database
-MONGODB_URI=your_mongodb_connection_string
-
-# Authentication
-JWT_SECRET=your_jwt_secret_key
-
-# Stripe
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-# Mailgun
-MAILGUN_API_KEY=your_mailgun_api_key
-MAILGUN_DOMAIN=your_mailgun_domain
-
-# Firebase (User Authentication)
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-
-# Firebase Admin SDK (Server-side token verification)
-# Use individual credentials to reduce environment variable size (AWS Lambda has 4KB limit)
-FIREBASE_PROJECT_ID=your_project_id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project_id.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour_Private_Key_Here\n-----END PRIVATE KEY-----"
-
-# Algolia Search (optional but recommended)
-NEXT_PUBLIC_ALGOLIA_APP_ID=your_algolia_app_id
-NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY=your_algolia_search_api_key
-ALGOLIA_ADMIN_API_KEY=your_algolia_admin_api_key
-NEXT_PUBLIC_ALGOLIA_INDEX_NAME=tours
-
-# Sentry (optional)
-SENTRY_DSN=your_sentry_dsn
-
-# Intercom (optional)
-INTERCOM_APP_ID=your_intercom_app_id
-
-# Application
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Admin bootstrap login (use an email address)
-ADMIN_USERNAME=admin@youcompany.com
-ADMIN_PASSWORD=super-secure-password
-SUPPORT_EMAIL=support@yourcompany.com
-```
+- Node.js 20.x or later
+- pnpm 8.x or later
+- MongoDB (local or Atlas)
+- Firebase project
+- Stripe account
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/tourticket.git
-   cd tourticket
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/tourticket.git
+cd tourticket
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+# Install dependencies
+pnpm install
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your credentials
-   ```
+# Copy environment template
+cp .env.example .env
 
-4. **Seed the database** (optional)
-   ```bash
-   node seed-database.js
-   ```
+# Edit .env with your credentials
+# See Environment Variables section below
 
-5. **Run development server**
-   ```bash
-   pnpm dev
-   ```
+# Run development server
+pnpm dev
 
-6. **Open your browser**
-   ```
-   http://localhost:3000
-   ```
+# Open browser at http://localhost:3000
+```
 
-## 📜 Available Scripts
+## Environment Variables
+
+Create a `.env` file with the following variables:
+
+```env
+# Database (Required)
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+
+# JWT Secret for Admin Auth (Required - min 32 characters)
+JWT_SECRET=your-super-secure-jwt-secret-minimum-32-chars
+
+# Firebase Client (Required for User Auth)
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your-measurement-id
+
+# Firebase Admin SDK (Required for Server-side Token Verification)
+# Option 1: Base64-encoded service account (recommended for Netlify/Vercel)
+FIREBASE_SERVICE_ACCOUNT_BASE64=your-base64-encoded-service-account-json
+
+# Option 2: Individual credentials
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+# Stripe (Required for Payments)
+STRIPE_SECRET_KEY=sk_live_xxx
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+
+# Cloudinary (Required for Image Uploads)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# Mailgun (Required for Emails)
+MAILGUN_API_KEY=your-mailgun-api-key
+MAILGUN_DOMAIN=your-mailgun-domain
+
+# Google Maps (Required for Hotel Pickup Feature)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+# Algolia Search (Recommended)
+NEXT_PUBLIC_ALGOLIA_APP_ID=your-algolia-app-id
+NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY=your-algolia-search-api-key
+ALGOLIA_ADMIN_API_KEY=your-algolia-admin-api-key
+NEXT_PUBLIC_ALGOLIA_INDEX_NAME=tours
+
+# Sentry Error Tracking (Optional)
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
+
+# Intercom Customer Support (Optional)
+NEXT_PUBLIC_INTERCOM_APP_ID=your-intercom-app-id
+
+# Application URLs
+NEXT_PUBLIC_APP_URL=https://your-domain.com
+NEXT_PUBLIC_BASE_URL=https://your-domain.com
+
+# Admin Bootstrap (for initial setup)
+ADMIN_USERNAME=admin@yourcompany.com
+ADMIN_PASSWORD=your-secure-password
+```
+
+## Available Scripts
 
 ```bash
 # Development
-pnpm dev                 # Start dev server with auto port detection (3000+)
-pnpm dev:original        # Start dev server on port 3000 with Turbopack
+pnpm dev                 # Start dev server (auto port detection)
+pnpm dev:original        # Start on port 3000 with Turbopack
 pnpm build               # Build for production
 pnpm start               # Start production server
 pnpm lint                # Run ESLint
 
 # Testing
 pnpm test                # Run Jest tests
-pnpm test:watch          # Run tests in watch mode
-pnpm test:coverage       # Run tests with coverage
+pnpm test:watch          # Watch mode
+pnpm test:coverage       # Coverage report
 
-# Algolia Search
-pnpm algolia:sync        # Sync all published tours to Algolia
-pnpm algolia:clear-sync  # Clear index and resync all tours
+# Algolia Search Sync
+pnpm algolia:sync        # Sync published tours
+pnpm algolia:clear-sync  # Clear and resync all
 pnpm algolia:sync-all    # Sync all tours (including unpublished)
 ```
 
-> **Note**: The dev server automatically detects available ports starting from 3000, preventing port conflicts.
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 tourticket/
-├── app/                    # Next.js App Router pages
-│   ├── [slug]/            # Dynamic tour detail pages (catch-all route)
-│   ├── admin/             # Admin dashboard routes (protected)
-│   ├── user/              # User dashboard routes (protected)
-│   ├── api/               # API routes (Route Handlers)
-│   └── ...                # Other routes (about, contact, etc.)
-├── components/            # React components (Server + Client)
-├── contexts/              # React Context providers (Client)
+├── app/                    # Next.js App Router
+│   ├── [slug]/            # Dynamic tour pages (ISR enabled)
+│   ├── admin/             # Admin dashboard (protected)
+│   ├── user/              # User dashboard (protected)
+│   ├── api/               # API routes
+│   │   ├── auth/          # Authentication endpoints
+│   │   ├── admin/         # Admin-only APIs
+│   │   ├── bookings/      # Booking management
+│   │   ├── checkout/      # Stripe payment flow
+│   │   └── user/          # User cart/wishlist sync
+│   └── checkout/          # Checkout page
+├── components/            # React components
+│   ├── auth/              # Login/Signup modals
+│   ├── admin/             # Admin dashboard components
+│   └── ...                # Shared components
+├── contexts/              # React Context (Auth, Cart, Wishlist)
 ├── hooks/                 # Custom React hooks
-├── lib/                   # Backend logic and Mongoose models
-│   ├── models/           # Database schemas
-│   ├── email/            # Email templates
-│   └── ...               # Utilities, auth, integrations
-├── scripts/               # Maintenance and utility scripts
-├── utils/                 # Frontend helper functions
-├── types/                 # TypeScript type definitions
-├── public/                # Static assets
-└── middleware.ts          # Route protection and middleware
+├── lib/                   # Backend logic
+│   ├── models/            # Mongoose schemas
+│   ├── email/             # Email templates
+│   ├── firebase/          # Firebase config & helpers
+│   └── ...                # Utilities
+├── scripts/               # Maintenance scripts
+├── types/                 # TypeScript definitions
+└── middleware.ts          # Route protection
 ```
 
-## 🔐 Authentication
+## Authentication
 
-The application supports dual authentication methods:
+### User Authentication (Firebase)
+- Email/password registration and login
+- Google OAuth one-click sign-in
+- Server-side token verification with Firebase Admin SDK
+- Automatic user profile sync to MongoDB
+- Cart and wishlist sync across devices
 
-### Firebase Authentication (Primary - User Accounts)
-1. User signs up/logs in with email and password (or Google OAuth)
-2. Firebase handles authentication and returns ID token
-3. Server verifies Firebase token using Firebase Admin SDK
-4. User data synced with MongoDB
-5. Role-based access control (user/admin)
+### Admin Authentication (JWT)
+- Separate admin login at `/admin/login`
+- JWT tokens stored in HTTP-only cookies
+- Role-based permissions (super_admin, admin, manager, support)
+- Team member invitations with email
 
-### JWT Authentication (Admin Accounts & Legacy)
-1. Admin signs in with email and password
-2. Password is hashed using bcryptjs
-3. JWT token is generated and stored in HTTP-only cookies
-4. Middleware validates tokens for protected routes
-5. Used for admin dashboard authentication
+## Key Features Explained
 
-**Note**: API routes automatically detect authentication method - Firebase tokens are tried first, with JWT fallback for backward compatibility.
+### Hotel Pickup with Google Maps
+Tours can include hotel pickup. The booking flow includes:
+1. User chooses "Enter pickup location" or "I'll provide later"
+2. Google Maps with Places autocomplete for hotel search
+3. Click-on-map to select exact location
+4. Popular area quick-select buttons (Giza, Downtown Cairo, etc.)
+5. Location saved to booking and shown in admin panel
 
-## 💳 Payment Flow
+### ISR for Tour Pages
+Tour detail pages use Incremental Static Regeneration:
+- Pages pre-generated at build time for top 50 tours
+- Cached and served instantly to users
+- Background revalidation every 60 seconds
+- Booking options pre-fetched server-side (no slow API calls)
 
-1. User adds tours to cart
-2. Proceeds to checkout
-3. Stripe payment form is presented
-4. Payment is processed securely
-5. Booking is confirmed and stored in database
-6. Confirmation email sent via Mailgun
-7. PDF ticket with QR code generated
+### Cross-Device Cart & Wishlist
+For logged-in users:
+- Cart items stored in MongoDB, synced via `/api/user/cart`
+- Wishlist stored in MongoDB, synced via `/api/user/wishlist`
+- Local storage fallback for guest users
+- Merge strategy on login (local + server items)
 
-## 🎨 UI/UX Features
+## Deployment
 
-- **Responsive Design** - Works seamlessly on all devices
-- **Smooth Animations** - Framer Motion transitions and micro-interactions
-- **Toast Notifications** - React Hot Toast for user feedback
-- **Loading States** - Skeleton screens and spinners for better perceived performance
-- **Error Handling** - User-friendly error messages with fallback UI
-- **AI Assistant** - Interactive AI-powered tour search and recommendations
+### Netlify (Current)
 
-## 🔒 Security Features
+The site is deployed on Netlify with these settings:
 
-- JWT token-based authentication
-- Password hashing with bcryptjs
-- HTTP-only cookies
-- CSRF protection
-- Input validation and sanitization
-- Protected API routes
-- Secure payment processing with Stripe
+**Build Command:** `pnpm build`
+**Publish Directory:** `.next`
 
-## 📊 Admin Dashboard
+**Required Environment Variables in Netlify Dashboard:**
+- All variables from `.env` file
+- Ensure `NEXT_PUBLIC_*` variables are added for client-side access
 
-Access the admin panel at `/admin` (requires admin role):
-
-- **Dashboard** - Revenue analytics, booking statistics
-- **Tours** - Create, edit, delete tours
-- **Bookings** - Manage all bookings
-- **Users** - User management
-- **Destinations** - Manage destinations
-- **Categories** - Manage tour categories
-- **Discounts** - Create promotional codes
-- **Reviews** - Moderate user reviews
-- **Content** - Blog posts, attraction pages
-- **Settings** - Hero settings, site configuration
-
-## 🚢 Deployment
-
-### Vercel (Recommended)
+### Vercel
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# Deploy
 vercel
 ```
 
 ### Other Platforms
-
-The application can be deployed on any platform that supports Next.js:
-- Netlify
+Works on any platform supporting Next.js:
 - AWS Amplify
 - Railway
 - Render
 - DigitalOcean App Platform
 
-### Build Command
-```bash
-pnpm build
-```
+## Google Maps Setup
 
-### Start Command
-```bash
-pnpm start
-```
+Required for hotel pickup feature:
 
-## 🔍 Algolia Search Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project and enable billing ($200/month free credit)
+3. Enable these APIs:
+   - Maps JavaScript API
+   - Places API
+   - Geocoding API
+4. Create API key with HTTP referrer restrictions
+5. Add domains: `localhost:*`, `your-domain.com/*`
+6. Add key to `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
-This application uses Algolia for fast, typo-tolerant search functionality.
+## Firebase Setup
 
-### Setting up Algolia
-
-1. **Create an Algolia account** at [algolia.com](https://www.algolia.com/)
-
-2. **Create a new application** in your Algolia dashboard
-
-3. **Get your API credentials:**
-   - Application ID
-   - Search-Only API Key (for frontend)
-   - Admin API Key (for backend operations)
-
-4. **Add to your `.env` file:**
-   ```env
-   NEXT_PUBLIC_ALGOLIA_APP_ID=your_app_id
-   NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY=your_search_api_key
-   ALGOLIA_ADMIN_API_KEY=your_admin_api_key
-   NEXT_PUBLIC_ALGOLIA_INDEX_NAME=tours
-   ```
-
-5. **Initial index sync:**
+1. Create project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Authentication → Email/Password and Google providers
+3. Get web app config (Project Settings → Your apps)
+4. Generate Admin SDK key (Project Settings → Service Accounts)
+5. For Netlify/Vercel, base64-encode the service account JSON:
    ```bash
-   pnpm algolia:sync
+   cat service-account.json | base64
    ```
+6. Add to `FIREBASE_SERVICE_ACCOUNT_BASE64`
 
-### Algolia Features
+## API Endpoints
 
-- **Instant Search** - Results appear as you type
-- **Typo Tolerance** - Finds results even with misspellings
-- **Faceted Filters** - Filter by category, destination, price, rating
-- **Custom Ranking** - Featured tours ranked higher
-- **Auto-sync** - Tours automatically sync when created/updated/deleted
-- **Fallback** - Falls back to MongoDB search if Algolia is unavailable
+### Public
+- `GET /api/tours` - List tours with filters
+- `GET /api/tours/[slug]` - Tour details
+- `GET /api/search` - Search tours
 
-### Manual Sync Commands
+### Authenticated (User)
+- `GET/POST/DELETE /api/user/cart` - Cart management
+- `GET/POST/DELETE /api/user/wishlist` - Wishlist management
+- `GET /api/user/bookings` - User's bookings
 
-```bash
-# Sync all published tours to Algolia
-pnpm algolia:sync
+### Admin Only
+- `POST/PUT/DELETE /api/admin/tours` - Tour CRUD
+- `GET/PUT /api/admin/bookings` - Booking management
+- `GET /api/admin/users` - User list
+- `POST /api/admin/team/invite` - Team invitations
 
-# Clear index and resync all tours
-pnpm algolia:clear-sync
-```
-
-### API Endpoint for Admin Sync
-
-```bash
-# Trigger sync via API
-POST /api/algolia/sync
-```
-
-## 🔥 Firebase Authentication Setup
-
-This application uses Firebase for user authentication, providing secure email/password and Google OAuth login.
-
-### Setting up Firebase
-
-1. **Create a Firebase project** at [firebase.google.com](https://firebase.google.com/)
-
-2. **Enable Authentication:**
-   - Go to Authentication → Sign-in method
-   - Enable Email/Password provider
-   - (Optional) Enable Google provider for OAuth
-
-3. **Get your Firebase config:**
-   - Go to Project Settings → General
-   - Scroll to "Your apps" and click the web icon (</>)
-   - Copy the Firebase configuration
-
-4. **Add client-side credentials to `.env`:**
-   ```env
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-   ```
-
-5. **Generate Admin SDK credentials:**
-   - Go to Project Settings → Service Accounts
-   - Click "Generate new private key"
-   - Download the JSON file
-
-6. **Extract individual credentials from the JSON:**
-   - Open the downloaded JSON file
-   - Extract `project_id`, `client_email`, and `private_key`
-
-7. **Add server-side credentials to `.env`:**
-   ```env
-   FIREBASE_PROJECT_ID=your_project_id
-   FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project_id.iam.gserviceaccount.com
-   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
-   Your_Private_Key_Here
-   -----END PRIVATE KEY-----"
-   ```
-
-### Why Individual Credentials?
-
-AWS Lambda (used by Netlify and Vercel) has a 4KB limit for environment variables. The full Firebase service account JSON is ~3KB, which combined with other variables exceeds this limit. By splitting the credentials into individual environment variables, we stay well under the limit (~1.7KB for Firebase credentials).
-
-### Firebase Features
-
-- **Email/Password Authentication** - Traditional signup/login
-- **Google OAuth** - One-click Google sign-in
-- **Token Verification** - Secure server-side token validation with Firebase Admin SDK
-- **Automatic User Sync** - User data automatically synced with MongoDB
-- **Dual Auth Support** - Works alongside JWT for admin accounts
-
-### Important Notes
-
-- Firebase credentials are split into client-side (`NEXT_PUBLIC_*`) and server-side (`FIREBASE_*`) variables
-- Client-side variables are safe to expose (used in browser)
-- Server-side variables must be kept secret (never expose private key)
-- The application automatically detects Firebase tokens and falls back to JWT for backward compatibility
-
-## 🧪 Testing
-
-```bash
-pnpm test                # Run all tests
-pnpm test:watch          # Run tests in watch mode
-pnpm test:coverage       # Generate coverage report
-```
-
-Tests are located in `__tests__` directories alongside the code they test. The project uses Jest with React Testing Library.
-
-## 📝 API Documentation
-
-### Authentication Endpoints
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `POST /api/auth/forgot-password` - Password reset
-
-### Tour Endpoints
-- `GET /api/tours` - Get all tours
-- `GET /api/tours/[slug]` - Get tour by slug
-- `POST /api/tours` - Create tour (admin)
-- `PUT /api/tours/[id]` - Update tour (admin)
-- `DELETE /api/tours/[id]` - Delete tour (admin)
-
-### Booking Endpoints
-- `POST /api/bookings` - Create booking
-- `GET /api/bookings` - Get user bookings
-- `GET /api/bookings/[id]` - Get booking details
-- `PUT /api/bookings/[id]` - Update booking (admin)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Read [CLAUDE.md](CLAUDE.md) for architecture and coding conventions
-4. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-5. Push to the branch (`git push origin feature/AmazingFeature`)
-6. Open a Pull Request
+2. Read [CLAUDE.md](CLAUDE.md) for architecture details
+3. Create feature branch (`git checkout -b feature/NewFeature`)
+4. Commit changes (`git commit -m 'Add NewFeature'`)
+5. Push to branch (`git push origin feature/NewFeature`)
+6. Open Pull Request
 
-### Development Guidelines
-
-- Follow the patterns documented in [CLAUDE.md](CLAUDE.md)
+### Guidelines
 - Always call `dbConnect()` before database operations
-- Use Server Components by default; add `'use client'` only when needed
+- Use Server Components by default, `'use client'` only when needed
 - Sync tours to Algolia after database updates
-- Write tests for new features
-- Ensure TypeScript types are properly defined
+- Keep API keys in environment variables only
+- Test on mobile viewports
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file.
 
-## 👨‍💻 Author
+## Author
 
 **Ranjit Rajput**
-
 - GitHub: [@ranjitrajput](https://github.com/ranjitrajput)
-- Project: [Tour Ticket](https://github.com/ranjitrajput/tourticket)
 
-## 🙏 Acknowledgments
+## Support
 
-- Next.js team for the amazing framework
-- Vercel for hosting and deployment platform
-- Stripe for payment processing
-- MongoDB for database solutions
-- All open-source contributors
-
-## 📞 Support
-
-For technical questions and development help, see [CLAUDE.md](CLAUDE.md) for architecture details and common gotchas.
-
-## 🐛 Bug Reports
-
-Found a bug? Please open an issue on [GitHub Issues](https://github.com/ranjitrajput/tourticket/issues) with:
-- Clear description of the issue
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details (Node version, browser, etc.)
+- Technical questions: See [CLAUDE.md](CLAUDE.md)
+- Bug reports: [GitHub Issues](https://github.com/ranjitrajput/tourticket/issues)
 
 ---
 
-Made with ❤️ by Ranjit Rajput
+Built with Next.js, deployed on Netlify
