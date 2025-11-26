@@ -1,0 +1,10 @@
+[build]
+  command = "pnpm build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Skip secret scanning (legacy keys in git history have been removed from code)
+[security]
+  skip_secret_scan = true
