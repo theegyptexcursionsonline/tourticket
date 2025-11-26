@@ -6,6 +6,33 @@ import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 
+// Helper to format dates consistently and avoid timezone issues
+function formatBookingDate(dateString: string | Date | undefined): string {
+  if (!dateString) return '';
+  const dateStr = dateString instanceof Date ? dateString.toISOString() : String(dateString);
+
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 // GET - Fetch a single booking by ID
 export async function GET(
   request: NextRequest,
@@ -164,12 +191,7 @@ export async function PATCH(
           'Valued Customer';
         const customerEmail = updatedUser.email;
         const tourTitle = updatedTour.title || 'Tour';
-        const bookingDate = new Date(updatedBooking.date).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
+        const bookingDate = formatBookingDate(updatedBooking.date);
         const bookingTime = updatedBooking.time;
         const bookingId = updatedBooking._id.toString();
 

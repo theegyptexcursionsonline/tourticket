@@ -7,6 +7,33 @@ import User from '@/lib/models/user';
 import { verifyToken } from '@/lib/jwt';
 import { EmailService } from '@/lib/email/emailService';
 
+// Helper to format dates consistently and avoid timezone issues
+function formatBookingDate(dateValue: Date | string | undefined): string {
+  if (!dateValue) return '';
+  const dateStr = dateValue instanceof Date ? dateValue.toISOString() : String(dateValue);
+
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  const date = new Date(dateValue);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,12 +105,7 @@ export async function POST(
         customerName: `${user.firstName} ${user.lastName}`,
         customerEmail: user.email,
         tourTitle: tour.title,
-        bookingDate: booking.date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
+        bookingDate: formatBookingDate(booking.date),
         bookingId: (booking._id as any).toString(),
         refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
         refundProcessingDays: refundAmount > 0 ? 5 : undefined,
