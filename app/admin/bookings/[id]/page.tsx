@@ -627,7 +627,7 @@ const BookingDetailPage = () => {
                               loading="lazy"
                               allowFullScreen
                               referrerPolicy="no-referrer-when-downgrade"
-                              src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${booking.hotelPickupLocation.lat},${booking.hotelPickupLocation.lng}&zoom=15`}
+                              src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${booking.hotelPickupLocation.lat},${booking.hotelPickupLocation.lng}&zoom=15`}
                             ></iframe>
                           </div>
                         </>

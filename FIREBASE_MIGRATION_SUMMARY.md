@@ -73,13 +73,13 @@ Add these to your `.env` file:
 
 ```bash
 # Firebase Client (User Auth)
-NEXT_PUBLIC_FIREBASE_API_KEY=***REMOVED***
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=egypt-excursionsonline.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=egypt-excursionsonline
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=egypt-excursionsonline.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=498291617386
-NEXT_PUBLIC_FIREBASE_APP_ID=1:498291617386:web:ef2d6a308b25e8fddee413
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XS03B6CEJT
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your-measurement-id
 
 # Firebase Admin SDK (Server-side)
 # Get this from Firebase Console → Project Settings → Service Accounts → Generate New Private Key

@@ -1,119 +1,140 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Search, X, Maximize2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MapPin, Search, X, Check, Building2, Navigation, Clock, Phone } from 'lucide-react';
 
 interface HotelPickupLocation {
   address: string;
   lat: number;
   lng: number;
   placeId?: string;
+  name?: string;
 }
 
 interface HotelPickupMapProps {
   onLocationSelect: (location: HotelPickupLocation | null) => void;
   initialLocation?: HotelPickupLocation;
-  tourLocation?: string; // For centering the map near the tour area
+  tourLocation?: string;
 }
 
 declare global {
   interface Window {
     google: any;
     googleMapsScriptLoaded?: boolean;
+    googleMapsCallback?: () => void;
   }
 }
 
+// Popular areas in Egypt for quick selection
+const POPULAR_AREAS = [
+  { name: 'Giza (Pyramids Area)', lat: 29.9792, lng: 31.1342 },
+  { name: 'Downtown Cairo', lat: 30.0444, lng: 31.2357 },
+  { name: 'Zamalek', lat: 30.0609, lng: 31.2194 },
+  { name: 'Nasr City', lat: 30.0511, lng: 31.3656 },
+  { name: 'Maadi', lat: 29.9602, lng: 31.2569 },
+  { name: 'Heliopolis', lat: 30.0866, lng: 31.3225 },
+];
+
 export default function HotelPickupMap({ onLocationSelect, initialLocation, tourLocation = 'Cairo, Egypt' }: HotelPickupMapProps) {
-  const [knowsLocation, setKnowsLocation] = useState<boolean | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [pickupOption, setPickupOption] = useState<'now' | 'later' | null>(null);
+  const [searchQuery, setSearchQuery] = useState(initialLocation?.address || '');
   const [selectedLocation, setSelectedLocation] = useState<HotelPickupLocation | null>(initialLocation || null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
-  
+  const [mapError, setMapError] = useState(false);
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
-  const autocompleteRef = useRef<any>(null);
+  const autocompleteServiceRef = useRef<any>(null);
+  const placesServiceRef = useRef<any>(null);
+  const geocoderRef = useRef<any>(null);
   const isInitializing = useRef(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Google Maps API key from environment variable
   const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
   // Load Google Maps script
   useEffect(() => {
-    if (knowsLocation !== true) return;
+    if (pickupOption !== 'now') return;
+    if (!GOOGLE_MAPS_API_KEY) {
+      setMapError(true);
+      return;
+    }
 
-    // Check if script already loaded
     if (window.google && window.google.maps) {
       setScriptLoaded(true);
       return;
     }
 
-    // Check if script is already being loaded
     if (window.googleMapsScriptLoaded) {
-      return;
+      const checkGoogle = setInterval(() => {
+        if (window.google && window.google.maps) {
+          setScriptLoaded(true);
+          clearInterval(checkGoogle);
+        }
+      }, 100);
+      return () => clearInterval(checkGoogle);
     }
 
     window.googleMapsScriptLoaded = true;
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=googleMapsCallback`;
     script.async = true;
     script.defer = true;
-    script.onload = () => {
+
+    window.googleMapsCallback = () => {
       setScriptLoaded(true);
     };
+
     script.onerror = () => {
       console.error('Failed to load Google Maps script');
       window.googleMapsScriptLoaded = false;
+      setMapError(true);
     };
 
     document.head.appendChild(script);
+  }, [pickupOption, GOOGLE_MAPS_API_KEY]);
 
-    return () => {
-      // Don't remove the script on unmount to avoid the error
-      // The script can be reused across different component instances
-    };
-  }, [knowsLocation]);
-
-  // Initialize map when script is loaded
-  const initializeMap = () => {
+  // Initialize map
+  const initializeMap = useCallback(() => {
     if (!window.google || !mapRef.current || isInitializing.current) return;
 
     isInitializing.current = true;
 
     try {
-      // Default center (Cairo, Egypt)
-      const defaultCenter = { lat: 30.0444, lng: 31.2357 };
-      
-      // Create map
+      const defaultCenter = { lat: 30.0444, lng: 31.2357 }; // Cairo
+
       const map = new window.google.maps.Map(mapRef.current, {
         center: initialLocation ? { lat: initialLocation.lat, lng: initialLocation.lng } : defaultCenter,
-        zoom: initialLocation ? 15 : 12,
+        zoom: initialLocation ? 15 : 11,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        zoomControl: true,
+        gestureHandling: 'greedy',
         styles: [
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'on' }]
-          }
+          { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+          { featureType: 'poi.park', elementType: 'labels', stylers: [{ visibility: 'off' }] }
         ]
       });
 
       mapInstanceRef.current = map;
+      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+      placesServiceRef.current = new window.google.maps.places.PlacesService(map);
+      geocoderRef.current = new window.google.maps.Geocoder();
 
-      // Add click listener to map
+      // Click listener for map
       map.addListener('click', (event: any) => {
         const lat = event.latLng.lat();
         const lng = event.latLng.lng();
-        
-        // Reverse geocode to get address
-        const geocoder = new window.google.maps.Geocoder();
-        geocoder.geocode({ location: { lat, lng } }, (results: any[], status: string) => {
+
+        geocoderRef.current.geocode({ location: { lat, lng } }, (results: any[], status: string) => {
           if (status === 'OK' && results[0]) {
             const location: HotelPickupLocation = {
               address: results[0].formatted_address,
@@ -121,50 +142,13 @@ export default function HotelPickupMap({ onLocationSelect, initialLocation, tour
               lng,
               placeId: results[0].place_id
             };
-            
-            setSelectedLocation(location);
-            setSearchQuery(location.address);
-            onLocationSelect(location);
-            placeMarker(lat, lng, location.address);
+            handleLocationSelect(location);
           }
         });
       });
 
-      // Initialize autocomplete
-      if (searchInputRef.current) {
-        const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
-          fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-          types: ['lodging', 'establishment', 'geocode'],
-          componentRestrictions: { country: 'eg' } // Restrict to Egypt
-        });
-
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          
-          if (place.geometry && place.geometry.location) {
-            const location: HotelPickupLocation = {
-              address: place.formatted_address || place.name || '',
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-              placeId: place.place_id
-            };
-
-            setSelectedLocation(location);
-            setSearchQuery(location.address);
-            onLocationSelect(location);
-            
-            map.setCenter(place.geometry.location);
-            map.setZoom(16);
-            placeMarker(location.lat, location.lng, location.address);
-          }
-        });
-
-        autocompleteRef.current = autocomplete;
-      }
-
-      // Place initial marker if location exists
       if (initialLocation) {
-        placeMarker(initialLocation.lat, initialLocation.lng, initialLocation.address);
+        placeMarker(initialLocation.lat, initialLocation.lng);
       }
 
       setIsMapLoaded(true);
@@ -172,225 +156,361 @@ export default function HotelPickupMap({ onLocationSelect, initialLocation, tour
     } catch (error) {
       console.error('Error initializing map:', error);
       isInitializing.current = false;
+      setMapError(true);
     }
-  };
+  }, [initialLocation]);
 
-  const placeMarker = (lat: number, lng: number, title: string) => {
-    if (!mapInstanceRef.current) return;
+  // Initialize map when ready
+  useEffect(() => {
+    if (scriptLoaded && pickupOption === 'now' && !mapInstanceRef.current) {
+      const timer = setTimeout(initializeMap, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scriptLoaded, pickupOption, initializeMap]);
 
-    // Remove existing marker
+  const placeMarker = (lat: number, lng: number) => {
+    if (!mapInstanceRef.current || !window.google) return;
+
     if (markerRef.current) {
       markerRef.current.setMap(null);
     }
 
-    // Create new marker
-    const marker = new window.google.maps.Marker({
+    markerRef.current = new window.google.maps.Marker({
       position: { lat, lng },
       map: mapInstanceRef.current,
-      title,
       animation: window.google.maps.Animation.DROP,
       icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#DC2626',
-        fillOpacity: 1,
-        strokeColor: '#FFFFFF',
-        strokeWeight: 2,
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 0C8.954 0 0 8.954 0 20c0 14 20 28 20 28s20-14 20-28C40 8.954 31.046 0 20 0z" fill="#DC2626"/>
+            <circle cx="20" cy="20" r="8" fill="white"/>
+          </svg>
+        `),
+        scaledSize: new window.google.maps.Size(40, 48),
+        anchor: new window.google.maps.Point(20, 48),
       }
     });
 
-    markerRef.current = marker;
+    mapInstanceRef.current.panTo({ lat, lng });
+    mapInstanceRef.current.setZoom(16);
   };
 
-  const handleClearLocation = () => {
+  const handleLocationSelect = (location: HotelPickupLocation) => {
+    setSelectedLocation(location);
+    setSearchQuery(location.name || location.address);
+    onLocationSelect(location);
+    placeMarker(location.lat, location.lng);
+    setShowPredictions(false);
+    setPredictions([]);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!value.trim() || !autocompleteServiceRef.current) {
+      setPredictions([]);
+      setShowPredictions(false);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(() => {
+      autocompleteServiceRef.current.getPlacePredictions(
+        {
+          input: value,
+          componentRestrictions: { country: 'eg' },
+          types: ['lodging'], // Only hotels
+        },
+        (results: any[], status: string) => {
+          setIsSearching(false);
+          if (status === 'OK' && results) {
+            setPredictions(results.slice(0, 5));
+            setShowPredictions(true);
+          } else {
+            // Try with geocode if no lodging results
+            autocompleteServiceRef.current.getPlacePredictions(
+              {
+                input: value,
+                componentRestrictions: { country: 'eg' },
+              },
+              (geoResults: any[], geoStatus: string) => {
+                if (geoStatus === 'OK' && geoResults) {
+                  setPredictions(geoResults.slice(0, 5));
+                  setShowPredictions(true);
+                } else {
+                  setPredictions([]);
+                }
+              }
+            );
+          }
+        }
+      );
+    }, 300);
+  };
+
+  const handlePredictionSelect = (prediction: any) => {
+    if (!placesServiceRef.current) return;
+
+    placesServiceRef.current.getDetails(
+      { placeId: prediction.place_id, fields: ['formatted_address', 'geometry', 'name'] },
+      (place: any, status: string) => {
+        if (status === 'OK' && place.geometry) {
+          const location: HotelPickupLocation = {
+            address: place.formatted_address,
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            placeId: prediction.place_id,
+            name: place.name
+          };
+          handleLocationSelect(location);
+        }
+      }
+    );
+  };
+
+  const handleQuickAreaSelect = (area: typeof POPULAR_AREAS[0]) => {
+    const location: HotelPickupLocation = {
+      address: area.name + ', Egypt',
+      lat: area.lat,
+      lng: area.lng,
+      name: area.name
+    };
+    handleLocationSelect(location);
+  };
+
+  const handleClear = () => {
     setSelectedLocation(null);
     setSearchQuery('');
     onLocationSelect(null);
-    
+    setPredictions([]);
+    setShowPredictions(false);
     if (markerRef.current) {
       markerRef.current.setMap(null);
       markerRef.current = null;
     }
   };
 
-  const handleSkip = () => {
-    setKnowsLocation(false);
+  const handleLaterOption = () => {
+    setPickupOption('later');
     onLocationSelect(null);
   };
 
-  // Initialize map when script loads and user selects "Yes"
-  useEffect(() => {
-    if (scriptLoaded && knowsLocation === true && !mapInstanceRef.current) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        initializeMap();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [scriptLoaded, knowsLocation]);
-
   return (
     <div className="space-y-4">
-      {/* Question Section */}
-      <div className="bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-slate-200 rounded-2xl p-6">
-        <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <MapPin className="text-red-600" size={24} />
-          Do you know where you want to be picked up?
-        </h3>
-        
+      {/* Initial Choice */}
+      {pickupOption === null && (
         <div className="space-y-3">
-          {/* Option 1: Yes, I can add it now */}
+          <p className="text-base font-medium text-slate-800 mb-3">
+            Where should we pick you up?
+          </p>
+
           <button
             type="button"
-            onClick={() => setKnowsLocation(true)}
-            className={`w-full p-4 border-2 rounded-xl text-left transition-all ${
-              knowsLocation === true
-                ? 'border-red-500 bg-red-50'
-                : 'border-slate-200 hover:border-red-300 hover:bg-red-50'
-            }`}
+            onClick={() => setPickupOption('now')}
+            className="w-full p-4 bg-white border-2 border-slate-200 rounded-xl text-left hover:border-red-400 hover:bg-red-50/50 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                knowsLocation === true 
-                  ? 'border-red-500 bg-red-500' 
-                  : 'border-slate-300'
-              }`}>
-                {knowsLocation === true && (
-                  <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
-                )}
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                <MapPin className="text-red-600" size={20} />
               </div>
-              <div className="flex-1">
-                <div className="font-semibold text-slate-800">Yes, I can add it now</div>
-                <div className="text-sm text-slate-600">Search for your hotel or click on the map</div>
+              <div>
+                <div className="font-semibold text-slate-900">Enter pickup location</div>
+                <div className="text-sm text-slate-500">Search for your hotel or address</div>
               </div>
             </div>
           </button>
 
-          {/* Option 2: I don't know yet */}
           <button
             type="button"
-            onClick={handleSkip}
-            className={`w-full p-4 border-2 rounded-xl text-left transition-all ${
-              knowsLocation === false
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'
-            }`}
+            onClick={handleLaterOption}
+            className="w-full p-4 bg-white border-2 border-slate-200 rounded-xl text-left hover:border-blue-400 hover:bg-blue-50/50 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                knowsLocation === false 
-                  ? 'border-blue-500 bg-blue-500' 
-                  : 'border-slate-300'
-              }`}>
-                {knowsLocation === false && (
-                  <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
-                )}
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <Clock className="text-blue-600" size={20} />
               </div>
-              <div className="flex-1">
-                <div className="font-semibold text-slate-800">I don't know yet</div>
-                <div className="text-sm text-slate-600">We'll contact you 24 hours before your tour</div>
+              <div>
+                <div className="font-semibold text-slate-900">I'll provide it later</div>
+                <div className="text-sm text-slate-500">We'll contact you before the tour</div>
               </div>
             </div>
           </button>
         </div>
+      )}
 
-        {/* Skip confirmation message */}
-        {knowsLocation === false && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              ✓ No problem! Our team will reach out via WhatsApp or email 24 hours before your tour to confirm your pickup location.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Map Interface (shown when user selects "Yes") */}
-      {knowsLocation === true && (
-        <>
-          <div className={`bg-white border-2 border-slate-200 rounded-2xl overflow-hidden transition-all ${
-            isFullscreen ? 'fixed inset-4 z-50' : ''
-          }`}>
-            {/* Search Bar */}
-            <div className="p-4 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search for hotel, address, etc."
-                    className="w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={handleClearLocation}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      <X size={18} />
-                    </button>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="p-3 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
-                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                >
-                  <Maximize2 size={18} />
-                </button>
-              </div>
-
-              {/* Helper text */}
-              <p className="text-sm text-slate-600 mt-2">
-                💡 <strong>Tip:</strong> Search for your hotel name or click directly on the map to select your pickup location
+      {/* Later Option Confirmation */}
+      {pickupOption === 'later' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+              <Check className="text-white" size={16} />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-blue-900">No problem!</p>
+              <p className="text-sm text-blue-700 mt-1">
+                We'll contact you via WhatsApp or email 24 hours before your tour to confirm your pickup location.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setPickupOption(null)}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              Change
+            </button>
+          </div>
+        </div>
+      )}
 
-            {/* Map Container */}
-            <div className={`relative bg-slate-100 ${isFullscreen ? 'h-[calc(100vh-200px)]' : 'h-[450px]'}`}>
-              <div 
-                ref={mapRef}
-                className="w-full h-full"
+      {/* Location Entry */}
+      {pickupOption === 'now' && (
+        <div className="space-y-3">
+          {/* Search Input */}
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => predictions.length > 0 && setShowPredictions(true)}
+                placeholder="Search hotel name or address..."
+                className="w-full pl-10 pr-10 py-3.5 bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-base"
               />
-              {!isMapLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-10 pointer-events-none">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-                    <p className="text-slate-600">Loading map...</p>
-                  </div>
-                </div>
+              {(searchQuery || selectedLocation) && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X size={18} />
+                </button>
               )}
             </div>
 
-            {/* Selected Location Display */}
-            {selectedLocation && (
-              <div className="p-4 bg-green-50 border-t border-green-200">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="text-white" size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-green-900">Pickup Location Selected</p>
-                    <p className="text-sm text-green-700 mt-1 break-words">{selectedLocation.address}</p>
-                  </div>
+            {/* Predictions Dropdown */}
+            {showPredictions && predictions.length > 0 && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                {predictions.map((prediction, index) => (
                   <button
+                    key={prediction.place_id}
                     type="button"
-                    onClick={handleClearLocation}
-                    className="text-green-700 hover:text-green-900 flex-shrink-0"
-                    title="Clear selection"
+                    onClick={() => handlePredictionSelect(prediction)}
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-50 flex items-start gap-3 transition-colors ${
+                      index !== predictions.length - 1 ? 'border-b border-slate-100' : ''
+                    }`}
                   >
-                    <X size={20} />
+                    <Building2 className="text-slate-400 mt-0.5 flex-shrink-0" size={18} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-slate-900 truncate">
+                        {prediction.structured_formatting?.main_text || prediction.description}
+                      </div>
+                      <div className="text-sm text-slate-500 truncate">
+                        {prediction.structured_formatting?.secondary_text || ''}
+                      </div>
+                    </div>
                   </button>
-                </div>
+                ))}
               </div>
             )}
           </div>
-        </>
+
+          {/* Selected Location Display */}
+          {selectedLocation && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <Check className="text-white" size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-green-900">Pickup location set</p>
+                  <p className="text-sm text-green-700 mt-0.5 break-words">
+                    {selectedLocation.name || selectedLocation.address}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="text-green-600 hover:text-green-800"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Select Areas - show when no location selected */}
+          {!selectedLocation && !showPredictions && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-600">Popular areas:</p>
+              <div className="flex flex-wrap gap-2">
+                {POPULAR_AREAS.map((area) => (
+                  <button
+                    key={area.name}
+                    type="button"
+                    onClick={() => handleQuickAreaSelect(area)}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-full transition-colors"
+                  >
+                    {area.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Map */}
+          {!mapError ? (
+            <div className="relative bg-slate-100 rounded-xl overflow-hidden h-[280px]">
+              <div ref={mapRef} className="w-full h-full" />
+              {!isMapLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-red-600 border-t-transparent mx-auto mb-2"></div>
+                    <p className="text-sm text-slate-500">Loading map...</p>
+                  </div>
+                </div>
+              )}
+              {isMapLoaded && !selectedLocation && (
+                <div className="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 text-center">
+                  <p className="text-xs text-slate-600">
+                    <Navigation className="inline-block mr-1" size={12} />
+                    Click on the map to select a location
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Phone className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+                <div>
+                  <p className="font-medium text-amber-900">Map unavailable</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Please type your hotel name or address above, or choose "I'll provide it later" and we'll contact you.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Back Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setPickupOption(null);
+              handleClear();
+            }}
+            className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            ← Choose different option
+          </button>
+        </div>
       )}
     </div>
   );
 }
-

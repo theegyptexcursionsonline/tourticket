@@ -181,8 +181,7 @@ interface IBooking {
 3. **Geocoding API** - Reverse lookup for clicked locations
 4. **Embed API** - Static maps in admin view
 
-**API Key:** `***REMOVED***`
-(Already in use for itinerary maps)
+**API Key:** Use `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` environment variable
 
 **Restrictions:**
 - Country: Egypt (for better autocomplete results)

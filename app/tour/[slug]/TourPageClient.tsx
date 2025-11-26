@@ -424,7 +424,7 @@ const ItinerarySection = ({ itinerary, tour, sectionRef }: { itinerary: Itinerar
             loading="lazy"
             allowFullScreen
             referrerPolicy="no-referrer-when-downgrade"
-            src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(mapQuery)}&zoom=12`}
+            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(mapQuery)}&zoom=12`}
           ></iframe>
 
           {/* Map Controls Overlay */}
@@ -1328,7 +1328,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                         loading="lazy"
                         allowFullScreen
                         referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.google.com/maps/embed/v1/place?key=***REMOVED***&q=${encodeURIComponent(tour.meetingPoint)}&zoom=15`}
+                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(tour.meetingPoint)}&zoom=15`}
                       ></iframe>
                     </div>
                   </div>
