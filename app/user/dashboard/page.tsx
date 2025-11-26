@@ -19,6 +19,28 @@ interface PopulatedBooking extends Omit<BookingType, 'tour'> {
   tour: Tour;
 }
 
+// Helper to parse dates avoiding timezone issues
+const parseLocalDate = (dateString: string | Date): Date => {
+  if (dateString instanceof Date) return dateString;
+  const match = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  }
+  return new Date(dateString);
+};
+
+const formatDisplayDate = (dateString: string | Date): string => {
+  const date = parseLocalDate(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
 /* ---------- StatCard (mobile-optimized) ---------- */
 const StatCard = ({ title, value, icon: Icon }: { title: string; value: string | number; icon: React.ElementType }) => (
   <motion.div
@@ -40,7 +62,7 @@ const StatCard = ({ title, value, icon: Icon }: { title: string; value: string |
 
 /* ---------- Booking Card (mobile-first) ---------- */
 const BookingCard = ({ booking }: { booking: PopulatedBooking }) => {
-  const bookingDate = new Date(booking.date);
+  const bookingDate = parseLocalDate(booking.date);
   const isPast = bookingDate < new Date();
 
   return (
@@ -84,12 +106,7 @@ const BookingCard = ({ booking }: { booking: PopulatedBooking }) => {
           <div className="space-y-2 mb-4 flex-grow">
             <div className="flex items-center gap-2 text-slate-600 text-sm">
               <Calendar size={14} className="flex-shrink-0" />
-              <span className="font-medium">{bookingDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                month: 'long', 
-                day: 'numeric',
-                year: 'numeric'
-              })}</span>
+              <span className="font-medium">{formatDisplayDate(booking.date)}</span>
             </div>
             
             <div className="flex items-center gap-2 text-slate-600 text-sm">

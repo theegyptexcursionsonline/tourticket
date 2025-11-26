@@ -91,6 +91,42 @@ interface BookingDetails {
   updatedAt: string;
 }
 
+// Helper to parse dates as local dates to avoid timezone issues
+// When MongoDB returns an ISO date string like "2025-11-26T00:00:00.000Z",
+// new Date() interprets it as UTC, which can show as previous day in some timezones
+const formatDisplayDate = (dateString: string | Date | undefined): string => {
+  if (!dateString) return '';
+
+  const dateStr = dateString instanceof Date
+    ? dateString.toISOString()
+    : String(dateString);
+
+  // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    // Create date using local timezone components
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  // Fallback: try to parse and format
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
 const UserBookingDetailPage = () => {
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -514,15 +550,10 @@ const UserBookingDetailPage = () => {
                 Booking Information
               </h3>
               <div className="space-y-4">
-                <DetailItem 
-                  icon={Calendar} 
-                  label="Date" 
-                  value={new Date(booking.date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                <DetailItem
+                  icon={Calendar}
+                  label="Tour Date"
+                  value={formatDisplayDate(booking.date)}
                 />
                 <DetailItem 
                   icon={Clock} 
@@ -566,15 +597,10 @@ const UserBookingDetailPage = () => {
                     value={booking.tour.meetingPoint}
                   />
                 )}
-                <DetailItem 
-                  icon={Calendar} 
-                  label="Booked On" 
-                  value={new Date(booking.createdAt).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                <DetailItem
+                  icon={Calendar}
+                  label="Booked On"
+                  value={formatDisplayDate(booking.createdAt)}
                 />
               </div>
             </div>

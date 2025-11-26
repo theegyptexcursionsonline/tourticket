@@ -103,6 +103,38 @@ interface BookingDetails {
   updatedAt: string;
 }
 
+// Helper to format dates consistently and avoid timezone issues
+const formatDisplayDate = (dateString: string | Date | undefined): string => {
+  if (!dateString) return '';
+
+  const dateStr = dateString instanceof Date
+    ? dateString.toISOString()
+    : String(dateString);
+
+  // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  // Fallback
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
 const BookingDetailPage = () => {
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -537,15 +569,10 @@ const BookingDetailPage = () => {
               Booking Details
             </h3>
             <div className="space-y-4">
-              <DetailItem 
-                icon={Calendar} 
-                label="Date" 
-                value={new Date(booking.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+              <DetailItem
+                icon={Calendar}
+                label="Tour Date"
+                value={formatDisplayDate(booking.date)}
               />
               <DetailItem 
                 icon={Clock} 

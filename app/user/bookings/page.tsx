@@ -31,6 +31,32 @@ interface Booking {
   infantGuests?: number;
 }
 
+// Helper to format dates consistently and avoid timezone issues
+const formatDisplayDate = (dateString: string | undefined, options?: Intl.DateTimeFormatOptions): string => {
+  if (!dateString) return '';
+
+  // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+  const match = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', options || {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  // Fallback
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', options || {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
 const BookingCard = ({ booking }: { booking: Booking }) => {
   const router = useRouter();
 
@@ -46,7 +72,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
             <p className="text-xs text-slate-500 mt-2">Booking ID: {booking._id}</p>
             <div className="mt-3 flex items-center gap-4">
               <span className="text-sm text-slate-600">
-                Booked on: {new Date(booking.createdAt).toLocaleDateString()}
+                Booked on: {formatDisplayDate(booking.createdAt)}
               </span>
               <span className="text-sm font-semibold text-slate-900">
                 ${booking.totalPrice.toFixed(2)}
@@ -115,11 +141,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                 <div className="flex items-center text-slate-600">
                   <Calendar size={16} className="mr-2 text-slate-400 flex-shrink-0" />
                   <span className="truncate">
-                    {new Date(booking.bookingDate).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
+                    {formatDisplayDate(booking.bookingDate)}
                   </span>
                 </div>
                 <div className="flex items-center text-slate-600">

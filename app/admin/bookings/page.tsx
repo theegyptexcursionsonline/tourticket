@@ -45,6 +45,32 @@ interface Booking {
   updatedAt: string;
 }
 
+// Helper to format dates consistently and avoid timezone issues
+const formatDisplayDate = (dateString: string | undefined, options?: Intl.DateTimeFormatOptions): string => {
+  if (!dateString) return '';
+
+  // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+  const match = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', options || {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  // Fallback
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', options || {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 const BookingsPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
@@ -53,7 +79,7 @@ const BookingsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
-  
+
   const router = useRouter();
 
   const fetchBookings = async () => {
@@ -428,11 +454,7 @@ const BookingsPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-900">
-                          {new Date(booking.date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                          {formatDisplayDate(booking.date)}
                         </div>
                         <div className="text-sm text-slate-500">{booking.time}</div>
                       </td>
