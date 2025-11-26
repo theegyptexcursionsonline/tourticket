@@ -288,6 +288,34 @@ export async function POST(request: Request) {
         const bookingTime = cartItem.selectedTime || '10:00';
         const totalGuests = (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0);
 
+        // Calculate the correct total price including add-ons and fees
+        const calculateItemTotal = () => {
+          const basePrice = cartItem.selectedBookingOption?.price || cartItem.discountPrice || cartItem.price || 0;
+          const adultPrice = basePrice * (cartItem.quantity || 1);
+          const childPrice = (basePrice / 2) * (cartItem.childQuantity || 0);
+          let tourTotal = adultPrice + childPrice;
+
+          let addOnsTotal = 0;
+          if (cartItem.selectedAddOns && cartItem.selectedAddOnDetails) {
+            Object.entries(cartItem.selectedAddOns).forEach(([addOnId, quantity]) => {
+              const addOnDetail = cartItem.selectedAddOnDetails?.[addOnId];
+              if (addOnDetail && Number(quantity) > 0) {
+                const guestsForAddOns = (cartItem.quantity || 0) + (cartItem.childQuantity || 0);
+                const addOnQuantity = addOnDetail.perGuest ? guestsForAddOns : 1;
+                addOnsTotal += addOnDetail.price * addOnQuantity;
+              }
+            });
+          }
+
+          const subtotal = tourTotal + addOnsTotal;
+          const serviceFee = subtotal * 0.03;
+          const tax = subtotal * 0.05;
+
+          return subtotal + serviceFee + tax;
+        };
+
+        const itemTotalPrice = calculateItemTotal();
+
         // Generate unique booking reference
         const bookingReference = await generateUniqueBookingReference();
 
@@ -298,7 +326,7 @@ export async function POST(request: Request) {
           date: bookingDate,
           time: bookingTime,
           guests: totalGuests,
-          totalPrice: cartItem.totalPrice || cartItem.discountPrice || cartItem.price || 0,
+          totalPrice: itemTotalPrice,
           status: 'Confirmed',
           paymentId: paymentResult.paymentId,
           paymentMethod,

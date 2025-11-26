@@ -225,7 +225,7 @@ const BookingDetailPage = () => {
     const basePrice = booking.selectedBookingOption?.price || 0;
     const adultPrice = basePrice * (booking.adultGuests || 1);
     const childPrice = (basePrice / 2) * (booking.childGuests || 0);
-    const subtotal = adultPrice + childPrice;
+    const tourSubtotal = adultPrice + childPrice;
 
     let addOnsTotal = 0;
     if (booking.selectedAddOns && booking.selectedAddOnDetails) {
@@ -239,17 +239,29 @@ const BookingDetailPage = () => {
       });
     }
 
+    // Subtotal includes tour price + add-ons
+    const subtotal = tourSubtotal + addOnsTotal;
+
+    // Service fee and tax are calculated on the full subtotal (including add-ons)
     const serviceFee = subtotal * 0.03;
     const tax = subtotal * 0.05;
-    
+
+    // Calculate the correct total
+    const calculatedTotal = subtotal + serviceFee + tax;
+
+    // Use the stored totalPrice if it seems reasonable, otherwise use calculated total
+    // This handles cases where the booking was created with incorrect totalPrice
+    const total = booking.totalPrice > subtotal ? booking.totalPrice : calculatedTotal;
+
     return {
       adultPrice,
       childPrice,
+      tourSubtotal,
       subtotal,
       addOnsTotal,
       serviceFee,
       tax,
-      total: booking.totalPrice
+      total
     };
   };
 
@@ -663,7 +675,7 @@ const BookingDetailPage = () => {
                     <span className="font-semibold text-green-600">FREE</span>
                   </div>
                 )}
-                
+
                 {pricing.addOnsTotal > 0 && (
                   <>
                     <div className="border-t pt-3 mt-3"></div>
@@ -673,11 +685,11 @@ const BookingDetailPage = () => {
                     </div>
                   </>
                 )}
-                
+
                 <div className="border-t pt-3 mt-3"></div>
                 <div className="flex justify-between text-slate-700">
                   <span>Subtotal</span>
-                  <span className="font-semibold">${(pricing.subtotal + pricing.addOnsTotal).toFixed(2)}</span>
+                  <span className="font-semibold">${pricing.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600 text-sm">
                   <span>Service Fee (3%)</span>
@@ -687,9 +699,9 @@ const BookingDetailPage = () => {
                   <span>Tax (5%)</span>
                   <span>${pricing.tax.toFixed(2)}</span>
                 </div>
-                
+
                 <div className="border-t-2 border-slate-300 pt-3 mt-3 flex justify-between">
-                  <span className="text-lg font-bold text-slate-900">Total</span>
+                  <span className="text-lg font-bold text-slate-900">Total Paid</span>
                   <span className="text-lg font-bold text-green-600">${pricing.total.toFixed(2)}</span>
                 </div>
               </div>
