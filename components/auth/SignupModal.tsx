@@ -38,7 +38,7 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
     const toastId = toast.loading('Creating your account...');
 
     try {
-      await signup(email, password, firstName, lastName);
+      await signup({ email, password, firstName, lastName });
       toast.success('Account created successfully!', { id: toastId });
 
       // Reset form
@@ -65,7 +65,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
 
     try {
       await loginWithGoogle();
-      toast.success('Account created successfully!', { id: toastId });
+      toast.dismiss(toastId);
+      toast.success('Signed in successfully!');
 
       // Call success callback if provided
       if (onSuccess) {
@@ -75,7 +76,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
       // Close modal
       onClose();
     } catch (error: any) {
-      toast.error(error.message || 'Google sign-in failed.', { id: toastId });
+      toast.dismiss(toastId);
+      toast.error(error.message || 'Google sign-in failed.');
     }
   };
 

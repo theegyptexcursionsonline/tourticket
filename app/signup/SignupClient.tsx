@@ -35,14 +35,16 @@ const SignupClient: React.FC = () => {
   };
 
   const handleGoogleSignUp = async () => {
-    const toastId = toast.loading('Signing up with Google...');
+    const toastId = toast.loading('Signing in with Google...');
 
     try {
       await loginWithGoogle();
-      toast.success('Account created successfully! Redirecting...', { id: toastId });
+      toast.dismiss(toastId);
+      toast.success('Signed in successfully! Redirecting...');
       router.push('/');
     } catch (err: any) {
-      toast.error(err.message || 'Google sign-up failed.', { id: toastId });
+      toast.dismiss(toastId);
+      toast.error(err.message || 'Google sign-in failed.');
     }
   };
 

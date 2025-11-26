@@ -107,11 +107,12 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
     lastName = nameParts.slice(1).join(' ') || '';
   }
 
-  // Check if user already exists
+  // Check if user already exists by Firebase UID
   let user = await User.findOne({ firebaseUid: firebaseUser.uid });
+  let isNewUser = false;
 
   if (user) {
-    // Update existing user
+    // Update existing user (same Firebase account)
     user.email = firebaseUser.email || user.email;
     user.emailVerified = firebaseUser.emailVerified;
     user.photoURL = firebaseUser.photoURL || user.photoURL;
@@ -119,17 +120,18 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
     user.lastLoginAt = new Date();
     await user.save();
   } else {
-    // Check if user exists by email (migration case)
+    // Check if user exists by email (migration case or different auth method)
     user = await User.findOne({ email: firebaseUser.email });
 
     if (user) {
-      // Link existing user to Firebase
+      // Link existing user to Firebase (user had account via different method)
       user.firebaseUid = firebaseUser.uid;
       user.authProvider = authProvider;
       user.emailVerified = firebaseUser.emailVerified;
       user.photoURL = firebaseUser.photoURL || user.photoURL;
       user.lastLoginAt = new Date();
       await user.save();
+      // Not marking as new user since they already had an account
     } else {
       // Create new user
       user = await User.create({
@@ -145,11 +147,13 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
         isActive: true,
         lastLoginAt: new Date(),
       });
+      isNewUser = true;
     }
   }
 
   return {
     success: true,
+    isNewUser,
     user: {
       id: user._id.toString(),
       _id: user._id.toString(),

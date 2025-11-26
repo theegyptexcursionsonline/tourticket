@@ -49,14 +49,16 @@ export default function LoginClient() {
 
     try {
       await loginWithGoogle();
-      toast.success('Login successful! Redirecting...', { id: toastId });
+      toast.dismiss(toastId);
+      toast.success('Login successful! Redirecting...');
 
       // Add a small delay to ensure auth state is updated before redirect
       setTimeout(() => {
         router.push('/user/dashboard');
       }, 100);
     } catch (error: any) {
-      toast.error(error.message || 'Google sign-in failed.', { id: toastId });
+      toast.dismiss(toastId);
+      toast.error(error.message || 'Google sign-in failed.');
     }
   };
 

@@ -25,15 +25,15 @@ const StatCard = ({ title, value, icon: Icon }: { title: string; value: string |
     initial={{ opacity: 0, y: 6 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.28 }}
-    className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 px-4 py-3 flex-1 min-w-[100px]"
+    className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 flex-1 min-w-0"
   >
-    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-rose-50 border border-rose-100 text-rose-600 flex-shrink-0">
-      <Icon size={16} />
+    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center bg-rose-50 border border-rose-100 text-rose-600 flex-shrink-0">
+      <Icon size={14} className="sm:w-4 sm:h-4" />
     </div>
 
-    <div className="flex-1 min-w-0">
-      <p className="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight truncate">{value}</p>
-      <p className="text-[11px] text-slate-500 uppercase tracking-wider mt-0.5 leading-tight">{title}</p>
+    <div className="flex-1 min-w-0 text-center sm:text-left">
+      <p className="text-lg sm:text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight">{value}</p>
+      <p className="text-[9px] sm:text-[11px] text-slate-500 uppercase tracking-wider leading-tight truncate">{title}</p>
     </div>
   </motion.div>
 );
@@ -212,10 +212,11 @@ const DashboardContent = () => {
   return (
     <div className="w-full">
       {/* Hero section with stats */}
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between md:gap-8">
-          <div className="flex items-center gap-4 min-w-0 flex-1 mb-6 md:mb-0">
-            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-slate-100">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-100 mb-6 sm:mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          {/* User Info */}
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 mb-5 lg:mb-0">
+            <div className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-slate-100">
               {user?.picture || user?.photoURL ? (
                 <Image
                   src={user.picture || user.photoURL || ''}
@@ -225,23 +226,24 @@ const DashboardContent = () => {
                   sizes="80px"
                 />
               ) : (
-                <div className="flex items-center justify-center w-full h-full text-white text-xl font-bold bg-rose-500">
+                <div className="flex items-center justify-center w-full h-full text-white text-lg sm:text-xl font-bold bg-rose-500">
                   {userName?.[0]?.toUpperCase() ?? 'U'}
                 </div>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight truncate">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight">
                 Welcome back, {userName.split(' ')[0] || 'Traveler'}!
               </h1>
-              <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1 leading-relaxed">
                 Here's a summary of your adventures.
               </p>
             </div>
           </div>
 
-          <div className="flex gap-4 flex-shrink-0">
+          {/* Stats Cards - Grid on mobile, flex on larger screens */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 lg:flex lg:flex-shrink-0">
             <StatCard title="Total Trips" value={totalBookings} icon={Ticket} />
             <StatCard title="Upcoming" value={upcomingCount} icon={Calendar} />
             <StatCard title="Completed" value={pastCount} icon={Compass} />

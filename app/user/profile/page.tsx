@@ -331,9 +331,9 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8">
       {/* Profile Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-        <div className="flex items-center gap-6">
-          <div className="relative w-20 h-20">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 text-center sm:text-left">
+          <div className="relative w-20 h-20 flex-shrink-0">
             {user?.picture || user?.photoURL ? (
               <Image
                 src={user.picture || user.photoURL || ''}
@@ -349,17 +349,17 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 break-words">
               {user?.name || `${user?.firstName} ${user?.lastName}` || 'Travel Enthusiast'}
             </h1>
-            <div className="flex items-center gap-2 text-slate-600 mb-1">
-              <Mail size={16} />
-              <span>{user?.email}</span>
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 mb-1 text-sm sm:text-base">
+              <Mail size={16} className="flex-shrink-0" />
+              <span className="truncate">{user?.email}</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600">
-              <Calendar size={16} />
-              <span>Member since {new Date(user?.createdAt || '').toLocaleDateString()}</span>
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 text-sm sm:text-base">
+              <Calendar size={16} className="flex-shrink-0" />
+              <span>Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}</span>
             </div>
           </div>
         </div>
@@ -368,44 +368,44 @@ export default function ProfilePage() {
       {/* Tab Navigation */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100">
         <div className="border-b border-slate-100">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex px-4 sm:px-6">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 sm:flex-none py-3 sm:py-4 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm transition-colors flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 ${
                 activeTab === 'profile'
                   ? 'border-red-600 text-red-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
             >
-              <User size={16} className="inline mr-2" />
-              Profile Information
+              <User size={16} className="flex-shrink-0" />
+              <span className="whitespace-nowrap">Profile Information</span>
             </button>
             <button
               onClick={() => setActiveTab('password')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 sm:flex-none py-3 sm:py-4 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm transition-colors flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 ${
                 activeTab === 'password'
                   ? 'border-red-600 text-red-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
             >
-              <Lock size={16} className="inline mr-2" />
-              Change Password
+              <Lock size={16} className="flex-shrink-0" />
+              <span className="whitespace-nowrap">Change Password</span>
             </button>
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {activeTab === 'profile' && (
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-6">Update Your Profile</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-4 sm:mb-6">Update Your Profile</h2>
               <ProfileForm />
             </div>
           )}
 
           {activeTab === 'password' && (
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">Change Password</h2>
-              <p className="text-slate-600 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Change Password</h2>
+              <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">
                 For your security, please enter your current password to set a new one.
               </p>
               <ChangePasswordForm />

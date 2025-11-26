@@ -238,7 +238,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signup = async (data: SignupData): Promise<void> => {
     setIsLoading(true);
     try {
-      // Create Firebase user
+      // Create Firebase user - Firebase handles duplicate email detection
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let errorMessage = 'Failed to create account. Please try again.';
 
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists.';
+        errorMessage = 'An account with this email already exists. Please log in instead.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
       } else if (error.code === 'auth/weak-password') {

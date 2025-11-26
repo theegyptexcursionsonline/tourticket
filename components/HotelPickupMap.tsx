@@ -38,7 +38,8 @@ export default function HotelPickupMap({ onLocationSelect, initialLocation, tour
   const autocompleteRef = useRef<any>(null);
   const isInitializing = useRef(false);
 
-  const GOOGLE_MAPS_API_KEY = '***REMOVED***';
+  // Google Maps API key from environment variable
+  const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
   // Load Google Maps script
   useEffect(() => {

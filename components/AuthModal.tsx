@@ -111,11 +111,13 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       await loginWithGoogle();
-      toast.success(mode === 'login' ? 'Welcome back!' : 'Account created successfully!', { id: toastId });
+      toast.dismiss(toastId);
+      toast.success(mode === 'login' ? 'Welcome back!' : 'Signed in successfully!');
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      toast.error(error.message || 'Google sign-in failed', { id: toastId });
+      toast.dismiss(toastId);
+      toast.error(error.message || 'Google sign-in failed');
     }
   };
 

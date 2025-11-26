@@ -1127,7 +1127,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     };
   }, [tour]);
 
-  // MODIFIED: Fetches availability and options with fallback to mock data
+  // OPTIMIZED: Use pre-fetched data from tour prop (SSR/ISR) instead of client-side API calls
   const fetchAvailability = async (date: Date, totalGuests: number) => {
     setIsLoading(true);
     setError('');
@@ -1138,17 +1138,34 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         throw new Error("Tour ID is missing");
       }
 
-      // Try to fetch tour options from API, but use fallback if it fails
+      // Use pre-fetched bookingOptions from tour prop (SSR) if available
       let tourOptions: TourOption[];
-      try {
-        const optionsResponse = await fetch(`/api/tours/${tourId}/options`);
-        if (!optionsResponse.ok) {
-          throw new Error('API endpoint not available');
-        }
-        tourOptions = await optionsResponse.json();
-      } catch (error) {
-        console.log('API not available, using mock tour options');
-        // Fallback to mock tour options
+      if (tour.bookingOptions && tour.bookingOptions.length > 0) {
+        // Transform pre-fetched bookingOptions to TourOption format
+        tourOptions = tour.bookingOptions.map((option: any, index: number) => ({
+          id: option.id || option._id || `option-${index}`,
+          title: option.label || option.title || 'Tour Option',
+          price: option.price || tourDisplayData?.discountPrice || 50,
+          originalPrice: option.originalPrice || option.price || tourDisplayData?.discountPrice || 50,
+          duration: option.duration || tourDisplayData?.duration || '3 hours',
+          languages: option.languages || tourDisplayData?.languages || ['English'],
+          description: option.description || 'Experience our tour',
+          timeSlots: option.timeSlots || [
+            { id: `slot-${index}-1`, time: '09:00', available: 12, price: option.price || tourDisplayData?.discountPrice || 50, isPopular: false },
+            { id: `slot-${index}-2`, time: '11:00', available: 8, price: option.price || tourDisplayData?.discountPrice || 50, isPopular: true },
+            { id: `slot-${index}-3`, time: '14:00', available: 15, price: option.price || tourDisplayData?.discountPrice || 50, isPopular: false },
+            { id: `slot-${index}-4`, time: '16:00', available: 3, price: option.price || tourDisplayData?.discountPrice || 50, isPopular: false },
+          ],
+          highlights: option.highlights || tourDisplayData?.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
+          included: option.included || tourDisplayData?.includes?.slice(0, 3) || ['Professional guide', 'Entry tickets', 'Group photos'],
+          groupSize: option.groupSize || `Max ${tourDisplayData?.maxGroupSize || 15} people`,
+          difficulty: option.difficulty || 'Easy',
+          badge: option.badge || (index === 0 ? 'Most Popular' : undefined),
+          discount: option.discount || (tourDisplayData?.originalPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : 0),
+          isRecommended: option.isRecommended ?? index === 0,
+        }));
+      } else {
+        // Fallback to default tour options (no API call needed)
         tourOptions = [
           {
             id: 'standard-tour',
@@ -1195,37 +1212,27 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         ];
       }
 
-      // Fetch add-ons with fallbacks
+      // Use pre-fetched addOns from tour prop (SSR) if available
       let addOnsToUse;
-      try {
-        const addOnsResponse = await fetch(`/api/tours/${tourId}/addons`);
-        if (addOnsResponse.ok) {
-          addOnsToUse = await addOnsResponse.json();
-          addOnsToUse = addOnsToUse.map((addon: any) => ({
-            ...addon,
-            icon: getAddOnIcon(addon.category),
-          }));
-        } else {
-          throw new Error('Failed to fetch add-ons');
-        }
-      } catch (error) {
-        console.log('Add-ons API not available, using fallback');
-        addOnsToUse = tour.addOns && tour.addOns.length > 0 
-          ? tour.addOns.map((addon: any, index: number) => ({
-              id: addon.id || `addon-${index}`,
-              title: addon.name || 'Tour Enhancement',
-              description: addon.description || 'Enhance your tour experience',
-              price: addon.price || 15,
-              originalPrice: addon.price ? Math.round(addon.price * 1.3) : 20,
-              required: false,
-              maxQuantity: 1,
-              popular: index === 0,
-              category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
-              icon: getAddOnIcon(addon.category || 'Experience'),
-              savings: addon.price ? Math.round(addon.price * 0.3) : 5,
-              perGuest: addon.category === 'Food',
-            }))
-          : addOnData;
+      if (tour.addOns && tour.addOns.length > 0) {
+        // Transform pre-fetched addOns to the expected format
+        addOnsToUse = tour.addOns.map((addon: any, index: number) => ({
+          id: addon.id || addon._id || `addon-${index}`,
+          title: addon.name || addon.title || 'Tour Enhancement',
+          description: addon.description || 'Enhance your tour experience',
+          price: addon.price || 15,
+          originalPrice: addon.originalPrice || (addon.price ? Math.round(addon.price * 1.3) : 20),
+          required: addon.required || false,
+          maxQuantity: addon.maxQuantity || 1,
+          popular: addon.popular ?? index === 0,
+          category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
+          icon: getAddOnIcon(addon.category || 'Experience'),
+          savings: addon.savings || (addon.price ? Math.round(addon.price * 0.3) : 5),
+          perGuest: addon.perGuest ?? addon.category === 'Food',
+        }));
+      } else {
+        // Fallback to default add-ons
+        addOnsToUse = addOnData;
       }
 
       const newAvailabilityData: AvailabilityData = {
@@ -1331,6 +1338,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     }
   }, [isOpen]);
 
+  // Scroll to top of booking content
+  const scrollToTop = useCallback(() => {
+    if (scrollableContentRef.current) {
+      scrollableContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
   // Enhanced navigation handlers
   const handleNext = useCallback(() => {
     if (currentStep === 2 && !bookingData.selectedTimeSlot) {
@@ -1344,22 +1358,28 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     if (currentStep < 4) {
       setCurrentStep(s => s + 1);
       setAnimationKey(prev => prev + 1);
+      // Scroll to top after step change
+      setTimeout(scrollToTop, 100);
     }
-  }, [currentStep, bookingData.selectedTimeSlot]);
+  }, [currentStep, bookingData.selectedTimeSlot, scrollToTop]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
       setCurrentStep(s => s - 1);
       setAnimationKey(prev => prev + 1);
+      // Scroll to top after step change
+      setTimeout(scrollToTop, 100);
     }
-  }, [currentStep]);
+  }, [currentStep, scrollToTop]);
 
   const handleStepClick = useCallback((step: number) => {
     if (step <= currentStep || step === 1) {
       setCurrentStep(step);
       setAnimationKey(prev => prev + 1);
+      // Scroll to top after step change
+      setTimeout(scrollToTop, 100);
     }
-  }, [currentStep]);
+  }, [currentStep, scrollToTop]);
 
   // Enhanced availability check
   const handleCheckAvailability = useCallback(() => {

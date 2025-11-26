@@ -8,6 +8,28 @@ import {
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
 
+// Cart item interface for storing in user document
+export interface ICartItem {
+  tourId: mongoose.Types.ObjectId;
+  tourSlug: string;
+  tourTitle: string;
+  tourImage?: string;
+  selectedDate: string;
+  selectedTime?: string;
+  quantity: number;
+  childQuantity?: number;
+  adultPrice: number;
+  childPrice?: number;
+  selectedAddOns?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+  uniqueId: string;
+  addedAt: Date;
+}
+
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
@@ -25,6 +47,8 @@ export interface IUser extends Document {
   invitationToken?: string;
   invitationExpires?: Date;
   requirePasswordChange?: boolean;
+  wishlist?: mongoose.Types.ObjectId[]; // Array of Tour IDs
+  cart?: ICartItem[]; // Array of cart items
 }
 
 const UserSchema: Schema<IUser> = new Schema({
@@ -105,6 +129,30 @@ const UserSchema: Schema<IUser> = new Schema({
     type: Date,
     default: Date.now,
   },
+  wishlist: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Tour',
+  }],
+  cart: [{
+    tourId: { type: Schema.Types.ObjectId, ref: 'Tour', required: true },
+    tourSlug: { type: String, required: true },
+    tourTitle: { type: String, required: true },
+    tourImage: { type: String },
+    selectedDate: { type: String, required: true },
+    selectedTime: { type: String },
+    quantity: { type: Number, required: true, default: 1 },
+    childQuantity: { type: Number, default: 0 },
+    adultPrice: { type: Number, required: true },
+    childPrice: { type: Number },
+    selectedAddOns: [{
+      id: String,
+      name: String,
+      price: Number,
+      quantity: Number,
+    }],
+    uniqueId: { type: String, required: true },
+    addedAt: { type: Date, default: Date.now },
+  }],
 });
 
 UserSchema.pre('save', function ensurePermissions(next) {

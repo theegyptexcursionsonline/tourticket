@@ -55,7 +55,8 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
 
     try {
       await loginWithGoogle();
-      toast.success('Login successful!', { id: toastId });
+      toast.dismiss(toastId);
+      toast.success('Login successful!');
 
       // Call success callback if provided
       if (onSuccess) {
@@ -65,7 +66,8 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
       // Close modal
       onClose();
     } catch (error: any) {
-      toast.error(error.message || 'Google sign-in failed.', { id: toastId });
+      toast.dismiss(toastId);
+      toast.error(error.message || 'Google sign-in failed.');
     }
   };
 

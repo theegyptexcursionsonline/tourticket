@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: result.user,
+      isNewUser: result.isNewUser,
     });
   } catch (error) {
     console.error('Firebase sync error:', error);
