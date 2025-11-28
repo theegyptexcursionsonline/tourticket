@@ -1831,7 +1831,7 @@ export default function AISearchWidget() {
                         }
                       }}
                       placeholder={chatMode ? 'Ask anything about Egypt, tours, prices…' : placeholderTexts[placeholderIndex]}
-                      className="ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight"
+                      className={`ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold ${isExpanded ? 'text-gray-900' : 'text-white'} placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight`}
                     />
 
                     <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 z-10">

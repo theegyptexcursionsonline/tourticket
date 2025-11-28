@@ -780,6 +780,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // AI SDK Chat Setup
   const {
@@ -787,6 +788,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     sendMessage,
     status,
     stop,
+    setMessages,
   } = useChat({
     transport: new DefaultChatTransport({
       api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
@@ -823,6 +825,12 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
       return () => clearTimeout(timeout);
     }
   }, [isExpanded]);
+
+  useEffect(() => {
+    if (isExpanded && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isExpanded, chatMode]);
 
   const handleCloseDropdown = () => {
     setIsExpanded(false);
@@ -869,12 +877,16 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     if (!chatContainerRef.current || userHasScrolledUp) return;
     
     const container = chatContainerRef.current;
-    setTimeout(() => {
+    // Use requestAnimationFrame for smoother scrolling
+    requestAnimationFrame(() => {
       if (!userHasScrolledUp && container) {
-        container.scrollTop = container.scrollHeight;
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
       }
-    }, 100);
-  }, [messages, isGenerating, userHasScrolledUp]);
+    });
+  }, [messages, messages.length, isGenerating, userHasScrolledUp, status]);
   
   // Track manual scrolling - let user scroll freely
   useEffect(() => {
@@ -916,7 +928,8 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const handleClearChat = () => {
     setDetectedToursByMessage({});
     setDetectedDestinationsByMessage({});
-    sendMessage({ text: '' }); // Reset chat messages
+    setMessages([]); // Clear all chat messages
+    setUserHasScrolledUp(false); // Reset scroll tracking
     setTimeout(() => {
       if (chatContainerRef.current) {
         chatContainerRef.current.scrollTop = 0;
@@ -1246,10 +1259,10 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           {/* Main Search/Chat Input Box - Enhanced */}
           <form onSubmit={handleSubmit}>
             <div
-              className={`relative bg-white/98 backdrop-blur-2xl rounded-full transition-all duration-500 ease-out ${
+              className={`relative backdrop-blur-2xl rounded-full transition-all duration-500 ease-out ${
                 isExpanded || isFocused
-                  ? 'shadow-[0_20px_60px_-15px_rgba(59,130,246,0.5)] border-2 border-blue-400 ring-4 ring-blue-100/50'
-                  : 'shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border-2 border-white/40 hover:border-blue-300 hover:shadow-[0_20px_50px_-15px_rgba(59,130,246,0.4)]'
+                  ? 'bg-white shadow-[0_20px_60px_-15px_rgba(59,130,246,0.5)] border-2 border-blue-400 ring-4 ring-blue-100/50'
+                  : 'bg-black/40 hover:bg-black/50 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border-2 border-white/30 hover:border-white/50'
               }`}
             >
               <div className="relative">
@@ -1262,8 +1275,13 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                     setIsFocused(true);
                   }}
                   onBlur={() => setIsFocused(false)}
+                  ref={inputRef}
                   placeholder={chatMode ? "Ask AI anything about Egypt tours..." : suggestion}
-                  className="w-full pl-16 md:pl-[70px] pr-14 md:pr-20 py-4 md:py-5 text-sm md:text-base text-gray-900 placeholder:text-gray-400/70 placeholder:font-normal font-medium bg-transparent outline-none rounded-full relative z-10 transition-all duration-300"
+                  className={`w-full pl-16 md:pl-[70px] pr-14 md:pr-20 py-4 md:py-5 text-sm md:text-base font-medium bg-transparent outline-none rounded-full relative z-10 transition-all duration-300 ${
+                    isExpanded || isFocused 
+                      ? 'text-gray-900 placeholder:text-gray-400/70' 
+                      : 'text-white placeholder:text-white/70'
+                  }`}
                   style={{ cursor: 'text' }}
                   disabled={chatMode && isGenerating}
                   autoComplete="off"
@@ -1372,16 +1390,20 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 ease: [0.34, 1.56, 0.64, 1],
                 opacity: { duration: 0.25 }
               }}
-              className="absolute top-full mt-4 left-0 right-0 backdrop-blur-[40px] rounded-[28px] shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] border border-white/30 overflow-hidden glass-dropdown"
+              className="absolute top-full mt-4 left-0 right-0 backdrop-blur-[40px] rounded-[28px] shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] border border-white/30 glass-dropdown"
               style={{ 
-                maxHeight: '70vh',
+                height: '60vh',
+                maxHeight: '500px',
                 boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.3)',
                 zIndex: 99999,
-                position: 'absolute'
+                position: 'absolute',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}
             >
               {/* Vibrant Background Layer for Glassmorphism */}
-              <div className="absolute inset-0 z-0 opacity-90">
+              <div className="absolute inset-0 z-0 opacity-90 pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-400/30 via-purple-400/30 to-pink-400/30" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-cyan-300/20 via-transparent to-orange-300/20" />
                 {/* Animated mesh gradient */}
@@ -1407,13 +1429,17 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               </div>
               
               {/* Content with glass effect */}
-              <div className="relative z-10 bg-white/10 backdrop-blur-md"
+              <div
+                className="relative z-10 flex flex-col bg-white/10 backdrop-blur-md"
                 style={{ 
                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+                  flex: 1,
+                  minHeight: 0,
+                  overflow: 'hidden'
                 }}
               >
               {/* Enhanced Header with Glass Effect */}
-              <div className="px-6 py-4 border-b border-white/20 bg-white/20 backdrop-blur-lg relative overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/20 bg-white/20 backdrop-blur-lg relative overflow-hidden flex-shrink-0">
                 {/* Animated shimmer effect */}
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
@@ -1519,7 +1545,16 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
               </div>
 
               {/* Results Area */}
-              <div ref={chatContainerRef} className="overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(65vh - 120px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto custom-scrollbar"
+                style={{ 
+                  minHeight: 0, 
+                  WebkitOverflowScrolling: 'touch',
+                  overflowY: 'auto',
+                  scrollbarGutter: 'stable'
+                }}
+              >
                 {chatMode ? (
                   /* Enhanced Chat Interface */
                   <motion.div 
@@ -1972,32 +2007,31 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
           animation: float 3s ease-in-out infinite;
         }
 
-        /* Enhanced Custom scrollbar */
+        /* Enhanced Custom scrollbar - always visible */
         .custom-scrollbar {
           scrollbar-width: thin;
-          scrollbar-color: #cbd5e1 transparent;
+          scrollbar-color: rgba(100, 116, 139, 0.6) rgba(241, 245, 249, 0.5);
         }
 
         .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+          width: 10px;
+          height: 10px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
+          background: rgba(241, 245, 249, 0.5);
           border-radius: 10px;
+          margin: 4px 0;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
+          background: linear-gradient(to bottom, #94a3b8, #64748b);
           border-radius: 10px;
-          border: 2px solid transparent;
-          background-clip: content-box;
+          border: 2px solid rgba(241, 245, 249, 0.5);
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #94a3b8, #64748b);
-          background-clip: content-box;
+          background: linear-gradient(to bottom, #64748b, #475569);
         }
 
         /* Hide scrollbar but keep functionality */
