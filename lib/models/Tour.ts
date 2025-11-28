@@ -885,7 +885,6 @@ TourSchema.index({ rating: -1, bookings: -1 });
 TourSchema.index({ discountPrice: 1, isPublished: 1 });
 TourSchema.index({ isFeatured: 1, isPublished: 1 });
 TourSchema.index({ createdAt: -1 });
-TourSchema.index({ slug: 1 }, { unique: true });
 TourSchema.index({ difficulty: 1, isPublished: 1 });
 
 // Compound indexes for common query patterns
