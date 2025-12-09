@@ -2,14 +2,26 @@
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY || '',
-});
+// Lazy initialization to avoid build-time errors when env vars are not set
+let mgClient: ReturnType<InstanceType<typeof Mailgun>['client']> | null = null;
 
-const DOMAIN = process.env.MAILGUN_DOMAIN || '';
-const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'booking@egypt-excursionsonline.com';
+function getMailgunClient() {
+  if (!mgClient) {
+    const key = process.env.MAILGUN_API_KEY;
+    if (!key) {
+      throw new Error('MAILGUN_API_KEY environment variable is not set');
+    }
+    const mailgun = new Mailgun(formData);
+    mgClient = mailgun.client({
+      username: 'api',
+      key: key,
+    });
+  }
+  return mgClient;
+}
+
+const getDomain = () => process.env.MAILGUN_DOMAIN || '';
+const getFromEmail = () => process.env.MAILGUN_FROM_EMAIL || 'booking@egypt-excursionsonline.com';
 
 interface InlineAttachment {
   filename: string;
@@ -37,6 +49,10 @@ interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
+    const mg = getMailgunClient();
+    const DOMAIN = getDomain();
+    const FROM_EMAIL = getFromEmail();
+
     const messageData: any = {
       from: `Egypt Excursions Online <${FROM_EMAIL}>`,
       to: [options.to],

@@ -29,29 +29,40 @@ interface CategoryWithCount extends ICategory {
 
 // Server-side function to fetch all categories and their tour counts
 async function getCategoriesWithTourCounts(): Promise<CategoryWithCount[]> {
-  await dbConnect();
-  
-  // Fetch all published categories
-  const categories = await Category.find({ isPublished: true })
-    .sort({ order: 1, name: 1 })
-    .lean();
-  
-  // For each category, count the number of published tours
-  const categoriesWithCounts = await Promise.all(
-    categories.map(async (cat) => {
-      const tourCount = await Tour.countDocuments({
-        category: { $in: [cat._id] },
-        isPublished: true
-      });
-      return {
-        ...cat,
-        tourCount: tourCount,
-      };
-    })
-  );
+  // Skip database fetch during build if MONGODB_URI is not set
+  if (!process.env.MONGODB_URI) {
+    console.warn('⚠️ Skipping interests fetch - MONGODB_URI not set');
+    return [];
+  }
 
-  // Serialize the data to pass to the client component
-  return JSON.parse(JSON.stringify(categoriesWithCounts));
+  try {
+    await dbConnect();
+    
+    // Fetch all published categories
+    const categories = await Category.find({ isPublished: true })
+      .sort({ order: 1, name: 1 })
+      .lean();
+    
+    // For each category, count the number of published tours
+    const categoriesWithCounts = await Promise.all(
+      categories.map(async (cat) => {
+        const tourCount = await Tour.countDocuments({
+          category: { $in: [cat._id] },
+          isPublished: true
+        });
+        return {
+          ...cat,
+          tourCount: tourCount,
+        };
+      })
+    );
+
+    // Serialize the data to pass to the client component
+    return JSON.parse(JSON.stringify(categoriesWithCounts));
+  } catch (error) {
+    console.error('Failed to fetch interests:', error);
+    return [];
+  }
 }
 
 // The main server component for the /interests route

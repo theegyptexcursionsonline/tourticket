@@ -2,10 +2,21 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
-});
+// Lazy Stripe initialization to avoid build-time errors
+let stripeInstance: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+    }
+    stripeInstance = new Stripe(key, {
+      apiVersion: '2024-12-18.acacia',
+    });
+  }
+  return stripeInstance;
+}
 
 export async function POST(request: Request) {
   try {
@@ -46,6 +57,7 @@ export async function POST(request: Request) {
     }
 
     // Create a PaymentIntent with Stripe
+    const stripe = getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(pricing.total * 100), // Stripe expects amount in cents
       currency: (pricing.currency || 'USD').toLowerCase(),

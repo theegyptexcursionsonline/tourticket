@@ -3,11 +3,23 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
-});
+// Lazy Stripe initialization to avoid build-time errors
+let stripeInstance: Stripe | null = null;
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+    }
+    stripeInstance = new Stripe(key, {
+      apiVersion: '2024-12-18.acacia',
+    });
+  }
+  return stripeInstance;
+}
+
+const getWebhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET || '';
 
 export async function POST(request: Request) {
   try {
@@ -25,10 +37,11 @@ export async function POST(request: Request) {
     let event: Stripe.Event;
 
     try {
+      const stripe = getStripe();
       event = stripe.webhooks.constructEvent(
         body,
         signature,
-        webhookSecret
+        getWebhookSecret()
       );
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);

@@ -4,12 +4,20 @@
 
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+// Check if database connection is available
+export function isDatabaseAvailable(): boolean {
+  return !!process.env.MONGODB_URI;
+}
 
-if (!MONGODB_URI) {
-  throw new Error(
-    'Please define the MONGODB_URI environment variable inside .env.local'
-  );
+// Get MONGODB_URI lazily to allow builds without env vars
+function getMongoUri(): string {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error(
+      'Please define the MONGODB_URI environment variable inside .env.local'
+    );
+  }
+  return uri;
 }
 
 /**
@@ -24,6 +32,13 @@ if (!cached) {
 }
 
 async function dbConnect() {
+  // Check if database is available
+  if (!isDatabaseAvailable()) {
+    throw new Error(
+      'Please define the MONGODB_URI environment variable inside .env.local'
+    );
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -39,7 +54,7 @@ async function dbConnect() {
       family: 4, // Use IPv4, skip trying IPv6
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(getMongoUri(), opts).then((mongoose) => {
       console.log('Database connected successfully');
       return mongoose;
     }).catch((error) => {

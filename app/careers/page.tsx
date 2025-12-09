@@ -21,8 +21,14 @@ export const metadata: Metadata = {
 };
 
 async function getJobs(): Promise<JobType[]> {
-    await dbConnect();
+    // Skip database fetch during build if MONGODB_URI is not set
+    if (!process.env.MONGODB_URI) {
+        console.warn('⚠️ Skipping job fetch - MONGODB_URI not set');
+        return [];
+    }
+    
     try {
+        await dbConnect();
         const jobs = await Job.find({ isActive: true }).sort({ createdAt: -1 }).lean();
         return JSON.parse(JSON.stringify(jobs));
     } catch (error) {

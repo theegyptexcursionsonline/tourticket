@@ -43,37 +43,48 @@ async function getBlogsWithCategoryCounts(): Promise<{
   categoryCounts: { value: string; label: string; count: number }[];
   featuredPosts: IBlog[];
 }> {
-  await dbConnect();
-  
-  // Get all published blogs
-  const blogs = await Blog.find({ status: 'published' })
-    .sort({ publishedAt: -1 })
-    .populate('relatedDestinations', 'name slug')
-    .populate('relatedTours', 'title slug');
+  // Skip database fetch during build if MONGODB_URI is not set
+  if (!process.env.MONGODB_URI) {
+    console.warn('⚠️ Skipping blog fetch - MONGODB_URI not set');
+    return { blogs: [], categoryCounts: [], featuredPosts: [] };
+  }
 
-  // Get featured posts
-  const featuredPosts = await Blog.find({ status: 'published', featured: true })
-    .sort({ publishedAt: -1 })
-    .limit(3)
-    .populate('relatedDestinations', 'name slug')
-    .populate('relatedTours', 'title slug');
+  try {
+    await dbConnect();
+    
+    // Get all published blogs
+    const blogs = await Blog.find({ status: 'published' })
+      .sort({ publishedAt: -1 })
+      .populate('relatedDestinations', 'name slug')
+      .populate('relatedTours', 'title slug');
 
-  // Get category counts
-  const categoryCounts = await Promise.all(
-    categories.map(async (category) => {
-      const count = await Blog.countDocuments({ 
-        status: 'published', 
-        category: category.value 
-      });
-      return { ...category, count };
-    })
-  );
+    // Get featured posts
+    const featuredPosts = await Blog.find({ status: 'published', featured: true })
+      .sort({ publishedAt: -1 })
+      .limit(3)
+      .populate('relatedDestinations', 'name slug')
+      .populate('relatedTours', 'title slug');
 
-  return {
-    blogs: JSON.parse(JSON.stringify(blogs)),
-    categoryCounts: categoryCounts.filter(cat => cat.count > 0),
-    featuredPosts: JSON.parse(JSON.stringify(featuredPosts))
-  };
+    // Get category counts
+    const categoryCounts = await Promise.all(
+      categories.map(async (category) => {
+        const count = await Blog.countDocuments({ 
+          status: 'published', 
+          category: category.value 
+        });
+        return { ...category, count };
+      })
+    );
+
+    return {
+      blogs: JSON.parse(JSON.stringify(blogs)),
+      categoryCounts: categoryCounts.filter(cat => cat.count > 0),
+      featuredPosts: JSON.parse(JSON.stringify(featuredPosts))
+    };
+  } catch (error) {
+    console.error('Failed to fetch blogs:', error);
+    return { blogs: [], categoryCounts: [], featuredPosts: [] };
+  }
 }
 
 export default async function BlogIndexPage() {

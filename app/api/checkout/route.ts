@@ -10,10 +10,21 @@ import Stripe from 'stripe';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-});
+// Lazy Stripe initialization to avoid build-time errors
+let stripeInstance: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+    }
+    stripeInstance = new Stripe(key, {
+      apiVersion: '2025-08-27.basil',
+    });
+  }
+  return stripeInstance;
+}
 
 // Format date consistently for display
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -215,6 +226,7 @@ export async function POST(request: Request) {
     } else {
       // Process payment with Stripe for card payments
       try {
+        const stripe = getStripe();
         // If paymentIntentId is provided, verify the payment
         if (paymentDetails?.paymentIntentId) {
           const paymentIntent = await stripe.paymentIntents.retrieve(paymentDetails.paymentIntentId);

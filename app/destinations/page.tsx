@@ -25,27 +25,38 @@ export const metadata: Metadata = {
 
 // Server-side function to fetch all destinations and their tour counts
 async function getDestinationsWithTourCounts(): Promise<IDestination[]> {
-  await dbConnect();
-  
-  // Fetch all destinations
-  const destinations = await Destination.find({}).lean();
-  
-  // For each destination, count the number of published tours
-  const destinationsWithCounts = await Promise.all(
-    destinations.map(async (dest) => {
-      const tourCount = await Tour.countDocuments({
-        destination: dest._id,
-        isPublished: true
-      });
-      return {
-        ...dest,
-        tourCount: tourCount,
-      };
-    })
-  );
+  // Skip database fetch during build if MONGODB_URI is not set
+  if (!process.env.MONGODB_URI) {
+    console.warn('⚠️ Skipping destinations fetch - MONGODB_URI not set');
+    return [];
+  }
 
-  // Serialize the data to pass to the client component
-  return JSON.parse(JSON.stringify(destinationsWithCounts));
+  try {
+    await dbConnect();
+    
+    // Fetch all destinations
+    const destinations = await Destination.find({}).lean();
+    
+    // For each destination, count the number of published tours
+    const destinationsWithCounts = await Promise.all(
+      destinations.map(async (dest) => {
+        const tourCount = await Tour.countDocuments({
+          destination: dest._id,
+          isPublished: true
+        });
+        return {
+          ...dest,
+          tourCount: tourCount,
+        };
+      })
+    );
+
+    // Serialize the data to pass to the client component
+    return JSON.parse(JSON.stringify(destinationsWithCounts));
+  } catch (error) {
+    console.error('Failed to fetch destinations:', error);
+    return [];
+  }
 }
 
 // The main server component for the /destinations route

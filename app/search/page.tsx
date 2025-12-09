@@ -22,8 +22,14 @@ export const metadata: Metadata = {
 };
 
 async function getFilters() {
-    await dbConnect();
+    // Skip database fetch during build if MONGODB_URI is not set
+    if (!process.env.MONGODB_URI) {
+        console.warn('⚠️ Skipping search filters fetch - MONGODB_URI not set');
+        return { categories: [], destinations: [] };
+    }
+
     try {
+        await dbConnect();
         const [categories, destinations] = await Promise.all([
             Category.find({}).sort({ name: 1 }).lean(),
             Destination.find({}).sort({ name: 1 }).lean()
