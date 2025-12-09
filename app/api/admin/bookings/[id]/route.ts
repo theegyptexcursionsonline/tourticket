@@ -1,10 +1,12 @@
-// app/api/admin/bookings/[id]/route.ts (Fixed - with correct EmailService)
+// app/api/admin/bookings/[id]/route.ts (Enhanced with booking editing and notifications)
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import Booking from '@/lib/models/Booking';
+import Booking, { BOOKING_STATUSES, IBookingEditHistoryEntry } from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
+import { verifyToken } from '@/lib/jwt';
+import { cookies } from 'next/headers';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -32,6 +34,35 @@ function formatBookingDate(dateString: string | Date | undefined): string {
     day: 'numeric',
   });
 }
+
+// Helper to get admin info from token
+async function getAdminInfo(): Promise<{ id: string; name: string; email: string } | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('authToken')?.value;
+    if (!token) return null;
+    
+    const payload = await verifyToken(token);
+    if (!payload) return null;
+    
+    return {
+      id: payload.sub as string,
+      name: (payload.name as string) || (payload.email as string) || 'Admin',
+      email: payload.email as string,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Status display messages for notifications
+const STATUS_MESSAGES: Record<string, string> = {
+  'Confirmed': '✓ Your booking has been confirmed! Get ready for an amazing experience.',
+  'Pending': '⏳ Your booking is currently pending. We\'ll update you soon.',
+  'Cancelled': '❌ Your booking has been cancelled.',
+  'Refunded': '💰 Your booking has been refunded. The full amount will be credited to your account.',
+  'Partial_Refund': '💰 A partial refund has been processed for your booking.',
+};
 
 // GET - Fetch a single booking by ID
 export async function GET(
@@ -103,7 +134,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update booking status (with email notifications)
+// PATCH - Update booking (status, date, time, booking option) with email notifications
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -113,12 +144,23 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { 
+      status, 
+      date, 
+      dateString, 
+      time, 
+      selectedBookingOption,
+      refundAmount,
+      refundReason 
+    } = body;
 
-    // Validate status
-    if (!status || !['Confirmed', 'Pending', 'Cancelled'].includes(status)) {
+    // Get admin info for edit history
+    const adminInfo = await getAdminInfo();
+
+    // Validate status if provided
+    if (status && !BOOKING_STATUSES.includes(status)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid status value' },
+        { success: false, message: `Invalid status value. Must be one of: ${BOOKING_STATUSES.join(', ')}` },
         { status: 400 }
       );
     }
@@ -128,7 +170,7 @@ export async function PATCH(
       .populate({
         path: 'tour',
         model: Tour,
-        select: 'title slug image duration rating discountPrice destination',
+        select: 'title slug image images duration rating discountPrice destination bookingOptions',
         populate: {
           path: 'destination',
           model: 'Destination',
@@ -138,7 +180,7 @@ export async function PATCH(
       .populate({
         path: 'user',
         model: User,
-        select: 'firstName lastName email name',
+        select: 'firstName lastName email name phone',
       });
 
     if (!currentBooking) {
@@ -148,11 +190,136 @@ export async function PATCH(
       );
     }
 
-    // Store old status for comparison
-    const oldStatus = currentBooking.status;
+    // Track changes for edit history and notifications
+    const changes: IBookingEditHistoryEntry[] = [];
+    const changesForNotification: { field: string; oldValue: string; newValue: string }[] = [];
 
-    // Update booking
-    currentBooking.status = status;
+    // Store old values for comparison
+    const oldStatus = currentBooking.status;
+    const oldDate = currentBooking.dateString || currentBooking.date?.toISOString().split('T')[0];
+    const oldTime = currentBooking.time;
+    const oldBookingOption = currentBooking.selectedBookingOption?.title;
+
+    // Update status if provided
+    if (status && status !== oldStatus) {
+      changes.push({
+        editedAt: new Date(),
+        editedBy: adminInfo?.id || 'system',
+        editedByName: adminInfo?.name || 'System',
+        field: 'status',
+        previousValue: oldStatus,
+        newValue: status,
+        changeType: (status === 'Refunded' || status === 'Partial_Refund') ? 'refund' : 'status_change',
+      });
+      changesForNotification.push({
+        field: 'Status',
+        oldValue: oldStatus,
+        newValue: status,
+      });
+      currentBooking.status = status;
+
+      // Handle refund tracking
+      if (status === 'Refunded' || status === 'Partial_Refund') {
+        if (refundAmount !== undefined) {
+          currentBooking.refundAmount = refundAmount;
+        }
+        if (refundReason) {
+          currentBooking.refundReason = refundReason;
+        }
+        currentBooking.refundDate = new Date();
+      }
+    }
+
+    // Update date if provided
+    if (dateString && dateString !== oldDate) {
+      const newDateObj = new Date(dateString + 'T12:00:00Z');
+      changes.push({
+        editedAt: new Date(),
+        editedBy: adminInfo?.id || 'system',
+        editedByName: adminInfo?.name || 'System',
+        field: 'date',
+        previousValue: formatBookingDate(oldDate),
+        newValue: formatBookingDate(dateString),
+        changeType: 'detail_update',
+      });
+      changesForNotification.push({
+        field: 'Tour Date',
+        oldValue: formatBookingDate(oldDate),
+        newValue: formatBookingDate(dateString),
+      });
+      currentBooking.date = newDateObj;
+      currentBooking.dateString = dateString;
+    } else if (date && !dateString) {
+      // Fallback if only date is provided
+      const newDateStr = new Date(date).toISOString().split('T')[0];
+      if (newDateStr !== oldDate) {
+        const newDateObj = new Date(newDateStr + 'T12:00:00Z');
+        changes.push({
+          editedAt: new Date(),
+          editedBy: adminInfo?.id || 'system',
+          editedByName: adminInfo?.name || 'System',
+          field: 'date',
+          previousValue: formatBookingDate(oldDate),
+          newValue: formatBookingDate(newDateStr),
+          changeType: 'detail_update',
+        });
+        changesForNotification.push({
+          field: 'Tour Date',
+          oldValue: formatBookingDate(oldDate),
+          newValue: formatBookingDate(newDateStr),
+        });
+        currentBooking.date = newDateObj;
+        currentBooking.dateString = newDateStr;
+      }
+    }
+
+    // Update time if provided
+    if (time && time !== oldTime) {
+      changes.push({
+        editedAt: new Date(),
+        editedBy: adminInfo?.id || 'system',
+        editedByName: adminInfo?.name || 'System',
+        field: 'time',
+        previousValue: oldTime,
+        newValue: time,
+        changeType: 'detail_update',
+      });
+      changesForNotification.push({
+        field: 'Tour Time',
+        oldValue: oldTime,
+        newValue: time,
+      });
+      currentBooking.time = time;
+    }
+
+    // Update booking option if provided
+    if (selectedBookingOption && selectedBookingOption.title !== oldBookingOption) {
+      changes.push({
+        editedAt: new Date(),
+        editedBy: adminInfo?.id || 'system',
+        editedByName: adminInfo?.name || 'System',
+        field: 'bookingOption',
+        previousValue: oldBookingOption || 'None',
+        newValue: selectedBookingOption.title,
+        changeType: 'detail_update',
+      });
+      changesForNotification.push({
+        field: 'Tour Option',
+        oldValue: oldBookingOption || 'None',
+        newValue: selectedBookingOption.title,
+      });
+      currentBooking.selectedBookingOption = selectedBookingOption;
+    }
+
+    // Add changes to edit history
+    if (changes.length > 0) {
+      if (!currentBooking.editHistory) {
+        currentBooking.editHistory = [];
+      }
+      currentBooking.editHistory.push(...changes);
+    }
+
+    // Save the updated booking
     await currentBooking.save();
 
     // Reload with lean for response
@@ -160,7 +327,7 @@ export async function PATCH(
       .populate({
         path: 'tour',
         model: Tour,
-        select: 'title slug image duration rating discountPrice destination',
+        select: 'title slug image images duration rating discountPrice destination bookingOptions',
         populate: {
           path: 'destination',
           model: 'Destination',
@@ -170,7 +337,7 @@ export async function PATCH(
       .populate({
         path: 'user',
         model: User,
-        select: 'firstName lastName email name',
+        select: 'firstName lastName email name phone',
       })
       .lean();
 
@@ -181,20 +348,27 @@ export async function PATCH(
       );
     }
 
-    // Send email notifications based on status change
+    // Send email notifications if there are changes
     const updatedUser = updatedBooking.user as any;
     const updatedTour = updatedBooking.tour as any;
-    if (oldStatus !== status && updatedUser && updatedTour) {
-      try {
-        const customerName = updatedUser.name || 
-          `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() || 
-          'Valued Customer';
-        const customerEmail = updatedUser.email;
-        const tourTitle = updatedTour.title || 'Tour';
-        const bookingDate = formatBookingDate(updatedBooking.date);
-        const bookingTime = updatedBooking.time;
-        const bookingId = updatedBooking._id.toString();
+    
+    if (changesForNotification.length > 0 && updatedUser && updatedTour) {
+      const customerName = updatedUser.name || 
+        `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() || 
+        'Valued Customer';
+      const customerEmail = updatedUser.email;
+      const tourTitle = updatedTour.title || 'Tour';
+      const bookingDate = formatBookingDate(updatedBooking.dateString || updatedBooking.date);
+      const bookingTime = updatedBooking.time;
+      const bookingId = updatedBooking.bookingReference || updatedBooking._id.toString();
 
+      // Build changes summary for email
+      const changesSummary = changesForNotification
+        .map(c => `${c.field}: ${c.oldValue} → ${c.newValue}`)
+        .join('\n');
+
+      // Send notification to customer
+      try {
         if (status === 'Cancelled') {
           // Calculate potential refund for cancellation email
           const bookingDateObj = new Date(updatedBooking.date);
@@ -206,28 +380,24 @@ export async function PATCH(
           else if (daysUntilTour >= 3) refundPercentage = 50;
           else refundPercentage = 0;
 
-          const refundAmount = (updatedBooking.totalPrice * refundPercentage) / 100;
+          const calculatedRefund = (updatedBooking.totalPrice * refundPercentage) / 100;
 
-          // Send cancellation confirmation email
           await EmailService.sendCancellationConfirmation({
             customerName,
             customerEmail,
             tourTitle,
             bookingDate,
             bookingId,
-            refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
-            refundProcessingDays: refundAmount > 0 ? 5 : undefined,
+            refundAmount: calculatedRefund > 0 ? `$${calculatedRefund.toFixed(2)}` : undefined,
+            refundProcessingDays: calculatedRefund > 0 ? 5 : undefined,
             cancellationReason: 'Status changed to cancelled by administrator',
             baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
           });
-
-          console.log(`✅ Cancellation email sent to ${customerEmail}`);
+          console.log(`✅ Cancellation email sent to customer: ${customerEmail}`);
         } else {
-          // Send status update email for other status changes
-          const statusMessages = {
-            'Confirmed': '✓ Your booking has been confirmed! Get ready for an amazing experience.',
-            'Pending': '⏳ Your booking is currently pending. We\'ll update you soon.',
-          };
+          // Send booking update email
+          const statusChanged = changesForNotification.some(c => c.field === 'Status');
+          const detailsChanged = changesForNotification.some(c => c.field !== 'Status');
 
           await EmailService.sendBookingStatusUpdate({
             customerName,
@@ -236,20 +406,40 @@ export async function PATCH(
             bookingDate,
             bookingTime,
             bookingId,
-            newStatus: status,
-            statusMessage: statusMessages[status as keyof typeof statusMessages] || 'Your booking status has been updated.',
-            additionalInfo: status === 'Confirmed'
-              ? 'Please make sure to arrive at the meeting point 15 minutes before the scheduled time.'
-              : undefined,
+            newStatus: status || oldStatus,
+            statusMessage: STATUS_MESSAGES[status || oldStatus] || 'Your booking has been updated.',
+            additionalInfo: detailsChanged 
+              ? `Changes made:\n${changesSummary}`
+              : (status === 'Confirmed' 
+                ? 'Please make sure to arrive at the meeting point 15 minutes before the scheduled time.'
+                : undefined),
             baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
           });
-
-          console.log(`✅ Status update email sent to ${customerEmail} - Status: ${status}`);
+          console.log(`✅ Update email sent to customer: ${customerEmail}`);
         }
       } catch (emailError) {
-        console.error('❌ Failed to send email notification:', emailError);
-        // Don't fail the request if email fails, just log it
-        // This allows the status update to succeed even if email fails
+        console.error('❌ Failed to send customer email notification:', emailError);
+      }
+
+      // Send notification to operator/admin
+      try {
+        await EmailService.sendOperatorBookingUpdate({
+          bookingId,
+          tourTitle,
+          customerName,
+          customerEmail,
+          customerPhone: updatedUser.phone,
+          bookingDate,
+          bookingTime,
+          changesSummary,
+          changedBy: adminInfo?.name || 'Admin',
+          changedAt: new Date().toISOString(),
+          newStatus: status || oldStatus,
+          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+        });
+        console.log(`✅ Update notification sent to operator`);
+      } catch (emailError) {
+        console.error('❌ Failed to send operator notification:', emailError);
       }
     }
 

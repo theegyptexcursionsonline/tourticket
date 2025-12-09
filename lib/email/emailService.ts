@@ -16,6 +16,7 @@ import type {
   BookingStatusUpdateData,
   AdminInviteEmailData,
   AdminAccessUpdateEmailData,
+  OperatorBookingUpdateData,
   EmailTemplate
 } from './type';
 
@@ -30,8 +31,9 @@ export class EmailService {
     'booking-update': '📢 Booking Status Update - {{tourTitle}}',
     'welcome': '🎊 Welcome to Egypt Excursions Online!',
     'admin-booking-alert': '📋 New Booking Alert - {{tourTitle}}',
-    'admin-invite': 'You’ve been invited to manage Egypt Excursions Online',
-    'admin-access-update': 'Your admin access has been {{action}}'
+    'admin-invite': "You've been invited to manage Egypt Excursions Online",
+    'admin-access-update': 'Your admin access has been {{action}}',
+    'operator-booking-update': '🔔 Booking Updated - {{bookingId}} - {{tourTitle}}'
   };
 
   private static async generateEmailTemplate(
@@ -278,6 +280,24 @@ export class EmailService {
       subject: template.subject,
       html: template.html,
       type: 'admin-access-update'
+    });
+  }
+
+  // OPERATOR BOOKING UPDATE (sent when admin edits a booking)
+  static async sendOperatorBookingUpdate(data: OperatorBookingUpdateData): Promise<void> {
+    const operatorEmail = process.env.OPERATOR_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL;
+
+    if (!operatorEmail) {
+      console.warn('OPERATOR_NOTIFICATION_EMAIL and ADMIN_NOTIFICATION_EMAIL are not set. Skipping operator notification.');
+      return;
+    }
+
+    const template = await this.generateEmailTemplate('operator-booking-update', data);
+    await sendEmail({
+      to: operatorEmail,
+      subject: template.subject,
+      html: template.html,
+      type: 'operator-booking-update'
     });
   }
 }

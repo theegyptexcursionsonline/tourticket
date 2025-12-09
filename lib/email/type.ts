@@ -194,6 +194,21 @@ export interface BookingStatusUpdateData extends BaseEmailData {
   baseUrl?: string;
 }
 
+export interface OperatorBookingUpdateData {
+  bookingId: string;
+  tourTitle: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  bookingDate: string;
+  bookingTime: string;
+  changesSummary: string;
+  changedBy: string;
+  changedAt: string;
+  newStatus: string;
+  baseUrl?: string;
+}
+
 export interface AdminInviteEmailData {
   inviteeName: string;
   inviteeEmail: string;
@@ -244,7 +259,8 @@ export type EmailType =
   | 'welcome'
   | 'admin-booking-alert'
   | 'admin-invite'
-  | 'admin-access-update';
+  | 'admin-access-update'
+  | 'operator-booking-update';
 
 export interface EmailTemplate {
   subject: string;

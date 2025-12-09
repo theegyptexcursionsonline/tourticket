@@ -17,7 +17,6 @@ import {
   Tag,
   MapPin,
   Edit,
-  Trash2,
   MessageSquare,
   CreditCard,
   Download,
@@ -26,11 +25,29 @@ import {
   Package,
   Receipt,
   QrCode,
-  Ticket,
-  Info
+  Info,
+  Save,
+  X,
+  History,
+  Building2
 } from 'lucide-react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
+import toast from 'react-hot-toast';
+
+// Valid booking statuses
+type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
+
+// Edit history entry interface
+interface EditHistoryEntry {
+  editedAt: string;
+  editedBy: string;
+  editedByName?: string;
+  field: string;
+  previousValue: string;
+  newValue: string;
+  changeType: 'status_change' | 'detail_update' | 'refund';
+}
 
 // Enhanced interfaces matching your booking model
 interface BookingUser {
@@ -40,6 +57,16 @@ interface BookingUser {
   name?: string;
   email: string;
   phone?: string;
+}
+
+interface BookingOption {
+  id?: string;
+  _id?: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  duration?: string;
+  badge?: string;
 }
 
 interface BookingTour {
@@ -56,6 +83,7 @@ interface BookingTour {
   rating?: number;
   discountPrice?: number;
   meetingPoint?: string;
+  bookingOptions?: BookingOption[];
 }
 
 interface BookingDetails {
@@ -64,10 +92,11 @@ interface BookingDetails {
   tour: BookingTour;
   user: BookingUser;
   date: string;
+  dateString?: string;
   time: string;
   guests: number;
   totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: BookingStatus;
   // Enhanced fields
   adultGuests?: number;
   childGuests?: number;
@@ -82,10 +111,12 @@ interface BookingDetails {
     lat: number;
     lng: number;
     placeId?: string;
+    name?: string;
   };
   selectedAddOns?: { [key: string]: number };
   selectedBookingOption?: {
-    _id: string;
+    _id?: string;
+    id?: string;
     title: string;
     price: number;
     originalPrice?: number;
@@ -99,6 +130,12 @@ interface BookingDetails {
       perGuest?: boolean;
     };
   };
+  // Edit history
+  editHistory?: EditHistoryEntry[];
+  // Refund tracking
+  refundAmount?: number;
+  refundDate?: string;
+  refundReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +178,19 @@ const BookingDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedDate, setEditedDate] = useState<string>('');
+  const [editedTime, setEditedTime] = useState<string>('');
+  const [editedBookingOption, setEditedBookingOption] = useState<BookingOption | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  
+  // Refund modal state
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundAmount, setRefundAmount] = useState<string>('');
+  const [refundReason, setRefundReason] = useState<string>('');
+  const [refundType, setRefundType] = useState<'Refunded' | 'Partial_Refund'>('Refunded');
   
   const params = useParams();
   const router = useRouter();
@@ -195,6 +245,14 @@ const BookingDetailPage = () => {
   const updateBookingStatus = async (newStatus: string) => {
     if (!booking) return;
     
+    // Handle refund statuses
+    if (newStatus === 'Refunded' || newStatus === 'Partial_Refund') {
+      setRefundType(newStatus as 'Refunded' | 'Partial_Refund');
+      setRefundAmount(newStatus === 'Refunded' ? booking.totalPrice.toString() : '');
+      setShowRefundModal(true);
+      return;
+    }
+    
     setUpdating(true);
     try {
       const response = await fetch(`/api/admin/bookings/${id}`, {
@@ -211,9 +269,111 @@ const BookingDetailPage = () => {
 
       const updatedBooking = await response.json();
       setBooking(updatedBooking);
+      toast.success(`Status updated to ${newStatus}`);
     } catch (err) {
       console.error('Error updating booking:', err);
-      alert('Failed to update booking status');
+      toast.error('Failed to update booking status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRefundSubmit = async () => {
+    if (!booking) return;
+    
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/bookings/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          status: refundType,
+          refundAmount: parseFloat(refundAmount) || 0,
+          refundReason: refundReason
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process refund');
+      }
+
+      const updatedBooking = await response.json();
+      setBooking(updatedBooking);
+      setShowRefundModal(false);
+      setRefundAmount('');
+      setRefundReason('');
+      toast.success(`${refundType === 'Refunded' ? 'Full' : 'Partial'} refund processed successfully`);
+    } catch (err) {
+      console.error('Error processing refund:', err);
+      toast.error('Failed to process refund');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const startEditing = () => {
+    if (!booking) return;
+    setEditedDate(booking.dateString || booking.date.split('T')[0]);
+    setEditedTime(booking.time);
+    setEditedBookingOption(booking.selectedBookingOption || null);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedDate('');
+    setEditedTime('');
+    setEditedBookingOption(null);
+  };
+
+  const saveEdits = async () => {
+    if (!booking) return;
+    
+    setUpdating(true);
+    try {
+      const updates: Record<string, any> = {};
+      
+      // Check what changed
+      const currentDate = booking.dateString || booking.date.split('T')[0];
+      if (editedDate && editedDate !== currentDate) {
+        updates.dateString = editedDate;
+      }
+      
+      if (editedTime && editedTime !== booking.time) {
+        updates.time = editedTime;
+      }
+      
+      if (editedBookingOption && editedBookingOption.title !== booking.selectedBookingOption?.title) {
+        updates.selectedBookingOption = editedBookingOption;
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        toast.info('No changes to save');
+        setIsEditing(false);
+        return;
+      }
+      
+      const response = await fetch(`/api/admin/bookings/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save changes');
+      }
+
+      const updatedBooking = await response.json();
+      setBooking(updatedBooking);
+      setIsEditing(false);
+      toast.success('Booking details updated successfully');
+    } catch (err) {
+      console.error('Error saving edits:', err);
+      toast.error('Failed to save changes');
     } finally {
       setUpdating(false);
     }
@@ -228,9 +388,18 @@ const BookingDetailPage = () => {
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
       case 'Cancelled':
         return `${baseClasses} bg-red-100 text-red-800`;
+      case 'Refunded':
+        return `${baseClasses} bg-blue-100 text-blue-800`;
+      case 'Partial_Refund':
+        return `${baseClasses} bg-purple-100 text-purple-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'Partial_Refund') return 'Partial Refund';
+    return status;
   };
 
   const formatUserName = (user: BookingUser) => {
@@ -494,7 +663,7 @@ const BookingDetailPage = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Current Status:</span>
                 <span className={getStatusBadge(booking.status)}>
-                  {booking.status}
+                  {getStatusLabel(booking.status)}
                 </span>
               </div>
               
@@ -507,9 +676,79 @@ const BookingDetailPage = () => {
                 <option value="Confirmed">Confirmed</option>
                 <option value="Pending">Pending</option>
                 <option value="Cancelled">Cancelled</option>
+                <option value="Refunded">Refunded</option>
+                <option value="Partial_Refund">Partial Refund</option>
               </select>
+              
+              {/* Refund info if applicable */}
+              {(booking.status === 'Refunded' || booking.status === 'Partial_Refund') && booking.refundAmount && (
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm font-medium text-blue-800">
+                    Refund Amount: ${booking.refundAmount.toFixed(2)}
+                  </p>
+                  {booking.refundDate && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Processed: {new Date(booking.refundDate).toLocaleDateString()}
+                    </p>
+                  )}
+                  {booking.refundReason && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Reason: {booking.refundReason}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+          
+          {/* Edit Booking Button */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Edit Booking</h3>
+            {isEditing ? (
+              <div className="space-y-3">
+                <button
+                  onClick={saveEdits}
+                  disabled={updating}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  Save Changes
+                </button>
+                <button
+                  onClick={cancelEditing}
+                  disabled={updating}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  <X size={16} />
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={startEditing}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Edit size={16} />
+                Edit Details
+              </button>
+            )}
+          </div>
+          
+          {/* Edit History */}
+          {booking.editHistory && booking.editHistory.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <History size={16} />
+                Edit History
+              </h3>
+              <button
+                onClick={() => setShowHistoryModal(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                View {booking.editHistory.length} change{booking.editHistory.length !== 1 ? 's' : ''}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Column - Details */}
@@ -567,24 +806,91 @@ const BookingDetailPage = () => {
             <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
               <Calendar className="w-5 h-5 mr-2 text-green-500" />
               Booking Details
+              {isEditing && <span className="ml-2 text-sm font-normal text-blue-600">(Editing)</span>}
             </h3>
             <div className="space-y-4">
-              <DetailItem
-                icon={Calendar}
-                label="Tour Date"
-                value={formatDisplayDate(booking.dateString || booking.date)}
-              />
-              <DetailItem 
-                icon={Clock} 
-                label="Time" 
-                value={booking.time}
-              />
+              {/* Tour Date - Editable */}
+              {isEditing ? (
+                <div className="flex items-start text-slate-700">
+                  <Calendar className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-slate-600">Tour Date:</span>
+                    <input
+                      type="date"
+                      value={editedDate}
+                      onChange={(e) => setEditedDate(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <DetailItem
+                  icon={Calendar}
+                  label="Tour Date"
+                  value={formatDisplayDate(booking.dateString || booking.date)}
+                />
+              )}
+              
+              {/* Time - Editable */}
+              {isEditing ? (
+                <div className="flex items-start text-slate-700">
+                  <Clock className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-slate-600">Time:</span>
+                    <input
+                      type="time"
+                      value={editedTime}
+                      onChange={(e) => setEditedTime(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <DetailItem 
+                  icon={Clock} 
+                  label="Time" 
+                  value={booking.time}
+                />
+              )}
+              
               <DetailItem
                 icon={Users}
                 label="Participants"
                 value={formatGuestBreakdown(booking)}
               />
-              {booking.selectedBookingOption && (
+              
+              {/* Booking Option - Editable */}
+              {isEditing && booking.tour.bookingOptions && booking.tour.bookingOptions.length > 0 ? (
+                <div className="flex items-start text-slate-700">
+                  <Package className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-slate-600">Booking Option:</span>
+                    <select
+                      value={editedBookingOption?.title || booking.selectedBookingOption?.title || ''}
+                      onChange={(e) => {
+                        const selected = booking.tour.bookingOptions?.find(o => o.title === e.target.value);
+                        if (selected) {
+                          setEditedBookingOption({
+                            id: selected.id || selected._id || '',
+                            title: selected.title,
+                            price: selected.price,
+                            originalPrice: selected.originalPrice,
+                            duration: selected.duration,
+                            badge: selected.badge,
+                          });
+                        }
+                      }}
+                      className="mt-1 block w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
+                    >
+                      {booking.tour.bookingOptions.map((option) => (
+                        <option key={option.id || option._id || option.title} value={option.title}>
+                          {option.title} - ${option.price.toFixed(2)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : booking.selectedBookingOption ? (
                 <DetailItem
                   icon={Package}
                   label="Booking Option"
@@ -606,7 +912,8 @@ const BookingDetailPage = () => {
                     </div>
                   }
                 />
-              )}
+              ) : null}
+              
               {booking.tour.duration && !booking.selectedBookingOption?.duration && (
                 <DetailItem
                   icon={Tag}
@@ -621,19 +928,31 @@ const BookingDetailPage = () => {
                   value={booking.tour.meetingPoint}
                 />
               )}
+              
+              {/* Hotel Pickup - Fixed display */}
               {(booking.hotelPickupDetails || booking.hotelPickupLocation) && (
                 <DetailItem
-                  icon={MapPin}
-                  label="Hotel Pickup Details"
+                  icon={Building2}
+                  label="Hotel Pickup"
                   value={
                     <div className="space-y-2">
-                      <span className="text-red-600 font-semibold block">
-                        {booking.hotelPickupLocation?.address || booking.hotelPickupDetails}
-                      </span>
+                      {/* Hotel Name - Show hotelPickupDetails first (this is the user-entered hotel name) */}
+                      {booking.hotelPickupDetails && (
+                        <span className="text-red-600 font-semibold block text-lg">
+                          🏨 {booking.hotelPickupDetails}
+                        </span>
+                      )}
+                      {/* Address - Show separately if we have location data */}
+                      {booking.hotelPickupLocation?.address && (
+                        <div className="text-sm text-slate-600">
+                          <span className="font-medium">Address: </span>
+                          {booking.hotelPickupLocation.address}
+                        </div>
+                      )}
                       {booking.hotelPickupLocation && (
                         <>
                           <div className="text-xs text-slate-500">
-                            📍 Lat: {booking.hotelPickupLocation.lat.toFixed(6)}, Lng: {booking.hotelPickupLocation.lng.toFixed(6)}
+                            📍 Coordinates: {booking.hotelPickupLocation.lat.toFixed(6)}, {booking.hotelPickupLocation.lng.toFixed(6)}
                           </div>
                           <div className="mt-3">
                             <a
@@ -663,6 +982,7 @@ const BookingDetailPage = () => {
                   }
                 />
               )}
+              
               <DetailItem 
                 icon={Calendar} 
                 label="Booked On" 
@@ -852,6 +1172,181 @@ const BookingDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Refund Modal */}
+      {showRefundModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/50 transition-opacity"
+              onClick={() => !updating && setShowRefundModal(false)}
+            />
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-blue-100 rounded-full">
+                <DollarSign className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-center text-slate-900 mb-2">
+                Process {refundType === 'Refunded' ? 'Full' : 'Partial'} Refund
+              </h3>
+              <p className="text-sm text-slate-600 text-center mb-6">
+                Original booking amount: ${booking.totalPrice.toFixed(2)}
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Refund Type
+                  </label>
+                  <select
+                    value={refundType}
+                    onChange={(e) => {
+                      setRefundType(e.target.value as 'Refunded' | 'Partial_Refund');
+                      if (e.target.value === 'Refunded') {
+                        setRefundAmount(booking.totalPrice.toString());
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Refunded">Full Refund</option>
+                    <option value="Partial_Refund">Partial Refund</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Refund Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={booking.totalPrice}
+                    value={refundAmount}
+                    onChange={(e) => setRefundAmount(e.target.value)}
+                    disabled={refundType === 'Refunded'}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Reason (optional)
+                  </label>
+                  <textarea
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter reason for refund..."
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowRefundModal(false)}
+                  disabled={updating}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRefundSubmit}
+                  disabled={updating || !refundAmount || parseFloat(refundAmount) <= 0}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {updating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="w-4 h-4" />
+                      Process Refund
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit History Modal */}
+      {showHistoryModal && booking.editHistory && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/50 transition-opacity"
+              onClick={() => setShowHistoryModal(false)}
+            />
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  Edit History
+                </h3>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {booking.editHistory
+                  .slice()
+                  .reverse()
+                  .map((entry, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border ${
+                        entry.changeType === 'status_change'
+                          ? 'bg-blue-50 border-blue-200'
+                          : entry.changeType === 'refund'
+                          ? 'bg-purple-50 border-purple-200'
+                          : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            entry.changeType === 'status_change'
+                              ? 'bg-blue-100 text-blue-800'
+                              : entry.changeType === 'refund'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-slate-100 text-slate-800'
+                          }`}>
+                            {entry.changeType === 'status_change' ? 'Status Change' :
+                             entry.changeType === 'refund' ? 'Refund' : 'Detail Update'}
+                          </span>
+                          <p className="mt-2 font-medium text-slate-900">
+                            {entry.field.charAt(0).toUpperCase() + entry.field.slice(1)}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2 text-sm">
+                            <span className="text-red-600 line-through">{entry.previousValue}</span>
+                            <span className="text-slate-400">→</span>
+                            <span className="text-green-600 font-medium">{entry.newValue}</span>
+                          </div>
+                        </div>
+                        <div className="text-right text-xs text-slate-500">
+                          <p className="font-medium">{entry.editedByName || entry.editedBy}</p>
+                          <p>{new Date(entry.editedAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                {booking.editHistory.length === 0 && (
+                  <p className="text-center text-slate-500 py-8">No edit history available</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

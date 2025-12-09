@@ -27,20 +27,25 @@ interface BookingTour {
   } | null;
 }
 
+// Valid booking statuses
+type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
+
 interface Booking {
   _id: string;
   tour: BookingTour | null;
   user: BookingUser | null;
   date: string;
+  dateString?: string;
   time: string;
   guests: number;
   totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: BookingStatus;
   adultGuests?: number;
   childGuests?: number;
   infantGuests?: number;
   paymentMethod?: string;
   specialRequests?: string;
+  refundAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,19 +163,6 @@ const BookingsPage = () => {
     router.push(`/admin/bookings/${id}`);
   };
 
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "px-2 py-1 text-xs font-semibold rounded-full";
-    switch (status) {
-      case 'Confirmed':
-        return `${baseClasses} bg-green-100 text-green-800`;
-      case 'Pending':
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case 'Cancelled':
-        return `${baseClasses} bg-red-100 text-red-800`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
 
   const formatUserName = (user: BookingUser | null | undefined) => {
     if (!user) return 'Deleted User';
@@ -216,23 +208,36 @@ const BookingsPage = () => {
       setIsUpdating(false);
     };
 
+    const getDropdownStyle = (status: string) => {
+      switch (status) {
+        case 'Confirmed':
+          return 'bg-green-100 text-green-800';
+        case 'Pending':
+          return 'bg-yellow-100 text-yellow-800';
+        case 'Cancelled':
+          return 'bg-red-100 text-red-800';
+        case 'Refunded':
+          return 'bg-blue-100 text-blue-800';
+        case 'Partial_Refund':
+          return 'bg-purple-100 text-purple-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    };
+
     return (
       <div className="relative">
         <select
           value={booking.status}
           onChange={(e) => handleChange(e.target.value)}
           disabled={isUpdating}
-          className={`appearance-none text-xs font-semibold px-3 py-2 pr-8 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-            booking.status === 'Confirmed' 
-              ? 'bg-green-100 text-green-800' 
-              : booking.status === 'Pending'
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-red-100 text-red-800'
-          }`}
+          className={`appearance-none text-xs font-semibold px-3 py-2 pr-8 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${getDropdownStyle(booking.status)}`}
         >
           <option value="Confirmed">Confirmed</option>
           <option value="Pending">Pending</option>
           <option value="Cancelled">Cancelled</option>
+          <option value="Refunded">Refunded</option>
+          <option value="Partial_Refund">Partial Refund</option>
         </select>
         <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
           {isUpdating ? (
@@ -264,12 +269,13 @@ const BookingsPage = () => {
       setBookings(prevBookings =>
         prevBookings.map(booking =>
           booking._id === bookingId
-            ? { ...booking, status: newStatus as 'Confirmed' | 'Pending' | 'Cancelled' }
+            ? { ...booking, status: newStatus as BookingStatus }
             : booking
         )
       );
 
-      toast.success(`Booking status updated to ${newStatus}`);
+      const statusLabel = newStatus === 'Partial_Refund' ? 'Partial Refund' : newStatus;
+      toast.success(`Booking status updated to ${statusLabel}`);
     } catch (error) {
       console.error('Error updating booking status:', error);
       toast.error('Failed to update booking status');
@@ -437,6 +443,8 @@ const BookingsPage = () => {
               <option value="Confirmed">Confirmed</option>
               <option value="Pending">Pending</option>
               <option value="Cancelled">Cancelled</option>
+              <option value="Refunded">Refunded</option>
+              <option value="Partial_Refund">Partial Refund</option>
             </select>
           </div>
 

@@ -2,6 +2,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
+// Edit history entry interface for tracking changes
+export interface IBookingEditHistoryEntry {
+  editedAt: Date;
+  editedBy: string; // admin user id or email
+  editedByName?: string; // admin user name for display
+  field: string; // which field was changed
+  previousValue: string;
+  newValue: string;
+  changeType: 'status_change' | 'detail_update' | 'refund';
+}
+
+// Booking status type - includes new refund statuses
+export type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
+
+// Array of valid statuses for validation
+export const BOOKING_STATUSES: BookingStatus[] = ['Confirmed', 'Pending', 'Cancelled', 'Refunded', 'Partial_Refund'];
+
 export interface IBooking extends Document {
   bookingReference: string;
   tour: mongoose.Schema.Types.ObjectId;
@@ -11,7 +28,7 @@ export interface IBooking extends Document {
   time: string;
   guests: number;
   totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: BookingStatus;
   paymentId?: string;
   paymentMethod?: string;
   specialRequests?: string;
@@ -22,6 +39,7 @@ export interface IBooking extends Document {
     lat: number;
     lng: number;
     placeId?: string;
+    name?: string; // Hotel name for better display
   };
   adultGuests?: number;
   childGuests?: number;
@@ -44,9 +62,48 @@ export interface IBooking extends Document {
       perGuest?: boolean;
     };
   };
+  // Edit history tracking
+  editHistory?: IBookingEditHistoryEntry[];
+  // Refund tracking
+  refundAmount?: number;
+  refundDate?: Date;
+  refundReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Edit history entry schema
+const EditHistoryEntrySchema = new Schema({
+  editedAt: {
+    type: Date,
+    required: true,
+    default: Date.now,
+  },
+  editedBy: {
+    type: String,
+    required: true,
+  },
+  editedByName: {
+    type: String,
+  },
+  field: {
+    type: String,
+    required: true,
+  },
+  previousValue: {
+    type: String,
+    required: true,
+  },
+  newValue: {
+    type: String,
+    required: true,
+  },
+  changeType: {
+    type: String,
+    enum: ['status_change', 'detail_update', 'refund'],
+    required: true,
+  },
+}, { _id: false });
 
 const BookingSchema: Schema<IBooking> = new Schema({
   bookingReference: {
@@ -110,7 +167,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
   
   status: {
     type: String,
-    enum: ['Confirmed', 'Pending', 'Cancelled'],
+    enum: BOOKING_STATUSES,
     default: 'Confirmed',
   },
   
@@ -144,6 +201,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
     lat: Number,
     lng: Number,
     placeId: String,
+    name: String, // Hotel name for better display
   },
   
   adultGuests: {
@@ -193,6 +251,25 @@ const BookingSchema: Schema<IBooking> = new Schema({
     },
     default: new Map(),
   },
+
+  // Edit history tracking
+  editHistory: {
+    type: [EditHistoryEntrySchema],
+    default: [],
+  },
+
+  // Refund tracking
+  refundAmount: {
+    type: Number,
+    min: 0,
+  },
+  refundDate: {
+    type: Date,
+  },
+  refundReason: {
+    type: String,
+    maxlength: 500,
+  },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -202,9 +279,9 @@ const BookingSchema: Schema<IBooking> = new Schema({
 // Virtual for guest breakdown text
 BookingSchema.virtual('guestBreakdown').get(function() {
   const parts = [];
-  if (this.adultGuests > 0) parts.push(`${this.adultGuests} adult${this.adultGuests > 1 ? 's' : ''}`);
-  if (this.childGuests > 0) parts.push(`${this.childGuests} child${this.childGuests > 1 ? 'ren' : ''}`);
-  if (this.infantGuests > 0) parts.push(`${this.infantGuests} infant${this.infantGuests > 1 ? 's' : ''}`);
+  if (this.adultGuests && this.adultGuests > 0) parts.push(`${this.adultGuests} adult${this.adultGuests > 1 ? 's' : ''}`);
+  if (this.childGuests && this.childGuests > 0) parts.push(`${this.childGuests} child${this.childGuests > 1 ? 'ren' : ''}`);
+  if (this.infantGuests && this.infantGuests > 0) parts.push(`${this.infantGuests} infant${this.infantGuests > 1 ? 's' : ''}`);
   return parts.join(', ');
 });
 
