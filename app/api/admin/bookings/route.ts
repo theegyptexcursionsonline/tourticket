@@ -66,11 +66,13 @@ export async function GET() {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Include ALL bookings (even with deleted tours) and ensure sort by createdAt desc
-    // Sort explicitly after filtering to guarantee newest first
-    const sortedBookings = bookings.sort((a: any, b: any) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+    // Filter out bookings with null tours (deleted tours) and ensure sort by createdAt desc
+    const validBookings = bookings.filter((booking: any) => booking.tour !== null);
+    
+    // Sort explicitly to guarantee newest first (handle missing createdAt)
+    const sortedBookings = validBookings.sort((a: any, b: any) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA; // Newest first
     });
 

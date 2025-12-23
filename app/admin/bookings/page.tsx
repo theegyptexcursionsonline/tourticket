@@ -584,9 +584,11 @@ const BookingsPage = () => {
                           {formatDisplayDate(booking.dateString || booking.date)}
                         </div>
                         <div className="text-sm text-slate-500">{booking.time}</div>
-                        <div className="text-xs text-slate-400 mt-1">
-                          Booked: {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </div>
+                        {booking.createdAt && (
+                          <div className="text-xs text-slate-400 mt-1">
+                            Booked: {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center text-sm text-slate-900">

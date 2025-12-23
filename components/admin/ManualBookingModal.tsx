@@ -86,11 +86,14 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       try {
         const response = await fetch('/api/admin/tours?limit=500');
         if (response.ok) {
-          const data = await response.json();
-          setTours(data.tours || data || []);
+          const result = await response.json();
+          // Handle different API response formats
+          const toursData = result.data || result.tours || result || [];
+          setTours(Array.isArray(toursData) ? toursData : []);
         }
       } catch (error) {
         console.error('Error fetching tours:', error);
+        toast.error('Failed to load tours');
       } finally {
         setLoadingTours(false);
       }
