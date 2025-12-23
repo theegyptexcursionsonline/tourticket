@@ -66,10 +66,15 @@ export async function GET() {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Filter out bookings with null tours (deleted tours)
-    const validBookings = bookings.filter(booking => booking.tour !== null);
+    // Include ALL bookings (even with deleted tours) and ensure sort by createdAt desc
+    // Sort explicitly after filtering to guarantee newest first
+    const sortedBookings = bookings.sort((a: any, b: any) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Newest first
+    });
 
-    return NextResponse.json(validBookings);
+    return NextResponse.json(sortedBookings);
   } catch (error) {
     console.error('Failed to fetch bookings:', error);
     return NextResponse.json({ message: 'Failed to fetch bookings' }, { status: 500 });
