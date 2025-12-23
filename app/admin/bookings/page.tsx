@@ -4,8 +4,9 @@
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, AlertTriangle, Loader2, Trash2, X } from 'lucide-react';
+import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, AlertTriangle, Loader2, Trash2, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ManualBookingModal from '@/components/admin/ManualBookingModal';
 
 interface BookingUser {
   _id: string;
@@ -89,6 +90,9 @@ const BookingsPage = () => {
   const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Manual booking modal state
+  const [showManualBookingModal, setShowManualBookingModal] = useState(false);
 
   const router = useRouter();
 
@@ -406,6 +410,13 @@ const BookingsPage = () => {
             </>
           )}
           <button
+            onClick={() => setShowManualBookingModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+          >
+            <Plus size={16} />
+            Add Booking
+          </button>
+          <button
             onClick={fetchBookings}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
           >
@@ -712,6 +723,16 @@ const BookingsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Manual Booking Modal */}
+      <ManualBookingModal
+        isOpen={showManualBookingModal}
+        onClose={() => setShowManualBookingModal(false)}
+        onSuccess={() => {
+          fetchBookings();
+          setShowManualBookingModal(false);
+        }}
+      />
     </div>
   );
 };

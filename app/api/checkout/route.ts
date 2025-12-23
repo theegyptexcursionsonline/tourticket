@@ -121,6 +121,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // IDEMPOTENCY CHECK: If we have a paymentIntentId, check if booking already exists
+    // This prevents duplicate bookings when both webhook and frontend try to create
+    if (paymentDetails?.paymentIntentId && paymentMethod === 'card') {
+      const existingBooking = await Booking.findOne({ 
+        paymentId: paymentDetails.paymentIntentId 
+      }).lean();
+      
+      if (existingBooking) {
+        console.log(`[Checkout] Booking already exists for payment ${paymentDetails.paymentIntentId} - returning existing`);
+        
+        // Return success with existing booking info
+        return NextResponse.json({
+          success: true,
+          message: 'Booking already confirmed!',
+          bookingId: existingBooking.bookingReference,
+          bookings: [existingBooking._id],
+          paymentId: paymentDetails.paymentIntentId,
+          customer: {
+            name: `${customer.firstName} ${customer.lastName}`,
+            email: customer.email,
+          },
+          alreadyExisted: true, // Flag to indicate this was pre-existing
+        });
+      }
+    }
+
     let user = null;
 
     // Handle user creation
