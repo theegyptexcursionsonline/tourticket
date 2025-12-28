@@ -18,9 +18,76 @@ interface HotelPickupMapProps {
   defaultPickupOption?: 'now' | 'later';
 }
 
+type Prediction = {
+  place_id: string;
+  description?: string;
+  structured_formatting?: {
+    main_text?: string;
+    secondary_text?: string;
+  };
+};
+
+type PlaceResult = {
+  formatted_address?: string;
+  name?: string;
+  geometry?: {
+    location?: {
+      lat: () => number;
+      lng: () => number;
+    };
+  };
+};
+
+type MapMouseEvent = {
+  latLng: {
+    lat: () => number;
+    lng: () => number;
+  };
+};
+
+type GoogleMarker = { setMap: (map: unknown | null) => void };
+type GoogleMap = {
+  addListener: (event: string, handler: (event: MapMouseEvent) => void) => void;
+  panTo: (pos: { lat: number; lng: number }) => void;
+  setZoom: (zoom: number) => void;
+};
+type AutocompleteService = {
+  getPlacePredictions: (
+    req: { input: string; componentRestrictions?: { country: string }; types?: string[] },
+    cb: (results: Prediction[] | null, status: string) => void
+  ) => void;
+};
+type PlacesService = {
+  getDetails: (
+    req: { placeId: string; fields: string[] },
+    cb: (place: PlaceResult | null, status: string) => void
+  ) => void;
+};
+type Geocoder = {
+  geocode: (
+    req: { location: { lat: number; lng: number } },
+    cb: (results: Array<{ formatted_address: string; place_id?: string }>, status: string) => void
+  ) => void;
+};
+
+type GoogleMaps = {
+  maps: {
+    Map: new (el: HTMLElement, opts: Record<string, unknown>) => GoogleMap;
+    Marker: new (opts: Record<string, unknown>) => GoogleMarker;
+    Size: new (w: number, h: number) => unknown;
+    Point: new (x: number, y: number) => unknown;
+    Animation: { DROP: unknown };
+    Geocoder: new () => Geocoder;
+    places: {
+      AutocompleteService: new () => AutocompleteService;
+      PlacesService: new (map: GoogleMap) => PlacesService;
+    };
+  };
+};
+
 declare global {
   interface Window {
-    google: any;
+    google: GoogleMaps;
     googleMapsScriptLoaded?: boolean;
     googleMapsCallback?: () => void;
   }
@@ -39,7 +106,6 @@ const POPULAR_AREAS = [
 export default function HotelPickupMap({
   onLocationSelect,
   initialLocation,
-  tourLocation = 'Cairo, Egypt',
   defaultPickupOption,
 }: HotelPickupMapProps) {
   const [pickupOption, setPickupOption] = useState<'now' | 'later' | null>(defaultPickupOption ?? null);
@@ -48,17 +114,16 @@ export default function HotelPickupMap({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
-  const [predictions, setPredictions] = useState<any[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const autocompleteServiceRef = useRef<any>(null);
-  const placesServiceRef = useRef<any>(null);
-  const geocoderRef = useRef<any>(null);
+  const mapInstanceRef = useRef<GoogleMap | null>(null);
+  const markerRef = useRef<GoogleMarker | null>(null);
+  const autocompleteServiceRef = useRef<AutocompleteService | null>(null);
+  const placesServiceRef = useRef<PlacesService | null>(null);
+  const geocoderRef = useRef<Geocoder | null>(null);
   const isInitializing = useRef(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -107,6 +172,42 @@ export default function HotelPickupMap({
     document.head.appendChild(script);
   }, [pickupOption, GOOGLE_MAPS_API_KEY]);
 
+  const placeMarker = useCallback((lat: number, lng: number) => {
+    if (!mapInstanceRef.current || !window.google) return;
+
+    if (markerRef.current) {
+      markerRef.current.setMap(null);
+    }
+
+    markerRef.current = new window.google.maps.Marker({
+      position: { lat, lng },
+      map: mapInstanceRef.current,
+      animation: window.google.maps.Animation.DROP,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 0C8.954 0 0 8.954 0 20c0 14 20 28 20 28s20-14 20-28C40 8.954 31.046 0 20 0z" fill="#DC2626"/>
+            <circle cx="20" cy="20" r="8" fill="white"/>
+          </svg>
+        `),
+        scaledSize: new window.google.maps.Size(40, 48),
+        anchor: new window.google.maps.Point(20, 48),
+      }
+    });
+
+    mapInstanceRef.current.panTo({ lat, lng });
+    mapInstanceRef.current.setZoom(16);
+  }, []);
+
+  const handleLocationSelect = useCallback((location: HotelPickupLocation) => {
+    setSelectedLocation(location);
+    setSearchQuery(location.name || location.address);
+    onLocationSelect(location);
+    placeMarker(location.lat, location.lng);
+    setShowPredictions(false);
+    setPredictions([]);
+  }, [onLocationSelect, placeMarker]);
+
   // Initialize map
   const initializeMap = useCallback(() => {
     if (!window.google || !mapRef.current || isInitializing.current) return;
@@ -136,17 +237,17 @@ export default function HotelPickupMap({
       geocoderRef.current = new window.google.maps.Geocoder();
 
       // Click listener for map
-      map.addListener('click', (event: any) => {
+      map.addListener('click', (event: MapMouseEvent) => {
         const lat = event.latLng.lat();
         const lng = event.latLng.lng();
 
-        geocoderRef.current.geocode({ location: { lat, lng } }, (results: any[], status: string) => {
-          if (status === 'OK' && results[0]) {
+        geocoderRef.current?.geocode({ location: { lat, lng } }, (results, status) => {
+          if (status === 'OK' && results?.[0]) {
             const location: HotelPickupLocation = {
-              address: results[0].formatted_address,
+              address: results[0]!.formatted_address,
               lat,
               lng,
-              placeId: results[0].place_id
+              placeId: results[0]!.place_id
             };
             handleLocationSelect(location);
           }
@@ -164,7 +265,7 @@ export default function HotelPickupMap({
       isInitializing.current = false;
       setMapError(true);
     }
-  }, [initialLocation]);
+  }, [handleLocationSelect, initialLocation, placeMarker]);
 
   // Initialize map when ready
   useEffect(() => {
@@ -173,42 +274,6 @@ export default function HotelPickupMap({
       return () => clearTimeout(timer);
     }
   }, [scriptLoaded, pickupOption, initializeMap]);
-
-  const placeMarker = (lat: number, lng: number) => {
-    if (!mapInstanceRef.current || !window.google) return;
-
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
-
-    markerRef.current = new window.google.maps.Marker({
-      position: { lat, lng },
-      map: mapInstanceRef.current,
-      animation: window.google.maps.Animation.DROP,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 0C8.954 0 0 8.954 0 20c0 14 20 28 20 28s20-14 20-28C40 8.954 31.046 0 20 0z" fill="#DC2626"/>
-            <circle cx="20" cy="20" r="8" fill="white"/>
-          </svg>
-        `),
-        scaledSize: new window.google.maps.Size(40, 48),
-        anchor: new window.google.maps.Point(20, 48),
-      }
-    });
-
-    mapInstanceRef.current.panTo({ lat, lng });
-    mapInstanceRef.current.setZoom(16);
-  };
-
-  const handleLocationSelect = (location: HotelPickupLocation) => {
-    setSelectedLocation(location);
-    setSearchQuery(location.name || location.address);
-    onLocationSelect(location);
-    placeMarker(location.lat, location.lng);
-    setShowPredictions(false);
-    setPredictions([]);
-  };
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -223,7 +288,6 @@ export default function HotelPickupMap({
       return;
     }
 
-    setIsSearching(true);
     searchTimeoutRef.current = setTimeout(() => {
       autocompleteServiceRef.current.getPlacePredictions(
         {
@@ -231,8 +295,7 @@ export default function HotelPickupMap({
           componentRestrictions: { country: 'eg' },
           types: ['lodging'], // Only hotels
         },
-        (results: any[], status: string) => {
-          setIsSearching(false);
+        (results, status) => {
           if (status === 'OK' && results) {
             setPredictions(results.slice(0, 5));
             setShowPredictions(true);
@@ -243,7 +306,7 @@ export default function HotelPickupMap({
                 input: value,
                 componentRestrictions: { country: 'eg' },
               },
-              (geoResults: any[], geoStatus: string) => {
+              (geoResults, geoStatus) => {
                 if (geoStatus === 'OK' && geoResults) {
                   setPredictions(geoResults.slice(0, 5));
                   setShowPredictions(true);
@@ -258,13 +321,13 @@ export default function HotelPickupMap({
     }, 300);
   };
 
-  const handlePredictionSelect = (prediction: any) => {
+  const handlePredictionSelect = (prediction: Prediction) => {
     if (!placesServiceRef.current) return;
 
     placesServiceRef.current.getDetails(
       { placeId: prediction.place_id, fields: ['formatted_address', 'geometry', 'name'] },
-      (place: any, status: string) => {
-        if (status === 'OK' && place.geometry) {
+      (place, status) => {
+        if (status === 'OK' && place?.geometry?.location && place.formatted_address) {
           const location: HotelPickupLocation = {
             address: place.formatted_address,
             lat: place.geometry.location.lat(),
@@ -340,8 +403,8 @@ export default function HotelPickupMap({
                 <Clock className="text-blue-600" size={20} />
               </div>
               <div>
-                <div className="font-semibold text-slate-900">I'll provide it later</div>
-                <div className="text-sm text-slate-500">We'll contact you before the tour</div>
+                <div className="font-semibold text-slate-900">I&apos;ll provide it later</div>
+                <div className="text-sm text-slate-500">We&apos;ll contact you before the tour</div>
               </div>
             </div>
           </button>
@@ -358,7 +421,7 @@ export default function HotelPickupMap({
             <div className="flex-1">
               <p className="font-medium text-blue-900">No problem!</p>
               <p className="text-sm text-blue-700 mt-1">
-                We'll contact you via WhatsApp or email 24 hours before your tour to confirm your pickup location.
+                    We&apos;ll contact you via WhatsApp or email 24 hours before your tour to confirm your pickup location.
               </p>
             </div>
             <button
@@ -497,7 +560,7 @@ export default function HotelPickupMap({
                 <div>
                   <p className="font-medium text-amber-900">Map unavailable</p>
                   <p className="text-sm text-amber-700 mt-1">
-                    Please type your hotel name or address above, or choose "I'll provide it later" and we'll contact you.
+                    Please type your hotel name or address above, or choose &quot;I&apos;ll provide it later&quot; and we&apos;ll contact you.
                   </p>
                 </div>
               </div>

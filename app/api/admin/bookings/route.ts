@@ -67,12 +67,13 @@ export async function GET() {
       .lean();
 
     // Filter out bookings with null tours (deleted tours) and ensure sort by createdAt desc
-    const validBookings = bookings.filter((booking: any) => booking.tour !== null);
+    type LeanBooking = { tour: unknown | null; createdAt?: unknown };
+    const validBookings = (bookings as LeanBooking[]).filter((booking) => booking.tour !== null);
     
     // Sort explicitly to guarantee newest first (handle missing createdAt)
-    const sortedBookings = validBookings.sort((a: any, b: any) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    const sortedBookings = validBookings.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt as string | Date).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt as string | Date).getTime() : 0;
       return dateB - dateA; // Newest first
     });
 
@@ -98,8 +99,6 @@ export async function POST(request: Request) {
       specialRequests,
       hotelPickupDetails,
       hotelPickupLocation,
-      internalNotes,
-      isManualBooking = true,
     } = body;
 
     // Validate required fields
@@ -133,8 +132,9 @@ export async function POST(request: Request) {
           password: 'manual-booking-' + Math.random().toString(36).substring(2, 15),
         });
         console.log(`[Manual Booking] Created new user: ${customer.email}`);
-      } catch (userError: any) {
-        if (userError.code === 11000) {
+      } catch (userError: unknown) {
+        const err = userError as { code?: number };
+        if (err?.code === 11000) {
           user = await User.findOne({ email: customer.email });
         } else {
           throw userError;
@@ -250,10 +250,10 @@ export async function POST(request: Request) {
       bookingReference: bookingReference,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Manual Booking] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create booking' },
+      { error: error instanceof Error ? error.message : 'Failed to create booking' },
       { status: 500 }
     );
   }

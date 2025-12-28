@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, Search, Plus, Calendar, Clock, Users, DollarSign, Mail, Phone, User, MapPin, CreditCard, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Loader2, Search, Calendar, Clock, Users, DollarSign, Mail, Phone, User, MapPin, CreditCard, FileText, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import HotelPickupMap from '@/components/HotelPickupMap';
 
@@ -270,9 +270,10 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       onSuccess();
       onClose();
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating booking:', error);
-      toast.error(error.message || 'Failed to create booking');
+      const message = error instanceof Error ? error.message : 'Failed to create booking';
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -725,7 +726,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                       <button
                         key={method.value}
                         type="button"
-                        onClick={() => setFormData({ ...formData, paymentMethod: method.value as any })}
+                        onClick={() => setFormData({ ...formData, paymentMethod: method.value as 'external' | 'cash' | 'bank' | 'pay_later' })}
                         className={`p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
                           formData.paymentMethod === method.value
                             ? 'border-blue-500 bg-blue-50 text-blue-700'
