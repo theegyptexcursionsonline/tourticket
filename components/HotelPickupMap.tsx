@@ -15,6 +15,7 @@ interface HotelPickupMapProps {
   onLocationSelect: (location: HotelPickupLocation | null) => void;
   initialLocation?: HotelPickupLocation;
   tourLocation?: string;
+  defaultPickupOption?: 'now' | 'later';
 }
 
 declare global {
@@ -35,8 +36,13 @@ const POPULAR_AREAS = [
   { name: 'Heliopolis', lat: 30.0866, lng: 31.3225 },
 ];
 
-export default function HotelPickupMap({ onLocationSelect, initialLocation, tourLocation = 'Cairo, Egypt' }: HotelPickupMapProps) {
-  const [pickupOption, setPickupOption] = useState<'now' | 'later' | null>(null);
+export default function HotelPickupMap({
+  onLocationSelect,
+  initialLocation,
+  tourLocation = 'Cairo, Egypt',
+  defaultPickupOption,
+}: HotelPickupMapProps) {
+  const [pickupOption, setPickupOption] = useState<'now' | 'later' | null>(defaultPickupOption ?? null);
   const [searchQuery, setSearchQuery] = useState(initialLocation?.address || '');
   const [selectedLocation, setSelectedLocation] = useState<HotelPickupLocation | null>(initialLocation || null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);

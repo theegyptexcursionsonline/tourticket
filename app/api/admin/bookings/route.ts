@@ -97,6 +97,7 @@ export async function POST(request: Request) {
       payment,
       specialRequests,
       hotelPickupDetails,
+      hotelPickupLocation,
       internalNotes,
       isManualBooking = true,
     } = body;
@@ -178,6 +179,7 @@ export async function POST(request: Request) {
       paymentMethod,
       specialRequests: specialRequests || undefined,
       hotelPickupDetails: hotelPickupDetails || undefined,
+      hotelPickupLocation: hotelPickupLocation || undefined,
       adultGuests: booking.adultGuests || 1,
       childGuests: booking.childGuests || 0,
       infantGuests: booking.infantGuests || 0,

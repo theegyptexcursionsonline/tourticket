@@ -3,21 +3,32 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Search, Plus, Calendar, Clock, Users, DollarSign, Mail, Phone, User, MapPin, CreditCard, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import HotelPickupMap from '@/components/HotelPickupMap';
 
 interface Tour {
   _id: string;
   title: string;
   slug: string;
-  pricing?: {
-    adult?: number;
-    child?: number;
-  };
+  // Current DB schema uses discountPrice/originalPrice (and optional price)
+  discountPrice?: number;
+  originalPrice?: number;
+  price?: number;
   bookingOptions?: {
-    id: string;
-    title: string;
+    type: string;
+    label: string;
     price: number;
     duration?: string;
+    originalPrice?: number;
+    badge?: string;
   }[];
+}
+
+interface HotelPickupLocation {
+  address: string;
+  lat: number;
+  lng: number;
+  placeId?: string;
+  name?: string;
 }
 
 interface ManualBookingModalProps {
@@ -36,6 +47,21 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
   const [tours, setTours] = useState<Tour[]>([]);
   const [loadingTours, setLoadingTours] = useState(true);
   const [tourSearch, setTourSearch] = useState('');
+
+  const getTourBasePrice = (tour: Tour): number => {
+    const optionPrices = (tour.bookingOptions || [])
+      .map(o => Number(o?.price))
+      .filter(p => Number.isFinite(p) && p >= 0);
+    if (optionPrices.length > 0) return Math.min(...optionPrices);
+
+    const fallback = tour.discountPrice ?? tour.price ?? 0;
+    return Number.isFinite(fallback) ? fallback : 0;
+  };
+
+  const getBookingOptionKey = (option: NonNullable<Tour['bookingOptions']>[number], index: number) => {
+    // bookingOptions are stored without an id in DB (schema uses _id:false), so we generate a stable key per tour payload
+    return `${option.type || 'option'}-${index}`;
+  };
 
   // Form data
   const [formData, setFormData] = useState({
@@ -76,6 +102,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     // Additional
     specialRequests: '',
     hotelPickupDetails: '',
+    hotelPickupLocation: null as HotelPickupLocation | null,
     internalNotes: '',
   });
 
@@ -131,28 +158,32 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
 
   // Handle tour selection
   const handleTourSelect = (tour: Tour) => {
-    const defaultPrice = tour.pricing?.adult || 0;
+    const defaultPrice = getTourBasePrice(tour);
     const firstOption = tour.bookingOptions?.[0];
+    const firstOptionKey = firstOption ? getBookingOptionKey(firstOption, 0) : '';
 
     setFormData(prev => ({
       ...prev,
       tourId: tour._id,
       selectedTour: tour,
       basePrice: defaultPrice,
-      bookingOptionId: firstOption?.id || '',
-      bookingOptionTitle: firstOption?.title || '',
+      bookingOptionId: firstOptionKey,
+      bookingOptionTitle: firstOption?.label || '',
       bookingOptionPrice: firstOption?.price || defaultPrice,
     }));
   };
 
   // Handle booking option selection
   const handleBookingOptionChange = (optionId: string) => {
-    const option = formData.selectedTour?.bookingOptions?.find(o => o.id === optionId);
+    const options = formData.selectedTour?.bookingOptions || [];
+    const idx = options.findIndex((o, i) => getBookingOptionKey(o, i) === optionId);
+    const option = idx >= 0 ? options[idx] : undefined;
+
     if (option) {
       setFormData(prev => ({
         ...prev,
-        bookingOptionId: option.id,
-        bookingOptionTitle: option.title,
+        bookingOptionId: optionId,
+        bookingOptionTitle: option.label,
         bookingOptionPrice: option.price,
       }));
     }
@@ -223,6 +254,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
           },
           specialRequests: formData.specialRequests || undefined,
           hotelPickupDetails: formData.hotelPickupDetails || undefined,
+          hotelPickupLocation: formData.hotelPickupLocation || undefined,
           internalNotes: formData.internalNotes || undefined,
           isManualBooking: true,
         }),
@@ -275,6 +307,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       paymentStatus: 'paid',
       specialRequests: '',
       hotelPickupDetails: '',
+      hotelPickupLocation: null,
       internalNotes: '',
     });
     setTourSearch('');
@@ -380,7 +413,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                       >
                         <div className="font-medium text-slate-900">{tour.title}</div>
                         <div className="text-sm text-slate-500 mt-1">
-                          Base price: ${tour.pricing?.adult || 0} per adult
+                          Base price: ${getTourBasePrice(tour)} per adult
                           {tour.bookingOptions && tour.bookingOptions.length > 0 && (
                             <span className="ml-2 text-blue-600">
                               • {tour.bookingOptions.length} booking options
@@ -407,9 +440,9 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                       onChange={(e) => handleBookingOptionChange(e.target.value)}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
-                      {formData.selectedTour.bookingOptions.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.title} - ${option.price}
+                      {formData.selectedTour.bookingOptions.map((option, idx) => (
+                        <option key={getBookingOptionKey(option, idx)} value={getBookingOptionKey(option, idx)}>
+                          {option.label} - ${option.price}
                           {option.duration && ` (${option.duration})`}
                         </option>
                       ))}
@@ -488,15 +521,33 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Hotel Pickup Location
                   </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
-                    <input
-                      type="text"
-                      value={formData.hotelPickupDetails}
-                      onChange={(e) => setFormData({ ...formData, hotelPickupDetails: e.target.value })}
-                      placeholder="Hotel name and address"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+                      <input
+                        type="text"
+                        value={formData.hotelPickupDetails}
+                        onChange={(e) => setFormData({ ...formData, hotelPickupDetails: e.target.value })}
+                        placeholder="Hotel name (optional)"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <HotelPickupMap
+                        tourLocation={formData.selectedTour?.title || 'Egypt'}
+                        defaultPickupOption="now"
+                        initialLocation={formData.hotelPickupLocation || undefined}
+                        onLocationSelect={(loc) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            hotelPickupLocation: loc,
+                            // If admin hasn't typed a name, default to place name/address for display
+                            hotelPickupDetails: prev.hotelPickupDetails || (loc?.name || loc?.address || ''),
+                          }));
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
