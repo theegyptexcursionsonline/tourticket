@@ -298,8 +298,7 @@ BookingSchema.virtual('guestBreakdown').get(function() {
 BookingSchema.index({ user: 1, createdAt: -1 });
 BookingSchema.index({ tour: 1, date: 1 });
 BookingSchema.index({ status: 1 });
-BookingSchema.index({ bookingReference: 1 });
-// Note: paymentId unique sparse index is defined inline in schema
+// Note: bookingReference and paymentId unique indexes are defined inline in schema
 
 const Booking: Model<IBooking> = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
 

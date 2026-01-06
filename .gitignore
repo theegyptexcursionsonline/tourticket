@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.pnpm-store/
 
 # testing
 /coverage
@@ -47,3 +48,20 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test screenshots
+*.screenshot.png
+checkout-test.png
+
+# Logs
+logs/
+*.log
+
+# OS files
+Thumbs.db
