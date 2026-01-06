@@ -427,6 +427,7 @@ export async function POST(request: Request) {
           time: bookingTime,
           guests: totalGuests,
           totalPrice: itemTotalPrice,
+          currency: paymentResult.currency || pricing.currency || 'USD', // Store the currency
           status: (isBankTransfer || isPayLater) ? 'Pending' : 'Confirmed',
           paymentId: paymentResult.paymentId,
           paymentMethod,

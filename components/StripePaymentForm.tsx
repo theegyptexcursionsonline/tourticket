@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Initialize Stripe
@@ -15,6 +15,8 @@ interface PaymentFormProps {
   onError: (error: string) => void;
   isProcessing: boolean;
   setIsProcessing: (value: boolean) => void;
+  paymentCompleted: boolean;
+  setPaymentCompleted: (value: boolean) => void;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -23,12 +25,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   onError,
   isProcessing,
   setIsProcessing,
+  paymentCompleted,
+  setPaymentCompleted,
 }) => {
   const stripe = useStripe();
   const elements = useElements();
 
   const handleSubmit = async () => {
-    if (!stripe || !elements) {
+    // Prevent double submission
+    if (!stripe || !elements || isProcessing || paymentCompleted) {
       return;
     }
 
@@ -45,16 +50,35 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       if (error) {
         onError(error.message || 'Payment failed');
+        setIsProcessing(false);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Mark payment as completed IMMEDIATELY to prevent double-charge
+        setPaymentCompleted(true);
         onSuccess(paymentIntent.id);
+        // Note: Don't set isProcessing to false here - keep button disabled
+      } else if (paymentIntent && paymentIntent.status === 'processing') {
+        // Payment is still processing
+        toast.loading('Payment is being processed...', { duration: 5000 });
       }
     } catch (err: any) {
       console.error('Payment error:', err);
       onError(err.message || 'An unexpected error occurred');
-    } finally {
       setIsProcessing(false);
     }
   };
+
+  // If payment already completed, show success state
+  if (paymentCompleted) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+          <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
+          <p className="text-green-800 font-semibold text-lg">Payment Successful!</p>
+          <p className="text-green-600 text-sm mt-1">Creating your booking...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -66,12 +90,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       <button
         type="button"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe || isProcessing || paymentCompleted}
         onClick={handleSubmit}
         className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isProcessing ? (
-          <Loader2 className="animate-spin" size={24} />
+          <>
+            <Loader2 className="animate-spin" size={24} />
+            <span>Processing Payment...</span>
+          </>
         ) : (
           <>
             <Lock size={18} />
@@ -113,15 +140,32 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   onError,
 }) => {
   const [clientSecret, setClientSecret] = useState<string>('');
+  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  
+  // Use refs to track if we've already created a payment intent for this cart
+  const paymentIntentCreatedRef = useRef(false);
+  const lastCartHashRef = useRef<string>('');
+  
+  // Generate a hash of cart items to detect real changes
+  const getCartHash = useCallback((cartItems: any[], pricingData: any) => {
+    const cartIds = cartItems.map(item => `${item._id || item.id}-${item.selectedDate}-${item.quantity}`).join('|');
+    return `${cartIds}-${pricingData?.total || 0}`;
+  }, []);
+
+  // Helper function to validate email format
+  const isValidEmail = useCallback((email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }, []);
 
   useEffect(() => {
-    // Helper function to validate email format
-    const isValidEmail = (email: string) => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return emailRegex.test(email);
-    };
+    // If payment already completed, don't create new intents
+    if (paymentCompleted) {
+      return;
+    }
 
     // Validate customer data before creating PaymentIntent
     if (!customer.email || !customer.firstName || !customer.lastName) {
@@ -147,9 +191,24 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       return;
     }
 
-    // Debounce payment intent creation to avoid creating it while user is typing
+    // Check if cart/pricing has actually changed
+    const currentCartHash = getCartHash(cart, pricing);
+    
+    // If we already have a payment intent and cart hasn't changed, don't create another
+    if (paymentIntentCreatedRef.current && clientSecret && lastCartHashRef.current === currentCartHash) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Debounce payment intent creation
     const timeoutId = setTimeout(() => {
       const createPaymentIntent = async () => {
+        // Double-check we haven't created one already (race condition protection)
+        if (paymentIntentCreatedRef.current && lastCartHashRef.current === currentCartHash && clientSecret) {
+          setIsLoading(false);
+          return;
+        }
+
         try {
           const response = await fetch('/api/checkout/create-payment-intent', {
             method: 'POST',
@@ -159,6 +218,8 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
               pricing,
               cart,
               discountCode,
+              // Send existing payment intent ID if we have one (for update instead of create)
+              existingPaymentIntentId: paymentIntentId || undefined,
             }),
           });
 
@@ -166,13 +227,14 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
           if (data.success && data.clientSecret) {
             setClientSecret(data.clientSecret);
+            setPaymentIntentId(data.paymentIntentId);
+            paymentIntentCreatedRef.current = true;
+            lastCartHashRef.current = currentCartHash;
           } else {
-            // Don't show error toast here, just log it
             console.error('Failed to create payment intent:', data.message);
             onError(data.message || 'Failed to initialize payment');
           }
         } catch (error) {
-          // Don't show error toast here, just log it
           console.error('Error creating payment intent:', error);
           onError('Failed to initialize payment');
         } finally {
@@ -181,10 +243,10 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       };
 
       createPaymentIntent();
-    }, 1000); // Wait 1 second after user stops typing
+    }, 1500); // Increased debounce to 1.5 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [amount, currency, customer, cart, pricing, discountCode, onError]);
+  }, [customer.email, customer.firstName, customer.lastName, cart, pricing, discountCode, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret, paymentIntentId]);
 
   if (isLoading) {
     return (
@@ -199,12 +261,6 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       </div>
     );
   }
-
-  // Helper function to validate email format
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
 
   // Show message if customer data is incomplete or invalid
   if (!customer.email || !customer.firstName || !customer.lastName || !isValidEmail(customer.email)) {
@@ -231,8 +287,20 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
   if (!clientSecret) {
     return (
-      <div className="text-center py-8 text-red-600">
-        Failed to initialize payment. Please refresh and try again.
+      <div className="bg-white border border-red-100 rounded-2xl shadow-sm overflow-hidden p-6">
+        <div className="flex items-center gap-3 text-red-600 mb-3">
+          <AlertCircle size={24} />
+          <p className="font-semibold">Unable to initialize payment</p>
+        </div>
+        <p className="text-slate-600 text-sm mb-4">
+          There was a problem connecting to our payment system. Please refresh the page and try again.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+        >
+          Refresh Page
+        </button>
       </div>
     );
   }
@@ -310,6 +378,8 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
               onError={onError}
               isProcessing={isProcessing}
               setIsProcessing={setIsProcessing}
+              paymentCompleted={paymentCompleted}
+              setPaymentCompleted={setPaymentCompleted}
             />
           </Elements>
         </div>

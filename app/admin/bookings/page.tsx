@@ -40,6 +40,7 @@ interface Booking {
   time: string;
   guests: number;
   totalPrice: number;
+  currency?: string; // Currency code (USD, EUR, etc.)
   status: BookingStatus;
   adultGuests?: number;
   childGuests?: number;
@@ -50,6 +51,33 @@ interface Booking {
   createdAt: string;
   updatedAt: string;
 }
+
+// Currency symbol mapping
+const getCurrencySymbol = (currency?: string): string => {
+  const symbols: { [key: string]: string } = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    EGP: 'E£',
+    AED: 'د.إ',
+    CHF: 'CHF',
+    CAD: 'C$',
+    AUD: 'A$',
+    SEK: 'kr',
+    DKK: 'kr',
+    NOK: 'kr',
+    JPY: '¥',
+    KRW: '₩',
+    CNY: '¥',
+    INR: '₹',
+    SAR: '﷼',
+    QAR: '﷼',
+    KWD: 'د.ك',
+    BHD: 'د.ب',
+    OMR: 'ر.ع.',
+  };
+  return symbols[currency?.toUpperCase() || 'USD'] || '$';
+};
 
 // Helper to format dates consistently and avoid timezone issues
 const formatDisplayDate = (dateString: string | undefined, options?: Intl.DateTimeFormatOptions): string => {
@@ -601,8 +629,15 @@ const BookingsPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center text-sm font-semibold text-slate-900">
-                          <DollarSign size={14} className="mr-1 text-green-600" />
+                          <span className="mr-1 text-green-600 font-bold">
+                            {getCurrencySymbol(booking.currency)}
+                          </span>
                           {booking.totalPrice.toFixed(2)}
+                          {booking.currency && booking.currency !== 'USD' && (
+                            <span className="ml-1 text-xs text-slate-400 font-normal">
+                              {booking.currency}
+                            </span>
+                          )}
                         </div>
                         {booking.paymentMethod && (
                           <div className="text-xs text-slate-500 capitalize">
@@ -659,7 +694,29 @@ const BookingsPage = () => {
               <div className="flex-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Revenue</p>
                 <p className="text-2xl font-bold text-slate-900">
-                  ${bookings.reduce((sum, b) => sum + b.totalPrice, 0).toFixed(2)}
+                  {/* Group by currency for accurate totals */}
+                  {(() => {
+                    const byCurrency = bookings.reduce((acc, b) => {
+                      const curr = b.currency || 'USD';
+                      acc[curr] = (acc[curr] || 0) + b.totalPrice;
+                      return acc;
+                    }, {} as { [key: string]: number });
+                    
+                    const currencies = Object.keys(byCurrency);
+                    if (currencies.length === 1) {
+                      return `${getCurrencySymbol(currencies[0])}${byCurrency[currencies[0]].toFixed(2)}`;
+                    }
+                    // Show primary currency (USD or first) with indicator of multiple currencies
+                    const primary = byCurrency['USD'] ? 'USD' : currencies[0];
+                    return (
+                      <>
+                        {getCurrencySymbol(primary)}{byCurrency[primary]?.toFixed(2) || '0.00'}
+                        {currencies.length > 1 && (
+                          <span className="text-xs text-slate-400 ml-1">+{currencies.length - 1} more</span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-green-500" />

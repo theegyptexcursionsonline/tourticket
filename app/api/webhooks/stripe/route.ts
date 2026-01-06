@@ -175,6 +175,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         time: bookingTime,
         guests: totalGuests,
         totalPrice: itemTotal,
+        currency: (metadata.pricing_currency || paymentIntent.currency || 'USD').toUpperCase(), // Store currency
         status: 'Confirmed',
         paymentId: paymentId,
         paymentMethod: 'card',

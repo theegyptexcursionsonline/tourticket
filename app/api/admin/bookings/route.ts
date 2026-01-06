@@ -174,6 +174,7 @@ export async function POST(request: Request) {
       time: bookingTime,
       guests: totalGuests,
       totalPrice: pricing?.totalPrice || 0,
+      currency: pricing?.currency || 'USD', // Include currency for manual bookings
       status: bookingStatus,
       paymentId: payment?.externalPaymentId || `MANUAL-${Date.now()}`,
       paymentMethod,

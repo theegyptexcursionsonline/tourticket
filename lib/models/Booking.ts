@@ -28,6 +28,7 @@ export interface IBooking extends Document {
   time: string;
   guests: number;
   totalPrice: number;
+  currency: string; // Currency code (USD, EUR, etc.)
   status: BookingStatus;
   paymentId?: string;
   paymentMethod?: string;
@@ -165,6 +166,13 @@ const BookingSchema: Schema<IBooking> = new Schema({
     min: 0,
   },
   
+  currency: {
+    type: String,
+    default: 'USD',
+    uppercase: true,
+    enum: ['USD', 'EUR', 'GBP', 'EGP', 'AED', 'CHF', 'CAD', 'AUD', 'SEK', 'DKK', 'NOK', 'JPY', 'KRW', 'CNY', 'INR', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR'],
+  },
+  
   status: {
     type: String,
     enum: BOOKING_STATUSES,
@@ -173,6 +181,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
   
   paymentId: {
     type: String,
+    index: { unique: true, sparse: true }, // Unique when present, allows null/undefined
   },
   
   paymentMethod: {
@@ -289,7 +298,8 @@ BookingSchema.virtual('guestBreakdown').get(function() {
 BookingSchema.index({ user: 1, createdAt: -1 });
 BookingSchema.index({ tour: 1, date: 1 });
 BookingSchema.index({ status: 1 });
-BookingSchema.index({ paymentId: 1 }); // For idempotent booking creation and webhook lookups
+BookingSchema.index({ bookingReference: 1 });
+// Note: paymentId unique sparse index is defined inline in schema
 
 const Booking: Model<IBooking> = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
 
