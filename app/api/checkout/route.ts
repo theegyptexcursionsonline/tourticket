@@ -418,30 +418,46 @@ export async function POST(request: Request) {
         // Generate unique booking reference
         const bookingReference = await generateUniqueBookingReference();
 
-        const booking = await Booking.create({
-          bookingReference, // Provide the reference explicitly
-          tour: tour._id,
-          user: user._id,
-          date: bookingDate,
-          dateString: bookingDateString, // Store original YYYY-MM-DD for timezone-safe display
-          time: bookingTime,
-          guests: totalGuests,
-          totalPrice: itemTotalPrice,
-          currency: paymentResult.currency || pricing.currency || 'USD', // Store the currency
-          status: (isBankTransfer || isPayLater) ? 'Pending' : 'Confirmed',
-          paymentId: paymentResult.paymentId,
-          paymentMethod,
-          specialRequests: customer.specialRequests,
-          emergencyContact: customer.emergencyContact,
-          hotelPickupDetails: customer.hotelPickupDetails,
-          hotelPickupLocation: customer.hotelPickupLocation,
-          adultGuests: cartItem.quantity || 1,
-          childGuests: cartItem.childQuantity || 0,
-          infantGuests: cartItem.infantQuantity || 0,
-          selectedAddOns: cartItem.selectedAddOns || {},
-          selectedBookingOption: cartItem.selectedBookingOption,
-          selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
-        });
+        let booking;
+        try {
+          booking = await Booking.create({
+            bookingReference, // Provide the reference explicitly
+            tour: tour._id,
+            user: user._id,
+            date: bookingDate,
+            dateString: bookingDateString, // Store original YYYY-MM-DD for timezone-safe display
+            time: bookingTime,
+            guests: totalGuests,
+            totalPrice: itemTotalPrice,
+            currency: paymentResult.currency || pricing.currency || 'USD', // Store the currency
+            status: (isBankTransfer || isPayLater) ? 'Pending' : 'Confirmed',
+            paymentId: paymentResult.paymentId,
+            paymentMethod,
+            specialRequests: customer.specialRequests,
+            emergencyContact: customer.emergencyContact,
+            hotelPickupDetails: customer.hotelPickupDetails,
+            hotelPickupLocation: customer.hotelPickupLocation,
+            adultGuests: cartItem.quantity || 1,
+            childGuests: cartItem.childQuantity || 0,
+            infantGuests: cartItem.infantQuantity || 0,
+            selectedAddOns: cartItem.selectedAddOns || {},
+            selectedBookingOption: cartItem.selectedBookingOption,
+            selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
+          });
+        } catch (createError: any) {
+          // E11000 = duplicate key error - booking already exists (created by webhook)
+          if (createError.code === 11000 && createError.keyPattern?.paymentId) {
+            console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId} (created by webhook)`);
+            const existingBooking = await Booking.findOne({ paymentId: paymentResult.paymentId });
+            if (existingBooking) {
+              booking = existingBooking;
+            } else {
+              throw createError;
+            }
+          } else {
+            throw createError;
+          }
+        }
 
         createdBookings.push(booking);
         

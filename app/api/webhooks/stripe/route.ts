@@ -196,7 +196,21 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
       console.log(`[Webhook] Created booking ${bookingReference} for tour ${tour.title}`);
     } catch (bookingError: any) {
-      console.error(`[Webhook] Error creating booking:`, bookingError);
+      // E11000 = duplicate key error - booking already exists (created by frontend)
+      if (bookingError.code === 11000 && bookingError.keyPattern?.paymentId) {
+        console.log(`[Webhook] Booking already exists for payment ${paymentId} (created by frontend) - skipping`);
+        // This is expected when frontend creates booking first - not an error
+        const existingBooking = await Booking.findOne({ paymentId }).lean();
+        if (existingBooking) {
+          return { 
+            created: false, 
+            reason: 'already_exists_concurrent', 
+            bookingId: existingBooking.bookingReference 
+          };
+        }
+      } else {
+        console.error(`[Webhook] Error creating booking:`, bookingError);
+      }
     }
   }
 
