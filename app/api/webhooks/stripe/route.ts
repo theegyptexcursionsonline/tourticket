@@ -209,7 +209,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           };
         }
       } else {
-        console.error(`[Webhook] Error creating booking:`, bookingError);
+      console.error(`[Webhook] Error creating booking:`, bookingError);
       }
     }
   }

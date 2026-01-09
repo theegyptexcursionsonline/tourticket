@@ -649,16 +649,16 @@ const BookingDetailPage = () => {
                   {booking.tour.destination.name}
                 </div>
               )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 rounded-lg p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-lg p-3">
                     <div className="text-xl font-bold text-slate-900">
                       {getCurrencySymbol(booking.currency)}{booking.totalPrice.toFixed(2)}
                       {booking.currency && booking.currency !== 'USD' && (
                         <span className="text-sm text-slate-400 ml-1">{booking.currency}</span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-500">Total Price</div>
-                  </div>
+                  <div className="text-xs text-slate-500">Total Price</div>
+                </div>
                 <div className="bg-slate-50 rounded-lg p-3">
                   <div className="text-xl font-bold text-slate-900">{booking.guests}</div>
                   <div className="text-xs text-slate-500">Guests</div>
@@ -1157,14 +1157,14 @@ const BookingDetailPage = () => {
                           </div>
                         </div>
                       </div>
-                                      <div className="text-right">
-                                        <div className="font-semibold text-slate-700">
+                      <div className="text-right">
+                        <div className="font-semibold text-slate-700">
                                           {getCurrencySymbol(booking.currency)}{addOnTotal.toFixed(2)}
-                                        </div>
-                                        <div className="text-xs text-slate-500">
+                        </div>
+                        <div className="text-xs text-slate-500">
                                           {getCurrencySymbol(booking.currency)}{addOnDetail.price.toFixed(2)} {addOnDetail.perGuest ? 'per guest' : 'total'}
-                                        </div>
-                                      </div>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

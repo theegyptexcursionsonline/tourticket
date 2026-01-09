@@ -64,16 +64,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                         const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
 
                         // Transform server cart to CartItem format
-                        const serverCart = data.cart.map((item: any) => ({
-                            ...item,
-                            id: item.tourId?.toString() || item.tourId,
-                            _id: item.tourId?.toString() || item.tourId,
-                            slug: item.tourSlug,
-                            title: item.tourTitle,
-                            image: item.tourImage,
-                            images: item.tourImage ? [{ url: item.tourImage }] : [],
-                            pricing: { adult: item.adultPrice, child: item.childPrice },
-                        }));
+                        const serverCart = data.cart.map((item: any) => {
+                            // Transform selectedAddOns from server array format to client object format
+                            // Server stores: [{ id, name, price, quantity }]
+                            // Client expects: selectedAddOns: { [addOnId]: quantity }
+                            //                 selectedAddOnDetails: { [addOnId]: { id, title, price, category, perGuest } }
+                            let selectedAddOns: { [key: string]: number } = {};
+                            let selectedAddOnDetails: { [key: string]: { id: string; title: string; price: number; category: string; perGuest: boolean } } = {};
+                            
+                            if (Array.isArray(item.selectedAddOns)) {
+                                item.selectedAddOns.forEach((addon: any) => {
+                                    if (addon.id) {
+                                        selectedAddOns[addon.id] = addon.quantity || 1;
+                                        selectedAddOnDetails[addon.id] = {
+                                            id: addon.id,
+                                            title: addon.name || addon.title || 'Add-on',
+                                            price: addon.price || 0,
+                                            category: addon.category || 'add-on',
+                                            perGuest: addon.perGuest ?? false,
+                                        };
+                                    }
+                                });
+                            }
+                            
+                            return {
+                                ...item,
+                                id: item.tourId?.toString() || item.tourId,
+                                _id: item.tourId?.toString() || item.tourId,
+                                slug: item.tourSlug,
+                                title: item.tourTitle,
+                                image: item.tourImage,
+                                images: item.tourImage ? [{ url: item.tourImage }] : [],
+                                pricing: { adult: item.adultPrice, child: item.childPrice },
+                                // Override with properly transformed add-ons
+                                selectedAddOns: Object.keys(selectedAddOns).length > 0 ? selectedAddOns : item.selectedAddOns,
+                                selectedAddOnDetails: Object.keys(selectedAddOnDetails).length > 0 ? selectedAddOnDetails : item.selectedAddOnDetails,
+                            };
+                        });
 
                         const serverIds = new Set(serverCart.map((c: CartItem) => c.uniqueId));
 
@@ -131,6 +158,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                         name: addon.title,
                         price: addon.price,
                         quantity: item.selectedAddOns?.[addon.id] || 1,
+                        category: addon.category || 'add-on',
+                        perGuest: addon.perGuest ?? false,
                     })) : [],
                 uniqueId: item.uniqueId,
             }));
@@ -206,6 +235,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                                 name: addon.title,
                                 price: addon.price,
                                 quantity: item.selectedAddOns?.[addon.id] || 1,
+                                category: addon.category || 'add-on',
+                                perGuest: addon.perGuest ?? false,
                             })) : [],
                         uniqueId,
                     }),

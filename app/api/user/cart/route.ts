@@ -80,7 +80,14 @@ export async function PUT(request: NextRequest) {
       childQuantity: item.childQuantity || 0,
       adultPrice: item.adultPrice || item.price || 0,
       childPrice: item.childPrice || 0,
-      selectedAddOns: item.selectedAddOns || [],
+      selectedAddOns: (item.selectedAddOns || []).map((addon: any) => ({
+        id: addon.id,
+        name: addon.name || addon.title,
+        price: addon.price || 0,
+        quantity: addon.quantity || 1,
+        category: addon.category || 'add-on',
+        perGuest: addon.perGuest ?? false,
+      })),
       uniqueId: item.uniqueId,
       addedAt: item.addedAt || new Date(),
     }));
@@ -148,7 +155,14 @@ export async function POST(request: NextRequest) {
       childQuantity: item.childQuantity || 0,
       adultPrice: item.adultPrice || item.price || 0,
       childPrice: item.childPrice || 0,
-      selectedAddOns: item.selectedAddOns || [],
+      selectedAddOns: (item.selectedAddOns || []).map((addon: any) => ({
+        id: addon.id,
+        name: addon.name || addon.title,
+        price: addon.price || 0,
+        quantity: addon.quantity || 1,
+        category: addon.category || 'add-on',
+        perGuest: addon.perGuest ?? false,
+      })),
       uniqueId: item.uniqueId,
       addedAt: new Date(),
     };

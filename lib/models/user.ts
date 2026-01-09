@@ -25,6 +25,8 @@ export interface ICartItem {
     name: string;
     price: number;
     quantity: number;
+    category?: string;
+    perGuest?: boolean;
   }>;
   uniqueId: string;
   addedAt: Date;
@@ -149,6 +151,8 @@ const UserSchema: Schema<IUser> = new Schema({
       name: String,
       price: Number,
       quantity: Number,
+      category: String,
+      perGuest: { type: Boolean, default: false },
     }],
     uniqueId: { type: String, required: true },
     addedAt: { type: Date, default: Date.now },

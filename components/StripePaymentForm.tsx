@@ -96,7 +96,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       >
         {isProcessing ? (
           <>
-            <Loader2 className="animate-spin" size={24} />
+          <Loader2 className="animate-spin" size={24} />
             <span>Processing Payment...</span>
           </>
         ) : (
