@@ -9,6 +9,7 @@ import { EmailService } from '@/lib/email/emailService';
 import Stripe from 'stripe';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
+import { currencies } from '@/utils/localization';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -90,6 +91,71 @@ const computeTimeUntilTour = (dateValue?: string | Date, timeValue?: string) => 
   return { days, hours, minutes };
 };
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+const getCurrencySymbolFromCode = (code?: string) => {
+  const upper = (code || 'USD').toUpperCase();
+  return currencies.find(c => c.code === upper)?.symbol || (upper === 'EUR' ? '€' : '$');
+};
+
+const toNumberQty = (value: any, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  if (value && typeof value === 'object') {
+    const inner = value.quantity ?? value.qty ?? value.count;
+    return toNumberQty(inner, fallback);
+  }
+  return fallback;
+};
+
+const calculateAddOnsTotal = (cartItem: any): number => {
+  const totalGuests = (cartItem?.quantity || 0) + (cartItem?.childQuantity || 0);
+  let addOnsTotal = 0;
+
+  // Case 1: selectedAddOns is an array (server/user schema format)
+  if (Array.isArray(cartItem?.selectedAddOns)) {
+    for (const addon of cartItem.selectedAddOns) {
+      const qty = toNumberQty(addon?.quantity, 0);
+      if (qty <= 0) continue;
+      const price = Number(addon?.price || 0);
+      const perGuest = addon?.perGuest ?? false;
+      const multiplier = perGuest ? totalGuests : 1;
+      addOnsTotal += price * multiplier;
+    }
+    return addOnsTotal;
+  }
+
+  // Case 2: selectedAddOns is an object (client format or corrupted format)
+  if (cartItem?.selectedAddOns && typeof cartItem.selectedAddOns === 'object') {
+    for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
+      const qty = toNumberQty(rawQty, 0);
+      const detail =
+        cartItem?.selectedAddOnDetails?.[addOnId] ||
+        (rawQty && typeof rawQty === 'object' ? (rawQty as any) : undefined);
+      if (!detail || qty <= 0) continue;
+      const price = Number((detail as any).price || 0);
+      const perGuest = (detail as any).perGuest ?? false;
+      const multiplier = perGuest ? totalGuests : 1;
+      addOnsTotal += price * multiplier;
+    }
+  }
+
+  return addOnsTotal;
+};
+
+const calculateCartSubtotal = (cart: any[]): number => {
+  return round2((cart || []).reduce((sum, item) => {
+    const basePrice = item?.selectedBookingOption?.price || item?.discountPrice || item?.price || 0;
+    const adultPrice = Number(basePrice) * (item?.quantity || 1);
+    const childPrice = (Number(basePrice) / 2) * (item?.childQuantity || 0);
+    const itemSubtotal = adultPrice + childPrice + calculateAddOnsTotal(item);
+    return sum + itemSubtotal;
+  }, 0));
+};
+
 export async function POST(request: Request) {
   try {
     await dbConnect();
@@ -146,6 +212,33 @@ export async function POST(request: Request) {
         });
       }
     }
+
+    // Always compute pricing on the server to avoid stale/incorrect totals in emails/PDFs
+    const currencyCode = (pricing?.currency || 'USD').toUpperCase();
+    const currencySymbol = pricing?.symbol || getCurrencySymbolFromCode(currencyCode);
+    const computedSubtotal = calculateCartSubtotal(cart || []);
+    let computedDiscount = 0;
+    if (discountCode) {
+      const discount = await Discount.findOne({ code: String(discountCode).toUpperCase() });
+      if (discount && discount.isActive && (!discount.expiresAt || new Date(discount.expiresAt) >= new Date()) && (!discount.usageLimit || discount.timesUsed < discount.usageLimit)) {
+        computedDiscount = discount.discountType === 'percentage'
+          ? round2((computedSubtotal * discount.value) / 100)
+          : round2(discount.value);
+      }
+    }
+    const computedServiceFee = round2(computedSubtotal * 0.03);
+    const computedTax = round2(computedSubtotal * 0.05);
+    const computedTotal = round2(Math.max(0, computedSubtotal + computedServiceFee + computedTax - computedDiscount));
+
+    const computedPricing = {
+      subtotal: computedSubtotal,
+      serviceFee: computedServiceFee,
+      tax: computedTax,
+      discount: computedDiscount,
+      total: computedTotal,
+      currency: currencyCode,
+      symbol: currencySymbol,
+    };
 
     let user = null;
 
@@ -262,7 +355,7 @@ export async function POST(request: Request) {
           }
 
           // Verify the amount matches
-          const expectedAmount = Math.round(pricing.total * 100);
+          const expectedAmount = Math.round(computedPricing.total * 100);
           if (paymentIntent.amount !== expectedAmount) {
             throw new Error('Payment amount mismatch. Please contact support.');
           }
@@ -394,17 +487,7 @@ export async function POST(request: Request) {
           const childPrice = (basePrice / 2) * (cartItem.childQuantity || 0);
           let tourTotal = adultPrice + childPrice;
 
-          let addOnsTotal = 0;
-          if (cartItem.selectedAddOns && cartItem.selectedAddOnDetails) {
-            Object.entries(cartItem.selectedAddOns).forEach(([addOnId, quantity]) => {
-              const addOnDetail = cartItem.selectedAddOnDetails?.[addOnId];
-              if (addOnDetail && Number(quantity) > 0) {
-                const guestsForAddOns = (cartItem.quantity || 0) + (cartItem.childQuantity || 0);
-                const addOnQuantity = addOnDetail.perGuest ? guestsForAddOns : 1;
-                addOnsTotal += addOnDetail.price * addOnQuantity;
-              }
-            });
-          }
+          const addOnsTotal = calculateAddOnsTotal(cartItem);
 
           const subtotal = tourTotal + addOnsTotal;
           const serviceFee = subtotal * 0.03;
@@ -482,7 +565,6 @@ export async function POST(request: Request) {
     const mainCartItem = cart[0];
     const emailBookingDate = formatBookingDate(mainCartItem?.selectedDate);
     const emailBookingTime = mainCartItem?.selectedTime || mainBooking.time;
-    const currencySymbol = pricing?.symbol || '$';
     const formatMoney = (value?: number) => formatCurrencyValue(value, currencySymbol);
     const orderedItemsSummary = cart.map((item: any) => {
       const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
@@ -490,16 +572,7 @@ export async function POST(request: Request) {
       const childPrice = (basePrice / 2) * (item.childQuantity || 0);
       let total = adultPrice + childPrice;
 
-      if (item.selectedAddOns && item.selectedAddOnDetails) {
-        Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
-          const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-          if (addOnDetail && Number(quantity) > 0) {
-            const guestsForAddOns = (item.quantity || 0) + (item.childQuantity || 0);
-            const addOnQuantity = addOnDetail.perGuest ? guestsForAddOns : 1;
-            total += addOnDetail.price * addOnQuantity;
-          }
-        });
-      }
+      total += calculateAddOnsTotal(item);
 
       return {
         title: item.title,
@@ -509,19 +582,35 @@ export async function POST(request: Request) {
         infants: item.infantQuantity || 0,
         bookingOption: item.selectedBookingOption?.title,
         totalPrice: formatMoney(total),
+        // For receipt PDF generation
+        quantity: item.quantity || 0,
+        childQuantity: item.childQuantity || 0,
+        infantQuantity: item.infantQuantity || 0,
+        price: Number(basePrice) || 0,
+        selectedBookingOption: item.selectedBookingOption ? {
+          title: item.selectedBookingOption.title,
+          price: Number(item.selectedBookingOption.price) || 0,
+        } : undefined,
       };
     });
 
-    const pricingDetails = pricing
-      ? {
-          subtotal: formatMoney(pricing.subtotal),
-          serviceFee: formatMoney(pricing.serviceFee),
-          tax: formatMoney(pricing.tax),
-          discount: pricing.discount > 0 ? formatMoney(pricing.discount) : undefined,
-          total: formatMoney(pricing.total),
-          currencySymbol
-        }
-      : undefined;
+    const pricingDetails = {
+      subtotal: formatMoney(computedPricing.subtotal),
+      serviceFee: formatMoney(computedPricing.serviceFee),
+      tax: formatMoney(computedPricing.tax),
+      discount: computedPricing.discount > 0 ? formatMoney(computedPricing.discount) : undefined,
+      total: formatMoney(computedPricing.total),
+      currencySymbol,
+    };
+
+    const pricingRaw = {
+      subtotal: computedPricing.subtotal,
+      serviceFee: computedPricing.serviceFee,
+      tax: computedPricing.tax,
+      discount: computedPricing.discount,
+      total: computedPricing.total,
+      symbol: currencySymbol,
+    };
 
     const hotelPickupLocation = customer.hotelPickupLocation || null;
     const hotelPickupMapImage = buildStaticMapImageUrl(hotelPickupLocation);
@@ -570,7 +659,7 @@ export async function POST(request: Request) {
         bookingTime: emailBookingTime,
         participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
         participantBreakdown: participantParts.join(', '),
-        totalPrice: formatMoney(pricing?.total),
+        totalPrice: formatMoney(computedPricing.total),
         bookingId: bookingId,
         bookingOption: bookingOption,
         specialRequests: customer.specialRequests,
@@ -584,6 +673,7 @@ export async function POST(request: Request) {
         baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
         orderedItems: orderedItemsSummary,
         pricingDetails,
+        pricingRaw,
         timeUntil: timeUntilTour || undefined,
         customerPhone: customer.phone,
         dateBadge,
@@ -666,7 +756,7 @@ export async function POST(request: Request) {
         bookingId: bookingId,
         // Use original cart date to avoid timezone issues with MongoDB UTC storage
         bookingDate: emailBookingDate,
-        totalPrice: formatMoney(pricing?.total),
+        totalPrice: formatMoney(computedPricing.total),
         paymentMethod: paymentMethod,
         specialRequests: customer.specialRequests,
         hotelPickupDetails: customer.hotelPickupDetails,

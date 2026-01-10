@@ -75,6 +75,16 @@ export class EmailService {
 
     // Generate receipt PDF using the same format as the checkout page
     try {
+      const parseMoney = (value: unknown): number | undefined => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value !== 'string') return undefined;
+        // Normalize EU decimals (comma) and strip currency symbols/whitespace
+        const normalized = value.replace(/\s/g, '').replace(/,/g, '.');
+        const cleaned = normalized.replace(/[^0-9.-]/g, '');
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
+
       // Build receipt payload matching the checkout page format exactly
       const receiptPayload: ReceiptPayload = {
         orderId: data.bookingId,
@@ -89,16 +99,16 @@ export class EmailService {
           childQuantity: item.childQuantity ?? item.children ?? 0,
           infantQuantity: item.infantQuantity ?? item.infants ?? 0,
           price: item.price,
-          totalPrice: item.totalPrice ? parseFloat(item.totalPrice.replace(/[^0-9.-]/g, '')) : undefined,
+          totalPrice: parseMoney((item as any).totalPrice),
           selectedBookingOption: item.selectedBookingOption,
         })),
         pricing: data.pricingRaw || {
           symbol: data.pricingDetails?.currencySymbol || '$',
-          subtotal: parseFloat(data.pricingDetails?.subtotal?.replace(/[^0-9.-]/g, '') || '0'),
-          serviceFee: parseFloat(data.pricingDetails?.serviceFee?.replace(/[^0-9.-]/g, '') || '0'),
-          tax: parseFloat(data.pricingDetails?.tax?.replace(/[^0-9.-]/g, '') || '0'),
-          discount: parseFloat(data.pricingDetails?.discount?.replace(/[^0-9.-]/g, '') || '0'),
-          total: parseFloat(data.pricingDetails?.total?.replace(/[^0-9.-]/g, '') || data.totalPrice?.replace(/[^0-9.-]/g, '') || '0'),
+          subtotal: parseMoney(data.pricingDetails?.subtotal) ?? 0,
+          serviceFee: parseMoney(data.pricingDetails?.serviceFee) ?? 0,
+          tax: parseMoney(data.pricingDetails?.tax) ?? 0,
+          discount: parseMoney(data.pricingDetails?.discount) ?? 0,
+          total: parseMoney(data.pricingDetails?.total) ?? parseMoney(data.totalPrice) ?? 0,
         },
         booking: {
           date: data.bookingDate,
