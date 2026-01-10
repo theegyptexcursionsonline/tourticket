@@ -149,11 +149,48 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   const paymentIntentCreatedRef = useRef(false);
   const lastCartHashRef = useRef<string>('');
   
-  // Generate a hash of cart items to detect real changes
-  const getCartHash = useCallback((cartItems: any[], pricingData: any) => {
-    const cartIds = cartItems.map(item => `${item._id || item.id}-${item.selectedDate}-${item.quantity}`).join('|');
-    return `${cartIds}-${pricingData?.total || 0}`;
-  }, []);
+  // Generate a hash of cart items to detect real changes (includes add-ons + booking option + children)
+  const getCartHash = useCallback((cartItems: any[], pricingData: any, discount?: string) => {
+    const normalizeQty = (v: any) => {
+      if (typeof v === 'number' && Number.isFinite(v)) return v;
+      if (typeof v === 'string') return Number(v) || 0;
+      if (v && typeof v === 'object') return normalizeQty(v.quantity ?? v.qty ?? v.count);
+      return 0;
+    };
+
+    const stableAddOns = (item: any) => {
+      const addOns = item?.selectedAddOns;
+      if (!addOns) return '';
+      // selectedAddOns can be object or array; we only hash ids + numeric qty
+      if (Array.isArray(addOns)) {
+        return addOns
+          .map((a: any) => `${a?.id}:${normalizeQty(a?.quantity)}`)
+          .sort()
+          .join(',');
+      }
+      if (typeof addOns === 'object') {
+        return Object.entries(addOns)
+          .map(([id, q]) => `${id}:${normalizeQty(q)}`)
+          .sort()
+          .join(',');
+      }
+      return '';
+    };
+
+    const cartSig = (cartItems || []).map((item) => {
+      const id = item._id || item.id;
+      const date = item.selectedDate || '';
+      const time = item.selectedTime || '';
+      const adults = normalizeQty(item.quantity || 0);
+      const children = normalizeQty(item.childQuantity || 0);
+      const infants = normalizeQty(item.infantQuantity || 0);
+      const bookingOption = item.selectedBookingOption?.id || '';
+      const addOnsSig = stableAddOns(item);
+      return `${id}|${date}|${time}|a${adults}|c${children}|n${infants}|bo${bookingOption}|ao${addOnsSig}`;
+    }).join('||');
+
+    return `${cartSig}::${(pricingData?.currency || currency || 'USD').toUpperCase()}::${pricingData?.total || 0}::${discount || ''}`;
+  }, [currency]);
 
   // Helper function to validate email format
   const isValidEmail = useCallback((email: string) => {
@@ -192,7 +229,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     }
 
     // Check if cart/pricing has actually changed
-    const currentCartHash = getCartHash(cart, pricing);
+    const currentCartHash = getCartHash(cart, pricing, discountCode);
     
     // If we already have a payment intent and cart hasn't changed, don't create another
     if (paymentIntentCreatedRef.current && clientSecret && lastCartHashRef.current === currentCartHash) {

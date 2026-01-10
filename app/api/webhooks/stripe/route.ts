@@ -160,11 +160,43 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const adultPrice = basePrice * (item.a || 1);
       const childPrice = (basePrice / 2) * (item.c || 0);
       let itemTotal = adultPrice + childPrice;
+
+      // Add-ons from metadata (ao: [{id,q,p,pg,t}])
+      const addOns = Array.isArray(item.ao) ? item.ao : [];
+      if (addOns.length > 0) {
+        const totalGuestsForAddOns = (item.a || 0) + (item.c || 0);
+        for (const ao of addOns) {
+          const qty = Number(ao?.q || 0);
+          if (!Number.isFinite(qty) || qty <= 0) continue;
+          const price = Number(ao?.p || 0);
+          const perGuest = !!ao?.pg;
+          const multiplier = perGuest ? totalGuestsForAddOns : 1;
+          itemTotal += price * multiplier * qty;
+        }
+      }
       const serviceFee = itemTotal * 0.03;
       const tax = itemTotal * 0.05;
       itemTotal = itemTotal + serviceFee + tax;
 
       const bookingReference = await generateUniqueBookingReference();
+
+      const selectedAddOns: Record<string, number> = {};
+      const selectedAddOnDetails: Record<string, any> = {};
+      if (Array.isArray(item.ao)) {
+        for (const ao of item.ao) {
+          if (!ao?.id) continue;
+          const qty = Number(ao?.q || 0);
+          if (!Number.isFinite(qty) || qty <= 0) continue;
+          selectedAddOns[ao.id] = qty;
+          selectedAddOnDetails[ao.id] = {
+            id: ao.id,
+            title: ao.t || 'Add-on',
+            price: Number(ao.p || 0),
+            category: 'add-on',
+            perGuest: !!ao.pg,
+          };
+        }
+      }
 
       const booking = await Booking.create({
         bookingReference,
@@ -182,6 +214,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         adultGuests: item.a || 1,
         childGuests: item.c || 0,
         infantGuests: item.n || 0,
+        selectedAddOns: Object.keys(selectedAddOns).length > 0 ? selectedAddOns : undefined,
+        selectedAddOnDetails: Object.keys(selectedAddOnDetails).length > 0 ? selectedAddOnDetails : undefined,
         selectedBookingOption: item.bo ? {
           id: item.bo,
           title: item.bot || '',
