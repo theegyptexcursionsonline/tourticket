@@ -147,7 +147,10 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   
   // Use settings for consistent price formatting with currency conversion
-  const { formatPrice } = useSettings();
+  const { formatPrice, selectedCurrency } = useSettings();
+  
+  // Check if display currency is different from charge currency (USD)
+  const isDisplayCurrencyDifferent = selectedCurrency.code !== 'USD';
   
   // Use refs to track if we've already created a payment intent for this cart
   const paymentIntentCreatedRef = useRef(false);
@@ -375,9 +378,14 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
             Secure Payment
           </p>
           <p className="text-3xl font-extrabold mt-2">{formattedTotal}</p>
-            <p className="text-sm text-white/80">
-              for {numberOfTours} {numberOfTours === 1 ? 'experience' : 'experiences'}
+          <p className="text-sm text-white/80">
+            for {numberOfTours} {numberOfTours === 1 ? 'experience' : 'experiences'}
+          </p>
+          {isDisplayCurrencyDifferent && (
+            <p className="text-xs text-white/60 mt-1">
+              You will be charged ${(pricing?.total ?? amount ?? 0).toFixed(2)} USD
             </p>
+          )}
         </div>
         <div className="space-y-2 text-sm text-white/90">
           <div className="flex items-center gap-2">
@@ -430,6 +438,16 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
             Powered by Stripe
           </div>
         </div>
+
+        {isDisplayCurrencyDifferent && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-xs text-amber-700">
+              <strong>Currency Notice:</strong> Your payment will be processed in USD (${(pricing?.total ?? amount ?? 0).toFixed(2)}). 
+              The displayed {selectedCurrency.code} amount is an estimate based on current exchange rates. 
+              Your bank may apply additional conversion fees.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

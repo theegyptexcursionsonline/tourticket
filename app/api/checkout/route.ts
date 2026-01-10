@@ -214,8 +214,10 @@ export async function POST(request: Request) {
     }
 
     // Always compute pricing on the server to avoid stale/incorrect totals in emails/PDFs
-    const currencyCode = (pricing?.currency || 'USD').toUpperCase();
-    const currencySymbol = pricing?.symbol || getCurrencySymbolFromCode(currencyCode);
+    // IMPORTANT: Always use USD since all prices are stored and charged in USD
+    // Client may send display currency (EUR, GBP, etc.) but we ignore it for actual charges
+    const currencyCode = 'USD';
+    const currencySymbol = '$';
     const computedSubtotal = calculateCartSubtotal(cart || []);
     let computedDiscount = 0;
     if (discountCode) {

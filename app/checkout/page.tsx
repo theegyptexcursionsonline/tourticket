@@ -802,7 +802,7 @@ const ThankYouPage = ({
   lastOrderId?: string;
   discount?: number;
 }) => {
-  const { formatPrice } = useSettings();
+  const { formatPrice, convertPrice, selectedCurrency } = useSettings();
   const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
@@ -850,14 +850,25 @@ const handleDownloadReceipt = async () => {
   try {
     const orderId = lastOrderId ?? `ORD-${Date.now()}`;
 
+    // PDF shows actual charged amount in USD (base currency)
+    // Plus approximate equivalent in user's display currency for reference
+    const isDisplayCurrencyDifferent = selectedCurrency.code !== 'USD';
+    
     const pricingForPdf = {
+      // Actual charged amounts (USD)
       subtotal: pricing.subtotal,
       serviceFee: pricing.serviceFee,
       tax: pricing.tax,
       discount: pricing.discount,
       total: pricing.total,
-      currency: pricing.currency,
-      symbol: pricing.symbol,
+      currency: 'USD',
+      symbol: '$',
+      // Display currency equivalent (for reference)
+      ...(isDisplayCurrencyDifferent && {
+        displayCurrency: selectedCurrency.code,
+        displaySymbol: selectedCurrency.symbol,
+        displayTotal: convertPrice(pricing.total),
+      }),
     };
 
     const orderedItemsForPdf = orderedItems.map((item) => {
@@ -882,10 +893,12 @@ const handleDownloadReceipt = async () => {
         return tourTotal + addOnsTotal;
       };
 
+      // Keep item prices in USD (actual charged amount)
+      const itemTotalUsd = getItemTotal(item);
       return {
         ...item,
-        totalPrice: getItemTotal(item),
-        finalPrice: getItemTotal(item),
+        totalPrice: itemTotalUsd,
+        finalPrice: itemTotalUsd,
       };
     });
 
@@ -1391,10 +1404,12 @@ export default function CheckoutPage() {
     tax,
     total,
     discount,
-    currency: selectedCurrency?.code ?? 'USD',
-    symbol: selectedCurrency?.symbol ?? '$',
+    // Always use USD for pricing since all prices are stored and charged in USD
+    // The UI uses formatPrice() for display conversion to user's preferred currency
+    currency: 'USD',
+    symbol: '$',
   };
-}, [cart, discount, selectedCurrency]);
+}, [cart, discount]);
 
   // Set customer type based on authentication status
   useEffect(() => {

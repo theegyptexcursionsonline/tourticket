@@ -122,6 +122,10 @@ export interface ReceiptPricing {
   total?: number;
   currency?: string;
   symbol?: string;
+  // Display currency equivalent (when different from charged currency)
+  displayCurrency?: string;
+  displaySymbol?: string;
+  displayTotal?: number;
 }
 
 export interface ReceiptCustomer {
@@ -158,11 +162,17 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
   } = payload;
 
   const currencySymbol = pricing?.symbol ?? '$';
+  const currencyCode = pricing?.currency ?? 'USD';
   const subtotal = round2(toNumber(pricing?.subtotal ?? 0));
   const serviceFee = round2(toNumber(pricing?.serviceFee ?? 0));
   const tax = round2(toNumber(pricing?.tax ?? 0));
   const discount = round2(toNumber(pricing?.discount ?? 0));
   const total = round2(toNumber(pricing?.total ?? 0));
+  
+  // Display currency (when different from charged currency)
+  const hasDisplayCurrency = pricing?.displayCurrency && pricing.displayCurrency !== currencyCode;
+  const displaySymbol = pricing?.displaySymbol ?? '';
+  const displayTotal = round2(toNumber(pricing?.displayTotal ?? 0));
 
   // Parse booking date
   const bookingDateStr = booking?.date || new Date().toISOString().split('T')[0];
@@ -416,11 +426,23 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
 
   y -= 8;
 
-  page.drawRectangle({ x: pricingX - 15, y: y - 8, width: pageWidth - margin - pricingX + 15, height: 28, color: colors.veryLightGray });
-  page.drawText('Total Paid', { x: pricingX, y: y, font: boldFont, size: 11, color: colors.black });
-  const totalText = `${currencySymbol}${total.toFixed(2)}`;
+  // Total box height depends on whether we show display currency equivalent
+  const totalBoxHeight = hasDisplayCurrency ? 48 : 28;
+  page.drawRectangle({ x: pricingX - 15, y: y - (totalBoxHeight - 20), width: pageWidth - margin - pricingX + 15, height: totalBoxHeight, color: colors.veryLightGray });
+  
+  page.drawText('Total Charged', { x: pricingX, y: y, font: boldFont, size: 11, color: colors.black });
+  const totalText = `${currencySymbol}${total.toFixed(2)} ${currencyCode}`;
   const totalWidth = boldFont.widthOfTextAtSize(totalText, 16);
   page.drawText(totalText, { x: pageWidth - margin - totalWidth, y: y - 2, font: boldFont, size: 16, color: colors.black });
+
+  // Show display currency equivalent if different from charged currency
+  if (hasDisplayCurrency && displayTotal > 0) {
+    y -= 22;
+    const equivalentText = `≈ ${displaySymbol}${displayTotal.toFixed(2)} ${pricing?.displayCurrency}`;
+    const equivalentWidth = font.widthOfTextAtSize(equivalentText, 10);
+    page.drawText('Approximate', { x: pricingX, y: y, font: font, size: 9, color: colors.gray });
+    page.drawText(equivalentText, { x: pageWidth - margin - equivalentWidth, y: y, font: font, size: 10, color: colors.gray });
+  }
 
   // BOTTOM GRADIENT BAR
   const bottomBarY = 30;
