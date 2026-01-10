@@ -68,6 +68,20 @@ export async function PUT(request: NextRequest) {
 
     await dbConnect();
 
+    const toNumberQty = (value: any, fallback = 1): number => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string') {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+        return fallback;
+      }
+      if (value && typeof value === 'object') {
+        const inner = (value as any).quantity ?? (value as any).qty ?? (value as any).count;
+        return toNumberQty(inner, fallback);
+      }
+      return fallback;
+    };
+
     // Transform cart items to match schema
     const cartItems = cart.map((item: any) => ({
       tourId: item.id || item.tourId,
@@ -84,7 +98,7 @@ export async function PUT(request: NextRequest) {
         id: addon.id,
         name: addon.name || addon.title,
         price: addon.price || 0,
-        quantity: addon.quantity || 1,
+        quantity: toNumberQty(addon.quantity, 1),
         category: addon.category || 'add-on',
         perGuest: addon.perGuest ?? false,
       })),
@@ -144,6 +158,20 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
+    const toNumberQty = (value: any, fallback = 1): number => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string') {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+        return fallback;
+      }
+      if (value && typeof value === 'object') {
+        const inner = (value as any).quantity ?? (value as any).qty ?? (value as any).count;
+        return toNumberQty(inner, fallback);
+      }
+      return fallback;
+    };
+
     const cartItem = {
       tourId: item.id || item.tourId,
       tourSlug: item.slug || item.tourSlug,
@@ -159,7 +187,7 @@ export async function POST(request: NextRequest) {
         id: addon.id,
         name: addon.name || addon.title,
         price: addon.price || 0,
-        quantity: addon.quantity || 1,
+        quantity: toNumberQty(addon.quantity, 1),
         category: addon.category || 'add-on',
         perGuest: addon.perGuest ?? false,
       })),

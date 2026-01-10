@@ -196,6 +196,27 @@ test('OLD FORMAT: Total missing add-ons (confirms the bug)', () => {
 });
 
 // ============================================================
+// Test 4b: Corrupted Quantity (real-world bug)
+// ============================================================
+console.log('\nTest 4b: Corrupted quantity value (object instead of number)');
+
+const cartItemCorruptedQty = {
+  price: 40,
+  quantity: 2,
+  childQuantity: 0,
+  selectedAddOns: { 'private-tour': { id: 'private-tour', name: 'Private Tour', price: 35, quantity: 1 } }, // WRONG type
+  selectedAddOnDetails: {
+    'private-tour': { id: 'private-tour', title: 'Private Tour', price: 35, category: 'add-on', perGuest: false }
+  }
+};
+
+const resultCorrupt = getItemTotal(cartItemCorruptedQty);
+
+test('CORRUPT: Add-ons total becomes 0 because quantity is an object (NaN > 0)', () => {
+  return resultCorrupt.addOnsTotal === 0;
+});
+
+// ============================================================
 // Test 5: After Transformation (FIX APPLIED)
 // ============================================================
 console.log('\nTest 5: After transformation (FIX applied)');
@@ -226,6 +247,45 @@ test('FIXED: Add-ons total is now €35', () => {
 
 test('FIXED: Total includes add-ons (€80 + €35 = €115)', () => {
   return result4.total === 115;
+});
+
+// ============================================================
+// Test 6: Normalization of corrupted quantity (FIX APPLIED)
+// ============================================================
+console.log('\nTest 6: Normalization fixes corrupted quantity');
+
+function toNumberQty(value: any, fallback = 1): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+    return fallback;
+  }
+  if (value && typeof value === 'object') {
+    const inner = value.quantity ?? value.qty ?? value.count;
+    return toNumberQty(inner, fallback);
+  }
+  return fallback;
+}
+
+function normalizeSelectedAddOns(selectedAddOns: any) {
+  const next: Record<string, number> = {};
+  if (!selectedAddOns || typeof selectedAddOns !== 'object') return next;
+  for (const [k, v] of Object.entries(selectedAddOns)) {
+    next[k] = toNumberQty(v, 1);
+  }
+  return next;
+}
+
+const fixedCorrupt = {
+  ...cartItemCorruptedQty,
+  selectedAddOns: normalizeSelectedAddOns(cartItemCorruptedQty.selectedAddOns),
+};
+
+const resultFixedCorrupt = getItemTotal(fixedCorrupt);
+
+test('FIXED: Add-ons total is €35 after normalization', () => {
+  return resultFixedCorrupt.addOnsTotal === 35;
 });
 
 // ============================================================
