@@ -5,6 +5,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { loadStripe } from '@stripe/stripe-js';
 import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSettings } from '@/hooks/useSettings';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -144,6 +145,9 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  
+  // Use settings for consistent price formatting with currency conversion
+  const { formatPrice } = useSettings();
   
   // Use refs to track if we've already created a payment intent for this cart
   const paymentIntentCreatedRef = useRef(false);
@@ -357,14 +361,9 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     },
   };
 
+  // Use formatPrice for consistent currency conversion with the rest of the app
   const displayTotal = pricing?.total ?? amount ?? 0;
-  const displayCurrency = (pricing?.currency || currency || 'USD').toUpperCase();
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: displayCurrency,
-    minimumFractionDigits: 2,
-  });
-  const formattedTotal = formatter.format(displayTotal);
+  const formattedTotal = formatPrice(displayTotal);
   const numberOfTours = cart?.length || 1;
 
   return (

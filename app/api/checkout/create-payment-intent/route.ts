@@ -173,10 +173,12 @@ export async function POST(request: Request) {
     }));
 
     // Create a PaymentIntent with Stripe - including full booking data for webhook recovery
+    // IMPORTANT: Always charge in USD since all prices are stored in USD
+    // The display currency is for user convenience only - Stripe handles card currency conversion
     const stripe = getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100), // Stripe expects amount in cents
-      currency: (pricing.currency || 'USD').toLowerCase(),
+      currency: 'usd', // Always charge in USD - prices are stored in USD
       description: `Booking for ${cart.length} tour${cart.length > 1 ? 's' : ''}`,
       metadata: {
         // Customer info
@@ -200,7 +202,7 @@ export async function POST(request: Request) {
         pricing_tax: String(tax),
         pricing_discount: String(discount || 0),
         pricing_total: String(total),
-        pricing_currency: pricing.currency || 'USD',
+        pricing_currency: 'USD', // Always USD - prices are stored and charged in USD
         // Discount
         discount_code: discountCode || 'none',
         // Flag to indicate this has booking data for webhook processing
@@ -222,7 +224,7 @@ export async function POST(request: Request) {
         tax,
         discount,
         total,
-        currency: (pricing.currency || 'USD').toUpperCase(),
+        currency: 'USD', // Always USD - prices are stored and charged in USD
       },
     });
 
