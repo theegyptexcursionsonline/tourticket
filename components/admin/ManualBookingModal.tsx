@@ -95,7 +95,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     tax: 0,
 
     // Payment
-    paymentMethod: 'external' as 'external' | 'cash' | 'bank' | 'pay_later',
+    paymentMethod: 'external' as 'external' | 'cash' | 'bank',
     paymentId: '',
     paymentStatus: 'paid' as 'paid' | 'pending',
 
@@ -721,12 +721,11 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                       { value: 'external', label: 'External (Stripe)', icon: CreditCard },
                       { value: 'cash', label: 'Cash', icon: DollarSign },
                       { value: 'bank', label: 'Bank Transfer', icon: FileText },
-                      { value: 'pay_later', label: 'Pay Later', icon: Clock },
                     ].map((method) => (
                       <button
                         key={method.value}
                         type="button"
-                        onClick={() => setFormData({ ...formData, paymentMethod: method.value as 'external' | 'cash' | 'bank' | 'pay_later' })}
+                        onClick={() => setFormData({ ...formData, paymentMethod: method.value as 'external' | 'cash' | 'bank' })}
                         className={`p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
                           formData.paymentMethod === method.value
                             ? 'border-blue-500 bg-blue-50 text-blue-700'

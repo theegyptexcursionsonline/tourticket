@@ -326,20 +326,19 @@ export async function POST(request: Request) {
     // Process payment based on payment method
     let paymentResult;
     const isBankTransfer = paymentMethod === 'bank';
-    const isPayLater = paymentMethod === 'pay_later';
+    const isCardPayment = !isBankTransfer;
+
+    if (paymentMethod === 'pay_later') {
+      return NextResponse.json(
+        { success: false, message: 'Pay Later is currently unavailable. Please select another payment method.' },
+        { status: 400 }
+      );
+    }
 
     if (isBankTransfer) {
       // For bank transfer, no Stripe processing needed
       paymentResult = {
         paymentId: `BANK-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-        status: 'pending',
-        amount: pricing.total,
-        currency: (pricing.currency || 'USD').toUpperCase(),
-      };
-    } else if (isPayLater) {
-      // For pay later, no payment processing needed
-      paymentResult = {
-        paymentId: `PAYLATER-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         status: 'pending',
         amount: pricing.total,
         currency: (pricing.currency || 'USD').toUpperCase(),
@@ -419,10 +418,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send Payment Confirmation or Bank Transfer Instructions or Pay Later Instructions
-    try {
-      if (isBankTransfer) {
-        // Send bank transfer instructions email
+    if (isBankTransfer) {
+      // Send bank transfer instructions email
+      try {
         await EmailService.sendBankTransferInstructions({
           customerName: `${customer.firstName} ${customer.lastName}`,
           customerEmail: customer.email,
@@ -442,26 +440,29 @@ export async function POST(request: Request) {
           hotelPickupDetails: customer.hotelPickupDetails,
           baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
         });
-      } else if (isPayLater) {
-        // Pay later - no payment email needed, booking confirmation will be sent separately
-        console.log('Pay Later booking - skipping payment confirmation email');
-      } else {
-        // Send regular payment confirmation for card payments
-        await EmailService.sendPaymentConfirmation({
-          customerName: `${customer.firstName} ${customer.lastName}`,
-          customerEmail: customer.email,
-          paymentId: paymentResult.paymentId,
-          paymentMethod: paymentMethod,
-          amount: `$${pricing.total.toFixed(2)}`,
-          currency: paymentResult.currency,
-          bookingId: `BOOKING-${Date.now()}`,
-          tourTitle: cart.length === 1 ? cart[0].title : `${cart.length} Tours`,
-          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
-        });
+      } catch (emailError) {
+        console.error('Failed to send bank transfer email:', emailError);
+        // Don't fail the booking if email fails
       }
-    } catch (emailError) {
-      console.error('Failed to send payment/bank transfer email:', emailError);
-      // Don't fail the booking if email fails
+    }
+
+    // For card payments, Stripe webhook is the single source of truth for bookings/emails.
+    if (isCardPayment) {
+      const existingBooking = await Booking.findOne({ paymentId: paymentResult.paymentId }).lean();
+      return NextResponse.json({
+        success: true,
+        message: existingBooking
+          ? 'Booking already confirmed!'
+          : 'Payment received. Your booking will be confirmed shortly.',
+        bookingId: existingBooking?.bookingReference,
+        bookings: existingBooking ? [existingBooking._id] : [],
+        paymentId: paymentResult.paymentId,
+        customer: {
+          name: `${customer.firstName} ${customer.lastName}`,
+          email: customer.email,
+        },
+        pending: !existingBooking,
+      });
     }
 
     // Create bookings with generated references
@@ -515,7 +516,7 @@ export async function POST(request: Request) {
           guests: totalGuests,
           totalPrice: itemTotalPrice,
             currency: paymentResult.currency || pricing.currency || 'USD', // Store the currency
-          status: (isBankTransfer || isPayLater) ? 'Pending' : 'Confirmed',
+          status: isBankTransfer ? 'Pending' : 'Confirmed',
           paymentId: paymentResult.paymentId,
           paymentMethod,
           specialRequests: customer.specialRequests,

@@ -159,7 +159,12 @@ export async function POST(request: Request) {
     let paymentMethod = 'card';
     if (payment?.method === 'cash') paymentMethod = 'cash';
     else if (payment?.method === 'bank') paymentMethod = 'bank';
-    else if (payment?.method === 'pay_later') paymentMethod = 'pay_later';
+    else if (payment?.method === 'pay_later') {
+      return NextResponse.json(
+        { error: 'Pay Later is currently unavailable. Please select another payment method.' },
+        { status: 400 }
+      );
+    }
 
     // Generate booking reference
     const bookingReference = await generateUniqueBookingReference();
