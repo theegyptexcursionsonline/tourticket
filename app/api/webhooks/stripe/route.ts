@@ -202,7 +202,16 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const discountCode = metadata.discount_code && metadata.discount_code !== 'none' 
         ? metadata.discount_code.toUpperCase() 
         : undefined;
-      const discountAmount = parseFloat(metadata.pricing_discount) || 0;
+      const totalDiscount = parseFloat(metadata.pricing_discount) || 0;
+      const pricingSubtotal = parseFloat(metadata.pricing_subtotal) || itemTotal;
+      
+      // For discount: if single item, apply full discount; if multiple items, prorate based on item's share
+      const itemDiscountShare = cartData.length === 1 
+        ? totalDiscount 
+        : Math.round((itemTotal / pricingSubtotal) * totalDiscount * 100) / 100;
+      
+      // Final total for this item (with discount applied)
+      const itemTotalWithDiscount = Math.max(0, itemTotal - itemDiscountShare);
 
       const booking = await Booking.create({
         bookingReference,
@@ -212,7 +221,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         dateString: bookingDateString,
         time: bookingTime,
         guests: totalGuests,
-        totalPrice: itemTotal,
+        totalPrice: itemTotalWithDiscount,
         currency: (metadata.pricing_currency || paymentIntent.currency || 'USD').toUpperCase(), // Store currency
         status: 'Confirmed',
         paymentId: paymentId,
@@ -229,7 +238,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         } : undefined,
         // Store discount info if a promo code was applied
         discountCode: discountCode,
-        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+        discountAmount: itemDiscountShare > 0 ? itemDiscountShare : undefined,
       });
 
       createdBookings.push({

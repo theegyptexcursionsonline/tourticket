@@ -499,7 +499,15 @@ export async function POST(request: Request) {
           return subtotal + serviceFee + tax;
         };
 
-        const itemTotalPrice = calculateItemTotal();
+        const itemTotalBeforeDiscount = calculateItemTotal();
+        
+        // For discount: if single item, apply full discount; if multiple items, prorate based on item's share
+        const itemDiscountShare = cart.length === 1 
+          ? computedPricing.discount 
+          : round2((itemTotalBeforeDiscount / computedPricing.subtotal) * computedPricing.discount);
+        
+        // Final total for this item (with discount applied)
+        const itemTotalPrice = round2(Math.max(0, itemTotalBeforeDiscount - itemDiscountShare));
 
         // Generate unique booking reference
         const bookingReference = await generateUniqueBookingReference();
@@ -531,7 +539,7 @@ export async function POST(request: Request) {
           selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
           // Store discount info if a promo code was applied
           discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
-          discountAmount: computedPricing.discount > 0 ? computedPricing.discount : undefined,
+          discountAmount: itemDiscountShare > 0 ? itemDiscountShare : undefined,
         });
         } catch (createError: any) {
           // E11000 = duplicate key error - booking already exists (created by webhook)

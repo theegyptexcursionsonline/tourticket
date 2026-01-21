@@ -478,12 +478,15 @@ const BookingDetailPage = () => {
     const serviceFee = subtotal * 0.03;
     const tax = subtotal * 0.05;
 
-    // Calculate the correct total
-    const calculatedTotal = subtotal + serviceFee + tax;
+    // Get discount amount from booking record
+    const discount = booking.discountAmount || 0;
 
-    // Use the stored totalPrice if it seems reasonable, otherwise use calculated total
-    // This handles cases where the booking was created with incorrect totalPrice
-    const total = booking.totalPrice > subtotal ? booking.totalPrice : calculatedTotal;
+    // Calculate the correct total (subtract discount)
+    const calculatedTotal = Math.max(0, subtotal + serviceFee + tax - discount);
+
+    // Use the stored totalPrice if available and reasonable, otherwise use calculated total
+    // This handles cases where the booking was created with the discount already applied
+    const total = booking.totalPrice > 0 ? booking.totalPrice : calculatedTotal;
 
     return {
       adultPrice,
@@ -493,6 +496,7 @@ const BookingDetailPage = () => {
       addOnsTotal,
       serviceFee,
       tax,
+      discount,
       total
     };
   };
