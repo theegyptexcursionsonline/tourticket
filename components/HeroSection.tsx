@@ -464,7 +464,22 @@ const useIsMobile = (breakpoint = 768) => {
 };
 
 const useHeroSettings = (initialSettings?: HeroSettings | null) => {
-  const [settings, setSettings] = useState<HeroSettings>(initialSettings || DEFAULT_SETTINGS);
+  // Merge initial settings with defaults to ensure all required fields exist
+  const mergeWithDefaults = (settings: HeroSettings | null | undefined): HeroSettings => {
+    if (!settings) return DEFAULT_SETTINGS;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...settings,
+      backgroundImages: settings.backgroundImages?.length ? settings.backgroundImages : DEFAULT_SETTINGS.backgroundImages,
+      title: { ...DEFAULT_SETTINGS.title, ...settings.title },
+      searchSuggestions: settings.searchSuggestions?.length ? settings.searchSuggestions : DEFAULT_SETTINGS.searchSuggestions,
+      trustIndicators: { ...DEFAULT_SETTINGS.trustIndicators, ...settings.trustIndicators },
+      overlaySettings: { ...DEFAULT_SETTINGS.overlaySettings, ...settings.overlaySettings },
+      animationSettings: { ...DEFAULT_SETTINGS.animationSettings, ...settings.animationSettings },
+    };
+  };
+
+  const [settings, setSettings] = useState<HeroSettings>(mergeWithDefaults(initialSettings));
   // NOTE: we keep isLoading for internal use, but default it to false so UI doesn't block
   const [isLoading, setIsLoading] = useState(false);
 
@@ -479,7 +494,7 @@ const useHeroSettings = (initialSettings?: HeroSettings | null) => {
         if (response.ok) {
           const result = await response.json();
           if (result.success) {
-            setSettings(result.data);
+            setSettings(mergeWithDefaults(result.data));
           }
         }
       } catch (error) {
@@ -497,19 +512,20 @@ const useHeroSettings = (initialSettings?: HeroSettings | null) => {
   return { settings, isLoading };
 };
 
-const useSlidingText = (texts: string[], interval = 3000) => {
+const useSlidingText = (texts: string[] | undefined, interval = 3000) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const safeTexts = texts || [];
   
   useEffect(() => {
-    if (texts.length === 0) return;
+    if (safeTexts.length === 0) return;
     const timer = setInterval(() => 
-      setCurrentIndex((prev) => (prev + 1) % texts.length), 
+      setCurrentIndex((prev) => (prev + 1) % safeTexts.length), 
       interval
     );
     return () => clearInterval(timer);
-  }, [texts.length, interval]);
+  }, [safeTexts.length, interval]);
   
-  return texts[currentIndex] || texts[0] || "Search...";
+  return safeTexts[currentIndex] || safeTexts[0] || "Search...";
 };
 
 // --- Enhanced AI Chat Components ---
@@ -1891,8 +1907,8 @@ interface HeroSectionProps {
 export default function HeroSection({ initialSettings }: HeroSectionProps = {}) {
   const { settings } = useHeroSettings(initialSettings);
 
-  // Create slides from settings
-  const slides = settings.backgroundImages.map(img => ({
+  // Create slides from settings with defensive check
+  const slides = (settings.backgroundImages || []).map(img => ({
     src: img.desktop,
     alt: img.alt,
     caption: img.alt

@@ -529,6 +529,9 @@ export async function POST(request: Request) {
           selectedAddOns: cartItem.selectedAddOns || {},
           selectedBookingOption: cartItem.selectedBookingOption,
           selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
+          // Store discount info if a promo code was applied
+          discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
+          discountAmount: computedPricing.discount > 0 ? computedPricing.discount : undefined,
         });
         } catch (createError: any) {
           // E11000 = duplicate key error - booking already exists (created by webhook)
@@ -770,7 +773,10 @@ export async function POST(request: Request) {
         baseUrl,
         tours: tourDetails,
         timeUntil: timeUntilTour || undefined,
-        dateBadge
+        dateBadge,
+        // Include discount/promo code info if applied
+        discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
+        discountAmount: computedPricing.discount > 0 ? formatMoney(computedPricing.discount) : undefined,
       });
     } catch (emailError) {
       console.error('Failed to send admin alert email:', emailError);

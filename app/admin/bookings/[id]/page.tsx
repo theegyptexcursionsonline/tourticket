@@ -137,6 +137,9 @@ interface BookingDetails {
   refundAmount?: number;
   refundDate?: string;
   refundReason?: string;
+  // Discount tracking
+  discountCode?: string;
+  discountAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -1079,6 +1082,20 @@ const BookingDetailPage = () => {
                   <span>Tax (5%)</span>
                   <span>{getCurrencySymbol(booking.currency)}{pricing.tax.toFixed(2)}</span>
                 </div>
+                
+                {booking.discountAmount && booking.discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="flex items-center gap-2">
+                      Discount
+                      {booking.discountCode && (
+                        <span className="text-xs bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                          {booking.discountCode}
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-semibold">-{getCurrencySymbol(booking.currency)}{booking.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
 
                 <div className="border-t-2 border-slate-300 pt-3 mt-3 flex justify-between">
                   <span className="text-lg font-bold text-slate-900">Total Paid</span>
@@ -1119,6 +1136,24 @@ const BookingDetailPage = () => {
                     <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">
                       {booking.paymentId}
                     </code>
+                  }
+                />
+              )}
+              {booking.discountCode && (
+                <DetailItem 
+                  icon={Tag} 
+                  label="Promo Code Applied" 
+                  value={
+                    <div className="flex items-center gap-2">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        {booking.discountCode}
+                      </span>
+                      {booking.discountAmount && booking.discountAmount > 0 && (
+                        <span className="text-green-600 font-medium">
+                          (-{getCurrencySymbol(booking.currency)}{booking.discountAmount.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
                   }
                 />
               )}

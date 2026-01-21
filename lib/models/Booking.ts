@@ -69,6 +69,9 @@ export interface IBooking extends Document {
   refundAmount?: number;
   refundDate?: Date;
   refundReason?: string;
+  // Discount tracking
+  discountCode?: string;
+  discountAmount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -278,6 +281,17 @@ const BookingSchema: Schema<IBooking> = new Schema({
   refundReason: {
     type: String,
     maxlength: 500,
+  },
+
+  // Discount tracking
+  discountCode: {
+    type: String,
+    maxlength: 50,
+  },
+  discountAmount: {
+    type: Number,
+    min: 0,
+    default: 0,
   },
 }, {
   timestamps: true,

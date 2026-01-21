@@ -181,6 +181,9 @@ export interface AdminAlertData {
     monthLabel: string;
     year: number;
   };
+  // Discount/Promo code info
+  discountCode?: string;
+  discountAmount?: string;
 }
 
 export interface BookingStatusUpdateData extends BaseEmailData {

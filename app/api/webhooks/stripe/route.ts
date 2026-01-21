@@ -198,6 +198,12 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         }
       }
 
+      // Extract discount info from metadata
+      const discountCode = metadata.discount_code && metadata.discount_code !== 'none' 
+        ? metadata.discount_code.toUpperCase() 
+        : undefined;
+      const discountAmount = parseFloat(metadata.pricing_discount) || 0;
+
       const booking = await Booking.create({
         bookingReference,
         tour: tour._id,
@@ -221,6 +227,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           title: item.bot || '',
           price: item.bp || 0,
         } : undefined,
+        // Store discount info if a promo code was applied
+        discountCode: discountCode,
+        discountAmount: discountAmount > 0 ? discountAmount : undefined,
       });
 
       createdBookings.push({
@@ -282,6 +291,12 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
     console.log(`[Webhook] Sent booking confirmation to ${customerEmail}`);
 
+    // Extract discount info from metadata for admin email
+    const emailDiscountCode = metadata.discount_code && metadata.discount_code !== 'none' 
+      ? metadata.discount_code.toUpperCase() 
+      : undefined;
+    const emailDiscountAmount = parseFloat(metadata.pricing_discount) || 0;
+
     // Send admin alert
     await EmailService.sendAdminBookingAlert({
       customerName: `${customerFirstName} ${customerLastName}`,
@@ -295,6 +310,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       totalPrice: `$${pricingTotal.toFixed(2)}`,
       paymentMethod: 'card',
       baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+      // Include discount/promo code info if applied
+      discountCode: emailDiscountCode,
+      discountAmount: emailDiscountAmount > 0 ? `$${emailDiscountAmount.toFixed(2)}` : undefined,
     });
 
     console.log(`[Webhook] Sent admin alert for booking ${bookingId}`);

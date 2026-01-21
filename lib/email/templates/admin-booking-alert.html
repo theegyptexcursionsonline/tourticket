@@ -173,6 +173,7 @@
                                     <tr><td class="info-label">Email</td><td class="info-value"><a href="mailto:{{customerEmail}}">{{customerEmail}}</a></td></tr>
                                     {{#if customerPhone}}<tr><td class="info-label">Phone</td><td class="info-value">{{customerPhone}}</td></tr>{{/if}}
                                     <tr><td class="info-label">Payment</td><td class="info-value">{{paymentMethod}}</td></tr>
+                                    {{#if discountCode}}<tr><td class="info-label">Promo Code</td><td class="info-value" style="color: #16a34a; font-weight: 700;">{{discountCode}} (-{{discountAmount}})</td></tr>{{/if}}
                             </table>
                             </div>
                         </td>
