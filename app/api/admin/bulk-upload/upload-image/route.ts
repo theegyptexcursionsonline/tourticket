@@ -101,10 +101,3 @@ export async function POST(req: Request) {
         }, { status: 500 });
     }
 }
-
-// Configure for file uploads
-export const config = {
-    api: {
-        bodyParser: false,
-    },
-};
