@@ -7,6 +7,7 @@ import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
+import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -423,6 +424,11 @@ export async function PATCH(
 
       // Send notification to operator/admin
       try {
+        // Build hotel pickup map URLs if location exists
+        const hotelPickupLocation = updatedBooking.hotelPickupLocation as { lat: number; lng: number; name?: string; address?: string } | undefined;
+        const hotelPickupMapImage = hotelPickupLocation ? buildStaticMapImageUrl(hotelPickupLocation) : undefined;
+        const hotelPickupMapLink = hotelPickupLocation ? buildGoogleMapsLink(hotelPickupLocation) : undefined;
+
         await EmailService.sendOperatorBookingUpdate({
           bookingId,
           tourTitle,
@@ -435,7 +441,18 @@ export async function PATCH(
           changedBy: adminInfo?.name || 'Admin',
           changedAt: new Date().toISOString(),
           newStatus: status || oldStatus,
-          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
+          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+          // Hotel pickup info
+          hotelPickupDetails: updatedBooking.hotelPickupDetails,
+          hotelPickupLocation: hotelPickupLocation,
+          hotelPickupMapImage: hotelPickupMapImage || undefined,
+          hotelPickupMapLink: hotelPickupMapLink || undefined,
+          // Special requests
+          specialRequests: updatedBooking.specialRequests,
+          // Guest counts
+          adultGuests: updatedBooking.adultGuests,
+          childGuests: updatedBooking.childGuests,
+          infantGuests: updatedBooking.infantGuests,
         });
         console.log(`✅ Update notification sent to operator`);
       } catch (emailError) {

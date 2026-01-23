@@ -210,6 +210,22 @@ export interface OperatorBookingUpdateData {
   changedAt: string;
   newStatus: string;
   baseUrl?: string;
+  // Hotel pickup info
+  hotelPickupDetails?: string;
+  hotelPickupLocation?: {
+    lat: number;
+    lng: number;
+    name?: string;
+    address?: string;
+  };
+  hotelPickupMapImage?: string;
+  hotelPickupMapLink?: string;
+  // Special requests
+  specialRequests?: string;
+  // Guest counts
+  adultGuests?: number;
+  childGuests?: number;
+  infantGuests?: number;
 }
 
 export interface AdminInviteEmailData {

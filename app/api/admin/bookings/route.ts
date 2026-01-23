@@ -7,6 +7,7 @@ import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
 import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
+import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 
 // Helper function to generate unique booking reference
 async function generateUniqueBookingReference(): Promise<string> {
@@ -204,31 +205,115 @@ export async function POST(request: Request) {
 
     console.log(`[Manual Booking] Created booking ${bookingReference} for ${customer.email}`);
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    const formatMoney = (value: number) => `$${value.toFixed(2)}`;
+
+    // Build hotel pickup map URLs
+    const hotelPickupMapImage = hotelPickupLocation ? buildStaticMapImageUrl(hotelPickupLocation) : undefined;
+    const hotelPickupMapLink = hotelPickupLocation ? buildGoogleMapsLink(hotelPickupLocation) : undefined;
+
+    // Calculate time until tour
+    let timeUntilTour: { days: number; hours: number; minutes: number } | undefined;
+    if (bookingDate) {
+      const targetDate = new Date(bookingDate);
+      if (bookingTime) {
+        const [hours, minutes] = bookingTime.split(':').map(Number);
+        if (!Number.isNaN(hours)) {
+          targetDate.setHours(hours, Number.isNaN(minutes) ? 0 : minutes, 0, 0);
+        }
+      }
+      const diff = targetDate.getTime() - Date.now();
+      if (diff > 0) {
+        timeUntilTour = {
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        };
+      }
+    }
+
+    // Build date badge
+    let dateBadge: { dayLabel: string; dayNumber: number; monthLabel: string; year: number } | undefined;
+    if (bookingDate) {
+      const d = new Date(bookingDate);
+      dateBadge = {
+        dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        dayNumber: d.getDate(),
+        monthLabel: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        year: d.getFullYear(),
+      };
+    }
+
+    // Build ordered items for customer email
+    const orderedItems = [{
+      title: tour.title,
+      image: tour.image,
+      adults: booking.adultGuests || 1,
+      children: booking.childGuests || 0,
+      infants: booking.infantGuests || 0,
+      bookingOption: booking.bookingOption?.title,
+      totalPrice: formatMoney(pricing?.totalPrice || 0),
+      quantity: booking.adultGuests || 1,
+      childQuantity: booking.childGuests || 0,
+      infantQuantity: booking.infantGuests || 0,
+      price: booking.bookingOption?.price || 0,
+      selectedBookingOption: booking.bookingOption || undefined,
+    }];
+
+    // Build pricing details
+    const totalPrice = pricing?.totalPrice || 0;
+    const pricingDetails = {
+      subtotal: formatMoney(totalPrice * 0.92), // Approximate subtotal
+      serviceFee: formatMoney(totalPrice * 0.03),
+      tax: formatMoney(totalPrice * 0.05),
+      total: formatMoney(totalPrice),
+      currencySymbol: '$',
+    };
+
     // Send confirmation email to customer
     try {
       await EmailService.sendBookingConfirmation({
         customerName: `${customer.firstName} ${customer.lastName}`,
         customerEmail: customer.email,
+        customerPhone: customer.phone,
         tourTitle: tour.title,
         bookingDate: formatBookingDate(booking.date),
         bookingTime: bookingTime,
         participants: `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`,
-        totalPrice: `$${(pricing?.totalPrice || 0).toFixed(2)}`,
+        totalPrice: formatMoney(totalPrice),
         bookingId: bookingReference,
         bookingOption: booking.bookingOption?.title,
         specialRequests: specialRequests,
         hotelPickupDetails: hotelPickupDetails,
+        hotelPickupLocation: hotelPickupLocation || undefined,
+        hotelPickupMapImage: hotelPickupMapImage || undefined,
+        hotelPickupMapLink: hotelPickupMapLink || undefined,
         meetingPoint: tour.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
         contactNumber: "+20 11 42255624",
         tourImage: tour.image,
-        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
-        customerPhone: customer.phone,
+        baseUrl,
+        orderedItems,
+        pricingDetails,
+        timeUntil: timeUntilTour,
+        dateBadge,
       });
       console.log(`[Manual Booking] Sent confirmation email to ${customer.email}`);
     } catch (emailError) {
       console.error('[Manual Booking] Failed to send confirmation email:', emailError);
       // Don't fail the booking if email fails
     }
+
+    // Build tours array for admin alert
+    const tourDetails = [{
+      title: tour.title,
+      date: formatBookingDate(booking.date),
+      time: bookingTime,
+      adults: booking.adultGuests || 1,
+      children: booking.childGuests || 0,
+      infants: booking.infantGuests || 0,
+      bookingOption: booking.bookingOption?.title,
+      price: formatMoney(pricing?.totalPrice || 0),
+    }];
 
     // Send admin alert
     try {
@@ -239,11 +324,18 @@ export async function POST(request: Request) {
         tourTitle: tour.title,
         bookingId: bookingReference,
         bookingDate: formatBookingDate(booking.date),
-        totalPrice: `$${(pricing?.totalPrice || 0).toFixed(2)}`,
+        totalPrice: formatMoney(totalPrice),
         paymentMethod: `${paymentMethod} (Manual Entry)`,
         specialRequests: specialRequests,
         hotelPickupDetails: hotelPickupDetails,
-        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+        hotelPickupLocation: hotelPickupLocation || undefined,
+        hotelPickupMapImage: hotelPickupMapImage || undefined,
+        hotelPickupMapLink: hotelPickupMapLink || undefined,
+        tours: tourDetails,
+        timeUntil: timeUntilTour,
+        dateBadge,
+        adminDashboardLink: baseUrl ? `${baseUrl}/admin/bookings/${bookingReference}` : undefined,
+        baseUrl,
       });
     } catch (emailError) {
       console.error('[Manual Booking] Failed to send admin alert:', emailError);

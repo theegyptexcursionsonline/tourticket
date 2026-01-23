@@ -152,9 +152,47 @@
                                 <td class="info-value"><a href="tel:{{customerPhone}}">{{customerPhone}}</a></td>
                             </tr>
                             {{/if}}
+                            {{#if adultGuests}}
+                            <tr>
+                                <td class="info-label">Guests</td>
+                                <td class="info-value">{{adultGuests}} Adult{{#if childGuests}}{{#if (gt childGuests 0)}}, {{childGuests}} Child{{/if}}{{/if}}{{#if infantGuests}}{{#if (gt infantGuests 0)}}, {{infantGuests}} Infant{{/if}}{{/if}}</td>
+                            </tr>
+                            {{/if}}
                         </table>
                     </div>
                 </div>
+
+                {{#if hotelPickupDetails}}
+                <div class="info-card" style="background: linear-gradient(135deg, rgba(191,219,254,0.65), rgba(199,210,254,0.65)); border-color: #93c5fd;">
+                    <div class="info-header" style="background: rgba(59,130,246,0.1);">🏨 Hotel Pickup</div>
+                    <div class="info-body">
+                        <p style="margin: 0 0 10px; font-size: 15px; font-weight: 600; color: #0f172a;">{{hotelPickupDetails}}</p>
+                        {{#if hotelPickupLocation.address}}
+                        <p style="margin: 0; font-size: 13px; color: #475569;">📍 {{hotelPickupLocation.address}}</p>
+                        {{/if}}
+                        {{#if hotelPickupMapImage}}
+                        <div style="margin-top: 16px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(59,130,246,0.3);">
+                            {{#if hotelPickupMapLink}}
+                            <a href="{{hotelPickupMapLink}}">
+                                <img src="{{hotelPickupMapImage}}" alt="Pickup location map" style="width: 100%; display: block;">
+                            </a>
+                            {{else}}
+                            <img src="{{hotelPickupMapImage}}" alt="Pickup location map" style="width: 100%; display: block;">
+                            {{/if}}
+                        </div>
+                        {{/if}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{#if specialRequests}}
+                <div class="info-card" style="background: linear-gradient(135deg, rgba(254,215,170,0.6), rgba(253,230,138,0.6)); border-color: #fcd34d;">
+                    <div class="info-header" style="background: rgba(245,158,11,0.1);">📝 Special Requests</div>
+                    <div class="info-body">
+                        <p style="margin: 0; font-size: 14px; color: #92400e; font-style: italic;">"{{specialRequests}}"</p>
+                    </div>
+                </div>
+                {{/if}}
 
                 <div class="editor-card">
                     <div class="editor-label">Changed By</div>
