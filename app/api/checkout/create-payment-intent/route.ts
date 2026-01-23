@@ -176,6 +176,17 @@ export async function POST(request: Request) {
     // IMPORTANT: Always charge in USD since all prices are stored in USD
     // The display currency is for user convenience only - Stripe handles card currency conversion
     const stripe = getStripe();
+    
+    // Prepare hotel pickup location as compressed JSON (if available)
+    const hotelPickupLocationJson = customer.hotelPickupLocation 
+      ? JSON.stringify({
+          lat: customer.hotelPickupLocation.lat,
+          lng: customer.hotelPickupLocation.lng,
+          name: customer.hotelPickupLocation.name?.substring(0, 100) || '',
+          address: customer.hotelPickupLocation.address?.substring(0, 150) || '',
+        })
+      : '';
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100), // Stripe expects amount in cents
       currency: 'usd', // Always charge in USD - prices are stored in USD
@@ -187,6 +198,11 @@ export async function POST(request: Request) {
         customer_first_name: customer.firstName,
         customer_last_name: customer.lastName,
         customer_phone: customer.phone || '',
+        // Hotel pickup info (essential for operator/admin emails)
+        hotel_pickup_details: (customer.hotelPickupDetails || '').substring(0, 300),
+        hotel_pickup_location: hotelPickupLocationJson.substring(0, 500),
+        // Special requests
+        special_requests: (customer.specialRequests || '').substring(0, 500),
         // Tour info
         tours: cart.map((item: any) => item.title).join(', ').substring(0, 500),
         tour_count: String(cart.length),

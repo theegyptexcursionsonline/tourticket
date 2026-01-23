@@ -8,6 +8,7 @@ import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
+import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -100,6 +101,20 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     console.error(`[Webhook] Missing customer data for payment ${paymentId}`);
     return { created: false, reason: 'missing_customer_data' };
   }
+
+  // Extract hotel pickup info from metadata
+  const hotelPickupDetails = metadata.hotel_pickup_details || '';
+  let hotelPickupLocation: { lat: number; lng: number; name?: string; address?: string } | null = null;
+  try {
+    if (metadata.hotel_pickup_location) {
+      hotelPickupLocation = JSON.parse(metadata.hotel_pickup_location);
+    }
+  } catch (e) {
+    console.log(`[Webhook] Could not parse hotel pickup location for ${paymentId}`);
+  }
+
+  // Extract special requests
+  const specialRequests = metadata.special_requests || '';
 
   // Parse cart data from metadata
   let cartData;
@@ -240,6 +255,10 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         // Store discount info if a promo code was applied
         discountCode: discountCode,
         discountAmount: itemDiscountShare > 0 ? itemDiscountShare : undefined,
+        // Hotel pickup and special requests
+        hotelPickupDetails: hotelPickupDetails || undefined,
+        hotelPickupLocation: hotelPickupLocation || undefined,
+        specialRequests: specialRequests || undefined,
       });
 
       createdBookings.push({
@@ -280,23 +299,120 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       : `MULTI-${Date.now()}`;
 
     const emailBookingDate = formatBookingDate(mainBooking.booking.date);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     
+    // Build hotel pickup map image URLs
+    const hotelPickupMapImage = hotelPickupLocation ? buildStaticMapImageUrl(hotelPickupLocation) : undefined;
+    const hotelPickupMapLink = hotelPickupLocation ? buildGoogleMapsLink(hotelPickupLocation) : undefined;
+
+    // Helper to format money
+    const formatMoney = (value: number) => `$${value.toFixed(2)}`;
+
+    // Extract pricing from metadata
+    const pricingSubtotal = parseFloat(metadata.pricing_subtotal) || pricingTotal;
+    const pricingServiceFee = parseFloat(metadata.pricing_service_fee) || 0;
+    const pricingTax = parseFloat(metadata.pricing_tax) || 0;
+    const pricingDiscount = parseFloat(metadata.pricing_discount) || 0;
+
+    // Calculate time until tour
+    const tourDate = mainBooking.booking.date;
+    const tourTime = mainBooking.booking.time;
+    let timeUntilTour: { days: number; hours: number; minutes: number } | undefined;
+    if (tourDate) {
+      const targetDate = new Date(tourDate);
+      if (tourTime) {
+        const [hours, minutes] = tourTime.split(':').map(Number);
+        if (!Number.isNaN(hours)) {
+          targetDate.setHours(hours, Number.isNaN(minutes) ? 0 : minutes, 0, 0);
+        }
+      }
+      const diff = targetDate.getTime() - Date.now();
+      if (diff > 0) {
+        timeUntilTour = {
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        };
+      }
+    }
+
+    // Build date badge
+    let dateBadge: { dayLabel: string; dayNumber: number; monthLabel: string; year: number } | undefined;
+    if (tourDate) {
+      const d = new Date(tourDate);
+      dateBadge = {
+        dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        dayNumber: d.getDate(),
+        monthLabel: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        year: d.getFullYear(),
+      };
+    }
+
+    // Build ordered items array for customer email and receipt PDF
+    const orderedItems = createdBookings.map((item: any) => ({
+      title: item.tour?.title || 'Tour',
+      image: item.tour?.image,
+      adults: item.booking.adultGuests || 1,
+      children: item.booking.childGuests || 0,
+      infants: item.booking.infantGuests || 0,
+      bookingOption: item.booking.selectedBookingOption?.title,
+      totalPrice: formatMoney(item.booking.totalPrice || 0),
+      // Additional fields for receipt PDF generation
+      quantity: item.booking.adultGuests || 1,
+      childQuantity: item.booking.childGuests || 0,
+      infantQuantity: item.booking.infantGuests || 0,
+      price: item.booking.selectedBookingOption?.price || 0,
+      selectedBookingOption: item.booking.selectedBookingOption || undefined,
+    }));
+
+    // Send booking confirmation to customer
     await EmailService.sendBookingConfirmation({
       customerName: `${customerFirstName} ${customerLastName}`,
       customerEmail: customerEmail,
+      customerPhone: customerPhone,
       tourTitle: createdBookings.length === 1 
         ? mainBooking.tour?.title || 'Tour' 
         : `${createdBookings.length} Tours`,
       bookingDate: emailBookingDate,
       bookingTime: mainBooking.booking.time,
       participants: `${mainBooking.booking.guests} participant${mainBooking.booking.guests !== 1 ? 's' : ''}`,
-      totalPrice: `$${pricingTotal.toFixed(2)}`,
+      totalPrice: formatMoney(pricingTotal),
       bookingId: bookingId,
+      bookingOption: mainBooking.booking.selectedBookingOption?.title,
       meetingPoint: mainBooking.tour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
       contactNumber: "+20 11 42255624",
       tourImage: mainBooking.tour?.image,
-      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
-      customerPhone: customerPhone,
+      baseUrl,
+      // Hotel pickup info
+      hotelPickupDetails: hotelPickupDetails || undefined,
+      hotelPickupLocation: hotelPickupLocation || undefined,
+      hotelPickupMapImage: hotelPickupMapImage || undefined,
+      hotelPickupMapLink: hotelPickupMapLink || undefined,
+      // Special requests
+      specialRequests: specialRequests || undefined,
+      // Order summary
+      orderedItems,
+      // Pricing breakdown
+      pricingDetails: {
+        subtotal: formatMoney(pricingSubtotal),
+        serviceFee: formatMoney(pricingServiceFee),
+        tax: formatMoney(pricingTax),
+        discount: pricingDiscount > 0 ? formatMoney(pricingDiscount) : undefined,
+        total: formatMoney(pricingTotal),
+        currencySymbol: '$',
+      },
+      // Raw pricing values for receipt PDF generation
+      pricingRaw: {
+        subtotal: pricingSubtotal,
+        serviceFee: pricingServiceFee,
+        tax: pricingTax,
+        discount: pricingDiscount,
+        total: pricingTotal,
+        symbol: '$',
+      },
+      // Countdown
+      timeUntil: timeUntilTour,
+      dateBadge,
     });
 
     console.log(`[Webhook] Sent booking confirmation to ${customerEmail}`);
@@ -305,7 +421,35 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     const emailDiscountCode = metadata.discount_code && metadata.discount_code !== 'none' 
       ? metadata.discount_code.toUpperCase() 
       : undefined;
-    const emailDiscountAmount = parseFloat(metadata.pricing_discount) || 0;
+    const emailDiscountAmount = pricingDiscount;
+
+    // Build tours array for admin email (with all details)
+    const tourDetails = await Promise.all(createdBookings.map(async (item: any) => {
+      // Gather add-on titles
+      const addOns: string[] = [];
+      if (item.booking.selectedAddOnDetails) {
+        const details = item.booking.selectedAddOnDetails;
+        // Handle both Map and plain object
+        const entries = details instanceof Map ? Array.from(details.entries()) : Object.entries(details || {});
+        for (const [_id, detail] of entries) {
+          if (detail && (detail as any).title) {
+            addOns.push((detail as any).title);
+          }
+        }
+      }
+
+      return {
+        title: item.tour?.title || 'Tour',
+        date: formatBookingDate(item.booking.date),
+        time: item.booking.time,
+        adults: item.booking.adultGuests || 1,
+        children: item.booking.childGuests || 0,
+        infants: item.booking.infantGuests || 0,
+        bookingOption: item.booking.selectedBookingOption?.title,
+        addOns: addOns.length > 0 ? addOns : undefined,
+        price: formatMoney(item.booking.totalPrice || 0),
+      };
+    }));
 
     // Send admin alert
     await EmailService.sendAdminBookingAlert({
@@ -317,12 +461,25 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         : `${createdBookings.length} Tours`,
       bookingId: bookingId,
       bookingDate: emailBookingDate,
-      totalPrice: `$${pricingTotal.toFixed(2)}`,
+      totalPrice: formatMoney(pricingTotal),
       paymentMethod: 'card',
-      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+      baseUrl,
+      adminDashboardLink: baseUrl ? `${baseUrl}/admin/bookings/${bookingId}` : undefined,
+      // Hotel pickup info
+      hotelPickupDetails: hotelPickupDetails || undefined,
+      hotelPickupLocation: hotelPickupLocation || undefined,
+      hotelPickupMapImage: hotelPickupMapImage || undefined,
+      hotelPickupMapLink: hotelPickupMapLink || undefined,
+      // Special requests
+      specialRequests: specialRequests || undefined,
+      // Tours array with all details
+      tours: tourDetails,
+      // Countdown
+      timeUntil: timeUntilTour,
+      dateBadge,
       // Include discount/promo code info if applied
       discountCode: emailDiscountCode,
-      discountAmount: emailDiscountAmount > 0 ? `$${emailDiscountAmount.toFixed(2)}` : undefined,
+      discountAmount: emailDiscountAmount > 0 ? formatMoney(emailDiscountAmount) : undefined,
     });
 
     console.log(`[Webhook] Sent admin alert for booking ${bookingId}`);
