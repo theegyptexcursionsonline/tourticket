@@ -159,7 +159,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const basePrice = item.bp || 0;
       const adultPrice = basePrice * (item.a || 1);
       const childPrice = (basePrice / 2) * (item.c || 0);
-      let itemTotal = adultPrice + childPrice;
+      let itemSubtotal = adultPrice + childPrice;
 
       // Add-ons from metadata (ao: [{id,q,p,pg,t}])
       const addOns = Array.isArray(item.ao) ? item.ao : [];
@@ -171,12 +171,13 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           const price = Number(ao?.p || 0);
           const perGuest = !!ao?.pg;
           const multiplier = perGuest ? totalGuestsForAddOns : 1;
-          itemTotal += price * multiplier * qty;
+          itemSubtotal += price * multiplier * qty;
         }
       }
-      const serviceFee = itemTotal * 0.03;
-      const tax = itemTotal * 0.05;
-      itemTotal = itemTotal + serviceFee + tax;
+      const itemSubtotalRounded = Math.round(itemSubtotal * 100) / 100;
+      const serviceFee = itemSubtotalRounded * 0.03;
+      const tax = itemSubtotalRounded * 0.05;
+      const itemTotalBeforeDiscount = itemSubtotalRounded + serviceFee + tax;
 
       const bookingReference = await generateUniqueBookingReference();
 
@@ -203,15 +204,15 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         ? metadata.discount_code.toUpperCase() 
         : undefined;
       const totalDiscount = parseFloat(metadata.pricing_discount) || 0;
-      const pricingSubtotal = parseFloat(metadata.pricing_subtotal) || itemTotal;
+      const pricingSubtotal = parseFloat(metadata.pricing_subtotal) || itemSubtotalRounded;
       
       // For discount: if single item, apply full discount; if multiple items, prorate based on item's share
       const itemDiscountShare = cartData.length === 1 
         ? totalDiscount 
-        : Math.round((itemTotal / pricingSubtotal) * totalDiscount * 100) / 100;
+        : Math.round((itemSubtotalRounded / pricingSubtotal) * totalDiscount * 100) / 100;
       
       // Final total for this item (with discount applied)
-      const itemTotalWithDiscount = Math.max(0, itemTotal - itemDiscountShare);
+      const itemTotalWithDiscount = Math.max(0, itemTotalBeforeDiscount - itemDiscountShare);
 
       const booking = await Booking.create({
         bookingReference,

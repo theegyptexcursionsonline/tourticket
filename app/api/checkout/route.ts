@@ -483,30 +483,26 @@ export async function POST(request: Request) {
         const bookingTime = cartItem.selectedTime || '10:00';
         const totalGuests = (cartItem.quantity || 1) + (cartItem.childQuantity || 0) + (cartItem.infantQuantity || 0);
 
-        // Calculate the correct total price including add-ons and fees
-        const calculateItemTotal = () => {
-          const basePrice = cartItem.selectedBookingOption?.price || cartItem.discountPrice || cartItem.price || 0;
-          const adultPrice = basePrice * (cartItem.quantity || 1);
-          const childPrice = (basePrice / 2) * (cartItem.childQuantity || 0);
-          let tourTotal = adultPrice + childPrice;
+        // Compute per-item subtotal (no fees/tax) to match server discount basis.
+        // NOTE: overall discount is computed from computedPricing.subtotal (no fees/tax), so we prorate using the same basis.
+        const basePrice = cartItem.selectedBookingOption?.price || cartItem.discountPrice || cartItem.price || 0;
+        const adultPrice = basePrice * (cartItem.quantity || 1);
+        const childPrice = (basePrice / 2) * (cartItem.childQuantity || 0);
+        const addOnsTotal = calculateAddOnsTotal(cartItem);
 
-          const addOnsTotal = calculateAddOnsTotal(cartItem);
+        const itemSubtotal = round2(adultPrice + childPrice + addOnsTotal);
+        const itemServiceFee = round2(itemSubtotal * 0.03);
+        const itemTax = round2(itemSubtotal * 0.05);
+        const itemTotalBeforeDiscount = round2(itemSubtotal + itemServiceFee + itemTax);
 
-          const subtotal = tourTotal + addOnsTotal;
-          const serviceFee = subtotal * 0.03;
-          const tax = subtotal * 0.05;
+        const discountBase = computedPricing.subtotal || 0;
+        const itemDiscountShare = computedPricing.discount > 0
+          ? (cart.length === 1
+              ? computedPricing.discount
+              : round2(discountBase > 0 ? (itemSubtotal / discountBase) * computedPricing.discount : 0))
+          : 0;
 
-          return subtotal + serviceFee + tax;
-        };
-
-        const itemTotalBeforeDiscount = calculateItemTotal();
-        
-        // For discount: if single item, apply full discount; if multiple items, prorate based on item's share
-        const itemDiscountShare = cart.length === 1 
-          ? computedPricing.discount 
-          : round2((itemTotalBeforeDiscount / computedPricing.subtotal) * computedPricing.discount);
-        
-        // Final total for this item (with discount applied)
+        // Final total for this booking (with discount applied)
         const itemTotalPrice = round2(Math.max(0, itemTotalBeforeDiscount - itemDiscountShare));
 
         // Generate unique booking reference

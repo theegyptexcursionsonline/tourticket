@@ -482,11 +482,16 @@ const BookingDetailPage = () => {
     const discount = booking.discountAmount || 0;
 
     // Calculate the correct total (subtract discount)
-    const calculatedTotal = Math.max(0, subtotal + serviceFee + tax - discount);
+    const preDiscountTotal = subtotal + serviceFee + tax;
+    const calculatedTotal = Math.max(0, preDiscountTotal - discount);
 
-    // Use the stored totalPrice if available and reasonable, otherwise use calculated total
-    // This handles cases where the booking was created with the discount already applied
-    const total = booking.totalPrice > 0 ? booking.totalPrice : calculatedTotal;
+    // Prefer stored totalPrice when it already includes discount.
+    // For older bookings (before discount was subtracted at save time), totalPrice equals preDiscountTotal.
+    let total = booking.totalPrice > 0 ? booking.totalPrice : calculatedTotal;
+    const epsilon = 0.02; // tolerate rounding differences
+    if (discount > 0 && Math.abs(total - preDiscountTotal) <= epsilon) {
+      total = Math.max(0, preDiscountTotal - discount);
+    }
 
     return {
       adultPrice,
