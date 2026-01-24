@@ -796,6 +796,8 @@ export async function POST(request: Request) {
           timeUntil: timeUntilTour || undefined,
           customerPhone: customer.phone,
           dateBadge,
+          // Promo code info
+          discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
         });
         console.log(`[Checkout] Customer confirmation sent for bank transfer booking ${bookingId}`);
       } catch (emailError) {

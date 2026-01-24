@@ -183,7 +183,13 @@
                     <tr>
                         <td>
                             <div class="section pickup">
-                                <div class="section-title">Hotel Pickup</div>
+                                <div class="section-title">🏨 Hotel Pickup</div>
+                                {{#if hotelPickupLocation.name}}
+                                <p class="body-text" style="font-weight: 700; font-size: 16px; margin-bottom: 8px;">{{hotelPickupLocation.name}}</p>
+                                {{/if}}
+                                {{#if hotelPickupLocation.address}}
+                                <p class="body-text" style="color: #64748b; font-size: 13px; margin-bottom: 8px;">📍 {{hotelPickupLocation.address}}</p>
+                                {{/if}}
                                 <p class="body-text">{{hotelPickupDetails}}</p>
                                 {{#if hotelPickupMapImage}}
                                 <div class="pickup-map">
@@ -193,12 +199,12 @@
                                     </a>
                                     {{else}}
                                     <img src="{{hotelPickupMapImage}}" alt="Pickup location map">
-                                                {{/if}}
+                                    {{/if}}
                                 </div>
-                                                {{/if}}
-                                        </div>
-                                    </td>
-                                                </tr>
+                                {{/if}}
+                            </div>
+                        </td>
+                    </tr>
                     {{/if}}
 
                     {{#if specialRequests}}

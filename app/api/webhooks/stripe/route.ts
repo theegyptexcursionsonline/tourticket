@@ -214,6 +214,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             },
             timeUntil: timeUntilTour,
             dateBadge,
+            // Promo code info
+            discountCode: existingBooking.discountCode || undefined,
           });
           
           console.log(`[Webhook] Sent customer confirmation for updated booking ${existingBooking.bookingReference}`);
@@ -560,11 +562,15 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       // Countdown
       timeUntil: timeUntilTour,
       dateBadge,
+      // Promo code info
+      discountCode: metadata.discount_code && metadata.discount_code !== 'none' 
+        ? metadata.discount_code.toUpperCase() 
+        : undefined,
     });
 
     console.log(`[Webhook] Sent booking confirmation to ${customerEmail}`);
 
-    // Extract discount info from metadata for admin email
+    // Extract discount info for admin email
     const emailDiscountCode = metadata.discount_code && metadata.discount_code !== 'none' 
       ? metadata.discount_code.toUpperCase() 
       : undefined;

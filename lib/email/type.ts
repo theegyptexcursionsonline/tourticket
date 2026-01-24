@@ -77,6 +77,8 @@ export interface BookingEmailData extends BaseEmailData {
     hours: number;
     minutes: number;
   };
+  // Promo code if applied
+  discountCode?: string;
 }
 
 export interface PaymentEmailData extends BaseEmailData {
