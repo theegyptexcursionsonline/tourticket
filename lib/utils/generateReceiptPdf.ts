@@ -139,6 +139,8 @@ export interface ReceiptBooking {
   time?: string;
   guests?: number;
   specialRequests?: string;
+  // Tour info fallback
+  tourTitle?: string;
 }
 
 export interface ReceiptPayload {
@@ -163,11 +165,24 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
 
   const currencySymbol = pricing?.symbol ?? '$';
   const currencyCode = pricing?.currency ?? 'USD';
-  const subtotal = round2(toNumber(pricing?.subtotal ?? 0));
-  const serviceFee = round2(toNumber(pricing?.serviceFee ?? 0));
-  const tax = round2(toNumber(pricing?.tax ?? 0));
+  const rawTotal = round2(toNumber(pricing?.total ?? 0));
   const discount = round2(toNumber(pricing?.discount ?? 0));
-  const total = round2(toNumber(pricing?.total ?? 0));
+  
+  // If subtotal is missing/zero but total exists, calculate breakdown from total
+  // Formula: total = subtotal + serviceFee(3%) + tax(5%) - discount
+  // So: subtotal = (total + discount) / 1.08
+  let subtotal = round2(toNumber(pricing?.subtotal ?? 0));
+  let serviceFee = round2(toNumber(pricing?.serviceFee ?? 0));
+  let tax = round2(toNumber(pricing?.tax ?? 0));
+  
+  if (subtotal === 0 && rawTotal > 0) {
+    // Recalculate from total
+    subtotal = round2((rawTotal + discount) / 1.08);
+    serviceFee = round2(subtotal * 0.03);
+    tax = round2(subtotal * 0.05);
+  }
+  
+  const total = rawTotal;
   
   // Display currency (when different from charged currency)
   const hasDisplayCurrency = pricing?.displayCurrency && pricing.displayCurrency !== currencyCode;
@@ -228,11 +243,13 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
 
   y -= 35;
 
-  // Tour title and subtitle
+  // Tour title and subtitle - handle empty orderedItems gracefully
   const firstItem = orderedItems[0];
-  const tourTitle = orderedItems.length === 1
-    ? firstItem?.title || 'Tour Booking'
-    : `${orderedItems.length} Tours Booked`;
+  const tourTitle = orderedItems.length === 0
+    ? (booking?.tourTitle || 'Tour Booking') // Fallback when no items
+    : orderedItems.length === 1
+      ? firstItem?.title || booking?.tourTitle || 'Tour Booking'
+      : `${orderedItems.length} Tours Booked`;
 
   const textBlockTopY = y;
   const dateBadgeWidth = 70;
@@ -292,9 +309,18 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
   page.drawText('TIME', { x: margin + colWidth, y: gridY, font: boldFont, size: 8, color: colors.lightGray });
   page.drawText(booking?.time || 'Flexible', { x: margin + colWidth, y: gridY - 14, font: boldFont, size: 11, color: colors.black });
 
-  const totalGuests = orderedItems.reduce((sum: number, item) => {
+  // Calculate total guests with fallback to booking.guests if orderedItems is empty
+  let totalGuests = orderedItems.reduce((sum: number, item) => {
     return sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
   }, 0);
+  // Fallback: if no guests from items, try booking.guests
+  if (totalGuests === 0 && booking?.guests) {
+    totalGuests = toNumber(booking.guests);
+  }
+  // Final fallback: at least 1 guest
+  if (totalGuests === 0) {
+    totalGuests = 1;
+  }
   page.drawText('GUESTS', { x: margin + colWidth * 2, y: gridY, font: boldFont, size: 8, color: colors.lightGray });
   page.drawText(`${totalGuests} Total`, { x: margin + colWidth * 2, y: gridY - 14, font: boldFont, size: 11, color: colors.black });
 

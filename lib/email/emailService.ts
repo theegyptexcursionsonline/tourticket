@@ -113,6 +113,10 @@ export class EmailService {
         booking: {
           date: data.bookingDate,
           time: data.bookingTime,
+          tourTitle: data.tourTitle, // Pass tour title for PDF fallback
+          guests: typeof data.participants === 'string' 
+            ? parseInt(data.participants) || 1 
+            : 1,
         },
         qrData: verificationUrl,
       };
