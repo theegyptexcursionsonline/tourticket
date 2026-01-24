@@ -45,8 +45,8 @@ async function getHomePageData() {
       heroSettings,
       dayTrips
     ] = await Promise.all([
-      // Destinations with tour count
-      Destination.find({ isPublished: true })
+      // Destinations with tour count (only featured)
+      Destination.find({ isPublished: true, featured: true })
         .select('name slug image description country')
         .limit(8)
         .lean(),
