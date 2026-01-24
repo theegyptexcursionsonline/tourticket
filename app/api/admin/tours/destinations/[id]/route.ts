@@ -3,11 +3,16 @@ import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     
@@ -72,6 +77,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
 

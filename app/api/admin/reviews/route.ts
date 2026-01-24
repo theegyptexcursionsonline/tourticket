@@ -4,9 +4,14 @@ import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // GET all reviews for the admin panel
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
   try {
     const reviews = await Review.find({})

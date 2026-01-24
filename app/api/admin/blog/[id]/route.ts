@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import mongoose from 'mongoose';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     
@@ -71,6 +76,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     

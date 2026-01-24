@@ -3,8 +3,13 @@ import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     console.log('Starting to fetch attraction pages...');
     await dbConnect();
@@ -109,6 +114,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     

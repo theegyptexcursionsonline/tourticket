@@ -5,6 +5,7 @@ import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
 import mongoose from "mongoose";
 import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -121,6 +122,10 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Verify admin authentication
+    const auth = await verifyAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     try {
         await dbConnect();
         const { id } = await params;
@@ -155,6 +160,10 @@ export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Verify admin authentication
+    const auth = await verifyAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     try {
         await dbConnect();
         const { id } = await params;
@@ -172,6 +181,14 @@ export async function PUT(
         // Clean booking options to remove invalid enum values
         if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
             body.bookingOptions = cleanBookingOptions(body.bookingOptions);
+        }
+
+        // Clean main tour difficulty field
+        if (body.difficulty !== undefined) {
+            const validDifficulties = ['Easy', 'Moderate', 'Challenging', 'Difficult'];
+            if (!body.difficulty || !validDifficulties.includes(body.difficulty)) {
+                body.difficulty = 'Easy'; // Default to 'Easy' if invalid
+            }
         }
 
         // Handle category, attractions and interests arrays
@@ -319,6 +336,10 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Verify admin authentication
+    const auth = await verifyAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     try {
         await dbConnect();
         const { id } = await params;

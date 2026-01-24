@@ -2,11 +2,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ imageIndex: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     

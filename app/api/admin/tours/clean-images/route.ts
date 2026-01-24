@@ -4,6 +4,7 @@ import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import AttractionPage from '@/lib/models/AttractionPage'; // Add this import
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 const PLACEHOLDER_PATTERNS = [
   'your-cdn.com',
@@ -18,6 +19,10 @@ const isPlaceholderUrl = (url: string) => {
 };
 
 export async function POST() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     

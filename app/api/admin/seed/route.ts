@@ -5,6 +5,7 @@ import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import AttractionPage from '@/lib/models/AttractionPage';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // Utility function to generate URL-friendly slugs
 const generateSlug = (name: string): string =>
@@ -202,8 +203,13 @@ interface ImportReport {
 }
 
 export async function POST(request: Request) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   console.log('\n🚀 ============================================');
   console.log('   DATA IMPORT PROCESS STARTED');
+  console.log(`   Admin: ${auth.email}`);
   console.log('============================================\n');
   await dbConnect();
 

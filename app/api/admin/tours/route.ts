@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextResponse } from 'next/server';
 import { syncTourToAlgolia } from '@/lib/algolia';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // Helper function to clean booking options
 function cleanBookingOptions(bookingOptions: any[]): any[] {
@@ -87,6 +88,10 @@ async function fetchToursWithPopulate() {
 
 // GET all tours
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
 
   try {
@@ -102,6 +107,10 @@ export async function GET() {
 
 // POST a new tour
 export async function POST(request: Request) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
   
   try {
@@ -116,6 +125,14 @@ export async function POST(request: Request) {
     // Clean booking options to remove invalid enum values
     if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
       body.bookingOptions = cleanBookingOptions(body.bookingOptions);
+    }
+
+    // Clean main tour difficulty field
+    if (body.difficulty !== undefined) {
+      const validDifficulties = ['Easy', 'Moderate', 'Challenging', 'Difficult'];
+      if (!body.difficulty || !validDifficulties.includes(body.difficulty)) {
+        body.difficulty = 'Easy'; // Default to 'Easy' if invalid
+      }
     }
 
     // Handle category, attractions and interests arrays

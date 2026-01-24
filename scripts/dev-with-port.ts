@@ -3,13 +3,31 @@
 /**
  * Custom dev script that automatically finds an available port
  * if the default port is already in use
+ * 
+ * Usage:
+ *   pnpm dev              # Starts on port 3000 (or next available)
+ *   pnpm dev -- -p 3005   # Starts on port 3005 (or next available)
+ *   PORT=4000 pnpm dev    # Starts on port 4000 (or next available)
  */
 
 import { spawn } from 'child_process';
 import detectPort from 'detect-port';
 
-// Check if PORT is set in environment, otherwise use 3021
-const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3021;
+// Parse command line arguments for -p or --port flag
+function getPortFromArgs(): number | null {
+  const args = process.argv.slice(2);
+  const portIndex = args.findIndex(arg => arg === '-p' || arg === '--port');
+  if (portIndex !== -1 && args[portIndex + 1]) {
+    const port = parseInt(args[portIndex + 1], 10);
+    if (!isNaN(port)) return port;
+  }
+  return null;
+}
+
+// Priority: CLI args > ENV variable > default (3000)
+const CLI_PORT = getPortFromArgs();
+const ENV_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : null;
+const DEFAULT_PORT = CLI_PORT || ENV_PORT || 3000;
 const MAX_PORT_ATTEMPTS = 10;
 
 async function findAvailablePort(startPort: number): Promise<number> {

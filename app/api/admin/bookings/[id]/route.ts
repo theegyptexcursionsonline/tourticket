@@ -8,6 +8,7 @@ import { EmailService } from '@/lib/email/emailService';
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -70,6 +71,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
 
   try {
@@ -140,6 +145,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
 
   try {
@@ -500,6 +509,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
 
   try {

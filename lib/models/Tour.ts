@@ -434,9 +434,10 @@ const TourSchema: Schema<ITour> = new Schema({
     type: String, 
     default: 'Easy',
     enum: {
-      values: ['Easy', 'Moderate', 'Challenging', 'Difficult'],
+      values: ['', 'Easy', 'Moderate', 'Challenging', 'Difficult'],
       message: 'Difficulty must be Easy, Moderate, Challenging, or Difficult'
     },
+    set: (v: string) => v || 'Easy', // Auto-set empty values to 'Easy'
     index: true
   },
   maxGroupSize: { 

@@ -6,8 +6,13 @@ import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET(req: Request) {
+    // Verify admin authentication
+    const auth = await verifyAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     await dbConnect();
 
     try {

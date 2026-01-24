@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
-// import { isAdmin } from '@/lib/auth'; // Hypothetical auth check
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET(request: Request) {
-  // if (!isAdmin(request)) {
-  //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  // }
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
   
   await dbConnect();
 
@@ -20,9 +20,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  // if (!isAdmin(request)) {
-  //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  // }
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
 

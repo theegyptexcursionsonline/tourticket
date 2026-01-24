@@ -4,8 +4,13 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
 

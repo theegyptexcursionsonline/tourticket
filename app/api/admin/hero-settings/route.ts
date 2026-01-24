@@ -2,8 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     
@@ -90,6 +95,10 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     const body = await request.json();

@@ -6,6 +6,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import AttractionPage from '@/lib/models/AttractionPage';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 const models = {
     Tours: Tour,
@@ -14,6 +15,10 @@ const models = {
 };
 
 export async function POST(req: Request) {
+    // Verify admin authentication
+    const auth = await verifyAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     await dbConnect();
 
     try {

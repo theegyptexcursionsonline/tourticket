@@ -2,8 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     const posts = await Blog.find().sort({ createdAt: -1 }).lean();
@@ -15,6 +20,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     const data = await request.json();

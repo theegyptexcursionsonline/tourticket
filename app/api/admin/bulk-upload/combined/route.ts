@@ -4,12 +4,17 @@ import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 const findByName = async (Model: any, name: string) => {
     return Model.findOne({ name: new RegExp(`^${name}$`, 'i') }).lean();
 };
 
 export async function POST(req: Request) {
+    // Verify admin authentication
+    const auth = await verifyAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     await dbConnect();
 
     try {

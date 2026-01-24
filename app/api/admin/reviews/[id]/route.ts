@@ -2,12 +2,17 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // --- PATCH: Update a specific review (e.g., approve it) ---
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   const { id } = await params;
   await dbConnect();
 
@@ -36,6 +41,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   const { id } = await params;
   await dbConnect();
 

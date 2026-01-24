@@ -61,12 +61,23 @@ export async function POST(request: NextRequest) {
     });
 
     // --- Success Response ---
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful!',
       token,
       user: userPayload,
     });
+    
+    // Set authToken cookie for API authentication
+    response.cookies.set('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days for regular users
+      path: '/',
+    });
+    
+    return response;
 
   } catch (error: any) {
     console.error('Login Error:', error);

@@ -8,6 +8,7 @@ import Destination from '@/lib/models/Destination';
 import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // Helper function to generate unique booking reference
 async function generateUniqueBookingReference(): Promise<string> {
@@ -45,6 +46,10 @@ function formatBookingDate(dateString: string | Date | undefined): string {
 }
 
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
 
   try {
@@ -87,6 +92,10 @@ export async function GET() {
 
 // POST - Create manual booking
 export async function POST(request: Request) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
 
   try {

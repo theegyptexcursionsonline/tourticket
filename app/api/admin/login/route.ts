@@ -84,11 +84,22 @@ export async function POST(request: NextRequest) {
       );
 
       console.log('[LOGIN] Step 5: Env admin login successful');
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         token,
         user: buildAdminUserPayload(pseudoUser, permissions),
       });
+      
+      // Set authToken cookie for API authentication
+      response.cookies.set('authToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 8, // 8 hours
+        path: '/',
+      });
+      
+      return response;
     }
 
     console.log('[LOGIN] Step 3: Connecting to database...');
@@ -165,11 +176,22 @@ export async function POST(request: NextRequest) {
     console.log('[LOGIN] Step 14: Token signed successfully');
 
     console.log('[LOGIN] Step 15: Login successful for:', user.email);
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       token,
       user: buildAdminUserPayload(user, permissions),
     });
+    
+    // Set authToken cookie for API authentication
+    response.cookies.set('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 8, // 8 hours
+      path: '/',
+    });
+    
+    return response;
   } catch (error) {
     console.error('===== Admin login failed =====');
     console.error('Error type:', error?.constructor?.name);

@@ -3,8 +3,13 @@ import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import { NextResponse } from 'next/server';
 import { MongoError } from 'mongodb';
+import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET() {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
   try {
     const destinations = await Destination.find({}).sort({ name: 1 });
@@ -15,6 +20,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Verify admin authentication
+  const auth = await verifyAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   await dbConnect();
   try {
     const body = await request.json();
