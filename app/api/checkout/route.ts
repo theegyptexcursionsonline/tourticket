@@ -446,23 +446,28 @@ export async function POST(request: Request) {
       }
     }
 
-    // For card payments, Stripe webhook is the single source of truth for bookings/emails.
-    if (isCardPayment) {
+    // STABLE FLOW: Create bookings immediately for ALL payment methods
+    // - Card payments: Create with "Pending" status, webhook will update to "Confirmed" and send customer email
+    // - Bank transfers: Create with "Pending" status
+    // - Admin is notified immediately for all bookings
+
+    // Check if booking already exists for this payment (idempotency)
+    if (isCardPayment && paymentResult.paymentId) {
       const existingBooking = await Booking.findOne({ paymentId: paymentResult.paymentId }).lean();
-      return NextResponse.json({
-        success: true,
-        message: existingBooking
-          ? 'Booking already confirmed!'
-          : 'Payment received. Your booking will be confirmed shortly.',
-        bookingId: existingBooking?.bookingReference,
-        bookings: existingBooking ? [existingBooking._id] : [],
-        paymentId: paymentResult.paymentId,
-        customer: {
-          name: `${customer.firstName} ${customer.lastName}`,
-          email: customer.email,
-        },
-        pending: !existingBooking,
-      });
+      if (existingBooking) {
+        console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId}`);
+        return NextResponse.json({
+          success: true,
+          message: 'Booking confirmed!',
+          bookingId: existingBooking.bookingReference,
+          bookings: [existingBooking._id],
+          paymentId: paymentResult.paymentId,
+          customer: {
+            name: `${customer.firstName} ${customer.lastName}`,
+            email: customer.email,
+          },
+        });
+      }
     }
 
     // Create bookings with generated references
@@ -520,7 +525,10 @@ export async function POST(request: Request) {
           guests: totalGuests,
           totalPrice: itemTotalPrice,
             currency: paymentResult.currency || pricing.currency || 'USD', // Store the currency
-          status: isBankTransfer ? 'Pending' : 'Confirmed',
+          // Card payments: "Pending" until webhook confirms payment succeeded
+          // Bank transfers: "Pending" until manual confirmation
+          // Webhook will update card payments to "Confirmed" when payment succeeds
+          status: 'Pending',
           paymentId: paymentResult.paymentId,
           paymentMethod,
           specialRequests: customer.specialRequests,
@@ -636,64 +644,34 @@ export async function POST(request: Request) {
         }
       : undefined;
     
-    // Send Enhanced Booking Confirmation
-    try {
-      // Get booking option from first cart item
-      const bookingOption = mainCartItem?.selectedBookingOption?.title;
+    // STABLE EMAIL FLOW:
+    // 1. Admin Alert: Sent IMMEDIATELY for all bookings (so admin knows about booking attempt)
+    // 2. Customer Confirmation: 
+    //    - Card payments: Sent by webhook AFTER payment succeeds
+    //    - Bank transfers: Sent here with bank transfer instructions
 
-      // Calculate participant breakdown for first item
-      const adultCount = mainCartItem?.quantity || 0;
-      const childCount = mainCartItem?.childQuantity || 0;
-      const infantCount = mainCartItem?.infantQuantity || 0;
+    // Prepare common email data
+    const bookingOption = mainCartItem?.selectedBookingOption?.title;
+    const adultCount = mainCartItem?.quantity || 0;
+    const childCount = mainCartItem?.childQuantity || 0;
+    const infantCount = mainCartItem?.infantQuantity || 0;
 
-      const participantParts = [];
-      if (adultCount > 0) {
-        const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
-        participantParts.push(`${adultCount} x Adult${adultCount > 1 ? 's' : ''} ($${basePrice.toFixed(2)})`);
-      }
-      if (childCount > 0) {
-        const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
-        const childPrice = basePrice / 2;
-        participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
-      }
-      if (infantCount > 0) {
-        participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} (Free)`);
-      }
-
-      await EmailService.sendBookingConfirmation({
-        customerName: `${customer.firstName} ${customer.lastName}`,
-        customerEmail: customer.email,
-        tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
-        // Use original cart date to avoid timezone issues with MongoDB UTC storage
-        bookingDate: emailBookingDate,
-        bookingTime: emailBookingTime,
-        participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
-        participantBreakdown: participantParts.join(', '),
-        totalPrice: formatMoney(computedPricing.total),
-        bookingId: bookingId,
-        bookingOption: bookingOption,
-        specialRequests: customer.specialRequests,
-        hotelPickupDetails: customer.hotelPickupDetails,
-        hotelPickupLocation,
-        hotelPickupMapImage: hotelPickupMapImage || undefined,
-        hotelPickupMapLink: hotelPickupMapLink || undefined,
-        meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
-        contactNumber: "+20 11 42255624",
-        tourImage: mainTour?.image,
-        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
-        orderedItems: orderedItemsSummary,
-        pricingDetails,
-        pricingRaw,
-        timeUntil: timeUntilTour || undefined,
-        customerPhone: customer.phone,
-        dateBadge,
-      });
-    } catch (emailError) {
-      console.error('Failed to send booking confirmation email:', emailError);
-      // Don't fail the booking if email fails
+    const participantParts = [];
+    if (adultCount > 0) {
+      const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
+      participantParts.push(`${adultCount} x Adult${adultCount > 1 ? 's' : ''} ($${basePrice.toFixed(2)})`);
+    }
+    if (childCount > 0) {
+      const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
+      const childPrice = basePrice / 2;
+      participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
+    }
+    if (infantCount > 0) {
+      participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} (Free)`);
     }
 
-    // Send Admin Alert
+    // SEND ADMIN ALERT IMMEDIATELY (before customer email)
+    // This ensures admin always knows about booking attempts
     try {
       // Prepare detailed tour information
       const tourDetails = await Promise.all(cart.map(async (item: any) => {
@@ -782,9 +760,49 @@ export async function POST(request: Request) {
         discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
         discountAmount: computedPricing.discount > 0 ? formatMoney(computedPricing.discount) : undefined,
       });
+      console.log(`[Checkout] Admin alert sent for booking ${bookingId}`);
     } catch (emailError) {
       console.error('Failed to send admin alert email:', emailError);
       // Don't fail the booking if admin email fails
+    }
+
+    // CUSTOMER EMAIL: Only send immediately for bank transfers
+    // Card payments: Customer will receive confirmation from webhook after payment succeeds
+    if (isBankTransfer) {
+      try {
+        await EmailService.sendBookingConfirmation({
+          customerName: `${customer.firstName} ${customer.lastName}`,
+          customerEmail: customer.email,
+          tourTitle: cart.length === 1 ? mainTour?.title || 'Tour' : `${cart.length} Tours`,
+          bookingDate: emailBookingDate,
+          bookingTime: emailBookingTime,
+          participants: `${mainBooking.guests} participant${mainBooking.guests !== 1 ? 's' : ''}`,
+          participantBreakdown: participantParts.join(', '),
+          totalPrice: formatMoney(computedPricing.total),
+          bookingId: bookingId,
+          bookingOption: bookingOption,
+          specialRequests: customer.specialRequests,
+          hotelPickupDetails: customer.hotelPickupDetails,
+          hotelPickupLocation,
+          hotelPickupMapImage: hotelPickupMapImage || undefined,
+          hotelPickupMapLink: hotelPickupMapLink || undefined,
+          meetingPoint: mainTour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
+          contactNumber: "+20 11 42255624",
+          tourImage: mainTour?.image,
+          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+          orderedItems: orderedItemsSummary,
+          pricingDetails,
+          pricingRaw,
+          timeUntil: timeUntilTour || undefined,
+          customerPhone: customer.phone,
+          dateBadge,
+        });
+        console.log(`[Checkout] Customer confirmation sent for bank transfer booking ${bookingId}`);
+      } catch (emailError) {
+        console.error('Failed to send customer confirmation email:', emailError);
+      }
+    } else {
+      console.log(`[Checkout] Card payment - customer confirmation will be sent by webhook after payment succeeds`);
     }
 
     // Return success response

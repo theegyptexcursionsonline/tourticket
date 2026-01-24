@@ -82,14 +82,161 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
   await dbConnect();
 
-  // Check if booking already exists for this payment
-  const existingBooking = await Booking.findOne({ paymentId }).lean();
+  // Check if booking already exists for this payment (created by checkout endpoint)
+  const existingBooking = await Booking.findOne({ paymentId });
+  
   if (existingBooking) {
-    console.log(`[Webhook] Booking already exists for payment ${paymentId}`);
-    return { created: false, reason: 'already_exists', bookingId: existingBooking.bookingReference };
+    console.log(`[Webhook] Booking exists for payment ${paymentId}, status: ${existingBooking.status}`);
+    
+    // If booking is still "Pending", update to "Confirmed" and send customer email
+    if (existingBooking.status === 'Pending') {
+      console.log(`[Webhook] Updating booking ${existingBooking.bookingReference} from Pending to Confirmed`);
+      existingBooking.status = 'Confirmed';
+      await existingBooking.save();
+      
+      // Need to send customer confirmation email - get tour info
+      const tour = await Tour.findById(existingBooking.tour);
+      const user = await User.findById(existingBooking.user);
+      
+      if (tour && user) {
+        // Send customer confirmation email (see email sending section below)
+        // We'll reuse the email sending logic by setting a flag
+        const bookingsToEmail = [{
+          booking: existingBooking,
+          tour: tour,
+        }];
+        
+        // Send confirmation email for the updated booking
+        try {
+          const bookingDate = formatBookingDate(existingBooking.date);
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+          const formatMoney = (value: number) => `$${value.toFixed(2)}`;
+          
+          // Extract hotel pickup from existing booking
+          const hotelPickupDetails = existingBooking.hotelPickupDetails || '';
+          const hotelPickupLocation = existingBooking.hotelPickupLocation || null;
+          const hotelPickupMapImage = hotelPickupLocation ? buildStaticMapImageUrl(hotelPickupLocation) : undefined;
+          const hotelPickupMapLink = hotelPickupLocation ? buildGoogleMapsLink(hotelPickupLocation) : undefined;
+          
+          // Build date badge
+          const tourDate = existingBooking.date;
+          let dateBadge: { dayLabel: string; dayNumber: number; monthLabel: string; year: number } | undefined;
+          if (tourDate) {
+            const d = new Date(tourDate);
+            dateBadge = {
+              dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+              dayNumber: d.getDate(),
+              monthLabel: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+              year: d.getFullYear(),
+            };
+          }
+          
+          // Calculate time until tour
+          let timeUntilTour: { days: number; hours: number; minutes: number } | undefined;
+          if (tourDate) {
+            const targetDate = new Date(tourDate);
+            const tourTime = existingBooking.time;
+            if (tourTime) {
+              const [hours, minutes] = tourTime.split(':').map(Number);
+              if (!Number.isNaN(hours)) {
+                targetDate.setHours(hours, Number.isNaN(minutes) ? 0 : minutes, 0, 0);
+              }
+            }
+            const diff = targetDate.getTime() - Date.now();
+            if (diff > 0) {
+              timeUntilTour = {
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+              };
+            }
+          }
+          
+          // Build ordered items for email
+          const orderedItems = [{
+            title: tour.title || 'Tour',
+            image: tour.image,
+            adults: existingBooking.adultGuests || 1,
+            children: existingBooking.childGuests || 0,
+            infants: existingBooking.infantGuests || 0,
+            bookingOption: existingBooking.selectedBookingOption?.title,
+            totalPrice: formatMoney(existingBooking.totalPrice || 0),
+            quantity: existingBooking.adultGuests || 1,
+            childQuantity: existingBooking.childGuests || 0,
+            infantQuantity: existingBooking.infantGuests || 0,
+            price: existingBooking.selectedBookingOption?.price || 0,
+            selectedBookingOption: existingBooking.selectedBookingOption || undefined,
+          }];
+          
+          // Get pricing from metadata or calculate
+          const pricingTotal = existingBooking.totalPrice || 0;
+          const pricingSubtotal = pricingTotal / 1.08; // Approximate (remove 3% service + 5% tax)
+          const pricingServiceFee = pricingSubtotal * 0.03;
+          const pricingTax = pricingSubtotal * 0.05;
+          const pricingDiscount = existingBooking.discountAmount || 0;
+          
+          await EmailService.sendBookingConfirmation({
+            customerName: `${user.firstName} ${user.lastName}`,
+            customerEmail: user.email,
+            customerPhone: metadata.customer_phone || '',
+            tourTitle: tour.title || 'Tour',
+            bookingDate: bookingDate,
+            bookingTime: existingBooking.time,
+            participants: `${existingBooking.guests} participant${existingBooking.guests !== 1 ? 's' : ''}`,
+            totalPrice: formatMoney(pricingTotal),
+            bookingId: existingBooking.bookingReference,
+            bookingOption: existingBooking.selectedBookingOption?.title,
+            meetingPoint: tour.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
+            contactNumber: "+20 11 42255624",
+            tourImage: tour.image,
+            baseUrl,
+            hotelPickupDetails: hotelPickupDetails || undefined,
+            hotelPickupLocation: hotelPickupLocation || undefined,
+            hotelPickupMapImage: hotelPickupMapImage || undefined,
+            hotelPickupMapLink: hotelPickupMapLink || undefined,
+            specialRequests: existingBooking.specialRequests || undefined,
+            orderedItems,
+            pricingDetails: {
+              subtotal: formatMoney(pricingSubtotal),
+              serviceFee: formatMoney(pricingServiceFee),
+              tax: formatMoney(pricingTax),
+              discount: pricingDiscount > 0 ? formatMoney(pricingDiscount) : undefined,
+              total: formatMoney(pricingTotal),
+              currencySymbol: '$',
+            },
+            pricingRaw: {
+              subtotal: pricingSubtotal,
+              serviceFee: pricingServiceFee,
+              tax: pricingTax,
+              discount: pricingDiscount,
+              total: pricingTotal,
+              symbol: '$',
+            },
+            timeUntil: timeUntilTour,
+            dateBadge,
+          });
+          
+          console.log(`[Webhook] Sent customer confirmation for updated booking ${existingBooking.bookingReference}`);
+        } catch (emailError) {
+          console.error(`[Webhook] Failed to send customer email for updated booking:`, emailError);
+        }
+      }
+      
+      return { 
+        created: false, 
+        updated: true, 
+        reason: 'updated_to_confirmed', 
+        bookingId: existingBooking.bookingReference 
+      };
+    }
+    
+    // Booking exists and is already Confirmed
+    console.log(`[Webhook] Booking ${existingBooking.bookingReference} already confirmed, skipping`);
+    return { created: false, reason: 'already_confirmed', bookingId: existingBooking.bookingReference };
   }
 
-  console.log(`[Webhook] Creating booking for payment ${paymentId}`);
+  // FALLBACK: Create booking if it doesn't exist (shouldn't happen normally, but ensures no lost bookings)
+  console.log(`[Webhook] Creating booking for payment ${paymentId} (fallback - checkout didn't create it)`);
 
   // Extract customer info from metadata
   const customerEmail = metadata.customer_email;
