@@ -7,6 +7,8 @@ import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 
+export const revalidate = 60; // ISR: revalidate every 60 seconds
+
 export const metadata: Metadata = {
   title: 'Explore Tours | Egypt Excursions Online',
   description: 'Browse and book the best tours and excursions in Egypt. Real-time pricing, instant booking, and free cancellation available.',

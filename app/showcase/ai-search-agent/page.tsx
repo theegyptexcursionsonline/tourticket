@@ -7,6 +7,8 @@ import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 
+export const revalidate = 60; // ISR: revalidate every 60 seconds
+
 export const metadata: Metadata = {
   title: 'Tours & Excursions | AI Travel Concierge | Egypt Excursions Online',
   description: 'Browse tours with our AI travel concierge. Get instant answers, personalized recommendations, and help booking your perfect Egypt experience.',

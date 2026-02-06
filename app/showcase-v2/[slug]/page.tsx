@@ -5,6 +5,8 @@ import Tour from '@/lib/models/Tour';
 import Review from '@/lib/models/Review';
 import ShowcaseV2ClientPage from './ShowcaseV2ClientPage';
 
+export const revalidate = 60; // ISR: revalidate every 60 seconds
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }

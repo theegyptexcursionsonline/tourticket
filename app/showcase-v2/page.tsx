@@ -3,6 +3,8 @@ import Image from 'next/image';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 
+export const revalidate = 60; // ISR: revalidate every 60 seconds
+
 export const metadata = {
   title: 'Book Tours | Egypt Excursions Online',
   description: 'Browse and book the best tours and excursions in Egypt. Seamless booking on desktop and mobile.',

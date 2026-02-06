@@ -7,6 +7,8 @@ import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 
+export const revalidate = 60; // ISR: revalidate every 60 seconds
+
 export const metadata: Metadata = {
   title: 'Tours & Excursions | AI Voice Assistant | Egypt Excursions Online',
   description: 'Browse tours with our AI voice assistant. Ask questions by voice, get instant tour details, and book your perfect Egypt experience in 29+ languages.',

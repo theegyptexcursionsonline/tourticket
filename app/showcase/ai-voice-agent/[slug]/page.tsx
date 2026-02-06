@@ -9,6 +9,8 @@ import Footer from '@/components/Footer';
 import VoiceAgentShowcaseClient from './VoiceAgentShowcaseClient';
 import { ITour } from '@/lib/models/Tour';
 
+export const revalidate = 60; // ISR: revalidate every 60 seconds
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
