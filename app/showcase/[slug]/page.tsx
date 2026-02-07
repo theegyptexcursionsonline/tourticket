@@ -15,7 +15,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-async function getTourBySlug(slug: string): Promise<{ tour: ITour; reviews: any[] } | null> {
+async function getTourBySlug(slug: string): Promise<{ tour: ITour; reviews: any[]; relatedTours: ITour[] } | null> {
   await dbConnect();
   const tour = await Tour.findOne({ slug })
     .populate('destination', 'name slug')
@@ -33,9 +33,27 @@ async function getTourBySlug(slug: string): Promise<{ tour: ITour; reviews: any[
     .limit(5)
     .lean();
 
+  // Fetch related tours from same category
+  let relatedTours: any[] = [];
+  const categoryIds = Array.isArray(tour.category)
+    ? tour.category.map((cat: any) => typeof cat === 'object' ? cat._id?.toString() : cat?.toString()).filter(Boolean)
+    : tour.category ? [typeof tour.category === 'object' ? (tour.category as any)._id?.toString() : tour.category?.toString()].filter(Boolean) : [];
+
+  if (categoryIds.length > 0) {
+    relatedTours = await Tour.find({
+      category: { $in: categoryIds },
+      _id: { $ne: tour._id },
+      isPublished: true
+    })
+      .populate('destination', 'name')
+      .limit(3)
+      .lean();
+  }
+
   return {
     tour: JSON.parse(JSON.stringify(tour)),
-    reviews: JSON.parse(JSON.stringify(reviews))
+    reviews: JSON.parse(JSON.stringify(reviews)),
+    relatedTours: JSON.parse(JSON.stringify(relatedTours))
   };
 }
 
@@ -76,7 +94,7 @@ export default async function ShowcasePage({ params }: PageProps) {
     notFound();
   }
 
-  const { tour, reviews } = result;
+  const { tour, reviews, relatedTours } = result;
 
   // Widget configuration - can be customized via environment variables
   const widgetConfig = {
@@ -92,6 +110,7 @@ export default async function ShowcasePage({ params }: PageProps) {
         <ShowcaseClientPage
           tour={tour}
           reviews={reviews}
+          relatedTours={relatedTours}
           widgetConfig={widgetConfig}
         />
       </main>
