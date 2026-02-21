@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no, email=no, address=no">
+    <title>Booking Update Notification</title>
+    <style>
+        body { margin: 0; padding: 0; background: #eef2f7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; -webkit-font-smoothing: antialiased; }
+        img { border: none; display: block; max-width: 100%; }
+        table { border-collapse: collapse; width: 100%; }
+
+        .wrapper { width: 100%; padding: 32px 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 45px rgba(15,23,42,0.15); }
+
+        .hero { background: linear-gradient(120deg, #f97316 0%, #ea580c 60%, #c2410c 100%); padding: 36px 40px; color: #fff; }
+        .logo { width: 110px; margin-bottom: 20px; }
+        .hero-eyebrow { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.85; font-weight: 600; }
+        .hero-title { font-size: 26px; font-weight: 700; margin: 10px 0 6px; }
+        .hero-meta { font-size: 15px; color: rgba(255,255,255,0.9); }
+
+        .content { padding: 40px; }
+        .greeting { font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.2px; }
+        .intro { font-size: 15px; color: #475569; line-height: 1.7; margin-bottom: 28px; }
+
+        .alert-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; font-size: 13px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; margin-bottom: 20px; }
+
+        .changes-card { border: 2px solid #f97316; border-radius: 18px; padding: 24px 28px; margin-bottom: 30px; background: #fff7ed; }
+        .changes-title { font-size: 14px; font-weight: 700; color: #c2410c; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .change-item { padding: 12px 0; border-bottom: 1px dashed #fed7aa; }
+        .change-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .change-label { font-size: 12px; color: #9a3412; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .change-values { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .old-value { background: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: line-through; }
+        .arrow { color: #9a3412; font-weight: bold; }
+        .new-value { background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+
+        .info-card { border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 28px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.06); }
+        .info-header { background: #f8fafc; padding: 18px 28px; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
+        .info-body { padding: 24px 28px; }
+        .info-grid td { padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .info-grid tr:last-child td { border-bottom: none; }
+        .info-label { color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; font-size: 12px; width: 35%; }
+        .info-value { color: #0f172a; font-weight: 600; font-size: 15px; }
+        .info-value a { color: #2563eb; text-decoration: none; }
+        .info-value a:hover { text-decoration: underline; }
+
+        .status-badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; font-size: 12px; }
+        .status-Confirmed, .status-confirmed { background: #d1fae5; color: #065f46; }
+        .status-Pending, .status-pending { background: #fef3c7; color: #92400e; }
+        .status-Cancelled, .status-cancelled { background: #fee2e2; color: #b91c1c; }
+        .status-Refunded, .status-refunded { background: #dbeafe; color: #1e40af; }
+        .status-Partial_Refund, .status-partial_refund { background: #e0e7ff; color: #3730a3; }
+
+        .editor-card { border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; margin-bottom: 30px; background: #f8fafc; }
+        .editor-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .editor-name { font-size: 15px; font-weight: 700; color: #0f172a; }
+        .editor-time { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+        .cta { text-align: center; margin: 32px 0; }
+        .cta-button { display: inline-block; padding: 16px 44px; border-radius: 10px; background: #f97316; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; box-shadow: 0 15px 30px rgba(249,115,22,0.3); }
+
+        .footer { background: #f8fafc; padding: 28px 40px; text-align: center; border-top: 1px solid #e2e8f0; }
+        .footer p { color: #94a3b8; font-size: 12px; margin: 10px 0; }
+
+        @media (max-width: 600px) {
+            .wrapper { padding: 0; }
+            .container { border-radius: 0; }
+            .hero, .content, .footer { padding-left: 24px !important; padding-right: 24px !important; }
+            .info-header, .info-body { padding-left: 20px; padding-right: 20px; }
+            .change-values { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .cta-button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="hero">
+                <img src="https://egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+                <div class="hero-eyebrow">Operator Alert</div>
+                <div class="hero-title">Booking Updated</div>
+                <div class="hero-meta">{{tourTitle}} · Ref: {{bookingId}}</div>
+            </div>
+
+            <div class="content">
+                <div class="alert-badge">
+                    <span>⚠️</span> Action May Be Required
+                </div>
+                
+                <div class="greeting">Booking Details Changed</div>
+                <p class="intro">A booking has been modified in the admin panel. Please review the changes below and update any operational arrangements if necessary.</p>
+
+                <div class="changes-card">
+                    <div class="changes-title">📝 Changes Made</div>
+                    {{#each changes}}
+                    <div class="change-item">
+                        <div class="change-label">{{this.field}}</div>
+                        <div class="change-values">
+                            <span class="old-value">{{this.oldValue}}</span>
+                            <span class="arrow">→</span>
+                            <span class="new-value">{{this.newValue}}</span>
+                        </div>
+                    </div>
+                    {{/each}}
+                    {{#unless changes}}
+                    <div class="change-item">
+                        <pre style="margin: 0; font-family: inherit; white-space: pre-wrap; color: #0f172a;">{{changesSummary}}</pre>
+                    </div>
+                    {{/unless}}
+                </div>
+
+                <div class="info-card">
+                    <div class="info-header">Updated Booking Details</div>
+                    <div class="info-body">
+                        <table class="info-grid">
+                            <tr>
+                                <td class="info-label">Reference</td>
+                                <td class="info-value" style="font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Tour</td>
+                                <td class="info-value">{{tourTitle}}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Date & Time</td>
+                                <td class="info-value">{{bookingDate}} · {{bookingTime}}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Status</td>
+                                <td class="info-value"><span class="status-badge status-{{newStatus}}">{{newStatus}}</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-header">Customer Information</div>
+                    <div class="info-body">
+                        <table class="info-grid">
+                            <tr>
+                                <td class="info-label">Name</td>
+                                <td class="info-value">{{customerName}}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Email</td>
+                                <td class="info-value"><a href="mailto:{{customerEmail}}">{{customerEmail}}</a></td>
+                            </tr>
+                            {{#if customerPhone}}
+                            <tr>
+                                <td class="info-label">Phone</td>
+                                <td class="info-value"><a href="tel:{{customerPhone}}">{{customerPhone}}</a></td>
+                            </tr>
+                            {{/if}}
+                            {{#if adultGuests}}
+                            <tr>
+                                <td class="info-label">Guests</td>
+                                <td class="info-value">{{adultGuests}} Adult{{#if childGuests}}{{#if (gt childGuests 0)}}, {{childGuests}} Child{{/if}}{{/if}}{{#if infantGuests}}{{#if (gt infantGuests 0)}}, {{infantGuests}} Infant{{/if}}{{/if}}</td>
+                            </tr>
+                            {{/if}}
+                        </table>
+                    </div>
+                </div>
+
+                {{#if hotelPickupDetails}}
+                <div class="info-card" style="background: linear-gradient(135deg, rgba(191,219,254,0.65), rgba(199,210,254,0.65)); border-color: #93c5fd;">
+                    <div class="info-header" style="background: rgba(59,130,246,0.1);">🏨 Hotel Pickup</div>
+                    <div class="info-body">
+                        <p style="margin: 0 0 10px; font-size: 15px; font-weight: 600; color: #0f172a;">{{hotelPickupDetails}}</p>
+                        {{#if hotelPickupLocation.address}}
+                        <p style="margin: 0; font-size: 13px; color: #475569;">📍 {{hotelPickupLocation.address}}</p>
+                        {{/if}}
+                        {{#if hotelPickupMapImage}}
+                        <div style="margin-top: 16px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(59,130,246,0.3);">
+                            {{#if hotelPickupMapLink}}
+                            <a href="{{hotelPickupMapLink}}">
+                                <img src="{{hotelPickupMapImage}}" alt="Pickup location map" style="width: 100%; display: block;">
+                            </a>
+                            {{else}}
+                            <img src="{{hotelPickupMapImage}}" alt="Pickup location map" style="width: 100%; display: block;">
+                            {{/if}}
+                        </div>
+                        {{/if}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{#if specialRequests}}
+                <div class="info-card" style="background: linear-gradient(135deg, rgba(254,215,170,0.6), rgba(253,230,138,0.6)); border-color: #fcd34d;">
+                    <div class="info-header" style="background: rgba(245,158,11,0.1);">📝 Special Requests</div>
+                    <div class="info-body">
+                        <p style="margin: 0; font-size: 14px; color: #92400e; font-style: italic;">"{{specialRequests}}"</p>
+                    </div>
+                </div>
+                {{/if}}
+
+                <div class="editor-card">
+                    <div class="editor-label">Changed By</div>
+                    <div class="editor-name">{{changedBy}}</div>
+                    <div class="editor-time">{{changedAt}}</div>
+                </div>
+
+                <div class="cta">
+                    <a class="cta-button" href="{{baseUrl}}/admin/bookings">View in Dashboard</a>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>This is an automated notification from the booking management system.</p>
+                <p>© {{year}} Egypt Excursions Online · Cairo, Egypt</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

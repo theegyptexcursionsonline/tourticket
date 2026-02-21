@@ -1,0 +1,625 @@
+{
+  "header": {
+    "explore": "استكشف",
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "destinations": "أهم الوجهات",
+    "activities": "أنواع الأنشطة",
+    "specialOffers": "عروض خاصة",
+    "deals": "عرض العروض",
+    "myProfile": "ملفي الشخصي",
+    "myBookings": "حجوزاتي",
+    "favorites": "المفضلة",
+    "signOut": "تسجيل الخروج"
+  },
+  "search": {
+    "placeholder": "إلى أين تذهب؟",
+    "noResults": "لم يتم العثور على جولات لـ \"{query}\". جرّب بحثًا مختلفًا.",
+    "searching": "جاري البحث...",
+    "tours": "جولات",
+    "mostPopular": "الأكثر شعبية",
+    "recentSearches": "عمليات البحث الأخيرة"
+  },
+  "currency": {
+    "title": "اختر العملة"
+  },
+  "language": {
+    "title": "اختر اللغة"
+  },
+  "cart": {
+    "title": "سلة التسوق",
+    "empty": "سلة التسوق فارغة",
+    "subtotal": "المجموع الفرعي",
+    "checkout": "متابعة الدفع"
+  },
+  "tour": {
+    "duration": "المدة",
+    "rating": "التقييم",
+    "bookings": "حجوزات",
+    "addToCart": "أضف إلى السلة"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "تم بنجاح"
+  },
+  "price": {
+    "from": "من",
+    "perPerson": "للشخص"
+  },
+  "booking": {
+    "adults": "بالغون",
+    "children": "أطفال",
+    "infants": "رضع",
+    "selectDate": "اختر التاريخ",
+    "selectTime": "اختر الوقت",
+    "participants": "مشاركون",
+    "total": "الإجمالي",
+    "save": "وفّر",
+    "discount": "خصم",
+    "addOns": "إضافات",
+    "enhance": "حسّن جولتك",
+    "review": "مراجعة وحجز"
+  },
+  "offers": {
+    "save": "وفّر حتى 20% على العروض المجمعة وبطاقات المدن!"
+  },
+  "tourCard": {
+    "featured": "مميز",
+    "max": "الحد الأقصى",
+    "freeCancellation": "إلغاء مجاني",
+    "mobileTicket": "تذكرة إلكترونية",
+    "more": "المزيد",
+    "addedToCart": "تمت الإضافة إلى السلة!",
+    "addedToWishlist": "تمت الإضافة إلى المفضلة!",
+    "removedFromWishlist": "تمت الإزالة من المفضلة",
+    "failedToAdd": "فشل في الإضافة إلى السلة",
+    "viewDetails": "عرض التفاصيل",
+    "startingFrom": "يبدأ من",
+    "perPerson": "للشخص"
+  },
+  "footer": {
+    "tagline": "احجز مغامرتك، تخطَّ الطوابير",
+    "trustedBy": "موثوق من عملائنا",
+    "averageRating": "متوسط التقييم من Tripadvisor",
+    "waysToPlay": "طرق الدفع",
+    "thingsToDo": "أنشطة يمكنك القيام بها",
+    "destinations": "الوجهات",
+    "contact": "اتصل بنا",
+    "aboutUs": "من نحن",
+    "blog": "المدونة",
+    "faq": "الأسئلة الشائعة",
+    "careers": "وظائف",
+    "contactInfo": "معلومات الاتصال",
+    "support247": "(دعم على مدار الساعة)",
+    "chatWithUs": "تحدث معنا",
+    "newsletter": "لا تفوت تحديثات السفر لدينا",
+    "newsletterDesc": "احصل على نصائح مختارة وعروض حصرية وإلهام للسفر",
+    "emailPlaceholder": "عنوان بريدك الإلكتروني",
+    "subscribe": "اشترك",
+    "followUs": "تابعنا على وسائل التواصل الاجتماعي",
+    "privacyPolicy": "سياسة الخصوصية",
+    "termsConditions": "الشروط والأحكام",
+    "copyright": "جميع الحقوق محفوظة",
+    "thingsToDoIn": "أنشطة يمكن القيام بها في {destination}",
+    "toursTickets": "الجولات والتذاكر",
+    "repliesWithinHour": "الرد خلال ساعة واحدة",
+    "newsletterThanksTitle": "شكرًا لك!",
+    "newsletterThanksDesc": "لقد اشتركت بنجاح في نشرتنا البريدية.",
+    "socialDesc": "انضم إلى مجتمعنا للحصول على التحديثات المباشرة ومقاطع الفيديو وإلهام السفر.",
+    "followSocialAria": "تابعنا على وسائل التواصل الاجتماعي",
+    "invalidEmail": "يرجى إدخال بريد إلكتروني صالح.",
+    "subscribeSuccess": "شكرًا لاشتراكك!",
+    "subscribeFailed": "فشل الاشتراك. يرجى المحاولة مرة أخرى.",
+    "subscribeError": "حدث خطأ. يرجى المحاولة لاحقًا."
+  },
+  "auth": {
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "rememberMe": "تذكرني",
+    "noAccount": "ليس لديك حساب؟",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "createAccount": "إنشاء حساب",
+    "resetPassword": "إعادة تعيين كلمة المرور"
+  },
+  "wishlist": {
+    "title": "قائمة المفضلة",
+    "empty": "قائمة المفضلة فارغة"
+  },
+  "hero": {
+    "defaultTitle": "اكتشف مصر",
+    "defaultHighlight": "الأهرامات والنيل",
+    "travelers": "+2 مليون مسافر",
+    "ratingScore": "تقييم 4.9/5",
+    "ratingStars": "★★★★★",
+    "subtitle": "رحلات لا تُنسى — من شروق الشمس عند الأهرامات إلى الإبحار في النيل.",
+    "searchPlaceholder": "إلى أين تذهب؟",
+    "aiPlaceholder": "اسأل الذكاء الاصطناعي عن جولات مصر..."
+  },
+  "about": {
+    "title": "لماذا تحجز مع Egypt Excursions Online؟",
+    "subtitle": "مع 15 عامًا من الخبرة، نحن خبراء السفر.",
+    "partner": "شريك رسمي لأفضل المتاحف والمعالم السياحية",
+    "bestPrice": "أفضل سعر مضمون وعملية حجز بسيطة",
+    "mobileTicket": "لا حاجة للطباعة! اعرض تذاكرك على هاتفك الذكي",
+    "freeCancellation": "إلغاء مجاني حتى 8 ساعات مقدمًا",
+    "cta": "المزيد عنا"
+  },
+  "destinations": {
+    "title": "إلى أين تذهب؟",
+    "tours": "جولات",
+    "tour": "جولة"
+  },
+  "featured": {
+    "title": "رحلات بحرية مثالية لك",
+    "subtitle": "اكتشف أفضل التجارب في مصر — مختارة بعناية من خبراء محليين لذكريات لا تُنسى.",
+    "seeAll": "عرض جميع الجولات",
+    "startingFrom": "يبدأ من",
+    "view": "عرض",
+    "noImageAvailable": "لا توجد صورة متاحة",
+    "imageUnavailable": "الصورة غير متاحة",
+    "openTour": "افتح الجولة {title}",
+    "addToCartAria": "أضف {title} إلى السلة",
+    "addToCartTitle": "أضف إلى السلة",
+    "untitledTour": "جولة بدون عنوان",
+    "defaultDescription": "تجربة مختارة بعناية مع أبرز المعالم المحلية وتعليقات إرشادية وحجز مرن.",
+    "durationNotSpecified": "المدة غير محددة",
+    "booked": "تم حجزها",
+    "seeAllAria": "عرض جميع الجولات"
+  },
+  "dayTrips": {
+    "title": "أفضل العروض على الجولات من مصر",
+    "subtitle": "استكشف ما وراء المدينة مع هذه الرحلات اليومية الأعلى تقييمًا، مع خصومات حصرية عبر الإنترنت.",
+    "errorTitle": "تعذر تحميل الرحلات اليومية",
+    "errorMessage": "واجهنا مشكلة في تحميل الجولات. يرجى المحاولة مرة أخرى لاحقًا.",
+    "retry": "إعادة المحاولة",
+    "retrying": "جاري إعادة المحاولة...",
+    "noImage": "لا توجد صورة",
+    "removedFromWishlist": "تمت الإزالة من المفضلة",
+    "addedToWishlist": "تمت الإضافة إلى المفضلة!",
+    "removeFromWishlistAria": "إزالة من المفضلة",
+    "addToWishlistAria": "إضافة إلى المفضلة",
+    "addToCartAria": "أضف إلى السلة",
+    "untitledTour": "جولة بدون عنوان",
+    "durationNotSpecified": "المدة غير محددة",
+    "noToursFound": "لم يتم العثور على جولات.",
+    "noToursReturned": "لم تُرجع واجهة API أي جولات.",
+    "unknownFetchError": "خطأ غير معروف أثناء تحميل الجولات.",
+    "unknownRetryError": "خطأ غير معروف أثناء إعادة المحاولة.",
+    "showErrorDetails": "عرض تفاصيل الخطأ",
+    "scrollLeft": "التمرير إلى اليسار",
+    "scrollRight": "التمرير إلى اليمين",
+    "seeAllCta": "عرض جميع الرحلات اليومية من مصر"
+  },
+  "promo": {
+    "heading": "اكتشف مصر",
+    "subheading": "عجائب خالدة، غروب النيل وقصص قديمة",
+    "description": "اكشف عجائب الفراعنة — أبحر في النيل، واستكشف الأهرامات، واشعر بالتاريخ ينبض بالحياة مع تجارب فاخرة مختارة.",
+    "cta": "استكشف مصر"
+  },
+  "faq": {
+    "title": "الأسئلة الشائعة",
+    "viewAll": "عرض الكل",
+    "viewAllAria": "عرض جميع الأسئلة الشائعة",
+    "items": [
+      {
+        "question": "هل يمكنني إعادة جدولة أو إلغاء التذاكر؟",
+        "answer": "نعم، في معظم الحالات يمكنك إعادة الجدولة أو الإلغاء حتى 24 ساعة قبل الموعد. يرجى مراجعة الشروط في صفحة الجولة أو المعلم."
+      },
+      {
+        "question": "ما مدة صلاحية التذاكر المفتوحة؟",
+        "answer": "عادةً تكون التذاكر المفتوحة صالحة لمدة سنة من تاريخ الشراء. تحقق دائمًا من قسم التفاصيل في صفحة التذكرة."
+      },
+      {
+        "question": "ما اللغات التي يتحدث بها المرشدون؟",
+        "answer": "غالبًا ما تُقدَّم الجولات الحية باللغة الإنجليزية واللغة المحلية، كما تتوفر أدلة صوتية بعدة لغات في العديد من الجولات."
+      },
+      {
+        "question": "هل يتم تأكيد الحجز فورًا؟",
+        "answer": "نعم، يتم تأكيد معظم الحجوزات فور نجاح الدفع، وستصلك رسالة تأكيد تحتوي على جميع التفاصيل."
+      },
+      {
+        "question": "هل أحتاج إلى طباعة التذكرة؟",
+        "answer": "لا. جميع تذاكرنا مناسبة للهاتف المحمول، ويمكنك إبراز التذكرة الإلكترونية من هاتفك أو جهازك اللوحي."
+      },
+      {
+        "question": "ماذا يحدث إذا تم إلغاء الجولة من قبل المشغل؟",
+        "answer": "في الحالات النادرة التي يتم فيها إلغاء الجولة بسبب ظروف غير متوقعة، سنبلغك فورًا ونوفر استردادًا كاملًا أو بديلًا مناسبًا."
+      },
+      {
+        "question": "هل توجد رسوم خفية؟",
+        "answer": "السعر المعروض في صفحة المنتج هو السعر النهائي ويشمل الضرائب والرسوم ما لم يُذكر خلاف ذلك."
+      },
+      {
+        "question": "هل يمكنني الدفع بعملة مختلفة؟",
+        "answer": "نعم، يدعم موقعنا عدة عملات، ويمكنك تغيير العملة المفضلة من أعلى الصفحة."
+      },
+      {
+        "question": "هل الجولات مناسبة لذوي الإعاقة؟",
+        "answer": "تختلف إمكانية الوصول حسب الجولة. نوفر معلومات تفصيلية في صفحة كل منتج."
+      },
+      {
+        "question": "ماذا يجب أن أحضر معي في الجولة؟",
+        "answer": "ننصح عمومًا بارتداء أحذية مريحة وإحضار ماء وملابس مناسبة للطقس. راجع صفحة المنتج للتفاصيل."
+      }
+    ]
+  },
+  "popularInterests": {
+    "featuredBadge": "مميز",
+    "trendingBadge": "رائج",
+    "experience": "تجربة",
+    "experiences": "تجارب",
+    "emptyTitle": "لا توجد تجارب مميزة بعد",
+    "emptySubtitle": "عد قريبًا لاكتشاف تجارب مختارة!",
+    "browseAllTours": "تصفح جميع الجولات",
+    "sectionBadge": "تجارب مميزة",
+    "sectionTitle": "أفضل فئات التجارب.",
+    "sectionSubtitle": "اكتشف أكثر التجارب التي يحبها المسافرون لمغامرات لا تُنسى",
+    "exploreAll": "استكشف الكل"
+  },
+  "interestGrid": {
+    "featuredBadge": "مميز",
+    "available": "متاح",
+    "tourSingular": "جولة",
+    "tourPlural": "جولات",
+    "toursLabel": "جولات",
+    "destinationsLabel": "وجهات",
+    "categoriesLabel": "فئات",
+    "untitledDestination": "وجهة بدون عنوان",
+    "untitledCategory": "فئة بدون عنوان",
+    "untitledTour": "جولة بدون عنوان",
+    "recommendedTours": "جولات موصى بها",
+    "noResultsTitle": "لا توجد نتائج",
+    "noResultsSubtitle": "جرّب تعديل كلمات البحث",
+    "badge": "اكتشف مصر",
+    "titlePrefix": "تصفح كل",
+    "titleHighlight": "التجارب",
+    "subtitle": "استكشف مجموعتنا الكاملة من الجولات والتجارب التي لا تُنسى عبر عجائب مصر",
+    "aiPlaceholder": "اسأل الذكاء الاصطناعي أي شيء عن جولات مصر...",
+    "searchPlaceholder": "ابحث عن التجارب بالاسم...",
+    "clearSearchAria": "مسح البحث",
+    "openAiAria": "فتح مساعد الذكاء الاصطناعي",
+    "aiAssistantLabel": "مساعد السفر بالذكاء الاصطناعي",
+    "searchResultsLabel": "نتائج البحث",
+    "popularSearchesLabel": "عمليات البحث الشائعة",
+    "aiGreetingTitle": "مرحبًا! أنا مساعد السفر الذكي لمصر",
+    "aiGreetingDescription": "اسألني عن الجولات والوجهات والتجارب في مصر، وسأساعدك في العثور على المغامرة المناسبة.",
+    "aiThinking": "الذكاء الاصطناعي يفكر...",
+    "aiInputPlaceholder": "اسأل عن الجولات والوجهات...",
+    "previousSlideAria": "الشريحة السابقة",
+    "nextSlideAria": "الشريحة التالية",
+    "popularSearches": [
+      "أهرامات الجيزة",
+      "رحلة نيلية",
+      "معبد الأقصر",
+      "سفاري الصحراء",
+      "غوص البحر الأحمر"
+    ]
+  },
+  "reviews": {
+    "title": "ماذا يقول ضيوفنا",
+    "subtitle": "قصص حقيقية من عملائنا الكرام.",
+    "items": [
+      {
+        "name": "عائشة",
+        "country": "مصر",
+        "review": "رحلة نيلية مذهلة وقت الغروب؛ كان المرشد ممتازًا والعشاء لا يُنسى.",
+        "rating": 5,
+        "datePublished": "2024-11-12"
+      },
+      {
+        "name": "لوكا",
+        "country": "إيطاليا",
+        "review": "الجولة الخاصة للأهرامات عند الشروق كانت تجربة لا تتكرر. أوصي بها بشدة.",
+        "rating": 5,
+        "datePublished": "2024-10-02"
+      },
+      {
+        "name": "مايا",
+        "country": "المملكة المتحدة",
+        "review": "الحجز كان سلسًا جدًا ورحلة الفلوكة في النيل كانت هادئة وجميلة للغاية.",
+        "rating": 5,
+        "datePublished": "2024-09-15"
+      }
+    ]
+  },
+  "loginPage": {
+    "title": "مرحبًا بعودتك",
+    "noAccount": "ليس لديك حساب؟",
+    "signUp": "إنشاء حساب",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
+    "rememberMe": "تذكرني",
+    "forgotPassword": "هل نسيت كلمة المرور؟",
+    "signingIn": "جارٍ تسجيل الدخول...",
+    "signIn": "تسجيل الدخول",
+    "orContinueWith": "أو المتابعة باستخدام",
+    "googleSigningIn": "جارٍ تسجيل الدخول عبر Google...",
+    "googleSignIn": "المتابعة باستخدام Google",
+    "legalPrefix": "بالمتابعة، فإنك توافق على",
+    "terms": "شروط الخدمة",
+    "and": "و",
+    "privacy": "سياسة الخصوصية",
+    "errors": {
+      "missingCredentials": "يرجى إدخال البريد الإلكتروني وكلمة المرور."
+    },
+    "toasts": {
+      "loginSuccess": "تم تسجيل الدخول بنجاح.",
+      "loginFailed": "تعذر تسجيل الدخول. حاول مرة أخرى.",
+      "googleFailed": "فشل تسجيل الدخول عبر Google."
+    },
+    "meta": {
+      "title": "تسجيل الدخول | Egypt Excursions Online",
+      "description": "سجّل الدخول للوصول إلى حجوزاتك والمفضلة والعروض الحصرية."
+    }
+  },
+  "signupPage": {
+    "title": "أنشئ حسابك",
+    "alreadyHaveAccount": "لديك حساب بالفعل؟",
+    "logIn": "تسجيل الدخول",
+    "firstNameLabel": "الاسم الأول",
+    "firstNamePlaceholder": "أدخل الاسم الأول",
+    "lastNameLabel": "اسم العائلة",
+    "lastNamePlaceholder": "أدخل اسم العائلة",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "أنشئ كلمة مرور",
+    "passwordHint": "استخدم 8 أحرف على الأقل",
+    "creatingAccount": "جارٍ إنشاء الحساب...",
+    "signUp": "إنشاء حساب",
+    "orContinueWith": "أو المتابعة باستخدام",
+    "googleSigningIn": "جارٍ الاتصال بـ Google...",
+    "googleSignUp": "المتابعة باستخدام Google",
+    "legalPrefix": "بإنشاء الحساب، فإنك توافق على",
+    "terms": "شروط الخدمة",
+    "and": "و",
+    "privacy": "سياسة الخصوصية",
+    "errors": {
+      "passwordMin": "يجب أن تكون كلمة المرور 8 أحرف على الأقل."
+    },
+    "toasts": {
+      "signupSuccess": "تم إنشاء الحساب بنجاح.",
+      "signupFailed": "تعذر إنشاء الحساب. حاول مرة أخرى.",
+      "googleSuccess": "تم تسجيل الدخول عبر Google بنجاح.",
+      "googleFailed": "فشل التسجيل عبر Google."
+    },
+    "meta": {
+      "title": "إنشاء حساب | Egypt Excursions Online",
+      "description": "أنشئ حسابك لبدء حجز الجولات والتجارب المميزة في مصر."
+    }
+  },
+  "forgotPage": {
+    "title": "هل نسيت كلمة المرور؟",
+    "subtitle": "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.",
+    "backToLogin": "العودة إلى تسجيل الدخول",
+    "emailLabel": "عنوان البريد الإلكتروني",
+    "emailPlaceholder": "you@example.com",
+    "sending": "جارٍ الإرسال...",
+    "sendReset": "إرسال رابط إعادة التعيين",
+    "success": {
+      "title": "تحقق من بريدك",
+      "emailSent": "إذا كان هناك حساب لهذا البريد، فقد أرسلنا رابط إعادة التعيين.",
+      "sendAnother": "إرسال بريد آخر"
+    },
+    "errors": {
+      "invalidEmail": "يرجى إدخال بريد إلكتروني صالح",
+      "unexpected": "حدث خطأ ما. حاول مرة أخرى.",
+      "invalidEmailWithPeriod": "يرجى إدخال بريد إلكتروني صالح.",
+      "tooManyRequests": "محاولات كثيرة جدًا. يرجى المحاولة لاحقًا.",
+      "userDisabled": "تم تعطيل هذا الحساب. تواصل مع الدعم."
+    },
+    "meta": {
+      "title": "نسيت كلمة المرور | Egypt Excursions Online",
+      "description": "أعد تعيين كلمة المرور لاستعادة الوصول إلى حسابك."
+    }
+  },
+  "notFoundPage": {
+    "title": "الصفحة غير موجودة",
+    "descriptionPrefix": "الصفحة التي تبحث عنها على",
+    "brand": "Egypt Excursions Online",
+    "descriptionSuffix": "قد تكون نُقلت أو لم تعد موجودة.",
+    "backHome": "العودة للرئيسية",
+    "exploreTours": "استكشاف الجولات"
+  },
+  "redirectingPage": {
+    "defaultTourName": "تجربتك",
+    "imageAlt": "جارٍ تجهيز حجزك",
+    "badge": "جارٍ تأمين حجزك",
+    "title": "جارٍ تجهيز {tourName}",
+    "description": "يرجى الانتظار قليلًا بينما نؤكد التوفر وننهي عملية الدفع. لن يستغرق ذلك سوى بضع ثوانٍ.",
+    "estimatedTime": "الوقت المتوقع",
+    "eta": "~3 ثوانٍ",
+    "loading": "جارٍ التحميل..."
+  },
+  "searchPage": {
+    "title": "اعثر على مغامرتك القادمة",
+    "searchPlaceholder": "ابحث باسم الجولة، مثل: 'أهرامات الجيزة'",
+    "hideFilters": "إخفاء الفلاتر",
+    "showFilters": "إظهار الفلاتر",
+    "searching": "جارٍ البحث...",
+    "showingResults": "عرض {count} نتيجة",
+    "sortBy": "الترتيب حسب:",
+    "sortOptions": {
+      "relevance": "الأكثر صلة",
+      "rating": "التقييم",
+      "priceLowToHigh": "السعر: من الأقل إلى الأعلى",
+      "priceHighToLow": "السعر: من الأعلى إلى الأقل"
+    },
+    "filters": "الفلاتر",
+    "clearAll": "مسح الكل",
+    "categories": "الفئات",
+    "destinations": "الوجهات",
+    "priceRange": "نطاق السعر",
+    "duration": {
+      "title": "المدة",
+      "upTo2Hours": "حتى ساعتين",
+      "from2To4Hours": "من ساعتين إلى 4 ساعات",
+      "from4To6Hours": "من 4 إلى 6 ساعات",
+      "moreThan6Hours": "أكثر من 6 ساعات"
+    },
+    "rating": "التقييم",
+    "ratings": {
+      "fiveStars": "5 نجوم",
+      "fourStarsAndUp": "4 نجوم فأكثر",
+      "threeStarsAndUp": "3 نجوم فأكثر"
+    },
+    "noToursFoundTitle": "لم يتم العثور على جولات",
+    "noToursFoundDescription": "لم نعثر على جولات تطابق معاييرك. جرّب تعديل الفلاتر أو مسحها.",
+    "clearFilters": "مسح الفلاتر",
+    "loadingTours": "جارٍ تحميل الجولات...",
+    "meta": {
+      "title": "البحث عن الجولات والأنشطة | Egypt Excursions Online",
+      "description": "ابحث وصفِّ ضمن مجموعتنا الكبيرة من الجولات والتجارب في مصر.",
+      "openGraphTitle": "البحث عن الجولات والأنشطة | Egypt Excursions Online",
+      "openGraphDescription": "ابحث وصفِّ ضمن مجموعتنا الكبيرة من الجولات والتجارب في مصر."
+    }
+  },
+  "reviewsForm": {
+    "errors": {
+      "selectRating": "يرجى اختيار تقييم.",
+      "commentMinLength": "يجب أن يكون التعليق 10 أحرف على الأقل إذا تم إدخاله.",
+      "auth": "خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.",
+      "emptyResponse": "استجابة فارغة من الخادم",
+      "invalidServerResponse": "أعاد الخادم استجابة غير صالحة. حاول مرة أخرى.",
+      "alreadyReviewed": "لقد قيّمت هذه الجولة بالفعل. يرجى تعديل تقييمك الحالي أعلاه.",
+      "loginRequired": "يرجى تسجيل الدخول لإرسال تقييم.",
+      "tourNotFound": "الجولة غير موجودة.",
+      "serverWithStatus": "خطأ في الخادم ({status})",
+      "submitFailed": "فشل إرسال التقييم",
+      "unexpected": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى."
+    },
+    "defaults": {
+      "title": "تجربة رائعة!"
+    },
+    "success": {
+      "submitted": "شكرًا لتقييمك!",
+      "canNowReview": "يمكنك الآن ترك تقييم!",
+      "accountCreatedCanReview": "تم إنشاء الحساب! يمكنك الآن ترك تقييم!"
+    },
+    "existing": {
+      "title": "لقد قيّمت هذه الجولة بالفعل",
+      "subtitle": "أرسلت تقييمًا في {date}.",
+      "ratingOutOfFive": "{rating}/5",
+      "editHint": "لتعديل أو حذف تقييمك، استخدم زر التعديل بجانب تقييمك أعلاه."
+    },
+    "guest": {
+      "title": "شارك تجربتك",
+      "subtitle": "يرجى تسجيل الدخول لترك تقييم ومساعدة المسافرين الآخرين.",
+      "login": "تسجيل الدخول",
+      "signup": "إنشاء حساب"
+    },
+    "userFallback": "مستخدم",
+    "form": {
+      "title": "شارك تجربتك",
+      "writingAs": "تكتب باسم {name}",
+      "ratingLabel": "تقييمك *",
+      "reviewTitleLabel": "عنوان التقييم (اختياري)",
+      "reviewTitlePlaceholder": "لخّص تجربتك...",
+      "characters": "{count}/{max} حرف",
+      "reviewCommentLabel": "تقييمك (اختياري)",
+      "reviewCommentPlaceholder": "حدّثنا عن تجربتك في هذه الجولة. ما الذي أعجبك أكثر؟ هل لديك نصائح للمسافرين؟ (اختياري)",
+      "commentHint": "اختياري - الحد الأدنى 10 أحرف إذا تم إدخاله",
+      "submitting": "جارٍ إرسال التقييم...",
+      "submit": "إرسال التقييم",
+      "legalPrefix": "بإرسال التقييم، فإنك توافق على",
+      "terms": "شروط الخدمة",
+      "and": "و",
+      "privacy": "سياسة الخصوصية"
+    },
+    "ratingLabels": {
+      "poor": "ضعيف",
+      "fair": "مقبول",
+      "good": "جيد",
+      "veryGood": "جيد جدًا",
+      "excellent": "ممتاز"
+    }
+  },
+  "aiSearch": {
+    "placeholder1": "جرّب \"أفضل الجولات في القاهرة\"",
+    "placeholder2": "اسأل \"جولات بأقل من 200 دولار\"",
+    "placeholder3": "ابحث عن \"رحلة نيلية فاخرة\"",
+    "placeholder4": "اعثر على \"رحلات يومية من القاهرة\"",
+    "placeholder5": "استكشف \"مغامرات سفاري الصحراء\"",
+    "placeholder6": "اكتشف \"جولات مناسبة للعائلات\"",
+    "greeting": "مرحبًا! أنا مساعد السفر الذكي لمصر",
+    "greetingSubtitle": "اسألني أي شيء — سأساعدك في العثور على جولات ورحلات وأسعار ووجهات والمزيد.",
+    "tryThesePrompts": "جرّب هذه الاقتراحات",
+    "prompt1": "أفضل الجولات في القاهرة بأقل من 100 دولار",
+    "prompt1Category": "اقتصادي",
+    "prompt2": "باقات رحلات النيل الفاخرة",
+    "prompt2Category": "فاخر",
+    "prompt3": "مغامرات سفاري الصحراء",
+    "prompt3Category": "مغامرة",
+    "prompt4": "جولات مصر المناسبة للعائلات",
+    "prompt4Category": "عائلي",
+    "prompt5": "رحلات يومية من القاهرة",
+    "prompt5Category": "سريع",
+    "prompt6": "أكثر الجولات شعبية هذا الشهر",
+    "prompt6Category": "شائع",
+    "trending1": "الأهرامات",
+    "trending2": "رحلة نيلية",
+    "trending3": "سفاري الصحراء",
+    "trending4": "الأقصر",
+    "trending5": "جولات بأقل من 100 دولار",
+    "trendingSearches": "عمليات البحث الرائجة",
+    "aiTravelAssistant": "مساعد السفر الذكي",
+    "searchResults": "نتائج البحث",
+    "featuredTours": "جولات مميزة",
+    "newChat": "محادثة جديدة",
+    "askAI": "اسأل الذكاء الاصطناعي",
+    "stop": "إيقاف",
+    "send": "إرسال",
+    "aiThinking": "الذكاء الاصطناعي يفكر…",
+    "searchError": "خطأ في البحث",
+    "askAbout": "اسأل الذكاء الاصطناعي عن \"{query}\"",
+    "chatPlaceholder": "اسأل أي شيء عن مصر، الجولات، الأسعار…",
+    "tours": "جولات",
+    "destinations": "وجهات",
+    "categories": "فئات",
+    "toursCount": "{count} جولات",
+    "untitledTour": "جولة بدون عنوان",
+    "untitledDestination": "وجهة بدون عنوان",
+    "untitledCategory": "فئة بدون عنوان",
+    "noFeaturedTours": "لا توجد جولات مميزة",
+    "lookingForTours": "جاري البحث عن جولات...",
+    "toursFound": "إليك بعض الجولات التي وجدتها لك:"
+  },
+  "reviewsList": {
+    "toasts": {
+      "provideRatingAndComment": "يرجى إدخال التقييم والتعليق.",
+      "updatedSuccess": "تم تحديث التقييم بنجاح!",
+      "deletedSuccess": "تم حذف التقييم بنجاح!"
+    },
+    "errors": {
+      "updateFailed": "فشل تحديث التقييم.",
+      "deleteFailed": "فشل حذف التقييم."
+    },
+    "confirmDelete": "هل أنت متأكد من حذف هذا التقييم؟ لا يمكن التراجع عن هذا الإجراء.",
+    "empty": "لا توجد تقييمات لهذه الجولة بعد. كن أول من يترك تقييمًا!",
+    "title": "ماذا يقول مسافرونا",
+    "anonymous": "مجهول",
+    "setRating": "ضبط التقييم {star}",
+    "actions": {
+      "saveChanges": "حفظ التغييرات",
+      "saveReview": "حفظ التقييم",
+      "cancelEditing": "إلغاء التحرير",
+      "cancelEdit": "إلغاء",
+      "editReview": "تعديل التقييم",
+      "deleteReview": "حذف التقييم"
+    },
+    "editPlaceholder": "شارك تجربتك...",
+    "editAria": "تعديل تعليق التقييم",
+    "characters": "{count}/{max} حرف",
+    "buttons": {
+      "cancel": "إلغاء",
+      "saving": "جارٍ الحفظ...",
+      "save": "حفظ"
+    },
+    "ratedOnly": "⭐ قيّم هذه التجربة",
+    "reviewerAvatar": "صورة مقدم التقييم"
+  }
+}

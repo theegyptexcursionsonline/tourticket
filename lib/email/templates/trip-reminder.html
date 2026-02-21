@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no, email=no, address=no">
+    <title>Trip Reminder</title>
+    <style>
+        body { margin: 0; padding: 0; background: #f3f6fb; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; -webkit-font-smoothing: antialiased; }
+        img { border: none; display: block; max-width: 100%; }
+        .wrapper { width: 100%; padding: 32px 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 30px 55px rgba(15,23,42,0.12); }
+
+        .hero { background: linear-gradient(135deg, #0f172a 0%, #2563eb 50%, #38bdf8 100%); padding: 36px 40px; color: #f8fafc; text-align: center; }
+        .logo { width: 110px; margin: 0 auto 20px; }
+        .hero-eyebrow { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; }
+        .hero-title { font-size: 28px; font-weight: 700; margin: 12px 0 6px; }
+        .hero-meta { font-size: 15px; opacity: 0.85; }
+
+        .content { padding: 42px; }
+        .greeting { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+        .intro { font-size: 15px; color: #475569; line-height: 1.7; margin-bottom: 26px; }
+
+        .countdown { border: 1px solid rgba(14,165,233,0.25); border-radius: 16px; background: #ecfeff; padding: 22px 24px; text-align: center; margin-bottom: 28px; }
+        .countdown-label { font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; color: #0c4a6e; font-weight: 700; margin-bottom: 6px; }
+        .countdown-value { font-size: 26px; font-weight: 700; color: #0c4a6e; }
+
+        .info-card { border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px 28px; margin-bottom: 24px; }
+        .info-title { font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 12px; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .info-row:last-child { margin-bottom: 0; }
+        .info-label { font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; }
+        .info-value { font-size: 16px; font-weight: 600; color: #0f172a; }
+
+        .timeline { border: 1px dashed #cbd5f5; border-radius: 16px; padding: 24px 20px; margin-bottom: 28px; }
+        .timeline-step { display: flex; gap: 12px; margin-bottom: 16px; }
+        .timeline-step:last-child { margin-bottom: 0; }
+        .timeline-dot { width: 12px; height: 12px; border-radius: 50%; background: #2563eb; margin-top: 4px; }
+        .timeline-text { font-size: 14px; color: #1f2937; line-height: 1.5; }
+
+        .essentials { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+        .essential-item { border: 1px solid #e0e7ff; border-radius: 12px; padding: 14px; text-align: center; background: #f8fafc; }
+        .essential-icon { font-size: 20px; margin-bottom: 6px; }
+        .essential-label { font-size: 13px; color: #475569; font-weight: 600; }
+
+        .checklist { border: 1px solid #dbeafe; border-radius: 16px; padding: 22px 24px; margin-bottom: 28px; background: #eff6ff; }
+        .checklist-title { font-size: 13px; letter-spacing: 0.8px; text-transform: uppercase; color: #1d4ed8; font-weight: 700; margin-bottom: 12px; }
+        .checklist-item { font-size: 14px; color: #1e293b; margin-bottom: 8px; padding-left: 22px; position: relative; }
+        .checklist-item:before { content: '✓'; position: absolute; left: 0; color: #22c55e; font-weight: 700; }
+
+        .weather { border: 1px solid #bae6fd; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px; background: #e0f2fe; font-size: 14px; color: #0c4a6e; }
+
+        .support { border: 1px solid #e2e8f0; border-radius: 16px; padding: 22px 24px; background: #0f172a; color: #f8fafc; text-align: center; }
+        .support strong { display: block; font-size: 15px; margin-bottom: 6px; }
+        .support span { font-size: 14px; color: rgba(248,250,252,0.85); }
+
+        .footer { background: #f8fafc; padding: 28px 40px; text-align: center; border-top: 1px solid #e2e8f0; }
+        .footer-links a { color: #94a3b8; font-size: 13px; margin: 0 10px; text-decoration: none; font-weight: 600; }
+        .footer p { color: #94a3b8; font-size: 12px; margin: 10px 0; }
+
+        @media (max-width: 600px) {
+            .wrapper { padding: 0; }
+            .container { border-radius: 0; }
+            .hero, .content, .footer { padding-left: 24px !important; padding-right: 24px !important; }
+            .essentials { grid-template-columns: repeat(2, 1fr); }
+            .timeline-step { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="hero">
+                <img src="https://egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+                <div class="hero-eyebrow">Tour starts in 24 hours</div>
+                <div class="hero-title">Tomorrow is the day!</div>
+                <div class="hero-meta">{{tourTitle}} · {{bookingDate}} · {{bookingTime}}</div>
+            </div>
+
+            <div class="content">
+                <div class="greeting">Hi {{customerName}},</div>
+                <p class="intro">Your Egyptian adventure begins tomorrow. Here’s a quick briefing to make arrival effortless.</p>
+
+                <div class="countdown">
+                    <div class="countdown-label">Countdown</div>
+                    <div class="countdown-value">Less than 24 hours to go</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-title">Tour details</div>
+                    <div class="info-row">
+                        <span class="info-label">Tour</span>
+                        <span class="info-value">{{tourTitle}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date & time</span>
+                        <span class="info-value">{{bookingDate}} · {{bookingTime}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Meeting point</span>
+                        <span class="info-value">{{meetingPoint}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Booking ID</span>
+                        <span class="info-value" style="font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</span>
+                    </div>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-step">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-text"><strong>Tonight:</strong> Pack essentials, charge your phone, and keep this email handy.</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-text"><strong>1 hour before:</strong> Leave early to arrive at the meeting point 15 minutes ahead of time.</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-text"><strong>On arrival:</strong> Show your booking ID and enjoy your experience.</div>
+                    </div>
+                </div>
+
+                <div class="essentials">
+                    <div class="essential-item">
+                        <div class="essential-icon">🪪</div>
+                        <div class="essential-label">ID / passport</div>
+                    </div>
+                    <div class="essential-item">
+                        <div class="essential-icon">💧</div>
+                        <div class="essential-label">Water & sun care</div>
+                    </div>
+                    <div class="essential-item">
+                        <div class="essential-icon">👟</div>
+                        <div class="essential-label">Comfortable shoes</div>
+                    </div>
+                </div>
+
+                {{#if weatherInfo}}
+                <div class="weather">
+                    <strong>Weather outlook:</strong> {{weatherInfo}}
+                </div>
+                {{/if}}
+
+                {{#if whatToBring}}
+                <div class="checklist">
+                    <div class="checklist-title">Bring these items</div>
+                    {{#each whatToBring}}
+                    <div class="checklist-item">{{this}}</div>
+                    {{/each}}
+                </div>
+                {{/if}}
+
+                {{#if importantNotes}}
+                <div class="info-card" style="background: #fffbeb; border-color: #fde68a;">
+                    <div class="info-title" style="color:#b45309;">Important notes</div>
+                    <p style="margin: 0; font-size: 14px; color: #92400e;">{{importantNotes}}</p>
+                </div>
+                {{/if}}
+
+                <div class="support">
+                    <strong>Need us on the day?</strong>
+                    <span>Guide contact: {{contactNumber}} · WhatsApp: +20 11 42255624</span>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="footer-links">
+                    <a href="{{baseUrl}}/user/bookings">My Bookings</a>
+                    <a href="{{baseUrl}}/help">Help Center</a>
+                    <a href="{{baseUrl}}/terms">Terms</a>
+                </div>
+                <p>© {{year}} Egypt Excursions Online • Cairo, Egypt</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

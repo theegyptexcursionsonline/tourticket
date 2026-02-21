@@ -1,0 +1,50 @@
+# Algolia-Crawler-Verif: BEDDE1C2A75642AF
+
+# Default rules for all crawlers
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /blog
+Allow: /categories
+Allow: /contact
+Allow: /destinations
+Allow: /egypt
+Allow: /faqs
+Allow: /search
+Allow: /tours
+Allow: /terms
+Allow: /privacy
+Allow: /careers
+Allow: /attraction
+
+# Private / authenticated areas
+Disallow: /admin
+Disallow: /user
+Disallow: /api
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot
+Disallow: /profile
+Disallow: /bookings
+Disallow: /booking/verify
+Disallow: /accept-invitation
+Disallow: /redirecting
+Disallow: /interests
+
+# Internal / dev pages
+Disallow: /sentry-example-page
+Disallow: /monitoring
+Disallow: /showcase
+Disallow: /showcase-v2
+
+# Next.js internals
+Disallow: /_next/
+Disallow: /static/
+
+# Crawl rate
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://egypt-excursionsonline.com/sitemap.xml

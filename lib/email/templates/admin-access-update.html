@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Access Update</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f5f7fb;
+        margin: 0;
+        padding: 0;
+        color: #0f172a;
+      }
+      .wrapper {
+        max-width: 620px;
+        margin: 0 auto;
+        padding: 32px 20px;
+      }
+      .card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 36px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      }
+      .badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+      .badge--activated {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+      .badge--deactivated {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 26px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        background: #0f172a;
+        color: #fff;
+      }
+      footer {
+        text-align: center;
+        margin-top: 28px;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <span class="badge {{#if isActivated}}badge--activated{{else}}badge--deactivated{{/if}}">
+          {{#if (eq action 'permissions_updated')}}
+            Permissions Updated
+          {{else if (eq action 'deleted')}}
+            Access Removed
+          {{else}}
+            Access {{action}}
+          {{/if}}
+        </span>
+        <h1>Hello {{inviteeName}},</h1>
+        <p>
+          {{#if (eq action 'permissions_updated')}}
+            {{updatedBy}} updated your admin permissions. Your new access level is now in effect.
+            {{#if permissions}}
+            <br/><br/>
+            <strong>Your current permissions:</strong>
+            <ul>
+              {{#each permissions}}
+                <li>{{this}}</li>
+              {{/each}}
+            </ul>
+            {{/if}}
+          {{else if (eq action 'deleted')}}
+            {{updatedBy}} permanently removed your admin account. You no longer have access to the admin portal.
+            All your credentials have been deleted from the system.
+          {{else if isActivated}}
+            Good news! {{updatedBy}} reactivated your admin privileges. You can log in any time using
+            the button below.
+          {{else}}
+            Heads up—{{updatedBy}} temporarily removed your admin access. You won't be able to log in
+            until your permissions are restored.
+          {{/if}}
+        </p>
+
+        {{#if (or isActivated (eq action 'permissions_updated'))}}
+        <p style="margin: 24px 0;">
+          <a class="btn" href="{{portalLink}}" target="_blank" rel="noopener noreferrer">
+            Go to admin portal
+          </a>
+        </p>
+        {{/if}}
+
+        <p>
+          If you have any questions or believe this change was made in error, reach out to
+          {{supportEmail}} and we'll sort it out quickly.
+        </p>
+      </div>
+
+      <footer>Egypt Excursions Online · Security first</footer>
+    </div>
+  </body>
+</html>
+

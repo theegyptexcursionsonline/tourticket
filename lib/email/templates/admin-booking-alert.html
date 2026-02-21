@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>New Booking Alert</title>
+    <style>
+        body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-family: 'Helvetica Neue', Arial, sans-serif; background: #eef2f7; color: #0f172a; }
+        table { border-collapse: collapse; }
+        img { border: 0; outline: none; display: block; max-width: 100%; }
+        a { color: #2563eb; text-decoration: none; }
+
+        .wrapper { width: 100%; padding: 32px 0; background: #eef2f7; }
+        .container { max-width: 700px; width: 100%; background: #fff; border-radius: 36px; overflow: hidden; box-shadow: 0 35px 70px rgba(15,23,42,0.18); }
+        .success-header { text-align: center; padding: 40px 32px 0; }
+        .status-icon { width: 76px; height: 76px; border-radius: 999px; margin: 0 auto 18px; background: radial-gradient(circle at 30% 30%, #38bdf8, #6366f1); color: #fff; font-size: 34px; line-height: 76px; font-weight: 700; }
+        .status-chip { display: inline-block; padding: 6px 14px; border-radius: 999px; background: rgba(99,102,241,0.12); color: #4c1d95; font-size: 11px; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
+        .success-title { font-size: 28px; margin: 12px 0 6px; font-weight: 800; color: #0f172a; }
+        .success-text { color: #475569; font-size: 15px; margin: 0; }
+
+        .ticket-card { margin: 32px; border: 1px solid #e2e8f0; border-radius: 30px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(226,232,240,0.4); }
+        .ticket-gradient { height: 6px; background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899); }
+        .ticket-body { padding: 32px; }
+        .top-row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .ticket-info { flex: 1 1 240px; }
+        .badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 11px; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
+        .badge-primary { background: #e0e7ff; color: #312e81; }
+        .badge-soft { background: #e2e8f0; color: #475569; }
+        .tour-title { font-size: 22px; margin: 0 0 6px; font-weight: 800; color: #0f172a; }
+        .tour-option { margin: 0 0 4px; color: #2563eb; font-weight: 600; }
+        .booking-reference { margin: 0; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #94a3b8; font-weight: 600; }
+        .ticket-date { text-align: right; }
+        .date-pill { border: 1px solid #e2e8f0; border-radius: 22px; padding: 12px; width: 90px; text-align: center; }
+        .date-day { font-size: 11px; letter-spacing: 1px; color: #ec4899; font-weight: 700; }
+        .date-number { font-size: 30px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .date-month { font-size: 12px; letter-spacing: 1px; color: #475569; font-weight: 600; }
+
+        .info-grid { display: flex; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; gap: 16px; margin-top: 24px; }
+        .info-grid > div { flex: 1 1 120px; }
+        .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin: 0 0 6px; font-weight: 700; }
+        .value { font-size: 16px; font-weight: 700; margin: 0; color: #0f172a; }
+        .value.mono { font-family: 'SFMono-Regular', Menlo, monospace; letter-spacing: 0.5px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; margin-right: 6px; }
+
+        .countdown-card { background: linear-gradient(135deg, #0f172a, #312e81); border-radius: 22px; padding: 20px; margin-top: 24px; color: #fff; text-align: center; }
+        .countdown-label { margin: 0 0 12px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; color: rgba(255,255,255,0.7); }
+        .countdown-grid { display: flex; justify-content: center; gap: 18px; }
+        .countdown-unit { min-width: 70px; }
+        .count-value { font-size: 28px; font-weight: 800; }
+        .count-caption { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.7); }
+
+        .section { margin: 0 32px 24px; border: 1px solid #e2e8f0; border-radius: 28px; padding: 24px; background: #fff; }
+        .section-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0 0 14px; }
+        .info-table { width: 100%; }
+        .info-label { width: 30%; font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 0; }
+        .info-value { font-size: 15px; font-weight: 600; color: #0f172a; padding: 10px 0; }
+
+        .pickup { background: linear-gradient(135deg, rgba(191,219,254,0.65), rgba(199,210,254,0.65)); border-color: #93c5fd; }
+        .pickup-map { margin-top: 16px; border-radius: 18px; overflow: hidden; border: 1px solid rgba(99,102,241,0.3); }
+        .note { background: linear-gradient(135deg, rgba(254,215,170,0.6), rgba(253,230,138,0.6)); border-color: #fcd34d; }
+
+        .tour-item { border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; margin-bottom: 12px; }
+        .tour-title { font-weight: 700; margin: 0 0 6px; color: #0f172a; }
+        .tour-meta { font-size: 13px; color: #94a3b8; margin: 2px 0; }
+        .tour-option { font-size: 12px; font-weight: 600; color: #2563eb; }
+        .tour-price { font-weight: 800; font-size: 16px; color: #0f172a; text-align: right; }
+
+        .action-card { border: 1px dashed #c7d2fe; border-radius: 22px; padding: 20px; text-align: center; background: #eef2ff; }
+        .btn { display: inline-block; padding: 15px 42px; border-radius: 999px; background: linear-gradient(120deg, #6366f1, #8b5cf6); color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 18px 35px rgba(99,102,241,0.35); }
+
+        .footer { padding: 24px; text-align: center; border-top: 1px solid #e2e8f0; background: #f8fafc; font-size: 12px; color: #94a3b8; }
+
+        @media screen and (max-width: 700px) {
+            .container { border-radius: 0; }
+            .ticket-card, .section { margin: 20px; padding: 20px; }
+            .top-row { flex-direction: column; }
+            .btn { display: block; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <table role="presentation" class="wrapper" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td align="center">
+                <table role="presentation" class="container" width="700" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td>
+                            <div class="success-header">
+                                <div class="status-icon">⚡</div>
+                                <span class="status-chip">New Booking</span>
+                                <h1 class="success-title">Action Required: {{tourTitle}}</h1>
+                                <p class="success-text">Booking {{bookingId}} has been confirmed. Review the snapshot below and sync with operations.</p>
+                            </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                            <div class="ticket-card">
+                                <div class="ticket-gradient"></div>
+                                <div class="ticket-body">
+                                    <div class="top-row">
+                                        <div class="ticket-info">
+                                            <div class="badges">
+                                                <span class="badge badge-primary">Admin Copy</span>
+                                                <span class="badge badge-soft">{{paymentMethod}}</span>
+                                            </div>
+                                            <h2 class="tour-title">{{tourTitle}}</h2>
+                                            <p class="booking-reference">Booking {{bookingId}}</p>
+                                        </div>
+                                        {{#if dateBadge}}
+                                        <div class="ticket-date">
+                                            <div class="date-pill">
+                                                <div class="date-day">{{dateBadge.dayLabel}}</div>
+                                                <div class="date-number">{{dateBadge.dayNumber}}</div>
+                                                <div class="date-month">{{dateBadge.monthLabel}}</div>
+                                            </div>
+                                        </div>
+                                        {{/if}}
+                                    </div>
+
+                                    <div class="info-grid">
+                                        <div>
+                                            <p class="label">Booking ID</p>
+                                            <p class="value mono">{{bookingId}}</p>
+                                        </div>
+                                        <div>
+                                            <p class="label">Travel Date</p>
+                                            <p class="value">{{bookingDate}}</p>
+                                        </div>
+                                        <div>
+                                            <p class="label">Payment</p>
+                                            <p class="value">{{paymentMethod}}</p>
+                                        </div>
+                                        <div>
+                                            <p class="label">Value</p>
+                                            <p class="value">{{totalPrice}}</p>
+                                        </div>
+                                    </div>
+
+                                    {{#if timeUntil}}
+                                    <div class="countdown-card">
+                                        <p class="countdown-label">Time until departure</p>
+                                        <div class="countdown-grid">
+                                            <div class="countdown-unit">
+                                                <div class="count-value">{{timeUntil.days}}</div>
+                                                <div class="count-caption">Days</div>
+                                            </div>
+                                            <div class="countdown-unit">
+                                                <div class="count-value">{{timeUntil.hours}}</div>
+                                                <div class="count-caption">Hours</div>
+                                            </div>
+                                            <div class="countdown-unit">
+                                                <div class="count-value">{{timeUntil.minutes}}</div>
+                                                <div class="count-caption">Mins</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{/if}}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <div class="section">
+                                <div class="section-title">Customer & Payment</div>
+                                <table class="info-table">
+                                    <tr><td class="info-label">Guest</td><td class="info-value">{{customerName}}</td></tr>
+                                    <tr><td class="info-label">Email</td><td class="info-value"><a href="mailto:{{customerEmail}}">{{customerEmail}}</a></td></tr>
+                                    {{#if customerPhone}}<tr><td class="info-label">Phone</td><td class="info-value">{{customerPhone}}</td></tr>{{/if}}
+                                    <tr><td class="info-label">Payment</td><td class="info-value">{{paymentMethod}}</td></tr>
+                                    {{#if discountCode}}<tr><td class="info-label">Promo Code</td><td class="info-value" style="color: #16a34a; font-weight: 700;">{{discountCode}} (-{{discountAmount}})</td></tr>{{/if}}
+                            </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    {{#if hotelPickupDetails}}
+                    <tr>
+                        <td>
+                            <div class="section pickup">
+                                <div class="section-title">🏨 Hotel Pickup</div>
+                                {{#if hotelPickupLocation.name}}
+                                <p class="body-text" style="font-weight: 700; font-size: 16px; margin-bottom: 8px;">{{hotelPickupLocation.name}}</p>
+                                {{/if}}
+                                {{#if hotelPickupLocation.address}}
+                                <p class="body-text" style="color: #64748b; font-size: 13px; margin-bottom: 8px;">📍 {{hotelPickupLocation.address}}</p>
+                                {{/if}}
+                                <p class="body-text">{{hotelPickupDetails}}</p>
+                                {{#if hotelPickupMapImage}}
+                                <div class="pickup-map">
+                                    {{#if hotelPickupMapLink}}
+                                    <a href="{{hotelPickupMapLink}}">
+                                        <img src="{{hotelPickupMapImage}}" alt="Pickup location map">
+                                    </a>
+                                    {{else}}
+                                    <img src="{{hotelPickupMapImage}}" alt="Pickup location map">
+                                    {{/if}}
+                                </div>
+                                {{/if}}
+                            </div>
+                        </td>
+                    </tr>
+                    {{/if}}
+
+                    {{#if specialRequests}}
+                    <tr>
+                        <td>
+                            <div class="section note">
+                                <div class="section-title">Special Requests</div>
+                                <p class="body-text">"{{specialRequests}}"</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                    {{/if}}
+
+                                {{#if tours}}
+                    <tr>
+                        <td>
+                            <div class="section">
+                                <div class="section-title">Tours & Pax</div>
+                                    {{#each tours}}
+                                <div class="tour-item">
+                                    <table width="100%">
+                                        <tr>
+                                            <td>
+                                                <p class="tour-title">{{this.title}}</p>
+                                                <p class="tour-meta">{{this.date}} · {{this.time}}</p>
+                                                <p class="tour-meta">Adults: {{this.adults}}{{#if this.children}} · Children: {{this.children}}{{/if}}{{#if this.infants}} · Infants: {{this.infants}}{{/if}}</p>
+                                                {{#if this.bookingOption}}<p class="tour-option">{{this.bookingOption}}</p>{{/if}}
+                                                {{#if this.addOns}}
+                                                <p class="tour-meta">Add-ons: {{#each this.addOns}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</p>
+                                                {{/if}}
+                                            </td>
+                                            <td class="tour-price" align="right">{{this.price}}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    {{/each}}
+                            </div>
+                        </td>
+                    </tr>
+                            {{/if}}
+
+                    <tr>
+                        <td>
+                            <div class="section">
+                                <div class="section-title">Next Steps</div>
+                                <div class="action-card">
+                                    <p style="margin:0 0 16px; color:#312e81; font-weight:600;">Verify logistics, confirm pickup and notify ops.</p>
+                                    {{#if adminDashboardLink}}
+                                    <a class="btn" href="{{adminDashboardLink}}">Open in Dashboard</a>
+                                    {{/if}}
+                            </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <div class="footer">
+                                System notification • © {{year}} Egypt Excursions Online
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+

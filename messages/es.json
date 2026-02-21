@@ -1,0 +1,625 @@
+{
+  "header": {
+    "explore": "EXPLORAR",
+    "login": "Iniciar Sesion",
+    "signup": "Registrarse",
+    "destinations": "Principales Destinos",
+    "activities": "Tipos de Actividades",
+    "specialOffers": "Ofertas Especiales",
+    "deals": "Ver Ofertas",
+    "myProfile": "Mi Perfil",
+    "myBookings": "Mis Reservas",
+    "favorites": "Favoritos",
+    "signOut": "Cerrar Sesion"
+  },
+  "search": {
+    "placeholder": "A donde vas?",
+    "noResults": "No se encontraron tours para \"{query}\". Intenta con una busqueda diferente.",
+    "searching": "Buscando...",
+    "tours": "Tours",
+    "mostPopular": "Mas populares",
+    "recentSearches": "Tus busquedas recientes"
+  },
+  "currency": {
+    "title": "Seleccionar una Moneda"
+  },
+  "language": {
+    "title": "Seleccionar un Idioma"
+  },
+  "cart": {
+    "title": "Tu Carrito",
+    "empty": "Tu carrito esta vacio",
+    "subtotal": "Subtotal",
+    "checkout": "Proceder al Pago"
+  },
+  "tour": {
+    "duration": "Duracion",
+    "rating": "Calificacion",
+    "bookings": "reservas",
+    "addToCart": "Anadir al Carrito"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Exito"
+  },
+  "price": {
+    "from": "desde",
+    "perPerson": "por persona"
+  },
+  "booking": {
+    "adults": "Adultos",
+    "children": "Ninos",
+    "infants": "Bebes",
+    "selectDate": "Seleccionar Fecha",
+    "selectTime": "Seleccionar Hora",
+    "participants": "participantes",
+    "total": "Total",
+    "save": "Ahorrar",
+    "discount": "Descuento",
+    "addOns": "Extras",
+    "enhance": "Mejora tu Tour",
+    "review": "Revisar y Reservar"
+  },
+  "offers": {
+    "save": "Ahorra hasta un 20% en paquetes combinados y pases de ciudad!"
+  },
+  "tourCard": {
+    "featured": "Destacado",
+    "max": "Max",
+    "freeCancellation": "Cancelacion gratuita",
+    "mobileTicket": "Ticket movil",
+    "more": "mas",
+    "addedToCart": "Anadido al carrito!",
+    "addedToWishlist": "Anadido a favoritos!",
+    "removedFromWishlist": "Eliminado de favoritos",
+    "failedToAdd": "Error al anadir al carrito",
+    "viewDetails": "Ver detalles",
+    "startingFrom": "Desde",
+    "perPerson": "por persona"
+  },
+  "footer": {
+    "tagline": "Reserva tu aventura, salta las filas",
+    "trustedBy": "Confiado por nuestros clientes",
+    "averageRating": "Calificacion promedio de Tripadvisor",
+    "waysToPlay": "Formas de pago",
+    "thingsToDo": "Cosas que hacer",
+    "destinations": "Destinos",
+    "contact": "Contacto",
+    "aboutUs": "Sobre nosotros",
+    "blog": "Blog",
+    "faq": "Preguntas frecuentes",
+    "careers": "Carreras",
+    "contactInfo": "Informacion de contacto",
+    "support247": "(Soporte 24/7)",
+    "chatWithUs": "Chatea con nosotros",
+    "newsletter": "No te pierdas nuestras actualizaciones de viaje",
+    "newsletterDesc": "Recibe consejos, ofertas exclusivas e inspiracion para viajar",
+    "emailPlaceholder": "Tu direccion de correo electronico",
+    "subscribe": "SUSCRIBIRSE",
+    "followUs": "Siguenos en redes sociales",
+    "privacyPolicy": "Politica de privacidad",
+    "termsConditions": "Terminos y condiciones",
+    "copyright": "Todos los derechos reservados",
+    "thingsToDoIn": "Things to do in {destination}",
+    "toursTickets": "Tours & Tickets",
+    "repliesWithinHour": "Replies within 1 hour",
+    "newsletterThanksTitle": "Thank you!",
+    "newsletterThanksDesc": "You've successfully subscribed to our newsletter.",
+    "socialDesc": "Join our community for live updates, reels, and travel inspiration.",
+    "followSocialAria": "Follow us on social media",
+    "invalidEmail": "Please enter a valid email address.",
+    "subscribeSuccess": "Thank you for subscribing!",
+    "subscribeFailed": "Subscription failed. Please try again.",
+    "subscribeError": "An error occurred. Please try again later."
+  },
+  "auth": {
+    "email": "Correo electronico",
+    "password": "Contrasena",
+    "forgotPassword": "Olvidaste tu contrasena?",
+    "rememberMe": "Recuerdame",
+    "noAccount": "No tienes una cuenta?",
+    "haveAccount": "Ya tienes una cuenta?",
+    "createAccount": "Crear Cuenta",
+    "resetPassword": "Restablecer Contrasena"
+  },
+  "wishlist": {
+    "title": "Tu Lista de Deseos",
+    "empty": "Tu lista de deseos esta vacia"
+  },
+  "hero": {
+    "defaultTitle": "Explora Egipto",
+    "defaultHighlight": "Piramides y Nilo",
+    "travelers": "2M+ viajeros",
+    "ratingScore": "4.9/5 calificacion",
+    "ratingStars": "★★★★★",
+    "subtitle": "Excursiones inolvidables — desde el amanecer en las piramides hasta navegar por el Nilo.",
+    "searchPlaceholder": "A donde vas?",
+    "aiPlaceholder": "Pregunta a la IA sobre tours en Egipto..."
+  },
+  "about": {
+    "title": "Por que reservar con Egypt Excursions Online?",
+    "subtitle": "Con 15 anos de experiencia, somos los expertos en viajes.",
+    "partner": "Socio oficial de los mejores museos y atracciones",
+    "bestPrice": "Mejor precio garantizado y proceso de reserva sencillo",
+    "mobileTicket": "Sin necesidad de imprimir! Muestra tus entradas en tu smartphone",
+    "freeCancellation": "Cancelacion gratuita hasta 8 horas antes",
+    "cta": "Mas sobre nosotros"
+  },
+  "destinations": {
+    "title": "A donde vas?",
+    "tours": "tours",
+    "tour": "tour"
+  },
+  "featured": {
+    "title": "Cruceros Perfectos Para Ti",
+    "subtitle": "Descubre las mejores experiencias en Egipto — seleccionadas por expertos locales para recuerdos inolvidables.",
+    "seeAll": "Ver todos los tours",
+    "startingFrom": "Desde",
+    "view": "Ver",
+    "noImageAvailable": "No image available",
+    "imageUnavailable": "Image unavailable",
+    "openTour": "Open tour {title}",
+    "addToCartAria": "Add {title} to cart",
+    "addToCartTitle": "Add to cart",
+    "untitledTour": "Untitled Tour",
+    "defaultDescription": "A beautifully curated experience — enjoy local highlights, guided commentary, and flexible booking.",
+    "durationNotSpecified": "Duration not specified",
+    "booked": "booked",
+    "seeAllAria": "See all tours"
+  },
+  "dayTrips": {
+    "title": "Las Mejores Ofertas en Tours desde Egipto",
+    "subtitle": "Explora mas alla de la ciudad con estas excursiones de un dia mejor valoradas, con descuentos exclusivos en linea.",
+    "errorTitle": "No se pudieron cargar las excursiones",
+    "errorMessage": "Tuvimos problemas al cargar los tours. Intentalo de nuevo mas tarde.",
+    "retry": "Reintentar",
+    "retrying": "Reintentando...",
+    "noImage": "No Image",
+    "removedFromWishlist": "Removed from wishlist",
+    "addedToWishlist": "Added to wishlist!",
+    "removeFromWishlistAria": "Remove from wishlist",
+    "addToWishlistAria": "Add to wishlist",
+    "addToCartAria": "Add to cart",
+    "untitledTour": "Untitled Tour",
+    "durationNotSpecified": "Duration not specified",
+    "noToursFound": "No tours found.",
+    "noToursReturned": "No tours returned from API.",
+    "unknownFetchError": "Unknown error while fetching tours.",
+    "unknownRetryError": "Unknown error while retrying.",
+    "showErrorDetails": "Show error details",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "seeAllCta": "SEE ALL DAY TRIPS FROM EGYPT"
+  },
+  "promo": {
+    "heading": "Descubre Egipto",
+    "subheading": "Maravillas eternas, atardeceres del Nilo e historias antiguas",
+    "description": "Desvela las maravillas de los faraones — navega por el Nilo, explora las piramides y siente la historia cobrar vida con experiencias de lujo seleccionadas.",
+    "cta": "Explorar Egipto"
+  },
+  "faq": {
+    "title": "PREGUNTAS FRECUENTES",
+    "viewAll": "VER TODO",
+    "viewAllAria": "View all FAQs",
+    "items": [
+      {
+        "question": "Can I reschedule or cancel my tickets?",
+        "answer": "Yes, in most cases you can reschedule or cancel your tickets up to 24 hours in advance. Please check the specific conditions for your chosen tour or attraction on its product page. Some special events may have different policies."
+      },
+      {
+        "question": "How long are open tickets valid?",
+        "answer": "Open tickets, which do not require a specific date and time slot, are typically valid for one year from the date of purchase. We always recommend checking the Details section on the ticket page for the exact validity period."
+      },
+      {
+        "question": "What languages do the tour guides speak?",
+        "answer": "Our live guided tours are most commonly offered in English and the local language. Many tours also offer audio guides in multiple languages, including Spanish, French, German, Italian, and more. The available languages are always listed on the product page."
+      },
+      {
+        "question": "Is my booking confirmed instantly?",
+        "answer": "Yes, most of our bookings are confirmed instantly after a successful payment. You will receive a booking confirmation email with your tickets and all necessary information right away."
+      },
+      {
+        "question": "Do I need to print my ticket?",
+        "answer": "No. All our tickets are mobile-friendly. You can simply show the e-ticket on your smartphone or tablet to the tour guide or at the entrance."
+      },
+      {
+        "question": "What happens if my tour is canceled by the operator?",
+        "answer": "In the rare event that a tour is canceled by the operator due to unforeseen circumstances, we will notify you immediately and provide a full refund or help you find a suitable alternative."
+      },
+      {
+        "question": "Are there any hidden fees?",
+        "answer": "The price you see on the product page is the final price. It includes all taxes and fees unless otherwise stated."
+      },
+      {
+        "question": "Can I pay with a different currency?",
+        "answer": "Yes, our website supports multiple currencies. You can change your preferred currency at the top of the page."
+      },
+      {
+        "question": "Are the tours accessible for people with disabilities?",
+        "answer": "Accessibility varies by tour. We provide detailed information on each product page. If you have specific needs, contact support before booking."
+      },
+      {
+        "question": "What should I bring on my tour?",
+        "answer": "We generally recommend comfortable shoes, a water bottle, and weather-appropriate clothing. See the product page for specific recommendations."
+      }
+    ]
+  },
+  "popularInterests": {
+    "featuredBadge": "Featured",
+    "trendingBadge": "Trending",
+    "experience": "experience",
+    "experiences": "experiences",
+    "emptyTitle": "No Featured Experiences Yet",
+    "emptySubtitle": "Check back soon for curated experiences!",
+    "browseAllTours": "Browse All Tours",
+    "sectionBadge": "Featured Experiences",
+    "sectionTitle": "Top Experience Categories.",
+    "sectionSubtitle": "Discover our most loved experiences curated for unforgettable adventures",
+    "exploreAll": "Explore All"
+  },
+  "interestGrid": {
+    "featuredBadge": "Featured",
+    "available": "Available",
+    "tourSingular": "tour",
+    "tourPlural": "tours",
+    "toursLabel": "Tours",
+    "destinationsLabel": "Destinations",
+    "categoriesLabel": "Categories",
+    "untitledDestination": "Untitled Destination",
+    "untitledCategory": "Untitled Category",
+    "untitledTour": "Untitled Tour",
+    "recommendedTours": "Recommended Tours",
+    "noResultsTitle": "No Results Found",
+    "noResultsSubtitle": "Try adjusting your search terms",
+    "badge": "Discover Egypt",
+    "titlePrefix": "Browse All",
+    "titleHighlight": "Experiences",
+    "subtitle": "Explore our complete collection of unforgettable tours and experiences across the wonders of Egypt",
+    "aiPlaceholder": "Ask AI anything about Egypt tours...",
+    "searchPlaceholder": "Search experiences by name...",
+    "clearSearchAria": "Clear search",
+    "openAiAria": "Open AI Assistant",
+    "aiAssistantLabel": "AI Travel Assistant",
+    "searchResultsLabel": "Search Results",
+    "popularSearchesLabel": "Popular Searches",
+    "aiGreetingTitle": "Hi! I'm your AI Egypt Travel Assistant",
+    "aiGreetingDescription": "Ask me anything about tours, destinations, or experiences in Egypt. I can help you find the perfect adventure!",
+    "aiThinking": "AI is thinking...",
+    "aiInputPlaceholder": "Ask about tours, destinations...",
+    "previousSlideAria": "Previous slide",
+    "nextSlideAria": "Next slide",
+    "popularSearches": [
+      "Pyramids of Giza",
+      "Nile Cruise",
+      "Luxor Temple",
+      "Desert Safari",
+      "Red Sea Diving"
+    ]
+  },
+  "reviews": {
+    "title": "What Our Guests Say",
+    "subtitle": "Real stories from our valued customers.",
+    "items": [
+      {
+        "name": "Aisha",
+        "country": "Egypt",
+        "review": "Amazing Nile sunset cruise—the guide was exceptional and the dinner unforgettable.",
+        "rating": 5,
+        "datePublished": "2024-11-12"
+      },
+      {
+        "name": "Luca",
+        "country": "Italy",
+        "review": "Private pyramid tour at sunrise was once-in-a-lifetime. Highly recommended.",
+        "rating": 5,
+        "datePublished": "2024-10-02"
+      },
+      {
+        "name": "Maya",
+        "country": "UK",
+        "review": "Seamless booking and the felucca ride on the Nile was so peaceful and beautiful.",
+        "rating": 5,
+        "datePublished": "2024-09-15"
+      }
+    ]
+  },
+  "loginPage": {
+    "title": "Bienvenido de nuevo",
+    "noAccount": "No tienes una cuenta?",
+    "signUp": "Registrate",
+    "emailLabel": "Correo electronico",
+    "emailPlaceholder": "tu@example.com",
+    "passwordLabel": "Contrasena",
+    "passwordPlaceholder": "Ingresa tu contrasena",
+    "rememberMe": "Recordarme",
+    "forgotPassword": "Olvidaste tu contrasena?",
+    "signingIn": "Iniciando sesion...",
+    "signIn": "Iniciar sesion",
+    "orContinueWith": "O continuar con",
+    "googleSigningIn": "Iniciando con Google...",
+    "googleSignIn": "Continuar con Google",
+    "legalPrefix": "Al continuar, aceptas nuestros",
+    "terms": "Terminos del servicio",
+    "and": "y la",
+    "privacy": "Politica de privacidad",
+    "errors": {
+      "missingCredentials": "Ingresa correo y contrasena."
+    },
+    "toasts": {
+      "loginSuccess": "Sesion iniciada correctamente.",
+      "loginFailed": "No se pudo iniciar sesion. Intenta de nuevo.",
+      "googleFailed": "Fallo el inicio de sesion con Google."
+    },
+    "meta": {
+      "title": "Iniciar sesion | Egypt Excursions Online",
+      "description": "Inicia sesion para acceder a tus reservas, favoritos y ofertas exclusivas."
+    }
+  },
+  "signupPage": {
+    "title": "Crea tu cuenta",
+    "alreadyHaveAccount": "Ya tienes una cuenta?",
+    "logIn": "Inicia sesion",
+    "firstNameLabel": "Nombre",
+    "firstNamePlaceholder": "Ingresa tu nombre",
+    "lastNameLabel": "Apellido",
+    "lastNamePlaceholder": "Ingresa tu apellido",
+    "emailLabel": "Correo electronico",
+    "emailPlaceholder": "tu@example.com",
+    "passwordLabel": "Contrasena",
+    "passwordPlaceholder": "Crea una contrasena",
+    "passwordHint": "Usa al menos 8 caracteres",
+    "creatingAccount": "Creando cuenta...",
+    "signUp": "Registrate",
+    "orContinueWith": "O continuar con",
+    "googleSigningIn": "Conectando con Google...",
+    "googleSignUp": "Continuar con Google",
+    "legalPrefix": "Al registrarte, aceptas nuestros",
+    "terms": "Terminos del servicio",
+    "and": "y la",
+    "privacy": "Politica de privacidad",
+    "errors": {
+      "passwordMin": "La contrasena debe tener al menos 8 caracteres."
+    },
+    "toasts": {
+      "signupSuccess": "Cuenta creada correctamente.",
+      "signupFailed": "No se pudo crear la cuenta. Intenta nuevamente.",
+      "googleSuccess": "Sesion con Google iniciada correctamente.",
+      "googleFailed": "Fallo el registro con Google."
+    },
+    "meta": {
+      "title": "Registro | Egypt Excursions Online",
+      "description": "Crea tu cuenta para reservar tours y experiencias increibles en Egipto."
+    }
+  },
+  "forgotPage": {
+    "title": "Olvidaste tu contrasena?",
+    "subtitle": "Ingresa tu correo y te enviaremos un enlace para restablecerla.",
+    "backToLogin": "Volver a iniciar sesion",
+    "emailLabel": "Correo electronico",
+    "emailPlaceholder": "tu@example.com",
+    "sending": "Enviando...",
+    "sendReset": "Enviar enlace de restablecimiento",
+    "success": {
+      "title": "Revisa tu bandeja de entrada",
+      "emailSent": "Si existe una cuenta con ese correo, acabamos de enviar un enlace de restablecimiento.",
+      "sendAnother": "Enviar otro correo"
+    },
+    "errors": {
+      "invalidEmail": "Ingresa un correo electronico valido",
+      "unexpected": "Algo salio mal. Intenta nuevamente.",
+      "invalidEmailWithPeriod": "Ingresa un correo electronico valido.",
+      "tooManyRequests": "Demasiados intentos. Intenta mas tarde.",
+      "userDisabled": "Esta cuenta esta deshabilitada. Contacta al soporte."
+    },
+    "meta": {
+      "title": "Olvidaste tu contrasena | Egypt Excursions Online",
+      "description": "Restablece tu contrasena para recuperar el acceso a tu cuenta."
+    }
+  },
+  "notFoundPage": {
+    "title": "Pagina no encontrada",
+    "descriptionPrefix": "La pagina que buscas en",
+    "brand": "Egypt Excursions Online",
+    "descriptionSuffix": "puede haberse movido o ya no existe.",
+    "backHome": "Volver al inicio",
+    "exploreTours": "Explorar tours"
+  },
+  "redirectingPage": {
+    "defaultTourName": "tu experiencia",
+    "imageAlt": "Preparando tu reserva",
+    "badge": "Asegurando tu reserva",
+    "title": "Preparando {tourName}",
+    "description": "Espera un momento mientras confirmamos disponibilidad y finalizamos tu pago. Esto solo toma unos segundos.",
+    "estimatedTime": "Tiempo estimado",
+    "eta": "~3 segundos",
+    "loading": "Cargando..."
+  },
+  "searchPage": {
+    "title": "Encuentra tu proxima aventura",
+    "searchPlaceholder": "Buscar por nombre de tour, p. ej., 'Piramides de Giza'",
+    "hideFilters": "Ocultar filtros",
+    "showFilters": "Mostrar filtros",
+    "searching": "Buscando...",
+    "showingResults": "Mostrando {count, plural, one {# resultado} other {# resultados}}",
+    "sortBy": "Ordenar por:",
+    "sortOptions": {
+      "relevance": "Relevancia",
+      "rating": "Calificacion",
+      "priceLowToHigh": "Precio: menor a mayor",
+      "priceHighToLow": "Precio: mayor a menor"
+    },
+    "filters": "Filtros",
+    "clearAll": "Limpiar todo",
+    "categories": "Categorias",
+    "destinations": "Destinos",
+    "priceRange": "Rango de precio",
+    "duration": {
+      "title": "Duracion",
+      "upTo2Hours": "Hasta 2 horas",
+      "from2To4Hours": "2 a 4 horas",
+      "from4To6Hours": "4 a 6 horas",
+      "moreThan6Hours": "Mas de 6 horas"
+    },
+    "rating": "Calificacion",
+    "ratings": {
+      "fiveStars": "5 estrellas",
+      "fourStarsAndUp": "4 estrellas o mas",
+      "threeStarsAndUp": "3 estrellas o mas"
+    },
+    "noToursFoundTitle": "No se encontraron tours",
+    "noToursFoundDescription": "No encontramos tours que coincidan con tus criterios. Prueba ajustar o limpiar filtros.",
+    "clearFilters": "Limpiar filtros",
+    "loadingTours": "Cargando tours...",
+    "meta": {
+      "title": "Buscar tours y actividades | Egypt Excursions Online",
+      "description": "Busca y filtra nuestra coleccion de tours y experiencias en Egipto.",
+      "openGraphTitle": "Buscar tours y actividades | Egypt Excursions Online",
+      "openGraphDescription": "Busca y filtra nuestra coleccion de tours y experiencias en Egipto."
+    }
+  },
+  "reviewsForm": {
+    "errors": {
+      "selectRating": "Selecciona una calificacion.",
+      "commentMinLength": "El comentario debe tener al menos 10 caracteres si se proporciona.",
+      "auth": "Error de autenticacion. Inicia sesion de nuevo.",
+      "emptyResponse": "Respuesta vacia del servidor",
+      "invalidServerResponse": "El servidor devolvio una respuesta invalida. Intentalo de nuevo.",
+      "alreadyReviewed": "Ya has evaluado este tour. Edita tu resena existente arriba.",
+      "loginRequired": "Inicia sesion para enviar una resena.",
+      "tourNotFound": "Tour no encontrado.",
+      "serverWithStatus": "Error del servidor ({status})",
+      "submitFailed": "No se pudo enviar la resena",
+      "unexpected": "Ocurrio un error inesperado. Intentalo de nuevo."
+    },
+    "defaults": {
+      "title": "Gran experiencia!"
+    },
+    "success": {
+      "submitted": "Gracias por tu resena!",
+      "canNowReview": "Ahora puedes dejar una resena!",
+      "accountCreatedCanReview": "Cuenta creada! Ahora puedes dejar una resena!"
+    },
+    "existing": {
+      "title": "Ya evaluaste este tour",
+      "subtitle": "Enviaste una resena el {date}.",
+      "ratingOutOfFive": "{rating}/5",
+      "editHint": "Para editar o eliminar tu resena, usa el boton de editar junto a tu resena arriba."
+    },
+    "guest": {
+      "title": "Comparte tu experiencia",
+      "subtitle": "Inicia sesion para dejar una resena y ayudar a otros viajeros.",
+      "login": "Iniciar sesion",
+      "signup": "Registrarse"
+    },
+    "userFallback": "Usuario",
+    "form": {
+      "title": "Comparte tu experiencia",
+      "writingAs": "Escribiendo como {name}",
+      "ratingLabel": "Tu calificacion *",
+      "reviewTitleLabel": "Titulo de la resena (opcional)",
+      "reviewTitlePlaceholder": "Resume tu experiencia...",
+      "characters": "{count}/{max} caracteres",
+      "reviewCommentLabel": "Tu resena (opcional)",
+      "reviewCommentPlaceholder": "Cuentanos sobre tu experiencia en este tour. Que fue lo que mas te gusto? Algun consejo para futuros viajeros? (Opcional)",
+      "commentHint": "Opcional - minimo 10 caracteres si se proporciona",
+      "submitting": "Enviando resena...",
+      "submit": "Enviar resena",
+      "legalPrefix": "Al enviar una resena, aceptas nuestros",
+      "terms": "Terminos del servicio",
+      "and": "y la",
+      "privacy": "Politica de privacidad"
+    },
+    "ratingLabels": {
+      "poor": "Malo",
+      "fair": "Regular",
+      "good": "Bueno",
+      "veryGood": "Muy bueno",
+      "excellent": "Excelente"
+    }
+  },
+  "aiSearch": {
+    "placeholder1": "Prueba \"Mejores tours en El Cairo\"",
+    "placeholder2": "Pregunta \"Tours por menos de $200\"",
+    "placeholder3": "Busca \"Crucero de lujo por el Nilo\"",
+    "placeholder4": "Encuentra \"Excursiones de un día desde El Cairo\"",
+    "placeholder5": "Explora \"Aventuras de safari en el desierto\"",
+    "placeholder6": "Descubre \"Tours familiares\"",
+    "greeting": "¡Hola! Soy tu asistente de viajes IA para Egipto",
+    "greetingSubtitle": "Pregúntame lo que quieras — te ayudaré a encontrar tours, viajes, precios, destinos y más.",
+    "tryThesePrompts": "Prueba estas sugerencias",
+    "prompt1": "Mejores tours en El Cairo por menos de $100",
+    "prompt1Category": "Económico",
+    "prompt2": "Paquetes de crucero de lujo por el Nilo",
+    "prompt2Category": "Lujo",
+    "prompt3": "Aventuras de safari en el desierto",
+    "prompt3Category": "Aventura",
+    "prompt4": "Tours familiares en Egipto",
+    "prompt4Category": "Familiar",
+    "prompt5": "Excursiones de un día desde El Cairo",
+    "prompt5Category": "Rápido",
+    "prompt6": "Tours más populares este mes",
+    "prompt6Category": "Popular",
+    "trending1": "Pirámides",
+    "trending2": "Crucero por el Nilo",
+    "trending3": "Safari en el desierto",
+    "trending4": "Luxor",
+    "trending5": "Tours por menos de $100",
+    "trendingSearches": "Búsquedas populares",
+    "aiTravelAssistant": "Asistente de viajes IA",
+    "searchResults": "Resultados de búsqueda",
+    "featuredTours": "Tours destacados",
+    "newChat": "Nuevo chat",
+    "askAI": "Preguntar a IA",
+    "stop": "Detener",
+    "send": "Enviar",
+    "aiThinking": "La IA está pensando…",
+    "searchError": "Error de búsqueda",
+    "askAbout": "Preguntar a IA sobre \"{query}\"",
+    "chatPlaceholder": "Pregunta lo que quieras sobre Egipto, tours, precios…",
+    "tours": "Tours",
+    "destinations": "Destinos",
+    "categories": "Categorías",
+    "toursCount": "{count} tours",
+    "untitledTour": "Tour sin título",
+    "untitledDestination": "Destino sin título",
+    "untitledCategory": "Categoría sin título",
+    "noFeaturedTours": "No hay tours destacados",
+    "lookingForTours": "Buscando tours...",
+    "toursFound": "Aquí tienes algunos tours que encontré para ti:"
+  },
+  "reviewsList": {
+    "toasts": {
+      "provideRatingAndComment": "Proporciona calificacion y comentario.",
+      "updatedSuccess": "Resena actualizada correctamente!",
+      "deletedSuccess": "Resena eliminada correctamente!"
+    },
+    "errors": {
+      "updateFailed": "No se pudo actualizar la resena.",
+      "deleteFailed": "No se pudo eliminar la resena."
+    },
+    "confirmDelete": "Seguro que deseas eliminar esta resena? Esta accion no se puede deshacer.",
+    "empty": "Aun no hay resenas para este tour. Se el primero en dejar una!",
+    "title": "Lo que dicen nuestros viajeros",
+    "anonymous": "Anonimo",
+    "setRating": "Establecer calificacion {star}",
+    "actions": {
+      "saveChanges": "Guardar cambios",
+      "saveReview": "Guardar resena",
+      "cancelEditing": "Cancelar edicion",
+      "cancelEdit": "Cancelar",
+      "editReview": "Editar resena",
+      "deleteReview": "Eliminar resena"
+    },
+    "editPlaceholder": "Comparte tu experiencia...",
+    "editAria": "Editar comentario de la resena",
+    "characters": "{count}/{max} caracteres",
+    "buttons": {
+      "cancel": "Cancelar",
+      "saving": "Guardando...",
+      "save": "Guardar"
+    },
+    "ratedOnly": "⭐ Califico esta experiencia",
+    "reviewerAvatar": "Avatar del revisor"
+  }
+}

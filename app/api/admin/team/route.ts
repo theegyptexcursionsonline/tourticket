@@ -1,0 +1,169 @@
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import dbConnect from '@/lib/dbConnect';
+import User from '@/lib/models/user';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import {
+  ADMIN_PERMISSIONS,
+  ADMIN_ROLES,
+  AdminPermission,
+  AdminRole,
+  getDefaultPermissions,
+} from '@/lib/constants/adminPermissions';
+import { EmailService } from '@/lib/email/emailService';
+
+const sanitize = (user: any) => ({
+  id: user._id.toString(),
+  _id: user._id.toString(),
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  role: user.role,
+  permissions: user.permissions || [],
+  isActive: user.isActive,
+  lastLoginAt: user.lastLoginAt,
+  createdAt: user.createdAt,
+});
+
+function normalizePermissions(
+  requested: unknown,
+  role: AdminRole,
+): AdminPermission[] {
+  if (!Array.isArray(requested) || requested.length === 0) {
+    return getDefaultPermissions(role);
+  }
+
+  return requested
+    .filter((perm): perm is AdminPermission =>
+      ADMIN_PERMISSIONS.includes(perm as AdminPermission),
+    )
+    .filter((value, index, self) => self.indexOf(value) === index);
+}
+
+const normalizeRole = (role: unknown): AdminRole => {
+  if (typeof role === 'string' && ADMIN_ROLES.includes(role as AdminRole)) {
+    return role as AdminRole;
+  }
+  return 'operations';
+};
+
+const getPortalLink = () => {
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://tourticket.app';
+  return `${base.replace(/\/$/, '')}/admin`;
+};
+
+const getSupportEmail = () =>
+  process.env.SUPPORT_EMAIL ||
+  process.env.ADMIN_NOTIFICATION_EMAIL ||
+  process.env.MAILGUN_FROM_EMAIL ||
+  'support@tourticket.app';
+
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminAuth(request, { permissions: ['manageUsers'] });
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  await dbConnect();
+
+  const teamMembers = await User.find({ role: { $ne: 'customer' } })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return NextResponse.json({
+    success: true,
+    data: teamMembers.map(sanitize),
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requireAdminAuth(request, { permissions: ['manageUsers'] });
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  await dbConnect();
+
+  const body = await request.json();
+  const { firstName, lastName, email, role = 'operations', permissions } = body;
+
+  if (!firstName || !lastName || !email) {
+    return NextResponse.json(
+      { success: false, error: 'First name, last name, and email are required.' },
+      { status: 400 },
+    );
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = await User.findOne({ email: normalizedEmail });
+  if (existing) {
+    return NextResponse.json(
+      { success: false, error: 'An account with this email already exists.' },
+      { status: 409 },
+    );
+  }
+
+  const normalizedRole = normalizeRole(role);
+  const effectivePermissions = normalizePermissions(permissions, normalizedRole);
+
+  // Generate invitation token
+  const invitationToken = crypto.randomBytes(32).toString('hex');
+  const invitationExpires = new Date();
+  invitationExpires.setDate(invitationExpires.getDate() + 7); // 7 days from now
+
+  // Create a temporary password - user must set their own via invitation link
+  const temporaryPassword = crypto.randomBytes(16).toString('hex');
+  const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+  const user = await User.create({
+    firstName,
+    lastName,
+    email: normalizedEmail,
+    password: hashedPassword,
+    role: normalizedRole,
+    permissions: effectivePermissions,
+    isActive: false, // Inactive until they accept invitation
+    invitationToken,
+    invitationExpires,
+    requirePasswordChange: true,
+  });
+
+  const inviteeName = `${firstName} ${lastName}`.trim();
+  const inviterName = auth.email || 'Admin Team';
+  
+  // Generate invitation link
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://tourticket.app';
+  const invitationLink = `${baseUrl.replace(/\/$/, '')}/accept-invitation?token=${invitationToken}`;
+
+  // Try to send invitation email - rollback if it fails
+  try {
+    await EmailService.sendAdminInviteEmail({
+      inviteeName: inviteeName || normalizedEmail,
+      inviteeEmail: normalizedEmail,
+      inviterName,
+      temporaryPassword: '', // No longer sending password
+      role: normalizedRole,
+      permissions: effectivePermissions,
+      portalLink: invitationLink,
+      supportEmail: getSupportEmail(),
+    });
+  } catch (emailError) {
+    console.error('Failed to send admin invite email, rolling back user creation:', emailError);
+    // Rollback: delete the user that was just created
+    await User.findByIdAndDelete(user._id);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to send invitation email. Please check email configuration and try again.' 
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json(
+    { success: true, data: sanitize(user) },
+    { status: 201 },
+  );
+}
+

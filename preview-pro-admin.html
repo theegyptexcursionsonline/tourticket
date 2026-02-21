@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Booking Alert</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #eef2f7; color: #0f172a; -webkit-font-smoothing: antialiased; }
+        table { border-collapse: collapse; width: 100%; }
+        .wrapper { width: 100%; background-color: #eef2f7; padding: 30px 0; }
+        .container { max-width: 660px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 45px rgba(15,23,42,0.15); }
+        
+        /* Header */
+        .header { background: linear-gradient(120deg, #0f172a 0%, #1e293b 60%, #312e81 100%); padding: 26px 32px; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; }
+        .brand { display: flex; align-items: center; color: #e2e8f0; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-size: 13px; }
+        .brand-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 10px; }
+        .header-meta { color: #cbd5f5; font-size: 13px; }
+        .header-badges { margin-top: 16px; }
+        .header-chip { display: inline-block; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: #f8fafc; margin-right: 10px; text-transform: uppercase; letter-spacing: 0.8px; }
+
+        /* KPI Cards */
+        .kpi-section { padding: 22px 32px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; gap: 16px; box-sizing: border-box; }
+        .kpi-card { flex: 1; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; }
+        .kpi-label { font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+        
+        /* Main Content */
+        .content { padding: 32px; }
+        .split-grid { display: flex; gap: 24px; }
+        .panel { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(15,23,42,0.05); margin-bottom: 28px; }
+        .section-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
+        
+        /* Data Grid */
+        .data-table { width: 100%; }
+        .data-table td { padding: 10px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top; font-size: 14px; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .label-col { width: 35%; color: #6b7280; font-weight: 500; }
+        .value-col { color: #111827; font-weight: 600; }
+        
+        /* Tour Item */
+        .tour-card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 15px; }
+        .tour-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px; }
+        .tour-name { font-weight: 700; font-size: 15px; color: #111827; }
+        .tour-price { font-weight: 700; color: #059669; font-size: 15px; }
+        .tour-meta { font-size: 13px; color: #4b5563; line-height: 1.6; }
+        .meta-row { display: flex; margin-bottom: 4px; }
+        .meta-label { width: 80px; color: #9ca3af; font-size: 12px; }
+        
+        /* Special Requests */
+        .alert-box { background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 18px; margin-bottom: 30px; }
+        .alert-title { color: #be123c; font-size: 13px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.6px; }
+        .alert-content { color: #9f1239; font-size: 14px; line-height: 1.5; }
+
+        /* Actions */
+        .action-checklist { border: 1px dashed #cbd5f5; border-radius: 12px; padding: 18px 20px; margin-bottom: 30px; }
+        .action-item { display: flex; align-items: center; margin-bottom: 10px; }
+        .action-item:last-child { margin-bottom: 0; }
+        .action-bullet { width: 18px; height: 18px; border: 2px solid #6366f1; border-radius: 50%; margin-right: 12px; }
+        .action-text { font-size: 13px; color: #1f2937; }
+
+        .action-bar { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; }
+        .btn-primary { background-color: #2563eb; color: white; border: 1px solid #1d4ed8; box-shadow: 0 8px 18px rgba(37,99,235,0.25); }
+        .btn-secondary { background-color: white; color: #374151; border: 1px solid #d1d5db; }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header, .kpi-section, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
+            .split-grid { flex-direction: column; }
+            .kpi-section { flex-direction: column; }
+            .kpi-card { width: 100%; }
+            .action-bar { flex-direction: column; }
+            .action-bar .btn { width: 100%; text-align: center; }
+        }
+        
+        /* Footer */
+        .footer { background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-top">
+                    <div class="brand">
+                        <span class="brand-dot"></span>
+                        Egypt Excursions Online
+                    </div>
+                    <div class="header-meta">New booking received • Saturday, 21 December 2024</div>
+                </div>
+                <div class="header-badges">
+                    <span class="header-chip">New Booking</span>
+                    <span class="header-chip">Priority • Immediate Review</span>
+                    <span class="header-chip">Payment Logged</span>
+                </div>
+            </div>
+            
+            <!-- KPI Stats -->
+            <div class="kpi-section">
+                <div class="kpi-card">
+                    <div class="kpi-label">Booking ID</div>
+                    <div class="kpi-value" style="font-family: 'SFMono-Regular', Menlo, monospace; font-size: 15px;">EEO-88229911-XYZ</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Value</div>
+                    <div class="kpi-value" style="color: #059669;">$160.00 USD</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Travel Date</div>
+                    <div class="kpi-value" style="font-size: 16px;">Saturday, 21 December 2024</div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="split-grid">
+                    <div class="panel">
+                        <span class="section-title">Customer Details</span>
+                        <table class="data-table">
+                            <tr>
+                                <td class="label-col">Name</td>
+                                <td class="value-col">Alexander Hamilton</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">Email</td>
+                                <td class="value-col"><a href="mailto:alex.hamilton@example.com" style="color: #2563eb;">alex.hamilton@example.com</a></td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">Phone</td>
+                                <td class="value-col">+1 555 0199</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">Payment</td>
+                                <td class="value-col">Stripe (Visa **** 4242)</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="panel">
+                        <span class="section-title">Booking Summary</span>
+                        <table class="data-table">
+                            <tr>
+                                <td class="label-col">Tour</td>
+                                <td class="value-col">Private Pyramids of Giza &amp; Sphinx Tour</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">Date & Time</td>
+                                <td class="value-col">Saturday, 21 December 2024</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">Reference</td>
+                                <td class="value-col" style="font-family: 'SFMono-Regular', Menlo, monospace;">EEO-88229911-XYZ</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">Value</td>
+                                <td class="value-col">$160.00 USD</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <span class="section-title">Tour Information</span>
+                        <div class="tour-card">
+                            <div class="tour-header">
+                                <div class="tour-name">Private Pyramids of Giza &amp; Sphinx Tour</div>
+                                <div class="tour-price">$160.00 USD</div>
+                            </div>
+                            <div class="tour-meta">
+                                <div class="meta-row">
+                                    <div class="meta-label">DATE</div>
+                                    <div>Saturday, 21 December 2024 at 09:00 AM</div>
+                                </div>
+                                <div class="meta-row">
+                                    <div class="meta-label">PAX</div>
+                                    <div>2 Adults, 0 Children</div>
+                                </div>
+                                <div class="meta-row">
+                                    <div class="meta-label">OPTION</div>
+                                    <div>Sunrise Access + Egyptologist</div>
+                                </div>
+                                <div class="meta-row">
+                                    <div class="meta-label">ADD-ONS</div>
+                                    <div>VIP Fast Track,Traditional Lunch</div>
+                                </div>
+                            </div>
+                        </div>
+                </div>
+
+                <div class="alert-box">
+                    <div class="alert-title">⚠️ Special Requests</div>
+                    <div class="alert-content">No spicy food for lunch please.</div>
+                </div>
+
+                <div class="action-checklist">
+                    <span class="section-title">Checklist</span>
+                    <div class="action-item">
+                        <div class="action-bullet"></div>
+                        <div class="action-text">Verify tour availability and logistics.</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-bullet"></div>
+                        <div class="action-text">Confirm special requests with the operations team.</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-bullet"></div>
+                        <div class="action-text">Send any additional instructions to the customer if needed.</div>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <a href="mailto:alex.hamilton@example.com" class="btn btn-secondary">Email Customer</a>
+                    <a href="https://admin.egypt-excursionsonline.com/bookings/EEO-88229911-XYZ" class="btn btn-primary">Open in Dashboard</a>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                System Notification • Egypt Excursions Online Admin
+            </div>
+        </div>
+    </div>
+</body>
+</html>

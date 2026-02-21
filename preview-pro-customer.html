@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>Booking Confirmation</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset & Basics */
+        body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f5f5f5; color: #2d3436; }
+        img { border: 0; outline: none; text-decoration: none; display: block; max-width: 100%; }
+        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        tr, td { padding: 0; }
+        a { text-decoration: none; color: #0066ff; }
+        
+        /* Layout */
+        .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        
+        /* Header */
+        .header { background-color: #ffffff; padding: 24px 40px; border-bottom: 1px solid #f0f0f0; text-align: center; }
+        .logo { width: 120px; height: auto; margin: 0 auto; }
+        
+        /* Hero Section */
+        .hero { position: relative; background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%); min-height: 220px; }
+        .hero-image { width: 100%; height: auto; display: block; opacity: 0.8; mix-blend-mode: screen; min-height: 220px; object-fit: cover; }
+        .hero-content { position: absolute; left: 40px; right: 40px; bottom: 32px; color: #ffffff; }
+        .hero-eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; font-weight: 600; }
+        .hero-title { font-size: 26px; font-weight: 700; margin: 8px 0 6px; letter-spacing: -0.4px; }
+        .hero-meta { font-size: 14px; opacity: 0.85; }
+        .status-badge { display: inline-block; background-color: #00d084; color: #0f172a; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        /* Content */
+        .content { padding: 40px; }
+        .greeting { font-size: 24px; font-weight: 700; color: #1a1a1a; margin-bottom: 12px; letter-spacing: -0.5px; }
+        .intro { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 32px; }
+        
+        /* Ticket Card */
+        .ticket-card { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 14px; overflow: hidden; margin-bottom: 32px; box-shadow: 0 16px 30px rgba(15,23,42,0.08); }
+        .ticket-header { background-color: #f9fafb; padding: 24px; border-bottom: 1px dashed #d1d5db; }
+        .tour-title { font-size: 18px; font-weight: 700; color: #1a1a1a; line-height: 1.4; margin-bottom: 8px; }
+        .tour-option { font-size: 14px; color: #0066ff; font-weight: 600; }
+        
+        .ticket-body { padding: 24px; }
+        .info-grid { display: table; width: 100%; }
+        .info-col { display: table-cell; width: 50%; vertical-align: top; padding-bottom: 20px; }
+        .info-label { font-size: 12px; text-transform: uppercase; color: #888888; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 4px; }
+        .info-value { font-size: 15px; color: #1a1a1a; font-weight: 500; line-height: 1.4; }
+        .price-large { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+        
+        /* Primary CTA */
+        .cta-container { text-align: center; margin-bottom: 40px; }
+        .btn-primary { display: inline-block; background-color: #0066ff; color: #ffffff; font-size: 16px; font-weight: 600; padding: 16px 48px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25); transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #0052cc; }
+        
+        /* Support Section */
+        .support-box { background-color: #0f172a; border-radius: 16px; padding: 28px; display: flex; align-items: center; margin-bottom: 32px; border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+        .support-icon { font-size: 28px; margin-right: 18px; }
+        .support-text strong { display: block; color: #f8fafc; font-size: 16px; margin-bottom: 6px; letter-spacing: 0.2px; }
+        .support-text p { margin: 0; color: #cbd5f5; font-size: 14px; }
+        
+        /* Need to Know */
+        .section-title { font-size: 13px; font-weight: 700; color: #6b7280; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
+        .tip-row { padding: 12px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; color: #1f2937; display: flex; align-items: flex-start; }
+        .tip-row:last-child { border-bottom: none; }
+        .tip-icon { margin-right: 12px; font-size: 16px; min-width: 20px; }
+        
+        /* Special Requests */
+        .special-req { background-color: #fff8f0; border: 1px solid #fed7aa; border-radius: 8px; padding: 16px; margin-bottom: 32px; }
+        .special-req-title { color: #9a3412; font-weight: 700; font-size: 13px; margin-bottom: 8px; text-transform: uppercase; }
+        .special-req-text { color: #c2410c; font-size: 14px; line-height: 1.5; }
+
+        /* Footer */
+        .footer { background-color: #f9fafb; padding: 40px; text-align: center; border-top: 1px solid #f0f0f0; }
+        .footer-links { margin-bottom: 24px; }
+        .footer-link { color: #6b7280; font-size: 13px; margin: 0 12px; font-weight: 500; }
+        .footer-text { color: #9ca3af; font-size: 12px; line-height: 1.5; margin-bottom: 8px; }
+        .social-icons { margin-top: 20px; }
+        .social-icon { display: inline-block; width: 32px; height: 32px; background-color: #e5e7eb; border-radius: 50%; margin: 0 6px; line-height: 32px; color: #ffffff; font-size: 14px; }
+
+        /* Timeline */
+        .timeline { display: flex; justify-content: space-between; margin: 28px 0 36px; padding: 0 16px; }
+        .timeline-step { text-align: center; flex: 1; position: relative; }
+        .timeline-step:not(:last-child)::after { content: ''; position: absolute; top: 18px; right: -50%; width: 100%; height: 2px; background: #e2e8f0; }
+        .timeline-dot { width: 14px; height: 14px; margin: 0 auto 10px; border-radius: 50%; border: 2px solid #94a3b8; background-color: #ffffff; }
+        .timeline-step.active .timeline-dot { border-color: #2563eb; background-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.15); }
+        .timeline-label { font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+        .timeline-desc { font-size: 12px; color: #6b7280; line-height: 1.4; }
+
+        /* Essentials */
+        .essentials-card { border: 1px solid #e0e7ff; border-radius: 14px; padding: 20px; margin-bottom: 30px; background: #f8fafc; }
+        .essentials-item { display: flex; align-items: center; margin-bottom: 14px; }
+        .essentials-item:last-child { margin-bottom: 0; }
+        .essentials-icon { width: 36px; height: 36px; border-radius: 10px; background: #e0e7ff; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; color: #1e1b4b; }
+        .essentials-body { font-size: 14px; color: #111827; line-height: 1.4; }
+        .essentials-body strong { display: block; font-size: 13px; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+
+        /* Mobile */
+        @media screen and (max-width: 600px) {
+            .wrapper { padding: 0; }
+            .container { border-radius: 0; width: 100% !important; box-shadow: none; }
+            .header { padding: 20px; }
+            .content { padding: 24px 20px; }
+            .hero-content { left: 20px; right: 20px; bottom: 20px; }
+            .info-col { display: block; width: 100%; padding-bottom: 16px; }
+            .info-col:last-child { padding-bottom: 0; }
+            .btn-primary { display: block; width: 100%; padding: 16px 0; box-sizing: border-box; }
+            .timeline { flex-direction: column; padding: 0; }
+            .timeline-step { margin-bottom: 18px; }
+            .timeline-step:not(:last-child)::after { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <img src="https://egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+            </div>
+
+            <!-- Hero Image with Overlay (Optional) -->
+            <div class="hero">
+                <img src="https://images.unsplash.com/photo-1539650116455-29e6ddd575dc?auto&#x3D;format&amp;fit&#x3D;crop&amp;w&#x3D;900&amp;q&#x3D;80" alt="Private Pyramids of Giza &amp; Sphinx Tour" class="hero-image">
+                <div class="hero-content">
+                    <div class="hero-eyebrow">Booking EEO-88229911-XYZ</div>
+                    <div class="hero-title">Private Pyramids of Giza &amp; Sphinx Tour</div>
+                    <div class="hero-meta">Happening Saturday, 21 December 2024 · 09:00 AM</div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <div class="status-badge">Booking Confirmed</div>
+                    <h1 class="greeting">You're going to Egypt!</h1>
+                    <p class="intro">Hi Alexander Hamilton, everything is set. Below is your digital travel pass with every detail you’ll need.</p>
+                </div>
+
+                <!-- Digital Ticket Card -->
+                <div class="ticket-card">
+                    <div class="ticket-header">
+                        <div class="tour-title">Private Pyramids of Giza &amp; Sphinx Tour</div>
+                        <div class="tour-option">Sunrise Access + Egyptologist</div>
+                    </div>
+                    <div class="ticket-body">
+                        <table class="info-grid">
+                            <tr>
+                                <td class="info-col">
+                                    <div class="info-label">Date & Time</div>
+                                    <div class="info-value">Saturday, 21 December 2024<br>09:00 AM</div>
+                                </td>
+                                <td class="info-col">
+                                    <div class="info-label">Reference</div>
+                                    <div class="info-value" style="font-family: monospace; letter-spacing: 1px;">EEO-88229911-XYZ</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="info-col">
+                                    <div class="info-label">Guests</div>
+                                    <div class="info-value">2 Adults</div>
+                                    <div style="font-size: 12px; color: #888; margin-top: 2px;">2 × Adults ($80.00)</div>
+                                </td>
+                                <td class="info-col">
+                                    <div class="info-label">Total Price</div>
+                                    <div class="price-large">$160.00 USD</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="info-col" colspan="2" style="padding-top: 8px; border-top: 1px solid #f0f0f0;">
+                                    <div class="info-label">Meeting Point</div>
+                                    <div class="info-value">📍 Grand Hyatt Cairo Lobby</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Trip Milestones -->
+                <div class="timeline">
+                    <div class="timeline-step active">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-label">Booked</div>
+                        <div class="timeline-desc">We’ve secured your seats and sent the confirmation.</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-label">Reminder</div>
+                        <div class="timeline-desc">24 hrs before the trip we’ll email final instructions.</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-label">Experience</div>
+                        <div class="timeline-desc">Show this pass on arrival and enjoy your tour.</div>
+                    </div>
+                </div>
+
+                <!-- Special Requests -->
+                <div class="special-req">
+                    <div class="special-req-title">Special Requests Included</div>
+                    <div class="special-req-text">"No spicy food for lunch please."</div>
+                </div>
+
+                <!-- Essentials -->
+                <div class="essentials-card">
+                    <div class="essentials-item">
+                        <div class="essentials-icon">📍</div>
+                        <div class="essentials-body">
+                            <strong>Meeting point</strong>
+                            Grand Hyatt Cairo Lobby
+                        </div>
+                    </div>
+                    <div class="essentials-item">
+                        <div class="essentials-icon">🆔</div>
+                        <div class="essentials-body">
+                            <strong>Booking reference</strong>
+                            EEO-88229911-XYZ
+                        </div>
+                    </div>
+                    <div class="essentials-item">
+                        <div class="essentials-icon">🤝</div>
+                        <div class="essentials-body">
+                            <strong>Guests</strong>
+                            2 Adults
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA -->
+                <div class="cta-container">
+                    <a href="https://egypt-excursionsonline.com/user/bookings/EEO-88229911-XYZ" class="btn-primary">Manage My Booking</a>
+                    <div style="margin-top: 16px; font-size: 13px; color: #666;">
+                        <a href="https://egypt-excursionsonline.com/contact" style="color: #666; text-decoration: underline;">Need to make changes?</a>
+                    </div>
+                </div>
+
+                <!-- Support -->
+                <div class="support-box">
+                    <div class="support-icon">🛎️</div>
+                    <div class="support-text">
+                        <strong>Concierge support anytime</strong>
+                        <p>
+                            WhatsApp: +20 11 42255624 &nbsp;•&nbsp;
+                            Email: booking@egypt-excursionsonline.com
+                             &nbsp;•&nbsp; Emergency: +20 11 42255624
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Things to Know -->
+                <h3 class="section-title">Good to know</h3>
+                <div class="tip-row">
+                    <span class="tip-icon">📱</span>
+                    <span>Save this email. You can show this ticket on your phone.</span>
+                </div>
+                <div class="tip-row">
+                    <span class="tip-icon">⏰</span>
+                    <span>Please arrive 15 minutes before the start time.</span>
+                </div>
+                <div class="tip-row">
+                    <span class="tip-icon">☀️</span>
+                    <span>Check the weather forecast and dress comfortably.</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-links">
+                    <a href="https://egypt-excursionsonline.com/user/bookings" class="footer-link">My Bookings</a>
+                    <a href="https://egypt-excursionsonline.com/help" class="footer-link">Help Center</a>
+                    <a href="https://egypt-excursionsonline.com/terms" class="footer-link">Terms</a>
+                </div>
+                <p class="footer-text">©  Egypt Excursions Online. All rights reserved.</p>
+                <p class="footer-text">Cairo, Egypt</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

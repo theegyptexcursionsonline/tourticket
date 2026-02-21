@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no, email=no, address=no">
+    <title>Booking Cancellation</title>
+    <style>
+        body { margin: 0; padding: 0; background: #f5f6fb; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; -webkit-font-smoothing: antialiased; }
+        img { border: none; display: block; max-width: 100%; }
+        .wrapper { width: 100%; padding: 32px 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 30px 55px rgba(15,23,42,0.12); }
+
+        .hero { background: linear-gradient(135deg, #1f2937 0%, #991b1b 100%); padding: 36px 40px; color: #fef2f2; text-align: center; }
+        .logo { width: 110px; margin: 0 auto 20px; }
+        .hero-eyebrow { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; }
+        .hero-title { font-size: 28px; font-weight: 700; margin: 12px 0 6px; letter-spacing: -0.4px; }
+        .hero-meta { font-size: 15px; opacity: 0.85; }
+
+        .content { padding: 42px; }
+        .greeting { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+        .intro { font-size: 15px; color: #475569; line-height: 1.7; margin-bottom: 28px; }
+
+        .alert { border: 1px solid #fecdd3; border-radius: 16px; background: #fff1f2; padding: 22px 24px; margin-bottom: 28px; display: flex; gap: 16px; }
+        .alert-icon { font-size: 26px; }
+        .alert strong { display: block; color: #be123c; font-size: 15px; margin-bottom: 6px; }
+        .alert span { font-size: 14px; color: #9f1239; }
+
+        .card { border: 1px solid #e2e8f0; border-radius: 18px; margin-bottom: 28px; overflow: hidden; box-shadow: 0 12px 35px rgba(15,23,42,0.06); }
+        .card-header { background: #f8fafc; padding: 18px 28px; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
+        .card-body { padding: 24px 28px; }
+        .detail-grid { width: 100%; }
+        .detail-grid tr td { padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .detail-grid tr:last-child td { border-bottom: none; }
+        .detail-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8; font-weight: 600; }
+        .detail-value { font-size: 16px; color: #0f172a; font-weight: 600; }
+
+        .refund-box { border: 1px solid #bbf7d0; border-radius: 16px; background: #f0fdf4; padding: 22px 24px; margin-bottom: 28px; }
+        .refund-title { font-size: 14px; font-weight: 700; color: #15803d; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+        .refund-row { font-size: 14px; color: #065f46; margin: 6px 0; }
+
+        .options { border: 1px dashed #e5e7eb; border-radius: 14px; padding: 22px 24px; margin-bottom: 30px; }
+        .option-title { font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+        .option { display: flex; gap: 12px; margin-bottom: 12px; }
+        .option:last-child { margin-bottom: 0; }
+        .option-bullet { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #e11d48; }
+        .option-text { font-size: 14px; color: #1f2937; line-height: 1.5; }
+
+        .cta { text-align: center; margin: 32px 0; }
+        .cta-button { display: inline-block; padding: 15px 38px; border-radius: 10px; border: 1px solid #991b1b; color: #991b1b; font-size: 15px; font-weight: 600; text-decoration: none; }
+
+        .support { border: 1px solid #ffe4e6; border-radius: 16px; background: #fff7fb; padding: 22px 24px; text-align: center; }
+        .support strong { display: block; font-size: 15px; color: #be123c; margin-bottom: 6px; }
+        .support span { font-size: 14px; color: #9f1239; }
+
+        .footer { background: #f8fafc; padding: 28px 40px; text-align: center; border-top: 1px solid #e2e8f0; }
+        .footer-links a { color: #94a3b8; font-size: 13px; margin: 0 10px; text-decoration: none; font-weight: 600; }
+        .footer p { color: #94a3b8; font-size: 12px; margin: 10px 0; }
+
+        @media (max-width: 600px) {
+            .wrapper { padding: 0; }
+            .container { border-radius: 0; }
+            .hero, .content, .footer { padding-left: 24px !important; padding-right: 24px !important; }
+            .card-header, .card-body { padding-left: 20px; padding-right: 20px; }
+            .alert { flex-direction: column; text-align: center; }
+            .option { flex-direction: column; }
+            .cta-button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="hero">
+                <img src="https://egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+                <div class="hero-eyebrow">Booking {{bookingId}}</div>
+                <div class="hero-title">Cancellation confirmed</div>
+                <div class="hero-meta">{{tourTitle}} · {{bookingDate}}</div>
+            </div>
+
+            <div class="content">
+                <div class="greeting">Hi {{customerName}},</div>
+                <p class="intro">We’ve finalized your cancellation request. Below is a snapshot of what was cancelled and how any refund will be handled.</p>
+
+                <div class="alert">
+                    <div class="alert-icon">⚠️</div>
+                    <div>
+                        <strong>Your booking has been released.</strong>
+                        <span>Feel free to rebook at any time—your account keeps all your traveler details.</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Cancelled itinerary</div>
+                    <div class="card-body">
+                        <table class="detail-grid">
+                            <tr>
+                                <td class="detail-label">Tour</td>
+                                <td class="detail-value">{{tourTitle}}</td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Original date</td>
+                                <td class="detail-value">{{bookingDate}}</td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Booking ID</td>
+                                <td class="detail-value" style="font-family: 'SFMono-Regular', Menlo, monospace;">{{bookingId}}</td>
+                            </tr>
+                            {{#if cancellationReason}}
+                            <tr>
+                                <td class="detail-label">Reason provided</td>
+                                <td class="detail-value">{{cancellationReason}}</td>
+                            </tr>
+                            {{/if}}
+                        </table>
+                    </div>
+                </div>
+
+                {{#if refundAmount}}
+                <div class="refund-box">
+                    <div class="refund-title">Refund status</div>
+                    <div class="refund-row"><strong>Amount:</strong> {{refundAmount}}</div>
+                    <div class="refund-row"><strong>Processing time:</strong> {{refundProcessingDays}} business days</div>
+                    <div class="refund-row">Funds return to your original payment method automatically.</div>
+                </div>
+                {{/if}}
+
+                <div class="options">
+                    <div class="option-title">Need to travel soon?</div>
+                    <div class="option">
+                        <div class="option-bullet"></div>
+                        <div class="option-text">Reply to this email and we’ll help you find a new date or tour instantly.</div>
+                    </div>
+                    <div class="option">
+                        <div class="option-bullet"></div>
+                        <div class="option-text">Browse fresh experiences in your account dashboard whenever you’re ready.</div>
+                    </div>
+                </div>
+
+                <div class="cta">
+                    <a class="cta-button" href="{{baseUrl}}/user/bookings">Explore other tours</a>
+                </div>
+
+                <div class="support">
+                    <strong>Concierge support</strong>
+                    <span>booking@egypt-excursionsonline.com • WhatsApp +20 11 42255624</span>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="footer-links">
+                    <a href="{{baseUrl}}/user/bookings">My Bookings</a>
+                    <a href="{{baseUrl}}/help">Help Center</a>
+                    <a href="{{baseUrl}}/terms">Terms</a>
+                </div>
+                <p>© {{year}} Egypt Excursions Online • Cairo, Egypt</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
