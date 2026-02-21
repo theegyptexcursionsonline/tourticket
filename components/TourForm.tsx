@@ -2141,6 +2141,8 @@ const addItineraryItem = () => {
                                             fields={tourTranslationFields}
                                             value={formData.translations}
                                             onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                                            modelType="tour"
+                                            entityId={tourToEdit?._id as string}
                                         />
                                     </div>
                                 )}

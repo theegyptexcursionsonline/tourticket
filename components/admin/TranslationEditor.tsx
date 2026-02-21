@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Globe, Plus, Minus } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Globe, Plus, Minus, Sparkles, Loader2, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import {
   TranslationFieldDef,
   translatableLocales,
@@ -20,7 +21,12 @@ interface TranslationEditorProps {
   fields: TranslationFieldDef[];
   value: Record<string, Record<string, unknown>>;
   onChange: (translations: Record<string, Record<string, unknown>>) => void;
+  /** Pass modelType and entityId to enable the "Auto Translate" button */
+  modelType?: 'tour' | 'destination' | 'category';
+  entityId?: string;
 }
+
+type LocaleStatus = 'pending' | 'translating' | 'done' | 'error';
 
 // ── Helpers ──
 
@@ -45,11 +51,23 @@ export default function TranslationEditor({
   fields,
   value,
   onChange,
+  modelType,
+  entityId,
 }: TranslationEditorProps) {
   const [activeLocale, setActiveLocale] = useState(translatableLocales[0]);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [localeStatuses, setLocaleStatuses] = useState<Record<string, LocaleStatus>>({});
+  const [currentLocale, setCurrentLocale] = useState('');
+  const translationsRef = useRef<Record<string, Record<string, unknown>>>({});
+
+  // Keep a stable ref to onChange so the streaming callback always uses the latest version
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   const rtl = isRTL(activeLocale);
   const localeData = (value[activeLocale] || {}) as Record<string, unknown>;
+
+  const canAutoTranslate = !!(modelType && entityId);
 
   // ── Field updaters ──
 
@@ -94,16 +112,202 @@ export default function TranslationEditor({
     }).length;
   };
 
+  // ── Streaming Auto Translate ──
+
+  const completedCount = Object.values(localeStatuses).filter((s) => s === 'done').length;
+  const totalLocales = translatableLocales.length;
+  const progressPercent = isTranslating ? Math.round((completedCount / totalLocales) * 100) : 0;
+
+  const handleAutoTranslate = async () => {
+    if (!canAutoTranslate) return;
+    setIsTranslating(true);
+    setCurrentLocale('');
+    translationsRef.current = { ...value };
+
+    // Initialize all locale statuses to pending
+    const initialStatuses: Record<string, LocaleStatus> = {};
+    translatableLocales.forEach((l) => { initialStatuses[l] = 'pending'; });
+    setLocaleStatuses(initialStatuses);
+
+    try {
+      const res = await fetch('/api/admin/translate/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelType, id: entityId }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Translation failed');
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('Streaming not supported');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value: chunk } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(chunk, { stream: true });
+
+        // Parse SSE events from buffer
+        const lines = buffer.split('\n');
+        buffer = '';
+
+        let eventType = '';
+        let eventData = '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            eventData = line.slice(6).trim();
+          } else if (line === '' && eventType && eventData) {
+            // Process complete event
+            try {
+              const data = JSON.parse(eventData);
+              handleSSEEvent(eventType, data);
+            } catch {
+              // Incomplete JSON, skip
+            }
+            eventType = '';
+            eventData = '';
+          } else if (line !== '') {
+            // Incomplete line, put back in buffer
+            buffer += line + '\n';
+          }
+        }
+      }
+
+      toast.success('All translations generated!');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Auto-translate failed');
+    } finally {
+      setTimeout(() => {
+        setIsTranslating(false);
+        setLocaleStatuses({});
+        setCurrentLocale('');
+      }, 2000);
+    }
+  };
+
+  const handleSSEEvent = useCallback((event: string, data: Record<string, unknown>) => {
+    switch (event) {
+      case 'translating': {
+        const locale = data.locale as string;
+        setCurrentLocale(locale);
+        setLocaleStatuses((prev) => ({ ...prev, [locale]: 'translating' }));
+        break;
+      }
+      case 'locale_done': {
+        const locale = data.locale as string;
+        const translations = data.translations as Record<string, unknown>;
+
+        setLocaleStatuses((prev) => ({ ...prev, [locale]: 'done' }));
+
+        // Update form with this locale's translations in real-time using the ref
+        if (translations && Object.keys(translations).length > 0) {
+          translationsRef.current = {
+            ...translationsRef.current,
+            [locale]: translations,
+          };
+          // Use ref to always call the latest onChange
+          onChangeRef.current({ ...translationsRef.current });
+        }
+
+        // Auto-switch to the locale that just finished so user sees it
+        setActiveLocale(locale);
+        break;
+      }
+      case 'error': {
+        const locale = data.locale as string;
+        if (locale) {
+          setLocaleStatuses((prev) => ({ ...prev, [locale]: 'error' }));
+        }
+        break;
+      }
+    }
+  }, []);
+
   // ── Render ──
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <Globe className="h-4 w-4 text-indigo-500" />
-        <span className="text-sm font-bold text-slate-700">Translations</span>
-        <span className="text-slate-400 text-sm">(optional)</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-indigo-500" />
+          <span className="text-sm font-bold text-slate-700">Translations</span>
+          <span className="text-slate-400 text-sm">(optional)</span>
+        </div>
+        {canAutoTranslate && (
+          <button
+            type="button"
+            onClick={handleAutoTranslate}
+            disabled={isTranslating}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-sm hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            {isTranslating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {isTranslating ? 'Translating...' : 'Auto Translate'}
+          </button>
+        )}
       </div>
+
+      {/* Real-time translation progress */}
+      {isTranslating && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4 space-y-4">
+          {/* Overall progress bar */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-indigo-700">
+              Translating {completedCount}/{totalLocales} languages...
+            </span>
+            <span className="text-indigo-500 font-semibold">{progressPercent}%</span>
+          </div>
+          <div className="w-full bg-indigo-100 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          {/* Per-locale status */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {translatableLocales.map((locale) => {
+              const status = localeStatuses[locale] || 'pending';
+              return (
+                <div
+                  key={locale}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
+                    status === 'done'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : status === 'translating'
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 animate-pulse'
+                        : status === 'error'
+                          ? 'bg-red-100 text-red-700 border border-red-200'
+                          : 'bg-white text-slate-400 border border-slate-200'
+                  }`}
+                >
+                  {status === 'done' ? (
+                    <Check className="h-3.5 w-3.5 flex-shrink-0" />
+                  ) : status === 'translating' ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" />
+                  ) : (
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-current flex-shrink-0" />
+                  )}
+                  <span className="font-medium truncate">{localeNames[locale]}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Locale tabs */}
       <div className="flex flex-wrap border-b border-slate-200 bg-slate-50 rounded-t-xl px-2">

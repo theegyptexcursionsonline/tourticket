@@ -1315,6 +1315,8 @@ setTimeout(() => router.refresh(), 0);
                       fields={destinationTranslationFields}
                       value={formData.translations}
                       onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                      modelType="destination"
+                      entityId={editingDestination?._id as string}
                     />
                   </div>
                 )}

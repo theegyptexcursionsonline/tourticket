@@ -671,6 +671,8 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                           fields={categoryTranslationFields}
                           value={formData.translations}
                           onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                          modelType="category"
+                          entityId={categoryId}
                         />
                       </div>
                     )}
