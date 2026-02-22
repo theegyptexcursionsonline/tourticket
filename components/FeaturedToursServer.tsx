@@ -307,7 +307,8 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
                 className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]"
                 style={{
                   width: 'max-content',
-                  animationDirection: rtl ? 'reverse' : 'normal',
+                  direction: 'ltr',
+                  animationName: rtl ? 'marquee-rtl' : 'marquee-ltr',
                 }}
               >
                 {duplicatedTours.map((tour, idx) => (
@@ -351,13 +352,20 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
           overflow: hidden;
         }
 
-        @keyframes marquee {
+        @keyframes marquee-ltr {
           from { transform: translateX(0); }
           to { transform: translateX(-50%); }
         }
 
+        @keyframes marquee-rtl {
+          from { transform: translateX(-50%); }
+          to { transform: translateX(0); }
+        }
+
         .animate-marquee {
-          animation: marquee 40s linear infinite;
+          animation-duration: 40s;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
           will-change: transform;
           backface-visibility: hidden;
           perspective: 1000px;
