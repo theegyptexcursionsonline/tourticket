@@ -259,6 +259,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
 
   // Duplicate tours for seamless scrolling
   const duplicatedTours = validatedTours.length > 0 ? [...validatedTours, ...validatedTours] : [];
+  const shouldAnimateMarquee = validatedTours.length > 4;
 
   if (tours.length === 0) {
     return null;
@@ -295,27 +296,40 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
 
         {/* Full-width carousel */}
         <div className="w-full">
-          {/* Auto-scrolling carousel with 1 row */}
-          <div className="relative w-full overflow-hidden group py-4 sm:py-6">
-            {/* Very subtle gradient masks - minimal on mobile */}
-            <div className="absolute top-0 left-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-r from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-l from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
+          {shouldAnimateMarquee ? (
+            <div className="relative w-full overflow-hidden group py-4 sm:py-6">
+              {/* Very subtle gradient masks - minimal on mobile */}
+              <div className="absolute top-0 left-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-r from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-l from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
 
-            {/* Single row - scrolls left */}
-            <div
-              className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]"
-              style={{
-                width: 'max-content',
-                animationDirection: rtl ? 'reverse' : 'normal',
-              }}
-            >
-              {duplicatedTours.map((tour, idx) => (
-                <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
-                  <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
-                </div>
-              ))}
+              {/* Animated row */}
+              <div
+                className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]"
+                style={{
+                  width: 'max-content',
+                  animationDirection: rtl ? 'reverse' : 'normal',
+                }}
+              >
+                {duplicatedTours.map((tour, idx) => (
+                  <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
+                    <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="py-4 sm:py-6">
+              <div className="container mx-auto px-4 md:px-8">
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
+                  {validatedTours.map((tour, idx) => (
+                    <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="px-1 sm:px-2">
+                      <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
