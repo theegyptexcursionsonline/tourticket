@@ -1501,7 +1501,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     </button>
                     <a href="tel:+201142255624" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Phone size={18} />
-                      <span>+20 11 42255624</span>
+                      <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>+20 11 42255624</span>
                     </a>
                     <a href="mailto:booking@egypt-excursionsonline.com" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Mail size={18} />
