@@ -6,7 +6,8 @@ import Image from "next/image";
 import { Link } from '@/i18n/routing';
 import { useNavData } from '@/contexts/NavDataContext';
 import toast, { Toaster } from 'react-hot-toast';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -48,6 +49,8 @@ export default function Footer() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const t = useTranslations('footer');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
 
   // Listen for open-chatbot events (dispatched by openChatbot)
   useEffect(() => {
@@ -318,8 +321,10 @@ export default function Footer() {
               <ul className="space-y-3 text-sm text-slate-600">
                 <li className="flex gap-3">
                   <span className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600"><Phone size={18} /></span>
-                  <div className="flex flex-col">
-                    <a href="tel:+201142255624" className="font-semibold text-slate-900 hover:text-red-600 transition-colors">+20 11 42255624</a>
+                  <div className={`flex flex-col ${rtl ? 'text-right' : 'text-left'}`}>
+                    <a href="tel:+201142255624" className="font-semibold text-slate-900 hover:text-red-600 transition-colors">
+                      <bdi dir="ltr">+20 11 42255624</bdi>
+                    </a>
                     <span className="text-xs text-slate-500">{t('support247')}</span>
                   </div>
                 </li>
@@ -406,13 +411,15 @@ export default function Footer() {
         </div>
 
         {/* Legal Footer */}
-        <div className="border-t border-slate-300 pt-4 text-xs text-slate-500 text-center">
+        <div className="border-t border-slate-300 pt-4 text-xs text-slate-500 text-center" dir={rtl ? 'rtl' : 'ltr'}>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-3">
             <Link className="underline hover:text-slate-700 transition-colors" href="/privacy">{t('privacyPolicy')}</Link>
             <span className="hidden sm:inline">·</span>
             <Link className="underline hover:text-slate-700 transition-colors" href="/terms">{t('termsConditions')}</Link>
           </div>
-          <p>© {new Date().getFullYear()} Egypt Excursions Online. {t('copyright')}</p>
+          <p>
+            © {new Date().getFullYear()} <bdi dir="ltr">Egypt Excursions Online</bdi>. {t('copyright')}
+          </p>
         </div>
       </div>
     </footer>

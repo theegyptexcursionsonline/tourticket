@@ -296,7 +296,7 @@ export default function ContactClientPage() {
                   </div>
                   <h3 className="font-bold text-slate-900 mb-2 text-lg">Call Us</h3>
                   <a href="tel:+201142255624" className="text-red-600 font-bold hover:text-red-700 text-xl mb-3 hover:scale-105 transition-transform inline-block">
-                    +20 11 42255624
+                    <bdi dir="ltr">+20 11 42255624</bdi>
                   </a>
                   <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
                     <Clock size={14} className="text-green-500" />
@@ -788,5 +788,4 @@ export default function ContactClientPage() {
     </div>
   );
 }
-
 

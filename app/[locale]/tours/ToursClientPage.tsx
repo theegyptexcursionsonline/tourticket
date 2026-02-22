@@ -98,7 +98,7 @@ const TOURS_PAGE_COPY: Record<'en' | 'ar', ToursPageCopy> = {
   },
 };
 
-const TourCard = ({ tour, copy }: { tour: TourWithDetails; copy: ToursPageCopy }) => {
+const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageCopy; rtl: boolean }) => {
   const { formatPrice } = useSettings();
   const discountPercent = tour.originalPrice && tour.discountPrice
     ? Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)
@@ -123,7 +123,7 @@ const TourCard = ({ tour, copy }: { tour: TourWithDetails; copy: ToursPageCopy }
 
           {/* Destination Badge */}
           {tour.destination?.name && (
-            <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
+            <div className={`absolute top-3 ${rtl ? 'right-3' : 'left-3'} bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg`}>
               <MapPin className="w-3.5 h-3.5 text-blue-600" />
               <span className="text-xs font-semibold text-slate-700">{tour.destination.name}</span>
             </div>
@@ -131,14 +131,14 @@ const TourCard = ({ tour, copy }: { tour: TourWithDetails; copy: ToursPageCopy }
 
           {/* Discount Badge */}
           {discountPercent > 0 && (
-            <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full shadow-lg">
+            <div className={`absolute top-3 ${rtl ? 'left-3' : 'right-3'} bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full shadow-lg`}>
               <span className="text-xs font-bold">-{discountPercent}% {copy.discountSuffix}</span>
             </div>
           )}
 
           {/* Featured Badge */}
           {tour.isFeatured && (
-            <div className="absolute bottom-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
+            <div className={`absolute bottom-3 ${rtl ? 'right-3' : 'left-3'} bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg`}>
               <Star className="w-3 h-3 fill-current" />
               <span className="text-xs font-bold">{copy.featured}</span>
             </div>
@@ -208,6 +208,7 @@ const TourCard = ({ tour, copy }: { tour: TourWithDetails; copy: ToursPageCopy }
 
 export default function ToursClientPage({ tours }: ToursClientPageProps) {
   const locale = useLocale();
+  const rtl = locale.startsWith('ar');
   const copy = locale.startsWith('ar') ? TOURS_PAGE_COPY.ar : TOURS_PAGE_COPY.en;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string>('all');
@@ -453,7 +454,7 @@ export default function ToursClientPage({ tours }: ToursClientPageProps) {
         {filteredTours.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredTours.map((tour) => (
-              <TourCard key={tour._id} tour={tour} copy={copy} />
+              <TourCard key={tour._id} tour={tour} copy={copy} rtl={rtl} />
             ))}
           </div>
         ) : (

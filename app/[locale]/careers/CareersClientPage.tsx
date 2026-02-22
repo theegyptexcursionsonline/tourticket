@@ -56,7 +56,7 @@ export default function CareersClientPage({ jobOpenings }: CareersClientPageProp
           </section>
           
           <section className="mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6 text-center md:text-left">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6 text-center md:text-start">
               Current Openings
             </h2>
             <div className="space-y-6">

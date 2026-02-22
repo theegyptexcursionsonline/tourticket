@@ -6,7 +6,7 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight, Users, Clock, MapPin, Heart,
+  ArrowLeft, ArrowRight, Users, Clock, MapPin, Heart,
   MessageCircle, Star, Search, CheckCircle, Shield,
   Award, Navigation, Camera, TrendingUp
 } from 'lucide-react';
@@ -14,6 +14,8 @@ import { Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import RelatedInterests from './RelatedInterests';
 import PopularInterestsGrid from './PopularInterestsGrid';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 interface InterestData {
   name: string;
@@ -447,6 +449,17 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
 };
 
 export default function InterestLandingPage({ interest }: InterestLandingPageProps) {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const BrowseArrow = rtl ? ArrowLeft : ArrowRight;
+  const popularCategoriesTitle = rtl ? 'فئات شائعة في مصر' : 'Popular Categories in Egypt';
+  const popularCategoriesSubtitle = rtl ? 'تصفح أكثر التجارب طلباً' : 'Browse the most sought-after experiences';
+  const ctaTitle = rtl ? `جاهز لاستكشاف ${interest.name}؟` : `Ready to explore ${interest.name}?`;
+  const ctaSubtitle = rtl
+    ? 'احجز تجربتك المثالية اليوم واصنع ذكريات لا تُنسى'
+    : 'Book your perfect experience today and create unforgettable memories';
+  const browseAllText = rtl ? 'تصفح جميع التجارب' : 'Browse All Experiences';
+  const getHelpText = rtl ? 'احصل على مساعدة في التخطيط' : 'Get Help Planning';
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recommended');
   const [selectedDuration, setSelectedDuration] = useState('');
@@ -621,8 +634,8 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
       <PopularInterestsGrid 
         limit={8}
         showFeaturedOnly={false}
-        title="Popular Categories in Egypt"
-        subtitle="Browse the most sought-after experiences"
+        title={popularCategoriesTitle}
+        subtitle={popularCategoriesSubtitle}
         columns={4}
       />
 
@@ -630,24 +643,24 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
       <section className="py-16 bg-red-600 text-white">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to explore {interest.name}?
+            {ctaTitle}
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Book your perfect experience today and create unforgettable memories
+            {ctaSubtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/tours"
-              className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+              className={`inline-flex items-center justify-center gap-2 px-8 py-3 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors ${rtl ? 'order-2' : 'order-1'}`}
             >
-              Browse All Experiences
-              <ArrowRight className="w-5 h-5" />
+              {browseAllText}
+              <BrowseArrow className="w-5 h-5" />
             </Link>
             <Link
               href="/contact"
-              className="inline-flex items-center justify-center gap-2 px-8 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-red-600 transition-colors"
+              className={`inline-flex items-center justify-center gap-2 px-8 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-red-600 transition-colors ${rtl ? 'order-1' : 'order-2'}`}
             >
-              Get Help Planning
+              {getHelpText}
               <MessageCircle className="w-5 h-5" />
             </Link>
           </div>

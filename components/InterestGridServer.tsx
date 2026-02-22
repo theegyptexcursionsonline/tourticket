@@ -55,7 +55,8 @@ import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 import 'instantsearch.css/themes/satellite.css';
 
 import 'swiper/css';
@@ -130,6 +131,9 @@ const getIconForInterest = (name: string, slug: string) => {
 // Interest Card Component
 const InterestCard = ({ interest }: { interest: Interest }) => {
   const t = useTranslations('interestGrid');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const ArrowIcon = rtl ? ArrowLeft : ArrowRight;
   const { Icon, gradient } = getIconForInterest(interest.name, interest.slug);
   const linkUrl = `/categories/${interest.slug}`;
 
@@ -175,7 +179,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
           </div>
 
           <div className={`w-10 h-10 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:scale-110`}>
-            <ArrowRight className="w-5 h-5 text-white transform group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={2.5} />
+            <ArrowIcon className="w-5 h-5 text-white transition-transform duration-300" strokeWidth={2.5} />
           </div>
         </div>
       </div>

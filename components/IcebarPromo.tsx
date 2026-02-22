@@ -1,8 +1,9 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { Link } from '@/i18n/routing';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 /**
  * EgyptPromo - Ultra Premium (parallax removed)
@@ -24,6 +25,9 @@ export default function EgyptPromo() {
   const imgLQ = '/pyramid2.jpg';      // tiny blurred placeholder (very small file)
 
   const t = useTranslations('promo');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const Arrow = rtl ? ArrowLeft : ArrowRight;
   const heading = t('heading');
   const subheading = t('subheading');
   const description = t('description');
@@ -103,7 +107,7 @@ export default function EgyptPromo() {
                 aria-label={primaryText}
               >
                 <span>{primaryText}</span>
-                <ArrowRight size={18} className="flex-shrink-0" />
+                <Arrow size={18} className="flex-shrink-0" />
               </Link>
             </div>
           </div>

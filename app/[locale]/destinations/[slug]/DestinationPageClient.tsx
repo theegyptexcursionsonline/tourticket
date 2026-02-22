@@ -27,6 +27,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -795,6 +796,9 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 // --- Hero Search Bar ---
 const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const copy = useDestinationPageCopy();
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const BackArrow = rtl ? ArrowRight : ArrowLeft;
   const [query, setQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatMode, setChatMode] = useState(false);
@@ -1296,12 +1300,14 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                     }
                   }}
                   placeholder={chatMode ? copy.askAiAnything : suggestion}
-                  className="w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3 md:py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10"
+                  className={`w-full py-3 md:py-4 text-sm md:text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full relative z-10 ${
+                    rtl ? 'pr-14 md:pr-16 pl-24 md:pl-28 text-right' : 'pl-14 md:pl-16 pr-24 md:pr-28 text-left'
+                  }`}
                   style={{ cursor: 'text' }}
                   disabled={chatMode && isGenerating}
                 />
 
-                <div className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 z-10">
+                <div className={`absolute top-1/2 transform -translate-y-1/2 z-10 ${rtl ? 'right-4 md:right-5' : 'left-4 md:left-5'}`}>
                   <motion.div
                     className="relative"
                     animate={{ scale: [1, 1.15, 1] }}
@@ -1322,7 +1328,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   </motion.div>
                 </div>
 
-                <div className="absolute right-4 md:right-5 top-1/2 transform -translate-y-1/2 flex items-center gap-2 md:gap-2.5 z-10">
+                <div className={`absolute top-1/2 transform -translate-y-1/2 flex items-center gap-2 md:gap-2.5 z-10 ${rtl ? 'left-4 md:left-5' : 'right-4 md:right-5'}`}>
                   {query ? (
                     <button
                       type="button"
@@ -1431,9 +1437,9 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                       <>
                         <button
                           onClick={handleBackToSearch}
-                          className="mr-1 p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+                          className={`${rtl ? 'ml-1' : 'mr-1'} p-1.5 hover:bg-white/80 rounded-lg transition-colors`}
                         >
-                          <ArrowLeft className="w-4 h-4 text-gray-600" />
+                          <BackArrow className="w-4 h-4 text-gray-600" />
                         </button>
                         <Bot className="w-4 h-4 text-blue-500" />
                         <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -1644,7 +1650,7 @@ const BackgroundSlideshow = ({
   );
 };
 
-const DestinationHeroSection = ({ destination, tourCount }: { destination: Destination, tourCount: number }) => {
+const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: Destination, tourCount: number, rtl: boolean }) => {
   const copy = useDestinationPageCopy();
   const slides = destination.image
     ? [{ src: destination.image, alt: destination.name }]
@@ -1664,8 +1670,8 @@ const DestinationHeroSection = ({ destination, tourCount }: { destination: Desti
       <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
 
       {/* Content */}
-      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-20 md:pt-0">
-        <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
+      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-20 md:pt-0" dir={rtl ? 'rtl' : 'ltr'}>
+        <div className="w-full max-w-7xl mx-auto text-center md:text-start pt-20 md:pt-0">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
             {copy.discover}
             <br />
@@ -1939,7 +1945,7 @@ const FaqItem = ({ item }: { item: { question: string; answer: string } }) => {
     <div className="border-b border-slate-200 py-4 sm:py-6 group">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center text-left hover:text-red-600 transition-colors"
+        className="w-full flex justify-between items-center text-start hover:text-red-600 transition-colors"
         aria-expanded={isOpen}
       >
         <h3 className="text-base sm:text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors pr-4">
@@ -2041,6 +2047,8 @@ const FAQSection = ({ destinationName }: { destinationName: string }) => {
 };
 
 // --- Reviews Component ---
+const hasArabicChars = (value: string): boolean => /[\u0600-\u06FF]/.test(value);
+
 const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], destinationName: string }) => {
   const copy = useDestinationPageCopy();
   if (!reviews || reviews.length === 0) return null;
@@ -2061,8 +2069,15 @@ const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], desti
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {reviews.slice(0, 6).map((review) => (
-            <div key={review._id} className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
+          {reviews.slice(0, 6).map((review) => {
+            const reviewText = `${review.title || ''} ${review.comment || ''} ${review.userName || ''}`.trim();
+            const reviewIsRTL = hasArabicChars(reviewText);
+            return (
+            <div
+              key={review._id}
+              className={`bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 ${reviewIsRTL ? 'text-right' : 'text-left'}`}
+              dir={reviewIsRTL ? 'rtl' : 'ltr'}
+            >
               <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 {[...Array(5)].map((_, i) => (
                   <Star 
@@ -2087,7 +2102,8 @@ const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], desti
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div className="text-center mt-8 sm:mt-12">
@@ -2192,6 +2208,8 @@ export default function DestinationPageClient({
   reviews = [],
   relatedDestinations = []
 }: DestinationPageClientProps) {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
   const copy = useDestinationPageCopy();
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
@@ -2226,9 +2244,9 @@ export default function DestinationPageClient({
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-white">
+      <main className="min-h-screen bg-white" dir={rtl ? 'rtl' : 'ltr'}>
         
-        <DestinationHeroSection destination={destination} tourCount={destinationTours.length} />
+        <DestinationHeroSection destination={destination} tourCount={destinationTours.length} rtl={rtl} />
 
         <StatsSection destinationTours={destinationTours} />
         

@@ -6,12 +6,14 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { Destination } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface DestinationWithTourCount extends Destination {
   tourCount: number;
 }
 
 export default function Destinations() {
+  const t = useTranslations('destinations');
   const [destinations, setDestinations] = useState<DestinationWithTourCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,8 +136,8 @@ export default function Destinations() {
   return (
     <section className="bg-white py-12 sm:py-16">
       <div className="container mx-auto px-4">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-6 sm:mb-8 text-center sm:text-left">
-          Where are you going?
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-6 sm:mb-8 text-start">
+          {t('title')}
         </h2>
         <div className="flex justify-center gap-4 sm:gap-6 md:gap-8 flex-wrap">
           {destinations.map((destination) => (
@@ -160,7 +162,7 @@ export default function Destinations() {
                 {destination.name}
               </h3>
               <p className="text-xs sm:text-sm text-slate-500">
-                {destination.tourCount} tour{destination.tourCount !== 1 ? 's' : ''}
+                {destination.tourCount} {destination.tourCount !== 1 ? t('tours') : t('tour')}
               </p>
             </Link>
           ))}

@@ -10,7 +10,8 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 // --- Safe Image Component ---
 const SafeImage = ({ 
@@ -173,6 +174,10 @@ interface DayTripsSectionProps {
 
 export default function DayTripsSection({ initialTours }: DayTripsSectionProps = {}) {
   const t = useTranslations('dayTrips');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const PrevArrowIcon = rtl ? ChevronRight : ChevronLeft;
+  const NextArrowIcon = rtl ? ChevronLeft : ChevronRight;
   const scrollContainer = useRef<HTMLDivElement>(null);
   const [tours, setTours] = useState<Tour[]>(initialTours || []);
   const [isLoading, setIsLoading] = useState(!initialTours);
@@ -452,14 +457,14 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
                 className="bg-white p-3 rounded-full shadow-md hover:bg-slate-100 transition-colors border border-slate-200 text-slate-600 hover:shadow-lg"
                 aria-label={t('scrollLeft')}
               >
-                <ChevronLeft size={20} />
+                <PrevArrowIcon size={20} />
               </button>
               <button
                 onClick={() => scroll('right')}
                 className="bg-white p-3 rounded-full shadow-md hover:bg-slate-100 transition-colors border border-slate-200 text-slate-600 hover:shadow-lg"
                 aria-label={t('scrollRight')}
               >
-                <ChevronRight size={20} />
+                <NextArrowIcon size={20} />
               </button>
             </div>
           </div>

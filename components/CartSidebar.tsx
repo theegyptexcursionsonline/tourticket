@@ -9,11 +9,15 @@ import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
 import Image from 'next/image';
 import { parseLocalDate } from '@/utils/date';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 const CartSidebar: FC = () => {
     const router = useRouter();
     const { isCartOpen, closeCart, cart, totalItems, removeFromCart } = useCart();
     const { formatPrice } = useSettings();
+    const locale = useLocale();
+    const rtl = isRTL(locale);
 
   // Calculate individual item total including add-ons
     const getItemTotal = (item: any) => {
@@ -74,7 +78,7 @@ const CartSidebar: FC = () => {
         <AnimatePresence>
             {isCartOpen && (
                 <motion.div
-                    className="fixed inset-0 z-50 flex justify-end rtl:justify-start"
+                    className="fixed inset-0 z-50"
                     initial="hidden"
                     animate="visible"
                     exit="hidden"
@@ -89,10 +93,11 @@ const CartSidebar: FC = () => {
                         onClick={closeCart}
                     />
                     <motion.div
-                        className="relative bg-slate-50 h-full w-full max-w-md shadow-2xl flex flex-col"
-                        initial={{ x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '-100%' : '100%' }}
+                        className={`absolute top-0 bottom-0 ${rtl ? 'left-0' : 'right-0'} bg-slate-50 h-full w-full max-w-md shadow-2xl flex flex-col`}
+                        dir={rtl ? 'rtl' : 'ltr'}
+                        initial={{ x: rtl ? '-100%' : '100%' }}
                         animate={{ x: 0 }}
-                        exit={{ x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '-100%' : '100%' }}
+                        exit={{ x: rtl ? '-100%' : '100%' }}
                         transition={{ type: 'spring', stiffness: 350, damping: 35 }}
                     >
                         {/* Header */}

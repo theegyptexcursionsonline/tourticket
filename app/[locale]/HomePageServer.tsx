@@ -37,7 +37,7 @@ async function getHomePageData(locale: string) {
     // Fetch all data in parallel for speed
     const [
       destinations,
-      tours,
+      featuredTours,
       categories,
       allCategories,
       attractionPages,
@@ -57,6 +57,7 @@ async function getHomePageData(locale: string) {
       Tour.find({ isPublished: true, isFeatured: true })
         .populate('destination', 'name')
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings translations')
+        .sort({ updatedAt: -1, createdAt: -1 })
         .limit(8)
         .lean(),
 
@@ -96,6 +97,7 @@ async function getHomePageData(locale: string) {
       // Day trips (all published tours, limited to 12)
       Tour.find({ isPublished: true })
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings tags translations')
+        .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
         .lean()
     ]);
@@ -195,7 +197,9 @@ async function getHomePageData(locale: string) {
       localizeEntityFields(dest, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
     );
 
-    const localizedTours = JSON.parse(JSON.stringify(tours)).map((tour: Record<string, unknown>) =>
+    const toursForFeaturedSection = featuredTours.length > 0 ? featuredTours : dayTrips.slice(0, 8);
+
+    const localizedTours = JSON.parse(JSON.stringify(toursForFeaturedSection)).map((tour: Record<string, unknown>) =>
       localizeEntityFields(tour, locale, [
         'title',
         'description',

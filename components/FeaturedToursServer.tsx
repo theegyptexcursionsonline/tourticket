@@ -2,17 +2,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Link } from '@/i18n/routing';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 interface FeaturedToursServerProps {
   tours: Tour[];
 }
+
+const toSafeString = (value: unknown): string =>
+  typeof value === 'string' ? value : '';
 
 // Safe Image Component
 const SafeImage = ({
@@ -22,7 +26,7 @@ const SafeImage = ({
   height,
   className
 }: {
-  src: string | null | undefined;
+  src: unknown;
   alt: string;
   width: number;
   height: number;
@@ -31,8 +35,9 @@ const SafeImage = ({
   const t = useTranslations('featured');
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const normalizedSrc = toSafeString(src).trim();
 
-  if (!src || src.trim() === '' || imageError) {
+  if (!normalizedSrc || imageError) {
     return (
       <div
         className={`flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 ${className}`}
@@ -56,7 +61,7 @@ const SafeImage = ({
         />
       )}
       <Image
-        src={src}
+        src={normalizedSrc}
         alt={alt}
         width={width}
         height={height}
@@ -222,6 +227,9 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
 
 export default function FeaturedToursServer({ tours }: FeaturedToursServerProps) {
   const t = useTranslations('featured');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const SeeAllArrow = rtl ? ArrowLeft : ArrowRight;
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
 
@@ -238,14 +246,14 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
   // Validate and prepare tours
   const validatedTours = tours.map((tour: Tour) => ({
     ...tour,
-    image: tour.image && tour.image.trim() !== '' ? tour.image : '',
-    title: tour.title || t('untitledTour'),
-    slug: tour.slug || '',
+    image: toSafeString(tour.image),
+    title: toSafeString(tour.title) || t('untitledTour'),
+    slug: toSafeString(tour.slug),
     originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : undefined,
     discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : tour.originalPrice || 0,
     rating: typeof tour.rating === 'number' ? tour.rating : 0,
     bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-    duration: tour.duration || t('durationNotSpecified'),
+    duration: toSafeString(tour.duration) || t('durationNotSpecified'),
     tags: Array.isArray(tour.tags) ? tour.tags : [],
   }));
 
@@ -279,7 +287,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
                 aria-label={t('seeAllAria')}
               >
                 <span>{t('seeAll')}</span>
-                <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1 flex-shrink-0" />
+                <SeeAllArrow size={18} className="transition-transform duration-300 flex-shrink-0" />
               </Link>
             </div>
           </div>
@@ -287,14 +295,20 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
 
         {/* Full-width carousel */}
         <div className="w-full">
-          {/* Auto-scrolling carousel with 1 row - Manual scroll enabled */}
-          <div className="relative w-full overflow-x-auto group py-4 sm:py-6 scrollbar-hide">
+          {/* Auto-scrolling carousel with 1 row */}
+          <div className="relative w-full overflow-hidden group py-4 sm:py-6">
             {/* Very subtle gradient masks - minimal on mobile */}
             <div className="absolute top-0 left-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-r from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
             <div className="absolute top-0 right-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-l from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
 
             {/* Single row - scrolls left */}
-            <div className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]" style={{ width: 'max-content' }}>
+            <div
+              className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]"
+              style={{
+                width: 'max-content',
+                animationDirection: rtl ? 'reverse' : 'normal',
+              }}
+            >
               {duplicatedTours.map((tour, idx) => (
                 <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
                   <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />

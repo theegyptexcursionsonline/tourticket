@@ -6,6 +6,7 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   ArrowRight,
   Star,
   Sparkles,
@@ -35,6 +36,8 @@ import {
   Ticket,
   Globe
 } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 interface Interest {
   _id: string;
@@ -138,10 +141,17 @@ const getIconForInterest = (name: string, slug: string) => {
 };
 
 const InterestCard = ({ interest }: { interest: Interest }) => {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
   const linkUrl =
     interest.type === 'attraction' ? `/attraction/${interest.slug}` : `/interests/${interest.slug}`;
   const imageUrl = interest.image || getInterestImage(interest.name);
   const { Icon, gradient } = getIconForInterest(interest.name, interest.slug);
+  const labelAttraction = rtl ? 'معلم' : 'Attraction';
+  const labelCategory = rtl ? 'فئة' : 'Category';
+  const labelTour = rtl ? 'جولة' : 'tour';
+  const labelTours = rtl ? 'جولات' : 'tours';
+  const featuredText = rtl ? 'مميز' : 'Featured';
 
   return (
     <Link
@@ -186,7 +196,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
                   : 'bg-blue-100 text-blue-700'
               }`}
             >
-              {interest.type === 'attraction' ? 'Attraction' : 'Category'}
+              {interest.type === 'attraction' ? labelAttraction : labelCategory}
             </span>
           </div>
 
@@ -194,16 +204,16 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
             {interest.name}
           </h3>
           <p className="text-sm text-slate-700 font-medium">
-            {interest.products} {interest.products === 1 ? 'tour' : 'tours'}
+            {interest.products} {interest.products === 1 ? labelTour : labelTours}
           </p>
         </div>
       </div>
 
       {/* Featured Badge */}
       {interest.featured && (
-        <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+        <div className={`absolute top-4 ${rtl ? 'left-4' : 'right-4'} z-20 bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1`}>
           <Star className="w-3 h-3 fill-current" />
-          Featured
+          {featuredText}
         </div>
       )}
     </Link>
@@ -218,6 +228,12 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
   subtitle = 'Discover the most popular experiences chosen by travelers',
   columns = 4,
 }) => {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const ExploreArrow = rtl ? ArrowLeft : ArrowRight;
+  const labelFeatured = rtl ? 'تجارب مميزة' : 'Featured Experiences';
+  const labelPopular = rtl ? 'فئات شائعة' : 'Popular Categories';
+  const exploreAllLabel = rtl ? 'استكشف جميع الفئات' : 'Explore All Categories';
   const [interests, setInterests] = useState<Interest[]>([]);
   const [loading, setLoading] = useState(!initialInterests);
 
@@ -325,7 +341,7 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
         >
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-100 to-orange-100 text-red-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
             <Sparkles className="w-4 h-4" />
-            {showFeaturedOnly ? 'Featured Experiences' : 'Popular Categories'}
+            {showFeaturedOnly ? labelFeatured : labelPopular}
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
             {title}
@@ -359,8 +375,8 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
             href="/interests"
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
-            Explore All Categories
-            <ArrowRight className="w-5 h-5" />
+            {exploreAllLabel}
+            <ExploreArrow className="w-5 h-5" />
           </Link>
         </motion.div>
       </div>

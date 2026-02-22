@@ -1,11 +1,15 @@
 'use client';
 
-import { ArrowRight, Award, DollarSign, Smartphone, CalendarCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award, DollarSign, Smartphone, CalendarCheck } from 'lucide-react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 export default function WhyBookWithUs() {
   const t = useTranslations('about');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const Arrow = rtl ? ArrowLeft : ArrowRight;
   return (
     <section className="bg-slate-50 py-12 sm:py-16 md:py-20 lg:py-24">
       <div className="container mx-auto px-4">
@@ -52,7 +56,7 @@ export default function WhyBookWithUs() {
               className="inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white text-sm sm:text-base font-semibold shadow-xl hover:scale-[1.03] transition-all duration-300 group"
             >
               <span>{t('cta')}</span>
-              <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5 transition-transform duration-300 group-hover:translate-x-1 flex-shrink-0" />
+              <Arrow className="w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0" />
             </a>
           </div>
 

@@ -7,7 +7,7 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
 import {
-  ArrowLeft, Clock, Star, Users, ShoppingCart, Calendar, MapPin,
+  ArrowLeft, ArrowRight, Clock, Star, Users, ShoppingCart, Calendar, MapPin,
   Info, CheckCircle, Heart, Share2, MessageCircle, Camera, ChevronDown,
   ChevronUp, Shield, Umbrella, Thermometer, Bus, Utensils, Mountain,
   Languages, CreditCard, Phone, Mail, AlertCircle, Car, Plane,
@@ -34,6 +34,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { Tour, CartItem, Review as ReviewType } from '@/types';
 import { toDateOnlyString } from '@/utils/date';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -242,6 +244,10 @@ function useScrollDirection() {
 }
 
 const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: any) => {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const LeftScrollIcon = rtl ? ChevronRight : ChevronLeft;
+  const RightScrollIcon = rtl ? ChevronLeft : ChevronRight;
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
   const navRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -316,11 +322,11 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
           <button
             aria-hidden={!canScrollLeft}
             aria-label="Scroll tabs left"
-            onClick={() => scrollBy(-160)}
+            onClick={() => scrollBy(rtl ? 160 : -160)}
             className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full bg-white shadow-sm transition-opacity ${canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             type="button"
           >
-            <ChevronLeft size={18} />
+            <LeftScrollIcon size={18} />
           </button>
 
           <div
@@ -355,11 +361,11 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
           <button
             aria-hidden={!canScrollRight}
             aria-label="Scroll tabs right"
-            onClick={() => scrollBy(160)}
+            onClick={() => scrollBy(rtl ? -160 : 160)}
             className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full bg-white shadow-sm transition-opacity ${canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             type="button"
           >
-            <ChevronRight size={18} />
+            <RightScrollIcon size={18} />
           </button>
         </div>
       </div>
@@ -911,6 +917,9 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
 
 // Main TourPageClient component - Enhanced with review management and fixed pricing
 export default function TourPageClient({ tour, relatedTours, initialReviews }: TourPageClientProps) {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const BackToToursArrow = rtl ? ArrowRight : ArrowLeft;
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
@@ -1113,7 +1122,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                 href="/tours"
                 className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm hover:underline transition-colors whitespace-nowrap"
               >
-                <ArrowLeft size={16} />
+                <BackToToursArrow size={16} />
                 <span className="hidden sm:inline">Back to all tours</span>
                 <span className="sm:hidden">Back</span>
               </Link>
@@ -1527,7 +1536,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     </button>
                     <a href="tel:+201142255624" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Phone size={18} />
-                      <span>+20 11 42255624</span>
+                      <span><bdi dir="ltr">+20 11 42255624</bdi></span>
                     </a>
                     <a href="mailto:booking@egypt-excursionsonline.com" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Mail size={18} />

@@ -6,6 +6,8 @@ import { Link } from '@/i18n/routing';
 import { Tag, Search, Star, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ICategory } from '@/lib/models/Category';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 interface CategoryWithCount extends ICategory {
   tourCount: number;
@@ -15,7 +17,7 @@ interface InterestsClientPageProps {
   categories: CategoryWithCount[];
 }
 
-const CategoryCard = ({ category }: { category: CategoryWithCount }) => (
+const CategoryCard = ({ category, rtl }: { category: CategoryWithCount; rtl: boolean }) => (
   <Link href={`/interests/${category.slug}`} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
     <div className="relative h-48">
       <Image
@@ -27,7 +29,7 @@ const CategoryCard = ({ category }: { category: CategoryWithCount }) => (
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
       {category.featured && (
-        <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+        <div className={`absolute top-3 ${rtl ? 'right-3' : 'left-3'} bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg`}>
           <Star size={12} className="fill-current" />
           Featured
         </div>
@@ -54,6 +56,8 @@ const CategoryCard = ({ category }: { category: CategoryWithCount }) => (
 );
 
 export default function InterestsClientPage({ categories }: InterestsClientPageProps) {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
   const [query, setQuery] = useState('');
 
   // Filter categories based on search query
@@ -124,7 +128,7 @@ export default function InterestsClientPage({ categories }: InterestsClientPageP
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <CategoryCard category={cat} />
+              <CategoryCard category={cat} rtl={rtl} />
             </motion.div>
           ))}
         </motion.div>
@@ -154,4 +158,3 @@ export default function InterestsClientPage({ categories }: InterestsClientPageP
     </div>
   );
 }
-

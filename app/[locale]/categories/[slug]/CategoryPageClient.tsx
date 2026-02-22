@@ -12,6 +12,7 @@ import { Tour, Category } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 type CategoryPageCopy = {
   searchToursPlaceholder: string;
@@ -162,6 +163,7 @@ const SearchAndFilter = ({
   priceRange,
   setPriceRange,
   copy,
+  rtl,
 }: {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -172,18 +174,21 @@ const SearchAndFilter = ({
   priceRange: string;
   setPriceRange: (range: string) => void;
   copy: CategoryPageCopy;
+  rtl: boolean;
 }) => (
   <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border border-gray-200">
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+        <Search className="search-icon-left absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
         <input
           type="text"
           placeholder={copy.searchToursPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          className={`w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${
+            rtl ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'
+          }`}
         />
       </div>
 
@@ -359,10 +364,12 @@ const CategoryHeroSection = ({
   category,
   tourCount,
   copy,
+  rtl,
 }: {
   category: Category;
   tourCount: number;
   copy: CategoryPageCopy;
+  rtl: boolean;
 }) => {
   const heroImage = (category as any).heroImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=80&fm=jpg';
 
@@ -382,8 +389,8 @@ const CategoryHeroSection = ({
       </div>
 
       {/* Content */}
-      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-7xl mx-auto text-center md:text-left pt-20 md:pt-0">
+      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8" dir={rtl ? 'rtl' : 'ltr'}>
+        <div className="w-full max-w-7xl mx-auto text-center md:text-start pt-20 md:pt-0">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
             {copy.discover}
             <br />
@@ -477,6 +484,7 @@ const TourCard = ({
 
 export default function CategoryPageClient({ category, categoryTours }: { category: Category; categoryTours: Tour[] }) {
     const locale = useLocale();
+    const rtl = isRTL(locale);
     const copy = locale.startsWith('ar') ? CATEGORY_PAGE_COPY.ar : CATEGORY_PAGE_COPY.en;
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
@@ -563,9 +571,9 @@ export default function CategoryPageClient({ category, categoryTours }: { catego
             <Header />
 
             {/* Hero Section */}
-            <CategoryHeroSection category={category} tourCount={categoryTours.length} copy={copy} />
+            <CategoryHeroSection category={category} tourCount={categoryTours.length} copy={copy} rtl={rtl} />
 
-            <main className="min-h-screen bg-slate-50">
+            <main className="min-h-screen bg-slate-50" dir={rtl ? 'rtl' : 'ltr'}>
                 {/* Stats Section */}
                 <StatsSection category={category} tours={categoryTours} copy={copy} />
 
@@ -588,6 +596,7 @@ export default function CategoryPageClient({ category, categoryTours }: { catego
                                     priceRange={priceRange}
                                     setPriceRange={setPriceRange}
                                     copy={copy}
+                                    rtl={rtl}
                                 />
                             </div>
                         )}

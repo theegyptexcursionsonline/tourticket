@@ -17,6 +17,8 @@ import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
 import { toDateOnlyString } from '@/utils/date';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 // Enhanced Types with database compatibility
 interface Tour {
@@ -241,6 +243,10 @@ const StepsIndicator: React.FC<{
   onStepClick?: (step: number) => void;
   isClickable?: boolean;
 }> = ({ currentStep, onStepClick, isClickable = false }) => {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const StepArrow = rtl ? ArrowLeft : ArrowRight;
+
   return (
     <div className="px-4 py-3 bg-white border-b border-gray-200">
       <div className="grid grid-cols-7 items-center max-w-xl mx-auto gap-0">
@@ -304,7 +310,7 @@ const StepsIndicator: React.FC<{
               {/* Arrow in Grid */}
               {index < STEPS.length - 1 && (
                 <div className="flex justify-center">
-                  <ArrowRight 
+                  <StepArrow
                     size={16} 
                     className={`${isCompleted ? 'text-green-500' : 'text-gray-300'} transition-colors duration-300`}
                     strokeWidth={2}
@@ -326,6 +332,10 @@ const CalendarWidget: React.FC<{
   availabilityData?: { [key: string]: 'high' | 'medium' | 'low' | 'full' };
   availableDays?: number[]; // 0-6 for Sunday-Saturday
 }> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays }) => {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const PrevMonthIcon = rtl ? ChevronRight : ChevronLeft;
+  const NextMonthIcon = rtl ? ChevronLeft : ChevronRight;
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -448,7 +458,7 @@ const CalendarWidget: React.FC<{
             onClick={() => navigateMonth('prev')}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <ChevronLeft size={20} className="text-gray-600" />
+            <PrevMonthIcon size={20} className="text-gray-600" />
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
@@ -456,7 +466,7 @@ const CalendarWidget: React.FC<{
             onClick={() => navigateMonth('next')}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <ChevronRight size={20} className="text-gray-600" />
+            <NextMonthIcon size={20} className="text-gray-600" />
           </motion.button>
         </div>
       </div>
@@ -1075,6 +1085,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   const router = useRouter();
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const BackIcon = rtl ? ArrowRight : ArrowLeft;
+  const ContinueIcon = rtl ? ArrowLeft : ArrowRight;
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
   
@@ -2182,7 +2196,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <ArrowLeft size={20} />
+                    <BackIcon size={20} />
                   </motion.button>
                 )}
                 <div>
@@ -2276,7 +2290,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          Continue <ArrowRight size={18} />
+                          Continue <ContinueIcon size={18} />
                         </motion.button>
                       )}
                       

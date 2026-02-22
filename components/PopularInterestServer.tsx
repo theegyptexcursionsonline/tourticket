@@ -4,10 +4,11 @@
 import React from 'react';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
-import { ArrowRight, Star, Sparkles, TrendingUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Star, Sparkles, TrendingUp } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay, EffectCoverflow } from 'swiper/modules';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -50,11 +51,13 @@ const DEFAULT_CATEGORY_IMAGE = '/placeholder-category.jpg';
 const InterestCard = ({
   interest,
   categoryPage,
-  t
+  t,
+  rtl
 }: {
   interest: Interest;
   categoryPage?: CategoryPage;
   t: PopularInterestsTranslator;
+  rtl: boolean;
 }) => {
   const linkUrl = categoryPage?.isPublished
     ? `/category/${categoryPage.slug}`
@@ -64,6 +67,8 @@ const InterestCard = ({
 
   // Only use actual database images - no mock images
   const imageUrl = categoryPage?.heroImage || interest.image || DEFAULT_CATEGORY_IMAGE;
+
+  const Arrow = rtl ? ArrowLeft : ArrowRight;
 
   return (
     <Link
@@ -115,7 +120,7 @@ const InterestCard = ({
             {interest.products} {interest.products === 1 ? t('experience') : t('experiences')}
           </p>
           <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:bg-white/30 transition-all">
-            <ArrowRight className="w-5 h-5 text-white transform group-hover:translate-x-1 transition-transform" />
+            <Arrow className="w-5 h-5 text-white transition-transform" />
           </div>
         </div>
       </div>
@@ -123,7 +128,10 @@ const InterestCard = ({
   );
 };
 
-const EmptyState = ({ t }: { t: PopularInterestsTranslator }) => (
+const EmptyState = ({ t, rtl }: { t: PopularInterestsTranslator; rtl: boolean }) => {
+  const Arrow = rtl ? ArrowLeft : ArrowRight;
+
+  return (
   <div className="text-center py-12">
     <Star className="w-12 h-12 text-slate-400 mx-auto mb-3" />
     <h3 className="text-xl font-bold text-white mb-2">{t('emptyTitle')}</h3>
@@ -132,14 +140,18 @@ const EmptyState = ({ t }: { t: PopularInterestsTranslator }) => (
       href="/tours"
       className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-lg hover:bg-slate-100 transition-colors font-semibold"
     >
-      {t('browseAllTours')} <ArrowRight className="w-4 h-4" />
+      {t('browseAllTours')} <Arrow className="w-4 h-4" />
     </Link>
   </div>
-);
+  );
+};
 
 // --- MAIN COMPONENT ---
 export default function PopularInterestServer({ interests, categoryPages }: PopularInterestServerProps) {
   const t = useTranslations('popularInterests');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const CtaArrow = rtl ? ArrowLeft : ArrowRight;
 
   const getCategoryPage = (interest: Interest): CategoryPage | undefined => {
     return categoryPages.find(page => {
@@ -157,7 +169,7 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
     });
   };
 
-  if (interests.length === 0) return <EmptyState t={t} />;
+  if (interests.length === 0) return <EmptyState t={t} rtl={rtl} />;
 
   return (
     <section className="bg-gradient-to-b from-slate-900 to-slate-800 py-12 sm:py-16 md:py-20 overflow-hidden">
@@ -203,13 +215,13 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
             1024: { slidesPerView: 2.5, spaceBetween: 28 },
             1280: { slidesPerView: 3, spaceBetween: 32 },
           }}
-          className="!pb-12"
+          className="popular-interests-swiper !pb-12"
         >
           {interests.map((interest) => {
             const categoryPage = getCategoryPage(interest);
             return (
               <SwiperSlide key={interest._id}>
-                <InterestCard interest={interest} categoryPage={categoryPage} t={t} />
+                <InterestCard interest={interest} categoryPage={categoryPage} t={t} rtl={rtl} />
               </SwiperSlide>
             );
           })}
@@ -222,7 +234,7 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
             className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-slate-900 rounded-xl text-sm sm:text-base font-bold hover:bg-slate-100 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
           >
             {t('exploreAll')}
-            <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5" />
+            <CtaArrow className="w-4 sm:w-5 h-4 sm:h-5" />
           </Link>
         </div>
       </div>
@@ -256,6 +268,12 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
         .swiper-button-next::after,
         .swiper-button-prev::after {
           font-size: 20px;
+        }
+
+        /* Override global RTL Swiper icon flip only for this carousel */
+        [dir="rtl"] .popular-interests-swiper .swiper-button-next,
+        [dir="rtl"] .popular-interests-swiper .swiper-button-prev {
+          transform: none !important;
         }
       `}</style>
     </section>

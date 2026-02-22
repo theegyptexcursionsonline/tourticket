@@ -364,7 +364,7 @@ function Sidebar({ blog }: { blog: IBlog }) {
             Browse All Tours
           </Link>
 
-          <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-indigo-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 mr-1" /> +20 11 42255624</a></div>
+          <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-indigo-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 mr-1" /> <bdi dir="ltr">+20 11 42255624</bdi></a></div>
         </div>
 
         {/* Popular Destinations */}

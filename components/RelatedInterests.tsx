@@ -6,6 +6,7 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   ArrowRight,
   Sparkles,
   TrendingUp,
@@ -36,6 +37,8 @@ import {
   Ticket,
   Globe
 } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { isRTL } from '@/i18n/config';
 
 interface Interest {
   _id: string;
@@ -213,6 +216,9 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
   title = 'Explore More Interests',
   subtitle = 'Discover other amazing experiences you might enjoy',
 }) => {
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const CtaArrow = rtl ? ArrowLeft : ArrowRight;
   const [interests, setInterests] = useState<Interest[]>([]);
   const [loading, setLoading] = useState(!initialInterests);
 
@@ -328,7 +334,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
             View All Interests
-            <ArrowRight className="w-5 h-5" />
+            <CtaArrow className="w-5 h-5" />
           </Link>
         </motion.div>
       </div>
