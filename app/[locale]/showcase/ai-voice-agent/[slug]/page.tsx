@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${result.tour.title} | Egypt Excursions Online`,
-    description: `Explore ${result.tour.title}. Use our AI voice assistant to ask questions and get instant tour details in 29+ languages.`,
+    description: `Explore ${result.tour.title}. Ask questions and get instant tour details in 29+ languages.`,
     openGraph: {
       title: result.tour.title,
       description: result.tour.description,

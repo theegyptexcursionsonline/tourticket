@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import Script from 'next/script';
 import { ITour } from '@/lib/models/Tour';
 
 interface VoiceAgentShowcaseClientProps {
@@ -23,6 +22,48 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : '4.9';
+
+  // Load voice widget via direct script injection (avoids Next.js Script timing issues)
+  useEffect(() => {
+    if (!widgetConfig.widgetId) return;
+
+    const scriptId = 'foxes-voice-widget-script';
+    if (document.getElementById(scriptId)) {
+      // Script already loaded, just re-init
+      if (typeof (window as any).foxes === 'function') {
+        (window as any).foxes('init', {
+          widgetId: widgetConfig.widgetId,
+          position: 'bottom-right',
+          primaryColor: '#0ea5e9',
+        });
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `${widgetConfig.apiUrl}/widget.js`;
+    script.async = true;
+    script.onload = () => {
+      if (typeof (window as any).foxes === 'function') {
+        (window as any).foxes('init', {
+          widgetId: widgetConfig.widgetId,
+          position: 'bottom-right',
+          primaryColor: '#0ea5e9',
+        });
+      }
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      // Cleanup on unmount
+      if (typeof (window as any).foxes === 'function') {
+        (window as any).foxes('destroy');
+      }
+      const el = document.getElementById(scriptId);
+      if (el) el.remove();
+    };
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl]);
 
   return (
     <div className="pt-20">
@@ -253,7 +294,7 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
             </div>
           </div>
 
-          {/* Right Column - Booking & Voice Help */}
+          {/* Right Column - Booking & Help */}
           <div className="lg:col-span-2">
             <div className="sticky top-24">
               {/* Price Header */}
@@ -267,7 +308,7 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
                 <p className="text-gray-500 text-sm">Prices vary based on date and group size</p>
               </div>
 
-              {/* Voice Assistant Info */}
+              {/* Help Section */}
               <div className="bg-white border-x border-gray-200 p-6 space-y-6">
                 <div className="text-center">
                   <div className="w-20 h-20 bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
@@ -276,15 +317,15 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold text-gray-900">Need Help?</h3>
-                  <p className="text-sm text-gray-500">Talk to our AI voice assistant</p>
+                  <p className="text-sm text-gray-500">Tap the mic button to ask anything</p>
                   <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 bg-green-100 rounded-full text-green-700 text-xs font-medium">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    Online — Ready to Talk
+                    Online
                   </div>
                 </div>
 
                 <div className="bg-sky-50 rounded-xl p-4 text-center">
-                  <p className="text-sky-700 font-medium text-sm mb-2">You can ask things like:</p>
+                  <p className="text-sky-700 font-medium text-sm mb-2">Try asking:</p>
                   <div className="space-y-2">
                     {[
                       `"Tell me about this tour"`,
@@ -315,7 +356,7 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <p className="text-xs text-gray-600 font-medium">24/7 Available</p>
+                    <p className="text-xs text-gray-600 font-medium">24/7</p>
                   </div>
                   <div>
                     <div className="w-10 h-10 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -331,23 +372,6 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
           </div>
         </div>
       </section>
-
-      {/* Foxes Voice Widget Script */}
-      {widgetConfig.widgetId && (
-        <Script
-          src={`${widgetConfig.apiUrl}/widget.js`}
-          strategy="lazyOnload"
-          onLoad={() => {
-            if (typeof window !== 'undefined' && (window as any).foxes) {
-              (window as any).foxes('init', {
-                widgetId: widgetConfig.widgetId,
-                position: 'bottom-right',
-                primaryColor: '#0ea5e9',
-              });
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

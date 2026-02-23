@@ -10,8 +10,8 @@ import Footer from '@/components/Footer';
 export const revalidate = 60; // ISR: revalidate every 60 seconds
 
 export const metadata: Metadata = {
-  title: 'Tours & Excursions | AI Voice Assistant | Egypt Excursions Online',
-  description: 'Browse tours with our AI voice assistant. Ask questions by voice, get instant tour details, and book your perfect Egypt experience in 29+ languages.',
+  title: 'Tours & Excursions | Egypt Excursions Online',
+  description: 'Browse and explore the best tours and excursions in Egypt. Get instant help, ask questions, and book your perfect experience.',
 };
 
 async function getPublishedTours() {
@@ -27,7 +27,7 @@ async function getPublishedTours() {
 
     return JSON.parse(JSON.stringify(tours));
   } catch (error) {
-    console.error('Failed to fetch tours for voice agent showcase:', error);
+    console.error('Failed to fetch tours:', error);
     return [];
   }
 }
@@ -49,27 +49,27 @@ export default async function AIVoiceAgentShowcasePage() {
             <div className="text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 border border-sky-200 rounded-full text-sky-700 text-sm font-medium mb-6">
                 <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
-                AI Voice Assistant Available
+                Voice Assistant Available
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-serif">
-                Explore Tours
-                <span className="text-sky-600"> By Voice</span>
+                Explore Egypt
+                <span className="text-sky-600"> Tours</span>
               </h1>
 
               <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Browse our tours and use the AI voice assistant for hands-free help.
-                Ask about tours, get details, check availability, and book — all by voice
-                in 29+ languages.
+                Browse our collection of tours and excursions across Egypt.
+                Need help? Just tap the mic button to ask anything — availability, pricing,
+                what to bring, or recommendations.
               </p>
 
               {/* Features */}
               <div className="flex flex-wrap justify-center gap-6 mb-12">
                 {[
-                  'Voice-Powered Assistance',
+                  'Hands-Free Help',
                   '29+ Languages',
-                  'Real-Time Responses',
-                  '24/7 Available',
+                  'Instant Answers',
+                  'Available 24/7',
                 ].map((feature) => (
                   <div key={feature} className="flex items-center gap-2 text-gray-700">
                     <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +86,7 @@ export default async function AIVoiceAgentShowcasePage() {
         {/* Tours Grid */}
         <section className="max-w-7xl mx-auto px-4 md:px-8 pb-20">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">
-            Browse Tours
+            Popular Tours
           </h2>
 
           {tours.length > 0 ? (

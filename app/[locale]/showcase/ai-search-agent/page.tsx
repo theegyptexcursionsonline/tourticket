@@ -10,8 +10,8 @@ import Footer from '@/components/Footer';
 export const revalidate = 60; // ISR: revalidate every 60 seconds
 
 export const metadata: Metadata = {
-  title: 'Tours & Excursions | AI Travel Concierge | Egypt Excursions Online',
-  description: 'Browse tours with our AI travel concierge. Get instant answers, personalized recommendations, and help booking your perfect Egypt experience.',
+  title: 'Tours & Excursions | Egypt Excursions Online',
+  description: 'Browse tours and get instant help planning your perfect Egypt experience. Ask questions, get recommendations, and book with ease.',
 };
 
 async function getPublishedTours() {
@@ -27,7 +27,7 @@ async function getPublishedTours() {
 
     return JSON.parse(JSON.stringify(tours));
   } catch (error) {
-    console.error('Failed to fetch tours for search agent showcase:', error);
+    console.error('Failed to fetch tours:', error);
     return [];
   }
 }
@@ -49,7 +49,7 @@ export default async function AISearchAgentShowcasePage() {
             <div className="text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 border border-violet-200 rounded-full text-violet-700 text-sm font-medium mb-6">
                 <span className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
-                AI-Powered Travel Assistant
+                Travel Concierge Available
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-serif">
@@ -58,16 +58,17 @@ export default async function AISearchAgentShowcasePage() {
               </h1>
 
               <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Browse our tours and chat with our AI travel concierge for personalized
-                recommendations, instant answers, and help booking your perfect trip.
+                Browse our tours and excursions across Egypt. Have a question?
+                Use the chat to get personalized recommendations, check availability,
+                or ask about anything.
               </p>
 
               {/* Features */}
               <div className="flex flex-wrap justify-center gap-6 mb-12">
                 {[
-                  'AI Travel Concierge',
+                  'Personalized Help',
                   '50+ Languages',
-                  'Personalized Recommendations',
+                  'Tour Recommendations',
                   'Instant Answers',
                 ].map((feature) => (
                   <div key={feature} className="flex items-center gap-2 text-gray-700">
@@ -85,7 +86,7 @@ export default async function AISearchAgentShowcasePage() {
         {/* Tours Grid */}
         <section className="max-w-7xl mx-auto px-4 md:px-8 pb-20">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">
-            Browse Tours
+            Popular Tours
           </h2>
 
           {tours.length > 0 ? (

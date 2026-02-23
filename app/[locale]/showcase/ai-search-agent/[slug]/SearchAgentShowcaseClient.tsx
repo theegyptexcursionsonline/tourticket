@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import Script from 'next/script';
 import { ITour } from '@/lib/models/Tour';
 
 interface SearchAgentShowcaseClientProps {
@@ -23,6 +22,37 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : '4.9';
+
+  // Load search widget via useEffect to avoid Next.js Script component issues
+  useEffect(() => {
+    if (!widgetConfig.apiKey) return;
+
+    const scriptId = 'foxes-search-widget-script';
+
+    // If script already exists, don't add again
+    if (document.getElementById(scriptId)) return;
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `${widgetConfig.apiUrl}/widget/foxes-widget.js`;
+    script.async = true;
+    script.setAttribute('data-api-key', widgetConfig.apiKey);
+    script.setAttribute('data-position', 'bottom-right');
+    script.setAttribute('data-accent', '#7c3aed');
+    script.setAttribute('data-agent-name', 'Travel Concierge');
+    script.setAttribute('data-greeting', 'Hi! Ask me anything about this tour or other experiences we offer.');
+    script.setAttribute('data-track-events', 'true');
+
+    document.body.appendChild(script);
+
+    return () => {
+      const el = document.getElementById(scriptId);
+      if (el) el.remove();
+      // Clean up any widget container the script may have created
+      const widgetContainer = document.getElementById('foxes-widget-container');
+      if (widgetContainer) widgetContainer.remove();
+    };
+  }, [widgetConfig.apiKey, widgetConfig.apiUrl]);
 
   return (
     <div className="pt-20 min-h-screen bg-gray-50">
@@ -284,10 +314,10 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold">Need Help Deciding?</h3>
-                  <p className="text-white/70 text-sm mt-1">Chat with our AI travel concierge</p>
+                  <p className="text-white/70 text-sm mt-1">Chat with us for instant answers</p>
                   <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    Online — Ready to Chat
+                    Online
                   </div>
                 </div>
 
@@ -339,20 +369,6 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
           </div>
         </div>
       </section>
-
-      {/* Foxes Search Widget Script */}
-      {widgetConfig.apiKey && (
-        <Script
-          src={`${widgetConfig.apiUrl}/widget/foxes-widget.js`}
-          strategy="lazyOnload"
-          data-api-key={widgetConfig.apiKey}
-          data-position="bottom-right"
-          data-accent="#7c3aed"
-          data-agent-name="Travel Concierge"
-          data-greeting="Hi! I'm your AI travel concierge. Ask me anything about this tour or other experiences!"
-          data-track-events="true"
-        />
-      )}
     </div>
   );
 }
