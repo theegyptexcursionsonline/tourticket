@@ -7,6 +7,7 @@
     "dev:port": "tsx scripts/dev-with-port.ts -p",
     "dev:original": "next dev --turbopack",
     "build": "next build",
+    "type": "next typegen",
     "start": "next start",
     "lint": "eslint .",
     "test": "jest",
