@@ -22,12 +22,12 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
     const scriptId = 'foxes-search-bar-script';
     if (document.getElementById(scriptId)) return;
 
+    // Self-mounting widget — no container div needed, just add the script
     const script = document.createElement('script');
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-search-widget.js`;
     script.async = true;
     script.setAttribute('data-api-key', widgetConfig.apiKey);
-    script.setAttribute('data-container', 'foxes-search-bar');
     script.setAttribute('data-accent', '#0891b2');
     script.setAttribute('data-agent-name', 'Travel Concierge');
     script.setAttribute('data-greeting', 'Search for tours, ask questions, or get personalized recommendations.');
@@ -39,8 +39,8 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
     return () => {
       const el = document.getElementById(scriptId);
       if (el) el.remove();
-      const container = document.getElementById('foxes-search-bar');
-      if (container) container.innerHTML = '';
+      const widgetRoot = document.getElementById('foxes-search-widget-root');
+      if (widgetRoot) widgetRoot.remove();
     };
   }, [widgetConfig.apiKey, widgetConfig.apiUrl]);
 
@@ -72,16 +72,7 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
         </div>
       </section>
 
-      {/* Search Bar — sticky at bottom of viewport */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <div id="foxes-search-bar" className="bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-t border-cyan-100">
-          {!widgetConfig.apiKey && (
-            <div className="flex items-center justify-center py-4 bg-cyan-50">
-              <p className="text-cyan-600 text-sm">Search bar loading...</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Search widget self-mounts as a fixed-bottom bar — no container div needed */}
 
       {/* Main Content — add bottom padding for sticky search bar */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 py-8 pb-24">
@@ -213,7 +204,7 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold">Smart Search</h3>
-                  <p className="text-white/70 text-sm mt-1">Use the search bar above to ask anything</p>
+                  <p className="text-white/70 text-sm mt-1">Use the search bar below to ask anything</p>
                 </div>
                 <div className="p-6 space-y-6">
                   <div className="bg-cyan-50 rounded-xl p-4 text-center">
