@@ -72,19 +72,19 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
         </div>
       </section>
 
-      {/* Search Bar — full-width above content */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 -mt-6 relative z-10 mb-8">
-        <div id="foxes-search-bar" className="rounded-2xl overflow-hidden shadow-lg border border-cyan-100 bg-white" style={{ minHeight: '56px' }}>
+      {/* Search Bar — sticky at bottom of viewport */}
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div id="foxes-search-bar" className="bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-t border-cyan-100">
           {!widgetConfig.apiKey && (
             <div className="flex items-center justify-center py-4 bg-cyan-50">
               <p className="text-cyan-600 text-sm">Search bar loading...</p>
             </div>
           )}
         </div>
-      </section>
+      </div>
 
-      {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+      {/* Main Content — add bottom padding for sticky search bar */}
+      <section className="max-w-7xl mx-auto px-4 md:px-8 py-8 pb-24">
         <div className="grid lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
