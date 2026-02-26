@@ -1,5 +1,5 @@
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
@@ -19,8 +19,8 @@ import {
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
 
-export async function POST(request: Request) {
-  const auth = await verifyAdmin();
+export async function POST(request: NextRequest) {
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   const { modelType, id } = (await request.json()) as {

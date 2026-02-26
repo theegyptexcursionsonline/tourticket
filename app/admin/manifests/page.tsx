@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import toast from 'react-hot-toast';
 import {
   ListPlus,
   Printer,
@@ -57,6 +59,7 @@ const formatManifestDate = (dateString: string): string => {
 };
 
 const ManifestsPage = () => {
+  const { token } = useAdminAuth();
   const [tours, setTours] = useState<Tour[]>([]);
   const [selectedTour, setSelectedTour] = useState('');
   const [selectedDate, setSelectedDate] = useState(toDateOnlyString(new Date()));
@@ -64,12 +67,24 @@ const ManifestsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   // Fetch all tours for the dropdown selector
   useEffect(() => {
     const fetchTours = async () => {
       try {
-        const response = await fetch('/api/admin/tours');
-        if (!response.ok) throw new Error('Failed to fetch tours');
+        const response = await fetch('/api/admin/tours', {
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to fetch tours');
+        }
         const data = await response.json();
 
         if (data.success && Array.isArray(data.data)) {
@@ -97,9 +112,11 @@ const ManifestsPage = () => {
     setManifestData(null);
 
     try {
-      const response = await fetch(`/api/admin/manifests?tourId=${selectedTour}&date=${selectedDate}`);
+      const response = await fetch(`/api/admin/manifests?tourId=${selectedTour}&date=${selectedDate}`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to generate manifest');
       }
       const data = await response.json();

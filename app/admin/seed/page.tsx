@@ -4,6 +4,7 @@
 import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { AlertTriangle, FileJson, Upload, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 type SeedReport = {
   wipedData: boolean;
@@ -14,6 +15,7 @@ type SeedReport = {
 };
 
 export default function SeedPage() {
+  const { token } = useAdminAuth();
   const [jsonFile, setJsonFile] = useState<File | null>(null);
   const [wipeData, setWipeData] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
@@ -21,6 +23,13 @@ export default function SeedPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   const sampleJson = `{
   "destinations": [
@@ -83,12 +92,15 @@ export default function SeedPage() {
 
         const response = await fetch('/api/admin/seed', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(data),
         });
 
         const result = await response.json();
-        if (response.ok && result.success) {
+        if (!response.ok) {
+          throw new Error(result.error || `Seeding failed (${response.status})`);
+        }
+        if (result.success) {
           setReport(result.report);
           toast.success('Database seeding process completed!');
         } else {

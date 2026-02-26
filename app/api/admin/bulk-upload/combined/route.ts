@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
@@ -10,9 +10,9 @@ const findByName = async (Model: any, name: string) => {
     return Model.findOne({ name: new RegExp(`^${name}$`, 'i') }).lean();
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     // Verify admin authentication
-    const auth = await verifyAdmin();
+    const auth = await verifyAdmin(req);
     if (auth instanceof NextResponse) return auth;
 
     await dbConnect();

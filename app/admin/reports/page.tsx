@@ -3,8 +3,10 @@
 
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DollarSign, BookOpen, Percent, TrendingUp, Crown } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // --- Type Definitions for Report Data ---
 interface KpiData {
@@ -48,16 +50,29 @@ const KpiCard = ({ title, value, icon: Icon, format = "number" }: { title: strin
 
 
 const ReportsPage = () => {
+  const { token } = useAdminAuth();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   useEffect(() => {
     const fetchReportData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/admin/reports');
-        if (!response.ok) throw new Error('Failed to fetch report data');
+        const response = await fetch('/api/admin/reports', {
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to fetch report data');
+        }
         const data = await response.json();
         setReportData(data);
       } catch (err) {

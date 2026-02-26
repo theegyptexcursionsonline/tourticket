@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Edit, Trash2, MoreVertical, X, Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 export const TourActions = ({ tourId }: { tourId: string }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,6 +16,14 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { token } = useAdminAuth();
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -59,7 +68,7 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
   const confirmDelete = async () => {
     setIsDeleting(true);
     const promise = (async () => {
-      const res = await fetch(`/api/admin/tours/${tourId}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/tours/${tourId}`, { method: "DELETE", headers: getAuthHeaders() });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Failed to delete" }));
         throw new Error(err?.message || "Delete failed");

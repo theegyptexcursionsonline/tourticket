@@ -1,6 +1,6 @@
 // app/api/admin/bulk-upload/verify/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
@@ -8,9 +8,9 @@ import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
     // Verify admin authentication
-    const auth = await verifyAdmin();
+    const auth = await verifyAdmin(req);
     if (auth instanceof NextResponse) return auth;
 
     await dbConnect();

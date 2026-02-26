@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
@@ -29,9 +29,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

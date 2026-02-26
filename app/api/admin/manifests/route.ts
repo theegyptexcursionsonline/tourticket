@@ -1,14 +1,14 @@
 // app/api/admin/manifests/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

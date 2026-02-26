@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Star, MessageSquare, User, Map, Trash2, CheckCircle, ShieldCheck, Clock, TrendingUp, Users, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -46,6 +47,7 @@ const StarRating = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg
 );
 
 const ReviewsPage = () => {
+  const { token } = useAdminAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'approved'>('all');
@@ -57,6 +59,13 @@ const ReviewsPage = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   // --- Calculate stats from reviews ---
   const calculateStats = (reviewsData: Review[]): ReviewStats => {
@@ -75,8 +84,13 @@ const ReviewsPage = () => {
     const fetchReviews = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/admin/reviews');
-        if (!response.ok) throw new Error('Failed to fetch reviews');
+        const response = await fetch('/api/admin/reviews', {
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to fetch reviews');
+        }
         const data = await response.json();
         setReviews(data);
         setStats(calculateStats(data));
@@ -114,11 +128,11 @@ const ReviewsPage = () => {
     try {
       const response = await fetch(`/api/admin/reviews/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ verified: true }),
       });
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to approve review');
       }
       const updatedReview = await response.json();
@@ -138,9 +152,10 @@ const ReviewsPage = () => {
     try {
       const response = await fetch(`/api/admin/reviews/${id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to delete review');
       }
 

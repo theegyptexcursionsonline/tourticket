@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import withAuth from '@/components/admin/withAuth';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
   Tag, 
   Plus, 
@@ -36,10 +37,18 @@ interface IDiscount {
 }
 
 const DiscountsPage = () => {
+  const { token } = useAdminAuth();
   const [discounts, setDiscounts] = useState<IDiscount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   // --- Form State ---
   const [code, setCode] = useState('');
@@ -52,9 +61,11 @@ const DiscountsPage = () => {
   const fetchDiscounts = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/discounts');
+      const response = await fetch('/api/admin/discounts', {
+        headers: getAuthHeaders(),
+      });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch discounts');
+      if (!response.ok) throw new Error(data.error || `Failed to fetch discounts (${response.status})`);
       if (data.success) {
         setDiscounts(data.data);
       } else {
@@ -84,7 +95,7 @@ const DiscountsPage = () => {
     try {
       const response = await fetch('/api/admin/discounts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           code: code.toUpperCase(),
           discountType,
@@ -93,7 +104,7 @@ const DiscountsPage = () => {
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to create discount');
+      if (!response.ok) throw new Error(data.error || `Failed to create discount (${response.status})`);
 
       if (data.success) {
         setDiscounts([data.data, ...discounts]);
@@ -115,11 +126,11 @@ const DiscountsPage = () => {
     try {
       const response = await fetch(`/api/admin/discounts/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: !currentStatus }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update status');
+      if (!response.ok) throw new Error(data.error || `Failed to update status (${response.status})`);
       
       if (data.success) {
         setDiscounts(discounts.map(d => d._id === id ? data.data : d));
@@ -137,9 +148,10 @@ const DiscountsPage = () => {
     try {
       const response = await fetch(`/api/admin/discounts/${id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
        const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to delete discount');
+      if (!response.ok) throw new Error(data.error || `Failed to delete discount (${response.status})`);
       
       if(data.success) {
         setDiscounts(discounts.filter(d => d._id !== id));

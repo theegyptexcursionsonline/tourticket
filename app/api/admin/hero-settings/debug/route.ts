@@ -1,12 +1,12 @@
 // app/api/admin/hero-settings/debug/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {

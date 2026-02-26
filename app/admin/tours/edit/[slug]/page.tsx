@@ -4,6 +4,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import withAuth from '@/components/admin/withAuth';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Plus, Trash2, Calendar, Clock, Users, ArrowLeft, Loader2 } from 'lucide-react';
 import 'react-day-picker/dist/style.css';
 import TourForm from '@/components/TourForm';
@@ -183,11 +184,19 @@ const EditTourPage = () => {
     const [error, setError] = useState('');
     const params = useParams();
     const router = useRouter();
+    const { token } = useAdminAuth();
     const slug = params.slug as string;
+
+    const getAuthHeaders = (contentType = true): HeadersInit => {
+      const headers: HeadersInit = {};
+      if (contentType) headers['Content-Type'] = 'application/json';
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return headers;
+    };
 
     useEffect(() => {
         if (slug) {
-            fetch(`/api/admin/tours/${slug}`)
+            fetch(`/api/admin/tours/${slug}`, { headers: getAuthHeaders() })
                 .then(res => {
                     if (!res.ok) {
                         throw new Error(`HTTP error! status: ${res.status}`);
@@ -227,7 +236,7 @@ const EditTourPage = () => {
             setError('No tour slug provided');
             setLoading(false);
         }
-    }, [slug]);
+    }, [slug, token]);
 
     // Enhanced Loading State
     if (loading) {

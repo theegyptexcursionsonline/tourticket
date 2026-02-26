@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import mongoose from 'mongoose';
@@ -14,9 +14,9 @@ const models = {
     Attractions: AttractionPage
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     // Verify admin authentication
-    const auth = await verifyAdmin();
+    const auth = await verifyAdmin(req);
     if (auth instanceof NextResponse) return auth;
 
     await dbConnect();

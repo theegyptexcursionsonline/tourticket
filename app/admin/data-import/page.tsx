@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, Trash2, Image as ImageIcon, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface ImportReport {
   wipedData: boolean;
@@ -54,6 +55,7 @@ interface ParsedItem {
 }
 
 export default function DataImportPage() {
+  const { token } = useAdminAuth();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [jsonData, setJsonData] = useState<string>('');
   const [parsedData, setParsedData] = useState<any>(null);
@@ -61,6 +63,13 @@ export default function DataImportPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   // Sample JSON template with ALL supported fields
   const sampleTemplate = {
@@ -469,13 +478,18 @@ export default function DataImportPage() {
 
       const response = await fetch('/api/admin/seed', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updatedData),
       });
 
       const data: ImportResult = await response.json();
+      if (!response.ok) {
+        setResult({
+          success: false,
+          error: data.error || `Import failed (${response.status})`,
+        });
+        return;
+      }
       setResult(data);
     } catch (error) {
       setResult({

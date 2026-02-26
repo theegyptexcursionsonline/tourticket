@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, Edit, Trash2, Eye, Search, Filter } from 'lucide-react';
 import { AttractionPage } from '@/types';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 export default function AttractionPagesAdmin() {
+  const { token } = useAdminAuth();
   const [pages, setPages] = useState<AttractionPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,15 +15,29 @@ export default function AttractionPagesAdmin() {
   const [filterType, setFilterType] = useState<'all' | 'attraction' | 'category'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
 
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   useEffect(() => {
     fetchPages();
   }, []);
 
   const fetchPages = async () => {
     try {
-      const response = await fetch('/api/admin/attraction-pages');
+      const response = await fetch('/api/admin/attraction-pages', {
+        headers: getAuthHeaders(),
+      });
       const data = await response.json();
-      
+
+      if (!response.ok) {
+        setError(data.error || `Failed to fetch pages (${response.status})`);
+        return;
+      }
+
       if (data.success) {
         setPages(data.data);
       } else {
@@ -43,10 +59,16 @@ export default function AttractionPagesAdmin() {
     try {
       const response = await fetch(`/api/admin/attraction-pages/${id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
 
       const data = await response.json();
-      
+
+      if (!response.ok) {
+        alert(data.error || `Failed to delete page (${response.status})`);
+        return;
+      }
+
       if (data.success) {
         setPages(pages.filter(page => page._id !== id));
         alert('Page deleted successfully');

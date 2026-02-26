@@ -1,7 +1,7 @@
 // app/api/admin/tours/route.ts
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { syncTourToAlgolia } from '@/lib/algolia';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
@@ -88,9 +88,9 @@ async function fetchToursWithPopulate() {
 }
 
 // GET all tours
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
@@ -107,9 +107,9 @@ export async function GET() {
 }
 
 // POST a new tour
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

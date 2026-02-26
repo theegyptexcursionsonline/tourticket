@@ -1,5 +1,5 @@
 // app/api/admin/reviews/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
@@ -7,9 +7,9 @@ import Tour from '@/lib/models/Tour';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // GET all reviews for the admin panel
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

@@ -4,9 +4,9 @@ import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {
@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {

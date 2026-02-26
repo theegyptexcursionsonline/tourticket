@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import toast from 'react-hot-toast';
 import {
   Package, MapPin, Folder, Image,
   ChevronDown, ChevronRight, Search,
@@ -18,6 +20,7 @@ interface DataViewerState {
 }
 
 export default function DataViewerPage() {
+  const { token } = useAdminAuth();
   const [data, setData] = useState<DataViewerState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,13 @@ export default function DataViewerPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'tours' | 'destinations' | 'categories' | 'attractions'>('all');
   const [showFullJSON, setShowFullJSON] = useState(false);
 
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -40,8 +50,13 @@ export default function DataViewerPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/data-viewer');
-      if (!response.ok) throw new Error('Failed to fetch data');
+      const response = await fetch('/api/admin/data-viewer', {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to fetch data');
+      }
       const result = await response.json();
       setData(result);
     } catch (err: any) {

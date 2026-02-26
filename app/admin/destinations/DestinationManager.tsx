@@ -31,6 +31,7 @@ import {
 import { IDestination } from '@/lib/models/Destination';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import { destinationTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface Tour {
   _id: string;
@@ -79,6 +80,15 @@ const generateSlug = (name: string) =>
 
 export default function DestinationManager({ initialDestinations }: { initialDestinations: IDestination[] }) {
   const router = useRouter();
+  const { token } = useAdminAuth();
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -121,7 +131,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   useEffect(() => {
     const fetchTours = async () => {
       try {
-        const response = await fetch('/api/admin/tours');
+        const response = await fetch('/api/admin/tours', { headers: getAuthHeaders() });
         const data = await response.json();
         if (data.success) {
           setAvailableTours(data.data.map((tour: any) => ({
@@ -220,7 +230,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
 
     // Fetch tours for this destination
     if (dest._id) {
-      fetch(`/api/admin/tours`)
+      fetch(`/api/admin/tours`, { headers: getAuthHeaders() })
         .then(res => res.json())
         .then(data => {
           if (data.success) {
@@ -379,7 +389,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const response = await fetch(apiEndpoint, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(submitData)
   });
 
@@ -400,7 +410,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       ...linkedTours.map(tourId =>
         fetch(`/api/admin/tours/${tourId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ destination: savedDestination._id })
         })
       ),
@@ -409,17 +419,17 @@ const handleSubmit = async (e: React.FormEvent) => {
         availableTours
           .filter(t => !linkedTours.includes(t._id))
           .map(async (tour) => {
-            const tourRes = await fetch(`/api/admin/tours/${tour._id}`);
+            const tourRes = await fetch(`/api/admin/tours/${tour._id}`, { headers: getAuthHeaders() });
             if (tourRes.ok) {
               const tourData = await tourRes.json();
-              const tourDestId = typeof tourData.data.destination === 'string' 
-                ? tourData.data.destination 
+              const tourDestId = typeof tourData.data.destination === 'string'
+                ? tourData.data.destination
                 : tourData.data.destination?._id;
 
               if (tourDestId === (editingDestination._id as any).toString()) {
                 return fetch(`/api/admin/tours/${tour._id}`, {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: getAuthHeaders(),
                   body: JSON.stringify({ destination: null })
                 });
               }
@@ -447,7 +457,7 @@ setTimeout(() => router.refresh(), 0);
 }
 };
   const handleDelete = (destId: string, destName: string) => {
-    const promise = fetch(`/api/admin/destinations/${destId}`, { method: 'DELETE' })
+    const promise = fetch(`/api/admin/destinations/${destId}`, { method: 'DELETE', headers: getAuthHeaders() })
       .then(res => {
         if (!res.ok) throw new Error('Failed to delete.');
         return res.json();

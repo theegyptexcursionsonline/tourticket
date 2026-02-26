@@ -124,13 +124,13 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     // Verify admin authentication
-    const auth = await verifyAdmin();
+    const auth = await verifyAdmin(request);
     if (auth instanceof NextResponse) return auth;
 
     try {
         await dbConnect();
         const { id } = await params;
-        
+
         console.log('Fetching tour with ID:', id);
 
         const tour = await findTour(id);
@@ -162,7 +162,7 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     // Verify admin authentication
-    const auth = await verifyAdmin();
+    const auth = await verifyAdmin(request);
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -343,7 +343,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     // Verify admin authentication
-    const auth = await verifyAdmin();
+    const auth = await verifyAdmin(request);
     if (auth instanceof NextResponse) return auth;
 
     try {

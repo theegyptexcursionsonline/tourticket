@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { UploadCloud, Loader2, FileJson, Package, MapPin, Star, Image as ImageIcon, Check, X, Upload, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 // Types for missing images
 interface MissingImage {
@@ -22,12 +23,14 @@ interface UploadResults {
 }
 
 // Image Upload Card Component
-const ImageUploadCard = ({ 
-    item, 
-    onImageUpload 
-}: { 
-    item: MissingImage; 
+const ImageUploadCard = ({
+    item,
+    onImageUpload,
+    getAuthHeaders
+}: {
+    item: MissingImage;
     onImageUpload: (id: string, url: string) => void;
+    getAuthHeaders: (contentType?: boolean) => HeadersInit;
 }) => {
     const [imageUrl, setImageUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
@@ -44,7 +47,7 @@ const ImageUploadCard = ({
         try {
             const response = await fetch('/api/admin/bulk-upload/link-image', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     docId: item._id,
                     modelType: item.modelType,
@@ -54,7 +57,7 @@ const ImageUploadCard = ({
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Failed to link image');
+            if (!response.ok) throw new Error(data.error || `Failed to link image (${response.status})`);
 
             toast.success(`Image linked to ${item.name}`);
             onImageUpload(item._id, imageUrl.trim());
@@ -92,11 +95,12 @@ const ImageUploadCard = ({
         try {
             const response = await fetch('/api/admin/bulk-upload/upload-image', {
                 method: 'POST',
+                headers: getAuthHeaders(false),
                 body: formData,
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Upload failed');
+            if (!response.ok) throw new Error(data.error || `Upload failed (${response.status})`);
 
             toast.success(`Image uploaded for ${item.name}`);
             onImageUpload(item._id, data.imageUrl);
@@ -309,11 +313,19 @@ const ResultDisplay = ({ results }: { results: UploadResults }) => {
 
 // Main Component
 export default function BulkUploadPage() {
+    const { token } = useAdminAuth();
     const [jsonInput, setJsonInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [results, setResults] = useState<UploadResults | null>(null);
     const [missingImages, setMissingImages] = useState<MissingImage[]>([]);
     const [uploadedImages, setUploadedImages] = useState<Set<string>>(new Set());
+
+    const getAuthHeaders = (contentType = true): HeadersInit => {
+        const headers: HeadersInit = {};
+        if (contentType) headers['Content-Type'] = 'application/json';
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    };
 
     const handleBulkUpload = async () => {
         setIsLoading(true);
@@ -333,12 +345,12 @@ export default function BulkUploadPage() {
         try {
             const response = await fetch('/api/admin/bulk-upload/combined', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(parsedData),
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Something went wrong on the server.');
+            if (!response.ok) throw new Error(data.error || `Something went wrong on the server (${response.status}).`);
 
             toast.success('Bulk upload processed successfully!');
             setResults(data.results);
@@ -477,6 +489,7 @@ export default function BulkUploadPage() {
                                 key={item._id}
                                 item={item}
                                 onImageUpload={handleImageUpload}
+                                getAuthHeaders={getAuthHeaders}
                             />
                         ))}
                     </div>

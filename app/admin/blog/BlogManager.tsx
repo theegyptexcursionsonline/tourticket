@@ -31,6 +31,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { IBlog } from '@/lib/models/Blog';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface FormData {
   title: string;
@@ -210,6 +211,15 @@ function RichTextEditor({
 /* -------------------- Main BlogManager (full file) -------------------- */
 export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] }) {
   const router = useRouter();
+  const { token } = useAdminAuth();
+
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -444,7 +454,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
 
     const promise = fetch(apiEndpoint, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(submitData)
     })
       .then(async res => {
@@ -469,7 +479,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
   };
 
   const handleDelete = (blogId: string, blogTitle: string) => {
-    const promise = fetch(`/api/admin/blog/${blogId}`, { method: 'DELETE' })
+    const promise = fetch(`/api/admin/blog/${blogId}`, { method: 'DELETE', headers: getAuthHeaders() })
       .then(res => {
         if (!res.ok) throw new Error('Failed to delete.');
         return res.json();

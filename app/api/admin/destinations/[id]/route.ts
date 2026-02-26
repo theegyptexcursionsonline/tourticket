@@ -12,22 +12,22 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {
     await dbConnect();
-    
+
     const data = await request.json();
     const { id } = await params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid destination ID' 
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid destination ID'
       }, { status: 400 });
     }
-    
+
     // Find the existing destination first
     const existingDestination = await Destination.findById(id);
     if (!existingDestination) {
@@ -191,7 +191,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {

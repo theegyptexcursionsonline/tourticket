@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import {
   autoTranslateTour,
@@ -9,8 +9,8 @@ import {
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
 
-export async function POST(request: Request) {
-  const auth = await verifyAdmin();
+export async function POST(request: NextRequest) {
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {

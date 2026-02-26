@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
   Image as ImageIcon, Settings, Upload, Trash2, Check, 
   Eye, EyeOff, Plus, Edit, Save, X, Monitor, Smartphone,
@@ -57,6 +58,7 @@ interface HeroSettings {
 }
 
 const HeroSettingsPage = () => {
+  const { token } = useAdminAuth();
   const [settings, setSettings] = useState<HeroSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -72,6 +74,13 @@ const HeroSettingsPage = () => {
   const [newTag, setNewTag] = useState('');
   const [newSuggestion, setNewSuggestion] = useState('');
 
+  const getAuthHeaders = (contentType = true): HeadersInit => {
+    const headers: HeadersInit = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
+
   useEffect(() => {
     fetchHeroSettings();
   }, []);
@@ -79,9 +88,15 @@ const HeroSettingsPage = () => {
 const fetchHeroSettings = async () => {
   try {
     setIsLoading(true);
-    const response = await fetch('/api/admin/hero-settings');
+    const response = await fetch('/api/admin/hero-settings', {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch hero settings');
+    }
     const result = await response.json();
-    
+
     if (result.success) {
       setSettings(result.data);
       setEditingSettings({ ...result.data });
@@ -105,14 +120,16 @@ const handleAddBackgroundImage = async () => {
   try {
     const response = await fetch('/api/admin/hero-settings/images', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ imageData: newImage }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to add image');
+    }
     const result = await response.json();
-    
+
     if (result.success) {
       setSettings(result.data);
       setEditingSettings({ ...result.data });
@@ -133,10 +150,15 @@ const handleDeleteImage = async (imageIndex: number) => {
   try {
     const response = await fetch(`/api/admin/hero-settings/images/${imageIndex}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to delete image');
+    }
     const result = await response.json();
-    
+
     if (result.success) {
       setSettings(result.data);
       setEditingSettings({ ...result.data });
@@ -154,13 +176,15 @@ const handleSetActiveImage = async (imageIndex: number) => {
   try {
     const response = await fetch(`/api/admin/hero-settings/images/${imageIndex}/activate`, {
       method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
+      headers: getAuthHeaders(),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to set active image');
+    }
     const result = await response.json();
-    
+
     if (result.success) {
       setSettings(result.data);
       setEditingSettings({ ...result.data });
@@ -181,14 +205,16 @@ const handleSaveSettings = async () => {
     setIsSaving(true);
     const response = await fetch('/api/admin/hero-settings', {
       method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(editingSettings),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to save settings');
+    }
     const result = await response.json();
-    
+
     if (result.success) {
       setSettings(result.data);
       setEditingSettings({ ...result.data });
@@ -214,9 +240,14 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
   try {
     const response = await fetch('/api/uploadhero', {
       method: 'POST',
+      headers: getAuthHeaders(false),
       body: uploadFormData,
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Upload failed');
+    }
     const data = await response.json();
 
     if (data.success && data.url) {

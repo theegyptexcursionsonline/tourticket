@@ -1,14 +1,14 @@
 // app/api/admin/reports/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {

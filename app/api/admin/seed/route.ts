@@ -1,5 +1,5 @@
 // app/api/admin/seed/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
@@ -202,9 +202,9 @@ interface ImportReport {
   warnings: string[];
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   // Verify admin authentication
-  const auth = await verifyAdmin();
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   console.log('\n🚀 ============================================');
