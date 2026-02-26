@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
+import Destination from '@/lib/models/Destination';
 import { verifyToken } from '@/lib/jwt';
 import { verifyFirebaseToken } from '@/lib/firebase/admin';
 import mongoose from 'mongoose';
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
         select: 'title slug image duration rating discountPrice',
         populate: {
           path: 'destination',
-          model: 'Destination',
+          model: Destination,
           select: 'name slug'
         }
       })

@@ -5,6 +5,7 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
+import Destination from '@/lib/models/Destination';
 import { verifyToken } from '@/lib/jwt';
 import { verifyFirebaseToken } from '@/lib/firebase/admin';
 
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         select: 'title slug image images duration rating discountPrice destination',
         populate: {
           path: 'destination',
-          model: 'Destination',
+          model: Destination,
           select: 'name slug',
         },
       })

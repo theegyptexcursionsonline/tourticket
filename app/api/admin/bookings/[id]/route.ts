@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Booking, { BOOKING_STATUSES, IBookingEditHistoryEntry } from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
+import Destination from '@/lib/models/Destination';
 import { EmailService } from '@/lib/email/emailService';
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
@@ -96,7 +97,7 @@ export async function GET(
         select: 'title slug image images duration rating discountPrice destination',
         populate: {
           path: 'destination',
-          model: 'Destination',
+          model: Destination,
           select: 'name slug',
         },
       })
@@ -192,7 +193,7 @@ export async function PATCH(
         select: 'title slug image images duration rating discountPrice destination bookingOptions',
         populate: {
           path: 'destination',
-          model: 'Destination',
+          model: Destination,
           select: 'name slug',
         },
       })
@@ -349,7 +350,7 @@ export async function PATCH(
         select: 'title slug image images duration rating discountPrice destination bookingOptions',
         populate: {
           path: 'destination',
-          model: 'Destination',
+          model: Destination,
           select: 'name slug',
         },
       })
@@ -503,10 +504,10 @@ export async function PATCH(
   } catch (error: any) {
     console.error('Failed to update booking:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: 'Failed to update booking',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: error.message || 'Unknown error',
       },
       { status: 500 }
     );
