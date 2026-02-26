@@ -10,7 +10,7 @@ interface InlineChatShowcaseClientProps {
   reviews: any[];
   widgetConfig: {
     apiUrl: string;
-    apiKey: string;
+    widgetId: string;
   };
 }
 
@@ -23,7 +23,7 @@ export default function InlineChatShowcaseClient({ tour, reviews, widgetConfig }
     : '4.9';
 
   useEffect(() => {
-    if (!widgetConfig.apiKey) return;
+    if (!widgetConfig.widgetId) return;
 
     const scriptId = 'foxes-inline-chat-script';
     if (document.getElementById(scriptId)) return;
@@ -32,7 +32,7 @@ export default function InlineChatShowcaseClient({ tour, reviews, widgetConfig }
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-inline-chat.js`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.apiKey);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-container', 'foxes-inline-chat');
     script.setAttribute('data-accent', '#059669');
     script.setAttribute('data-agent-name', 'Travel Concierge');
@@ -49,7 +49,7 @@ export default function InlineChatShowcaseClient({ tour, reviews, widgetConfig }
       const container = document.getElementById('foxes-inline-chat');
       if (container) container.innerHTML = '';
     };
-  }, [widgetConfig.apiKey, widgetConfig.apiUrl]);
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl]);
 
   return (
     <div className="pt-20 min-h-screen bg-gray-50">
@@ -252,7 +252,7 @@ export default function InlineChatShowcaseClient({ tour, reviews, widgetConfig }
             <div className="sticky top-24">
               <div id="foxes-inline-chat" className="rounded-2xl overflow-hidden border border-emerald-200 shadow-lg" style={{ minHeight: '500px' }}>
                 {/* Widget loads here */}
-                {!widgetConfig.apiKey && (
+                {!widgetConfig.widgetId && (
                   <div className="flex items-center justify-center h-full min-h-[500px] bg-emerald-50">
                     <p className="text-emerald-600 text-sm">Chat widget loading...</p>
                   </div>

@@ -3,15 +3,13 @@
 import React, { useEffect } from 'react';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
+import { FOXES_SEARCH_CONFIG } from '../foxes-config';
 
-const widgetConfig = {
-  apiUrl: process.env.NEXT_PUBLIC_FOXES_SEARCH_API_URL || 'https://search.foxestechnology.com',
-  apiKey: process.env.NEXT_PUBLIC_FOXES_SEARCH_API_KEY || '',
-};
+const widgetConfig = FOXES_SEARCH_CONFIG;
 
 export default function AIChatPageShowcase() {
   useEffect(() => {
-    if (!widgetConfig.apiKey) return;
+    if (!widgetConfig.widgetId) return;
     const scriptId = 'foxes-chat-page-script';
     if (document.getElementById(scriptId)) return;
 
@@ -19,7 +17,7 @@ export default function AIChatPageShowcase() {
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-chat-page.js`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.apiKey);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-container', 'foxes-chat-page');
     script.setAttribute('data-accent', '#4f46e5');
     script.setAttribute('data-agent-name', 'Travel Concierge');
@@ -75,7 +73,7 @@ export default function AIChatPageShowcase() {
             className="rounded-2xl overflow-hidden shadow-xl border border-indigo-100 bg-white"
             style={{ minHeight: '650px' }}
           >
-            {!widgetConfig.apiKey && (
+            {!widgetConfig.widgetId && (
               <div className="flex items-center justify-center h-full min-h-[650px] bg-indigo-50">
                 <div className="text-center">
                   <svg className="w-12 h-12 text-indigo-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

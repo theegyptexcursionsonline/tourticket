@@ -8,6 +8,7 @@ import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 import VoiceAgentShowcaseClient from './VoiceAgentShowcaseClient';
 import { ITour } from '@/lib/models/Tour';
+import { FOXES_VOICE_CONFIG } from '../../foxes-config';
 
 export const revalidate = 60; // ISR: revalidate every 60 seconds
 
@@ -65,11 +66,6 @@ export default async function VoiceAgentShowcasePage({ params }: PageProps) {
 
   const { tour, reviews } = result;
 
-  const widgetConfig = {
-    apiUrl: process.env.NEXT_PUBLIC_FOXES_VOICE_API_URL || 'https://voice.foxestechnology.com',
-    widgetId: process.env.NEXT_PUBLIC_FOXES_VOICE_WIDGET_ID || '',
-  };
-
   return (
     <>
       <Header2 />
@@ -77,7 +73,7 @@ export default async function VoiceAgentShowcasePage({ params }: PageProps) {
         <VoiceAgentShowcaseClient
           tour={tour}
           reviews={reviews}
-          widgetConfig={widgetConfig}
+          widgetConfig={FOXES_VOICE_CONFIG}
         />
       </main>
       <Footer />

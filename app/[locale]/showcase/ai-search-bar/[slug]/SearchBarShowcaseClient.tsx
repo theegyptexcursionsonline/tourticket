@@ -8,7 +8,7 @@ import { ITour } from '@/lib/models/Tour';
 interface SearchBarShowcaseClientProps {
   tour: ITour;
   reviews: any[];
-  widgetConfig: { apiUrl: string; apiKey: string };
+  widgetConfig: { apiUrl: string; widgetId: string };
 }
 
 export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }: SearchBarShowcaseClientProps) {
@@ -18,7 +18,7 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1) : '4.9';
 
   useEffect(() => {
-    if (!widgetConfig.apiKey) return;
+    if (!widgetConfig.widgetId) return;
     const scriptId = 'foxes-search-bar-script';
     if (document.getElementById(scriptId)) return;
 
@@ -27,7 +27,7 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-search-widget.js`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.apiKey);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-accent', '#0891b2');
     script.setAttribute('data-agent-name', 'Travel Concierge');
     script.setAttribute('data-greeting', 'Search for tours, ask questions, or get personalized recommendations.');
@@ -42,7 +42,7 @@ export default function SearchBarShowcaseClient({ tour, reviews, widgetConfig }:
       const widgetRoot = document.getElementById('foxes-search-widget-root');
       if (widgetRoot) widgetRoot.remove();
     };
-  }, [widgetConfig.apiKey, widgetConfig.apiUrl]);
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl]);
 
   return (
     <div className="pt-20 min-h-screen bg-gray-50">

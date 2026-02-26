@@ -8,7 +8,7 @@ import { ITour } from '@/lib/models/Tour';
 interface ChatModalShowcaseClientProps {
   tour: ITour;
   reviews: any[];
-  widgetConfig: { apiUrl: string; apiKey: string };
+  widgetConfig: { apiUrl: string; widgetId: string };
 }
 
 export default function ChatModalShowcaseClient({ tour, reviews, widgetConfig }: ChatModalShowcaseClientProps) {
@@ -18,7 +18,7 @@ export default function ChatModalShowcaseClient({ tour, reviews, widgetConfig }:
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1) : '4.9';
 
   useEffect(() => {
-    if (!widgetConfig.apiKey) return;
+    if (!widgetConfig.widgetId) return;
     const scriptId = 'foxes-chat-modal-script';
     if (document.getElementById(scriptId)) return;
 
@@ -26,7 +26,7 @@ export default function ChatModalShowcaseClient({ tour, reviews, widgetConfig }:
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-chat-modal.js`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.apiKey);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-accent', '#9333ea');
     script.setAttribute('data-agent-name', 'Travel Concierge');
     script.setAttribute('data-greeting', 'Hi! Ask me anything about this tour or let me help you find the perfect experience.');
@@ -39,7 +39,7 @@ export default function ChatModalShowcaseClient({ tour, reviews, widgetConfig }:
       const el = document.getElementById(scriptId);
       if (el) el.remove();
     };
-  }, [widgetConfig.apiKey, widgetConfig.apiUrl]);
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl]);
 
   const openChat = () => {
     if (typeof window !== 'undefined' && (window as any).FoxesChat) {

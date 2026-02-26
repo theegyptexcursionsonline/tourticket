@@ -10,7 +10,7 @@ interface SearchAgentShowcaseClientProps {
   reviews: any[];
   widgetConfig: {
     apiUrl: string;
-    apiKey: string;
+    widgetId: string;
   };
 }
 
@@ -25,7 +25,7 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
 
   // Load search widget via useEffect to avoid Next.js Script component issues
   useEffect(() => {
-    if (!widgetConfig.apiKey) return;
+    if (!widgetConfig.widgetId) return;
 
     const scriptId = 'foxes-search-widget-script';
 
@@ -36,7 +36,7 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-widget.js`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.apiKey);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-position', 'bottom-right');
     script.setAttribute('data-accent', '#7c3aed');
     script.setAttribute('data-agent-name', 'Travel Concierge');
@@ -52,7 +52,7 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
       const widgetContainer = document.getElementById('foxes-widget-container');
       if (widgetContainer) widgetContainer.remove();
     };
-  }, [widgetConfig.apiKey, widgetConfig.apiUrl]);
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl]);
 
   return (
     <div className="pt-20 min-h-screen bg-gray-50">

@@ -8,6 +8,7 @@ import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 import ChatModalShowcaseClient from './ChatModalShowcaseClient';
 import { ITour } from '@/lib/models/Tour';
+import { FOXES_SEARCH_CONFIG } from '../../foxes-config';
 
 export const revalidate = 60;
 
@@ -41,16 +42,11 @@ export default async function ChatModalShowcasePage({ params }: PageProps) {
   const result = await getTourBySlug(slug);
   if (!result) notFound();
   const { tour, reviews } = result;
-  const widgetConfig = {
-    apiUrl: process.env.NEXT_PUBLIC_FOXES_SEARCH_API_URL || 'https://search.foxestechnology.com',
-    apiKey: process.env.NEXT_PUBLIC_FOXES_SEARCH_API_KEY || '',
-  };
-
   return (
     <>
       <Header2 />
       <main className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
-        <ChatModalShowcaseClient tour={tour} reviews={reviews} widgetConfig={widgetConfig} />
+        <ChatModalShowcaseClient tour={tour} reviews={reviews} widgetConfig={FOXES_SEARCH_CONFIG} />
       </main>
       <Footer />
     </>
