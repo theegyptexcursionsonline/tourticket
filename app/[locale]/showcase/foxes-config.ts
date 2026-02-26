@@ -1,18 +1,16 @@
 /**
  * Foxes AI Widget Configuration for Showcase Pages
  *
- * These are public, non-secret values — safe to hardcode.
- * Update the widgetId after creating a WidgetConfig in the Foxes dashboard.
- *
- * No .env file needed. Customers embedding the widget on their own sites
- * just copy a <script> tag — no environment setup required.
+ * These are public, non-secret widget IDs — safe to hardcode.
+ * Same as what any customer would paste in their HTML.
+ * No .env file needed.
  */
 export const FOXES_SEARCH_CONFIG = {
-  apiUrl: "https://search.foxestechnology.com",
-  widgetId: "", // Set this to the wgt_xxx value from your Foxes AI dashboard
+  apiUrl: "https://ai-search-agent.netlify.app",
+  widgetId: "wgt_CXtars0OalnORU0z2rgcvw",
 };
 
 export const FOXES_VOICE_CONFIG = {
-  apiUrl: "https://voice.foxestechnology.com",
-  widgetId: "", // Set this to the widgetId from your Foxes Voice dashboard
+  apiUrl: "https://foxes-ai-voice.netlify.app",
+  widgetId: "694c1a7a27cc23227da2ccdb",
 };

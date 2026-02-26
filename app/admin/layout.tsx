@@ -1,11 +1,14 @@
 'use client'; // Required for components that use hooks or client-side logic
 
+import { Inter } from 'next/font/google';
 import Sidebar from '@/components/admin/Sidebar';
 import Header from '@/components/admin/Header';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import withAuth from '@/components/admin/withAuth'; // 1. Import withAuth HOC
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 // 2. Create a component for the protected content
 const ProtectedAdminContent = ({ children }: { children: React.ReactNode }) => {
@@ -33,7 +36,7 @@ export default function AdminLayout({
 }) {
     return (
         <html lang="en" dir="ltr">
-            <body className="font-sans">
+            <body className={`${inter.variable} font-sans`}>
                 <AuthProvider>
                     <SettingsProvider>
                         <AdminAuthProvider>
