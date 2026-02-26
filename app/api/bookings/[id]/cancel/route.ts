@@ -80,13 +80,23 @@ export async function POST(
       return NextResponse.json({ error: 'Booking already cancelled' }, { status: 400 });
     }
 
+    // Enforce 24-hour cancellation policy
+    const bookingDate = new Date(booking.date);
+    const now = new Date();
+    const hoursUntilTour = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursUntilTour < 24) {
+      return NextResponse.json(
+        { error: 'Cancellations are only allowed at least 24 hours before the tour' },
+        { status: 400 }
+      );
+    }
+
     // Get cancellation reason from request body
     const { reason } = await request.json();
 
     // Calculate refund based on days until tour
-    const bookingDate = new Date(booking.date);
-    const now = new Date();
-    const daysUntilTour = Math.ceil((bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilTour = Math.ceil(hoursUntilTour / 24);
 
     let refundPercentage = 0;
     if (daysUntilTour >= 7) refundPercentage = 100;
