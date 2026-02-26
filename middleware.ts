@@ -6,7 +6,27 @@ import type { NextRequest } from 'next/server';
 const intlMiddleware = createMiddleware(routing);
 
 export function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
+
+  // Subdomain routing: dashboard.* → /admin
+  const isDashboardSubdomain =
+    hostname.startsWith('dashboard.') ||
+    hostname.startsWith('admin.');
+
+  if (isDashboardSubdomain && !pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // Redirect main domain /admin to dashboard subdomain
+  if (!isDashboardSubdomain && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
+    const adminPath = pathname.replace(/^\/admin/, '') || '/';
+    const dashboardUrl = new URL(`https://dashboard.egypt-excursionsonline.com${adminPath}`);
+    dashboardUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(dashboardUrl);
+  }
 
   // Routes that should NOT go through locale middleware
   const skipLocaleRoutes = [
