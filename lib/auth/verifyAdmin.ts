@@ -1,7 +1,7 @@
 // lib/auth/verifyAdmin.ts
 // Simple admin authentication helper for API routes
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/jwt';
 
@@ -26,10 +26,19 @@ export interface AdminInfo {
  * 
  * @returns AdminInfo if authenticated, NextResponse error if not
  */
-export async function verifyAdmin(): Promise<AdminInfo | NextResponse> {
+export async function verifyAdmin(request?: NextRequest): Promise<AdminInfo | NextResponse> {
   try {
+    // Try cookie first, then Authorization header as fallback
     const cookieStore = await cookies();
-    const token = cookieStore.get('authToken')?.value;
+    let token = cookieStore.get('authToken')?.value;
+
+    // Fallback: check Authorization header if cookie is missing
+    if (!token && request) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
 
     if (!token) {
       return NextResponse.json(

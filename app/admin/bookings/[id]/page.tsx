@@ -34,6 +34,7 @@ import {
 import Image from 'next/image';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 // Valid booking statuses
 type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
@@ -225,6 +226,7 @@ const BookingDetailPage = () => {
   
   const params = useParams();
   const router = useRouter();
+  const { token } = useAdminAuth();
   const id = params.id as string;
 
   // Generate QR Code
@@ -246,16 +248,27 @@ const BookingDetailPage = () => {
     }
   }, [booking]);
 
+  const getAuthHeaders = (): HeadersInit => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
   const fetchBooking = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/bookings/${id}`);
+      const response = await fetch(`/api/admin/bookings/${id}`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
         if (response.status === 404) {
           throw new Error('Booking not found');
         }
-        throw new Error('Failed to fetch booking details');
+        throw new Error(errorData?.error || errorData?.message || 'Failed to fetch booking details');
       }
       const data = await response.json();
       setBooking(data);
@@ -288,14 +301,13 @@ const BookingDetailPage = () => {
     try {
       const response = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update booking status');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || errorData?.message || 'Failed to update booking status');
       }
 
       const updatedBooking = await response.json();
@@ -303,7 +315,7 @@ const BookingDetailPage = () => {
       toast.success(`Status updated to ${newStatus}`);
     } catch (err) {
       console.error('Error updating booking:', err);
-      toast.error('Failed to update booking status');
+      toast.error((err as Error).message || 'Failed to update booking status');
     } finally {
       setUpdating(false);
     }
@@ -316,10 +328,8 @@ const BookingDetailPage = () => {
     try {
       const response = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
           status: refundType,
           refundAmount: parseFloat(refundAmount) || 0,
           refundReason: refundReason
@@ -327,7 +337,8 @@ const BookingDetailPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process refund');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || errorData?.message || 'Failed to process refund');
       }
 
       const updatedBooking = await response.json();
@@ -338,7 +349,7 @@ const BookingDetailPage = () => {
       toast.success(`${refundType === 'Refunded' ? 'Full' : 'Partial'} refund processed successfully`);
     } catch (err) {
       console.error('Error processing refund:', err);
-      toast.error('Failed to process refund');
+      toast.error((err as Error).message || 'Failed to process refund');
     } finally {
       setUpdating(false);
     }
@@ -388,14 +399,13 @@ const BookingDetailPage = () => {
       
       const response = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updates),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save changes');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || errorData?.message || 'Failed to save changes');
       }
 
       const updatedBooking = await response.json();
@@ -404,7 +414,7 @@ const BookingDetailPage = () => {
       toast.success('Booking details updated successfully');
     } catch (err) {
       console.error('Error saving edits:', err);
-      toast.error('Failed to save changes');
+      toast.error((err as Error).message || 'Failed to save changes');
     } finally {
       setUpdating(false);
     }

@@ -4,8 +4,8 @@ import Booking from '@/lib/models/Booking';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function POST(request: NextRequest) {
-  // Verify admin authentication
-  const auth = await verifyAdmin();
+  // Verify admin authentication (cookie + Authorization header fallback)
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   try {

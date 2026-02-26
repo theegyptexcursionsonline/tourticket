@@ -1,5 +1,5 @@
 // app/api/admin/bookings/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
@@ -45,9 +45,9 @@ function formatBookingDate(dateString: string | Date | undefined): string {
   });
 }
 
-export async function GET() {
-  // Verify admin authentication
-  const auth = await verifyAdmin();
+export async function GET(request: NextRequest) {
+  // Verify admin authentication (cookie + Authorization header fallback)
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
@@ -91,9 +91,9 @@ export async function GET() {
 }
 
 // POST - Create manual booking
-export async function POST(request: Request) {
-  // Verify admin authentication
-  const auth = await verifyAdmin();
+export async function POST(request: NextRequest) {
+  // Verify admin authentication (cookie + Authorization header fallback)
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

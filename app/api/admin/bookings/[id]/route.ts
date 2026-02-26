@@ -37,16 +37,25 @@ function formatBookingDate(dateString: string | Date | undefined): string {
   });
 }
 
-// Helper to get admin info from token
-async function getAdminInfo(): Promise<{ id: string; name: string; email: string } | null> {
+// Helper to get admin info from token (cookie or Authorization header)
+async function getAdminInfo(request?: NextRequest): Promise<{ id: string; name: string; email: string } | null> {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('authToken')?.value;
+    let token = cookieStore.get('authToken')?.value;
+
+    // Fallback: check Authorization header
+    if (!token && request) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
+
     if (!token) return null;
-    
+
     const payload = await verifyToken(token);
     if (!payload) return null;
-    
+
     return {
       id: payload.sub as string,
       name: (payload.name as string) || (payload.email as string) || 'Admin',
@@ -71,8 +80,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // Verify admin authentication
-  const auth = await verifyAdmin();
+  // Verify admin authentication (cookie + Authorization header fallback)
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
@@ -145,8 +154,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // Verify admin authentication
-  const auth = await verifyAdmin();
+  // Verify admin authentication (cookie + Authorization header fallback)
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
@@ -165,7 +174,7 @@ export async function PATCH(
     } = body;
 
     // Get admin info for edit history
-    const adminInfo = await getAdminInfo();
+    const adminInfo = await getAdminInfo(request);
 
     // Validate status if provided
     if (status && !BOOKING_STATUSES.includes(status)) {
@@ -509,8 +518,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // Verify admin authentication
-  const auth = await verifyAdmin();
+  // Verify admin authentication (cookie + Authorization header fallback)
+  const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

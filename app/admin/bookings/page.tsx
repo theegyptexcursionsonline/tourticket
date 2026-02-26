@@ -6,6 +6,7 @@ import withAuth from '@/components/admin/withAuth';
 import { useRouter } from 'next/navigation';
 import { Search, Calendar, Users, DollarSign, Filter, RefreshCw, Eye, Download, AlertTriangle, Loader2, Trash2, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import ManualBookingModal from '@/components/admin/ManualBookingModal';
 
 interface BookingUser {
@@ -123,12 +124,23 @@ const BookingsPage = () => {
   const [showManualBookingModal, setShowManualBookingModal] = useState(false);
 
   const router = useRouter();
+  const { token } = useAdminAuth();
+
+  const getAuthHeaders = (): HeadersInit => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  };
 
   const fetchBookings = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/admin/bookings');
+      const response = await fetch('/api/admin/bookings', {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
       }
@@ -288,14 +300,13 @@ const BookingsPage = () => {
     try {
       const response = await fetch(`/api/admin/bookings/${bookingId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update booking status');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || errorData?.message || 'Failed to update booking status');
       }
 
       setBookings(prevBookings =>
@@ -340,9 +351,7 @@ const BookingsPage = () => {
     try {
       const response = await fetch('/api/admin/bookings/bulk-delete', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ bookingIds: Array.from(selectedBookings) }),
       });
 
