@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
       '/hero3.jpg': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219769/eeo/hero/hero3.jpg',
       '/hero2.png': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219765/eeo/hero/hero2.jpg',
       '/hero3.png': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219769/eeo/hero/hero3.jpg',
+      '/uploads/hero/hero-1758831253590-1o2r7qimcmc.png': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772220313/eeo/hero/hero-1758831253590-1o2r7qimcmc.png',
+      '/uploads/hero/hero-1758831785080-xs4df9a3ly.png': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772220319/eeo/hero/hero-1758831785080-xs4df9a3ly.png',
     };
     if (settings) {
       let needsSave = false;
