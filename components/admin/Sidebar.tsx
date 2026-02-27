@@ -53,15 +53,13 @@ const navItems = [
 /** Sidebar logo — statically imported so it's always bundled */
 const SidebarLogo = ({ expanded }: { expanded: boolean }) => {
   return (
-    <div
-      className={`flex-shrink-0 overflow-hidden rounded-xl transition-all duration-300 ${
-        expanded ? "h-10 w-40" : "h-10 w-10"
-      }`}
-    >
+    <div className="flex-shrink-0 transition-all duration-300">
       <Image
         src={logoSm}
         alt="Egypt Excursions Online"
-        className="h-full w-full object-cover"
+        className={`rounded-lg transition-all duration-300 ${
+          expanded ? "h-11 w-auto" : "h-10 w-10 object-cover"
+        }`}
         priority
       />
     </div>
