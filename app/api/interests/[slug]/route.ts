@@ -35,13 +35,13 @@ export async function GET(
 
     console.log('Found category:', category);
 
-    let tours = [];
+    let tours: any[] = [];
     let totalTours = 0;
 
     if (category) {
       // Find tours in this category
       tours = await Tour.find({
-        category: { $in: [category._id] },
+        category: { $in: [(category as any)._id] },
         isPublished: true
       })
       .populate({
@@ -58,7 +58,7 @@ export async function GET(
       .lean();
 
       totalTours = await Tour.countDocuments({
-        category: { $in: [category._id] },
+        category: { $in: [(category as any)._id] },
         isPublished: true
       });
     } else {
@@ -108,8 +108,8 @@ export async function GET(
 
     // Fetch reviews for these tours (optimized with limit)
     const tourIds = tours.slice(0, 20).map(tour => tour._id); // Limit to first 20 tours for reviews
-    let reviews = [];
-    let reviewStats = [];
+    let reviews: any[] = [];
+    let reviewStats: any[] = [];
 
     if (tourIds.length > 0) {
       // Run review queries in parallel
@@ -155,10 +155,10 @@ export async function GET(
     }));
 
     // Get related categories (fetch in parallel if possible, but skip during build)
-    let relatedCategories = [];
+    let relatedCategories: any[] = [];
     if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
       relatedCategories = await Category.find({
-        _id: { $ne: category?._id }
+        _id: { $ne: (category as any)?._id }
       }).limit(6).lean();
     }
 
@@ -174,7 +174,7 @@ export async function GET(
     const interestData = {
       name: interestName,
       slug: slug,
-      description: category?.description || `Discover amazing ${interestName.toLowerCase()} experiences in Egypt`,
+      description: (category as any)?.description || `Discover amazing ${interestName.toLowerCase()} experiences in Egypt`,
       longDescription: `Explore our curated collection of ${interestName.toLowerCase()} tours and experiences. From budget-friendly options to luxury adventures, find the perfect way to experience Egypt's incredible ${interestName.toLowerCase()}.`,
       category: category,
       tours: tours,

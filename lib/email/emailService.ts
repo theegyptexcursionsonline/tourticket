@@ -38,7 +38,7 @@ export class EmailService {
 
   private static async generateEmailTemplate(
     type: EmailType,
-    data: Record<string, unknown>
+    data: Record<string, any>
   ): Promise<EmailTemplate> {
     try {
       const templateData = {

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
                             continue;
                         }
 
-                        const doc = { ...item, destination: destination._id, category: category._id };
+                        const doc = { ...item, destination: (destination as any)._id, category: (category as any)._id };
                         delete doc.destinationName;
                         delete doc.categoryName;
                         
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
                                 results.errors.push(`Category not found for page "${item.title}": ${item.categoryName}`);
                                 continue;
                              }
-                             doc.categoryId = category._id;
+                             doc.categoryId = (category as any)._id;
                              delete doc.categoryName;
                         }
 

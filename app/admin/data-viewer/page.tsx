@@ -254,7 +254,7 @@ export default function DataViewerPage() {
             onToggle={() => toggleSection('tours')}
             expandedItems={expandedItems}
             onToggleItem={toggleItem}
-            renderItem={(tour) => (
+            renderItem={(tour: any) => (
               <TourCard tour={tour} />
             )}
           />
@@ -270,7 +270,7 @@ export default function DataViewerPage() {
             onToggle={() => toggleSection('destinations')}
             expandedItems={expandedItems}
             onToggleItem={toggleItem}
-            renderItem={(dest) => (
+            renderItem={(dest: any) => (
               <DestinationCard destination={dest} />
             )}
           />
@@ -286,7 +286,7 @@ export default function DataViewerPage() {
             onToggle={() => toggleSection('categories')}
             expandedItems={expandedItems}
             onToggleItem={toggleItem}
-            renderItem={(cat) => (
+            renderItem={(cat: any) => (
               <CategoryCard category={cat} />
             )}
           />
@@ -302,7 +302,7 @@ export default function DataViewerPage() {
             onToggle={() => toggleSection('attractions')}
             expandedItems={expandedItems}
             onToggleItem={toggleItem}
-            renderItem={(attr) => (
+            renderItem={(attr: any) => (
               <AttractionCard attraction={attr} />
             )}
           />

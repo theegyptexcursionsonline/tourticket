@@ -65,7 +65,7 @@ export async function sendTripReminders() {
 
     console.log(`Found ${upcomingBookings.length} bookings for tomorrow`);
 
-    for (const booking of upcomingBookings) {
+    for (const booking of upcomingBookings as any[]) {
       try {
         await EmailService.sendTripReminder({
           customerName: `${booking.user.firstName} ${booking.user.lastName}`,
@@ -126,7 +126,7 @@ export async function sendTripCompletionEmails() {
 
     console.log(`Found ${completedBookings.length} completed bookings from yesterday`);
 
-    for (const booking of completedBookings) {
+    for (const booking of completedBookings as any[]) {
       try {
         await EmailService.sendTripCompletion({
           customerName: `${booking.user.firstName} ${booking.user.lastName}`,

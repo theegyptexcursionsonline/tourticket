@@ -51,12 +51,12 @@ export async function generateMetadata({
     }
 
     return {
-      title: category.metaTitle || `${category.name} Tours | Egypt Excursions Online`,
-      description: category.metaDescription || category.description?.substring(0, 160) || `Explore ${category.name} tours and activities`,
-      keywords: category.keywords?.join(', '),
+      title: (category as any).metaTitle || `${(category as any).name} Tours | Egypt Excursions Online`,
+      description: (category as any).metaDescription || String((category as any).description || '').substring(0, 160) || `Explore ${(category as any).name} tours and activities`,
+      keywords: Array.isArray((category as any).keywords) ? (category as any).keywords.join(', ') : undefined,
       openGraph: {
-        title: category.name,
-        description: category.description?.substring(0, 160),
+        title: (category as any).name,
+        description: String((category as any).description || '').substring(0, 160),
         images: category.heroImage ? [category.heroImage] : [],
         type: 'website',
       },
@@ -79,7 +79,7 @@ async function getPageData(slug: string, locale: string) {
   }
 
   const categoryTours = await TourModel.find({
-    category: { $in: [categoryRaw._id] },
+    category: { $in: [(categoryRaw as any)._id] },
     isPublished: true
   }).populate('destination').lean();
   

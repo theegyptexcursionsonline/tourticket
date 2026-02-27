@@ -91,14 +91,14 @@ async function getPageData(slug: string, locale: string) {
 
   // Fetch published tours for this destination
   const destinationTours = await TourModel.find({
-    destination: destinationRaw._id,
+    destination: (destinationRaw as any)._id,
     isPublished: true
   }).lean();
 
   const allCategories = await CategoryModel.find({}).lean();
 
   // Fetch reviews for tours in this destination
-  const tourIds = destinationTours.map(tour => tour._id);
+  const tourIds = destinationTours.map(tour => (tour as any)._id);
   const reviews = await ReviewModel.find({
     tour: { $in: tourIds },
     verified: true
@@ -109,9 +109,9 @@ async function getPageData(slug: string, locale: string) {
 
   // Fetch related destinations (same country or similar)
   const relatedDestinationsRaw = await DestinationModel.find({
-    _id: { $ne: destinationRaw._id },
+    _id: { $ne: (destinationRaw as any)._id },
     $or: [
-      { country: destinationRaw.country },
+      { country: (destinationRaw as any).country },
       { featured: true }
     ]
   })

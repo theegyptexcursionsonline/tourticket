@@ -219,7 +219,7 @@ export default function TranslationEditor({
         }
 
         // Auto-switch to the locale that just finished so user sees it
-        setActiveLocale(locale);
+        setActiveLocale(locale as typeof activeLocale);
         break;
       }
       case 'error': {

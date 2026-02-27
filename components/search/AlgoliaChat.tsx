@@ -413,7 +413,7 @@ export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaCh
                   classNames={{
                     root: 'min-h-[500px] algolia-chat-enhanced',
                   }}
-                  placeholder="Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')"
+                  {...{ placeholder: "Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')" } as any}
                 />
               </div>
             </div>

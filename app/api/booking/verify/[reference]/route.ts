@@ -42,17 +42,19 @@ export async function GET(
     }
 
     // Transform booking data for frontend
+    const tour = booking.tour as any;
+    const user = booking.user as any;
     const transformedBooking = {
       bookingReference: booking.bookingReference,
       tour: {
-        title: booking.tour.title,
-        image: booking.tour.image,
-        duration: booking.tour.duration,
+        title: tour.title,
+        image: tour.image,
+        duration: tour.duration,
       },
       user: {
-        firstName: booking.user.firstName,
-        lastName: booking.user.lastName,
-        email: booking.user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
       },
       date: booking.date,
       time: booking.time,

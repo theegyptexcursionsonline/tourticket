@@ -211,7 +211,7 @@ const DestinationCard = ({
   <Link href={`/destinations/${destination.slug}`} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
     <div className="relative h-48">
       <Image
-        src={destination.image}
+        src={destination.image || '/hero2.jpg'}
         alt={`Image of ${destination.name}`}
         fill
         className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -240,7 +240,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
   const {
     messages,
     sendMessage,
-    isLoading,
+    status,
   } = useChat({
     transport: new DefaultChatTransport({
       api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
@@ -250,6 +250,8 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
       },
     }),
   });
+
+  const isLoading = status === 'streaming' || status === 'submitted';
 
   // Filter destinations based on search query
   const filteredDestinations = useMemo(() => {
@@ -304,13 +306,13 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
     const container = chatContainerRef.current;
     if (!container || !showAIChat) return;
     
-    let scrollTimeout: NodeJS.Timeout;
-    
+    let scrollTimeout: NodeJS.Timeout | undefined;
+
     const handleScroll = () => {
       // Don't interfere if this is a programmatic scroll
       if (isScrollingRef.current) return;
-      
-      clearTimeout(scrollTimeout);
+
+      if (scrollTimeout) clearTimeout(scrollTimeout);
       
       // Check if user is at the bottom
       const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
@@ -327,7 +329,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       container.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [showAIChat]);
 
@@ -458,7 +460,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
         >
           {filteredDestinations.map((dest, index) => (
             <motion.div
-              key={dest._id}
+              key={String(dest._id)}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}

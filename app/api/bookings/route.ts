@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     const totalCount = validBookings.length;
     const totalPages = Math.ceil(totalCount / limit);
 
-    const transformedBookings = validBookings.map(booking => ({
+    const transformedBookings = validBookings.map((booking: any) => ({
       ...booking,
       id: booking._id,
       bookingDate: booking.date,
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      userId = user._id.toString();
+      userId = (user._id as any).toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);

@@ -32,7 +32,7 @@ export async function GET(
     }
 
     // Populate category if exists
-    let populatedPage = { ...page };
+    let populatedPage: any = { ...page };
     if (page.categoryId) {
       try {
         const category = await Category.findById(page.categoryId).select('name slug').lean();
@@ -43,7 +43,7 @@ export async function GET(
       }
     }
 
-    let tours = [];
+    let tours: any[] = [];
     let totalTours = 0;
 
     if (populatedPage.pageType === 'category' && populatedPage.categoryId) {
@@ -125,7 +125,7 @@ export async function GET(
         // Keywords match
         if (populatedPage.keywords && populatedPage.keywords.length > 0) {
           searchQueries.push({ tags: { $in: populatedPage.keywords } });
-          populatedPage.keywords.forEach(keyword => {
+          populatedPage.keywords.forEach((keyword: string) => {
             searchQueries.push({ title: { $regex: new RegExp(keyword, 'i') } });
             searchQueries.push({ description: { $regex: new RegExp(keyword, 'i') } });
           });
@@ -133,7 +133,7 @@ export async function GET(
 
         // Highlights match
         if (populatedPage.highlights && populatedPage.highlights.length > 0) {
-          populatedPage.highlights.forEach(highlight => {
+          populatedPage.highlights.forEach((highlight: string) => {
             searchQueries.push({ title: { $regex: new RegExp(highlight, 'i') } });
             searchQueries.push({ description: { $regex: new RegExp(highlight, 'i') } });
           });
@@ -192,8 +192,8 @@ export async function GET(
 
     // Fetch reviews for the tours
     const tourIds = tours.map(tour => tour._id);
-    let reviews = [];
-    let reviewStats = [];
+    let reviews: any[] = [];
+    let reviewStats: any[] = [];
 
     if (tourIds.length > 0) {
       reviews = await Review.find({

@@ -1,5 +1,7 @@
 // components/BackgroundSlideshow.tsx (Updated version)
-const BackgroundSlideshow = ({ 
+import { useState, useRef, useEffect } from 'react';
+
+const BackgroundSlideshow = ({
   slides = [], 
   delay = 6000, 
   fadeMs = 900,
@@ -24,7 +26,7 @@ const BackgroundSlideshow = ({
   useEffect(() => {
     if (!autoplay || slides.length <= 1) return;
     
-    const next = () => setIndex((i) => (i + 1) % slides.length);
+    const next = () => setIndex((i: number) => (i + 1) % slides.length);
     timeoutRef.current = window.setTimeout(next, delay);
     
     return () => {

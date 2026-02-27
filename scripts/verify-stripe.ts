@@ -92,7 +92,7 @@ async function verifyStripeConfiguration() {
 
     try {
       const stripe = new Stripe(secretKey, {
-        apiVersion: '2024-12-18.acacia',
+        apiVersion: '2025-08-27.basil' as any,
       });
 
       // Test API call

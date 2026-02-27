@@ -32,10 +32,10 @@ async function verifyFixes() {
     const testCategory = await Category.findOne({}).lean();
     if (testCategory) {
       const tourCount = await Tour.countDocuments({
-        category: { $in: [testCategory._id] },
+        category: { $in: [(testCategory as any)._id] },
         isPublished: true
       });
-      console.log(`Category: ${testCategory.name}`);
+      console.log(`Category: ${(testCategory as any).name}`);
       console.log(`Tours found with $in: ${tourCount}`);
       console.log('✓ $in query working\n');
     }
@@ -67,7 +67,7 @@ async function verifyFixes() {
     console.log('=== TEST 4: All Tours Have Categories ===');
     const totalTours = await Tour.countDocuments({});
     const toursWithCategories = await Tour.countDocuments({
-      category: { $exists: true, $ne: [], $ne: null }
+      category: { $exists: true, $ne: null }
     });
     console.log(`Total tours: ${totalTours}`);
     console.log(`Tours with categories: ${toursWithCategories}`);
@@ -82,7 +82,7 @@ async function verifyFixes() {
     const categoriesToTest = ['cultural', 'adventure-tours', 'spa-wellness', 'quad-atv-tours'];
 
     for (const slug of categoriesToTest) {
-      const cat = await Category.findOne({ slug }).lean();
+      const cat = await Category.findOne({ slug }).lean() as any;
       if (cat) {
         const count = await Tour.countDocuments({
           category: { $in: [cat._id] },

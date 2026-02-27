@@ -217,7 +217,7 @@ export default function ShowcaseClientPage({ tour, reviews, relatedTours, widget
   const faqRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
 
-  const inViewOptions = { threshold: 0.1 };
+  const inViewOptions = { amount: 0.1 as const };
   const isOverviewInView = useInView(overviewRef, inViewOptions);
   const isItineraryInView = useInView(itineraryRef, inViewOptions);
   const isPracticalInView = useInView(practicalRef, inViewOptions);
@@ -239,7 +239,7 @@ export default function ShowcaseClientPage({ tour, reviews, relatedTours, widget
   }, [isOverviewInView, isItineraryInView, isPracticalInView, isAccessibilityInView, isPoliciesInView, isCulturalInView, isReviewsInView, isFaqInView]);
 
   const scrollToSection = (id: string) => {
-    const refs: Record<string, React.RefObject<HTMLDivElement>> = {
+    const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
       overview: overviewRef, itinerary: itineraryRef, practical: practicalRef,
       accessibility: accessibilityRef, policies: policiesRef, cultural: culturalRef,
       reviews: reviewsRef, faq: faqRef,

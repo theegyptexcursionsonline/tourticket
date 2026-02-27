@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        const updateResult = await Model.updateOne(
+        const updateResult = await (Model as any).updateOne(
             { _id: docId },
             { $set: { [imageField]: imageUrl } }
         );

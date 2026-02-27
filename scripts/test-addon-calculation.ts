@@ -12,7 +12,7 @@ console.log('🔧 Testing Add-on Calculation Fix...\n');
 let passed = 0;
 let failed = 0;
 
-function test(name: string, fn: () => boolean) {
+function runTest(name: string, fn: () => boolean) {
   try {
     if (fn()) {
       console.log(`  ✅ ${name}`);
@@ -63,24 +63,24 @@ function transformServerToClient(serverAddOns: any[]) {
 
 const transformed = transformServerToClient(serverAddOns);
 
-test('selectedAddOns is an object (not array)', () => {
+runTest('selectedAddOns is an object (not array)', () => {
   return typeof transformed.selectedAddOns === 'object' && !Array.isArray(transformed.selectedAddOns);
 });
 
-test('selectedAddOns has correct keys', () => {
+runTest('selectedAddOns has correct keys', () => {
   return 'private-tour' in transformed.selectedAddOns && 'lunch-upgrade' in transformed.selectedAddOns;
 });
 
-test('selectedAddOns has correct quantities', () => {
+runTest('selectedAddOns has correct quantities', () => {
   return transformed.selectedAddOns['private-tour'] === 1 && transformed.selectedAddOns['lunch-upgrade'] === 2;
 });
 
-test('selectedAddOnDetails has correct structure', () => {
+runTest('selectedAddOnDetails has correct structure', () => {
   const detail = transformed.selectedAddOnDetails['private-tour'];
   return detail && detail.id === 'private-tour' && detail.title === 'Private Tour' && detail.price === 35;
 });
 
-test('perGuest is preserved correctly', () => {
+runTest('perGuest is preserved correctly', () => {
   return transformed.selectedAddOnDetails['private-tour'].perGuest === false &&
          transformed.selectedAddOnDetails['lunch-upgrade'].perGuest === true;
 });
@@ -123,18 +123,18 @@ const cartItemClientFormat = {
   }
 };
 
-const result1 = getItemTotal(cartItemClientFormat);
+const addonResult1 = getItemTotal(cartItemClientFormat);
 
-test('Tour total calculated correctly (2 adults × €40)', () => {
-  return result1.tourTotal === 80;
+runTest('Tour total calculated correctly (2 adults × €40)', () => {
+  return addonResult1.tourTotal === 80;
 });
 
-test('Add-on total calculated correctly (€35 flat)', () => {
-  return result1.addOnsTotal === 35;
+runTest('Add-on total calculated correctly (€35 flat)', () => {
+  return addonResult1.addOnsTotal === 35;
 });
 
-test('Combined total is correct (€80 + €35 = €115)', () => {
-  return result1.total === 115;
+runTest('Combined total is correct (€80 + €35 = €115)', () => {
+  return addonResult1.total === 115;
 });
 
 // ============================================================
@@ -152,20 +152,20 @@ const cartItemWithPerGuestAddon = {
   }
 };
 
-const result2 = getItemTotal(cartItemWithPerGuestAddon);
+const addonResult2 = getItemTotal(cartItemWithPerGuestAddon);
 
-test('Tour total with child (2 adults + 1 child)', () => {
+runTest('Tour total with child (2 adults + 1 child)', () => {
   // 2 × €40 + 1 × €20 (half price for child) = €100
-  return result2.tourTotal === 100;
+  return addonResult2.tourTotal === 100;
 });
 
-test('Per-guest add-on multiplied by guest count', () => {
+runTest('Per-guest add-on multiplied by guest count', () => {
   // €15 × 3 guests = €45
-  return result2.addOnsTotal === 45;
+  return addonResult2.addOnsTotal === 45;
 });
 
-test('Combined total is correct (€100 + €45 = €145)', () => {
-  return result2.total === 145;
+runTest('Combined total is correct (€100 + €45 = €145)', () => {
+  return addonResult2.total === 145;
 });
 
 // ============================================================
@@ -185,12 +185,12 @@ const cartItemBrokenFormat = {
 
 const result3 = getItemTotal(cartItemBrokenFormat);
 
-test('OLD FORMAT: Add-ons total is 0 (bug behavior)', () => {
+runTest('OLD FORMAT: Add-ons total is 0 (bug behavior)', () => {
   // The old bug: when selectedAddOnDetails is undefined, add-ons are skipped
   return result3.addOnsTotal === 0;
 });
 
-test('OLD FORMAT: Total missing add-ons (confirms the bug)', () => {
+runTest('OLD FORMAT: Total missing add-ons (confirms the bug)', () => {
   // Total should be just tour price, add-ons missing
   return result3.total === 80;
 });
@@ -212,7 +212,7 @@ const cartItemCorruptedQty = {
 
 const resultCorrupt = getItemTotal(cartItemCorruptedQty);
 
-test('CORRUPT: Add-ons total becomes 0 because quantity is an object (NaN > 0)', () => {
+runTest('CORRUPT: Add-ons total becomes 0 because quantity is an object (NaN > 0)', () => {
   return resultCorrupt.addOnsTotal === 0;
 });
 
@@ -241,11 +241,11 @@ const fixedCartItem = {
 
 const result4 = getItemTotal(fixedCartItem);
 
-test('FIXED: Add-ons total is now €35', () => {
+runTest('FIXED: Add-ons total is now €35', () => {
   return result4.addOnsTotal === 35;
 });
 
-test('FIXED: Total includes add-ons (€80 + €35 = €115)', () => {
+runTest('FIXED: Total includes add-ons (€80 + €35 = €115)', () => {
   return result4.total === 115;
 });
 
@@ -284,7 +284,7 @@ const fixedCorrupt = {
 
 const resultFixedCorrupt = getItemTotal(fixedCorrupt);
 
-test('FIXED: Add-ons total is €35 after normalization', () => {
+runTest('FIXED: Add-ons total is €35 after normalization', () => {
   return resultFixedCorrupt.addOnsTotal === 35;
 });
 

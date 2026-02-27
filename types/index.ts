@@ -23,7 +23,7 @@ export interface User {
 }
 
 export interface Destination {
-  _id: string;
+  _id?: string;
   id?: string;
   name: string;
   slug: string;
@@ -73,7 +73,7 @@ export interface Destination {
 
 // types/index.ts - Update the Category interface
 export interface Category {
-  _id: string;
+  _id?: string;
   id?: string;
   name: string;
   slug: string;
@@ -161,6 +161,7 @@ export interface AddOn {
   name: string;
   description: string;
   price: number;
+  category?: string;
 }
 
 // =================================================================
@@ -200,8 +201,10 @@ export interface Tour {
   ageRestriction?: string;
   cancellationPolicy?: string;
   operatedBy?: string;
+  excludes?: string[];
+  reviewCount?: number;
   destination: Destination | string;
-  category: Category | string;
+  category: Category | Category[] | string | string[];
   availability?: Availability;
   reviews?: Review[];
   attractions?: (AttractionPage | string)[];
@@ -448,6 +451,14 @@ export interface SearchFilters {
   dateRange?: [string, string];
 }
 
+export interface SearchResult {
+  tours: Tour[];
+  destinations: Destination[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -496,6 +507,24 @@ export interface TourFormData {
   tags: string;
   isFeatured: boolean;
   availability: Availability;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
   attractions?: string[];
   interests?: string[];
+}
+
+// =================================================================
+// JOB INTERFACE
+// =================================================================
+
+export interface Job {
+  _id: string;
+  title: string;
+  location: string;
+  type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
+  description: string;
+  link?: string;
+  isActive: boolean;
+  createdAt?: string;
 }

@@ -56,7 +56,7 @@ export default async function ShowcaseV2TourPage({ params }: PageProps) {
   let relatedTours: any[] = [];
   const categoryIds = Array.isArray(tour.category)
     ? tour.category.map((cat: any) => typeof cat === 'object' ? cat._id?.toString() : cat?.toString()).filter(Boolean)
-    : tour.category ? [typeof tour.category === 'object' ? (tour.category as any)._id?.toString() : tour.category?.toString()].filter(Boolean) : [];
+    : tour.category ? [typeof tour.category === 'object' ? (tour.category as any)._id?.toString() : (tour.category as any)?.toString()].filter(Boolean) : [];
 
   if (categoryIds.length > 0) {
     relatedTours = await Tour.find({

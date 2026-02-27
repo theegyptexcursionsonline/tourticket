@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
         if (page.categoryId) {
           try {
             const category = await Category.findById(page.categoryId).select('name slug').lean();
-            populatedPage.categoryId = category;
+            populatedPage.categoryId = category as any;
           } catch (error) {
             console.error(`Error populating category for page ${page._id}:`, error);
-            populatedPage.categoryId = null;
+            populatedPage.categoryId = null as any;
           }
         }
         
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         
         try {
           if (page.pageType === 'category' && page.categoryId) {
-            const categoryId = typeof page.categoryId === 'object' ? page.categoryId._id : page.categoryId;
+            const categoryId = typeof page.categoryId === 'object' ? (page.categoryId as any)._id : page.categoryId;
             tourCount = await Tour.countDocuments({
               category: categoryId,
               isPublished: true

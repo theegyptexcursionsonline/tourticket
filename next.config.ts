@@ -7,9 +7,14 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const nextConfig = {
   reactStrictMode: true,
 
-  // Ignore TypeScript errors during build
+  // TypeScript type checking during build (catches type errors before deploy)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
+  },
+
+  // ESLint checking during build (catches lint errors before deploy)
+  eslint: {
+    ignoreDuringBuilds: false,
   },
 
   // Server external packages configuration
@@ -165,7 +170,7 @@ const nextConfig = {
   },
 
   // Webpack configuration for additional optimization
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+  webpack: (config: any, { buildId, dev, isServer, defaultLoaders, webpack }: any) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       // Add any specific aliases you need

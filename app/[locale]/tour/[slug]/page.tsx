@@ -112,7 +112,7 @@ async function getTourData(
 
     if (localizedTour.destination && typeof localizedTour.destination === 'object') {
       localizedTour.destination = localizeEntityFields(
-        localizedTour.destination as Record<string, unknown>,
+        localizedTour.destination as unknown as Record<string, unknown>,
         locale,
         ['name', 'description', 'country']
       ) as any;
@@ -120,7 +120,7 @@ async function getTourData(
 
     if (localizedTour.category && typeof localizedTour.category === 'object') {
       localizedTour.category = localizeEntityFields(
-        localizedTour.category as Record<string, unknown>,
+        localizedTour.category as unknown as Record<string, unknown>,
         locale,
         ['name', 'description', 'longDescription']
       ) as any;
@@ -181,7 +181,7 @@ export async function generateMetadata({
       .select('title description image discountPrice originalPrice metaTitle metaDescription translations')
       .lean();
 
-    const tour = tourRaw
+    const tour: any = tourRaw
       ? localizeEntityFields(tourRaw as Record<string, unknown>, locale, [
           'title',
           'description',

@@ -6,13 +6,20 @@ import { Link } from '@/i18n/routing';
 import { Calendar, Clock, User, Tag, Eye, Heart, Search, Filter } from 'lucide-react';
 import { IBlog } from '@/lib/models/Blog';
 
-interface BlogClientPageProps {
-  blogs: IBlog[];
-  categories: { value: string; label: string; count: number }[];
-  featuredPosts: IBlog[];
+// Extend IBlog with virtual fields from the Mongoose schema
+interface BlogWithVirtuals extends IBlog {
+  categoryDisplay?: string;
+  readTimeText?: string;
+  publishedDate?: string;
 }
 
-const BlogCard = ({ blog }: { blog: IBlog }) => (
+interface BlogClientPageProps {
+  blogs: BlogWithVirtuals[];
+  categories: { value: string; label: string; count: number }[];
+  featuredPosts: BlogWithVirtuals[];
+}
+
+const BlogCard = ({ blog }: { blog: BlogWithVirtuals }) => (
   <Link href={`/blog/${blog.slug}`} className="group block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-slate-200">
     <div className="relative h-64 overflow-hidden">
       <Image
@@ -93,7 +100,7 @@ const BlogCard = ({ blog }: { blog: IBlog }) => (
   </Link>
 );
 
-const FeaturedBlogCard = ({ blog }: { blog: IBlog }) => (
+const FeaturedBlogCard = ({ blog }: { blog: BlogWithVirtuals }) => (
   <Link href={`/blog/${blog.slug}`} className="group block relative h-96 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300">
     <Image
       src={blog.featuredImage}
@@ -198,7 +205,7 @@ export default function BlogClientPage({ blogs, categories, featuredPosts }: Blo
             <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">Featured Stories</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredPosts.map((post) => (
-                <FeaturedBlogCard key={post._id} blog={post} />
+                <FeaturedBlogCard key={String(post._id)} blog={post} />
               ))}
             </div>
           </div>
@@ -285,7 +292,7 @@ export default function BlogClientPage({ blogs, categories, featuredPosts }: Blo
               {filteredBlogs.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {filteredBlogs.map((blog) => (
-                    <BlogCard key={blog._id} blog={blog} />
+                    <BlogCard key={String(blog._id)} blog={blog} />
                   ))}
                 </div>
               ) : (

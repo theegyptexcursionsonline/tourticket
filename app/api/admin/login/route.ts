@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     console.log('[LOGIN] Step 13: Signing JWT token...');
     const token = await signToken(
       {
-        sub: user._id.toString(),
+        sub: (user._id as any).toString(),
         email: user.email,
         given_name: user.firstName,
         family_name: user.lastName,

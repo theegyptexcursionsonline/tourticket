@@ -42,7 +42,7 @@ interface PopularInterestServerProps {
   categoryPages: CategoryPage[];
 }
 
-type PopularInterestsTranslator = (key: string, values?: Record<string, unknown>) => string;
+type PopularInterestsTranslator = (key: any, values?: any) => string;
 
 // Default fallback image for categories without images
 const DEFAULT_CATEGORY_IMAGE = '/placeholder-category.jpg';

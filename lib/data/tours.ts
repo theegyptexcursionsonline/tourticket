@@ -1,6 +1,5 @@
-import { Tour } from '@/types';
-
-export const tours: Tour[] = [
+// Static demo tour data - uses a simplified schema different from the DB Tour model
+export const tours: any[] = [
   {
     id: 'new-york-pizza-lovers-canal-cruise',
     title: 'New York Pizza by LOVERS Canal Cruise in Amsterdam',
@@ -551,27 +550,27 @@ export const tours: Tour[] = [
   }
 ];
 
-export const getTourById = (id: string): Tour | undefined => {
+export const getTourById = (id: string) => {
   return tours.find(tour => tour.id === id || tour.slug === id);
 };
 
-export const getToursByDestination = (destinationId: string): Tour[] => {
+export const getToursByDestination = (destinationId: string) => {
   return tours.filter(tour => tour.destinationId === destinationId);
 };
 
-export const getToursByCategory = (categoryId: string): Tour[] => {
+export const getToursByCategory = (categoryId: string) => {
   return tours.filter(tour => tour.categoryIds.includes(categoryId));
 };
 
-export const getFeaturedTours = (): Tour[] => {
+export const getFeaturedTours = () => {
   return tours.filter(tour => tour.featured);
 };
 
-export const searchTours = (query: string): Tour[] => {
+export const searchTours = (query: string) => {
   const searchTerm = query.toLowerCase();
   return tours.filter(tour =>
     tour.title.toLowerCase().includes(searchTerm) ||
     tour.description?.toLowerCase().includes(searchTerm) ||
-    tour.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
+    tour.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm))
   );
 };

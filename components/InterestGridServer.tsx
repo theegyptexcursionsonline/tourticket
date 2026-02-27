@@ -561,7 +561,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
         /(?:^|\n)\s*(?:\d+\.\s*)?([^—\n]{15,}?)\s+—\s*\$(\d+)/gm,
       ];
 
-      const potentialTours = new Map<string, number>();
+      const potentialTours: Record<string, number> = {};
 
       for (const pattern of tourPatterns) {
         const matches = text.matchAll(pattern);
@@ -570,15 +570,16 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
             const title = match[1].trim().replace(/^(Cairo:|Luxor:|Aswan:|Alexandria:|Hurghada:|Sharm El Sheikh:)\s*/i, '');
             const price = match[2] ? parseInt(match[2]) : 0;
             if (title.length > 10) {
-              potentialTours.set(title, price);
+              potentialTours[title] = price;
             }
           }
         }
       }
 
-      if (potentialTours.size > 0) {
-        const toursArray = Array.from(potentialTours.entries()).slice(0, 4);
-        const searchPromises = toursArray.map(async ([tourTitle]) => {
+      const tourEntries = Object.entries(potentialTours);
+      if (tourEntries.length > 0) {
+        const toursArray = tourEntries.slice(0, 4);
+        const searchPromises = toursArray.map(async ([tourTitle]: [string, number]) => {
           try {
             let response = await searchClient.search([{
               indexName: INDEX_TOURS,
@@ -590,7 +591,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
             let firstResult = response.results[0] as any;
 
             if (!firstResult?.hits?.length) {
-              const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
+              const keywords = tourTitle.split(/\s+/).filter((w: string) => w.length > 3).slice(0, 4).join(' ');
               response = await searchClient.search([{
                 indexName: INDEX_TOURS,
                 params: {

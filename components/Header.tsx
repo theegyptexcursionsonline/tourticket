@@ -121,7 +121,7 @@ const SEARCH_SUGGESTIONS = [
   'Cultural experiences'
 ];
 
-function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
+function useOnClickOutside(ref: React.RefObject<HTMLElement | null>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
       if (!ref.current || ref.current.contains(event.target as Node)) return;
@@ -587,18 +587,18 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container || !chatMode) return;
-    
-    let scrollTimeout: NodeJS.Timeout;
-    
+
+    let scrollTimeout: NodeJS.Timeout | undefined;
+
     const handleScroll = () => {
       // Don't interfere if this is a programmatic scroll
       if (isScrollingRef.current) return;
-      
-      clearTimeout(scrollTimeout);
-      
+
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+
       // Check if user is at the bottom
       const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
-      
+
       if (isAtBottom) {
         // User scrolled back to bottom - re-enable auto-scroll
         setUserHasScrolledUp(false);
@@ -607,11 +607,11 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
         setUserHasScrolledUp(true);
       }
     };
-    
+
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       container.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [chatMode]);
 
@@ -1422,7 +1422,7 @@ export default function Header({
       />
 
       {/* Auth modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialState={authModalState} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialMode={authModalState} />
 
       {/* Global Styles */}
       <style jsx global>{`

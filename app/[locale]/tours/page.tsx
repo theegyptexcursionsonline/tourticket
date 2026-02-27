@@ -112,7 +112,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
         });
       }
 
-      return localizedTour as ITour;
+      return localizedTour as unknown as ITour;
     });
   } catch (error) {
     console.error('Failed to fetch tours:', error);

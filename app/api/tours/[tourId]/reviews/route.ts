@@ -49,7 +49,7 @@ export async function POST(
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = user._id.toString();
+      userId = (user as any)._id.toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
@@ -120,14 +120,14 @@ export async function POST(
         path: 'user',
         model: 'User',
         select: 'firstName lastName email'
-      });
+      }) as any;
 
     // Update tour's average rating (optional - you might want to do this in background)
     try {
       const reviewStats = await Review.aggregate([
         { $match: { tour: new mongoose.Types.ObjectId(tourId) } },
-        { $group: { 
-          _id: null, 
+        { $group: {
+          _id: null,
           avgRating: { $avg: '$rating' },
           totalReviews: { $sum: 1 }
         }}
@@ -208,7 +208,7 @@ export async function GET(
       .lean();
 
     // Transform the data for frontend consumption
-    const transformedReviews = reviews.map(review => ({
+    const transformedReviews = reviews.map((review: any) => ({
       _id: review._id,
       rating: review.rating,
       title: review.title,

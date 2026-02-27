@@ -30,8 +30,23 @@ jest.mock('react-hot-toast', () => ({
   },
 }))
 
+// Mock AdminAuthContext so DestinationManager can call useAdminAuth
+jest.mock('@/contexts/AdminAuthContext', () => ({
+  useAdminAuth: () => ({
+    user: { id: 'test-admin', email: 'admin@test.com', role: 'super_admin', permissions: ['manage_destinations'] },
+    token: 'mock-token',
+    isLoading: false,
+    isAuthenticated: true,
+    hasPermission: () => true,
+    hasAnyPermission: () => true,
+    login: jest.fn(),
+    logout: jest.fn(),
+    refreshUser: jest.fn(),
+  }),
+}))
+
 describe('DestinationManager', () => {
-  const mockDestinations: IDestination[] = [
+  const mockDestinations: any[] = [
     {
       _id: '1',
       name: 'Cairo',

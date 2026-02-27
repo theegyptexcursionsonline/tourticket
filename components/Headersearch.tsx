@@ -38,7 +38,7 @@ const SEARCH_SUGGESTIONS = [
   'Explore art galleries', 'City passes & tickets', 'Weekend getaways', 'Cultural experiences'
 ];
 
-function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
+function useOnClickOutside(ref: React.RefObject<HTMLElement | null>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
       if (!ref.current || ref.current.contains(event.target as Node)) return;
@@ -748,7 +748,7 @@ const linkHoverColor = 'hover:text-red-500';
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={handleAuthModalClose}
-        initialState={authModalState}
+        initialMode={authModalState}
       />
     </>
   );

@@ -42,10 +42,10 @@ export async function POST(req: NextRequest) {
                         results.destinations.created++;
                         // Check if image is missing
                         const newDoc = await Destination.findOne({ slug: item.slug }).lean();
-                        if (newDoc && !newDoc.image) {
+                        if (newDoc && !(newDoc as any).image) {
                             results.missingImages.push({
-                                _id: newDoc._id.toString(),
-                                name: newDoc.name,
+                                _id: (newDoc as any)._id.toString(),
+                                name: (newDoc as any).name,
                                 imageField: 'image',
                                 modelType: 'Destinations'
                             });

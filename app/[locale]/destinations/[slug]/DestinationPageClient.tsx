@@ -870,17 +870,17 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     const container = chatContainerRef.current;
     if (!container || !chatMode) return;
     
-    let scrollTimeout: NodeJS.Timeout;
-    
+    let scrollTimeout: NodeJS.Timeout | undefined;
+
     const handleScroll = () => {
       // Don't interfere if this is a programmatic scroll
       if (isScrollingRef.current) return;
-      
-      clearTimeout(scrollTimeout);
-      
+
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+
       // Check if user is at the bottom
       const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
-      
+
       if (isAtBottom) {
         // User scrolled back to bottom - re-enable auto-scroll
         setUserHasScrolledUp(false);
@@ -889,11 +889,11 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         setUserHasScrolledUp(true);
       }
     };
-    
+
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       container.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [chatMode]);
 
@@ -1503,7 +1503,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                             <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[85%] ${isUser ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3' : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200'}`}>
                                 {isUser ? (
-                                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                                  <p className="text-sm leading-relaxed">{(msg as any).content}</p>
                                 ) : (
                                   renderContent(msg.parts, msg.id, hasDetectedContent, isUser)
                                 )}
@@ -2237,7 +2237,7 @@ export default function DestinationPageClient({
   const destinationCategories = allCategories.map(category => ({
     ...category,
     tourCount: destinationTours.filter(tour => 
-      typeof tour.category === 'object' ? tour.category._id === category._id : tour.category === category._id
+      typeof tour.category === 'object' && !Array.isArray(tour.category) ? (tour.category as any)._id === category._id : tour.category === category._id
     ).length
   })).filter(category => category.tourCount > 0);
 

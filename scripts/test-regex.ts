@@ -12,7 +12,7 @@ console.log('Test 1:', test1);
 console.log('Regex:', regex);
 console.log('');
 
-const result1 = test1.replace(regex, (m, prop, content) => {
+const regexResult1 = test1.replace(regex, (m, prop, content) => {
   console.log('MATCHED!');
   console.log('  Full match:', JSON.stringify(m));
   console.log('  Property:', prop);
@@ -20,11 +20,11 @@ const result1 = test1.replace(regex, (m, prop, content) => {
   return '[REPLACED]';
 });
 
-console.log('Result 1:', result1);
+console.log('Result 1:', regexResult1);
 console.log('');
 
 console.log('Test 2:', test2);
-const result2 = test2.replace(regex, (m, prop, content) => {
+const regexResult2 = test2.replace(regex, (m, prop, content) => {
   console.log('MATCHED!');
   console.log('  Full match:', JSON.stringify(m));
   console.log('  Property:', prop);
@@ -32,4 +32,4 @@ const result2 = test2.replace(regex, (m, prop, content) => {
   return '[REPLACED]';
 });
 
-console.log('Result 2:', result2);
+console.log('Result 2:', regexResult2);

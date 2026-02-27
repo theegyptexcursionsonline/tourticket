@@ -37,7 +37,7 @@ import { toDateOnlyString } from '@/utils/date';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
-  time: string;
+  time?: string;
   title: string;
   description: string;
   duration?: string;
@@ -386,7 +386,7 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
 };
 
 // FIXED ItinerarySection - Now properly displays the correct icons
-const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement> }) => (
+const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Clock size={24} className="text-red-600" />
@@ -439,7 +439,7 @@ const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[
   </div>
 );
 
-const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Backpack size={24} className="text-blue-600" />
@@ -511,7 +511,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
   </div>
 );
 
-const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Accessibility size={24} className="text-purple-600" />
@@ -556,7 +556,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
   </div>
 );
 
-const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Shield size={24} className="text-red-600" />
@@ -598,7 +598,7 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   </div>
 );
 
-const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Heart size={24} className="text-teal-600" />
@@ -649,7 +649,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 );
 
 // Enhanced FAQ Component - Updated to accept faqs as props
-const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement> }) => {
+const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Use provided faqs if available, otherwise use fallback
@@ -719,11 +719,11 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefO
 };
 
 // Enhanced Reviews Section Component with integrated review management
-const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: { 
-  tour: Tour, 
-  reviews: ReviewType[], 
+const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
+  tour: Tour,
+  reviews: ReviewType[],
   onReviewSubmitted: (review: ReviewType) => void,
-  sectionRef: React.RefObject<HTMLDivElement> 
+  sectionRef: React.RefObject<HTMLDivElement | null>
 }) => {
   const [currentReviews, setCurrentReviews] = useState<ReviewType[]>(reviews);
 
@@ -788,7 +788,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
 };
 
 // Overview Section Component
-const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-24">
     <div className="bg-gradient-to-br from-white via-white to-slate-50/30 p-8 md:p-10 rounded-3xl shadow-xl border border-slate-200/80 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl">
       <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 pb-4 border-b border-slate-200">About this experience</h2>
@@ -921,7 +921,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
   const reviewsRef = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLDivElement>(null);
 
-  const inViewOptions = { threshold: 0.1 };
+  const inViewOptions = { amount: 0.1 as const };
   const isOverviewInView = useInView(overviewRef, inViewOptions);
   const isItineraryInView = useInView(itineraryRef, inViewOptions);
   const isPracticalInView = useInView(practicalRef, inViewOptions);
@@ -1432,7 +1432,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
 
       <Footer />
 
-      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
+      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as any} />
 
       <StickyBookButton
         price={tour.discountPrice}

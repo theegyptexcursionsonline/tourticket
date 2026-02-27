@@ -61,7 +61,7 @@ jest.mock('@/components/SearchModel', () => {
 })
 
 describe('DestinationPageClient', () => {
-  const mockDestination: Destination = {
+  const mockDestination: any = {
     _id: '1',
     name: 'Cairo',
     slug: 'cairo',
@@ -91,7 +91,7 @@ describe('DestinationPageClient', () => {
     tourCount: 50,
   }
 
-  const mockTours: Tour[] = [
+  const mockTours: any[] = [
     {
       _id: '1',
       title: 'Pyramids Tour',
@@ -141,7 +141,7 @@ describe('DestinationPageClient', () => {
     },
   ]
 
-  const defaultProps = {
+  const defaultProps: any = {
     destination: mockDestination,
     destinationTours: mockTours,
     allCategories: mockCategories,

@@ -92,7 +92,7 @@ import TranslationEditor from '@/components/admin/TranslationEditor';
 // ─── Helpers ───
 
 function makeRequest(body: Record<string, unknown>) {
-  return { json: async () => body } as unknown as Request;
+  return { json: async () => body } as any;
 }
 
 const FAKE_OPENAI_RESPONSE = {
@@ -102,7 +102,7 @@ const FAKE_OPENAI_RESPONSE = {
   de: { title: 'Pyramidentour', description: 'Beschreibung auf Deutsch' },
 };
 
-function mockOpenAISuccess(response = FAKE_OPENAI_RESPONSE) {
+function mockOpenAISuccess(response: any = FAKE_OPENAI_RESPONSE) {
   mockCreate.mockResolvedValue({
     choices: [{ message: { content: JSON.stringify(response) } }],
   });

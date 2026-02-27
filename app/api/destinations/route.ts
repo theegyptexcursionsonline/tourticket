@@ -29,14 +29,14 @@ export async function GET() {
     });
 
     // Add tour counts to destinations
-    const destinationsWithCountsData = destinations.map(dest => ({
+    const destinationsWithCountsData = destinations.map((dest: any) => ({
       ...dest,
       tourCount: tourCounts[dest._id.toString()] || 0,
     }));
 
     const destinationsWithCounts = destinationsWithCountsData
-      .filter(dest => dest.tourCount > 0 || dest.featured)
-      .sort((a, b) => {
+      .filter((dest: any) => dest.tourCount > 0 || dest.featured)
+      .sort((a: any, b: any) => {
         // Featured first
         if (a.featured && !b.featured) return -1;
         if (!a.featured && b.featured) return 1;

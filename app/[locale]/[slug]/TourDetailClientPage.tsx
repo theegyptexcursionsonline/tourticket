@@ -395,7 +395,7 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   return icons[iconType || 'location'] || icons.location;
 };
 
-const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: ItineraryItem[], tourTitle: string, sectionRef: React.RefObject<HTMLDivElement> }) => {
+const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: ItineraryItem[], tourTitle: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   // Extract locations for map
   const locations = itinerary
     .filter(item => item.location)
@@ -531,7 +531,7 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
   );
 };
 
-const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Backpack size={24} className="text-blue-600" />
@@ -603,7 +603,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
   </div>
 );
 
-const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Accessibility size={24} className="text-purple-600" />
@@ -648,7 +648,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
   </div>
 );
 
-const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Shield size={24} className="text-red-600" />
@@ -690,7 +690,7 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   </div>
 );
 
-const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Heart size={24} className="text-teal-600" />
@@ -740,7 +740,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   </div>
 );
 
-const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefObject<HTMLDivElement> }) => {
+const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const faqsToShow = faqs && faqs.length > 0 ? faqs : [
@@ -812,7 +812,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
   tour: ITour,
   reviews: Review[],
   onReviewSubmitted: (review: Review) => void,
-  sectionRef: React.RefObject<HTMLDivElement>
+  sectionRef: React.RefObject<HTMLDivElement | null>
 }) => {
   const [currentReviews, setCurrentReviews] = useState<Review[]>(reviews);
 
@@ -854,14 +854,14 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
       <ReviewsStructuredData />
       
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <ReviewList 
-          reviews={currentReviews} 
-          onReviewUpdated={handleReviewUpdated}
+        <ReviewList
+          reviews={currentReviews as any}
+          onReviewUpdated={handleReviewUpdated as any}
           onReviewDeleted={handleReviewDeleted}
         />
-        
+
         <div className="border-t border-slate-200 p-6">
-          <ReviewForm tourId={tour._id!} onReviewSubmitted={handleNewReview} />
+          <ReviewForm tourId={String(tour._id)} onReviewSubmitted={handleNewReview} />
         </div>
         
         <div className="container mx-auto px-4 my-8">
@@ -872,7 +872,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
   );
 };
 
-const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.RefObject<HTMLDivElement> }) => (
+const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
   <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-24">
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
       <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">About this experience</h2>
@@ -946,7 +946,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
 
-  const tourIsWishlisted = isWishlisted(tour._id!);
+  const tourIsWishlisted = isWishlisted(String(tour._id));
 
   const handleReviewSubmitted = (newReview: Review) => {
     setReviews(prevReviews => [newReview, ...prevReviews]);
@@ -956,10 +956,10 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (tourIsWishlisted) {
-      removeFromWishlist(tour._id!);
+      removeFromWishlist(String(tour._id));
       toast.success('Removed from wishlist');
     } else {
-      addToWishlist(tour);
+      addToWishlist(tour as any);
       toast.success('Added to wishlist!');
     }
   };
@@ -1006,7 +1006,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   const reviewsRef = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLDivElement>(null);
 
-  const inViewOptions = { threshold: 0.1 };
+  const inViewOptions = { amount: 0.1 as const };
   const isOverviewInView = useInView(overviewRef, inViewOptions);
   const isItineraryInView = useInView(itineraryRef, inViewOptions);
   const isPracticalInView = useInView(practicalRef, inViewOptions);
@@ -1070,7 +1070,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
     try {
       const quickAddCartItem = {
-        ...tour,
+        ...(tour as any),
         uniqueId: `${tour._id}-quick-add-${Date.now()}`,
         quantity: 1,
         childQuantity: 0,
@@ -1078,7 +1078,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         selectedTime: 'Anytime',
         selectedAddOns: {},
         totalPrice: tour.discountPrice,
-      };
+      } as any;
       addToCart(quickAddCartItem);
       setAdded(true);
       setLiveMessage('Added to cart');
@@ -1232,7 +1232,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
-                        <span>{typeof tour.destination === 'string' ? tour.destination : tour.destination?.name || 'Destination'}</span>
+                        <span>{typeof tour.destination === 'string' ? tour.destination : (tour.destination as any)?.name || 'Destination'}</span>
                       </div>
                     </div>
                   </div>
@@ -1286,7 +1286,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                         <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
                         <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
                         <button
-                          onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(tour.meetingPoint)}`, '_blank')}
+                          onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(tour.meetingPoint || '')}`, '_blank')}
                           className="text-red-600 hover:underline text-sm font-medium mt-2 inline-flex items-center gap-1"
                         >
                           <Navigation size={14} />
@@ -1304,7 +1304,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                         loading="lazy"
                         allowFullScreen
                         referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(tour.meetingPoint)}&zoom=15`}
+                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(tour.meetingPoint || '')}&zoom=15`}
                       ></iframe>
                     </div>
                   </div>
@@ -1316,7 +1316,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
-                      <Link key={relatedTour._id} href={`/tour/${relatedTour.slug}`} className="group">
+                      <Link key={String(relatedTour._id)} href={`/tour/${relatedTour.slug}`} className="group">
                         <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                           <div className="relative">
                             <Image
@@ -1519,7 +1519,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       </main>
 
 
-      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour} />
+      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as any} />
 
       <StickyBookButton
         price={tour.discountPrice}

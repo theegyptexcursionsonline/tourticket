@@ -485,10 +485,10 @@ const AdminDashboard = () => {
                     axisLine={false}
                   />
                   <Tooltip
-                    formatter={(value: number) => [
+                    formatter={((value: number) => [
                       new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value),
                       'Revenue'
-                    ]}
+                    ]) as any}
                     contentStyle={{
                       backgroundColor: 'white',
                       border: '1px solid #E2E8F0',

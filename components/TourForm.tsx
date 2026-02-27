@@ -76,14 +76,28 @@ interface Availability {
 interface BookingOption {
     type: string;
     label: string;
-    price: number;
+    price: number | string;
     description?: string;
+    originalPrice?: number | string;
+    duration?: string;
+    languages?: string[];
+    highlights?: string[];
+    groupSize?: string;
+    difficulty?: string;
+    badge?: string;
+    discount?: number;
+    isRecommended?: boolean;
 }
 
 interface ItineraryItem {
     day: number;
     title: string;
     description: string;
+    icon?: string;
+    time?: string;
+    duration?: string;
+    location?: string;
+    includes?: string[];
 }
 
 interface FAQ {
@@ -95,6 +109,7 @@ interface AddOn {
     name: string;
     description: string;
     price: number;
+    category?: string;
 }
 
 interface TourFormData {
@@ -113,6 +128,9 @@ interface TourFormData {
     includes: string[];
     tags: string;
     isFeatured: boolean;
+    isPublished: boolean;
+    difficulty: string;
+    maxGroupSize: number | string;
     whatsIncluded: string[];
     whatsNotIncluded: string[];
     itinerary: ItineraryItem[];
@@ -122,12 +140,18 @@ interface TourFormData {
     addOns: AddOn[];
     attractions?: string[];
     interests?: string[];
+    metaTitle?: string;
+    metaDescription?: string;
+    keywords?: string | string[];
     translations: Record<string, Record<string, unknown>>;
 }
 
 interface Tour extends Partial<TourFormData> {
     _id?: string;
     faq?: FAQ[];
+    price?: number;
+    destination?: any;
+    category?: any;
 }
 
 // --- Helper Components ---
@@ -160,7 +184,7 @@ const AvailabilityManager = ({ availability, setAvailability }: { availability: 
     };
 
     const handleSlotChange = (index: number, field: string, value: string | number) => {
-        const newSlots = [...availability.slots];
+        const newSlots = [...(availability.slots || [])];
         newSlots[index] = { ...newSlots[index], [field]: value };
         setAvailability({ ...availability, slots: newSlots });
     };
@@ -368,16 +392,16 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                     : (tourToEdit.category?._id?.toString() || tourToEdit.category ? [tourToEdit.category?._id?.toString() || tourToEdit.category] : []),
                 image: tourToEdit.image || '', 
                 images: tourToEdit.images || [],
-                highlights: tourToEdit.highlights?.length > 0 ? tourToEdit.highlights : [''],
-                includes: tourToEdit.includes?.length > 0 ? tourToEdit.includes : [''],
+                highlights: (tourToEdit.highlights?.length ?? 0) > 0 ? tourToEdit.highlights! : [''],
+                includes: (tourToEdit.includes?.length ?? 0) > 0 ? tourToEdit.includes! : [''],
                 tags: Array.isArray(tourToEdit.tags) ? tourToEdit.tags.join(', ') : (tourToEdit.tags || ''),
                 isFeatured: tourToEdit.isFeatured || false,
-                whatsIncluded: tourToEdit.whatsIncluded?.length > 0 ? tourToEdit.whatsIncluded : [''],
-                whatsNotIncluded: tourToEdit.whatsNotIncluded?.length > 0 ? tourToEdit.whatsNotIncluded : [''],
-                itinerary: tourToEdit.itinerary?.length > 0 ? tourToEdit.itinerary : [{ day: 1, title: '', description: '' }],
-                faqs: (tourToEdit.faq || tourToEdit.faqs)?.length > 0 ? (tourToEdit.faq || tourToEdit.faqs) : [{ question: '', answer: '' }],
-                bookingOptions: tourToEdit.bookingOptions?.length > 0
-                    ? tourToEdit.bookingOptions.map((option: BookingOption) => ({
+                whatsIncluded: (tourToEdit.whatsIncluded?.length ?? 0) > 0 ? tourToEdit.whatsIncluded! : [''],
+                whatsNotIncluded: (tourToEdit.whatsNotIncluded?.length ?? 0) > 0 ? tourToEdit.whatsNotIncluded! : [''],
+                itinerary: (tourToEdit.itinerary?.length ?? 0) > 0 ? tourToEdit.itinerary! : [{ day: 1, title: '', description: '' }],
+                faqs: ((tourToEdit.faq || tourToEdit.faqs)?.length ?? 0) > 0 ? (tourToEdit.faq || tourToEdit.faqs)! : [{ question: '', answer: '' }],
+                bookingOptions: (tourToEdit.bookingOptions?.length ?? 0) > 0
+                    ? tourToEdit.bookingOptions!.map((option: BookingOption) => ({
                         type: option.type || 'Per Person',
                         label: option.label || '',
                         price: option.price || 0,
@@ -407,7 +431,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                         discount: 0,
                         isRecommended: false
                     }],
-                addOns: tourToEdit.addOns?.length > 0 ? tourToEdit.addOns : [],
+                addOns: (tourToEdit.addOns?.length ?? 0) > 0 ? tourToEdit.addOns! : [],
              isPublished: tourToEdit.isPublished || false,
                 difficulty: tourToEdit.difficulty || '',
                 maxGroupSize: tourToEdit.maxGroupSize || 10,
@@ -455,9 +479,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             setFormData(initialData as TourFormData);
             
             // On edit, expand the first item in each collapsible section if they exist
-            if (initialData.bookingOptions.length > 0) setExpandedOptionIndex(0);
-            if (initialData.itinerary.length > 0) setExpandedItineraryIndex(0);
-            if (initialData.faqs.length > 0) setExpandedFaqIndex(0);
+            if ((initialData.bookingOptions?.length ?? 0) > 0) setExpandedOptionIndex(0);
+            if ((initialData.itinerary?.length ?? 0) > 0) setExpandedItineraryIndex(0);
+            if ((initialData.faqs?.length ?? 0) > 0) setExpandedFaqIndex(0);
         }
 
         const fetchData = async () => {
@@ -700,8 +724,8 @@ const addItineraryItem = () => {
                     index, 
                     option: {
                         ...option,
-                        price: parseFloat(option.price) || 0,
-                        originalPrice: option.originalPrice ? parseFloat(option.originalPrice) : undefined,
+                        price: parseFloat(String(option.price)) || 0,
+                        originalPrice: option.originalPrice ? parseFloat(String(option.originalPrice)) : undefined,
                     }
                 }),
             });
@@ -820,14 +844,14 @@ const addItineraryItem = () => {
                 slug: cleanedData.slug.trim(),
                 description: cleanedData.description.trim(),
                 duration: cleanedData.duration.trim(),
-                price: parseFloat(cleanedData.discountPrice) || 0,
-                discountPrice: parseFloat(cleanedData.discountPrice) || 0,
+                price: parseFloat(String(cleanedData.discountPrice)) || 0,
+                discountPrice: parseFloat(String(cleanedData.discountPrice)) || 0,
                 longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
-                originalPrice: cleanedData.originalPrice ? parseFloat(cleanedData.originalPrice) : undefined,
+                originalPrice: cleanedData.originalPrice ? parseFloat(String(cleanedData.originalPrice)) : undefined,
                 destination: cleanedData.destination,
                 category: cleanedData.category,
                 difficulty: cleanedData.difficulty || 'Easy',
-                maxGroupSize: parseInt(cleanedData.maxGroupSize) || 10,
+                maxGroupSize: parseInt(String(cleanedData.maxGroupSize)) || 10,
                 isPublished: Boolean(cleanedData.isPublished),
                 isFeatured: Boolean(cleanedData.isFeatured),
                 image: cleanedData.image || '/images/placeholder.png', // Provide fallback
@@ -1726,7 +1750,7 @@ const addItineraryItem = () => {
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <div className="text-lg font-bold text-slate-900">
-                                                                        {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
+                                                                        {selectedCurrency.symbol}{Number(option.price || 0).toFixed(2)}
                                                                     </div>
                                                                     <div className="text-xs text-slate-500">
                                                                         {option.type === 'Per Person' ? 'per person' : 'per group'}
@@ -1768,7 +1792,7 @@ const addItineraryItem = () => {
                                                                     {option.label || `Booking Option ${index + 1}`}
                                                                 </h5>
                                                                 <p className="text-sm text-slate-500">
-                                                                    {option.type} - {selectedCurrency.symbol}{option.price?.toFixed(2) || '0.00'}
+                                                                    {option.type} - {selectedCurrency.symbol}{Number(option.price || 0).toFixed(2)}
                                                                 </p>
                                                             </div>
                                                         </div>

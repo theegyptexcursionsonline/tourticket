@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = user._id.toString();
+      userId = (user as any)._id.toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
@@ -85,15 +85,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
     // Update the review
     const updatedReview = await Review.findByIdAndUpdate(
       id,
-      { 
-        rating, 
+      {
+        rating,
         comment: comment.trim(),
         title: title?.trim() || review.title,
         userName: review.userName, // Keep existing userName
         userEmail: review.userEmail // Keep existing userEmail
       },
       { new: true, runValidators: true }
-    ).populate('user', 'firstName lastName name picture');
+    ).populate('user', 'firstName lastName name picture') as any;
 
     // Transform the response to match what the frontend expects
     const transformedReview = {
@@ -143,7 +143,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = user._id.toString();
+      userId = (user as any)._id.toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);

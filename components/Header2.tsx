@@ -97,7 +97,7 @@ const SEARCH_SUGGESTIONS = [
   'Cultural experiences'
 ];
 
-function useOnClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
+function useOnClickOutside(ref: React.RefObject<HTMLElement | null>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
       if (!ref.current || ref.current.contains(event.target as Node)) return;
@@ -983,7 +983,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
       />
 
       {/* Auth modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialState={authModalState} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialMode={authModalState} />
     </>
   );
 }

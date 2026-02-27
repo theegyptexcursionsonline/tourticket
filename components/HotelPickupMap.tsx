@@ -289,7 +289,7 @@ export default function HotelPickupMap({
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      autocompleteServiceRef.current.getPlacePredictions(
+      autocompleteServiceRef.current!.getPlacePredictions(
         {
           input: value,
           componentRestrictions: { country: 'eg' },
@@ -301,7 +301,7 @@ export default function HotelPickupMap({
             setShowPredictions(true);
           } else {
             // Try with geocode if no lodging results
-            autocompleteServiceRef.current.getPlacePredictions(
+            autocompleteServiceRef.current!.getPlacePredictions(
               {
                 input: value,
                 componentRestrictions: { country: 'eg' },

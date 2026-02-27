@@ -19,6 +19,7 @@ interface MonthlyRevenue {
   revenue: number;
 }
 interface TopTour {
+  tourId: string;
   title: string;
   totalBookings: number;
   totalRevenue: number;

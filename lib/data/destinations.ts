@@ -364,11 +364,11 @@ export const getAllDestinations = (): Destination[] => {
 };
 
 export const getDestinationsByCountry = (country: string): Destination[] => {
-  return destinations.filter(dest => dest.country.toLowerCase() === country.toLowerCase());
+  return destinations.filter(dest => dest.country?.toLowerCase() === country.toLowerCase());
 };
 
 export const getEuropeanDestinations = (): Destination[] => {
   return destinations.filter(dest => 
-    ['Netherlands', 'Germany', 'Denmark', 'Sweden'].includes(dest.country)
+    ['Netherlands', 'Germany', 'Denmark', 'Sweden'].includes(dest.country ?? '')
   );
 };

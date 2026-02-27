@@ -44,7 +44,7 @@ const { verifyAdmin } = jest.requireMock('@/lib/auth/verifyAdmin');
 import { POST } from '../route';
 
 function makeRequest(body: Record<string, unknown>) {
-  return { json: async () => body } as unknown as Request;
+  return { json: async () => body } as any;
 }
 
 describe('POST /api/admin/translate', () => {

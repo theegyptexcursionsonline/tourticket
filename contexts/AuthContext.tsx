@@ -27,6 +27,7 @@ interface User {
   permissions?: string[];
   authProvider?: 'firebase' | 'jwt' | 'google';
   emailVerified?: boolean;
+  createdAt?: string;
 }
 
 interface SignupData {

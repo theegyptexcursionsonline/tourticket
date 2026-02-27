@@ -1053,17 +1053,17 @@ const HeroSearchBar = ({
     const container = chatContainerRef.current;
     if (!container || !chatMode) return;
     
-    let scrollTimeout: NodeJS.Timeout;
-    
+    let scrollTimeout: NodeJS.Timeout | undefined;
+
     const handleScroll = () => {
       // Don't interfere if this is a programmatic scroll
       if (isScrollingRef.current) return;
-      
-      clearTimeout(scrollTimeout);
-      
+
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+
       // Check if user is at the bottom
       const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
-      
+
       if (isAtBottom) {
         // User scrolled back to bottom - re-enable auto-scroll
         setUserHasScrolledUp(false);
@@ -1072,11 +1072,11 @@ const HeroSearchBar = ({
         setUserHasScrolledUp(true);
       }
     };
-    
+
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       container.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [chatMode]);
 

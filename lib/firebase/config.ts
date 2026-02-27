@@ -15,10 +15,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (client-side only)
-let app: FirebaseApp;
-let auth: Auth;
+let app!: FirebaseApp;
+let auth!: Auth;
 let analytics: Analytics | null = null;
-let googleProvider: GoogleAuthProvider;
+let googleProvider!: GoogleAuthProvider;
 
 // Only initialize if not already initialized
 if (typeof window !== 'undefined') {

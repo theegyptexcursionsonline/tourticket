@@ -22,10 +22,10 @@ async function syncIndexes() {
   console.log('🔧 Syncing Booking indexes to MongoDB...\n');
   
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI!);
     console.log('✅ Connected to MongoDB\n');
-    
-    const db = mongoose.connection.db;
+
+    const db = mongoose.connection.db!;
     const bookingsCollection = db.collection('bookings');
     
     // Check existing indexes

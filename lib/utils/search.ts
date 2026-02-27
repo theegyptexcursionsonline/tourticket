@@ -1,6 +1,8 @@
-import { Tour, SearchFilters, SearchResult } from '@/types';
-import { tours } from '@/lib/data/tours';
-import { destinations } from '@/lib/data/destinations';
+import { Tour, Destination, SearchFilters, SearchResult } from '@/types';
+
+// Static data arrays - previously loaded from lib/data files
+const tours: Tour[] = [];
+const destinations: Destination[] = [];
 
 export function performAdvancedSearch(
   query: string,
@@ -29,11 +31,18 @@ export function performAdvancedSearch(
 
   // Apply filters
   if (filters.destination) {
-    filteredTours = filteredTours.filter(tour => tour.destinationId === filters.destination);
+    filteredTours = filteredTours.filter(tour => {
+      const destId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;
+      return destId === filters.destination;
+    });
   }
 
   if (filters.category) {
-    filteredTours = filteredTours.filter(tour => tour.categoryIds.includes(filters.category!));
+    filteredTours = filteredTours.filter(tour => {
+      const cat = tour.category;
+      const catId = typeof cat === 'string' ? cat : (cat as any)?._id;
+      return catId === filters.category;
+    });
   }
 
   if (filters.priceRange) {
@@ -71,10 +80,10 @@ export function generateSlug(text: string): string {
 
 export function getRelatedTours(tour: Tour, limit: number = 3): Tour[] {
   return tours
-    .filter(t => 
-      t.id !== tour.id && 
-      (t.destinationId === tour.destinationId || 
-       t.categoryIds.some(cat => tour.categoryIds.includes(cat)))
+    .filter(t =>
+      t.id !== tour.id &&
+      (t.destination === tour.destination ||
+       t.category === tour.category)
     )
     .slice(0, limit);
 }

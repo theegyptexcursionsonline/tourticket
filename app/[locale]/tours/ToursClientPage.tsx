@@ -9,9 +9,10 @@ import { useSettings } from '@/hooks/useSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from 'next-intl';
 
-interface TourWithDetails extends ITour {
-  destination?: { name: string };
+type TourWithDetails = Omit<ITour, 'destination'> & {
+  destination?: any;
   categories?: { name: string }[];
+  reviewCount?: number;
 }
 
 interface ToursClientPageProps {
@@ -454,7 +455,7 @@ export default function ToursClientPage({ tours }: ToursClientPageProps) {
         {filteredTours.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredTours.map((tour) => (
-              <TourCard key={tour._id} tour={tour} copy={copy} rtl={rtl} />
+              <TourCard key={String(tour._id)} tour={tour} copy={copy} rtl={rtl} />
             ))}
           </div>
         ) : (

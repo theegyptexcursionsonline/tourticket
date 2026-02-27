@@ -1353,8 +1353,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
       );
       
-      originalBasePrice = bookingData.selectedTimeSlot.originalPrice || 
-                         selectedOption?.originalPrice || 
+      originalBasePrice = (bookingData.selectedTimeSlot as any).originalPrice ||
+                         selectedOption?.originalPrice ||
                          bookingData.selectedTimeSlot.price;
     } else if (tourDisplayData) {
       basePrice = tourDisplayData.discountPrice;
@@ -1669,7 +1669,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         totalPrice: 0,
       };
 
-      addToCart(newCartItem, false);
+      addToCart(newCartItem as any, false);
 
       toast.dismiss(loadingToast);
       onClose();
@@ -1721,7 +1721,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         setCurrentStep(1);
         break;
       case 'language':
-        toast.info('Language selection coming soon!');
+        toast('Language selection coming soon!');
         break;
     }
     setAnimationKey(prev => prev + 1);
@@ -1734,9 +1734,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         const scrollContainer = scrollableContentRef.current;
         const elementToScrollTo = datePickerRef.current;
 
-        const topPosition = elementToScrollTo.offsetTop;
+        const topPosition = elementToScrollTo!.offsetTop;
 
-        scrollContainer.scrollTo({
+        scrollContainer!.scrollTo({
           top: topPosition,
           behavior: 'smooth'
         });

@@ -331,11 +331,11 @@ export default async function HomePageServer() {
       <HeroSection initialSettings={heroSettings} />
 
       {/* Pass pre-fetched data as props */}
-      <DestinationsServer destinations={destinations} />
+      <DestinationsServer destinations={destinations as any} />
       <IcebarPromo />
       <FeaturedToursServer tours={tours} />
-      <PopularInterestServer interests={featuredInterests} categoryPages={categoryPages} />
-      <InterestGridServer categories={categories} />
+      <PopularInterestServer interests={featuredInterests as any} categoryPages={categoryPages as any} />
+      <InterestGridServer categories={categories as any} />
       <DayTripsServer tours={dayTrips} />
 
       <AboutUs />

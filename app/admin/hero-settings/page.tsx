@@ -268,7 +268,7 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
   const handleResetSettings = () => {
     if (settings) {
       setEditingSettings({ ...settings });
-      toast.info('Settings reset to last saved version');
+      toast('Settings reset to last saved version');
     }
   };
 

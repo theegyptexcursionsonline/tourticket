@@ -28,7 +28,7 @@ export default function AIAgentModal() {
   const {
     messages,
     sendMessage,
-    isLoading,
+    status,
     stop,
   } = useChat({
     transport: new DefaultChatTransport({
@@ -39,6 +39,7 @@ export default function AIAgentModal() {
       },
     }),
   });
+  const isLoading = status === 'submitted' || status === 'streaming';
 
   /** ---------- OPEN MODAL FROM FLOATING BUTTON ---------- **/
   useEffect(() => {
@@ -92,12 +93,12 @@ export default function AIAgentModal() {
           try {
             const response = await searchClient.search([{
               indexName: INDEX_TOURS,
-              query: tourTitle,
               params: {
+                query: tourTitle,
                 hitsPerPage: 1,
               }
             }]);
-            return response.results[0]?.hits[0];
+            return (response.results[0] as any)?.hits?.[0];
           } catch (error) {
             console.error('Error searching for tour:', tourTitle, error);
             return null;
