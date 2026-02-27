@@ -13,13 +13,30 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     
     let settings = await HeroSettings.findOne({ isActive: true });
-    
+
+    // Fix legacy .png paths that should be .jpg
+    if (settings) {
+      let needsSave = false;
+      const fixes: Record<string, string> = { '/hero2.png': '/hero2.jpg', '/hero3.png': '/hero3.jpg' };
+      for (const img of settings.backgroundImages) {
+        if (fixes[img.desktop]) {
+          img.desktop = fixes[img.desktop];
+          needsSave = true;
+        }
+      }
+      if (settings.currentActiveImage && fixes[settings.currentActiveImage]) {
+        settings.currentActiveImage = fixes[settings.currentActiveImage];
+        needsSave = true;
+      }
+      if (needsSave) await settings.save();
+    }
+
     if (!settings) {
       // Create default settings if none exist
       settings = new HeroSettings({
         backgroundImages: [
           {
-            desktop: '/hero2.png',
+            desktop: '/hero2.jpg',
             alt: 'Pyramids of Giza at sunrise',
             isActive: true,
           },
@@ -29,12 +46,12 @@ export async function GET(request: NextRequest) {
             isActive: false,
           },
           {
-            desktop: '/hero3.png',
+            desktop: '/hero3.jpg',
             alt: 'Luxor temple columns at golden hour',
             isActive: false,
           }
         ],
-        currentActiveImage: '/hero2.png',
+        currentActiveImage: '/hero2.jpg',
         title: {
           main: 'Explore Egypt\'s Pyramids & Nile',
         },
