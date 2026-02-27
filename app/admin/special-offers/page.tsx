@@ -521,7 +521,8 @@ function OfferModal({
       // Initialize from existing offer
       if (offer?.applicableTours) {
         offer.applicableTours.forEach(tour => {
-          map.set(tour._id, { allOptions: true, selectedOptions: [] });
+          if (!tour || !tour._id) return;
+          map.set(String(tour._id), { allOptions: true, selectedOptions: [] });
         });
       }
       if (offer?.tourOptionSelections) {

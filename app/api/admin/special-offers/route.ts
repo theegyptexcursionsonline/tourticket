@@ -155,7 +155,13 @@ export async function POST(request: NextRequest) {
           .filter(Boolean)
       : [];
     const safeApplicableTours = Array.isArray(applicableTours)
-      ? applicableTours.map((t: any) => typeof t === 'object' && t !== null ? String(t._id || t) : String(t))
+      ? applicableTours
+          .map((t: any) => {
+            if (!t) return null;
+            const id = typeof t === 'object' ? (t._id || t) : t;
+            return id ? String(id) : null;
+          })
+          .filter((id: string | null): id is string => !!id && id !== 'null' && id !== 'undefined')
       : [];
 
     const offer = new SpecialOffer({
@@ -245,11 +251,15 @@ export async function PUT(request: NextRequest) {
         .filter(Boolean);
     }
 
-    // Sanitize applicableTours — may arrive as populated objects
+    // Sanitize applicableTours — may arrive as populated objects or contain null entries
     if (Array.isArray(updateData.applicableTours)) {
-      updateData.applicableTours = updateData.applicableTours.map((t: any) =>
-        typeof t === 'object' && t !== null ? String(t._id || t) : String(t)
-      );
+      updateData.applicableTours = updateData.applicableTours
+        .map((t: any) => {
+          if (!t) return null;
+          const id = typeof t === 'object' ? (t._id || t) : t;
+          return id ? String(id) : null;
+        })
+        .filter((id: string | null): id is string => !!id && id !== 'null' && id !== 'undefined');
     }
 
     // Validate dates if both provided
