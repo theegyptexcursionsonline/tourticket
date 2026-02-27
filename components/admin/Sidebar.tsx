@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -162,15 +161,27 @@ const AdminSidebar = () => {
           <div className={`${showLabel ? "flex-1 min-w-0" : ""}`}>
             <div className={`flex flex-col ${showLabel ? "items-start" : "items-center"} gap-3 min-w-0`}>
               {/* Logo */}
-              <div className={`relative h-10 flex-shrink-0 transition-all duration-300 ${showLabel ? "w-36" : "w-12"}`}>
-                <Image
+              <div className={`flex-shrink-0 transition-all duration-300 ${showLabel ? "w-36" : "w-12"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src="/EEO-logo.png"
-                  alt="Egypt Excursions Online logo"
-                  fill
-                  sizes={showLabel ? "144px" : "48px"}
-                  className="object-contain"
-                  priority
+                  alt="Egypt Excursions Online"
+                  width={showLabel ? 144 : 48}
+                  height={40}
+                  className="h-10 w-auto object-contain"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling;
+                    if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                  }}
                 />
+                <div
+                  className="h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg"
+                  style={{ display: 'none' }}
+                >
+                  EEO
+                </div>
               </div>
 
               {/* Title */}
