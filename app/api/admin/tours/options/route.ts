@@ -13,13 +13,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const tours = await Tour.find({})
-      .select('title')
+      .select('title bookingOptions')
       .sort({ title: 1 })
       .lean();
 
     const data = tours.map((t) => ({
+      _id: String(t._id),
       id: String(t._id),
       title: t.title,
+      bookingOptions: t.bookingOptions || [],
     }));
 
     return NextResponse.json({ success: true, data });
