@@ -14,18 +14,24 @@ export async function GET(request: NextRequest) {
     
     let settings = await HeroSettings.findOne({ isActive: true });
 
-    // Fix legacy .png paths that should be .jpg
+    // Migrate local paths to Cloudinary URLs
+    const heroCloudinary: Record<string, string> = {
+      '/hero1.jpg': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219754/eeo/hero/hero1.jpg',
+      '/hero2.jpg': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219765/eeo/hero/hero2.jpg',
+      '/hero3.jpg': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219769/eeo/hero/hero3.jpg',
+      '/hero2.png': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219765/eeo/hero/hero2.jpg',
+      '/hero3.png': 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219769/eeo/hero/hero3.jpg',
+    };
     if (settings) {
       let needsSave = false;
-      const fixes: Record<string, string> = { '/hero2.png': '/hero2.jpg', '/hero3.png': '/hero3.jpg' };
       for (const img of settings.backgroundImages) {
-        if (fixes[img.desktop]) {
-          img.desktop = fixes[img.desktop];
+        if (heroCloudinary[img.desktop]) {
+          img.desktop = heroCloudinary[img.desktop];
           needsSave = true;
         }
       }
-      if (settings.currentActiveImage && fixes[settings.currentActiveImage]) {
-        settings.currentActiveImage = fixes[settings.currentActiveImage];
+      if (settings.currentActiveImage && heroCloudinary[settings.currentActiveImage]) {
+        settings.currentActiveImage = heroCloudinary[settings.currentActiveImage];
         needsSave = true;
       }
       if (needsSave) await settings.save();
@@ -36,22 +42,22 @@ export async function GET(request: NextRequest) {
       settings = new HeroSettings({
         backgroundImages: [
           {
-            desktop: '/hero2.jpg',
+            desktop: 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219765/eeo/hero/hero2.jpg',
             alt: 'Pyramids of Giza at sunrise',
             isActive: true,
           },
           {
-            desktop: '/hero1.jpg',
+            desktop: 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219754/eeo/hero/hero1.jpg',
             alt: 'Felucca on the Nile at sunset',
             isActive: false,
           },
           {
-            desktop: '/hero3.jpg',
+            desktop: 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219769/eeo/hero/hero3.jpg',
             alt: 'Luxor temple columns at golden hour',
             isActive: false,
           }
         ],
-        currentActiveImage: '/hero2.jpg',
+        currentActiveImage: 'https://res.cloudinary.com/dm3sxllch/image/upload/v1772219765/eeo/hero/hero2.jpg',
         title: {
           main: 'Explore Egypt\'s Pyramids & Nile',
         },
