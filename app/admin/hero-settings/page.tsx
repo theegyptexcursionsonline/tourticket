@@ -11,7 +11,7 @@ import {
   Palette, Type, MousePointer, Users, Star, RefreshCw,
   Hash, Search, Play, Pause, Zap, Globe, Timer, Sparkles
 } from 'lucide-react';
-import Image from 'next/image';
+
 
 interface HeroSettings {
   _id?: string;
@@ -437,14 +437,14 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
                   }`}
                 >
                   <div className="aspect-video relative bg-slate-100">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={image.desktop}
                       alt={image.alt}
-                      fill
-                      className="object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        if (target.src !== '/image.png') {
+                        if (!target.src.endsWith('/image.png')) {
                           target.src = '/image.png';
                         }
                       }}
@@ -1258,14 +1258,14 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
               
               <div className="relative aspect-video bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
                 {editingSettings.currentActiveImage && (
-                  <Image
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
                     src={editingSettings.currentActiveImage}
                     alt="Hero preview"
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      if (target.src !== '/image.png') {
+                      if (!target.src.endsWith('/image.png')) {
                         target.src = '/image.png';
                       }
                     }}
