@@ -156,49 +156,45 @@ const AdminSidebar = () => {
         aria-expanded={isMobile ? isMobileOpen : isOpen}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-6 border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Logo */}
-            <div className="relative flex-shrink-0">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl opacity-10"></div>
-              <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl">
+        <div
+          className={`flex ${showLabel ? "items-start justify-between" : "items-center justify-center"} ${showLabel ? "px-6" : "px-4"} py-6 border-b border-slate-100 flex-shrink-0`}
+        >
+          <div className={`${showLabel ? "flex-1 min-w-0" : ""}`}>
+            <div className={`flex flex-col ${showLabel ? "items-start" : "items-center"} gap-3 min-w-0`}>
+              {/* Logo */}
+              <div className={`relative h-10 flex-shrink-0 transition-all duration-300 ${showLabel ? "w-36" : "w-12"}`}>
                 <Image
                   src="/EEO-logo.png"
-                  alt="Logo"
-                  width={24}
-                  height={24}
-                  className="rounded-sm filter brightness-0 invert"
+                  alt="Egypt Excursions Online logo"
+                  fill
+                  sizes={showLabel ? "144px" : "48px"}
+                  className="object-contain"
+                  priority
                 />
               </div>
-            </div>
 
-            {/* Title */}
-            <div
-              className={`transition-all duration-300 min-w-0 ${
-                !isOpen && !isMobile && "opacity-0 translate-x-2 overflow-hidden"
-              }`}
-            >
-              <h1 className="text-lg font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent truncate">
-                AdminPanel
-              </h1>
-              <p className="text-xs text-slate-500 -mt-0.5 truncate">
-                Egypt Excursions
-              </p>
+              {/* Title */}
+              {showLabel && (
+                <div className="min-w-0 w-full">
+                  <h1 className="text-lg font-bold text-slate-800 truncate leading-tight">
+                    Admin Panel
+                  </h1>
+                  <p className="text-[11px] text-slate-400 truncate leading-snug">
+                    Egypt Excursions Online
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Toggle button (Desktop only) */}
-          {!isMobile && (
+          {!isMobile && isOpen && (
             <button
               onClick={toggleSidebar}
               aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
               className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all duration-200 hover:scale-105 active:scale-95 border border-slate-200/50 flex-shrink-0"
             >
-              {isOpen ? (
-                <ChevronLeft className="h-4 w-4 text-slate-600" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-slate-600" />
-              )}
+              <ChevronLeft className="h-4 w-4 text-slate-600" />
             </button>
           )}
         </div>
