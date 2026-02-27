@@ -144,6 +144,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Sanitize tourOptionSelections and applicableTours
+    const safeTourOptionSelections = Array.isArray(tourOptionSelections)
+      ? tourOptionSelections
+          .map((sel: any) => {
+            const tid = sel?.tourId && typeof sel.tourId === 'object' ? sel.tourId._id : sel?.tourId;
+            if (!tid) return null;
+            return { ...sel, tourId: String(tid) };
+          })
+          .filter(Boolean)
+      : [];
+    const safeApplicableTours = Array.isArray(applicableTours)
+      ? applicableTours.map((t: any) => typeof t === 'object' && t !== null ? String(t._id || t) : String(t))
+      : [];
+
     const offer = new SpecialOffer({
       name: name.trim(),
       description: description?.trim(),
@@ -161,8 +175,8 @@ export async function POST(request: NextRequest) {
       travelStartDate: travelStartDate ? new Date(travelStartDate) : undefined,
       travelEndDate: travelEndDate ? new Date(travelEndDate) : undefined,
       bookingWindow: bookingWindow || undefined,
-      applicableTours: applicableTours || [],
-      tourOptionSelections: tourOptionSelections || [],
+      applicableTours: safeApplicableTours,
+      tourOptionSelections: safeTourOptionSelections,
       applicableCategories: applicableCategories || [],
       excludedTours: excludedTours || [],
       usageLimit: usageLimit || undefined,
@@ -219,6 +233,24 @@ export async function PUT(request: NextRequest) {
     if (updateData.travelStartDate) updateData.travelStartDate = new Date(updateData.travelStartDate);
     if (updateData.travelEndDate) updateData.travelEndDate = new Date(updateData.travelEndDate);
     if (updateData.code) updateData.code = updateData.code.toUpperCase().trim();
+
+    // Sanitize tourOptionSelections — tourId may arrive as a populated object
+    if (Array.isArray(updateData.tourOptionSelections)) {
+      updateData.tourOptionSelections = updateData.tourOptionSelections
+        .map((sel: any) => {
+          const tid = sel?.tourId && typeof sel.tourId === 'object' ? sel.tourId._id : sel?.tourId;
+          if (!tid) return null;
+          return { ...sel, tourId: String(tid) };
+        })
+        .filter(Boolean);
+    }
+
+    // Sanitize applicableTours — may arrive as populated objects
+    if (Array.isArray(updateData.applicableTours)) {
+      updateData.applicableTours = updateData.applicableTours.map((t: any) =>
+        typeof t === 'object' && t !== null ? String(t._id || t) : String(t)
+      );
+    }
 
     // Validate dates if both provided
     if (updateData.startDate && updateData.endDate && updateData.endDate <= updateData.startDate) {

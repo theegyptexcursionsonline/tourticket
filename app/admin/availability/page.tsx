@@ -114,7 +114,9 @@ const AvailabilityPage = () => {
         year: String(year),
       });
 
-      const response = await fetch(`/api/admin/availability?${params.toString()}`);
+      const response = await fetch(`/api/admin/availability?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -130,7 +132,7 @@ const AvailabilityPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedTour, month, year]);
+  }, [selectedTour, month, year, token]);
 
   useEffect(() => {
     fetchAvailability();
@@ -187,7 +189,7 @@ const AvailabilityPage = () => {
     try {
       const response = await fetch('/api/admin/availability', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           tourId: selectedTour,
           dates: Array.from(selectedDates),
@@ -521,6 +523,7 @@ function StopSaleRangeModal({
   onClose: () => void;
   onApplied: () => void;
 }) {
+  const { token } = useAdminAuth();
   const [tourId, setTourId] = useState(initialTourId);
   const [options, setOptions] = useState<Array<{ id: string; title: string }>>([]);
   const [allOptions, setAllOptions] = useState(true);
@@ -534,7 +537,9 @@ function StopSaleRangeModal({
     const load = async () => {
       if (!tourId) return;
       try {
-        const res = await fetch(`/api/tours/${tourId}/options`);
+        const res = await fetch(`/api/tours/${tourId}/options`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         const opts = Array.isArray(data) ? data : [];
         setOptions(opts.map((o: any) => ({ id: o.id, title: o.title })));
@@ -579,7 +584,7 @@ function StopSaleRangeModal({
 
       const res = await fetch('/api/admin/availability', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           tourId,
           dates,
@@ -733,6 +738,7 @@ function SlotEditorModal({
   onClose: () => void;
   onSave: () => void;
 }) {
+  const { token } = useAdminAuth();
   const [slots, setSlots] = useState<Slot[]>(
     existingData?.slots || [{ time: '09:00', capacity: 10, booked: 0, blocked: false }]
   );
@@ -754,7 +760,9 @@ function SlotEditorModal({
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const res = await fetch(`/api/tours/${tourId}/options`);
+        const res = await fetch(`/api/tours/${tourId}/options`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         const opts = Array.isArray(data) ? data : [];
         setTourOptions(opts.map((o: any) => ({ id: o.id, label: o.title })));
@@ -772,7 +780,7 @@ function SlotEditorModal({
     try {
       const res = await fetch('/api/admin/availability', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           tourId,
           dates: [date],
@@ -849,7 +857,7 @@ function SlotEditorModal({
     try {
       const response = await fetch('/api/admin/availability', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           tourId,
           date,

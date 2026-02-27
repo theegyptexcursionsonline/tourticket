@@ -21,7 +21,7 @@ interface BookingOption {
 }
 
 interface TourOptionSelection {
-  tourId: string;
+  tourId: string | { _id: string; title?: string; bookingOptions?: BookingOption[] };
   selectedOptions: string[];
   allOptions: boolean;
 }
@@ -92,7 +92,9 @@ const SpecialOffersPage = () => {
   const fetchOffers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/special-offers');
+      const response = await fetch('/api/admin/special-offers', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
       if (data.success) {
         setOffers(data.data || []);
@@ -103,7 +105,7 @@ const SpecialOffersPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [token]);
 
   // Fetch tours for selection
   const fetchTours = useCallback(async () => {
@@ -133,6 +135,7 @@ const SpecialOffersPage = () => {
     try {
       const response = await fetch(`/api/admin/special-offers?id=${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (data.success) {
@@ -152,7 +155,7 @@ const SpecialOffersPage = () => {
     try {
       const response = await fetch('/api/admin/special-offers', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ _id: offer._id, isActive: !offer.isActive }),
       });
       const data = await response.json();
@@ -488,6 +491,7 @@ function OfferModal({
   onClose: () => void;
   onSave: () => void;
 }) {
+  const { token } = useAdminAuth();
   const [formData, setFormData] = useState({
     name: offer?.name || '',
     description: offer?.description || '',
@@ -522,10 +526,16 @@ function OfferModal({
       }
       if (offer?.tourOptionSelections) {
         offer.tourOptionSelections.forEach(selection => {
-          map.set(selection.tourId, {
-            allOptions: selection.allOptions,
-            selectedOptions: selection.selectedOptions || [],
-          });
+          // tourId may be a populated object or a plain string
+          const tid = typeof selection.tourId === 'object' && selection.tourId !== null
+            ? (selection.tourId as { _id: string })._id
+            : selection.tourId;
+          if (tid) {
+            map.set(String(tid), {
+              allOptions: selection.allOptions,
+              selectedOptions: selection.selectedOptions || [],
+            });
+          }
         });
       }
       return map;
@@ -677,7 +687,7 @@ function OfferModal({
 
       const response = await fetch('/api/admin/special-offers', {
         method: offer ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
 
