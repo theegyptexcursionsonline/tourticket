@@ -44,6 +44,46 @@ const navItems = [
   { href: "/admin/team", label: "Team Access", icon: Shield, permissions: ["manageUsers"] },
 ];
 
+/** Bulletproof sidebar logo with cascading fallbacks */
+const SidebarLogo = ({ expanded }: { expanded: boolean }) => {
+  const [src, setSrc] = React.useState<string | null>("/EEO-logo-sm.png");
+
+  const handleError = () => {
+    if (src === "/EEO-logo-sm.png") {
+      // Try the original full-size logo
+      setSrc("/EEO-logo.png");
+    } else {
+      // Both images failed — show text fallback
+      setSrc(null);
+    }
+  };
+
+  if (!src) {
+    return (
+      <div
+        className={`flex-shrink-0 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white font-bold transition-all duration-300 ${
+          expanded ? "px-3 text-sm" : "w-10 text-lg"
+        }`}
+      >
+        {expanded ? "Egypt Excursions Online" : "EEO"}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex-shrink-0 transition-all duration-300 ${expanded ? "w-36" : "w-12"}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={src}
+        src={src}
+        alt="Egypt Excursions Online"
+        className="h-10 w-auto object-contain"
+        onError={handleError}
+      />
+    </div>
+  );
+};
+
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -160,29 +200,8 @@ const AdminSidebar = () => {
         >
           <div className={`${showLabel ? "flex-1 min-w-0" : ""}`}>
             <div className={`flex flex-col ${showLabel ? "items-start" : "items-center"} gap-3 min-w-0`}>
-              {/* Logo */}
-              <div className={`flex-shrink-0 transition-all duration-300 ${showLabel ? "w-36" : "w-12"}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/EEO-logo.png"
-                  alt="Egypt Excursions Online"
-                  width={showLabel ? 144 : 48}
-                  height={40}
-                  className="h-10 w-auto object-contain"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const fallback = target.nextElementSibling;
-                    if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                  }}
-                />
-                <div
-                  className="h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg"
-                  style={{ display: 'none' }}
-                >
-                  EEO
-                </div>
-              </div>
+              {/* Logo — bulletproof: optimised small → original → text fallback */}
+              <SidebarLogo expanded={showLabel} />
 
               {/* Title */}
               {showLabel && (
