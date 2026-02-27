@@ -29,7 +29,11 @@ import {
   Save,
   X,
   History,
-  Building2
+  Building2,
+  Globe,
+  Sparkles,
+  FileText,
+  Shield
 } from 'lucide-react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
@@ -90,6 +94,7 @@ interface BookingTour {
 interface BookingDetails {
   _id: string;
   bookingReference?: string;
+  source?: 'online' | 'manual';
   tour: BookingTour;
   user: BookingUser;
   date: string;
@@ -97,8 +102,11 @@ interface BookingDetails {
   time: string;
   guests: number;
   totalPrice: number;
-  currency?: string; // Currency code (USD, EUR, etc.)
+  currency?: string;
   status: BookingStatus;
+  // Payment
+  paymentStatus?: 'paid' | 'pending' | 'pay_on_arrival';
+  amountPaid?: number;
   // Enhanced fields
   adultGuests?: number;
   childGuests?: number;
@@ -107,6 +115,23 @@ interface BookingDetails {
   paymentMethod?: string;
   specialRequests?: string;
   emergencyContact?: string;
+  // Customer extras
+  customerPhone?: string;
+  customerCountry?: string;
+  // Pickup
+  pickupLocation?: string;
+  pickupAddress?: string;
+  // Internal
+  internalNotes?: string;
+  // Applied offer
+  appliedOffer?: {
+    id: string;
+    name: string;
+    offerType: string;
+    discountAmount: number;
+    discountValue: number;
+    endDate?: string;
+  };
   hotelPickupDetails?: string;
   hotelPickupLocation?: {
     address: string;
@@ -622,7 +647,12 @@ const BookingDetailPage = () => {
             <ArrowLeft className="h-5 w-5 text-slate-600" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Booking Details</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-slate-800">Booking Details</h1>
+              {booking.source === 'manual' && (
+                <span className="px-2.5 py-1 text-xs font-bold bg-emerald-100 text-emerald-700 rounded-full">Manual</span>
+              )}
+            </div>
             <p className="text-slate-500 text-sm">
               {booking.bookingReference ? (
                 <>Reference: <span className="font-mono font-semibold">{booking.bookingReference}</span></>
@@ -846,11 +876,32 @@ const BookingDetailPage = () => {
                   } 
                 />
               )}
+              {booking.customerPhone && !booking.user.phone && (
+                <DetailItem
+                  icon={Phone}
+                  label="Phone"
+                  value={
+                    <a
+                      href={`tel:${booking.customerPhone}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {booking.customerPhone}
+                    </a>
+                  }
+                />
+              )}
+              {booking.customerCountry && (
+                <DetailItem
+                  icon={Globe}
+                  label="Country"
+                  value={booking.customerCountry}
+                />
+              )}
               {booking.emergencyContact && (
-                <DetailItem 
-                  icon={Phone} 
-                  label="Emergency Contact" 
-                  value={booking.emergencyContact} 
+                <DetailItem
+                  icon={Shield}
+                  label="Emergency Contact"
+                  value={booking.emergencyContact}
                 />
               )}
             </div>
@@ -1136,10 +1187,25 @@ const BookingDetailPage = () => {
               Payment Information
             </h3>
             <div className="space-y-4">
+              {booking.paymentStatus && (
+                <DetailItem
+                  icon={DollarSign}
+                  label="Payment Status"
+                  value={
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                      booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                      booking.paymentStatus === 'pay_on_arrival' ? 'bg-amber-100 text-amber-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {booking.paymentStatus === 'pay_on_arrival' ? 'Pay on Arrival' : booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                    </span>
+                  }
+                />
+              )}
               {booking.paymentMethod && (
-                <DetailItem 
-                  icon={CreditCard} 
-                  label="Payment Method" 
+                <DetailItem
+                  icon={CreditCard}
+                  label="Payment Method"
                   value={
                     <span className="capitalize bg-slate-100 px-2 py-1 rounded text-sm">
                       {booking.paymentMethod}
@@ -1147,10 +1213,17 @@ const BookingDetailPage = () => {
                   }
                 />
               )}
+              {booking.amountPaid !== undefined && booking.amountPaid > 0 && (
+                <DetailItem
+                  icon={DollarSign}
+                  label="Amount Paid"
+                  value={`${getCurrencySymbol(booking.currency)}${booking.amountPaid.toFixed(2)}`}
+                />
+              )}
               {booking.paymentId && (
-                <DetailItem 
-                  icon={Hash} 
-                  label="Payment ID" 
+                <DetailItem
+                  icon={Hash}
+                  label="Payment ID"
                   value={
                     <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">
                       {booking.paymentId}
@@ -1226,6 +1299,43 @@ const BookingDetailPage = () => {
             </div>
           )}
 
+          {/* Pickup Details */}
+          {(booking.pickupLocation || booking.pickupAddress) && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200 flex items-center">
+                <MapPin className="w-5 h-5 mr-2 text-orange-500" />
+                Pickup Details
+              </h3>
+              <div className="space-y-4">
+                {booking.pickupLocation && (
+                  <DetailItem icon={MapPin} label="Location" value={booking.pickupLocation} />
+                )}
+                {booking.pickupAddress && (
+                  <DetailItem icon={Building2} label="Address" value={booking.pickupAddress} />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Applied Offer */}
+          {booking.appliedOffer && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+              <h3 className="font-bold text-amber-900 mb-3 flex items-center">
+                <Sparkles className="w-5 h-5 mr-2" />
+                Applied Offer
+              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-amber-800">{booking.appliedOffer.name}</p>
+                  <p className="text-sm text-amber-700 capitalize">{booking.appliedOffer.offerType.replace(/_/g, ' ')}</p>
+                </div>
+                <span className="text-lg font-bold text-green-700">
+                  -{getCurrencySymbol(booking.currency)}{booking.appliedOffer.discountAmount.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Special Requests */}
           {booking.specialRequests && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
@@ -1234,6 +1344,17 @@ const BookingDetailPage = () => {
                 Special Requests
               </h3>
               <p className="text-amber-800">{booking.specialRequests}</p>
+            </div>
+          )}
+
+          {/* Internal Notes */}
+          {booking.internalNotes && (
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+              <h3 className="font-bold text-slate-800 mb-3 flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-slate-500" />
+                Internal Notes
+              </h3>
+              <p className="text-slate-700 whitespace-pre-wrap">{booking.internalNotes}</p>
             </div>
           )}
 

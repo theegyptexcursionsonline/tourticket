@@ -5,6 +5,7 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
+import mongoose from 'mongoose';
 import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
@@ -46,44 +47,213 @@ function formatBookingDate(dateString: string | Date | undefined): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify admin authentication (cookie + Authorization header fallback)
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();
 
   try {
-    const bookings = await Booking.find({})
-      .populate({ 
-        path: 'tour', 
-        model: Tour, 
-        select: 'title image duration destination',
-        populate: {
-          path: 'destination',
-          model: Destination,
-          select: 'name slug',
-        }
-      })
-      .populate({ 
-        path: 'user', 
-        model: User, 
-        select: 'name email firstName lastName' 
-      })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { searchParams } = new URL(request.url);
+    const pageParam = searchParams.get('page');
+    const limitParam = searchParams.get('limit');
+    const search = (searchParams.get('search') || '').trim();
+    const status = (searchParams.get('status') || 'all').trim();
+    const tourIdParam = (searchParams.get('tourId') || '').trim();
+    const purchaseFrom = (searchParams.get('purchaseFrom') || '').trim();
+    const purchaseTo = (searchParams.get('purchaseTo') || '').trim();
+    const activityFrom = (searchParams.get('activityFrom') || '').trim();
+    const activityTo = (searchParams.get('activityTo') || '').trim();
+    const sortParam = (searchParams.get('sort') || 'createdAt_desc').trim();
 
-    // Filter out bookings with null tours (deleted tours) and ensure sort by createdAt desc
-    type LeanBooking = { tour: unknown | null; createdAt?: unknown };
-    const validBookings = (bookings as LeanBooking[]).filter((booking) => booking.tour !== null);
-    
-    // Sort explicitly to guarantee newest first (handle missing createdAt)
-    const sortedBookings = validBookings.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt as string | Date).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt as string | Date).getTime() : 0;
-      return dateB - dateA; // Newest first
+    const page = Math.max(1, Number.parseInt(pageParam || '1', 10) || 1);
+    const requestedLimit = Number.parseInt(limitParam || '10', 10) || 10;
+    const allowedLimits = new Set([10, 20, 50]);
+    const limit = allowedLimits.has(requestedLimit) ? requestedLimit : 10;
+    const skip = (page - 1) * limit;
+
+    const baseMatch: Record<string, unknown> = {};
+
+    // Status filter
+    if (status && status !== 'all') {
+      // Accept both lowercase codes and title-case DB values
+      const titleCase = status.charAt(0).toUpperCase() + status.slice(1);
+      const mapped: Record<string, string> = {
+        pending: 'Pending',
+        confirmed: 'Confirmed',
+        cancelled: 'Cancelled',
+        refunded: 'Refunded',
+        partial_refund: 'Partial_Refund',
+        partial_refunded: 'Partial_Refund',
+      };
+      baseMatch.status = mapped[status.toLowerCase()] || titleCase;
+    }
+
+    // Tour filter
+    if (tourIdParam && mongoose.Types.ObjectId.isValid(tourIdParam)) {
+      baseMatch.tour = new mongoose.Types.ObjectId(tourIdParam);
+    }
+
+    // Date helpers
+    const parseDayStartUtc = (dateStr: string): Date | null => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+      return new Date(`${dateStr}T00:00:00.000Z`);
+    };
+    const parseDayEndUtc = (dateStr: string): Date | null => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+      return new Date(`${dateStr}T23:59:59.999Z`);
+    };
+
+    // Purchase date range (createdAt)
+    const createdAtFrom = parseDayStartUtc(purchaseFrom);
+    const createdAtTo = parseDayEndUtc(purchaseTo);
+    if (createdAtFrom || createdAtTo) {
+      baseMatch.createdAt = {
+        ...(createdAtFrom ? { $gte: createdAtFrom } : {}),
+        ...(createdAtTo ? { $lte: createdAtTo } : {}),
+      };
+    }
+
+    // Activity date range (tour date)
+    const dateFrom = parseDayStartUtc(activityFrom);
+    const dateTo = parseDayEndUtc(activityTo);
+    if (dateFrom || dateTo) {
+      baseMatch.date = {
+        ...(dateFrom ? { $gte: dateFrom } : {}),
+        ...(dateTo ? { $lte: dateTo } : {}),
+      };
+    }
+
+    // Sort mapping
+    const sortMap: Record<string, Record<string, 1 | -1>> = {
+      createdAt_desc: { createdAt: -1 },
+      createdAt_asc: { createdAt: 1 },
+      activityDate_desc: { date: -1 },
+      activityDate_asc: { date: 1 },
+    };
+    const sortStage = sortMap[sortParam] || sortMap.createdAt_desc;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pipeline: any[] = [
+      { $match: baseMatch },
+      // Join Tour
+      {
+        $lookup: {
+          from: 'tours',
+          localField: 'tour',
+          foreignField: '_id',
+          as: 'tour',
+        },
+      },
+      { $unwind: { path: '$tour', preserveNullAndEmptyArrays: true } },
+      // Join Destination
+      {
+        $lookup: {
+          from: 'destinations',
+          localField: 'tour.destination',
+          foreignField: '_id',
+          as: 'destination',
+        },
+      },
+      { $unwind: { path: '$destination', preserveNullAndEmptyArrays: true } },
+      // Join User
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      // Derived strings for search
+      {
+        $addFields: {
+          idStr: { $toString: '$_id' },
+        },
+      },
+    ];
+
+    if (search) {
+      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(safe, 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { bookingReference: { $regex: regex } },
+            { idStr: { $regex: regex } },
+            { 'user.name': { $regex: regex } },
+            { 'user.email': { $regex: regex } },
+            { 'user.firstName': { $regex: regex } },
+            { 'user.lastName': { $regex: regex } },
+            { 'tour.title': { $regex: regex } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
+      { $sort: sortStage },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 1,
+                bookingReference: 1,
+                source: 1,
+                date: 1,
+                dateString: 1,
+                time: 1,
+                guests: 1,
+                adultGuests: 1,
+                childGuests: 1,
+                infantGuests: 1,
+                totalPrice: 1,
+                currency: 1,
+                status: 1,
+                paymentMethod: 1,
+                paymentStatus: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                tour: {
+                  _id: '$tour._id',
+                  title: '$tour.title',
+                  image: '$tour.image',
+                  duration: '$tour.duration',
+                  destination: {
+                    _id: '$destination._id',
+                    name: '$destination.name',
+                    slug: '$destination.slug',
+                  },
+                },
+                user: {
+                  _id: '$user._id',
+                  name: '$user.name',
+                  firstName: '$user.firstName',
+                  lastName: '$user.lastName',
+                  email: '$user.email',
+                },
+              },
+            },
+          ],
+          meta: [{ $count: 'total' }],
+        },
+      }
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [result] = await (Booking as any).aggregate(pipeline).allowDiskUse(true);
+    const data = result?.data || [];
+    const total = result?.meta?.[0]?.total || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return NextResponse.json({
+      success: true,
+      data,
+      meta: { total, page, limit, totalPages },
     });
-
-    return NextResponse.json(sortedBookings);
   } catch (error) {
     console.error('Failed to fetch bookings:', error);
     return NextResponse.json({ message: 'Failed to fetch bookings' }, { status: 500 });

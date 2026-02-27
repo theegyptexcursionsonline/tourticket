@@ -23,6 +23,8 @@ import {
   Layout,
   ImageIcon,
   Shield,
+  CalendarCheck,
+  Gift,
 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 
@@ -36,6 +38,8 @@ const navItems = [
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare, permissions: ["manageContent"] },
   { href: "/admin/reports", label: "Reports", icon: TrendingUp, permissions: ["manageReports"] },
   { href: "/admin/tours", label: "Tours", icon: Compass, permissions: ["manageTours"] },
+  { href: "/admin/availability", label: "Availability", icon: CalendarCheck, permissions: ["manageTours"] },
+  { href: "/admin/special-offers", label: "Special Offers", icon: Gift, permissions: ["manageTours"] },
   { href: "/admin/destinations", label: "Destination", icon: Map, permissions: ["manageContent"] },
   { href: "/admin/attraction-pages", label: "Attraction", icon: Layout, permissions: ["manageContent"] },
   { href: "/admin/categories", label: "Category", icon: Tag, permissions: ["manageContent"] },
