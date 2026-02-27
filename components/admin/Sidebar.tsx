@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import logoSm from "@/public/EEO-logo-sm.png";
 import {
   LayoutDashboard,
   Map,
@@ -48,41 +50,19 @@ const navItems = [
   { href: "/admin/team", label: "Team Access", icon: Shield, permissions: ["manageUsers"] },
 ];
 
-/** Bulletproof sidebar logo with cascading fallbacks */
+/** Sidebar logo — statically imported so it's always bundled */
 const SidebarLogo = ({ expanded }: { expanded: boolean }) => {
-  const [src, setSrc] = React.useState<string | null>("/EEO-logo-sm.png");
-
-  const handleError = () => {
-    if (src === "/EEO-logo-sm.png") {
-      // Try the original full-size logo
-      setSrc("/EEO-logo.png");
-    } else {
-      // Both images failed — show text fallback
-      setSrc(null);
-    }
-  };
-
-  if (!src) {
-    return (
-      <div
-        className={`flex-shrink-0 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white font-bold transition-all duration-300 ${
-          expanded ? "px-3 text-sm" : "w-10 text-lg"
-        }`}
-      >
-        {expanded ? "Egypt Excursions Online" : "EEO"}
-      </div>
-    );
-  }
-
   return (
-    <div className={`flex-shrink-0 transition-all duration-300 ${expanded ? "w-36" : "w-12"}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        key={src}
-        src={src}
+    <div
+      className={`flex-shrink-0 overflow-hidden rounded-xl transition-all duration-300 ${
+        expanded ? "h-10 w-40" : "h-10 w-10"
+      }`}
+    >
+      <Image
+        src={logoSm}
         alt="Egypt Excursions Online"
-        className="h-10 w-auto object-contain"
-        onError={handleError}
+        className="h-full w-full object-cover"
+        priority
       />
     </div>
   );
