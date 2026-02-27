@@ -3,10 +3,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Admin Authentication', () => {
   test('admin routes on main domain redirect to dashboard subdomain', async ({ request }) => {
     const response = await request.get('/admin', { maxRedirects: 0 });
-    // Should redirect (307) to dashboard.egypt-excursionsonline.com
+    // Should redirect (307) to dashboard2.egypt-excursionsonline.com
     expect(response.status()).toBe(307);
     const location = response.headers()['location'];
-    expect(location).toContain('dashboard.egypt-excursionsonline.com');
+    expect(location).toContain('dashboard2.egypt-excursionsonline.com');
   });
 
   test('admin API without auth returns 401', async ({ request }) => {

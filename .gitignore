@@ -68,3 +68,6 @@ Thumbs.db
 
 # Markdown files
 *.md
+
+# Local Netlify folder
+.netlify

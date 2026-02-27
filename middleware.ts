@@ -9,9 +9,10 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
 
-  // Subdomain routing: dashboard.* → /admin
+  // Subdomain routing: dashboard/dashboard2/admin.* → /admin
   const isDashboardSubdomain =
     hostname.startsWith('dashboard.') ||
+    hostname.startsWith('dashboard2.') ||
     hostname.startsWith('admin.');
 
   if (isDashboardSubdomain && !pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
@@ -23,7 +24,7 @@ export function middleware(request: NextRequest) {
   // Redirect main domain /admin to dashboard subdomain
   if (!isDashboardSubdomain && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
     const adminPath = pathname.replace(/^\/admin/, '') || '/';
-    const dashboardUrl = new URL(`https://dashboard.egypt-excursionsonline.com${adminPath}`);
+    const dashboardUrl = new URL(`https://dashboard2.egypt-excursionsonline.com${adminPath}`);
     dashboardUrl.search = request.nextUrl.search;
     return NextResponse.redirect(dashboardUrl);
   }
