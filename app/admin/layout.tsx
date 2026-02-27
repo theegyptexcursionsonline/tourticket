@@ -13,9 +13,9 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 // 2. Create a component for the protected content
 const ProtectedAdminContent = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 md:p-8">
           {children}
