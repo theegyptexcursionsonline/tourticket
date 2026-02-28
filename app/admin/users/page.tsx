@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import withAuth from '@/components/admin/withAuth';
-import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2 } from 'lucide-react';
+import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2, Search, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
@@ -14,6 +14,8 @@ interface User {
   email: string;
   createdAt: string;
   bookingCount: number;
+  authProvider?: string;
+  phone?: string;
 }
 
 interface UserStats {
@@ -22,6 +24,9 @@ interface UserStats {
   activeThisMonth: number;
   averageBookingsPerUser: number;
 }
+
+// Firebase UIDs and other non-human names are long alphanumeric strings
+const looksLikeUid = (name: string) => /^[a-zA-Z0-9]{20,}$/.test(name.replace(/\s/g, ''));
 
 const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -34,6 +39,7 @@ const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { token } = useAdminAuth();
 
   useEffect(() => {
@@ -41,6 +47,19 @@ const UsersPage = () => {
       fetchUsers();
     }
   }, [token]);
+
+  const computeStats = (data: User[]): UserStats => {
+    const totalUsers = data.length;
+    const totalBookings = data.reduce((sum, user) => sum + user.bookingCount, 0);
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const activeThisMonth = data.filter((user) => {
+      const userDate = new Date(user.createdAt);
+      return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
+    }).length;
+    const averageBookingsPerUser = totalUsers > 0 ? Math.round((totalBookings / totalUsers) * 10) / 10 : 0;
+    return { totalUsers, totalBookings, activeThisMonth, averageBookingsPerUser };
+  };
 
   const fetchUsers = async () => {
     if (!token) return;
@@ -56,23 +75,7 @@ const UsersPage = () => {
       }
       const data = await response.json();
       setUsers(data);
-      
-      const totalUsers = data.length;
-      const totalBookings = data.reduce((sum: number, user: User) => sum + user.bookingCount, 0);
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      const activeThisMonth = data.filter((user: User) => {
-        const userDate = new Date(user.createdAt);
-        return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
-      }).length;
-      const averageBookingsPerUser = totalUsers > 0 ? Math.round((totalBookings / totalUsers) * 10) / 10 : 0;
-      
-      setStats({
-        totalUsers,
-        totalBookings,
-        activeThisMonth,
-        averageBookingsPerUser
-      });
+      setStats(computeStats(data));
     } catch (err) {
       setError((err as Error).message);
       toast.error('Failed to load users');
@@ -82,24 +85,52 @@ const UsersPage = () => {
   };
 
   const getUserDisplayName = (user: User) => {
-    if (user.name) return user.name;
+    // Prefer firstName + lastName
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
     if (user.firstName) return user.firstName;
+    // Use name only if it doesn't look like a Firebase UID
+    if (user.name && !looksLikeUid(user.name)) return user.name;
+    // Fallback to email prefix
     return user.email.split('@')[0];
   };
+
+  const getAuthBadge = (provider?: string) => {
+    switch (provider) {
+      case 'google':
+        return { label: 'Google', className: 'bg-blue-50 text-blue-700 border-blue-200' };
+      case 'firebase':
+        return { label: 'Firebase', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'jwt':
+        return { label: 'Email', className: 'bg-green-50 text-green-700 border-green-200' };
+      default:
+        return { label: 'Email', className: 'bg-slate-50 text-slate-600 border-slate-200' };
+    }
+  };
+
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const q = searchQuery.toLowerCase();
+    return users.filter((user) => {
+      const name = getUserDisplayName(user).toLowerCase();
+      const email = user.email.toLowerCase();
+      const id = user._id.toLowerCase();
+      return name.includes(q) || email.includes(q) || id.includes(q);
+    });
+  }, [users, searchQuery]);
 
   const handleDeleteUser = async (userId: string, userEmail: string) => {
     const userName = users.find(u => u._id === userId);
     const displayName = userName ? getUserDisplayName(userName) : userEmail;
-    
+
     const confirmMessage = `Are you sure you want to delete this user?\n\nName: ${displayName}\nEmail: ${userEmail}\n\nThis action cannot be undone and will also delete all associated bookings and data.`;
-    
+
     if (!confirm(confirmMessage)) {
       return;
     }
 
-    const doubleConfirm = confirm('⚠️ FINAL WARNING: This will permanently delete the user and all their data. Are you absolutely sure?');
-    
+    const doubleConfirm = confirm('\u26a0\ufe0f FINAL WARNING: This will permanently delete the user and all their data. Are you absolutely sure?');
+
     if (!doubleConfirm) {
       return;
     }
@@ -127,25 +158,9 @@ const UsersPage = () => {
 
       if (data.success) {
         toast.success(`User "${displayName}" deleted successfully`);
-        setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
-        
         const updatedUsers = users.filter(user => user._id !== userId);
-        const totalUsers = updatedUsers.length;
-        const totalBookings = updatedUsers.reduce((sum, user) => sum + user.bookingCount, 0);
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const activeThisMonth = updatedUsers.filter((user) => {
-          const userDate = new Date(user.createdAt);
-          return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
-        }).length;
-        const averageBookingsPerUser = totalUsers > 0 ? Math.round((totalBookings / totalUsers) * 10) / 10 : 0;
-        
-        setStats({
-          totalUsers,
-          totalBookings,
-          activeThisMonth,
-          averageBookingsPerUser
-        });
+        setUsers(updatedUsers);
+        setStats(computeStats(updatedUsers));
       } else {
         throw new Error(data.error || 'Failed to delete user');
       }
@@ -164,7 +179,7 @@ const UsersPage = () => {
           <div className="h-8 w-8 bg-slate-200 rounded mr-3" />
           <div className="h-8 w-64 bg-slate-200 rounded" />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white p-6 rounded-xl shadow-lg">
@@ -227,14 +242,24 @@ const UsersPage = () => {
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
-      <div className="flex items-center mb-8">
-        <div className="p-2 bg-slate-100 rounded-lg mr-4">
-          <Users className="h-8 w-8 text-slate-600" />
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center">
+          <div className="p-2 bg-slate-100 rounded-lg mr-4">
+            <Users className="h-8 w-8 text-slate-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-800">User Management</h1>
+            <p className="text-slate-500 mt-1">Manage and monitor your platform users</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-800">User Management</h1>
-          <p className="text-slate-500 mt-1">Manage and monitor your platform users</p>
-        </div>
+        <button
+          onClick={fetchUsers}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -268,18 +293,64 @@ const UsersPage = () => {
 
       {/* Users List */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        {/* Header with search */}
         <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-800">All Users</h2>
-          <p className="text-slate-500 text-sm">Complete list of registered users</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">All Users</h2>
+              <p className="text-slate-500 text-sm">
+                {searchQuery
+                  ? `${filteredUsers.length} of ${users.length} users`
+                  : `${users.length} registered users`}
+              </p>
+            </div>
+            {/* Search Box */}
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent bg-slate-50 placeholder-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {users.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <div className="text-center py-16">
             <div className="mx-auto w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <Users className="h-12 w-12 text-slate-400" />
+              {searchQuery ? (
+                <Search className="h-12 w-12 text-slate-400" />
+              ) : (
+                <Users className="h-12 w-12 text-slate-400" />
+              )}
             </div>
-            <h3 className="text-lg font-semibold text-slate-600 mb-2">No Users Yet</h3>
-            <p className="text-slate-400">No users have registered on your platform yet.</p>
+            <h3 className="text-lg font-semibold text-slate-600 mb-2">
+              {searchQuery ? 'No Users Found' : 'No Users Yet'}
+            </h3>
+            <p className="text-slate-400">
+              {searchQuery
+                ? `No users matching "${searchQuery}"`
+                : 'No users have registered on your platform yet.'}
+            </p>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-4 text-sm text-slate-600 underline hover:text-slate-800"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -298,16 +369,17 @@ const UsersPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Bookings
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const displayName = getUserDisplayName(user);
                   const initial = displayName.charAt(0).toUpperCase();
-                  
+                  const authBadge = getAuthBadge(user.authProvider);
+
                   return (
                     <tr key={user._id} className="hover:bg-slate-50 transition-colors duration-200">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -316,21 +388,26 @@ const UsersPage = () => {
                             {initial}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-slate-800 truncate">
+                            <div className="font-semibold text-slate-800 truncate max-w-[200px]">
                               {displayName}
                             </div>
-                            <div className="text-xs text-slate-500">ID: {user._id.slice(-6)}</div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-slate-400">ID: {user._id.slice(-6)}</span>
+                              <span className={`inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded border ${authBadge.className}`}>
+                                {authBadge.label}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>
-                      
+
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-slate-600">
                           <Mail className="h-4 w-4 mr-2 text-slate-400 flex-shrink-0" />
-                          <span className="text-sm truncate">{user.email}</span>
+                          <span className="text-sm truncate max-w-[200px]">{user.email}</span>
                         </div>
                       </td>
-                      
+
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-slate-600">
                           <Calendar className="h-4 w-4 mr-2 text-slate-400 flex-shrink-0" />
@@ -343,7 +420,7 @@ const UsersPage = () => {
                           </span>
                         </div>
                       </td>
-                      
+
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100">
                           <BookOpen className="h-4 w-4 mr-1 text-slate-500" />
@@ -352,12 +429,12 @@ const UsersPage = () => {
                           </span>
                         </div>
                       </td>
-                      
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
+
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
                           onClick={() => handleDeleteUser(user._id, user.email)}
                           disabled={deletingUserId === user._id}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-300 hover:border-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-300 hover:border-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Delete User"
                         >
                           {deletingUserId === user._id ? (
