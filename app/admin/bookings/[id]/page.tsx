@@ -95,8 +95,8 @@ interface BookingDetails {
   _id: string;
   bookingReference?: string;
   source?: 'online' | 'manual';
-  tour: BookingTour;
-  user: BookingUser;
+  tour: BookingTour | null;
+  user: BookingUser | null;
   date: string;
   dateString?: string;
   time: string;
@@ -468,12 +468,13 @@ const BookingDetailPage = () => {
     return status;
   };
 
-  const formatUserName = (user: BookingUser) => {
+  const formatUserName = (user: BookingUser | null | undefined) => {
+    if (!user) return 'Unknown Customer';
     if (user.name) return user.name;
     if (user.firstName && user.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
-    return user.firstName || user.email;
+    return user.firstName || user.email || 'Unknown';
   };
 
   const formatGuestBreakdown = (booking: BookingDetails) => {
@@ -686,16 +687,16 @@ const BookingDetailPage = () => {
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
             <div className="aspect-video rounded-t-lg overflow-hidden bg-slate-100">
               <Image
-                src={booking.tour.image || booking.tour.images?.[0] || '/bg.png'}
-                alt={booking.tour.title}
+                src={booking.tour?.image || booking.tour?.images?.[0] || '/bg.png'}
+                alt={booking.tour?.title || 'Tour'}
                 width={500}
                 height={300}
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="p-4">
-              <h2 className="text-lg font-bold text-slate-900 mb-2">{booking.tour.title}</h2>
-              {booking.tour.destination && (
+              <h2 className="text-lg font-bold text-slate-900 mb-2">{booking.tour?.title || 'Tour (data unavailable)'}</h2>
+              {booking.tour?.destination && (
                 <div className="flex items-center text-sm text-slate-600 mb-4">
                   <MapPin size={14} className="mr-1" />
                   {booking.tour.destination.name}
@@ -850,33 +851,35 @@ const BookingDetailPage = () => {
                 label="Name" 
                 value={formatUserName(booking.user)} 
               />
-              <DetailItem 
-                icon={Mail} 
-                label="Email" 
-                value={
-                  <a 
-                    href={`mailto:${booking.user.email}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    {booking.user.email}
-                  </a>
-                }
-              />
-              {booking.user.phone && (
-                <DetailItem 
-                  icon={Phone} 
-                  label="Phone" 
+              {booking.user?.email && (
+                <DetailItem
+                  icon={Mail}
+                  label="Email"
                   value={
-                    <a 
+                    <a
+                      href={`mailto:${booking.user.email}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {booking.user.email}
+                    </a>
+                  }
+                />
+              )}
+              {booking.user?.phone && (
+                <DetailItem
+                  icon={Phone}
+                  label="Phone"
+                  value={
+                    <a
                       href={`tel:${booking.user.phone}`}
                       className="text-blue-600 hover:text-blue-800 hover:underline"
                     >
                       {booking.user.phone}
                     </a>
-                  } 
+                  }
                 />
               )}
-              {booking.customerPhone && !booking.user.phone && (
+              {booking.customerPhone && !booking.user?.phone && (
                 <DetailItem
                   icon={Phone}
                   label="Phone"
@@ -966,7 +969,7 @@ const BookingDetailPage = () => {
               />
               
               {/* Booking Option - Editable */}
-              {isEditing && booking.tour.bookingOptions && booking.tour.bookingOptions.length > 0 ? (
+              {isEditing && booking.tour?.bookingOptions && booking.tour.bookingOptions.length > 0 ? (
                 <div className="flex items-start text-slate-700">
                   <Package className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
@@ -974,7 +977,7 @@ const BookingDetailPage = () => {
                     <select
                       value={editedBookingOption?.title || booking.selectedBookingOption?.title || ''}
                       onChange={(e) => {
-                        const selected = booking.tour.bookingOptions?.find(o => o.title === e.target.value);
+                        const selected = booking.tour?.bookingOptions?.find(o => o.title === e.target.value);
                         if (selected) {
                           setEditedBookingOption({
                             id: selected.id || selected._id || '',
@@ -1020,14 +1023,14 @@ const BookingDetailPage = () => {
                 />
               ) : null}
               
-              {booking.tour.duration && !booking.selectedBookingOption?.duration && (
+              {booking.tour?.duration && !booking.selectedBookingOption?.duration && (
                 <DetailItem
                   icon={Tag}
                   label="Duration"
                   value={booking.tour.duration}
                 />
               )}
-              {booking.tour.meetingPoint && (
+              {booking.tour?.meetingPoint && (
                 <DetailItem
                   icon={MapPin}
                   label="Meeting Point"
@@ -1375,7 +1378,7 @@ const BookingDetailPage = () => {
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>Contact customer: {booking.user.email}</span>
+                <span>Contact customer: {booking.user?.email || 'N/A'}</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
