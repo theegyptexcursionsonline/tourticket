@@ -170,6 +170,12 @@ interface BookingDetails {
   updatedAt: string;
 }
 
+// Safe toFixed helper - handles undefined/null/NaN values
+const safeToFixed = (value: number | undefined | null, digits = 2): string => {
+  if (value === undefined || value === null || isNaN(Number(value))) return (0).toFixed(digits);
+  return Number(value).toFixed(digits);
+};
+
 // Currency symbol mapping
 const getCurrencySymbol = (currency?: string): string => {
   const symbols: { [key: string]: string } = {
@@ -705,7 +711,7 @@ const BookingDetailPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-50 rounded-lg p-3">
                     <div className="text-xl font-bold text-slate-900">
-                      {getCurrencySymbol(booking.currency)}{booking.totalPrice.toFixed(2)}
+                      {getCurrencySymbol(booking.currency)}{safeToFixed(booking.totalPrice)}
                       {booking.currency && booking.currency !== 'USD' && (
                         <span className="text-sm text-slate-400 ml-1">{booking.currency}</span>
                       )}
@@ -770,7 +776,7 @@ const BookingDetailPage = () => {
               {(booking.status === 'Refunded' || booking.status === 'Partial_Refund') && booking.refundAmount && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm font-medium text-blue-800">
-                    Refund Amount: {getCurrencySymbol(booking.currency)}{booking.refundAmount.toFixed(2)}
+                    Refund Amount: {getCurrencySymbol(booking.currency)}{safeToFixed(booking.refundAmount)}
                   </p>
                   {booking.refundDate && (
                     <p className="text-xs text-blue-600 mt-1">
@@ -993,7 +999,7 @@ const BookingDetailPage = () => {
                     >
                       {booking.tour.bookingOptions.map((option) => (
                         <option key={option.id || option._id || option.title} value={option.title}>
-                          {option.title} - ${option.price.toFixed(2)}
+                          {option.title} - ${safeToFixed(option.price)}
                         </option>
                       ))}
                     </select>
@@ -1061,7 +1067,7 @@ const BookingDetailPage = () => {
                       {booking.hotelPickupLocation && (
                         <>
                           <div className="text-xs text-slate-500">
-                            📍 Coordinates: {booking.hotelPickupLocation.lat.toFixed(6)}, {booking.hotelPickupLocation.lng.toFixed(6)}
+                            📍 Coordinates: {safeToFixed(booking.hotelPickupLocation.lat, 6)}, {safeToFixed(booking.hotelPickupLocation.lng, 6)}
                           </div>
                           <div className="mt-3">
                             <a
@@ -1115,14 +1121,14 @@ const BookingDetailPage = () => {
               <div className="space-y-3">
                 {booking.adultGuests && booking.adultGuests > 0 && (
                   <div className="flex justify-between text-slate-700">
-                    <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} ({getCurrencySymbol(booking.currency)}{(booking.selectedBookingOption?.price || 0).toFixed(2)})</span>
-                    <span className="font-semibold">{getCurrencySymbol(booking.currency)}{pricing.adultPrice.toFixed(2)}</span>
+                    <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} ({getCurrencySymbol(booking.currency)}{safeToFixed(booking.selectedBookingOption?.price)})</span>
+                    <span className="font-semibold">{getCurrencySymbol(booking.currency)}{safeToFixed(pricing.adultPrice)}</span>
                   </div>
                 )}
                 {booking.childGuests && booking.childGuests > 0 && (
                   <div className="flex justify-between text-slate-700">
-                    <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} ({getCurrencySymbol(booking.currency)}{((booking.selectedBookingOption?.price || 0) / 2).toFixed(2)})</span>
-                    <span className="font-semibold">{getCurrencySymbol(booking.currency)}{pricing.childPrice.toFixed(2)}</span>
+                    <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} ({getCurrencySymbol(booking.currency)}{safeToFixed((booking.selectedBookingOption?.price || 0) / 2)})</span>
+                    <span className="font-semibold">{getCurrencySymbol(booking.currency)}{safeToFixed(pricing.childPrice)}</span>
                   </div>
                 )}
                 {booking.infantGuests && booking.infantGuests > 0 && (
@@ -1137,7 +1143,7 @@ const BookingDetailPage = () => {
                     <div className="border-t pt-3 mt-3"></div>
                     <div className="flex justify-between text-slate-700">
                       <span>Add-ons</span>
-                      <span className="font-semibold">{getCurrencySymbol(booking.currency)}{pricing.addOnsTotal.toFixed(2)}</span>
+                      <span className="font-semibold">{getCurrencySymbol(booking.currency)}{safeToFixed(pricing.addOnsTotal)}</span>
                     </div>
                   </>
                 )}
@@ -1145,15 +1151,15 @@ const BookingDetailPage = () => {
                 <div className="border-t pt-3 mt-3"></div>
                 <div className="flex justify-between text-slate-700">
                   <span>Subtotal</span>
-                  <span className="font-semibold">{getCurrencySymbol(booking.currency)}{pricing.subtotal.toFixed(2)}</span>
+                  <span className="font-semibold">{getCurrencySymbol(booking.currency)}{safeToFixed(pricing.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600 text-sm">
                   <span>Service Fee (3%)</span>
-                  <span>{getCurrencySymbol(booking.currency)}{pricing.serviceFee.toFixed(2)}</span>
+                  <span>{getCurrencySymbol(booking.currency)}{safeToFixed(pricing.serviceFee)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600 text-sm">
                   <span>Tax (5%)</span>
-                  <span>{getCurrencySymbol(booking.currency)}{pricing.tax.toFixed(2)}</span>
+                  <span>{getCurrencySymbol(booking.currency)}{safeToFixed(pricing.tax)}</span>
                 </div>
                 
                 {booking.discountAmount && booking.discountAmount > 0 && (
@@ -1166,14 +1172,14 @@ const BookingDetailPage = () => {
                         </span>
                       )}
                     </span>
-                    <span className="font-semibold">-{getCurrencySymbol(booking.currency)}{booking.discountAmount.toFixed(2)}</span>
+                    <span className="font-semibold">-{getCurrencySymbol(booking.currency)}{safeToFixed(booking.discountAmount)}</span>
                   </div>
                 )}
 
                 <div className="border-t-2 border-slate-300 pt-3 mt-3 flex justify-between">
                   <span className="text-lg font-bold text-slate-900">Total Paid</span>
                   <span className="text-lg font-bold text-green-600">
-                    {getCurrencySymbol(booking.currency)}{pricing.total.toFixed(2)}
+                    {getCurrencySymbol(booking.currency)}{safeToFixed(pricing.total)}
                     {booking.currency && booking.currency !== 'USD' && (
                       <span className="text-sm text-slate-400 ml-1">{booking.currency}</span>
                     )}
@@ -1220,7 +1226,7 @@ const BookingDetailPage = () => {
                 <DetailItem
                   icon={DollarSign}
                   label="Amount Paid"
-                  value={`${getCurrencySymbol(booking.currency)}${booking.amountPaid.toFixed(2)}`}
+                  value={`${getCurrencySymbol(booking.currency)}${safeToFixed(booking.amountPaid)}`}
                 />
               )}
               {booking.paymentId && (
@@ -1245,7 +1251,7 @@ const BookingDetailPage = () => {
                       </span>
                       {booking.discountAmount && booking.discountAmount > 0 && (
                         <span className="text-green-600 font-medium">
-                          (-{getCurrencySymbol(booking.currency)}{booking.discountAmount.toFixed(2)})
+                          (-{getCurrencySymbol(booking.currency)}{safeToFixed(booking.discountAmount)})
                         </span>
                       )}
                     </div>
@@ -1289,10 +1295,10 @@ const BookingDetailPage = () => {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold text-slate-700">
-                                          {getCurrencySymbol(booking.currency)}{addOnTotal.toFixed(2)}
+                                          {getCurrencySymbol(booking.currency)}{safeToFixed(addOnTotal)}
                         </div>
                         <div className="text-xs text-slate-500">
-                                          {getCurrencySymbol(booking.currency)}{addOnDetail.price.toFixed(2)} {addOnDetail.perGuest ? 'per guest' : 'total'}
+                                          {getCurrencySymbol(booking.currency)}{safeToFixed(addOnDetail.price)} {addOnDetail.perGuest ? 'per guest' : 'total'}
                         </div>
                       </div>
                     </div>
@@ -1333,7 +1339,7 @@ const BookingDetailPage = () => {
                   <p className="text-sm text-amber-700 capitalize">{booking.appliedOffer.offerType.replace(/_/g, ' ')}</p>
                 </div>
                 <span className="text-lg font-bold text-green-700">
-                  -{getCurrencySymbol(booking.currency)}{booking.appliedOffer.discountAmount.toFixed(2)}
+                  -{getCurrencySymbol(booking.currency)}{safeToFixed(booking.appliedOffer.discountAmount)}
                 </span>
               </div>
             </div>
@@ -1405,7 +1411,7 @@ const BookingDetailPage = () => {
                 Process {refundType === 'Refunded' ? 'Full' : 'Partial'} Refund
               </h3>
               <p className="text-sm text-slate-600 text-center mb-6">
-                Original booking amount: {getCurrencySymbol(booking.currency)}{booking.totalPrice.toFixed(2)} {booking.currency || 'USD'}
+                Original booking amount: {getCurrencySymbol(booking.currency)}{safeToFixed(booking.totalPrice)} {booking.currency || 'USD'}
               </p>
               
               <div className="space-y-4">
