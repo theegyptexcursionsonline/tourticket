@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import {
   Star, Clock, Users, MapPin, Heart, ShoppingCart, ArrowRight,
   Languages, Award, Zap, Mountain,
-  Smartphone, CheckCircle
+  Smartphone, CheckCircle, Tag
 } from 'lucide-react';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -164,6 +164,12 @@ const TourCard: React.FC<TourCardProps> = ({
                   {tag}
                 </div>
               ))}
+              {tour.specialOffer && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full shadow-lg bg-gradient-to-r from-purple-600 to-violet-500 text-white max-w-[200px]">
+                  <Tag size={11} className="flex-shrink-0" />
+                  <span className="truncate">{tour.specialOffer.badgeText}</span>
+                </div>
+              )}
             </div>
 
             {/* Top Right Actions */}

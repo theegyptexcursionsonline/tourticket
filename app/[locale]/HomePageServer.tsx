@@ -6,6 +6,7 @@ import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
 import HeroSettings from '@/lib/models/HeroSettings';
+import SpecialOffer from '@/lib/models/SpecialOffer';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
@@ -45,7 +46,8 @@ async function getHomePageData(locale: string) {
       headerDestinations,
       headerCategories,
       heroSettings,
-      dayTrips
+      dayTrips,
+      activeOffers
     ] = await Promise.all([
       // Destinations with tour count (only featured)
       Destination.find({ isPublished: true, featured: true })
@@ -99,8 +101,37 @@ async function getHomePageData(locale: string) {
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings tags translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
+        .lean(),
+
+      // Active featured special offers (for badge display on tour cards)
+      SpecialOffer.find({
+        isActive: true,
+        isFeatured: true,
+        startDate: { $lte: new Date() },
+        endDate: { $gte: new Date() },
+      })
+        .select('name featuredBadgeText type discountValue applicableTours priority')
+        .sort({ priority: -1 })
         .lean()
     ]);
+
+    // Build tour → best offer map (highest priority wins, then highest discount)
+    const tourOfferMap = new Map<string, { badgeText: string; offerType: string; discountValue: number; priority: number }>();
+    for (const offer of activeOffers) {
+      for (const tourId of (offer as any).applicableTours || []) {
+        const key = tourId.toString();
+        const existing = tourOfferMap.get(key);
+        if (!existing || (offer as any).priority > existing.priority ||
+            ((offer as any).priority === existing.priority && (offer as any).discountValue > existing.discountValue)) {
+          tourOfferMap.set(key, {
+            badgeText: (offer as any).featuredBadgeText || (offer as any).name,
+            offerType: (offer as any).type,
+            discountValue: (offer as any).discountValue,
+            priority: (offer as any).priority,
+          });
+        }
+      }
+    }
 
     // Calculate tour counts for destinations
     const destinationsWithCounts = await Promise.all(
@@ -199,8 +230,8 @@ async function getHomePageData(locale: string) {
 
     const toursForFeaturedSection = featuredTours.length > 0 ? featuredTours : dayTrips.slice(0, 8);
 
-    const localizedTours = JSON.parse(JSON.stringify(toursForFeaturedSection)).map((tour: Record<string, unknown>) =>
-      localizeEntityFields(tour, locale, [
+    const localizedTours = JSON.parse(JSON.stringify(toursForFeaturedSection)).map((tour: Record<string, unknown>) => {
+      const localized = localizeEntityFields(tour, locale, [
         'title',
         'description',
         'longDescription',
@@ -213,8 +244,17 @@ async function getHomePageData(locale: string) {
         'tags',
         'metaTitle',
         'metaDescription',
-      ])
-    );
+      ]);
+      const offer = tourOfferMap.get(String(tour._id));
+      if (offer) {
+        localized.specialOffer = {
+          badgeText: offer.badgeText,
+          offerType: offer.offerType,
+          discountValue: offer.discountValue,
+        };
+      }
+      return localized;
+    });
 
     const localizedCategories = interestGridCategories.map((category: Record<string, unknown>) =>
       localizeEntityFields(category, locale, [
@@ -262,8 +302,8 @@ async function getHomePageData(locale: string) {
       ])
     );
 
-    const localizedDayTrips = JSON.parse(JSON.stringify(dayTrips)).map((tour: Record<string, unknown>) =>
-      localizeEntityFields(tour, locale, [
+    const localizedDayTrips = JSON.parse(JSON.stringify(dayTrips)).map((tour: Record<string, unknown>) => {
+      const localized = localizeEntityFields(tour, locale, [
         'title',
         'description',
         'longDescription',
@@ -276,8 +316,17 @@ async function getHomePageData(locale: string) {
         'tags',
         'metaTitle',
         'metaDescription',
-      ])
-    );
+      ]);
+      const offer = tourOfferMap.get(String(tour._id));
+      if (offer) {
+        localized.specialOffer = {
+          badgeText: offer.badgeText,
+          offerType: offer.offerType,
+          discountValue: offer.discountValue,
+        };
+      }
+      return localized;
+    });
 
     return {
       destinations: localizedDestinations,

@@ -243,6 +243,11 @@ export interface Tour {
       metaDescription?: string;
     }
   >;
+  specialOffer?: {
+    badgeText: string;
+    offerType: string;
+    discountValue: number;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

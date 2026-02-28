@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon, Tag } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -136,6 +136,16 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Special Offer Badge */}
+        {tour.specialOffer && (
+          <div className={`absolute ${tour.tags && tour.tags.length > 0 ? 'top-[5.5rem]' : 'top-14'} left-4 z-20`}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-full bg-gradient-to-r from-purple-600 to-violet-500 text-white backdrop-blur-sm" style={{ boxShadow: 'none' }}>
+              <Tag size={11} />
+              <span className="truncate max-w-[160px]">{tour.specialOffer.badgeText}</span>
+            </span>
           </div>
         )}
 

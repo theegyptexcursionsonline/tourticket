@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, Image as ImageIcon } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, Image as ImageIcon, Tag } from 'lucide-react';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -90,11 +90,19 @@ const DayTripCard = ({
           className="w-full h-full rounded-t-xl"
         />
         
-        {trip.tags?.find((tag: any) => typeof tag === 'string' && tag.includes('%')) && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10">
-            {trip.tags.find((tag: any) => typeof tag === 'string' && tag.includes('%'))}
-          </div>
-        )}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          {trip.tags?.find((tag: any) => typeof tag === 'string' && tag.includes('%')) && (
+            <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+              {trip.tags.find((tag: any) => typeof tag === 'string' && tag.includes('%'))}
+            </div>
+          )}
+          {trip.specialOffer && (
+            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-purple-600 to-violet-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md max-w-[160px]">
+              <Tag size={9} className="flex-shrink-0" />
+              <span className="truncate">{trip.specialOffer.badgeText}</span>
+            </div>
+          )}
+        </div>
         
         <button
           className={`absolute top-3 right-3 bg-white/90 p-2 rounded-full backdrop-blur-sm transition-all duration-300 shadow-md ${
