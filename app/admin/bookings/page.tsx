@@ -65,6 +65,12 @@ interface TourOption {
   title: string;
 }
 
+// Safe toFixed helper - handles undefined/null/NaN values
+const safeToFixed = (value: number | undefined | null, digits = 2): string => {
+  if (value === undefined || value === null || isNaN(Number(value))) return (0).toFixed(digits);
+  return Number(value).toFixed(digits);
+};
+
 // Currency symbol mapping
 const getCurrencySymbol = (currency?: string): string => {
   const symbols: Record<string, string> = {
@@ -598,7 +604,7 @@ const BookingsPage = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center text-sm font-semibold text-slate-900">
                           <span className="mr-1 text-green-600 font-bold">{getCurrencySymbol(booking.currency)}</span>
-                          {booking.totalPrice.toFixed(2)}
+                          {safeToFixed(booking.totalPrice)}
                           {booking.currency && booking.currency !== 'USD' && (
                             <span className="ml-1 text-xs text-slate-400 font-normal">{booking.currency}</span>
                           )}

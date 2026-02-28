@@ -31,6 +31,12 @@ interface HotelPickupLocation {
   name?: string;
 }
 
+// Safe toFixed helper - handles undefined/null/NaN values
+const safeToFixed = (value: number | undefined | null, digits = 2): string => {
+  if (value === undefined || value === null || isNaN(Number(value))) return (0).toFixed(digits);
+  return Number(value).toFixed(digits);
+};
+
 interface ManualBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -821,25 +827,25 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between text-slate-600">
                         <span>{formData.adultGuests} Adults × ${formData.bookingOptionPrice || formData.basePrice}</span>
-                        <span>${((formData.bookingOptionPrice || formData.basePrice) * formData.adultGuests).toFixed(2)}</span>
+                        <span>${safeToFixed((formData.bookingOptionPrice || formData.basePrice) * formData.adultGuests)}</span>
                       </div>
                       {formData.childGuests > 0 && (
                         <div className="flex justify-between text-slate-600">
-                          <span>{formData.childGuests} Children × ${((formData.bookingOptionPrice || formData.basePrice) / 2).toFixed(2)}</span>
-                          <span>${(((formData.bookingOptionPrice || formData.basePrice) / 2) * formData.childGuests).toFixed(2)}</span>
+                          <span>{formData.childGuests} Children × ${safeToFixed((formData.bookingOptionPrice || formData.basePrice) / 2)}</span>
+                          <span>${safeToFixed(((formData.bookingOptionPrice || formData.basePrice) / 2) * formData.childGuests)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-slate-600">
                         <span>Service Fee (3%)</span>
-                        <span>${formData.serviceFee.toFixed(2)}</span>
+                        <span>${safeToFixed(formData.serviceFee)}</span>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Tax (5%)</span>
-                        <span>${formData.tax.toFixed(2)}</span>
+                        <span>${safeToFixed(formData.tax)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg text-slate-900 pt-2 border-t border-slate-200">
                         <span>Total</span>
-                        <span>${formData.totalPrice.toFixed(2)}</span>
+                        <span>${safeToFixed(formData.totalPrice)}</span>
                       </div>
                     </div>
                   )}

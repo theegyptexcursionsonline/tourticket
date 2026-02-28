@@ -93,6 +93,12 @@ interface BookingDetails {
 }
 
 // Helper to parse dates as local dates to avoid timezone issues
+// Safe toFixed helper - handles undefined/null/NaN values
+const safeToFixed = (value: number | undefined | null, digits = 2): string => {
+  if (value === undefined || value === null || isNaN(Number(value))) return (0).toFixed(digits);
+  return Number(value).toFixed(digits);
+};
+
 // When MongoDB returns an ISO date string like "2025-11-26T00:00:00.000Z",
 // new Date() interprets it as UTC, which can show as previous day in some timezones
 const formatDisplayDate = (dateString: string | Date | undefined): string => {
@@ -228,7 +234,7 @@ const UserBookingDetailPage = () => {
       
       toast.success(
         result.refundAmount > 0 
-          ? `Booking cancelled. You'll receive a refund of $${result.refundAmount.toFixed(2)}`
+          ? `Booking cancelled. You'll receive a refund of $${safeToFixed(result.refundAmount)}`
           : 'Booking cancelled successfully'
       );
       
@@ -501,7 +507,7 @@ const UserBookingDetailPage = () => {
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="text-xl font-bold text-slate-900">${booking.totalPrice.toFixed(2)}</div>
+                    <div className="text-xl font-bold text-slate-900">${safeToFixed(booking.totalPrice)}</div>
                     <div className="text-xs text-slate-500">Total Paid</div>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3">
@@ -628,14 +634,14 @@ const UserBookingDetailPage = () => {
                 <div className="space-y-3">
                   {booking.adultGuests && booking.adultGuests > 0 && (
                     <div className="flex justify-between text-slate-700">
-                      <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} (${(booking.selectedBookingOption?.price || 0).toFixed(2)})</span>
-                      <span className="font-semibold">${pricing.adultPrice.toFixed(2)}</span>
+                      <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} (${safeToFixed(booking.selectedBookingOption?.price)})</span>
+                      <span className="font-semibold">${safeToFixed(pricing.adultPrice)}</span>
                     </div>
                   )}
                   {booking.childGuests && booking.childGuests > 0 && (
                     <div className="flex justify-between text-slate-700">
-                      <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} (${((booking.selectedBookingOption?.price || 0) / 2).toFixed(2)})</span>
-                      <span className="font-semibold">${pricing.childPrice.toFixed(2)}</span>
+                      <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} (${safeToFixed((booking.selectedBookingOption?.price || 0) / 2)})</span>
+                      <span className="font-semibold">${safeToFixed(pricing.childPrice)}</span>
                     </div>
                   )}
                   {booking.infantGuests && booking.infantGuests > 0 && (
@@ -650,7 +656,7 @@ const UserBookingDetailPage = () => {
                       <div className="border-t pt-3 mt-3"></div>
                       <div className="flex justify-between text-slate-700">
                         <span>Add-ons</span>
-                        <span className="font-semibold">${pricing.addOnsTotal.toFixed(2)}</span>
+                        <span className="font-semibold">${safeToFixed(pricing.addOnsTotal)}</span>
                       </div>
                     </>
                   )}
@@ -658,20 +664,20 @@ const UserBookingDetailPage = () => {
                   <div className="border-t pt-3 mt-3"></div>
                   <div className="flex justify-between text-slate-700">
                     <span>Subtotal</span>
-                    <span className="font-semibold">${pricing.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold">${safeToFixed(pricing.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 text-sm">
                     <span>Service Fee (3%)</span>
-                    <span>${pricing.serviceFee.toFixed(2)}</span>
+                    <span>${safeToFixed(pricing.serviceFee)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 text-sm">
                     <span>Tax (5%)</span>
-                    <span>${pricing.tax.toFixed(2)}</span>
+                    <span>${safeToFixed(pricing.tax)}</span>
                   </div>
                   
                   <div className="border-t-2 border-slate-300 pt-3 mt-3 flex justify-between">
                     <span className="text-lg font-bold text-slate-900">Total Paid</span>
-                    <span className="text-lg font-bold text-green-600">${pricing.total.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-green-600">${safeToFixed(pricing.total)}</span>
                   </div>
                 </div>
               </div>
@@ -743,10 +749,10 @@ const UserBookingDetailPage = () => {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-slate-700">
-                            ${addOnTotal.toFixed(2)}
+                            ${safeToFixed(addOnTotal)}
                           </div>
                           <div className="text-xs text-slate-500">
-                            ${addOnDetail.price.toFixed(2)} {addOnDetail.perGuest ? 'per guest' : 'total'}
+                            ${safeToFixed(addOnDetail.price)} {addOnDetail.perGuest ? 'per guest' : 'total'}
                           </div>
                         </div>
                       </div>

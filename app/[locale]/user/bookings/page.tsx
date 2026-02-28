@@ -31,6 +31,12 @@ interface Booking {
   infantGuests?: number;
 }
 
+// Safe toFixed helper - handles undefined/null/NaN values
+const safeToFixed = (value: number | undefined | null, digits = 2): string => {
+  if (value === undefined || value === null || isNaN(Number(value))) return (0).toFixed(digits);
+  return Number(value).toFixed(digits);
+};
+
 // Helper to format dates consistently and avoid timezone issues
 const formatDisplayDate = (dateString: string | undefined, options?: Intl.DateTimeFormatOptions): string => {
   if (!dateString) return '';
@@ -75,7 +81,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                 Booked on: {formatDisplayDate(booking.createdAt)}
               </span>
               <span className="text-sm font-semibold text-slate-900">
-                ${booking.totalPrice.toFixed(2)}
+                ${safeToFixed(booking.totalPrice)}
               </span>
             </div>
           </div>
@@ -166,7 +172,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
               <div className="text-right">
                 <div className="text-xs text-slate-500 mb-1">Total Price</div>
                 <div className="text-2xl font-bold text-slate-900">
-                  ${booking.totalPrice.toFixed(2)}
+                  ${safeToFixed(booking.totalPrice)}
                 </div>
               </div>
               <button
