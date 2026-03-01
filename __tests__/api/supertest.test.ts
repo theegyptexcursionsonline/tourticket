@@ -10,7 +10,7 @@
 import supertest from 'supertest';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
-let request: supertest.SuperTest<supertest.Test>;
+let request: ReturnType<typeof supertest>;
 let serverAvailable = false;
 
 beforeAll(async () => {
