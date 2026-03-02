@@ -16,6 +16,7 @@ interface VoiceAgentShowcaseClientProps {
 
 export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }: VoiceAgentShowcaseClientProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'reviews'>('overview');
+  const widgetScriptVersion = '2026-03-02-voice-fix-1';
 
   const destination = typeof tour.destination === 'object' ? (tour.destination as any) : null;
 
@@ -31,8 +32,10 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
     if (document.getElementById(scriptId)) {
       // Script already loaded, just re-init
       if (typeof (window as any).foxes === 'function') {
+        (window as any).foxes('destroy');
         (window as any).foxes('init', {
           widgetId: widgetConfig.widgetId,
+          baseUrl: widgetConfig.apiUrl,
           position: 'bottom-right',
           primaryColor: '#0ea5e9',
         });
@@ -42,12 +45,13 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
 
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `${widgetConfig.apiUrl}/widget.js`;
+    script.src = `${widgetConfig.apiUrl}/widget.js?v=${widgetScriptVersion}`;
     script.async = true;
     script.onload = () => {
       if (typeof (window as any).foxes === 'function') {
         (window as any).foxes('init', {
           widgetId: widgetConfig.widgetId,
+          baseUrl: widgetConfig.apiUrl,
           position: 'bottom-right',
           primaryColor: '#0ea5e9',
         });
@@ -63,7 +67,7 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
       const el = document.getElementById(scriptId);
       if (el) el.remove();
     };
-  }, [widgetConfig.widgetId, widgetConfig.apiUrl]);
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl, widgetScriptVersion]);
 
   return (
     <div className="pt-20">
