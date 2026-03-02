@@ -6,6 +6,9 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
+import SearchAgentWidgetLoader from './SearchAgentWidgetLoader';
+import { FOXES_SEARCH_CONFIG } from '../foxes-config';
+
 
 export const revalidate = 60; // ISR: revalidate every 60 seconds
 
@@ -171,6 +174,7 @@ export default async function AISearchAgentShowcasePage() {
             </div>
           )}
         </section>
+        <SearchAgentWidgetLoader widgetConfig={FOXES_SEARCH_CONFIG} />
       </main>
       <Footer />
     </>
