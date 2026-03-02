@@ -26,7 +26,7 @@ export default function SearchAgentWidgetLoader({ widgetConfig }: SearchAgentWid
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-widget.js?v=${widgetScriptVersion}`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.widgetId);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-position', 'bottom-right');
     script.setAttribute('data-accent', '#7c3aed');
     script.setAttribute('data-agent-name', 'Travel Concierge');

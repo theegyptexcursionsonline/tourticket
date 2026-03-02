@@ -36,7 +36,7 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
     script.id = scriptId;
     script.src = `${widgetConfig.apiUrl}/widget/foxes-widget.js`;
     script.async = true;
-    script.setAttribute('data-api-key', widgetConfig.widgetId);
+    script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-position', 'bottom-right');
     script.setAttribute('data-accent', '#7c3aed');
     script.setAttribute('data-agent-name', 'Travel Concierge');
