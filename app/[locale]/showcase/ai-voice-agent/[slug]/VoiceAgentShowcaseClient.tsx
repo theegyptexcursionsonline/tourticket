@@ -16,7 +16,8 @@ interface VoiceAgentShowcaseClientProps {
 
 export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }: VoiceAgentShowcaseClientProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'reviews'>('overview');
-  const widgetScriptVersion = '2026-03-02-voice-fix-1';
+  const widgetScriptVersion = '2026-03-03-voice-reliability-2';
+  const fallbackVoiceApiUrl = 'https://foxes-ai-voice.netlify.app';
 
   const destination = typeof tour.destination === 'object' ? (tour.destination as any) : null;
 
@@ -27,47 +28,100 @@ export default function VoiceAgentShowcaseClient({ tour, reviews, widgetConfig }
   // Load voice widget via direct script injection (avoids Next.js Script timing issues)
   useEffect(() => {
     if (!widgetConfig.widgetId) return;
+    let cancelled = false;
 
     const scriptId = 'foxes-voice-widget-script';
-    if (document.getElementById(scriptId)) {
-      // Script already loaded, just re-init
+    const removeScript = () => {
+      const existing = document.getElementById(scriptId);
+      if (existing) existing.remove();
+    };
+
+    const initWidget = (apiUrl: string) => {
       if (typeof (window as any).foxes === 'function') {
         (window as any).foxes('destroy');
         (window as any).foxes('init', {
           widgetId: widgetConfig.widgetId,
-          baseUrl: widgetConfig.apiUrl,
-          position: 'bottom-right',
-          primaryColor: '#0ea5e9',
-        });
-      }
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `${widgetConfig.apiUrl}/widget.js?v=${widgetScriptVersion}`;
-    script.async = true;
-    script.onload = () => {
-      if (typeof (window as any).foxes === 'function') {
-        (window as any).foxes('init', {
-          widgetId: widgetConfig.widgetId,
-          baseUrl: widgetConfig.apiUrl,
+          baseUrl: apiUrl,
           position: 'bottom-right',
           primaryColor: '#0ea5e9',
         });
       }
     };
-    document.body.appendChild(script);
+
+    const loadScript = (apiUrl: string) =>
+      new Promise<void>((resolve, reject) => {
+        removeScript();
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `${apiUrl}/widget.js?v=${widgetScriptVersion}`;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load widget script from ${apiUrl}`));
+        document.body.appendChild(script);
+      });
+
+    const canReachVoiceApi = async (apiUrl: string) => {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 1800);
+      try {
+        const response = await fetch(
+          `${apiUrl}/api/widget/${encodeURIComponent(widgetConfig.widgetId)}`,
+          {
+            method: 'GET',
+            headers: { 'X-Widget-ID': widgetConfig.widgetId },
+            signal: controller.signal,
+          }
+        );
+        return response.ok;
+      } catch {
+        return false;
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    };
+
+    const mountWidget = async () => {
+      const preferredApiUrl = widgetConfig.apiUrl;
+      let resolvedApiUrl = preferredApiUrl;
+
+      if (preferredApiUrl !== fallbackVoiceApiUrl) {
+        const reachable = await canReachVoiceApi(preferredApiUrl);
+        if (!reachable) {
+          resolvedApiUrl = fallbackVoiceApiUrl;
+        }
+      }
+
+      if (cancelled) return;
+
+      if (document.getElementById(scriptId) && typeof (window as any).foxes === 'function') {
+        initWidget(resolvedApiUrl);
+        return;
+      }
+
+      try {
+        await loadScript(resolvedApiUrl);
+        if (cancelled) return;
+        initWidget(resolvedApiUrl);
+      } catch {
+        if (resolvedApiUrl === fallbackVoiceApiUrl) return;
+        try {
+          await loadScript(fallbackVoiceApiUrl);
+          if (cancelled) return;
+          initWidget(fallbackVoiceApiUrl);
+        } catch (_) {}
+      }
+    };
+    mountWidget();
 
     return () => {
+      cancelled = true;
       // Cleanup on unmount
       if (typeof (window as any).foxes === 'function') {
         (window as any).foxes('destroy');
       }
-      const el = document.getElementById(scriptId);
-      if (el) el.remove();
+      removeScript();
     };
-  }, [widgetConfig.widgetId, widgetConfig.apiUrl, widgetScriptVersion]);
+  }, [widgetConfig.widgetId, widgetConfig.apiUrl, widgetScriptVersion, fallbackVoiceApiUrl]);
 
   return (
     <div className="pt-20">

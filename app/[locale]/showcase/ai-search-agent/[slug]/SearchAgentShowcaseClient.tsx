@@ -34,7 +34,7 @@ export default function SearchAgentShowcaseClient({ tour, reviews, widgetConfig 
 
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `${widgetConfig.apiUrl}/widget/foxes-widget.js`;
+    script.src = `${widgetConfig.apiUrl}/widget/foxes-widget.js?v=2026-03-06-carousel-cards-1`;
     script.async = true;
     script.setAttribute('data-widget-id', widgetConfig.widgetId);
     script.setAttribute('data-position', 'bottom-right');

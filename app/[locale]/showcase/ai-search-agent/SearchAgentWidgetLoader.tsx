@@ -10,7 +10,7 @@ interface SearchAgentWidgetLoaderProps {
 }
 
 export default function SearchAgentWidgetLoader({ widgetConfig }: SearchAgentWidgetLoaderProps) {
-  const widgetScriptVersion = '2026-03-02-search-listing-embed-1';
+  const widgetScriptVersion = '2026-03-06-carousel-cards-1';
 
   useEffect(() => {
     if (!widgetConfig.widgetId) return;

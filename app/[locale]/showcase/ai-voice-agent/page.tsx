@@ -6,6 +6,8 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
+import FoxesVoiceWidget from './FoxesVoiceWidget';
+import { FOXES_VOICE_CONFIG } from '../foxes-config';
 
 export const revalidate = 60; // ISR: revalidate every 60 seconds
 
@@ -173,6 +175,10 @@ export default async function AIVoiceAgentShowcasePage() {
         </section>
       </main>
       <Footer />
+      <FoxesVoiceWidget
+        apiUrl={FOXES_VOICE_CONFIG.apiUrl}
+        widgetId={FOXES_VOICE_CONFIG.widgetId}
+      />
     </>
   );
 }
