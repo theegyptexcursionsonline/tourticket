@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
-import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, Loader2, X, Smartphone } from "lucide-react";
+import QRCode from 'qrcode';
 import Image from "next/image";
 import { Link } from '@/i18n/routing';
 import { useNavData } from '@/contexts/NavDataContext';
@@ -48,6 +49,29 @@ export default function Footer() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showAppModal, setShowAppModal] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const qrGenerated = useRef(false);
+
+  // Generate actual QR code on mount
+  useEffect(() => {
+    if (qrGenerated.current) return;
+    qrGenerated.current = true;
+    QRCode.toDataURL('https://egypt-excursionsonline.com', {
+      width: 200,
+      margin: 1,
+      color: { dark: '#0f172a', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    }).then(setQrDataUrl).catch(console.error);
+  }, []);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!showAppModal) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowAppModal(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showAppModal]);
   const t = useTranslations('footer');
   const locale = useLocale();
   const rtl = isRTL(locale);
@@ -220,6 +244,73 @@ export default function Footer() {
       <Toaster position="top-center" />
       <div className="container mx-auto px-4 py-12">
 
+        {/* App Download Banner */}
+        <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.4)]">
+          {/* Decorative background circles */}
+          <div className="absolute -top-20 -right-20 w-72 h-72 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col md:flex-row items-center gap-8 md:gap-12 p-8 sm:p-10 lg:p-12">
+            {/* Left: Smartphone mockup icon */}
+            <div className="hidden lg:flex shrink-0 w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-red-700 items-center justify-center shadow-lg shadow-red-500/25">
+              <Smartphone size={38} className="text-white" />
+            </div>
+
+            {/* Center: Text + buttons */}
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight">{t('getTheApp')}</h3>
+              <p className="text-sm sm:text-base text-slate-300 mb-6 max-w-lg leading-relaxed">{t('getTheAppDesc')}</p>
+
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
+                {/* App Store */}
+                <button
+                  type="button"
+                  onClick={() => setShowAppModal(true)}
+                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-2xl px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer shadow-md hover:shadow-lg w-full sm:w-auto"
+                >
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" className="shrink-0">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                  </svg>
+                  <div className="flex flex-col leading-tight text-left">
+                    <span className="text-[11px] text-slate-500 font-medium">{t('downloadOn')}</span>
+                    <span className="text-base font-bold -mt-0.5">App Store</span>
+                  </div>
+                </button>
+
+                {/* Google Play */}
+                <button
+                  type="button"
+                  onClick={() => setShowAppModal(true)}
+                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-2xl px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer shadow-md hover:shadow-lg w-full sm:w-auto"
+                >
+                  <svg viewBox="0 0 24 24" width="28" height="28" className="shrink-0">
+                    <path d="M3.18 23.67c-.38-.4-.56-.96-.56-1.68V2.01c0-.72.18-1.28.56-1.68l.1-.1L14.7 11.65v.26L3.28 23.57l-.1-.1z" fill="#4285F4" />
+                    <path d="M18.54 15.79l-3.84-3.84v-.26l3.84-3.84.08.05 4.56 2.59c1.3.74 1.3 1.95 0 2.69l-4.56 2.59-.08.02z" fill="#FBBC04" />
+                    <path d="M18.62 15.77L14.7 11.78 3.18 23.67c.43.46 1.14.51 1.96.06l13.48-7.96" fill="#EA4335" />
+                    <path d="M18.62 7.85L5.14.27C4.32-.18 3.61-.13 3.18.33l11.52 11.45 3.92-3.93z" fill="#34A853" />
+                  </svg>
+                  <div className="flex flex-col leading-tight text-left">
+                    <span className="text-[11px] text-slate-500 font-medium">{t('getItOn')}</span>
+                    <span className="text-base font-bold -mt-0.5">Google Play</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Right: QR Code */}
+            <div className="shrink-0 flex flex-col items-center">
+              <div className="bg-white rounded-2xl p-3 shadow-lg ring-1 ring-white/20">
+                {qrDataUrl ? (
+                  <Image src={qrDataUrl} alt="Scan to download app" width={130} height={130} className="rounded-lg" />
+                ) : (
+                  <div className="w-[130px] h-[130px] bg-slate-100 rounded-lg animate-pulse" />
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-3 font-medium tracking-wide">{t('scanToDownload')}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-6 mb-6 items-start bg-slate-50 border border-slate-100 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2)]">
 
@@ -389,12 +480,12 @@ export default function Footer() {
               <p className="text-xs text-slate-500 mb-3">{t('socialDesc')}</p>
               <div className="flex gap-3">
                 {socialLinks.map(({ icon: Icon, href }, i) => (
-                  <a 
-                    key={i} 
-                    href={href} 
+                  <a
+                    key={i}
+                    href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-red-600 transition-colors border border-slate-200" 
+                    className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-red-600 transition-colors border border-slate-200"
                     aria-label={t('followSocialAria')}
                   >
                     <Icon size={18} />
@@ -402,6 +493,7 @@ export default function Footer() {
                 ))}
               </div>
             </div>
+
           </div>
         </div>
 
@@ -422,6 +514,43 @@ export default function Footer() {
           </p>
         </div>
       </div>
+
+      {/* Coming Soon Modal */}
+      {showAppModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setShowAppModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowAppModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-slate-900 flex items-center justify-center mb-5">
+              <Smartphone size={30} className="text-white" />
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{t('comingSoon')}</h3>
+            <p className="text-sm text-slate-500 mb-6 leading-relaxed">{t('comingSoonDesc')}</p>
+
+            <button
+              type="button"
+              onClick={() => setShowAppModal(false)}
+              className="w-full h-11 rounded-xl text-white bg-gradient-to-r from-red-600 to-slate-900 hover:from-red-700 hover:to-slate-950 transition-colors text-sm font-semibold"
+            >
+              {t('gotIt')}
+            </button>
+          </div>
+        </div>
+      )}
     </footer>
   );
 }
