@@ -277,6 +277,9 @@ export default function Footer() {
                 <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-slate-600 sm:mb-8 sm:text-base lg:mx-0">
                   {t('getTheAppDesc')}
                 </p>
+                <p className="mx-auto mb-5 inline-flex rounded-full border border-rose-200 bg-white/85 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm lg:mx-0">
+                  {t('launchingOn')}
+                </p>
 
                 {/* Store buttons */}
                 <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-0 lg:mb-0 lg:max-w-[26rem]">
@@ -317,49 +320,49 @@ export default function Footer() {
 
               {/* Right: Mobile preview and desktop phone mockup */}
               <div className="w-full shrink-0 lg:w-auto">
-                <div className="mx-auto w-full max-w-md lg:hidden">
-                  <div className="overflow-hidden rounded-[28px] border border-white/80 bg-white/75 p-3 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.22)] backdrop-blur-sm sm:p-4">
-                    <div className="rounded-[24px] border border-rose-100 bg-gradient-to-br from-white via-rose-50/70 to-amber-50 p-4 sm:p-5">
-                      <div className="mb-4 flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 ring-1 ring-rose-200">
-                            <Smartphone size={18} className="text-rose-700" />
-                          </div>
-                          <div className="space-y-2 text-left">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-700">{t('comingSoon')}</p>
-                            <div className="h-2.5 w-24 rounded-full bg-slate-200" />
+                <div className="mx-auto flex w-full max-w-md justify-center pb-4 lg:hidden">
+                  <div className="relative h-[280px] w-[176px] sm:h-[300px] sm:w-[188px]">
+                    <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-slate-800 to-slate-700 border border-white/40 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.4)] overflow-hidden">
+                      <div className="absolute top-0 left-1/2 z-10 h-[22px] w-[84px] -translate-x-1/2 rounded-b-2xl bg-slate-900" />
+                      <div className="absolute inset-[3px] rounded-[1.75rem] bg-gradient-to-b from-rose-400 via-rose-500 to-slate-900 overflow-hidden">
+                        <div className="flex items-center justify-between px-5 pb-2 pt-7">
+                          <span className="text-[8px] font-medium text-white/75">9:41</span>
+                          <div className="flex gap-1">
+                            <div className="h-1.5 w-3 rounded-sm bg-white/55" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-white/55" />
                           </div>
                         </div>
-                        <div className="hidden rounded-2xl bg-white p-2 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.28)] sm:block">
-                          {qrDataUrl ? (
-                            <Image src={qrDataUrl} alt="Scan to download app" width={64} height={64} className="rounded-xl" />
-                          ) : (
-                            <div className="h-16 w-16 animate-pulse rounded-xl bg-slate-100" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="rounded-2xl border border-rose-100 bg-white/80 p-3 backdrop-blur-sm">
-                          <div className="mb-3 h-28 rounded-xl bg-gradient-to-br from-rose-200 via-rose-100 to-amber-50" />
-                          <div className="mb-2 h-2.5 w-32 rounded-full bg-slate-300" />
-                          <div className="mb-3 h-2 w-20 rounded-full bg-slate-200" />
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <svg key={i} className="h-3 w-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                              ))}
+                        <div className="space-y-2.5 px-3.5 pt-1">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/20">
+                              <Smartphone size={12} className="text-white" />
                             </div>
-                            <div className="h-7 w-16 rounded-lg bg-rose-100" />
+                            <div className="h-2 w-14 rounded-full bg-white/30" />
                           </div>
-                        </div>
-                        <div className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50/80 p-3">
-                          <div className="space-y-2">
-                            <div className="h-2.5 w-24 rounded-full bg-slate-300" />
-                            <div className="h-2 w-16 rounded-full bg-slate-200" />
+                          <div className="h-2.5 w-24 rounded-full bg-white/20" />
+                          <div className="h-2 w-16 rounded-full bg-white/15" />
+                          <div className="rounded-xl border border-white/10 bg-white/10 p-2.5 backdrop-blur-sm">
+                            <div className="mb-2 h-14 rounded-lg bg-white/12" />
+                            <div className="mb-1.5 h-2 w-20 rounded-full bg-white/25" />
+                            <div className="h-1.5 w-12 rounded-full bg-white/15" />
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <svg key={i} className="h-2.5 w-2.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                ))}
+                              </div>
+                              <div className="h-5 w-10 rounded-md bg-rose-200/80" />
+                            </div>
                           </div>
-                          <div className="h-10 w-10 rounded-xl bg-rose-100" />
+                          <div className="rounded-xl border border-white/10 bg-white/10 p-2.5 backdrop-blur-sm">
+                            <div className="mb-2 h-8 rounded-lg bg-white/10" />
+                            <div className="h-2 w-16 rounded-full bg-white/20" />
+                          </div>
                         </div>
                       </div>
+                    </div>
+                    <div className="absolute -left-10 top-6 rounded-2xl border border-rose-100 bg-white/95 px-3 py-2 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.3)] backdrop-blur-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-600">{t('comingSoon')}</p>
                     </div>
                   </div>
                 </div>
@@ -664,6 +667,9 @@ export default function Footer() {
               </div>
 
               <h3 className="relative text-2xl font-extrabold tracking-tight text-slate-900">{t('comingSoon')}</h3>
+              <p className="relative mt-3 inline-flex rounded-full border border-rose-200 bg-white/85 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm">
+                {t('launchingOn')}
+              </p>
             </div>
 
             {/* Modal body */}
