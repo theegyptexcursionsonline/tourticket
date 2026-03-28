@@ -71,7 +71,15 @@ export async function GET(request: NextRequest) {
     const limit = allowedLimits.has(requestedLimit) ? requestedLimit : 10;
     const skip = (page - 1) * limit;
 
-    const baseMatch: Record<string, unknown> = {};
+    const baseMatch: Record<string, unknown> = {
+      // Only show bookings from the EEO network (no tenantId or default tenant)
+      $or: [
+        { tenantId: { $exists: false } },
+        { tenantId: null },
+        { tenantId: '' },
+        { tenantId: 'default' },
+      ],
+    };
 
     // Status filter
     if (status && status !== 'all') {
