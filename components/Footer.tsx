@@ -245,84 +245,132 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-12">
 
         {/* App Download Banner */}
-        <div className="relative mb-6 overflow-hidden rounded-3xl shadow-[0_20px_60px_-20px_rgba(15,23,42,0.5)]">
+          <div className="relative mb-6 overflow-hidden rounded-3xl border border-rose-100 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.22)]">
           {/* Layered gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(220,38,38,0.15)_0%,_transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(59,130,246,0.08)_0%,_transparent_50%)]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-50 via-white to-amber-50" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(244,63,94,0.16)_0%,_transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(251,191,36,0.14)_0%,_transparent_52%)]" />
 
           {/* Subtle grid pattern overlay */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'linear-gradient(rgba(15,23,42,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,.04) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
           {/* Floating accent orbs */}
-          <div className="absolute top-1/2 right-[15%] -translate-y-1/2 w-[320px] h-[320px] bg-red-500/[0.07] rounded-full blur-[80px] pointer-events-none" />
-          <div className="absolute -bottom-20 left-[10%] w-[240px] h-[240px] bg-sky-500/[0.05] rounded-full blur-[60px] pointer-events-none" />
+          <div className="absolute top-1/2 right-[15%] -translate-y-1/2 h-[320px] w-[320px] rounded-full bg-rose-300/[0.14] blur-[90px] pointer-events-none" />
+          <div className="absolute -bottom-20 left-[10%] h-[240px] w-[240px] rounded-full bg-amber-300/[0.12] blur-[70px] pointer-events-none" />
 
-          <div className="relative flex flex-col lg:flex-row items-center gap-8 lg:gap-0 p-8 sm:p-10 lg:py-0 lg:ps-12 lg:pe-0">
+            <div className="relative flex flex-col items-stretch gap-6 p-6 sm:gap-8 sm:p-10 lg:flex-row lg:items-center lg:gap-0 lg:py-0 lg:ps-12 lg:pe-0">
 
-            {/* Left content */}
-            <div className="flex-1 text-center lg:text-left lg:py-12">
+              {/* Left content */}
+              <div className="flex-1 text-center lg:text-left lg:py-12">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-full px-4 py-1.5 mb-5">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white/80 px-4 py-1.5 shadow-sm backdrop-blur-sm">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                 </span>
-                <span className="text-xs font-medium text-slate-300 tracking-wide">{t('comingSoon')}</span>
+                <span className="text-xs font-medium tracking-wide text-rose-700">{t('comingSoon')}</span>
               </div>
 
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-white mb-3 tracking-tight leading-[1.15]">
+              <h3 className="mb-3 text-3xl font-extrabold leading-[1.15] tracking-tight text-slate-900 sm:text-4xl">
                 {t('getTheApp')}
               </h3>
-              <p className="text-sm sm:text-base text-slate-400 mb-8 max-w-md leading-relaxed mx-auto lg:mx-0">
-                {t('getTheAppDesc')}
-              </p>
+                <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-slate-600 sm:mb-8 sm:text-base lg:mx-0">
+                  {t('getTheAppDesc')}
+                </p>
 
-              {/* Store buttons */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 mb-8 lg:mb-0">
-                {/* App Store */}
-                <button
-                  type="button"
-                  onClick={() => setShowAppModal(true)}
-                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-xl px-5 py-3 hover:bg-slate-50 transition-all cursor-pointer shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/25 hover:-translate-y-0.5 w-full sm:w-auto"
-                >
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" className="shrink-0">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                  </svg>
-                  <div className="flex flex-col leading-tight text-left">
-                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{t('downloadOn')}</span>
-                    <span className="text-[15px] font-bold -mt-0.5">App Store</span>
-                  </div>
-                </button>
+                {/* Store buttons */}
+                <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-0 lg:mb-0 lg:max-w-[26rem]">
+                  {/* App Store */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAppModal(true)}
+                    className="group inline-flex min-h-[72px] w-full items-center justify-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.35)] transition-all hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50/60 hover:shadow-[0_16px_32px_-20px_rgba(244,63,94,0.25)] sm:px-5"
+                  >
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" className="shrink-0">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                    </svg>
+                    <div className="min-w-0 flex flex-col leading-tight text-left">
+                      <span className="truncate text-[10px] font-medium uppercase tracking-wider text-slate-500">{t('downloadOn')}</span>
+                      <span className="text-base font-bold">App Store</span>
+                    </div>
+                  </button>
 
-                {/* Google Play */}
-                <button
-                  type="button"
-                  onClick={() => setShowAppModal(true)}
-                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-xl px-5 py-3 hover:bg-slate-50 transition-all cursor-pointer shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/25 hover:-translate-y-0.5 w-full sm:w-auto"
-                >
-                  <svg viewBox="0 0 24 24" width="24" height="24" className="shrink-0">
-                    <path d="M3.18 23.67c-.38-.4-.56-.96-.56-1.68V2.01c0-.72.18-1.28.56-1.68l.1-.1L14.7 11.65v.26L3.28 23.57l-.1-.1z" fill="#4285F4" />
-                    <path d="M18.54 15.79l-3.84-3.84v-.26l3.84-3.84.08.05 4.56 2.59c1.3.74 1.3 1.95 0 2.69l-4.56 2.59-.08.02z" fill="#FBBC04" />
-                    <path d="M18.62 15.77L14.7 11.78 3.18 23.67c.43.46 1.14.51 1.96.06l13.48-7.96" fill="#EA4335" />
-                    <path d="M18.62 7.85L5.14.27C4.32-.18 3.61-.13 3.18.33l11.52 11.45 3.92-3.93z" fill="#34A853" />
-                  </svg>
-                  <div className="flex flex-col leading-tight text-left">
-                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{t('getItOn')}</span>
-                    <span className="text-[15px] font-bold -mt-0.5">Google Play</span>
-                  </div>
-                </button>
+                  {/* Google Play */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAppModal(true)}
+                    className="group inline-flex min-h-[72px] w-full items-center justify-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.35)] transition-all hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50/60 hover:shadow-[0_16px_32px_-20px_rgba(244,63,94,0.25)] sm:px-5"
+                  >
+                    <svg viewBox="0 0 24 24" width="24" height="24" className="shrink-0">
+                      <path d="M3.18 23.67c-.38-.4-.56-.96-.56-1.68V2.01c0-.72.18-1.28.56-1.68l.1-.1L14.7 11.65v.26L3.28 23.57l-.1-.1z" fill="#4285F4" />
+                      <path d="M18.54 15.79l-3.84-3.84v-.26l3.84-3.84.08.05 4.56 2.59c1.3.74 1.3 1.95 0 2.69l-4.56 2.59-.08.02z" fill="#FBBC04" />
+                      <path d="M18.62 15.77L14.7 11.78 3.18 23.67c.43.46 1.14.51 1.96.06l13.48-7.96" fill="#EA4335" />
+                      <path d="M18.62 7.85L5.14.27C4.32-.18 3.61-.13 3.18.33l11.52 11.45 3.92-3.93z" fill="#34A853" />
+                    </svg>
+                    <div className="min-w-0 flex flex-col leading-tight text-left">
+                      <span className="truncate text-[10px] font-medium uppercase tracking-wider text-slate-500">{t('getItOn')}</span>
+                      <span className="text-base font-bold">Google Play</span>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Right: Phone mockup with QR */}
-            <div className="shrink-0 flex items-end gap-6 lg:gap-8 lg:self-end">
-              {/* QR Code card */}
-              <div className="hidden sm:flex flex-col items-center mb-8 lg:mb-10">
-                <div className="bg-white/[0.07] backdrop-blur-md border border-white/[0.1] rounded-2xl p-1.5">
-                  <div className="bg-white rounded-[14px] p-2.5">
-                    {qrDataUrl ? (
-                      <Image src={qrDataUrl} alt="Scan to download app" width={100} height={100} className="rounded-lg" />
+              {/* Right: Mobile preview and desktop phone mockup */}
+              <div className="w-full shrink-0 lg:w-auto">
+                <div className="mx-auto w-full max-w-md lg:hidden">
+                  <div className="overflow-hidden rounded-[28px] border border-white/80 bg-white/75 p-3 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.22)] backdrop-blur-sm sm:p-4">
+                    <div className="rounded-[24px] border border-rose-100 bg-gradient-to-br from-white via-rose-50/70 to-amber-50 p-4 sm:p-5">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 ring-1 ring-rose-200">
+                            <Smartphone size={18} className="text-rose-700" />
+                          </div>
+                          <div className="space-y-2 text-left">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-700">{t('comingSoon')}</p>
+                            <div className="h-2.5 w-24 rounded-full bg-slate-200" />
+                          </div>
+                        </div>
+                        <div className="hidden rounded-2xl bg-white p-2 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.28)] sm:block">
+                          {qrDataUrl ? (
+                            <Image src={qrDataUrl} alt="Scan to download app" width={64} height={64} className="rounded-xl" />
+                          ) : (
+                            <div className="h-16 w-16 animate-pulse rounded-xl bg-slate-100" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="rounded-2xl border border-rose-100 bg-white/80 p-3 backdrop-blur-sm">
+                          <div className="mb-3 h-28 rounded-xl bg-gradient-to-br from-rose-200 via-rose-100 to-amber-50" />
+                          <div className="mb-2 h-2.5 w-32 rounded-full bg-slate-300" />
+                          <div className="mb-3 h-2 w-20 rounded-full bg-slate-200" />
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <svg key={i} className="h-3 w-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                              ))}
+                            </div>
+                            <div className="h-7 w-16 rounded-lg bg-rose-100" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50/80 p-3">
+                          <div className="space-y-2">
+                            <div className="h-2.5 w-24 rounded-full bg-slate-300" />
+                            <div className="h-2 w-16 rounded-full bg-slate-200" />
+                          </div>
+                          <div className="h-10 w-10 rounded-xl bg-rose-100" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="hidden items-end justify-center gap-6 lg:flex lg:gap-8 lg:self-end">
+                {/* QR Code card */}
+                <div className="mb-8 flex flex-col items-center lg:mb-10">
+                  <div className="bg-white/[0.07] backdrop-blur-md border border-white/[0.1] rounded-2xl p-1.5">
+                    <div className="bg-white rounded-[14px] p-2.5">
+                      {qrDataUrl ? (
+                        <Image src={qrDataUrl} alt="Scan to download app" width={100} height={100} className="rounded-lg" />
                     ) : (
                       <div className="w-[100px] h-[100px] bg-slate-100 rounded-lg animate-pulse" />
                     )}
@@ -331,8 +379,8 @@ export default function Footer() {
                 <p className="text-[11px] text-slate-500 mt-2.5 font-medium tracking-wide">{t('scanToDownload')}</p>
               </div>
 
-              {/* Phone mockup */}
-              <div className="hidden lg:block relative w-[200px] h-[320px]">
+                  {/* Phone mockup */}
+                <div className="relative h-[320px] w-[200px]">
                 {/* Phone body */}
                 <div className="absolute inset-0 rounded-[2rem] rounded-b-none bg-gradient-to-b from-slate-800 to-slate-700 border border-white/[0.12] border-b-0 shadow-2xl shadow-black/40 overflow-hidden">
                   {/* Notch */}
@@ -375,10 +423,11 @@ export default function Footer() {
                       <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
                         <div className="w-full h-10 bg-white/10 rounded-lg mb-2" />
                         <div className="h-2 w-20 bg-white/20 rounded-full" />
-                      </div>
-                    </div>
-                  </div>
                 </div>
+                </div>
+              </div>
+            </div>
+          </div>
               </div>
             </div>
           </div>
@@ -590,40 +639,40 @@ export default function Footer() {
 
       {/* Coming Soon Modal */}
       {showAppModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
-          onClick={() => setShowAppModal(false)}
-        >
           <div
-            className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 backdrop-blur-md sm:items-center sm:p-4"
+            onClick={() => setShowAppModal(false)}
           >
-            {/* Modal header gradient */}
-            <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 px-8 pt-10 pb-14 text-center overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(220,38,38,0.2)_0%,_transparent_60%)]" />
-              <button
-                type="button"
-                onClick={() => setShowAppModal(false)}
-                className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
-                aria-label="Close"
-              >
-                <X size={20} />
+            <div
+              className="relative max-h-[calc(100vh-1rem)] w-full max-w-sm overflow-y-auto rounded-[2rem] bg-white shadow-2xl sm:max-h-[calc(100vh-2rem)] sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal header gradient */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50 px-6 pb-12 pt-8 text-center sm:px-8 sm:pb-14 sm:pt-10">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(244,63,94,0.16)_0%,_transparent_60%)]" />
+                <button
+                  type="button"
+                  onClick={() => setShowAppModal(false)}
+                  className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-700"
+                  aria-label="Close"
+                >
+                  <X size={20} />
               </button>
 
-              <div className="relative mx-auto w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-4">
-                <Smartphone size={28} className="text-white" />
+              <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-rose-200 bg-white/90 shadow-sm backdrop-blur-sm">
+                <Smartphone size={28} className="text-rose-700" />
               </div>
 
-              <h3 className="relative text-2xl font-extrabold text-white tracking-tight">{t('comingSoon')}</h3>
+              <h3 className="relative text-2xl font-extrabold tracking-tight text-slate-900">{t('comingSoon')}</h3>
             </div>
 
             {/* Modal body */}
-            <div className="px-8 -mt-6 pb-8 relative">
-              {/* QR code card floating above the fold */}
-              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex items-center gap-4 mb-6">
-                <div className="shrink-0 bg-slate-50 rounded-xl p-2">
-                  {qrDataUrl ? (
-                    <Image src={qrDataUrl} alt="QR code" width={72} height={72} className="rounded-lg" />
+              <div className="relative -mt-6 px-5 pb-6 sm:px-8 sm:pb-8">
+                {/* QR code card floating above the fold */}
+                <div className="mb-6 flex flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-lg sm:flex-row sm:text-left">
+                  <div className="shrink-0 bg-slate-50 rounded-xl p-2">
+                    {qrDataUrl ? (
+                      <Image src={qrDataUrl} alt="QR code" width={72} height={72} className="rounded-lg" />
                   ) : (
                     <div className="w-[72px] h-[72px] bg-slate-100 rounded-lg animate-pulse" />
                   )}
