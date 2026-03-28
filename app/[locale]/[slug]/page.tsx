@@ -14,26 +14,39 @@ interface PageProps {
 }
 
 async function getTourBySlug(slug: string): Promise<{ tour: ITour; reviews: any[] } | null> {
-  await dbConnect();
-  const tour = await Tour.findOne({ slug })
-    .populate('destination', 'name slug')
-    .populate('category', 'name slug')
-    .lean();
+  try {
+    console.log(`[TourDetail] Connecting to DB for slug: ${slug}`);
+    await dbConnect();
+    console.log(`[TourDetail] DB connected, querying tour: ${slug}`);
 
-  if (!tour) {
-    return null;
+    const tour = await Tour.findOne({ slug })
+      .populate('destination', 'name slug')
+      .populate('category', 'name slug')
+      .lean();
+
+    if (!tour) {
+      console.log(`[TourDetail] Tour not found: ${slug}`);
+      return null;
+    }
+
+    console.log(`[TourDetail] Tour found: ${tour.title}, fetching reviews`);
+
+    // Fetch reviews separately
+    const reviews = await Review.find({ tour: tour._id })
+      .populate('user', 'firstName lastName picture')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(`[TourDetail] Loaded ${reviews.length} reviews for: ${slug}`);
+
+    return {
+      tour: JSON.parse(JSON.stringify(tour)),
+      reviews: JSON.parse(JSON.stringify(reviews))
+    };
+  } catch (error) {
+    console.error(`[TourDetail] Error loading tour "${slug}":`, error);
+    throw error;
   }
-
-  // Fetch reviews separately
-  const reviews = await Review.find({ tour: tour._id })
-    .populate('user', 'firstName lastName picture')
-    .sort({ createdAt: -1 })
-    .lean();
-
-  return {
-    tour: JSON.parse(JSON.stringify(tour)),
-    reviews: JSON.parse(JSON.stringify(reviews))
-  };
 }
 
 async function getRelatedTours(categoryIds: string | string[] | any, currentTourId: string): Promise<ITour[]> {
@@ -99,6 +112,8 @@ export async function generateStaticParams() {
 
 export default async function TourDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  console.log(`[TourDetail] Rendering page for slug: ${slug}`);
+
   const result = await getTourBySlug(slug);
 
   if (!result) {
@@ -106,7 +121,13 @@ export default async function TourDetailPage({ params }: PageProps) {
   }
 
   const { tour, reviews } = result;
-  const relatedTours = await getRelatedTours(tour.category, (tour._id as any)?.toString());
+
+  let relatedTours: ITour[] = [];
+  try {
+    relatedTours = await getRelatedTours(tour.category, (tour._id as any)?.toString());
+  } catch (error) {
+    console.error(`[TourDetail] Failed to load related tours for: ${slug}`, error);
+  }
 
   return (
     <>
