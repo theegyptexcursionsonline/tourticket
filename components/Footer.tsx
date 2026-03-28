@@ -245,35 +245,53 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-12">
 
         {/* App Download Banner */}
-        <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.4)]">
-          {/* Decorative background circles */}
-          <div className="absolute -top-20 -right-20 w-72 h-72 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative mb-6 overflow-hidden rounded-3xl shadow-[0_20px_60px_-20px_rgba(15,23,42,0.5)]">
+          {/* Layered gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(220,38,38,0.15)_0%,_transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(59,130,246,0.08)_0%,_transparent_50%)]" />
 
-          <div className="relative flex flex-col md:flex-row items-center gap-8 md:gap-12 p-8 sm:p-10 lg:p-12">
-            {/* Left: Smartphone mockup icon */}
-            <div className="hidden lg:flex shrink-0 w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-red-700 items-center justify-center shadow-lg shadow-red-500/25">
-              <Smartphone size={38} className="text-white" />
-            </div>
+          {/* Subtle grid pattern overlay */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-            {/* Center: Text + buttons */}
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight">{t('getTheApp')}</h3>
-              <p className="text-sm sm:text-base text-slate-300 mb-6 max-w-lg leading-relaxed">{t('getTheAppDesc')}</p>
+          {/* Floating accent orbs */}
+          <div className="absolute top-1/2 right-[15%] -translate-y-1/2 w-[320px] h-[320px] bg-red-500/[0.07] rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute -bottom-20 left-[10%] w-[240px] h-[240px] bg-sky-500/[0.05] rounded-full blur-[60px] pointer-events-none" />
 
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
+          <div className="relative flex flex-col lg:flex-row items-center gap-8 lg:gap-0 p-8 sm:p-10 lg:py-0 lg:ps-12 lg:pe-0">
+
+            {/* Left content */}
+            <div className="flex-1 text-center lg:text-left lg:py-12">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-full px-4 py-1.5 mb-5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+                <span className="text-xs font-medium text-slate-300 tracking-wide">{t('comingSoon')}</span>
+              </div>
+
+              <h3 className="text-3xl sm:text-4xl font-extrabold text-white mb-3 tracking-tight leading-[1.15]">
+                {t('getTheApp')}
+              </h3>
+              <p className="text-sm sm:text-base text-slate-400 mb-8 max-w-md leading-relaxed mx-auto lg:mx-0">
+                {t('getTheAppDesc')}
+              </p>
+
+              {/* Store buttons */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 mb-8 lg:mb-0">
                 {/* App Store */}
                 <button
                   type="button"
                   onClick={() => setShowAppModal(true)}
-                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-2xl px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer shadow-md hover:shadow-lg w-full sm:w-auto"
+                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-xl px-5 py-3 hover:bg-slate-50 transition-all cursor-pointer shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/25 hover:-translate-y-0.5 w-full sm:w-auto"
                 >
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" className="shrink-0">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" className="shrink-0">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
                   </svg>
                   <div className="flex flex-col leading-tight text-left">
-                    <span className="text-[11px] text-slate-500 font-medium">{t('downloadOn')}</span>
-                    <span className="text-base font-bold -mt-0.5">App Store</span>
+                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{t('downloadOn')}</span>
+                    <span className="text-[15px] font-bold -mt-0.5">App Store</span>
                   </div>
                 </button>
 
@@ -281,32 +299,87 @@ export default function Footer() {
                 <button
                   type="button"
                   onClick={() => setShowAppModal(true)}
-                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-2xl px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer shadow-md hover:shadow-lg w-full sm:w-auto"
+                  className="group inline-flex items-center gap-3 bg-white text-slate-900 rounded-xl px-5 py-3 hover:bg-slate-50 transition-all cursor-pointer shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/25 hover:-translate-y-0.5 w-full sm:w-auto"
                 >
-                  <svg viewBox="0 0 24 24" width="28" height="28" className="shrink-0">
+                  <svg viewBox="0 0 24 24" width="24" height="24" className="shrink-0">
                     <path d="M3.18 23.67c-.38-.4-.56-.96-.56-1.68V2.01c0-.72.18-1.28.56-1.68l.1-.1L14.7 11.65v.26L3.28 23.57l-.1-.1z" fill="#4285F4" />
                     <path d="M18.54 15.79l-3.84-3.84v-.26l3.84-3.84.08.05 4.56 2.59c1.3.74 1.3 1.95 0 2.69l-4.56 2.59-.08.02z" fill="#FBBC04" />
                     <path d="M18.62 15.77L14.7 11.78 3.18 23.67c.43.46 1.14.51 1.96.06l13.48-7.96" fill="#EA4335" />
                     <path d="M18.62 7.85L5.14.27C4.32-.18 3.61-.13 3.18.33l11.52 11.45 3.92-3.93z" fill="#34A853" />
                   </svg>
                   <div className="flex flex-col leading-tight text-left">
-                    <span className="text-[11px] text-slate-500 font-medium">{t('getItOn')}</span>
-                    <span className="text-base font-bold -mt-0.5">Google Play</span>
+                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{t('getItOn')}</span>
+                    <span className="text-[15px] font-bold -mt-0.5">Google Play</span>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* Right: QR Code */}
-            <div className="shrink-0 flex flex-col items-center">
-              <div className="bg-white rounded-2xl p-3 shadow-lg ring-1 ring-white/20">
-                {qrDataUrl ? (
-                  <Image src={qrDataUrl} alt="Scan to download app" width={130} height={130} className="rounded-lg" />
-                ) : (
-                  <div className="w-[130px] h-[130px] bg-slate-100 rounded-lg animate-pulse" />
-                )}
+            {/* Right: Phone mockup with QR */}
+            <div className="shrink-0 flex items-end gap-6 lg:gap-8 lg:self-end">
+              {/* QR Code card */}
+              <div className="hidden sm:flex flex-col items-center mb-8 lg:mb-10">
+                <div className="bg-white/[0.07] backdrop-blur-md border border-white/[0.1] rounded-2xl p-1.5">
+                  <div className="bg-white rounded-[14px] p-2.5">
+                    {qrDataUrl ? (
+                      <Image src={qrDataUrl} alt="Scan to download app" width={100} height={100} className="rounded-lg" />
+                    ) : (
+                      <div className="w-[100px] h-[100px] bg-slate-100 rounded-lg animate-pulse" />
+                    )}
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-2.5 font-medium tracking-wide">{t('scanToDownload')}</p>
               </div>
-              <p className="text-xs text-slate-400 mt-3 font-medium tracking-wide">{t('scanToDownload')}</p>
+
+              {/* Phone mockup */}
+              <div className="hidden lg:block relative w-[200px] h-[320px]">
+                {/* Phone body */}
+                <div className="absolute inset-0 rounded-[2rem] rounded-b-none bg-gradient-to-b from-slate-800 to-slate-700 border border-white/[0.12] border-b-0 shadow-2xl shadow-black/40 overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90px] h-[26px] bg-slate-900 rounded-b-2xl z-10" />
+                  {/* Screen content */}
+                  <div className="absolute inset-[3px] inset-b-0 rounded-[1.75rem] rounded-b-none bg-gradient-to-b from-red-600 via-red-700 to-slate-900 overflow-hidden">
+                    {/* Status bar dots */}
+                    <div className="flex justify-between items-center px-6 pt-8 pb-2">
+                      <span className="text-[9px] text-white/70 font-medium">9:41</span>
+                      <div className="flex gap-1">
+                        <div className="w-3 h-1.5 rounded-sm bg-white/50" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
+                      </div>
+                    </div>
+                    {/* App content mockup */}
+                    <div className="px-4 pt-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+                          <Smartphone size={14} className="text-white" />
+                        </div>
+                        <div className="h-2 w-16 bg-white/30 rounded-full" />
+                      </div>
+                      <div className="h-2.5 w-28 bg-white/20 rounded-full" />
+                      <div className="h-2 w-20 bg-white/15 rounded-full" />
+                      {/* Tour card preview */}
+                      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10 mt-2">
+                        <div className="w-full h-16 bg-white/10 rounded-lg mb-2" />
+                        <div className="h-2 w-24 bg-white/25 rounded-full mb-1.5" />
+                        <div className="h-1.5 w-16 bg-white/15 rounded-full" />
+                        <div className="flex items-center justify-between mt-2.5">
+                          <div className="flex gap-0.5">
+                            {[...Array(5)].map((_, i) => (
+                              <svg key={i} className="w-2.5 h-2.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            ))}
+                          </div>
+                          <div className="h-5 w-12 bg-red-500/60 rounded-md" />
+                        </div>
+                      </div>
+                      {/* Second card hint */}
+                      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+                        <div className="w-full h-10 bg-white/10 rounded-lg mb-2" />
+                        <div className="h-2 w-20 bg-white/20 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -518,36 +591,59 @@ export default function Footer() {
       {/* Coming Soon Modal */}
       {showAppModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
           onClick={() => setShowAppModal(false)}
         >
           <div
-            className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center"
+            className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setShowAppModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
+            {/* Modal header gradient */}
+            <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 px-8 pt-10 pb-14 text-center overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(220,38,38,0.2)_0%,_transparent_60%)]" />
+              <button
+                type="button"
+                onClick={() => setShowAppModal(false)}
+                className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
 
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-slate-900 flex items-center justify-center mb-5">
-              <Smartphone size={30} className="text-white" />
+              <div className="relative mx-auto w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-4">
+                <Smartphone size={28} className="text-white" />
+              </div>
+
+              <h3 className="relative text-2xl font-extrabold text-white tracking-tight">{t('comingSoon')}</h3>
             </div>
 
-            <h3 className="text-xl font-bold text-slate-900 mb-2">{t('comingSoon')}</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">{t('comingSoonDesc')}</p>
+            {/* Modal body */}
+            <div className="px-8 -mt-6 pb-8 relative">
+              {/* QR code card floating above the fold */}
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 flex items-center gap-4 mb-6">
+                <div className="shrink-0 bg-slate-50 rounded-xl p-2">
+                  {qrDataUrl ? (
+                    <Image src={qrDataUrl} alt="QR code" width={72} height={72} className="rounded-lg" />
+                  ) : (
+                    <div className="w-[72px] h-[72px] bg-slate-100 rounded-lg animate-pulse" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 mb-0.5">{t('scanToDownload')}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">egypt-excursionsonline.com</p>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setShowAppModal(false)}
-              className="w-full h-11 rounded-xl text-white bg-gradient-to-r from-red-600 to-slate-900 hover:from-red-700 hover:to-slate-950 transition-colors text-sm font-semibold"
-            >
-              {t('gotIt')}
-            </button>
+              <p className="text-sm text-slate-500 leading-relaxed text-center mb-6">{t('comingSoonDesc')}</p>
+
+              <button
+                type="button"
+                onClick={() => setShowAppModal(false)}
+                className="w-full h-12 rounded-xl text-white bg-slate-900 hover:bg-slate-800 transition-colors text-sm font-semibold shadow-sm"
+              >
+                {t('gotIt')}
+              </button>
+            </div>
           </div>
         </div>
       )}
