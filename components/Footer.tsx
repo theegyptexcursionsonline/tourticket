@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, Loader2, X, Smartphone } from "lucide-react";
 import QRCode from 'qrcode';
 import Image from "next/image";
@@ -51,19 +51,32 @@ export default function Footer() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showAppModal, setShowAppModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
-  const qrGenerated = useRef(false);
+  const t = useTranslations('footer');
+  const locale = useLocale();
+  const rtl = isRTL(locale);
+  const appLandingPath = locale === 'en' ? '/mobile-app' : `/${locale}/mobile-app`;
+  const appLandingUrl = `https://egypt-excursionsonline.com${appLandingPath}`;
+  const appLandingLabel = appLandingUrl.replace(/^https?:\/\//, '');
 
-  // Generate actual QR code on mount
+  // Generate QR code for the dedicated app landing page.
   useEffect(() => {
-    if (qrGenerated.current) return;
-    qrGenerated.current = true;
-    QRCode.toDataURL('https://egypt-excursionsonline.com', {
+    let isMounted = true;
+
+    QRCode.toDataURL(appLandingUrl, {
       width: 200,
       margin: 1,
       color: { dark: '#0f172a', light: '#ffffff' },
       errorCorrectionLevel: 'M',
-    }).then(setQrDataUrl).catch(console.error);
-  }, []);
+    })
+      .then((dataUrl) => {
+        if (isMounted) setQrDataUrl(dataUrl);
+      })
+      .catch(console.error);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [appLandingUrl]);
 
   // Close modal on Escape key
   useEffect(() => {
@@ -72,9 +85,6 @@ export default function Footer() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [showAppModal]);
-  const t = useTranslations('footer');
-  const locale = useLocale();
-  const rtl = isRTL(locale);
 
   // Listen for open-chatbot events (dispatched by openChatbot)
   useEffect(() => {
@@ -685,7 +695,7 @@ export default function Footer() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900 mb-0.5">{t('scanToDownload')}</p>
-                  <p className="text-xs text-slate-500 leading-relaxed">egypt-excursionsonline.com</p>
+                  <p className="text-xs text-slate-500 leading-relaxed break-all">{appLandingLabel}</p>
                 </div>
               </div>
 
