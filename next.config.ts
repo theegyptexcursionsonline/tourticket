@@ -7,6 +7,10 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const nextConfig = {
   reactStrictMode: true,
 
+  // Skip type/lint checks during build — CI catches these separately
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+
   // Server external packages configuration
   serverExternalPackages: ['mongoose'],
 
