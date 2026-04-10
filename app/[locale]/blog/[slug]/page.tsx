@@ -5,6 +5,7 @@ import Blog from '@/lib/models/Blog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogPostClient from './BlogPostClient';
+import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import type { IBlog } from '@/lib/models/Blog';
 
 type Params = { slug: string };
@@ -94,6 +95,17 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
 
   return (
     <>
+      <BlogPostSchema
+        title={blog.title}
+        slug={slug}
+        description={blog.metaDescription || blog.excerpt}
+        excerpt={blog.excerpt}
+        image={blog.featuredImage}
+        author={blog.author}
+        publishedAt={blog.publishedAt?.toString()}
+        updatedAt={blog.updatedAt?.toString()}
+        tags={blog.tags}
+      />
       <Header startSolid />
       <main className="pt-20">
         <BlogPostClient blog={blog} relatedPosts={relatedPosts} />

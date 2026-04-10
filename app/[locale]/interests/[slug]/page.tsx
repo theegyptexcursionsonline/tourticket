@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import InterestLandingPage from '@/components/InterestLandingPage';
+import CollectionSchema from '@/components/schema/CollectionSchema';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
@@ -127,6 +128,12 @@ export default async function Page(props: InterestPageProps) {
 
   return (
     <>
+      <CollectionSchema
+        name={interest.name}
+        description={interest.description}
+        url={`/interests/${params.slug}`}
+        items={interest.tours.map((t: any) => ({ name: t.title, url: `/tour/${t.slug}`, image: t.image }))}
+      />
       <Header startSolid />
       <InterestLandingPage interest={interest} />
       <Footer />

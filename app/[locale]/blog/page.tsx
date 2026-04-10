@@ -5,6 +5,7 @@ import Blog from '@/lib/models/Blog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
+import CollectionSchema from '@/components/schema/CollectionSchema';
 import { IBlog } from '@/lib/models/Blog';
 
 // Enable ISR with 60 second revalidation for instant page loads
@@ -92,10 +93,16 @@ export default async function BlogIndexPage() {
 
   return (
     <>
+      <CollectionSchema
+        name="Travel Blog"
+        description="Discover travel tips, destination guides, and inspiring stories from Egypt"
+        url="/blog"
+        items={(blogs as any[]).map((b: any) => ({ name: b.title, url: `/blog/${b.slug}`, image: b.featuredImage }))}
+      />
       <Header startSolid />
       <main className="min-h-screen pt-20">
-        <BlogClientPage 
-          blogs={blogs} 
+        <BlogClientPage
+          blogs={blogs}
           categories={categoryCounts}
           featuredPosts={featuredPosts}
         />

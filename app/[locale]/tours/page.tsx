@@ -9,6 +9,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
 import ToursClientPage from './ToursClientPage';
+import ToursListSchema from '@/components/schema/ToursListSchema';
 import { ITour } from '@/lib/models/Tour';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 
@@ -131,6 +132,11 @@ export default async function ToursIndexPage({
 
   return (
     <>
+      <ToursListSchema
+        tours={(tours as any[]).map((t: any) => ({ title: t.title, slug: t.slug, image: t.image, discountPrice: t.discountPrice, originalPrice: t.originalPrice, rating: t.rating, reviewCount: t.reviewCount, duration: t.duration }))}
+        listName="All Tours & Activities in Egypt"
+        listDescription="Browse our complete collection of tours and experiences in Egypt"
+      />
       <Header startSolid />
       <main className="min-h-screen bg-slate-50 pt-20">
         <ToursClientPage tours={tours} />

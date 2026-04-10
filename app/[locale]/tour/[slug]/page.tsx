@@ -9,6 +9,7 @@ import ReviewModel from '@/lib/models/Review';
 import UserModel from '@/lib/models/user';
 import { Tour, Review } from '@/types';
 import TourPageClient from './TourPageClient';
+import TourSchema from '@/components/schema/TourSchema';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 
 // Enable ISR with 60 second revalidation for instant page loads
@@ -198,24 +199,27 @@ export async function generateMetadata({
     }
 
     const price = tour.discountPrice || tour.originalPrice || 0;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+    const tourUrl = `${baseUrl}/tour/${slug}`;
+    const desc = tour.metaDescription || tour.description?.substring(0, 160) || `Book ${tour.title} with Egypt Excursions Online`;
     return {
       title: tour.metaTitle || `${tour.title} - Egypt Excursions Online`,
-      description:
-        tour.metaDescription ||
-        tour.description?.substring(0, 160) ||
-        `Book ${tour.title} with Egypt Excursions Online`,
+      description: desc,
+      alternates: {
+        canonical: `/tour/${slug}`,
+      },
       openGraph: {
         title: tour.title,
-        description:
-          tour.metaDescription || tour.description?.substring(0, 160),
-        images: tour.image ? [tour.image] : [],
+        description: desc,
+        images: tour.image ? [{ url: tour.image, width: 1200, height: 630, alt: tour.title }] : [],
         type: 'website',
+        siteName: 'Egypt Excursions Online',
+        url: tourUrl,
       },
       twitter: {
         card: 'summary_large_image',
         title: tour.title,
-        description:
-          tour.metaDescription || tour.description?.substring(0, 160),
+        description: desc,
         images: tour.image ? [tour.image] : [],
       },
     };
@@ -241,5 +245,10 @@ export default async function TourPage({
     notFound();
   }
 
-  return <TourPageClient tour={tour} relatedTours={relatedTours} initialReviews={reviews} />;
+  return (
+    <>
+      <TourSchema tour={tour as any} reviews={reviews as any} />
+      <TourPageClient tour={tour} relatedTours={relatedTours} initialReviews={reviews} />
+    </>
+  );
 }

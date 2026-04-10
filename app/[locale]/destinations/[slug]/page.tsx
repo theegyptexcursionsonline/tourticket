@@ -6,6 +6,7 @@ import TourModel from '@/lib/models/Tour';
 import CategoryModel from '@/lib/models/Category';
 import ReviewModel from '@/lib/models/Review';
 import DestinationPageClient from './DestinationPageClient';
+import DestinationSchema from '@/components/schema/DestinationSchema';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 
 // Enable ISR with 60 second revalidation for fast page loads
@@ -223,12 +224,22 @@ export default async function DestinationPage({
   }
 
   return (
-    <DestinationPageClient
-      destination={destination}
-      destinationTours={destinationTours}
-      allCategories={allCategories}
-      reviews={reviews}
-      relatedDestinations={relatedDestinations}
-    />
+    <>
+      <DestinationSchema
+        name={destination.name as string}
+        slug={slug}
+        description={destination.description as string}
+        image={destination.image as string}
+        country={destination.country as string}
+        tours={destinationTours.map((t: any) => ({ title: t.title, slug: t.slug, image: t.image, discountPrice: t.discountPrice, originalPrice: t.originalPrice, rating: t.rating, reviewCount: t.reviewCount }))}
+      />
+      <DestinationPageClient
+        destination={destination}
+        destinationTours={destinationTours}
+        allCategories={allCategories}
+        reviews={reviews}
+        relatedDestinations={relatedDestinations}
+      />
+    </>
   );
 }

@@ -5,6 +5,7 @@ import TourModel from '@/lib/models/Tour';
 import CategoryModel from '@/lib/models/Category';
 import { Tour, Category } from '@/types';
 import CategoryPageClient from './CategoryPageClient';
+import CollectionSchema from '@/components/schema/CollectionSchema';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 
 // Enable ISR with 60 second revalidation for instant page loads
@@ -153,9 +154,17 @@ export default async function CategoryPage({
   }
 
   return (
-    <CategoryPageClient
-      category={category}
-      categoryTours={categoryTours}
-    />
+    <>
+      <CollectionSchema
+        name={(category as any).name}
+        description={(category as any).description}
+        url={`/categories/${resolvedParams.slug}`}
+        items={categoryTours.map((t: any) => ({ name: t.title, url: `/tour/${t.slug}`, image: t.image }))}
+      />
+      <CategoryPageClient
+        category={category}
+        categoryTours={categoryTours}
+      />
+    </>
   );
 }

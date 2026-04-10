@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
 import DestinationsClientPage from './DestinationsClientPage';
+import CollectionSchema from '@/components/schema/CollectionSchema';
 import { IDestination } from '@/lib/models/Destination';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 
@@ -114,6 +115,12 @@ export default async function DestinationsIndexPage({
 
   return (
     <>
+      <CollectionSchema
+        name="All Destinations"
+        description="Explore amazing destinations across Egypt"
+        url="/destinations"
+        items={(destinations as any[]).map((d: any) => ({ name: d.name, url: `/destinations/${d.slug}`, image: d.image }))}
+      />
       <Header startSolid />
       <main className="min-h-screen bg-slate-50 pt-20">
         <DestinationsClientPage destinations={destinations as any} />

@@ -10,6 +10,8 @@ import Link from "next/link";
 // Import the reusable Header and Footer components
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import OrganizationSchema from '@/components/schema/OrganizationSchema';
+import WebSiteSchema from '@/components/schema/WebSiteSchema';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -61,6 +63,13 @@ function DarkHero() {
 export default function AboutUsPage() {
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
+      <OrganizationSchema />
+      <WebSiteSchema
+        pageName="About Us - Your Best Travel Buddy | Egypt Excursions Online"
+        pageDescription="Learn about Egypt Excursions Online, your trusted partner for extraordinary travel experiences with 15 years of expertise in tourism."
+        pageUrl="/about"
+        breadcrumbs={[{ name: 'Home', url: '/' }, { name: 'About Us', url: '/about' }]}
+      />
       {/* Add the DarkHero section at the top of the page */}
       <DarkHero />
       
