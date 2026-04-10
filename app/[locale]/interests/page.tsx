@@ -46,9 +46,11 @@ async function getCategoriesWithTourCounts(): Promise<CategoryWithCount[]> {
     // For each category, count the number of published tours
     const categoriesWithCounts = await Promise.all(
       categories.map(async (cat) => {
+        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const tourCount = await Tour.countDocuments({
           category: { $in: [cat._id] },
-          isPublished: true
+          isPublished: true,
+          ...defaultTenantFilter
         });
         return {
           ...cat,

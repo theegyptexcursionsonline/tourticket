@@ -14,8 +14,9 @@ export async function GET() {
       .sort({ featured: -1, tourCount: -1, name: 1 })
       .lean();
 
-    // Get all published tours
-    const tours = await Tour.find({ isPublished: true })
+    // Get all published tours (exclude German/other tenant tours)
+    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
+    const tours = await Tour.find({ isPublished: true, ...defaultTenantFilter })
       .select('destination')
       .lean();
 

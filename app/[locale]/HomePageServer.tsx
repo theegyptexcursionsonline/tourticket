@@ -39,6 +39,9 @@ async function getHomePageData(locale: string) {
   try {
     await dbConnect();
 
+    // Only show tours from the main (default) tenant — exclude German/other tenant tours
+    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
+
     // Fetch all data in parallel for speed
     const [
       destinations,
@@ -59,8 +62,8 @@ async function getHomePageData(locale: string) {
         .limit(8)
         .lean(),
 
-      // Featured tours
-      Tour.find({ isPublished: true, isFeatured: true })
+      // Featured tours (exclude German tenant tours)
+      Tour.find({ isPublished: true, isFeatured: true, ...defaultTenantFilter })
         .populate('destination', 'name')
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings translations')
         .sort({ updatedAt: -1, createdAt: -1 })
@@ -100,8 +103,8 @@ async function getHomePageData(locale: string) {
         .select('backgroundImages currentActiveImage title searchSuggestions floatingTags trustIndicators overlaySettings animationSettings metaTitle metaDescription')
         .lean(),
 
-      // Day trips (all published tours, limited to 12)
-      Tour.find({ isPublished: true })
+      // Day trips (all published tours, limited to 12, exclude German tenant tours)
+      Tour.find({ isPublished: true, ...defaultTenantFilter })
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings tags translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
@@ -142,7 +145,8 @@ async function getHomePageData(locale: string) {
       destinations.map(async (dest) => {
         const count = await Tour.countDocuments({
           destination: dest._id,
-          isPublished: true
+          isPublished: true,
+          ...defaultTenantFilter
         });
         return {
           ...JSON.parse(JSON.stringify(dest)),
@@ -156,7 +160,8 @@ async function getHomePageData(locale: string) {
       categories.map(async (category: any) => {
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
-          isPublished: true
+          isPublished: true,
+          ...defaultTenantFilter
         });
         return {
           ...JSON.parse(JSON.stringify(category)),
@@ -171,7 +176,8 @@ async function getHomePageData(locale: string) {
         // Category is an array field in Tour model, so we need to use $in
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
-          isPublished: true
+          isPublished: true,
+          ...defaultTenantFilter
         });
         return {
           type: 'category' as const,
@@ -208,7 +214,8 @@ async function getHomePageData(locale: string) {
         if (searchQueries.length > 0) {
           tourCount = await Tour.countDocuments({
             isPublished: true,
-            $or: searchQueries
+            ...defaultTenantFilter,
+            $and: [{ $or: searchQueries }]
           });
         }
 

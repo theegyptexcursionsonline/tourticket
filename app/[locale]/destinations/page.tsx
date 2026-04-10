@@ -67,9 +67,11 @@ async function getDestinationsWithTourCounts(locale: string): Promise<IDestinati
     // For each destination, count the number of published tours
     const destinationsWithCounts = await Promise.all(
       destinations.map(async (dest) => {
+        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const tourCount = await Tour.countDocuments({
           destination: dest._id,
-          isPublished: true
+          isPublished: true,
+          ...defaultTenantFilter
         });
         return {
           ...dest,

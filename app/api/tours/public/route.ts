@@ -7,8 +7,10 @@ export async function GET() {
   await dbConnect();
   try {
     // Only return public tour data
+    // Only show tours from the default tenant (exclude German/other tenant tours)
+    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
     const tours = await Tour.find(
-      { isActive: true, isPublished: true },
+      { isActive: true, isPublished: true, ...defaultTenantFilter },
       { 
         destination: 1, 
         title: 1, 

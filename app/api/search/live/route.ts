@@ -34,9 +34,12 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const searchQuery = searchParams.get('q');
 
+        // Only show tours from the default tenant (exclude German/other tenant tours)
+        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
+
         if (!searchQuery) {
             // Return tours based on filters when no search query
-            const query: any = {};
+            const query: any = { ...defaultTenantFilter };
 
             const categories = searchParams.get('categories');
             if (categories) {
@@ -99,7 +102,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: true, data: [] });
         }
 
-        const tours = await Tour.find(searchConditions)
+        const tours = await Tour.find({ ...searchConditions, ...defaultTenantFilter })
             .select('title slug image rating reviews destination location tags')
             .populate('destination', 'name')
             .sort({ rating: -1, bookings: -1 }) // Prioritize high-rated popular tours

@@ -98,16 +98,19 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
 
         // Build additional filters - ALWAYS filter for published tours only
+        // Exclude German/other tenant tours — only show default tenant content
+        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const additionalFilters: any = {
-            isPublished: true  // Only show published tours
+            isPublished: true,
+            ...defaultTenantFilter
         };
 
         // Categories Filter
         const categories = searchParams.get('categories');
         if (categories) {
             try {
-                additionalFilters.category = { 
-                    $in: categories.split(',').map(id => new mongoose.Types.ObjectId(id)) 
+                additionalFilters.category = {
+                    $in: categories.split(',').map(id => new mongoose.Types.ObjectId(id))
                 };
             } catch (error) {
                 console.warn("Invalid category ID format", error);
@@ -118,25 +121,28 @@ export async function GET(request: Request) {
         const destinations = searchParams.get('destinations');
         if (destinations) {
             try {
-                additionalFilters.destination = { 
-                    $in: destinations.split(',').map(id => new mongoose.Types.ObjectId(id)) 
+                additionalFilters.destination = {
+                    $in: destinations.split(',').map(id => new mongoose.Types.ObjectId(id))
                 };
             } catch (error) {
                 console.warn("Invalid destination ID format", error);
             }
         }
 
-        // Price Filter
+        // Price Filter — use $and to avoid overwriting the tenant $or filter
         const minPrice = searchParams.get('minPrice');
         const maxPrice = searchParams.get('maxPrice');
         if (minPrice || maxPrice) {
             const priceQuery: any = {};
             if (minPrice) priceQuery.$gte = Number(minPrice);
             if (maxPrice) priceQuery.$lte = Number(maxPrice);
-            additionalFilters.$or = [
-                { discountPrice: priceQuery },
-                { price: priceQuery }
-            ];
+            if (!additionalFilters.$and) additionalFilters.$and = [];
+            additionalFilters.$and.push({
+                $or: [
+                    { discountPrice: priceQuery },
+                    { price: priceQuery }
+                ]
+            });
         }
 
         // Duration Filter

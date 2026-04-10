@@ -15,9 +15,11 @@ export async function GET() {
     // Optionally add tour counts
     const categoriesWithCounts = await Promise.all(
       categories.map(async (category) => {
+        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
-          isPublished: true
+          isPublished: true,
+          ...defaultTenantFilter
         });
         
         return {
