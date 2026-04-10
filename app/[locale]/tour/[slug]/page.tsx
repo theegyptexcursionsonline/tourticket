@@ -206,7 +206,7 @@ export async function generateMetadata({
       title: tour.metaTitle || `${tour.title} - Egypt Excursions Online`,
       description: desc,
       alternates: {
-        canonical: `/tour/${slug}`,
+        canonical: `${baseUrl}/tour/${slug}`,
       },
       openGraph: {
         title: tour.title,
