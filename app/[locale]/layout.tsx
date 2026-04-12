@@ -26,7 +26,10 @@ const almarai = Almarai({
   variable: '--font-almarai'
 });
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(BASE_URL),
   title: "Egypt Excursions Online - Unforgettable Experiences",
   description:
     "Discover and book unforgettable tours, day trips, and excursions across Egypt. Explore Hurghada, Cairo, Luxor, Sharm El Sheikh and more with Egypt Excursions Online.",
@@ -53,6 +56,17 @@ export const metadata: Metadata = {
       'max-video-preview': -1,
       'max-image-preview': 'large',
       'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: '/',
+    languages: {
+      'en': `${BASE_URL}/`,
+      'ar': `${BASE_URL}/ar`,
+      'es': `${BASE_URL}/es`,
+      'fr': `${BASE_URL}/fr`,
+      'de': `${BASE_URL}/de`,
+      'x-default': `${BASE_URL}/`,
     },
   },
 };

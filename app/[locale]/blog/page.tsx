@@ -20,6 +20,17 @@ export const metadata: Metadata = {
     description: 'Discover travel tips, destination guides, and inspiring stories from Egypt.',
     type: 'website',
   },
+  alternates: {
+    canonical: '/blog',
+    languages: {
+      'en': '/blog',
+      'ar': '/ar/blog',
+      'es': '/es/blog',
+      'fr': '/fr/blog',
+      'de': '/de/blog',
+      'x-default': '/blog',
+    },
+  },
 };
 
 const categories = [

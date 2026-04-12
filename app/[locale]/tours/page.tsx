@@ -49,6 +49,17 @@ export async function generateMetadata({
       description: meta.description,
       type: 'website',
     },
+    alternates: {
+      canonical: '/tours',
+      languages: {
+        'en': '/tours',
+        'ar': '/ar/tours',
+        'es': '/es/tours',
+        'fr': '/fr/tours',
+        'de': '/de/tours',
+        'x-default': '/tours',
+      },
+    },
   };
 };
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
+import { getSeoAlternates } from '@/lib/seo';
 import {
   Award, DollarSign, Smartphone, CalendarCheck,
   Heart, Users, Compass
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: ['/about.png'],
   },
+  alternates: getSeoAlternates('/about'),
 };
 
 // =================================================================

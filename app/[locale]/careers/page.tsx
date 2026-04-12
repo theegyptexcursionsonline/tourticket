@@ -2,6 +2,9 @@
 import React from "react";
 import { Metadata } from "next";
 import CareersClientPage from "./CareersClientPage";
+import OrganizationSchema from "@/components/schema/OrganizationSchema";
+import WebSiteSchema from "@/components/schema/WebSiteSchema";
+import { getSeoAlternates } from '@/lib/seo';
 import dbConnect from "@/lib/dbConnect";
 import Job from "@/lib/models/Job";
 import { Job as JobType } from "@/types";
@@ -18,6 +21,7 @@ export const metadata: Metadata = {
     description: 'Explore exciting career opportunities at Egypt Excursions Online.',
     type: 'website',
   },
+  alternates: getSeoAlternates('/careers'),
 };
 
 async function getJobs(): Promise<JobType[]> {
@@ -39,5 +43,11 @@ async function getJobs(): Promise<JobType[]> {
 
 export default async function CareersPage() {
     const jobOpenings = await getJobs();
-    return <CareersClientPage jobOpenings={jobOpenings} />;
+    return (
+        <>
+            <OrganizationSchema />
+            <WebSiteSchema pageName="Careers" />
+            <CareersClientPage jobOpenings={jobOpenings} />
+        </>
+    );
 }

@@ -47,6 +47,17 @@ export async function generateMetadata({
       description: meta.description,
       type: 'website',
     },
+    alternates: {
+      canonical: '/destinations',
+      languages: {
+        'en': '/destinations',
+        'ar': '/ar/destinations',
+        'es': '/es/destinations',
+        'fr': '/fr/destinations',
+        'de': '/de/destinations',
+        'x-default': '/destinations',
+      },
+    },
   };
 };
 

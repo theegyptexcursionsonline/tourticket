@@ -1,5 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
+import { getSeoAlternates } from '@/lib/seo';
 import ContactClientPage from './ContactClientPage';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
 import WebSiteSchema from '@/components/schema/WebSiteSchema';
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: ['/about.png'],
   },
+  alternates: getSeoAlternates('/contact'),
 };
 
 export default function ContactPage() {
