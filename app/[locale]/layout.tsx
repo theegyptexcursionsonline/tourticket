@@ -29,7 +29,6 @@ const almarai = Almarai({
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
   title: "Egypt Excursions Online - Unforgettable Experiences",
   description:
     "Discover and book unforgettable tours, day trips, and excursions across Egypt. Explore Hurghada, Cairo, Luxor, Sharm El Sheikh and more with Egypt Excursions Online.",
