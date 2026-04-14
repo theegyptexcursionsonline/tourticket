@@ -7,6 +7,12 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const nextConfig = {
   reactStrictMode: true,
 
+  // Heavy pages (/[locale]/egypt, /[locale]/interests, /[locale]) do
+  // MongoDB-backed data fetches during SSG and blow past the 60s default
+  // on Netlify's build image. Raise the per-page timeout to 300s so the
+  // cold-DB-connection worst case doesn't trip the retry cap.
+  staticPageGenerationTimeout: 300,
+
   // Skip type/lint checks during build — CI catches these separately
   typescript: { ignoreBuildErrors: true },
 
