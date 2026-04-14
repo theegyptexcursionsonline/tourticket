@@ -74,41 +74,63 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-async function getNavData() {
+// Module-level nav-data cache. During `next build` the LocaleLayout runs for
+// every single static page (272× on tourticket) — without a cache, every page
+// re-hits MongoDB twice, which cumulatively pushed individual page renders
+// past Next.js's 60s SSG budget and timed out the Netlify build. The cache
+// below drops each worker process from 272 DB round-trips to 1 per TTL
+// window, which is all we need during a build and still safe at runtime.
+type NavCache = { destinations: any[]; categories: any[] };
+let _navDataCache: NavCache | null = null;
+let _navDataCacheExpiry = 0;
+const NAV_DATA_TTL_MS = 60_000;
+
+function dedupeByNormalizedName<T extends { name?: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    const key = (item.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
+}
+
+async function getNavData(): Promise<NavCache> {
+  const now = Date.now();
+  if (_navDataCache && now < _navDataCacheExpiry) {
+    return _navDataCache;
+  }
+
   try {
     await dbConnect();
+    // Plain `.find().lean()` (cheap and index-friendly) followed by a JS-side
+    // dedupe by normalized name. The old code used a `$group` aggregation to
+    // collapse the 26+ duplicate category clusters live in the DB, but that
+    // pipeline was orders of magnitude slower than doing the dedup in Node,
+    // and had to run once per SSG page. The defensive property we care about
+    // — "the menu never shows duplicate names" — is satisfied just as well
+    // by `dedupeByNormalizedName` below.
     const [destinations, categories] = await Promise.all([
-      Destination.aggregate([
-        { $match: { isPublished: true, featured: true } },
-        { $sort: { tourCount: -1, name: 1 } },
-        {
-          $group: {
-            _id: { $toLower: { $trim: { input: '$name' } } },
-            doc: { $first: '$$ROOT' },
-          },
-        },
-        { $replaceRoot: { newRoot: '$doc' } },
-        { $project: { _id: 1, name: 1, slug: 1, image: 1, description: 1, country: 1, featured: 1, tourCount: 1 } },
-        { $sort: { tourCount: -1, name: 1 } },
-      ]),
-      Category.aggregate([
-        { $match: { isPublished: true, featured: true } },
-        { $sort: { order: 1, name: 1 } },
-        {
-          $group: {
-            _id: { $toLower: { $trim: { input: '$name' } } },
-            doc: { $first: '$$ROOT' },
-          },
-        },
-        { $replaceRoot: { newRoot: '$doc' } },
-        { $project: { _id: 1, name: 1, slug: 1, icon: 1, description: 1, order: 1 } },
-        { $sort: { order: 1, name: 1 } },
-      ]),
+      Destination.find({ isPublished: true, featured: true })
+        .select('_id name slug image description country featured tourCount')
+        .sort({ tourCount: -1, name: 1 })
+        .lean(),
+      Category.find({ isPublished: true, featured: true })
+        .select('_id name slug icon description order')
+        .sort({ order: 1, name: 1 })
+        .lean(),
     ]);
-    return {
-      destinations: JSON.parse(JSON.stringify(destinations)),
-      categories: JSON.parse(JSON.stringify(categories)),
+
+    const result: NavCache = {
+      destinations: JSON.parse(JSON.stringify(dedupeByNormalizedName(destinations as any[]))),
+      categories: JSON.parse(JSON.stringify(dedupeByNormalizedName(categories as any[]))),
     };
+
+    _navDataCache = result;
+    _navDataCacheExpiry = now + NAV_DATA_TTL_MS;
+    return result;
   } catch (error) {
     console.error('Failed to fetch nav data in layout:', error);
     return { destinations: [], categories: [] };
