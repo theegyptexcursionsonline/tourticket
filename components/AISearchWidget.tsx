@@ -281,7 +281,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as any[]);
   const limitedHits = uniqueHits.slice(0, limit);
   const t = useTranslations('aiSearch');
 
@@ -338,7 +338,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as any[]);
   const limitedHits = uniqueHits.slice(0, limit);
   const t = useTranslations('aiSearch');
 
