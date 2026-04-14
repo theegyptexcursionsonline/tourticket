@@ -1,22 +1,24 @@
 // app/api/destinations/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Fetch all published destinations
-    const destinations = await Destination.find({ isPublished: true, featured: true })
+    const featuredOnly = new URL(request.url).searchParams.get('featured') !== 'false';
+    const destinations = await Destination.find({
+      isPublished: true,
+      ...(featuredOnly ? { featured: true } : {}),
+    })
       .select('_id name slug country image description featured tourCount')
       .sort({ featured: -1, tourCount: -1, name: 1 })
       .lean();
 
-    // Get all published tours (exclude German/other tenant tours)
-    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
-    const tours = await Tour.find({ isPublished: true, ...defaultTenantFilter })
+    const tours = await Tour.find({ isPublished: true })
       .select('destination')
       .lean();
 
@@ -35,8 +37,8 @@ export async function GET() {
       tourCount: tourCounts[dest._id.toString()] || 0,
     }));
 
-    const destinationsWithCounts = destinationsWithCountsData
-      .filter((dest: any) => dest.tourCount > 0 || dest.featured)
+    const destinationsWithCounts = filterVisibleTaxonomyEntries(destinationsWithCountsData)
+      .filter((dest: any) => (dest.tourCount || 0) > 0 || dest.featured)
       .sort((a: any, b: any) => {
         // Featured first
         if (a.featured && !b.featured) return -1;

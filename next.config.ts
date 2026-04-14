@@ -9,7 +9,6 @@ const nextConfig = {
 
   // Skip type/lint checks during build — CI catches these separately
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
 
   // Server external packages configuration
   serverExternalPackages: ['mongoose'],

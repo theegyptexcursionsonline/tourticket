@@ -6,8 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Star, Loader2, User, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from '@/i18n/routing';
-import LoginModal from '@/components/auth/LoginModal';
-import SignupModal from '@/components/auth/SignupModal';
 import { useLocale, useTranslations } from 'next-intl';
 
 interface ReviewFormProps {
@@ -25,39 +23,75 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasExistingReview, setHasExistingReview] = useState<any>(null);
-  const [isCheckingExisting, setIsCheckingExisting] = useState(true);
-  const [isLoginModalOpen, setLoginModalOpen] = useState(false);
-  const [isSignupModalOpen, setSignupModalOpen] = useState(false);
+  const [canReview, setCanReview] = useState(false);
+  const [eligibilityReason, setEligibilityReason] = useState<string | null>(null);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(false);
 
   // Check if user has already reviewed this tour
   useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const checkExistingReview = async () => {
       if (!isAuthenticated || !user || !token) {
-        setIsCheckingExisting(false);
+        if (isMounted) {
+          setHasExistingReview(null);
+          setCanReview(false);
+          setEligibilityReason('verified_booking_required');
+          setIsCheckingExisting(false);
+        }
         return;
       }
+
+      if (isMounted) {
+        setIsCheckingExisting(true);
+      }
+
+      timeoutId = setTimeout(() => {
+        controller.abort();
+      }, 8000);
 
       try {
         const response = await fetch(`/api/tours/${tourId}/reviews/check`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
+          signal: controller.signal,
         });
 
         if (response.ok) {
           const data = await response.json();
-          if (data.hasReview) {
-            setHasExistingReview(data.review);
+          if (isMounted) {
+            setHasExistingReview(data.hasReview ? data.review : null);
+            setCanReview(Boolean(data.canReview));
+            setEligibilityReason(data.reason || null);
           }
         }
       } catch (error) {
-        console.error('Error checking existing review:', error);
+        if ((error as Error)?.name !== 'AbortError') {
+          console.error('Error checking existing review:', error);
+        }
       } finally {
-        setIsCheckingExisting(false);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
+        if (isMounted) {
+          setIsCheckingExisting(false);
+        }
       }
     };
 
     checkExistingReview();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [isAuthenticated, user, token, tourId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +111,11 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
 
     if (!token) {
       toast.error(t('errors.auth'));
+      return;
+    }
+
+    if (!canReview) {
+      toast.error('Only customers with a completed booking can leave a review.');
       return;
     }
 
@@ -223,62 +262,41 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
     );
   }
 
-  // If not authenticated, show login prompt
+  // If not authenticated, explain the verified-review policy
   if (!isAuthenticated) {
     return (
-      <>
-        <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('guest.title')}</h3>
-            <p className="text-gray-600 mb-4">
-              {t('guest.subtitle')}
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setLoginModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {t('guest.login')}
-              </button>
-              <button
-                onClick={() => setSignupModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg border border-blue-600 hover:bg-blue-50 transition-colors"
-              >
-                {t('guest.signup')}
-              </button>
-            </div>
+      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-blue-600" />
           </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('guest.title')}</h3>
+          <p className="text-gray-600">
+            Reviews are only available to customers who completed this tour. Eligible guests receive a post-trip review email automatically.
+          </p>
         </div>
+      </div>
+    );
+  }
 
-        {/* Login and Signup Modals */}
-        <LoginModal
-          isOpen={isLoginModalOpen}
-          onClose={() => setLoginModalOpen(false)}
-          onSwitchToSignup={() => {
-            setLoginModalOpen(false);
-            setSignupModalOpen(true);
-          }}
-          onSuccess={() => {
-            // Auth state will update automatically
-            toast.success(t('success.canNowReview'));
-          }}
-        />
-        <SignupModal
-          isOpen={isSignupModalOpen}
-          onClose={() => setSignupModalOpen(false)}
-          onSwitchToLogin={() => {
-            setSignupModalOpen(false);
-            setLoginModalOpen(true);
-          }}
-          onSuccess={() => {
-            // Auth state will update automatically
-            toast.success(t('success.accountCreatedCanReview'));
-          }}
-        />
-      </>
+  if (!canReview) {
+    return (
+      <div className="mt-8 p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Edit2 className="w-8 h-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('form.title')}</h3>
+          <p className="text-gray-600">
+            Only customers with a completed booking can leave a review. Once you finish this tour, we&apos;ll send your review link by email.
+          </p>
+          {eligibilityReason && (
+            <p className="mt-3 text-xs text-amber-700 uppercase tracking-wide">
+              {eligibilityReason.replaceAll('_', ' ')}
+            </p>
+          )}
+        </div>
+      </div>
     );
   }
 

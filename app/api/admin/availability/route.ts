@@ -1,5 +1,6 @@
 // app/api/admin/availability/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import dbConnect from '@/lib/dbConnect';
 import Availability from '@/lib/models/Availability';
 import Tour from '@/lib/models/Tour';
@@ -7,6 +8,28 @@ import StopSale from '@/lib/models/StopSale';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export const dynamic = 'force-dynamic';
+
+// Bust the ISR full-route cache for every public surface that shows a tour's
+// availability / stop-sale state. Without this, the tour detail page (which
+// uses `export const revalidate = 60`) can show stale "Available" option cards
+// for up to 60 seconds after an admin stop-sales the tour.
+//
+// Path-pattern revalidation (vs. per-slug revalidation) is intentional: it
+// flushes every locale + legacy `/tour/[slug]` route in one call and removes
+// the need to thread slugs through the handlers.
+function revalidateTourAvailabilitySurfaces() {
+  try {
+    revalidatePath('/[locale]/[slug]', 'page');        // primary tour detail
+    revalidatePath('/[locale]/tour/[slug]', 'page');   // legacy `/tour/:slug`
+    revalidatePath('/[locale]/tours', 'page');         // tours listing
+    revalidatePath('/[locale]/search', 'page');        // search results
+  } catch (err) {
+    // revalidatePath can throw in non-Route-Handler contexts; we're always
+    // inside a handler here, but we never want a revalidation glitch to
+    // cascade into a 500 on a successful write.
+    console.warn('revalidateTourAvailabilitySurfaces failed:', err);
+  }
+}
 
 // GET - Fetch availability for a tour/month
 export async function GET(request: NextRequest) {
@@ -248,6 +271,8 @@ export async function POST(request: NextRequest) {
       await StopSale.deleteMany({ tourId, startDate: availabilityDate, endDate: availabilityDate, optionIds: [] });
     }
 
+    revalidateTourAvailabilitySurfaces();
+
     return NextResponse.json({
       success: true,
       data: availability,
@@ -279,13 +304,26 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Dedupe dates at midnight-local precision. Without this, a dates array that
+    // repeats the same day (common when admin selects overlapping ranges) produces
+    // parallel upserts into StopSale, which races against the unique index
+    // `{tourId, startDate, endDate, optionIds}` and surfaces as E11000.
+    const seenTimestamps = new Set<number>();
+    const uniqueDates: Date[] = [];
+    for (const dateStr of dates) {
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) continue;
+      d.setHours(0, 0, 0, 0);
+      const ts = d.getTime();
+      if (seenTimestamps.has(ts)) continue;
+      seenTimestamps.add(ts);
+      uniqueDates.push(d);
+    }
+
     const operations = [];
     const stopSaleOps: any[] = [];
 
-    for (const dateStr of dates) {
-      const date = new Date(dateStr);
-      date.setHours(0, 0, 0, 0);
-
+    for (const date of uniqueDates) {
       const updateData: Record<string, unknown> = {};
 
       switch (action) {
@@ -347,21 +385,79 @@ export async function PUT(request: NextRequest) {
     }
 
     const result = await Availability.bulkWrite(operations);
-    if (stopSaleOps.length > 0) {
-      await StopSale.bulkWrite(stopSaleOps, { ordered: false });
+
+    // Sequential stop-sale writes with per-op duplicate-key tolerance.
+    // bulkWrite({ ordered: false }) on an upsert against a unique index will race
+    // when two ops target the same filter, surfacing as an E11000 BulkWriteError
+    // that the generic catch block used to return as a generic 500. Serializing
+    // and catching 11000 per-op means a concurrent admin write no longer fails
+    // the whole batch.
+    let stopSaleWritten = 0;
+    let stopSaleDeleted = 0;
+    for (const op of stopSaleOps) {
+      try {
+        if (op.updateOne) {
+          const { filter, update } = op.updateOne;
+          await StopSale.updateOne(filter, update, { upsert: true });
+          stopSaleWritten += 1;
+        } else if (op.deleteOne) {
+          await StopSale.deleteOne(op.deleteOne.filter);
+          stopSaleDeleted += 1;
+        }
+      } catch (opError: any) {
+        if (opError?.code === 11000) {
+          // Another request created the same record between our filter lookup
+          // and the insert. Fall back to a plain update (no upsert) so we still
+          // persist the caller's reason/updatedAt.
+          if (op.updateOne) {
+            try {
+              await StopSale.updateOne(op.updateOne.filter, op.updateOne.update);
+              stopSaleWritten += 1;
+              continue;
+            } catch (retryError) {
+              console.error('Stop-sale E11000 retry failed:', retryError);
+            }
+          }
+        }
+        throw opError;
+      }
     }
+
+    revalidateTourAvailabilitySurfaces();
 
     return NextResponse.json({
       success: true,
       data: {
         modified: result.modifiedCount,
         upserted: result.upsertedCount,
+        stopSaleWritten,
+        stopSaleDeleted,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error bulk updating availability:', error);
+
+    // Surface duplicate-key races as a clear 409 so the admin modal can show a
+    // specific toast ("already stop-saled, refresh the page") instead of a
+    // generic 500 that looks like a server bug.
+    if (error?.code === 11000) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'DUPLICATE_STOP_SALE',
+          error:
+            'This date range is already stop-saled for this tour. Refresh the admin page and edit the existing record instead.',
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Failed to bulk update availability' },
+      {
+        success: false,
+        code: 'BULK_UPDATE_FAILED',
+        error: error?.message || 'Failed to bulk update availability',
+      },
       { status: 500 }
     );
   }
@@ -415,6 +511,8 @@ export async function DELETE(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    revalidateTourAvailabilitySurfaces();
 
     return NextResponse.json({
       success: true,

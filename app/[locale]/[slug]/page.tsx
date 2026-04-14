@@ -72,6 +72,7 @@ async function getRelatedTours(categoryIds: string | string[] | any, currentTour
   })
     .populate('destination', 'name')
     .populate('category', 'name')
+    .select('title slug image discountPrice originalPrice duration destination category rating reviewCount tags')
     .limit(3)
     .lean();
 

@@ -1114,6 +1114,63 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     specialRequests: '',
   });
 
+  // Stop-sale state (Bug #1 parity with tourticket-destinations).
+  // Keyed by YYYY-MM-DD. A date is present if the admin has fully or
+  // partially blocked it via the stop-sale admin flow. The calendar memo
+  // below overlays this on top of tour.availability so blocked dates render
+  // as unclickable — before this, a user could pick a blocked date and only
+  // discover the block on the next step.
+  const [stopSaleDates, setStopSaleDates] = useState<Record<string, 'full' | 'partial'>>({});
+
+  useEffect(() => {
+    const tourId = tour?.id || tour?._id;
+    if (!tourId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const today = new Date();
+        const monthsToFetch: Array<{ month: number; year: number }> = [];
+        for (let offset = 0; offset < 6; offset += 1) {
+          const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+          monthsToFetch.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+        }
+
+        const responses = await Promise.all(
+          monthsToFetch.map(({ month, year }) =>
+            fetch(`/api/tours/${tourId}/stop-sales?month=${month}&year=${year}`, {
+              cache: 'no-store',
+            })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ),
+        );
+
+        if (cancelled) return;
+
+        const next: Record<string, 'full' | 'partial'> = {};
+        for (const res of responses) {
+          const days = res?.data?.days as Record<string, { status: 'full' | 'partial' }> | undefined;
+          if (!days) continue;
+          for (const [key, value] of Object.entries(days)) {
+            if (value?.status === 'full' || value?.status === 'partial') {
+              if (next[key] !== 'full') next[key] = value.status;
+            }
+          }
+        }
+        setStopSaleDates(next);
+      } catch (err) {
+        // Non-fatal: the calendar degrades to its pre-stop-sale behavior if
+        // the fetch fails; the server-side check still blocks the booking.
+        console.warn('[BookingSidebar] stop-sale month fetch failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tour?.id, tour?._id]);
+
   // Generate calendar availability based on tour's availability settings
   const calendarAvailability = useMemo(() => {
     const availabilityMap: { [key: string]: 'high' | 'medium' | 'low' | 'full' } = {};
@@ -1180,8 +1237,19 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       availabilityMap[dateKey] = 'high';
     }
 
+    // Overlay stop-sale state: fully blocked days become 'full' (unclickable),
+    // partially blocked days downgrade to 'low' as a visual warning while
+    // remaining selectable so partially-available options can still be picked.
+    for (const [key, status] of Object.entries(stopSaleDates)) {
+      if (status === 'full') {
+        availabilityMap[key] = 'full';
+      } else if (status === 'partial' && availabilityMap[key] !== 'full') {
+        availabilityMap[key] = 'low';
+      }
+    }
+
     return availabilityMap;
-  }, [tour?.availability]);
+  }, [tour?.availability, stopSaleDates]);
 
   // Get tour display data with proper fallbacks
   const tourDisplayData = useMemo(() => {

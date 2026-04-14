@@ -1,5 +1,6 @@
 // app/api/tours/[tourId]/reviews/route.ts
 import dbConnect from '@/lib/dbConnect';
+import Booking from '@/lib/models/Booking';
 import Review from '@/lib/models/Review';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
@@ -11,6 +12,8 @@ import mongoose from 'mongoose';
 interface Params {
   tourId: string;
 }
+
+const REVIEW_ELIGIBLE_STATUSES = ['Confirmed', 'Completed', 'confirmed', 'completed'];
 
 // POST - Create a new review
 export async function POST(
@@ -49,7 +52,7 @@ export async function POST(
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = (user as any)._id.toString();
+      userId = (user._id as any).toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
@@ -101,16 +104,32 @@ export async function POST(
       return NextResponse.json({ error: 'You have already reviewed this tour' }, { status: 409 });
     }
 
-    // Create the review
-    const review = await Review.create({
+    const eligibleBooking = await Booking.findOne({
       tour: new mongoose.Types.ObjectId(tourId),
       user: new mongoose.Types.ObjectId(userId),
-      userName: `${user.firstName} ${user.lastName}`,
+      tenantId: (tour as any).tenantId,
+      status: { $in: REVIEW_ELIGIBLE_STATUSES },
+      date: { $lt: new Date() },
+    })
+      .select('_id')
+      .lean();
+
+    if (!eligibleBooking) {
+      return NextResponse.json({
+        error: 'Only customers with a completed booking can leave a review.'
+      }, { status: 403 });
+    }
+
+    const review = await Review.create({
+      tenantId: (tour as any).tenantId || 'default',
+      tour: new mongoose.Types.ObjectId(tourId),
+      user: new mongoose.Types.ObjectId(userId),
+      userName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || (user as any).name || user.email,
       userEmail: user.email,
       rating: Number(rating),
       title: title?.trim() || undefined,
       comment: comment?.trim() || undefined,
-      verified: false,
+      verified: true,
       helpful: 0
     });
 
@@ -153,7 +172,7 @@ export async function POST(
         comment: populatedReview.comment,
         createdAt: populatedReview.createdAt,
         user: {
-          _id: populatedReview.user._id,
+          _id: (populatedReview.user as any)?._id,
           name: populatedReview.userName,
           email: populatedReview.userEmail
         }
@@ -208,14 +227,14 @@ export async function GET(
       .lean();
 
     // Transform the data for frontend consumption
-    const transformedReviews = reviews.map((review: any) => ({
+    const transformedReviews = reviews.map((review) => ({
       _id: review._id,
       rating: review.rating,
       title: review.title,
       comment: review.comment,
       createdAt: review.createdAt,
       user: {
-        _id: review.user._id,
+        _id: (review.user as any)?._id,
         name: review.userName,
         email: review.userEmail
       }

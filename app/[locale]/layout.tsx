@@ -78,14 +78,32 @@ async function getNavData() {
   try {
     await dbConnect();
     const [destinations, categories] = await Promise.all([
-      Destination.find({ isPublished: true, featured: true })
-        .select('_id name slug image description country featured tourCount')
-        .sort({ tourCount: -1, name: 1 })
-        .lean(),
-      Category.find({ isPublished: true, featured: true })
-        .select('_id name slug icon description')
-        .sort({ order: 1, name: 1 })
-        .lean(),
+      Destination.aggregate([
+        { $match: { isPublished: true, featured: true } },
+        { $sort: { tourCount: -1, name: 1 } },
+        {
+          $group: {
+            _id: { $toLower: { $trim: { input: '$name' } } },
+            doc: { $first: '$$ROOT' },
+          },
+        },
+        { $replaceRoot: { newRoot: '$doc' } },
+        { $project: { _id: 1, name: 1, slug: 1, image: 1, description: 1, country: 1, featured: 1, tourCount: 1 } },
+        { $sort: { tourCount: -1, name: 1 } },
+      ]),
+      Category.aggregate([
+        { $match: { isPublished: true, featured: true } },
+        { $sort: { order: 1, name: 1 } },
+        {
+          $group: {
+            _id: { $toLower: { $trim: { input: '$name' } } },
+            doc: { $first: '$$ROOT' },
+          },
+        },
+        { $replaceRoot: { newRoot: '$doc' } },
+        { $project: { _id: 1, name: 1, slug: 1, icon: 1, description: 1, order: 1 } },
+        { $sort: { order: 1, name: 1 } },
+      ]),
     ]);
     return {
       destinations: JSON.parse(JSON.stringify(destinations)),

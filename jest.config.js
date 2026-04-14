@@ -36,7 +36,11 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
+    '/.netlify/',
     '/e2e/',
+  ],
+  modulePathIgnorePatterns: [
+    '<rootDir>/.netlify/',
   ],
 }
 
