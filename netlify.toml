@@ -1,0 +1,64 @@
+[build]
+  command = "pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # --shamefully-hoist flattens node_modules so Next.js and jest binaries
+  # resolve correctly on Netlify. Without this the pnpm symlink layout
+  # breaks Next's module resolution during `next build` and exits with
+  # code 2 before any output hits the log. tourticket-destinations uses
+  # the same flag and has been deploying reliably.
+  PNPM_FLAGS = "--shamefully-hoist"
+  # Skip the prebuild jest run on Netlify — tests run in CI, not on deploy.
+  # Keeps cloud builds deterministic and avoids react act() issues under
+  # NODE_ENV=production.
+  SKIP_TESTS = "1"
+
+# Inline env vars into serverless functions (MongoDB, Stripe, etc.)
+[[plugins]]
+  package = "netlify-plugin-inline-functions-env"
+  [plugins.inputs]
+    include = [
+      "ADMIN_NOTIFICATION_EMAIL",
+      "ADMIN_PASSWORD",
+      "ADMIN_USERNAME",
+      "ALGOLIA_ADMIN_API_KEY",
+      "ALGOLIA_WRITE_API_KEY",
+      "BASE_URL",
+      "CLOUDINARY_API_KEY",
+      "CLOUDINARY_API_SECRET",
+      "CLOUDINARY_CLOUD_NAME",
+      "CLOUDINARY_URL",
+      "FIREBASE_CLIENT_EMAIL",
+      "FIREBASE_PRIVATE_KEY",
+      "FIREBASE_PROJECT_ID",
+      "JWT_SECRET",
+      "MAILGUN_API_KEY",
+      "MAILGUN_DOMAIN",
+      "MAILGUN_FROM_EMAIL",
+      "MONGODB_URI",
+      "NEXT_PUBLIC_BASE_URL",
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "STRIPE_RESTRICTED_KEY"
+    ]
+
+[functions."*"]
+  timeout = 26
+
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+  from = "https://www.egypt-excursionsonline.com/*"
+  to = "https://egypt-excursionsonline.com/*"
+  status = 301
+  force = true
