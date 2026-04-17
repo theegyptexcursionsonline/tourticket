@@ -10,6 +10,7 @@ import TourDetailClientPage from './TourDetailClientPage';
 import { ITour } from '@/lib/models/Tour';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { localizeTour } from '@/lib/i18n/localizeTour';
+import { getStopSaleDatesForTour } from '@/lib/stopSaleFetcher';
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -131,12 +132,18 @@ export default async function TourDetailPage({ params }: PageProps) {
 
   const { tour, reviews } = result;
 
-  let relatedTours: ITour[] = [];
-  try {
-    relatedTours = await getRelatedTours(tour.category, (tour._id as any)?.toString());
-  } catch (error) {
-    console.error(`[TourDetail] Failed to load related tours for: ${slug}`, error);
-  }
+  // Fire related tours + stop-sale prefetch in parallel. Stop-sale prefetch
+  // ensures BookingSidebar's calendar renders with accurate "Unavailable"
+  // state on first paint instead of doing 6 client-side fetches on mount.
+  const tourIdString = (tour._id as any)?.toString?.() || '';
+  const [relatedToursResult, initialStopSaleDates] = await Promise.all([
+    getRelatedTours(tour.category, tourIdString).catch((error) => {
+      console.error(`[TourDetail] Failed to load related tours for: ${slug}`, error);
+      return [] as ITour[];
+    }),
+    getStopSaleDatesForTour(tourIdString, 6),
+  ]);
+  const relatedTours: ITour[] = relatedToursResult;
 
   const localizedTour = localizeTourFields(tour, locale);
 
@@ -185,6 +192,7 @@ export default async function TourDetailPage({ params }: PageProps) {
         tour={localizedTour}
         relatedTours={localizedRelatedTours}
         initialReviews={reviews}
+        initialStopSaleDates={initialStopSaleDates}
       />
       <Footer />
     </>
