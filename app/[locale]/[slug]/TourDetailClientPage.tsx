@@ -429,7 +429,7 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
         {/* Left: Itinerary Timeline */}
         <div className="relative order-2 lg:order-1">
           {/* Dotted line connector */}
-          <div className="absolute left-5 top-5 bottom-5 w-0.5 border-l-2 border-dashed border-slate-300"></div>
+          <div className="absolute left-[18px] top-[18px] bottom-[18px] w-0.5 border-l-2 border-dashed border-slate-300"></div>
 
           <div className="max-h-[600px] lg:max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
             {itinerary.map((item, index) => (
@@ -441,23 +441,23 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
                     index === 0 ? 'bg-green-100 animate-pulse' :
                     index === itinerary.length - 1 ? 'bg-red-100' :
                     'bg-blue-100'
-                  }`} style={{ transform: 'scale(1.16)' }}></div>
+                  }`} style={{ transform: 'scale(1.12)' }}></div>
 
                   {/* Icon circle */}
-                  <div className={`relative w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-lg ${
+                  <div className={`relative w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow-lg ${
                     index === 0 ? 'bg-green-600' :
                     index === itinerary.length - 1 ? 'bg-red-600' :
                     'bg-blue-600'
                   } text-white`}>
-                    <ItineraryIcon iconType={item.icon} className="w-5 h-5" />
+                    <ItineraryIcon iconType={item.icon} className="w-4 h-4" />
                   </div>
 
                   {/* Connecting dots */}
                   {index < itinerary.length - 1 && (
                     <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col gap-1 py-2">
-                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                     </div>
                   )}
                 </div>

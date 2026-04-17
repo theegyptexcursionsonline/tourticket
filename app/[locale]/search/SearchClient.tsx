@@ -5,7 +5,7 @@ import { Tour as TourType, Category, Destination } from '@/types';
 import TourCard from '@/components/user/TourCard';
 import { Star, Search as SearchIcon, SlidersHorizontal } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import Header from '@/components/Headersearch';
+import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
 import { useTranslations } from 'next-intl';
@@ -218,7 +218,8 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
   // --- Render ---
   return (
     <>
-      <Header />
+      <Header startSolid />
+      <div className="h-16 md:h-20 lg:h-20" aria-hidden="true" />
 
       {/* Hero / Search Section */}
       <div className="bg-slate-50 border-b border-slate-200">
