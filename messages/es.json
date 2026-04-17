@@ -538,7 +538,10 @@
       "title": "Comparte tu experiencia",
       "subtitle": "Inicia sesion para dejar una resena y ayudar a otros viajeros.",
       "login": "Iniciar sesion",
-      "signup": "Registrarse"
+      "signup": "Registrarse",
+      "bookNow": "Reservar este tour",
+      "bookNowHint": "Reserva ahora y te invitaremos a dejar tu resena despues de completar el viaje.",
+      "completeTourHint": "Completa primero este tour y te enviaremos automaticamente tu enlace de resena verificada por correo."
     },
     "userFallback": "Usuario",
     "form": {

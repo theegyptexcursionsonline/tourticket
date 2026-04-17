@@ -538,7 +538,10 @@
       "title": "Teilen Sie Ihr Erlebnis",
       "subtitle": "Bitte melden Sie sich an, um eine Bewertung zu hinterlassen und anderen Reisenden zu helfen.",
       "login": "Anmelden",
-      "signup": "Registrieren"
+      "signup": "Registrieren",
+      "bookNow": "Diese Tour buchen",
+      "bookNowHint": "Buchen Sie jetzt und wir laden Sie nach Abschluss Ihrer Reise zur Bewertung ein.",
+      "completeTourHint": "Schließen Sie diese Tour zuerst ab, dann senden wir Ihnen Ihren verifizierten Bewertungslink per E-Mail."
     },
     "userFallback": "Benutzer",
     "form": {

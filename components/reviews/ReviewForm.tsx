@@ -11,9 +11,10 @@ import { useLocale, useTranslations } from 'next-intl';
 interface ReviewFormProps {
   tourId: string;
   onReviewSubmitted: (newReview: any) => void;
+  onBookNow?: () => void;
 }
 
-const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) => {
+const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBookNow }) => {
   const t = useTranslations('reviewsForm');
   const locale = useLocale();
   const { user, isAuthenticated, token, isLoading } = useAuth();
@@ -274,6 +275,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
           <p className="text-gray-600">
             Reviews are only available to customers who completed this tour. Eligible guests receive a post-trip review email automatically.
           </p>
+          {onBookNow && (
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={onBookNow}
+                className="inline-flex items-center justify-center rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+              >
+                {t('guest.bookNow')}
+              </button>
+              <p className="text-sm text-blue-700 max-w-md">
+                {t('guest.bookNowHint')}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -290,6 +305,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted }) =>
           <p className="text-gray-600">
             Only customers with a completed booking can leave a review. Once you finish this tour, we&apos;ll send your review link by email.
           </p>
+          {onBookNow && (
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={onBookNow}
+                className="inline-flex items-center justify-center rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+              >
+                {t('guest.bookNow')}
+              </button>
+              <p className="text-sm text-amber-700 max-w-md">
+                {t('guest.completeTourHint')}
+              </p>
+            </div>
+          )}
           {eligibilityReason && (
             <p className="mt-3 text-xs text-amber-700 uppercase tracking-wide">
               {eligibilityReason.replaceAll('_', ' ')}

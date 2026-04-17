@@ -538,7 +538,10 @@
       "title": "Share Your Experience",
       "subtitle": "Please log in to leave a review and help other travelers.",
       "login": "Log In",
-      "signup": "Sign Up"
+      "signup": "Sign Up",
+      "bookNow": "Book This Tour",
+      "bookNowHint": "Book now and we will invite you to review after your trip is completed.",
+      "completeTourHint": "Complete this tour first and we will email your verified review link automatically."
     },
     "userFallback": "User",
     "form": {

@@ -538,7 +538,10 @@
       "title": "Partagez votre experience",
       "subtitle": "Connectez-vous pour laisser un avis et aider les autres voyageurs.",
       "login": "Se connecter",
-      "signup": "S'inscrire"
+      "signup": "S'inscrire",
+      "bookNow": "Reserver ce tour",
+      "bookNowHint": "Reservez maintenant et nous vous inviterons a laisser un avis apres votre sortie.",
+      "completeTourHint": "Terminez d'abord ce tour et nous vous enverrons automatiquement votre lien d'avis verifie par e-mail."
     },
     "userFallback": "Utilisateur",
     "form": {

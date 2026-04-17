@@ -874,11 +874,12 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefO
   );
 };
 
-const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
+const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNow }: {
   tour: ITour,
   reviews: Review[],
   onReviewSubmitted: (review: Review) => void,
-  sectionRef: React.RefObject<HTMLDivElement | null>
+  sectionRef: React.RefObject<HTMLDivElement | null>,
+  onBookNow: () => void,
 }) => {
   const [currentReviews, setCurrentReviews] = useState<Review[]>(reviews);
 
@@ -927,7 +928,11 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
         />
 
         <div className="border-t border-slate-200 p-6">
-          <ReviewForm tourId={String(tour._id)} onReviewSubmitted={handleNewReview} />
+          <ReviewForm
+            tourId={String(tour._id)}
+            onReviewSubmitted={handleNewReview}
+            onBookNow={onBookNow}
+          />
         </div>
         
         <div className="container mx-auto px-4 my-8">
@@ -1338,6 +1343,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                 reviews={reviews} 
                 onReviewSubmitted={handleReviewSubmitted} 
                 sectionRef={reviewsRef} 
+                onBookNow={openBookingSidebar}
               />
               
               <EnhancedFAQ faqs={tour.faq || []} sectionRef={faqRef} />
