@@ -411,11 +411,19 @@ const CalendarWidget: React.FC<{
       const isDayUnavailable = availableDays && availableDays.length > 0 && !availableDays.includes(dayOfWeek);
       const isUnavailable = isPast || isFull || isDayUnavailable;
 
+      const unavailableTitle = isPast
+        ? undefined
+        : isFull || isDayUnavailable
+        ? 'Unavailable'
+        : undefined;
+
       days.push(
         <motion.button
           key={day}
           onClick={() => !isUnavailable && onDateSelect(currentDate)}
           disabled={isUnavailable}
+          title={unavailableTitle}
+          aria-label={unavailableTitle ? `${day} — ${unavailableTitle}` : String(day)}
           whileHover={{ scale: isUnavailable ? 1 : 1.1 }}
           whileTap={{ scale: isUnavailable ? 1 : 0.95 }}
           className={`relative w-10 h-10 text-sm rounded-full border-2 transition-all font-medium ${
