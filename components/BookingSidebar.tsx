@@ -436,10 +436,10 @@ const CalendarWidget: React.FC<{
           className={`relative w-10 h-10 text-sm rounded-full border-2 transition-all font-medium ${
             isSelected
               ? 'bg-gradient-to-br from-red-500 to-orange-600 text-white border-red-600 shadow-lg scale-110'
-              : isToday && !isDayUnavailable
+              : isToday && !isDayUnavailable && !isFull
               ? 'bg-gradient-to-br from-red-100 to-red-200 text-red-700 border-red-300 font-bold'
-              : isPast || isDayUnavailable
-              ? 'text-gray-300 bg-gray-50 border-gray-100 cursor-not-allowed'
+              : isPast || isDayUnavailable || isFull
+              ? 'text-gray-300 bg-gray-50 border-gray-100 cursor-not-allowed line-through'
               : !hasLoadedStopSales
               ? 'bg-white border-gray-100 text-gray-400 animate-pulse'
               : availability
@@ -558,108 +558,108 @@ const TourOptionCard: React.FC<{
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative border-2 rounded-2xl p-5 transition-all cursor-pointer bg-white hover:shadow-lg ${
+      className={`relative border-2 rounded-xl p-3 transition-all cursor-pointer bg-white hover:shadow-md ${
         option.isRecommended
-          ? 'border-red-400 bg-gradient-to-br from-red-50 to-orange-50 ring-2 ring-red-200 shadow-md'
+          ? 'border-red-400 bg-gradient-to-br from-red-50 to-orange-50 ring-1 ring-red-200 shadow-sm'
           : 'border-gray-200 hover:border-red-300 hover:bg-gray-50'
       }`}
       whileHover={{ scale: 1.01 }}
     >
       {/* Header with Badges */}
-      <div className="flex items-start justify-between mb-4 gap-3">
+      <div className="flex items-start justify-between mb-2 gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             {option.isRecommended && (
-              <span className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                <Sparkles size={12} />
+              <span className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                <Sparkles size={10} />
                 {option.badge || 'Recommended'}
               </span>
             )}
             {option.discount && option.discount > 0 && (
-              <span className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
                 Save {option.discount}%
               </span>
             )}
           </div>
 
-          <h3 className="text-base font-bold text-gray-900 leading-tight mb-3">
+          <h3 className="text-sm font-bold text-gray-900 leading-tight mb-1.5">
             {option.title}
           </h3>
 
-          {/* Rating and Bookings Row - Now using real data */}
-          <div className="flex items-center gap-2 sm:gap-4 mb-3 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
-              <Star size={14} className="text-yellow-500 fill-yellow-500" />
-              <span className="text-sm font-semibold text-gray-800">{rating}</span>
+          {/* Rating and Bookings Row */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
+              <Star size={11} className="text-yellow-500 fill-yellow-500" />
+              <span className="text-xs font-semibold text-gray-800">{rating}</span>
             </div>
             {totalBookings > 0 && (
-              <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
-                <Users size={14} className="text-blue-500" />
-                <span className="text-sm font-medium text-gray-700">{totalBookings.toLocaleString()} booked</span>
+              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
+                <Users size={11} className="text-blue-500" />
+                <span className="text-xs font-medium text-gray-700">{totalBookings.toLocaleString()} booked</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full">
-              <User size={14} className="text-purple-500" />
-              <span className="text-sm font-medium text-gray-700">Max {maxParticipants}</span>
+            <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
+              <User size={11} className="text-purple-500" />
+              <span className="text-xs font-medium text-gray-700">Max {maxParticipants}</span>
             </div>
           </div>
         </div>
 
         {/* Price Section */}
-        <div className="flex-shrink-0 text-right bg-gray-50 rounded-2xl p-3 w-[110px] sm:w-[120px]">
+        <div className="flex-shrink-0 text-right bg-gray-50 rounded-xl px-2.5 py-2 w-[96px] sm:w-[104px]">
           {originalSubtotal > subtotal && (
-            <div className="text-sm text-gray-400 line-through mb-1 whitespace-nowrap">
+            <div className="text-xs text-gray-400 line-through whitespace-nowrap">
               {formatPrice(originalSubtotal)}
             </div>
           )}
-          <div className="text-xl font-bold text-red-600 whitespace-nowrap">
+          <div className="text-base font-bold text-red-600 whitespace-nowrap leading-tight">
             {formatPrice(subtotal)}
           </div>
-          <div className="text-xs text-gray-500 mt-1 whitespace-nowrap">
+          <div className="text-[10px] text-gray-500 whitespace-nowrap">
             Total price
           </div>
         </div>
       </div>
 
       {/* Specs Row */}
-      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4 bg-gray-50 rounded-full p-3">
-        <div className="flex items-center gap-2">
-          <Clock size={16} className="text-red-500" />
+      <div className="flex items-center gap-3 text-xs text-gray-600 mb-2 bg-gray-50 rounded-full px-3 py-1.5">
+        <div className="flex items-center gap-1.5">
+          <Clock size={13} className="text-red-500" />
           <span className="font-medium">{option.duration}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Languages size={16} className="text-green-500" />
+        <div className="flex items-center gap-1.5">
+          <Languages size={13} className="text-green-500" />
           <span className="font-medium">{option.languages.slice(0, 2).join(', ')}</span>
           {option.languages.length > 2 && (
-            <span className="text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">
+            <span className="text-[10px] bg-gray-200 px-1 py-0.5 rounded-full">
               +{option.languages.length - 2}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <TrendingUp size={16} className="text-orange-500" />
+        <div className="flex items-center gap-1.5">
+          <TrendingUp size={13} className="text-orange-500" />
           <span className="font-medium">{option.difficulty}</span>
         </div>
       </div>
 
       {/* Description */}
-      <p className="text-sm text-gray-700 leading-relaxed mb-4 bg-white rounded-full p-3 border border-gray-100">
+      <p className="text-xs text-gray-700 leading-relaxed mb-2 bg-white rounded-xl px-3 py-2 border border-gray-100 line-clamp-2">
         {option.description}
       </p>
 
       {/* Highlights */}
       {option.highlights && (
-        <div className="mb-5">
-          <h4 className="font-semibold text-gray-800 text-sm mb-2">What's Included</h4>
-          <div className="grid grid-cols-1 gap-2">
+        <div className="mb-2">
+          <h4 className="font-semibold text-gray-800 text-xs mb-1">What's Included</h4>
+          <div className="grid grid-cols-1 gap-1">
             {option.highlights.slice(0, 3).map((highlight, index) => (
-              <div key={index} className="flex items-center gap-2 bg-green-50 rounded-full p-2">
-                <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
-                <span className="text-sm text-gray-800 font-medium">{highlight}</span>
+              <div key={index} className="flex items-center gap-1.5 bg-green-50 rounded-full px-2.5 py-1">
+                <CheckCircle size={12} className="text-green-600 flex-shrink-0" />
+                <span className="text-xs text-gray-800 font-medium">{highlight}</span>
               </div>
             ))}
             {option.highlights.length > 3 && (
-              <div className="text-sm text-red-600 font-medium bg-red-50 rounded-full p-2 text-center">
+              <div className="text-xs text-red-600 font-medium bg-red-50 rounded-full px-2.5 py-1 text-center">
                 +{option.highlights.length - 3} more benefits included
               </div>
             )}
@@ -668,40 +668,40 @@ const TourOptionCard: React.FC<{
       )}
 
       {/* Price Summary */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-4 mb-5 border border-gray-200">
-        <div className="flex justify-between items-center text-sm mb-2">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl px-3 py-2 mb-2 border border-gray-200">
+        <div className="flex justify-between items-center text-xs mb-1">
           <span className="text-gray-700 font-medium">
             {adults} Adult{adults > 1 ? 's' : ''}{childCount > 0 && `, ${childCount} Child${childCount > 1 ? 'ren' : ''}`}
           </span>
           {savings > 0 && (
-            <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-xs">
+            <span className="text-green-600 font-bold bg-green-100 px-1.5 py-0.5 rounded-full text-[10px]">
               You Save {formatPrice(savings)}
             </span>
           )}
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-sm">Per person: {formatPrice(basePrice)}</span>
-          <span className="text-lg font-bold text-gray-900">{formatPrice(subtotal)}</span>
+          <span className="text-gray-600 text-xs">Per person: {formatPrice(basePrice)}</span>
+          <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
         </div>
       </div>
 
       {/* Time Slots */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-gray-800 text-sm">Available Times Today</h4>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Select one to continue</span>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold text-gray-800 text-xs">Available Times Today</h4>
+          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Select one to continue</span>
         </div>
 
         {!hasAvailableSlots && option.isStopSaleBlocked && (
-          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             <div className="font-semibold">Unavailable on the selected date</div>
-            <div className="mt-1 text-amber-700">
+            <div className="mt-0.5 text-amber-700">
               {option.stopSaleReason || 'This option has been stop-saled by the operator for this date.'}
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 gap-2">
           {option.timeSlots.map(timeSlot => {
             const isSelected = selectedTimeSlot?.id === timeSlot.id;
             const isLowAvailability = timeSlot.available <= 3;
@@ -714,45 +714,45 @@ const TourOptionCard: React.FC<{
                 disabled={isSoldOut}
                 whileHover={{ scale: isSoldOut ? 1 : 1.02 }}
                 whileTap={{ scale: isSoldOut ? 1 : 0.98 }}
-                className={`relative p-4 rounded-full text-sm font-medium transition-all border-2 ${
+                className={`relative px-3 py-2 rounded-full text-sm font-medium transition-all border-2 ${
                   isSelected
-                    ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white border-red-600 shadow-lg'
+                    ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white border-red-600 shadow-md'
                     : isSoldOut
                     ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : 'bg-white border-gray-300 text-gray-800 hover:border-red-400 hover:shadow-md hover:bg-red-50'
+                    : 'bg-white border-gray-300 text-gray-800 hover:border-red-400 hover:shadow-sm hover:bg-red-50'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="text-left">
-                    <div className="font-bold text-base">{timeSlot.time}</div>
-                    <div className={`text-xs mt-1 ${isSelected ? 'text-red-100' : 'text-gray-500'}`}>
+                    <div className="font-bold text-sm leading-tight">{timeSlot.time}</div>
+                    <div className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-gray-500'}`}>
                       {isSoldOut ? 'Fully Booked' : `${timeSlot.available} spots left`}
                     </div>
                   </div>
-                  
+
                   <div className="text-right">
                     {timeSlot.isPopular && !isSelected && (
-                      <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-bold mb-1">
+                      <div className="bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                         Popular
                       </div>
                     )}
-                    <div className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-gray-600'}`}>
+                    <div className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-gray-600'}`}>
                       {formatPrice(timeSlot.price)}
                     </div>
                   </div>
                 </div>
 
                 {isLowAvailability && !isSoldOut && !isSelected && (
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-red-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg">
+                  <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow">
                       Almost Full!
                     </div>
                   </div>
                 )}
 
                 {isSelected && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                    <Check size={12} />
+                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check size={10} />
                   </div>
                 )}
               </motion.button>
@@ -762,17 +762,17 @@ const TourOptionCard: React.FC<{
       </div>
 
       {/* Trust Indicators */}
-      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-          <Shield size={12} className="text-green-500" />
+      <div className="flex items-center gap-2.5 mt-2 pt-2 border-t border-gray-200">
+        <div className="flex items-center gap-1 text-[10px] text-gray-600">
+          <Shield size={10} className="text-green-500" />
           <span>Free cancellation</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-          <CheckCircle size={12} className="text-blue-500" />
+        <div className="flex items-center gap-1 text-[10px] text-gray-600">
+          <CheckCircle size={10} className="text-blue-500" />
           <span>Instant confirmation</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-          <Heart size={12} className="text-red-500" />
+        <div className="flex items-center gap-1 text-[10px] text-gray-600">
+          <Heart size={10} className="text-red-500" />
           <span>Highly rated</span>
         </div>
       </div>
