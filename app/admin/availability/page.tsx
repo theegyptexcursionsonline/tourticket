@@ -10,6 +10,7 @@ import {
   Plus, Minus, Save, Loader2, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { toDateOnlyString } from '@/utils/date';
 
 interface Slot {
   time: string;
@@ -122,7 +123,7 @@ const AvailabilityPage = () => {
       if (data.success) {
         const availMap = new Map<string, AvailabilityData>();
         data.data.forEach((item: AvailabilityData) => {
-          const dateKey = new Date(item.date).toISOString().split('T')[0];
+          const dateKey = toDateOnlyString(new Date(item.date));
           availMap.set(dateKey, item);
         });
         setAvailability(availMap);
@@ -528,8 +529,8 @@ function StopSaleRangeModal({
   const [options, setOptions] = useState<Array<{ id: string; title: string }>>([]);
   const [allOptions, setAllOptions] = useState(true);
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => toDateOnlyString(new Date()));
+  const [endDate, setEndDate] = useState(() => toDateOnlyString(new Date()));
   const [reason, setReason] = useState('');
   const [isWorking, setIsWorking] = useState(false);
 
@@ -565,7 +566,7 @@ function StopSaleRangeModal({
     current.setHours(0, 0, 0, 0);
     last.setHours(0, 0, 0, 0);
     while (current <= last) {
-      dates.push(current.toISOString().split('T')[0]);
+      dates.push(toDateOnlyString(current));
       current.setDate(current.getDate() + 1);
     }
     return dates;
@@ -573,6 +574,10 @@ function StopSaleRangeModal({
 
   const submit = async (action: 'block' | 'unblock') => {
     if (!tourId) return;
+    if (!allOptions && selectedOptionIds.size === 0) {
+      toast.error('Select at least one option or choose All Options');
+      return;
+    }
     setIsWorking(true);
     try {
       const dates = generateDateRange(startDate, endDate);
@@ -589,6 +594,7 @@ function StopSaleRangeModal({
           tourId,
           dates,
           action,
+          optionIds: allOptions ? [] : Array.from(selectedOptionIds).sort(),
           stopSaleReason: reason || (action === 'block' ? 'Stop sale applied' : ''),
         }),
       });
@@ -806,35 +812,24 @@ function SlotEditorModal({
     }
   };
 
-  const setOptionStopSale = async (optionId: string, enabled: boolean) => {
-    setIsStopSaleLoading(true);
-    try {
-      // For option-level stop-sale, we update local state
-      // and persist via the main save action
-      const newStopped = new Set(stoppedOptionIds);
-      if (enabled) {
-        newStopped.add(optionId);
-      } else {
-        newStopped.delete(optionId);
-      }
-      setStoppedOptionIds(newStopped);
+  const setOptionStopSale = (optionId: string, enabled: boolean) => {
+    const newStopped = new Set(stoppedOptionIds);
+    if (enabled) {
+      newStopped.add(optionId);
+    } else {
+      newStopped.delete(optionId);
+    }
+    setStoppedOptionIds(newStopped);
 
-      // Check if all options are stopped
-      if (newStopped.size >= tourOptions.length && tourOptions.length > 0) {
-        setStopSaleStatus('full');
-        setStopSale(true);
-      } else if (newStopped.size > 0) {
-        setStopSaleStatus('partial');
-      } else {
-        setStopSaleStatus('none');
-        setStopSale(false);
-      }
-
-      toast.success(enabled ? 'Option stop-sale applied' : 'Option stop-sale removed');
-    } catch {
-      toast.error('Failed to update stop-sale');
-    } finally {
-      setIsStopSaleLoading(false);
+    if (newStopped.size >= tourOptions.length && tourOptions.length > 0) {
+      setStopSaleStatus('full');
+      setStopSale(true);
+    } else if (newStopped.size > 0) {
+      setStopSaleStatus('partial');
+      setStopSale(false);
+    } else {
+      setStopSaleStatus('none');
+      setStopSale(false);
     }
   };
 
@@ -864,6 +859,8 @@ function SlotEditorModal({
           slots,
           stopSale,
           stopSaleReason,
+          stopSaleStatus,
+          stoppedOptionIds: Array.from(stoppedOptionIds).sort(),
         }),
       });
 

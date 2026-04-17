@@ -281,7 +281,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[]);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
   const t = useTranslations('aiSearch');
 
@@ -342,7 +342,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[]);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
   const t = useTranslations('aiSearch');
 
@@ -1862,6 +1862,11 @@ export default function AISearchWidget() {
                       }}
                       placeholder={chatMode ? t('chatPlaceholder') : placeholderTexts[placeholderIndex]}
                       className={`ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold ${isExpanded ? 'text-gray-900' : 'text-white'} placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight`}
+                      style={{
+                        color: isExpanded ? '#111827' : '#ffffff',
+                        WebkitTextFillColor: isExpanded ? '#111827' : '#ffffff',
+                        caretColor: isExpanded ? '#111827' : '#ffffff',
+                      }}
                     />
 
                     <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 z-10">

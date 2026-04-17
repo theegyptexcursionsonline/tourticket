@@ -3,6 +3,24 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 
 const eslintConfig = [
+  {
+    ignores: [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/.netlify/**",
+      "**/out/**",
+      "**/coverage/**",
+      "**/dist/**",
+      "**/scripts/**",
+      "**/__tests__/**",
+      "**/*.config.{js,cjs,mjs,ts}",
+      "**/next.config.ts",
+      "**/jest.config.js",
+      "**/jest.setup.js",
+      "test-email-templates.ts",
+      "types/**/*.d.ts",
+    ],
+  },
   ...nextConfig,
   ...nextCoreWebVitals,
   ...nextTypescript,
@@ -12,18 +30,7 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/no-require-imports": "warn",
-      "react/no-unescaped-entities": "warn",
-      "@next/next/no-img-element": "warn",
-      "react-hooks/exhaustive-deps": "warn",
       "prefer-const": "warn",
-      "react/display-name": "warn",
-      "jsx-a11y/alt-text": "warn",
-      // Downgrade React Compiler rules (shipped with eslint-config-next@16) to warnings
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/preserve-manual-memoization": "warn",
-      // Disable link rule — project uses next-intl Link, not next/link
-      "@next/next/no-html-link-for-pages": "off",
     },
   },
 ];

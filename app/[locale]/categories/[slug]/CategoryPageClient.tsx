@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import { Star, Clock, ShoppingCart, Search, MapPin, Users, Award, TrendingUp, CheckCircle2, Tag } from 'lucide-react';
+import { Star, Clock, ShoppingCart, Search, MapPin, Users, Award, TrendingUp, CheckCircle2, Tag, Compass, ChevronDown } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
@@ -54,6 +54,22 @@ type CategoryPageCopy = {
   exploreAllTours: string;
   exploreRelatedCategories: string;
   discoverMoreExperiences: string;
+  quickFacts: string;
+  whatToExpect: string;
+  popularDestinations: string;
+  perfectFor: string;
+  categoryFaq: string;
+  planWithConfidence: string;
+  startingFrom: string;
+  priceRange: string;
+  tripLengths: string;
+  destinationsCovered: string;
+  browseDestination: string;
+  learnMore: string;
+  topPicks: string;
+  handpickedTours: string;
+  chooseExperience: string;
+  chooseExperienceItems: string[];
 };
 
 const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
@@ -103,6 +119,27 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     exploreAllTours: 'Explore All Tours',
     exploreRelatedCategories: 'Explore Related Categories',
     discoverMoreExperiences: 'Discover more amazing experiences',
+    quickFacts: 'Quick Facts',
+    whatToExpect: 'What to Expect',
+    popularDestinations: 'Popular Destinations',
+    perfectFor: 'Perfect For',
+    categoryFaq: 'Frequently Asked Questions',
+    planWithConfidence: 'Plan With Confidence',
+    startingFrom: 'Starting From',
+    priceRange: 'Price Range',
+    tripLengths: 'Trip Lengths',
+    destinationsCovered: 'Destinations Covered',
+    browseDestination: 'Browse Destination',
+    learnMore: 'Learn More',
+    topPicks: 'Top Picks In This Category',
+    handpickedTours: 'Handpicked tours worth shortlisting first',
+    chooseExperience: 'How to Choose the Right Experience',
+    chooseExperienceItems: [
+      'Compare the duration first so the tour fits naturally into your travel day.',
+      'Check what is included, especially transfers, guide services, and entrance fees.',
+      'Look at the destination and activity style to match the energy you want from the day.',
+      'Use ratings and highlights together to spot the strongest-value tours quickly.',
+    ],
   },
   ar: {
     searchToursPlaceholder: 'ابحث عن الجولات...',
@@ -149,7 +186,208 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     exploreAllTours: 'استكشف جميع الجولات',
     exploreRelatedCategories: 'استكشف فئات مشابهة',
     discoverMoreExperiences: 'اكتشف المزيد من التجارب الرائعة',
+    quickFacts: 'حقائق سريعة',
+    whatToExpect: 'ماذا تتوقع',
+    popularDestinations: 'الوجهات الأكثر شهرة',
+    perfectFor: 'مناسبة لـ',
+    categoryFaq: 'الأسئلة الشائعة',
+    planWithConfidence: 'خطط بثقة',
+    startingFrom: 'الأسعار تبدأ من',
+    priceRange: 'نطاق الأسعار',
+    tripLengths: 'مدد الرحلات',
+    destinationsCovered: 'الوجهات المتاحة',
+    browseDestination: 'استعرض الوجهة',
+    learnMore: 'اعرف المزيد',
+    topPicks: 'أفضل الاختيارات في هذه الفئة',
+    handpickedTours: 'جولات مختارة تستحق أن تبدأ بها',
+    chooseExperience: 'كيف تختار التجربة المناسبة',
+    chooseExperienceItems: [
+      'ابدأ بمقارنة المدة حتى تناسب الجولة يوم سفرك بسهولة.',
+      'تحقق مما هو مشمول، خاصةً التنقلات وخدمة المرشد ورسوم الدخول.',
+      'انظر إلى الوجهة ونوع النشاط لتختار مستوى الحركة والطاقة المناسب لك.',
+      'استخدم التقييمات مع النقاط البارزة لاكتشاف أفضل قيمة بسرعة.',
+    ],
   },
+};
+
+type CategoryInsightDestination = {
+  name: string;
+  slug: string;
+  image?: string;
+  count: number;
+};
+
+type CategoryFaqItem = {
+  question: string;
+  answer: string;
+};
+
+type CategoryInsights = {
+  overviewParagraphs: string[];
+  expectationItems: string[];
+  travelerTypes: string[];
+  popularDestinations: CategoryInsightDestination[];
+  faqItems: CategoryFaqItem[];
+  durationSummary: string;
+  minPriceLabel: string | null;
+  priceRangeLabel: string | null;
+};
+
+const extractNumericDuration = (duration?: string) => {
+  if (!duration) return null;
+
+  const match = duration.match(/(\d+)(?:\s*-\s*(\d+))?/);
+  if (!match) return null;
+
+  const high = match[2] ? Number.parseInt(match[2], 10) : Number.parseInt(match[1], 10);
+  if (!Number.isFinite(high)) return null;
+
+  const lowerDuration = duration.toLowerCase();
+  if (lowerDuration.includes('day')) {
+    return high * 24;
+  }
+
+  return high;
+};
+
+const formatDurationSummary = (durations: string[], locale: string) => {
+  if (durations.length === 0) {
+    return locale.startsWith('ar') ? 'مدد متنوعة من الرحلات القصيرة إلى الجولات اليومية' : 'Varied trip lengths from short outings to full-day tours';
+  }
+
+  if (durations.length === 1) {
+    return durations[0];
+  }
+
+  const sorted = [...durations].sort((a, b) => {
+    const aValue = extractNumericDuration(a) ?? Number.MAX_SAFE_INTEGER;
+    const bValue = extractNumericDuration(b) ?? Number.MAX_SAFE_INTEGER;
+    return aValue - bValue;
+  });
+
+  return `${sorted[0]} - ${sorted[sorted.length - 1]}`;
+};
+
+const buildTravelerTypes = (category: Category, locale: string) => {
+  const source = `${category.name} ${category.slug} ${(category.description || '')}`.toLowerCase();
+
+  if (locale.startsWith('ar')) {
+    if (source.includes('adventure') || source.includes('safari') || source.includes('desert')) {
+      return ['عشاق المغامرة', 'المسافرون النشطون', 'الأزواج والأصدقاء', 'من يبحثون عن أنشطة خارجية'];
+    }
+
+    return ['زوار مصر لأول مرة', 'الأزواج والعائلات', 'محبو الجولات المنظمة', 'من يريدون الحجز السهل والمرن'];
+  }
+
+  if (source.includes('adventure') || source.includes('safari') || source.includes('desert')) {
+    return ['Thrill seekers', 'Active travelers', 'Couples and friends', 'Anyone craving outdoor energy'];
+  }
+
+  return ['First-time visitors', 'Couples and families', 'Travelers who prefer guided experiences', 'Guests looking for easy planning'];
+};
+
+const buildOverviewParagraphs = ({
+  category,
+  destinations,
+  minPriceLabel,
+  durationSummary,
+  locale,
+}: {
+  category: Category;
+  destinations: CategoryInsightDestination[];
+  minPriceLabel: string | null;
+  durationSummary: string;
+  locale: string;
+}) => {
+  const baseDescription = category.longDescription || category.description || '';
+  const destinationNames = destinations.slice(0, 3).map((destination) => destination.name);
+  const destinationsText = destinationNames.length > 0
+    ? destinationNames.join(', ')
+    : locale.startsWith('ar')
+      ? 'أشهر الوجهات في مصر'
+      : 'top destinations across Egypt';
+
+  const generatedParagraphs = locale.startsWith('ar')
+    ? [
+        `${category.name} تجمع بين تجارب متنوعة عبر ${destinationsText}. ستجد هنا أنشطة مناسبة للمسافرين الذين يريدون أكثر من مجرد زيارة سريعة، مع خيارات تساعدك على اختيار التجربة التي تناسب طاقتك ووقتك وميزانيتك.`,
+        `${minPriceLabel ? `تبدأ الأسعار من ${minPriceLabel}` : 'تتوفر خيارات سعرية متنوعة'} وتمتد المدد عادة من ${durationSummary}. هذا يمنحك مرونة لاختيار جولة قصيرة سريعة أو يوم مليء بالمغامرة حسب خطتك داخل مصر.`,
+      ]
+    : [
+        `${category.name} brings together some of the most memorable experiences across ${destinationsText}. It is designed for travelers who want more than a quick stop, with options that match different energy levels, budgets, and styles of trip.`,
+        `${minPriceLabel ? `Prices start from ${minPriceLabel}` : 'You will find a healthy spread of price points'} and most experiences range across ${durationSummary}. That makes it easy to choose anything from a quick outing to a full day built around this category.`,
+      ];
+
+  const paragraphs = baseDescription
+    ? [baseDescription, ...generatedParagraphs]
+    : generatedParagraphs;
+
+  return paragraphs.filter(Boolean);
+};
+
+const buildCategoryFaqs = ({
+  category,
+  destinations,
+  minPriceLabel,
+  durationSummary,
+  tourCount,
+  locale,
+}: {
+  category: Category;
+  destinations: CategoryInsightDestination[];
+  minPriceLabel: string | null;
+  durationSummary: string;
+  tourCount: number;
+  locale: string;
+}) => {
+  const destinationText = destinations.slice(0, 3).map((destination) => destination.name).join(', ');
+
+  if (locale.startsWith('ar')) {
+    return [
+      {
+        question: `ما الذي يشمله قسم ${category.name}؟`,
+        answer: `يشمل هذا القسم حاليًا ${tourCount} تجارب وجولات مختارة بعناية، مع خيارات تناسب أنماط سفر مختلفة وميزانيات متنوعة.`,
+      },
+      {
+        question: `ما هي أكثر الوجهات شهرة ضمن ${category.name}؟`,
+        answer: destinationText
+          ? `أشهر الوجهات في هذه الفئة تشمل ${destinationText}، ويمكنك استعراض كل وجهة لمعرفة عدد التجارب المتاحة فيها.`
+          : 'تتوزع هذه التجارب عبر أكثر من وجهة في مصر بحسب التوفر الحالي على الموقع.',
+      },
+      {
+        question: `كم تستغرق تجارب ${category.name} عادة؟`,
+        answer: `المدد المتوفرة عادة تمتد عبر ${durationSummary}، لذلك يمكنك اختيار تجربة سريعة أو برنامج أطول بحسب يومك وخطتك.`,
+      },
+      {
+        question: `ما نطاق الأسعار المتوقع؟`,
+        answer: minPriceLabel
+          ? `تبدأ الأسعار من ${minPriceLabel} وتختلف حسب مدة الجولة وما تتضمنه من خدمات ومواصلات وتجهيزات.`
+          : 'تختلف الأسعار حسب مدة الجولة وما تتضمنه من خدمات ومواصلات وتجهيزات.',
+      },
+    ];
+  }
+
+  return [
+    {
+      question: `What is included in the ${category.name} category?`,
+      answer: `This category currently brings together ${tourCount} curated tours and experiences, giving you a mix of styles, budgets, and pacing in one place.`,
+    },
+    {
+      question: `Which destinations are most popular for ${category.name}?`,
+      answer: destinationText
+        ? `The strongest destinations in this category right now include ${destinationText}, and each one has its own mix of tours to compare.`
+        : 'These experiences are spread across multiple destinations in Egypt depending on current availability.',
+    },
+    {
+      question: `How long do these ${category.name.toLowerCase()} experiences usually last?`,
+      answer: `Most experiences in this category span ${durationSummary}, so you can choose something short and flexible or plan around a longer outing.`,
+    },
+    {
+      question: 'What should I expect on pricing?',
+      answer: minPriceLabel
+        ? `Prices currently start from ${minPriceLabel}, with the total depending on duration, inclusions, transport, and the style of experience you book.`
+        : 'Prices vary depending on duration, inclusions, transport, and the overall style of experience you choose.',
+    },
+  ];
 };
 
 // --- SearchAndFilter Component ---
@@ -296,12 +534,24 @@ const StatsSection = ({
 };
 
 // --- AboutSection Component ---
-const AboutSection = ({ category, copy }: { category: Category; copy: CategoryPageCopy }) => {
-  const highlights = (category as any).highlights || [];
-  const features = (category as any).features || [];
-  const longDescription = (category as any).longDescription || category.description;
+const AboutSection = ({
+  category,
+  copy,
+  insights,
+}: {
+  category: Category;
+  copy: CategoryPageCopy;
+  insights: CategoryInsights;
+}) => {
+  const highlights = ((category as any).highlights || []).length > 0
+    ? (category as any).highlights
+    : insights.expectationItems;
+  const features = ((category as any).features || []).length > 0
+    ? (category as any).features
+    : insights.travelerTypes;
+  const popularDestinations = insights.popularDestinations;
 
-  if (!longDescription && highlights.length === 0 && features.length === 0) {
+  if (insights.overviewParagraphs.length === 0 && highlights.length === 0 && features.length === 0) {
     return null;
   }
 
@@ -311,15 +561,36 @@ const AboutSection = ({ category, copy }: { category: Category; copy: CategoryPa
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-gray-900 mb-6">{copy.aboutCategory(category.name)}</h2>
 
-          {longDescription && (
-            <div className="prose prose-lg max-w-none mb-8">
-              <p className="text-gray-700 leading-relaxed">{longDescription}</p>
+          <div className="space-y-4 mb-8">
+            {insights.overviewParagraphs.map((paragraph) => (
+              <p key={paragraph} className="text-gray-700 leading-relaxed text-lg">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <div className="text-sm font-semibold text-gray-500 mb-2">{copy.startingFrom}</div>
+              <div className="text-2xl font-bold text-slate-900">{insights.minPriceLabel || '—'}</div>
             </div>
-          )}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <div className="text-sm font-semibold text-gray-500 mb-2">{copy.priceRange}</div>
+              <div className="text-2xl font-bold text-slate-900">{insights.priceRangeLabel || '—'}</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <div className="text-sm font-semibold text-gray-500 mb-2">{copy.tripLengths}</div>
+              <div className="text-lg font-bold text-slate-900">{insights.durationSummary}</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <div className="text-sm font-semibold text-gray-500 mb-2">{copy.destinationsCovered}</div>
+              <div className="text-2xl font-bold text-slate-900">{popularDestinations.length}</div>
+            </div>
+          </div>
 
           {highlights.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">{copy.highlights}</h3>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">{copy.whatToExpect}</h3>
               <div className="grid md:grid-cols-2 gap-3">
                 {highlights.map((highlight: string, index: number) => (
                   <div key={index} className="flex items-start gap-2">
@@ -333,7 +604,7 @@ const AboutSection = ({ category, copy }: { category: Category; copy: CategoryPa
 
           {features.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">{copy.features}</h3>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">{copy.perfectFor}</h3>
               <div className="grid md:grid-cols-2 gap-3">
                 {features.map((feature: string, index: number) => (
                   <div key={index} className="flex items-start gap-2">
@@ -345,8 +616,42 @@ const AboutSection = ({ category, copy }: { category: Category; copy: CategoryPa
             </div>
           )}
 
+          {popularDestinations.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">{copy.popularDestinations}</h3>
+              <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {popularDestinations.map((destination) => (
+                  <Link
+                    key={destination.slug}
+                    href={`/destinations/${destination.slug}`}
+                    className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all"
+                  >
+                    <div className="relative h-40">
+                      <Image
+                        src={destination.image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80&fm=jpg'}
+                        alt={destination.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <div className="text-lg font-semibold text-slate-900 mb-1">{destination.name}</div>
+                      <div className="text-sm text-slate-500 mb-3">
+                        {destination.count} {destination.count === 1 ? copy.toursAvailable.replace('s', '') : copy.toursAvailable.toLowerCase()}
+                      </div>
+                      <span className="inline-flex items-center gap-2 text-red-600 font-medium text-sm">
+                        {copy.browseDestination}
+                        <Compass size={15} />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">{copy.essentialInformation}</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">{copy.planWithConfidence}</h3>
             <ul className="space-y-2 text-gray-700">
               {copy.essentialInfoItems.map((item) => (
                 <li key={item}>• {item}</li>
@@ -358,6 +663,142 @@ const AboutSection = ({ category, copy }: { category: Category; copy: CategoryPa
     </section>
   );
 };
+
+const CategoryFaqSection = ({
+  copy,
+  faqItems,
+}: {
+  copy: CategoryPageCopy;
+  faqItems: CategoryFaqItem[];
+}) => {
+  const [openIndex, setOpenIndex] = useState(0);
+
+  if (faqItems.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="py-12 bg-white">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">{copy.categoryFaq}</h2>
+          <div className="space-y-4">
+            {faqItems.map((faq, index) => {
+              const isOpen = openIndex === index;
+
+              return (
+                <div key={faq.question} className="border border-gray-200 rounded-2xl overflow-hidden bg-slate-50">
+                  <button
+                    onClick={() => setOpenIndex(isOpen ? -1 : index)}
+                    className="w-full flex items-center justify-between gap-4 p-5 text-left"
+                    aria-expanded={isOpen}
+                  >
+                    <span className="font-semibold text-slate-900 text-lg">{faq.question}</span>
+                    <ChevronDown
+                      size={20}
+                      className={`text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="px-5 pb-5 text-slate-600 leading-relaxed">
+                      {faq.answer}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const TopPicksSection = ({
+  tours,
+  copy,
+}: {
+  tours: Tour[];
+  copy: CategoryPageCopy;
+}) => {
+  if (tours.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="py-12 bg-white border-y border-slate-100">
+      <div className="container mx-auto px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">{copy.topPicks}</h2>
+            <p className="text-slate-600">{copy.handpickedTours}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {tours.map((tour) => (
+              <div key={tour._id} className="bg-slate-50 border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+                <div className="relative h-56">
+                  <Image
+                    src={tour.image}
+                    alt={tour.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center gap-3 text-sm text-slate-500 mb-3">
+                    {tour.destination && typeof tour.destination === 'object' && (
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin size={14} />
+                        {tour.destination.name}
+                      </span>
+                    )}
+                    {tour.rating && (
+                      <span className="inline-flex items-center gap-1">
+                        <Star size={14} className="fill-current text-yellow-500" />
+                        {tour.rating}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-2 line-clamp-2">{tour.title}</h3>
+                  <p className="text-slate-600 text-sm line-clamp-3 mb-4">
+                    {tour.description?.replace(/<[^>]+>/g, '')}
+                  </p>
+                  <Link
+                    href={`/${tour.slug}`}
+                    className="inline-flex items-center gap-2 text-red-600 font-semibold"
+                  >
+                    {copy.learnMore}
+                    <Compass size={16} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const BookingGuidanceSection = ({ copy }: { copy: CategoryPageCopy }) => (
+  <section className="py-12 bg-slate-50">
+    <div className="container mx-auto px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+          <h2 className="text-3xl font-bold text-slate-900 mb-6">{copy.chooseExperience}</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {copy.chooseExperienceItems.map((item) => (
+              <div key={item} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+                <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-700 leading-relaxed">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
 
 // --- Hero Section Component ---
 const CategoryHeroSection = ({
@@ -482,10 +923,27 @@ const TourCard = ({
 };
 
 
-export default function CategoryPageClient({ category, categoryTours }: { category: Category; categoryTours: Tour[] }) {
+export default function CategoryPageClient({
+    category,
+    categoryTours,
+    relatedInterests = [],
+}: {
+    category: Category;
+    categoryTours: Tour[];
+    relatedInterests?: Array<{
+      _id: string;
+      type: 'category' | 'attraction';
+      name: string;
+      slug: string;
+      products: number;
+      featured?: boolean;
+      image?: string;
+    }>;
+}) {
     const locale = useLocale();
     const rtl = isRTL(locale);
     const copy = locale.startsWith('ar') ? CATEGORY_PAGE_COPY.ar : CATEGORY_PAGE_COPY.en;
+    const { formatPrice } = useSettings();
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -503,8 +961,101 @@ export default function CategoryPageClient({ category, categoryTours }: { catego
         setTimeout(() => setSelectedTour(null), 300);
     };
 
+    const categoryInsights = useMemo(() => {
+        const destinationMap = new Map<string, CategoryInsightDestination>();
+        const highlightSet = new Set<string>();
+        const durationSet = new Set<string>();
+        const prices: number[] = [];
+
+        for (const tour of categoryTours) {
+            const rawDestination = typeof tour.destination === 'object' && tour.destination ? tour.destination : null;
+            const destinationName = rawDestination?.name;
+            const destinationSlug = rawDestination?.slug;
+
+            if (destinationName && destinationSlug) {
+                const existing = destinationMap.get(destinationSlug);
+                destinationMap.set(destinationSlug, {
+                    name: destinationName,
+                    slug: destinationSlug,
+                    image: rawDestination.image,
+                    count: (existing?.count || 0) + 1,
+                });
+            }
+
+            (tour.highlights || []).forEach((highlight) => {
+                const trimmed = highlight?.trim();
+                if (trimmed) {
+                    highlightSet.add(trimmed);
+                }
+            });
+
+            if (tour.duration) {
+                durationSet.add(tour.duration);
+            }
+
+            const price = tour.discountPrice || tour.originalPrice || tour.price;
+            if (price && Number.isFinite(price)) {
+                prices.push(price);
+            }
+        }
+
+        const popularDestinations = Array.from(destinationMap.values())
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+            .slice(0, 4);
+
+        const sortedPrices = [...prices].sort((a, b) => a - b);
+        const minPrice = sortedPrices[0];
+        const maxPrice = sortedPrices[sortedPrices.length - 1];
+        const minPriceLabel = minPrice ? formatPrice(minPrice) : null;
+        const priceRangeLabel = minPrice && maxPrice
+            ? minPrice === maxPrice
+                ? formatPrice(minPrice)
+                : `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`
+            : null;
+
+        const expectationItems = Array.from(highlightSet).slice(0, 6);
+        const travelerTypes = buildTravelerTypes(category, locale);
+        const durationSummary = formatDurationSummary(Array.from(durationSet), locale);
+        const overviewParagraphs = buildOverviewParagraphs({
+            category,
+            destinations: popularDestinations,
+            minPriceLabel,
+            durationSummary,
+            locale,
+        });
+        const faqItems = buildCategoryFaqs({
+            category,
+            destinations: popularDestinations,
+            minPriceLabel,
+            durationSummary,
+            tourCount: categoryTours.length,
+            locale,
+        });
+
+        return {
+            overviewParagraphs,
+            expectationItems,
+            travelerTypes,
+            popularDestinations,
+            faqItems,
+            durationSummary,
+            minPriceLabel,
+            priceRangeLabel,
+        } satisfies CategoryInsights;
+    }, [category, categoryTours, formatPrice, locale]);
+
+    const topPicks = useMemo(() => {
+        return [...categoryTours]
+            .sort((a, b) => {
+                const ratingDelta = (b.rating || 0) - (a.rating || 0);
+                if (ratingDelta !== 0) return ratingDelta;
+                return (b.bookings || 0) - (a.bookings || 0);
+            })
+            .slice(0, 3);
+    }, [categoryTours]);
+
     // Filter and sort tours
-    const filteredAndSortedTours = React.useMemo(() => {
+    const filteredAndSortedTours = useMemo(() => {
         let filtered = [...categoryTours];
 
         // Search filter
@@ -578,7 +1129,11 @@ export default function CategoryPageClient({ category, categoryTours }: { catego
                 <StatsSection category={category} tours={categoryTours} copy={copy} />
 
                 {/* About Section */}
-                <AboutSection category={category} copy={copy} />
+                <AboutSection category={category} copy={copy} insights={categoryInsights} />
+
+                <TopPicksSection tours={topPicks} copy={copy} />
+
+                <BookingGuidanceSection copy={copy} />
 
                 <div className="container mx-auto px-4 py-8">
                     <div className="max-w-7xl mx-auto">
@@ -640,9 +1195,12 @@ export default function CategoryPageClient({ category, categoryTours }: { catego
                     </div>
                 </div>
 
+                <CategoryFaqSection copy={copy} faqItems={categoryInsights.faqItems} />
+
                 {/* Related Categories Section */}
                 <div className="py-12 bg-white">
                     <RelatedInterests
+                        initialInterests={relatedInterests}
                         currentSlug={category.slug}
                         title={copy.exploreRelatedCategories}
                         subtitle={copy.discoverMoreExperiences}

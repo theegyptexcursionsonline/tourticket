@@ -138,6 +138,56 @@ async function getPageData(slug: string, locale: string) {
   };
 }
 
+async function getRelatedCategoryInterests(currentCategoryId: string, currentSlug: string, locale: string) {
+  const relatedCategories = await CategoryModel.find({
+    isPublished: true,
+    slug: { $ne: currentSlug },
+    _id: { $ne: currentCategoryId },
+  })
+    .select('name slug heroImage featured order description translations')
+    .sort({ featured: -1, order: 1, name: 1 })
+    .limit(12)
+    .lean();
+
+  if (relatedCategories.length === 0) {
+    return [];
+  }
+
+  const categoryIds = relatedCategories.map((category: any) => category._id);
+  const counts = await TourModel.aggregate([
+    {
+      $match: {
+        isPublished: true,
+        category: { $in: categoryIds },
+      },
+    },
+    { $unwind: '$category' },
+    {
+      $group: {
+        _id: '$category',
+        count: { $sum: 1 },
+      },
+    },
+  ]).catch(() => []);
+
+  const countMap = new Map(counts.map((item: any) => [String(item._id), Number(item.count) || 0]));
+
+  return relatedCategories
+    .map((category: any) => {
+      const localized = localizeEntityFields(category, locale, ['name', 'description']);
+      return {
+        type: 'category' as const,
+        _id: String(category._id),
+        slug: category.slug,
+        name: String((localized as any).name || category.name || ''),
+        image: category.heroImage,
+        featured: Boolean(category.featured),
+        products: countMap.get(String(category._id)) || 0,
+      };
+    })
+    .filter((category) => category.products > 0);
+}
+
 export default async function CategoryPage({
   params,
 }: {
@@ -153,6 +203,12 @@ export default async function CategoryPage({
     notFound();
   }
 
+  const relatedInterests = await getRelatedCategoryInterests(
+    String((category as any)._id),
+    resolvedParams.slug,
+    resolvedParams.locale
+  );
+
   return (
     <>
       <CollectionSchema
@@ -164,6 +220,7 @@ export default async function CategoryPage({
       <CategoryPageClient
         category={category}
         categoryTours={categoryTours}
+        relatedInterests={relatedInterests}
       />
     </>
   );

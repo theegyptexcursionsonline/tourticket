@@ -8,10 +8,18 @@ import Header2 from '@/components/Header2';
 import Footer from '@/components/Footer';
 import TourDetailClientPage from './TourDetailClientPage';
 import { ITour } from '@/lib/models/Tour';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeTour } from '@/lib/i18n/localizeTour';
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }
+
+const localizeTourFields = (tour: ITour, locale: string) =>
+  localizeTour(tour as unknown as Record<string, unknown>, locale) as unknown as ITour;
+
+const localizeTaxonomyFields = (entity: unknown, locale: string, fields: string[]) =>
+  localizeEntityFields(entity as Record<string, unknown>, locale, fields);
 
 async function getTourBySlug(slug: string): Promise<{ tour: ITour; reviews: any[] } | null> {
   try {
@@ -80,7 +88,7 @@ async function getRelatedTours(categoryIds: string | string[] | any, currentTour
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const result = await getTourBySlug(slug);
 
   if (!result) {
@@ -89,17 +97,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const { tour } = result;
-  const destination = typeof tour.destination === 'object' ? (tour.destination as any) : null;
+  const localizedTour = localizeTourFields(result.tour, locale);
+  const destination = typeof localizedTour.destination === 'object' ? (localizedTour.destination as any) : null;
 
   return {
-    title: tour.metaTitle || `${tour.title} | ${destination?.name || 'Travel'} Tours`,
-    description: tour.metaDescription || tour.description,
-    keywords: tour.keywords || [tour.title, destination?.name].filter(Boolean),
+    title: localizedTour.metaTitle || `${localizedTour.title} | ${destination?.name || 'Travel'} Tours`,
+    description: localizedTour.metaDescription || localizedTour.description,
+    keywords: localizedTour.keywords || [localizedTour.title, destination?.name].filter(Boolean),
     openGraph: {
-      title: tour.title,
-      description: tour.description,
-      images: tour.image ? [{ url: tour.image, alt: tour.title }] : [],
+      title: localizedTour.title,
+      description: localizedTour.description,
+      images: localizedTour.image ? [{ url: localizedTour.image, alt: localizedTour.title }] : [],
       type: 'website',
     },
   };
@@ -112,7 +120,7 @@ export async function generateStaticParams() {
 }
 
 export default async function TourDetailPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   console.log(`[TourDetail] Rendering page for slug: ${slug}`);
 
   const result = await getTourBySlug(slug);
@@ -130,12 +138,52 @@ export default async function TourDetailPage({ params }: PageProps) {
     console.error(`[TourDetail] Failed to load related tours for: ${slug}`, error);
   }
 
+  const localizedTour = localizeTourFields(tour, locale);
+
+  if (localizedTour.destination && typeof localizedTour.destination === 'object') {
+    localizedTour.destination = localizeTaxonomyFields(
+      localizedTour.destination as unknown,
+      locale,
+      ['name', 'description', 'country', 'metaTitle', 'metaDescription']
+    ) as any;
+  }
+
+  if (localizedTour.category && !Array.isArray(localizedTour.category) && typeof localizedTour.category === 'object') {
+    localizedTour.category = localizeTaxonomyFields(
+      localizedTour.category as unknown,
+      locale,
+      ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
+    ) as any;
+  }
+
+  const localizedRelatedTours = relatedTours.map((relatedTour) => {
+    const localizedRelated = localizeTourFields(relatedTour, locale);
+
+    if (localizedRelated.destination && typeof localizedRelated.destination === 'object') {
+      localizedRelated.destination = localizeTaxonomyFields(
+        localizedRelated.destination as unknown,
+        locale,
+        ['name', 'description', 'country', 'metaTitle', 'metaDescription']
+      ) as any;
+    }
+
+    if (localizedRelated.category && !Array.isArray(localizedRelated.category) && typeof localizedRelated.category === 'object') {
+      localizedRelated.category = localizeTaxonomyFields(
+        localizedRelated.category as unknown,
+        locale,
+        ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
+      ) as any;
+    }
+
+    return localizedRelated;
+  });
+
   return (
     <>
       <Header2 startSolid />
       <TourDetailClientPage
-        tour={tour}
-        relatedTours={relatedTours}
+        tour={localizedTour}
+        relatedTours={localizedRelatedTours}
         initialReviews={reviews}
       />
       <Footer />

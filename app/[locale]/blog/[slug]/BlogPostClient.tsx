@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
+import { getAuthorRouteSlug } from '@/lib/blogAuthors';
 import {
   Calendar,
   Clock,
@@ -34,7 +35,7 @@ interface Props {
 
 /**
  * BlogPostClient.tsx
- * Full file including AuthorCard and CommentsSection integrated.
+ * Full file including the post body, author card, and related content.
  *
  * NOTES:
  * - Keep server-side sanitization for blog.content.
@@ -157,6 +158,7 @@ function AuthorCard({ author }: { author: any }) {
   if (!author) return null;
 
   const avatar = author.avatar || `/api/avatars/${encodeURIComponent(author.name || 'author')}`;
+  const authorSlug = getAuthorRouteSlug(author);
 
   return (
     <div className="bg-white rounded-2xl shadow p-6 flex gap-4 items-start">
@@ -193,18 +195,14 @@ function AuthorCard({ author }: { author: any }) {
         </div>
 
         <div className="mt-4 flex gap-3">
-          <Link href={`/author/${encodeURIComponent(author.slug || author.name)}`} className="px-3 py-2 border rounded-lg text-sm text-slate-700 hover:bg-slate-50">More articles</Link>
+          {authorSlug ? (
+            <Link href={`/author/${authorSlug}`} className="px-3 py-2 border rounded-lg text-sm text-slate-700 hover:bg-slate-50">More articles</Link>
+          ) : null}
           <a href={`mailto:${author.email || ''}`} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Contact author</a>
         </div>
       </div>
     </div>
   );
-}
-
-/* ---------- Comments Section ---------- */
-function CommentsSection({ slug }: { slug: string }) {
-  void slug;
-  return null;
 }
 
 /* ---------- Structured Sidebar component (travel-focused) ---------- */
@@ -281,6 +279,11 @@ function Sidebar({ blog }: { blog: IBlog }) {
 
 /* ---------- Main component ---------- */
 export default function BlogPostClient({ blog, relatedPosts }: Props) {
+  const authorSlug = getAuthorRouteSlug({
+    slug: blog.authorSlug,
+    name: blog.author,
+  });
+
   return (
     <div className="bg-slate-50 min-h-screen">
       {/* Back / breadcrumb */}
@@ -310,7 +313,16 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
           <h1 className="text-2xl md:text-4xl font-extrabold leading-tight mb-4">{blog.title}</h1>
 
           <div className="flex items-center gap-4 text-sm text-slate-200">
-            <div className="flex items-center gap-2"><User className="h-4 w-4" /> <span>{blog.author}</span></div>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              {authorSlug ? (
+                <Link href={`/author/${authorSlug}`} className="hover:text-white">
+                  {blog.author}
+                </Link>
+              ) : (
+                <span>{blog.author}</span>
+              )}
+            </div>
             <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{formatDate(blog.publishedAt)}</span></div>
             <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> <span>{ReadTimeText(blog)}</span></div>
             <div className="flex items-center gap-2"><Eye className="h-4 w-4" /> <span>{blog.views ?? 0} views</span></div>
@@ -369,11 +381,6 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
                 slug: blog.authorSlug,
                 postsCount: blog.authorPostsCount
               }} />
-            </div>
-
-            {/* Comments */}
-            <div className="mt-6">
-              <CommentsSection slug={blog.slug ?? blog._id ?? blog.id} />
             </div>
 
             {/* Related posts (inline) */}

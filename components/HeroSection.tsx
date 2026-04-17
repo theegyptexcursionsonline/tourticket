@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useLocale, useTranslations } from 'next-intl';
+import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Types and Constants ---
@@ -229,6 +230,26 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
   return null;
 }
 
+function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?: string; title?: string; tourCount?: number }>(
+  hits: T[],
+  options?: { requireTours?: boolean }
+) {
+  const requireTours = options?.requireTours ?? false;
+  const uniqueHits = dedupeTaxonomyEntries(
+    hits.map((hit) => ({
+      ...hit,
+      slug: hit.slug || hit.objectID,
+      name: hit.name || hit.title,
+    }))
+  ) as T[];
+
+  if (!requireTours) {
+    return uniqueHits;
+  }
+
+  return uniqueHits.filter((hit) => (Number(hit.tourCount) || 0) > 0);
+}
+
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const copy = useHeroCopy();
   const { hits } = useHits();
@@ -434,7 +455,8 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const copy = useHeroCopy();
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -458,7 +480,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
             </span>
           </div>
           <span className="ml-auto text-[10px] md:text-xs font-bold text-emerald-700 bg-white/50 backdrop-blur-md px-3 md:px-3.5 py-1 md:py-1.5 rounded-full border border-white/40 shadow-sm">
-            {hits.length} {copy.found}
+            {uniqueHits.length} {copy.found}
           </span>
         </div>
       </div>
@@ -509,7 +531,8 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const copy = useHeroCopy();
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -533,7 +556,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
             </span>
           </div>
           <span className="ml-auto text-[10px] md:text-xs font-bold text-purple-700 bg-white/50 backdrop-blur-md px-3 md:px-3.5 py-1 md:py-1.5 rounded-full border border-white/40 shadow-sm">
-            {hits.length} {copy.found}
+            {uniqueHits.length} {copy.found}
           </span>
         </div>
       </div>
@@ -1442,7 +1465,12 @@ const HeroSearchBar = ({
                       ? 'text-gray-900 placeholder:text-gray-400/70' 
                       : 'text-white placeholder:text-white/70'
                   }`}
-                  style={{ cursor: 'text' }}
+                  style={{
+                    cursor: 'text',
+                    color: isExpanded || isFocused ? '#111827' : '#ffffff',
+                    WebkitTextFillColor: isExpanded || isFocused ? '#111827' : '#ffffff',
+                    caretColor: isExpanded || isFocused ? '#111827' : '#ffffff',
+                  }}
                   disabled={chatMode && isGenerating}
                   autoComplete="off"
                 />

@@ -457,15 +457,60 @@ describe('Smoke: Full translation flow (mocked E2E)', () => {
       title: 'Pyramids Tour',
       description: 'Explore the Great Pyramids',
       highlights: ['Ancient wonders', 'Guided tour'],
+      itinerary: [{ title: 'Pickup', description: 'Hotel pickup' }],
+      faq: [{ question: 'What should I bring?', answer: 'Comfortable shoes' }],
+      bookingOptions: [{ label: 'Shared tour', description: 'Join a group', badge: 'Popular' }],
+      addOns: [{ name: 'Photo package', description: 'Professional vacation photos' }],
     });
 
-    // 2. OpenAI returns translations
-    mockOpenAISuccess({
-      ar: { title: 'جولة الأهرامات', description: 'استكشف الأهرامات العظيمة', highlights: ['عجائب قديمة', 'جولة مع مرشد'] },
-      es: { title: 'Tour Pirámides', description: 'Explora las Pirámides', highlights: ['Maravillas antiguas', 'Tour guiado'] },
-      fr: { title: 'Visite Pyramides', description: 'Explorez les Pyramides', highlights: ['Merveilles antiques', 'Visite guidée'] },
-      de: { title: 'Pyramidentour', description: 'Erkunden Sie die Pyramiden', highlights: ['Antike Wunder', 'Geführte Tour'] },
-    });
+    // 2. OpenAI returns per-locale flat and structured translations
+    const localeResponses = {
+      ar: {
+        flat: { title: 'جولة الأهرامات', description: 'استكشف الأهرامات العظيمة', highlights: ['عجائب قديمة', 'جولة مع مرشد'] },
+        structured: {
+          itinerary: [{ title: 'الاستلام', description: 'الاستلام من الفندق' }],
+          faq: [{ question: 'ماذا أحضر معي؟', answer: 'أحذية مريحة' }],
+          bookingOptions: [{ label: 'جولة مشتركة', description: 'انضم إلى مجموعة', badge: 'الأكثر شعبية' }],
+          addOns: [{ name: 'باقة الصور', description: 'صور عطلة احترافية' }],
+        },
+      },
+      es: {
+        flat: { title: 'Tour Pirámides', description: 'Explora las Pirámides', highlights: ['Maravillas antiguas', 'Tour guiado'] },
+        structured: {
+          itinerary: [{ title: 'Recogida', description: 'Recogida en el hotel' }],
+          faq: [{ question: '¿Qué debo llevar?', answer: 'Zapatos cómodos' }],
+          bookingOptions: [{ label: 'Tour compartido', description: 'Únete a un grupo', badge: 'Popular' }],
+          addOns: [{ name: 'Paquete de fotos', description: 'Fotos profesionales de vacaciones' }],
+        },
+      },
+      fr: {
+        flat: { title: 'Visite Pyramides', description: 'Explorez les Pyramides', highlights: ['Merveilles antiques', 'Visite guidée'] },
+        structured: {
+          itinerary: [{ title: 'Prise en charge', description: 'Prise en charge à l’hôtel' }],
+          faq: [{ question: 'Que dois-je apporter ?', answer: 'Des chaussures confortables' }],
+          bookingOptions: [{ label: 'Visite partagée', description: 'Rejoignez un groupe', badge: 'Populaire' }],
+          addOns: [{ name: 'Pack photo', description: 'Photos de vacances professionnelles' }],
+        },
+      },
+      de: {
+        flat: { title: 'Pyramidentour', description: 'Erkunden Sie die Pyramiden', highlights: ['Antike Wunder', 'Geführte Tour'] },
+        structured: {
+          itinerary: [{ title: 'Abholung', description: 'Abholung vom Hotel' }],
+          faq: [{ question: 'Was soll ich mitbringen?', answer: 'Bequeme Schuhe' }],
+          bookingOptions: [{ label: 'Gemeinsame Tour', description: 'Schließen Sie sich einer Gruppe an', badge: 'Beliebt' }],
+          addOns: [{ name: 'Fotopaket', description: 'Professionelle Urlaubsfotos' }],
+        },
+      },
+    } as const;
+
+    for (const locale of translatableLocales) {
+      mockCreate.mockResolvedValueOnce({
+        choices: [{ message: { content: JSON.stringify(localeResponses[locale as keyof typeof localeResponses].flat) } }],
+      });
+      mockCreate.mockResolvedValueOnce({
+        choices: [{ message: { content: JSON.stringify(localeResponses[locale as keyof typeof localeResponses].structured) } }],
+      });
+    }
 
     // 3. Admin makes the API call
     const res = await POST(makeRequest({ modelType: 'tour', id: 'tour-abc' }));
@@ -478,7 +523,7 @@ describe('Smoke: Full translation flow (mocked E2E)', () => {
     expect(data.message).toContain('tour-abc');
 
     // 5. Verify OpenAI was called with the right model
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledTimes(translatableLocales.length * 2);
     expect(mockCreate.mock.calls[0][0].model).toBe('gpt-4o-mini');
 
     // 6. Verify DB was updated with translations
@@ -487,8 +532,18 @@ describe('Smoke: Full translation flow (mocked E2E)', () => {
       expect.objectContaining({
         $set: expect.objectContaining({
           translations: expect.objectContaining({
-            ar: expect.objectContaining({ title: 'جولة الأهرامات' }),
-            es: expect.objectContaining({ title: 'Tour Pirámides' }),
+            ar: expect.objectContaining({
+              title: 'جولة الأهرامات',
+              itinerary: expect.arrayContaining([
+                expect.objectContaining({ title: 'الاستلام' }),
+              ]),
+            }),
+            es: expect.objectContaining({
+              title: 'Tour Pirámides',
+              bookingOptions: expect.arrayContaining([
+                expect.objectContaining({ label: 'Tour compartido' }),
+              ]),
+            }),
           }),
         }),
       })

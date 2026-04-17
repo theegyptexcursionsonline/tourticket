@@ -42,6 +42,7 @@ import {
     Minus
 } from 'lucide-react';
 import TranslationEditor from '@/components/admin/TranslationEditor';
+import TourStructuredTranslationEditor from '@/components/admin/TourStructuredTranslationEditor';
 import { tourTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 
 // --- Interface Definitions ---
@@ -175,6 +176,22 @@ const SmallHint = ({ children, className = "" }: { children: React.ReactNode; cl
 
 const inputBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
 const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
+
+const TourTranslationHelp = ({ isDraft }: { isDraft: boolean }) => (
+    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 space-y-2">
+        <p className="text-sm font-semibold text-slate-800">Translation scope</p>
+        <p className="text-sm text-slate-700">
+            This tab localizes the core tour copy used across listings and detail pages:
+            title, descriptions, duration, highlights, includes, tags, SEO meta fields,
+            plus structured itinerary, FAQ, booking option, and add-on content below.
+        </p>
+        {isDraft && (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                You can draft manual translations now. Auto-translate becomes available after the tour is saved the first time.
+            </p>
+        )}
+    </div>
+);
 
 // --- Availability Manager Sub-Component ---
 const AvailabilityManager = ({ availability, setAvailability }: { availability: Availability, setAvailability: (data: Availability) => void }) => {
@@ -2161,12 +2178,21 @@ const addItineraryItem = () => {
                                 {/* Translations Tab */}
                                 {activeTab === 'translations' && (
                                     <div className="space-y-6">
+                                        <TourTranslationHelp isDraft={!tourToEdit?._id} />
                                         <TranslationEditor
                                             fields={tourTranslationFields}
                                             value={formData.translations}
                                             onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
                                             modelType="tour"
                                             entityId={tourToEdit?._id as string}
+                                        />
+                                        <TourStructuredTranslationEditor
+                                            value={formData.translations}
+                                            onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                                            itinerary={formData.itinerary}
+                                            faqs={formData.faqs}
+                                            bookingOptions={formData.bookingOptions}
+                                            addOns={formData.addOns}
                                         />
                                     </div>
                                 )}

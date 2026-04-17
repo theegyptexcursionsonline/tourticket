@@ -70,6 +70,25 @@ export interface ITourTranslation {
   tags?: string[];
   metaTitle?: string;
   metaDescription?: string;
+  itinerary?: Array<{
+    title?: string;
+    description?: string;
+    location?: string;
+    includes?: string[];
+  }>;
+  faq?: Array<{
+    question?: string;
+    answer?: string;
+  }>;
+  bookingOptions?: Array<{
+    label?: string;
+    description?: string;
+    badge?: string;
+  }>;
+  addOns?: Array<{
+    name?: string;
+    description?: string;
+  }>;
 }
 
 // Complete Tour Interface
@@ -360,6 +379,41 @@ const AddOnSchema = new Schema<IAddOn>({
   }
 }, { _id: false });
 
+const ItineraryTranslationItemSchema = new Schema(
+  {
+    title: { type: String, trim: true, maxlength: 200 },
+    description: { type: String, trim: true, maxlength: 5000 },
+    location: { type: String, trim: true, maxlength: 200 },
+    includes: [{ type: String, trim: true, maxlength: 300 }],
+  },
+  { _id: false }
+);
+
+const FAQTranslationItemSchema = new Schema(
+  {
+    question: { type: String, trim: true, maxlength: 500 },
+    answer: { type: String, trim: true, maxlength: 2000 },
+  },
+  { _id: false }
+);
+
+const BookingOptionTranslationItemSchema = new Schema(
+  {
+    label: { type: String, trim: true, maxlength: 200 },
+    description: { type: String, trim: true, maxlength: 1000 },
+    badge: { type: String, trim: true, maxlength: 50 },
+  },
+  { _id: false }
+);
+
+const AddOnTranslationItemSchema = new Schema(
+  {
+    name: { type: String, trim: true, maxlength: 100 },
+    description: { type: String, trim: true, maxlength: 500 },
+  },
+  { _id: false }
+);
+
 const TourTranslationSchema = new Schema<ITourTranslation>(
   {
     title: { type: String, trim: true, maxlength: 200 },
@@ -374,6 +428,10 @@ const TourTranslationSchema = new Schema<ITourTranslation>(
     tags: [{ type: String, trim: true, maxlength: 50 }],
     metaTitle: { type: String, trim: true, maxlength: 60 },
     metaDescription: { type: String, trim: true, maxlength: 160 },
+    itinerary: [ItineraryTranslationItemSchema],
+    faq: [FAQTranslationItemSchema],
+    bookingOptions: [BookingOptionTranslationItemSchema],
+    addOns: [AddOnTranslationItemSchema],
   },
   { _id: false }
 );

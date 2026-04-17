@@ -49,6 +49,7 @@ import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import 'instantsearch.css/themes/satellite.css';
 
 // =================================================================
@@ -165,6 +166,26 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex];
 };
 
+function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?: string; title?: string; tourCount?: number }>(
+  hits: T[],
+  options?: { requireTours?: boolean }
+) {
+  const requireTours = options?.requireTours ?? false;
+  const uniqueHits = dedupeTaxonomyEntries(
+    hits.map((hit) => ({
+      ...hit,
+      slug: hit.slug || hit.objectID,
+      name: hit.name || hit.title,
+    }))
+  ) as T[];
+
+  if (!requireTours) {
+    return uniqueHits;
+  }
+
+  return uniqueHits.filter((hit) => (Number(hit.tourCount) || 0) > 0);
+}
+
 // =================================================================
 // --- ALGOLIA SEARCH COMPONENTS ---
 // =================================================================
@@ -261,7 +282,8 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -276,7 +298,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
             Destinations
           </span>
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
-            {hits.length}
+            {uniqueHits.length}
           </span>
         </div>
       </div>
@@ -323,7 +345,8 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -338,7 +361,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
             Categories
           </span>
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
-            {hits.length}
+            {uniqueHits.length}
           </span>
         </div>
       </div>

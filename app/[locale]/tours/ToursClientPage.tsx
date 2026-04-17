@@ -44,7 +44,7 @@ type ToursPageCopy = {
   viewDetails: string;
 };
 
-const TOURS_PAGE_COPY: Record<'en' | 'ar', ToursPageCopy> = {
+const TOURS_PAGE_COPY: Record<'en' | 'ar' | 'de', ToursPageCopy> = {
   en: {
     heroTitle: 'Explore All Tours',
     heroSubtitle: (tourCount: number, destinationCount: number) =>
@@ -70,6 +70,32 @@ const TOURS_PAGE_COPY: Record<'en' | 'ar', ToursPageCopy> = {
     featured: 'Featured',
     perPerson: 'per person',
     viewDetails: 'View Details',
+  },
+  de: {
+    heroTitle: 'Alle Touren Entdecken',
+    heroSubtitle: (tourCount: number, destinationCount: number) =>
+      `Entdecken Sie ${tourCount} sorgfältig ausgewählte Erlebnisse in ${destinationCount} Reisezielen. Ihr nächstes Abenteuer beginnt hier.`,
+    searchPlaceholder: 'Touren nach Name oder Beschreibung suchen...',
+    filters: 'Filter',
+    clearAll: 'Alles löschen',
+    sortBy: 'Sortieren nach:',
+    newestFirst: 'Neueste zuerst',
+    priceLowToHigh: 'Preis: niedrig nach hoch',
+    priceHighToLow: 'Preis: hoch nach niedrig',
+    highestRated: 'Beste Bewertung',
+    destination: 'Reiseziel',
+    category: 'Kategorie',
+    allDestinations: 'Alle Reiseziele',
+    allCategories: 'Alle Kategorien',
+    showingResults: (filtered: number, total: number) =>
+      `${filtered} von ${total} Touren werden angezeigt`,
+    noToursFoundTitle: 'Keine Touren gefunden',
+    noToursFoundSubtitle: 'Versuchen Sie, Ihre Filter oder Suchbegriffe anzupassen',
+    clearAllFilters: 'Alle Filter löschen',
+    discountSuffix: 'RABATT',
+    featured: 'Empfohlen',
+    perPerson: 'pro Person',
+    viewDetails: 'Details ansehen',
   },
   ar: {
     heroTitle: 'استكشف جميع الجولات',
@@ -210,7 +236,11 @@ const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageC
 export default function ToursClientPage({ tours }: ToursClientPageProps) {
   const locale = useLocale();
   const rtl = locale.startsWith('ar');
-  const copy = locale.startsWith('ar') ? TOURS_PAGE_COPY.ar : TOURS_PAGE_COPY.en;
+  const copy = locale.startsWith('ar')
+    ? TOURS_PAGE_COPY.ar
+    : locale.startsWith('de')
+      ? TOURS_PAGE_COPY.de
+      : TOURS_PAGE_COPY.en;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

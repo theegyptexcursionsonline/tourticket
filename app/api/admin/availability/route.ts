@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const body = await request.json();
-    const { tourId, date, slots, stopSale, stopSaleReason, notes } = body;
+    const { tourId, date, slots, stopSale, stopSaleReason, notes, stopSaleStatus, stoppedOptionIds } = body;
 
     if (!tourId || !date) {
       return NextResponse.json(
@@ -237,6 +237,21 @@ export async function POST(request: NextRequest) {
     const availabilityDate = new Date(date);
     availabilityDate.setHours(0, 0, 0, 0);
 
+    const normalizedStoppedOptionIds = Array.isArray(stoppedOptionIds)
+      ? Array.from(new Set(stoppedOptionIds.map((id: unknown) => String(id)).filter(Boolean))).sort()
+      : [];
+
+    const effectiveStopSaleStatus: 'none' | 'partial' | 'full' =
+      stopSaleStatus === 'partial' || stopSaleStatus === 'full' || stopSaleStatus === 'none'
+        ? stopSaleStatus
+        : stopSale
+          ? 'full'
+          : normalizedStoppedOptionIds.length > 0
+            ? 'partial'
+            : 'none';
+
+    const legacyFullStopSale = effectiveStopSaleStatus === 'full';
+
     // Upsert availability
     const availability = await Availability.findOneAndUpdate(
       { tour: tourId, date: availabilityDate },
@@ -244,17 +259,18 @@ export async function POST(request: NextRequest) {
         tour: tourId,
         date: availabilityDate,
         slots: slots || [],
-        stopSale: stopSale || false,
-        stopSaleReason: stopSaleReason || '',
+        stopSale: legacyFullStopSale,
+        stopSaleReason: legacyFullStopSale ? (stopSaleReason || '') : '',
         notes: notes || '',
       },
       { upsert: true, new: true, runValidators: true }
     );
 
-    // Mirror legacy tour-level stopSale boolean into StopSale model (all options)
-    // so that public/frontend checks can respect it.
-    if (stopSale) {
-      await StopSale.findOneAndUpdate(
+    // Keep stop-sale records in sync with the single-day editor state.
+    await StopSale.deleteMany({ tourId, startDate: availabilityDate, endDate: availabilityDate });
+
+    if (effectiveStopSaleStatus === 'full') {
+      await StopSale.updateOne(
         { tourId, startDate: availabilityDate, endDate: availabilityDate, optionIds: [] },
         {
           $set: {
@@ -267,8 +283,22 @@ export async function POST(request: NextRequest) {
         },
         { upsert: true },
       );
-    } else {
-      await StopSale.deleteMany({ tourId, startDate: availabilityDate, endDate: availabilityDate, optionIds: [] });
+    } else if (effectiveStopSaleStatus === 'partial') {
+      for (const optionId of normalizedStoppedOptionIds) {
+        await StopSale.updateOne(
+          { tourId, startDate: availabilityDate, endDate: availabilityDate, optionIds: [optionId] },
+          {
+            $set: {
+              tourId,
+              startDate: availabilityDate,
+              endDate: availabilityDate,
+              optionIds: [optionId],
+              reason: stopSaleReason || 'Blocked',
+            },
+          },
+          { upsert: true },
+        );
+      }
     }
 
     revalidateTourAvailabilitySurfaces();
@@ -295,7 +325,11 @@ export async function PUT(request: NextRequest) {
     await dbConnect();
 
     const body = await request.json();
-    const { tourId, dates, action, slots, stopSale, stopSaleReason } = body;
+    const { tourId, dates, action, slots, stopSale, stopSaleReason, optionIds } = body;
+    const normalizedOptionIds = Array.isArray(optionIds)
+      ? Array.from(new Set(optionIds.map((id: unknown) => String(id)).filter(Boolean))).sort()
+      : [];
+    const isOptionScoped = normalizedOptionIds.length > 0;
 
     if (!tourId || !dates || !Array.isArray(dates) || !action) {
       return NextResponse.json(
@@ -328,63 +362,112 @@ export async function PUT(request: NextRequest) {
 
       switch (action) {
         case 'block':
-          updateData.stopSale = true;
-          updateData.stopSaleReason = stopSaleReason || 'Blocked';
-          stopSaleOps.push({
-            updateOne: {
-              filter: { tourId, startDate: date, endDate: date, optionIds: [] },
-              update: {
-                $set: { tourId, startDate: date, endDate: date, optionIds: [], reason: stopSaleReason || 'Blocked' },
+          if (!isOptionScoped) {
+            updateData.stopSale = true;
+            updateData.stopSaleReason = stopSaleReason || 'Blocked';
+            stopSaleOps.push({
+              deleteMany: {
+                filter: { tourId, startDate: date, endDate: date },
               },
-              upsert: true,
-            },
-          });
-          break;
-        case 'unblock':
-          updateData.stopSale = false;
-          updateData.stopSaleReason = '';
-          stopSaleOps.push({
-            deleteOne: {
-              filter: { tourId, startDate: date, endDate: date, optionIds: [] },
-            },
-          });
-          break;
-        case 'updateSlots':
-          if (slots) updateData.slots = slots;
-          break;
-        case 'setStopSale':
-          updateData.stopSale = stopSale;
-          updateData.stopSaleReason = stopSaleReason || '';
-          if (stopSale) {
+            });
             stopSaleOps.push({
               updateOne: {
                 filter: { tourId, startDate: date, endDate: date, optionIds: [] },
                 update: {
-                  $set: { tourId, startDate: date, endDate: date, optionIds: [], reason: stopSaleReason || '' },
+                  $set: { tourId, startDate: date, endDate: date, optionIds: [], reason: stopSaleReason || 'Blocked' },
                 },
                 upsert: true,
               },
             });
           } else {
+            updateData.stopSale = false;
+            updateData.stopSaleReason = '';
             stopSaleOps.push({
               deleteOne: {
                 filter: { tourId, startDate: date, endDate: date, optionIds: [] },
               },
             });
+            for (const optionId of normalizedOptionIds) {
+              stopSaleOps.push({
+                updateOne: {
+                  filter: { tourId, startDate: date, endDate: date, optionIds: [optionId] },
+                  update: {
+                    $set: { tourId, startDate: date, endDate: date, optionIds: [optionId], reason: stopSaleReason || 'Blocked' },
+                  },
+                  upsert: true,
+                },
+              });
+            }
+          }
+          break;
+        case 'unblock':
+          if (!isOptionScoped) {
+            updateData.stopSale = false;
+            updateData.stopSaleReason = '';
+            stopSaleOps.push({
+              deleteMany: {
+                filter: { tourId, startDate: date, endDate: date },
+              },
+            });
+          } else {
+            updateData.stopSale = false;
+            updateData.stopSaleReason = '';
+            for (const optionId of normalizedOptionIds) {
+              stopSaleOps.push({
+                deleteOne: {
+                  filter: { tourId, startDate: date, endDate: date, optionIds: [optionId] },
+                },
+              });
+            }
+          }
+          break;
+        case 'updateSlots':
+          if (slots) updateData.slots = slots;
+          break;
+        case 'setStopSale':
+          if (!isOptionScoped) {
+            updateData.stopSale = stopSale;
+            updateData.stopSaleReason = stopSaleReason || '';
+            if (stopSale) {
+              stopSaleOps.push({
+                deleteMany: {
+                  filter: { tourId, startDate: date, endDate: date },
+                },
+              });
+              stopSaleOps.push({
+                updateOne: {
+                  filter: { tourId, startDate: date, endDate: date, optionIds: [] },
+                  update: {
+                    $set: { tourId, startDate: date, endDate: date, optionIds: [], reason: stopSaleReason || '' },
+                  },
+                  upsert: true,
+                },
+              });
+            } else {
+              stopSaleOps.push({
+                deleteMany: {
+                  filter: { tourId, startDate: date, endDate: date },
+                },
+              });
+            }
           }
           break;
       }
 
-      operations.push({
-        updateOne: {
-          filter: { tour: tourId, date },
-          update: { $set: { ...updateData, tour: tourId, date } },
-          upsert: true,
-        },
-      });
+      if (Object.keys(updateData).length > 0) {
+        operations.push({
+          updateOne: {
+            filter: { tour: tourId, date },
+            update: { $set: { ...updateData, tour: tourId, date } },
+            upsert: true,
+          },
+        });
+      }
     }
 
-    const result = await Availability.bulkWrite(operations);
+    const result = operations.length > 0
+      ? await Availability.bulkWrite(operations)
+      : { modifiedCount: 0, upsertedCount: 0 };
 
     // Sequential stop-sale writes with per-op duplicate-key tolerance.
     // bulkWrite({ ordered: false }) on an upsert against a unique index will race
@@ -400,6 +483,9 @@ export async function PUT(request: NextRequest) {
           const { filter, update } = op.updateOne;
           await StopSale.updateOne(filter, update, { upsert: true });
           stopSaleWritten += 1;
+        } else if (op.deleteMany) {
+          const deleteResult = await StopSale.deleteMany(op.deleteMany.filter);
+          stopSaleDeleted += deleteResult.deletedCount || 0;
         } else if (op.deleteOne) {
           await StopSale.deleteOne(op.deleteOne.filter);
           stopSaleDeleted += 1;

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
+import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Algolia Config ---
@@ -16,6 +17,26 @@ const INDEX_CATEGORIES = 'categories';
 const INDEX_BLOGS = 'blogs';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+
+function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?: string; title?: string; tourCount?: number }>(
+  hits: T[],
+  options?: { requireTours?: boolean }
+) {
+  const requireTours = options?.requireTours ?? false;
+  const uniqueHits = dedupeTaxonomyEntries(
+    hits.map((hit) => ({
+      ...hit,
+      slug: hit.slug || hit.objectID,
+      name: hit.name || hit.title,
+    }))
+  ) as T[];
+
+  if (!requireTours) {
+    return uniqueHits;
+  }
+
+  return uniqueHits.filter((hit) => (Number(hit.tourCount) || 0) > 0);
+}
 
 // Custom SearchBox component
 function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
@@ -82,7 +103,8 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const limitedHits = uniqueHits.slice(0, limit);
   if (limitedHits.length === 0) return null;
   return (
     <div>
@@ -90,7 +112,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
         <div className="flex items-center gap-2 md:gap-2.5">
           <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25"><Compass className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} /></div>
           <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">Destinations</span>
-          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{hits.length}</span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{uniqueHits.length}</span>
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (
@@ -114,7 +136,8 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const limitedHits = uniqueHits.slice(0, limit);
   if (limitedHits.length === 0) return null;
   return (
     <div>
@@ -122,7 +145,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
         <div className="flex items-center gap-2 md:gap-2.5">
           <div className="w-5 md:w-6 h-5 md:h-6 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/25"><Tag className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} /></div>
           <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">Categories</span>
-          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{hits.length}</span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{uniqueHits.length}</span>
         </div>
       </div>
       {limitedHits.map((hit: any, index) => (

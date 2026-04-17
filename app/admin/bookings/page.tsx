@@ -95,6 +95,10 @@ const formatDisplayDate = (dateString: string | undefined, options?: Intl.DateTi
   return date.toLocaleDateString('en-US', options || { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
+const formatBookedDate = (dateString: string | undefined): string => {
+  return formatDisplayDate(dateString, { month: 'short', day: 'numeric' });
+};
+
 const BookingsPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalBookings, setTotalBookings] = useState(0);
@@ -588,7 +592,7 @@ const BookingsPage = () => {
                         <div className="text-sm text-slate-500">{booking.time}</div>
                         {booking.createdAt && (
                           <div className="text-xs text-slate-400 mt-1">
-                            Booked: {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            Booked: {formatBookedDate(booking.createdAt)}
                           </div>
                         )}
                       </td>

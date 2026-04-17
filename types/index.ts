@@ -241,6 +241,25 @@ export interface Tour {
       tags?: string[];
       metaTitle?: string;
       metaDescription?: string;
+      itinerary?: Array<{
+        title?: string;
+        description?: string;
+        location?: string;
+        includes?: string[];
+      }>;
+      faq?: Array<{
+        question?: string;
+        answer?: string;
+      }>;
+      bookingOptions?: Array<{
+        label?: string;
+        description?: string;
+        badge?: string;
+      }>;
+      addOns?: Array<{
+        name?: string;
+        description?: string;
+      }>;
     }
   >;
   specialOffer?: {

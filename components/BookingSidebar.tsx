@@ -152,6 +152,8 @@ interface TourOption {
   badge?: string;
   discount?: number;
   isRecommended?: boolean;
+  isStopSaleBlocked?: boolean;
+  stopSaleReason?: string;
 }
 
 interface SpecialOffer {
@@ -161,6 +163,12 @@ interface SpecialOffer {
   discount: number;
   validUntil: string;
   type: 'early-bird' | 'group' | 'seasonal';
+}
+
+interface StopSaleDayInfo {
+  status: 'full' | 'partial';
+  stoppedOptionIds: string[];
+  reasons: Record<string, string>;
 }
 
 interface BookingData {
@@ -394,7 +402,7 @@ const CalendarWidget: React.FC<{
       const isToday = currentDate.toDateString() === today.toDateString();
       const isSelected = selectedDate && currentDate.toDateString() === selectedDate.toDateString();
       const isPast = currentDate < today && !isToday;
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = toDateOnlyString(currentDate);
       const availability = availabilityData[dateKey];
       const isFull = availability === 'full';
 
@@ -527,6 +535,7 @@ const TourOptionCard: React.FC<{
   const rating = tour.rating || 4.5;
   const totalBookings = tour.bookings || tour.reviews || 0;
   const maxParticipants = tour.maxGroupSize || 15;
+  const hasAvailableSlots = option.timeSlots.some((timeSlot) => timeSlot.available > 0);
 
   return (
     <motion.div
@@ -665,6 +674,15 @@ const TourOptionCard: React.FC<{
           <h4 className="font-semibold text-gray-800 text-sm">Available Times Today</h4>
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Select one to continue</span>
         </div>
+
+        {!hasAvailableSlots && option.isStopSaleBlocked && (
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="font-semibold">Unavailable on the selected date</div>
+            <div className="mt-1 text-amber-700">
+              {option.stopSaleReason || 'This option has been stop-saled by the operator for this date.'}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-3">
           {option.timeSlots.map(timeSlot => {
@@ -1120,56 +1138,86 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   // below overlays this on top of tour.availability so blocked dates render
   // as unclickable — before this, a user could pick a blocked date and only
   // discover the block on the next step.
-  const [stopSaleDates, setStopSaleDates] = useState<Record<string, 'full' | 'partial'>>({});
+  const [stopSaleDates, setStopSaleDates] = useState<Record<string, StopSaleDayInfo>>({});
 
-  useEffect(() => {
+  const fetchStopSaleDates = useCallback(async (monthsOverride?: Array<{ month: number; year: number }>) => {
     const tourId = tour?.id || tour?._id;
-    if (!tourId) return;
-    let cancelled = false;
+    if (!tourId) return {} as Record<string, StopSaleDayInfo>;
 
-    (async () => {
-      try {
-        const today = new Date();
-        const monthsToFetch: Array<{ month: number; year: number }> = [];
-        for (let offset = 0; offset < 6; offset += 1) {
-          const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
-          monthsToFetch.push({ month: d.getMonth() + 1, year: d.getFullYear() });
-        }
+    try {
+      const monthsToFetch = monthsOverride && monthsOverride.length > 0
+        ? monthsOverride
+        : (() => {
+            const today = new Date();
+            const months: Array<{ month: number; year: number }> = [];
+            for (let offset = 0; offset < 6; offset += 1) {
+              const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+              months.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+            }
+            return months;
+          })();
 
-        const responses = await Promise.all(
-          monthsToFetch.map(({ month, year }) =>
-            fetch(`/api/tours/${tourId}/stop-sales?month=${month}&year=${year}`, {
-              cache: 'no-store',
-            })
-              .then((r) => (r.ok ? r.json() : null))
-              .catch(() => null),
-          ),
-        );
+      const responses = await Promise.all(
+        monthsToFetch.map(({ month, year }) =>
+          fetch(`/api/tours/${tourId}/stop-sales?month=${month}&year=${year}`, {
+            cache: 'no-store',
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+        ),
+      );
 
-        if (cancelled) return;
-
-        const next: Record<string, 'full' | 'partial'> = {};
-        for (const res of responses) {
-          const days = res?.data?.days as Record<string, { status: 'full' | 'partial' }> | undefined;
-          if (!days) continue;
-          for (const [key, value] of Object.entries(days)) {
-            if (value?.status === 'full' || value?.status === 'partial') {
-              if (next[key] !== 'full') next[key] = value.status;
+      const next: Record<string, StopSaleDayInfo> = {};
+      for (const res of responses) {
+        const days = res?.data?.days as Record<string, StopSaleDayInfo> | undefined;
+        if (!days) continue;
+        for (const [key, value] of Object.entries(days)) {
+          if (value?.status === 'full' || value?.status === 'partial') {
+            if (next[key]?.status !== 'full') {
+              next[key] = {
+                status: value.status,
+                stoppedOptionIds: Array.isArray(value.stoppedOptionIds) ? value.stoppedOptionIds : [],
+                reasons: value.reasons || {},
+              };
             }
           }
         }
-        setStopSaleDates(next);
-      } catch (err) {
-        // Non-fatal: the calendar degrades to its pre-stop-sale behavior if
-        // the fetch fails; the server-side check still blocks the booking.
-        console.warn('[BookingSidebar] stop-sale month fetch failed:', err);
+      }
+
+      setStopSaleDates((prev) => {
+        const merged = { ...prev, ...next };
+        return merged;
+      });
+
+      return next;
+    } catch (err) {
+      // Non-fatal: the calendar degrades to its pre-stop-sale behavior if
+      // the fetch fails; the server-side check still blocks the booking.
+      console.warn('[BookingSidebar] stop-sale month fetch failed:', err);
+      return {} as Record<string, StopSaleDayInfo>;
+    }
+  }, [tour?.id, tour?._id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const next = await fetchStopSaleDates();
+      if (cancelled) return;
+      if (Object.keys(next).length > 0) {
+        setStopSaleDates((prev) => ({ ...prev, ...next }));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [tour?.id, tour?._id]);
+  }, [fetchStopSaleDates]);
+
+  useEffect(() => {
+    if (!isOpen || !showDatePicker) return;
+    void fetchStopSaleDates();
+  }, [isOpen, showDatePicker, fetchStopSaleDates]);
 
   // Generate calendar availability based on tour's availability settings
   const calendarAvailability = useMemo(() => {
@@ -1188,7 +1236,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     const blockedSet = new Set(
       blockedDates.map(d => {
         const date = new Date(d);
-        return date.toISOString().split('T')[0];
+        return toDateOnlyString(date);
       })
     );
 
@@ -1196,7 +1244,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     if (type === 'specific_dates' && specificDates.length > 0) {
       specificDates.forEach(d => {
         const date = new Date(d);
-        const dateKey = date.toISOString().split('T')[0];
+        const dateKey = toDateOnlyString(date);
         if (!blockedSet.has(dateKey) && date >= today) {
           availabilityMap[dateKey] = 'high';
         }
@@ -1210,7 +1258,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
 
     // Iterate through each day
     for (let d = new Date(today); d <= sixMonthsLater; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toISOString().split('T')[0];
+      const dateKey = toDateOnlyString(d);
       const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
 
       // Check if blocked
@@ -1240,10 +1288,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     // Overlay stop-sale state: fully blocked days become 'full' (unclickable),
     // partially blocked days downgrade to 'low' as a visual warning while
     // remaining selectable so partially-available options can still be picked.
-    for (const [key, status] of Object.entries(stopSaleDates)) {
-      if (status === 'full') {
+    for (const [key, info] of Object.entries(stopSaleDates)) {
+      if (info.status === 'full') {
         availabilityMap[key] = 'full';
-      } else if (status === 'partial' && availabilityMap[key] !== 'full') {
+      } else if (info.status === 'partial' && availabilityMap[key] !== 'full') {
         availabilityMap[key] = 'low';
       }
     }
@@ -1312,21 +1360,35 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
         throw new Error("Tour ID is missing");
       }
 
+      const selectedDateKey = toDateOnlyString(date);
+      const selectedStopSale = stopSaleDates[selectedDateKey];
+
+      if (selectedStopSale?.status === 'full') {
+        throw new Error('This date is stop-saled and cannot be booked.');
+      }
+
       // Use pre-fetched bookingOptions from tour prop (SSR) if available
       let tourOptions: TourOption[];
       if (tour.bookingOptions && tour.bookingOptions.length > 0) {
         // Transform pre-fetched bookingOptions to TourOption format
         tourOptions = tour.bookingOptions.map((option: any, index: number) => {
           const optionPrice = option.price || tourDisplayData?.discountPrice || 50;
+          const optionId = option.id || option._id || `option-${index}`;
+          const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(optionId);
+          const stopSaleReason = selectedStopSale?.reasons?.[optionId] || selectedStopSale?.reasons?.all;
+          const baseTimeSlots = option.timeSlots || generateTimeSlotsFromAvailability(optionPrice, index);
           return {
-            id: option.id || option._id || `option-${index}`,
+            id: optionId,
             title: option.label || option.title || 'Tour Option',
             price: optionPrice,
             originalPrice: option.originalPrice || optionPrice,
             duration: option.duration || tourDisplayData?.duration || '3 hours',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
-            timeSlots: option.timeSlots || generateTimeSlotsFromAvailability(optionPrice, index),
+            timeSlots: baseTimeSlots.map((slot: TimeSlot) => ({
+              ...slot,
+              available: isStopSaleBlocked ? 0 : slot.available,
+            })),
             highlights: option.highlights || tourDisplayData?.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
             included: option.included || tourDisplayData?.includes?.slice(0, 3) || ['Professional guide', 'Entry tickets', 'Group photos'],
             groupSize: option.groupSize || `Max ${tourDisplayData?.maxGroupSize || 15} people`,
@@ -1334,21 +1396,29 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             badge: option.badge || (index === 0 ? 'Most Popular' : undefined),
             discount: option.discount || (tourDisplayData?.originalPrice && tourDisplayData.originalPrice > tourDisplayData.discountPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : undefined),
             isRecommended: option.isRecommended ?? index === 0,
+            isStopSaleBlocked,
+            stopSaleReason,
           };
         });
       } else {
         // Fallback to default tour options using actual availability slots
         const standardPrice = tourDisplayData?.discountPrice || 50;
+        const baseTimeSlots = generateTimeSlotsFromAvailability(standardPrice, 0);
+        const fallbackOptionId = 'standard-default';
+        const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(fallbackOptionId);
         tourOptions = [
           {
-            id: 'standard-tour',
+            id: fallbackOptionId,
             title: 'Standard Tour Experience',
             price: standardPrice,
             originalPrice: tourDisplayData?.originalPrice || standardPrice,
             duration: tourDisplayData?.duration || '3 hours',
             languages: tourDisplayData?.languages || ['English'],
             description: 'Perfect introduction to the destination with expert guide',
-            timeSlots: generateTimeSlotsFromAvailability(standardPrice, 0),
+            timeSlots: baseTimeSlots.map((slot) => ({
+              ...slot,
+              available: isStopSaleBlocked ? 0 : slot.available,
+            })),
             highlights: tourDisplayData?.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
             included: tourDisplayData?.includes?.slice(0, 3) || ['Professional guide', 'Entry tickets', 'Group photos'],
             groupSize: `Max ${tourDisplayData?.maxGroupSize || 15} people`,
@@ -1356,6 +1426,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
             badge: 'Most Popular',
             discount: tourDisplayData?.originalPrice && tourDisplayData.originalPrice > tourDisplayData.discountPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : undefined,
             isRecommended: true,
+            isStopSaleBlocked,
+            stopSaleReason: selectedStopSale?.reasons?.[fallbackOptionId] || selectedStopSale?.reasons?.all,
           }
         ];
       }
@@ -1384,7 +1456,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       }
 
       const newAvailabilityData: AvailabilityData = {
-        date: date.toISOString().split('T')[0],
+        date: toDateOnlyString(date),
         timeSlots: [],
         addOns: addOnsToUse,
         tourOptions: tourOptions,
@@ -1530,7 +1602,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   }, [currentStep, scrollToTop]);
 
   // Enhanced availability check
-  const handleCheckAvailability = useCallback(() => {
+  const handleCheckAvailability = useCallback(async () => {
     if (!bookingData.selectedDate) {
       setError('Please select a date to continue');
       toast.error('Date selection required', { icon: '📅' });
@@ -1551,9 +1623,22 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       return;
     }
 
+    const selectedMonth = bookingData.selectedDate;
+    const freshStopSales = await fetchStopSaleDates([
+      { month: selectedMonth.getMonth() + 1, year: selectedMonth.getFullYear() },
+    ]);
+    const selectedDateKey = toDateOnlyString(bookingData.selectedDate);
+    const latestStopSaleStatus = freshStopSales[selectedDateKey]?.status || stopSaleDates[selectedDateKey]?.status;
+
+    if (latestStopSaleStatus === 'full') {
+      setError('This date is stop-saled and cannot be booked');
+      toast.error('This date is no longer available. Please choose another date.', { icon: '⛔' });
+      return;
+    }
+
     setError('');
     fetchAvailability(bookingData.selectedDate, totalGuests);
-  }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability]);
+  }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability, fetchStopSaleDates, stopSaleDates]);
 
   // Enhanced date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -1562,7 +1647,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
     setAvailability(null);
     setCurrentStep(1);
 
-    const dateKey = date.toISOString().split('T')[0];
+    const dateKey = toDateOnlyString(date);
     const dayAvailability = calendarAvailability[dateKey];
 
     if (dayAvailability === 'full') {

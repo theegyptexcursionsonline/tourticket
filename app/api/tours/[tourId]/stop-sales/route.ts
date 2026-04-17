@@ -10,11 +10,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import StopSale from '@/lib/models/StopSale';
+import Tour from '@/lib/models/Tour';
+import { toDateOnlyString } from '@/utils/date';
 
 export const dynamic = 'force-dynamic';
 
 function toDateKey(d: Date) {
-  return d.toISOString().split('T')[0];
+  return toDateOnlyString(d);
 }
 
 function toDateOnly(d: Date) {
@@ -52,6 +54,13 @@ export async function GET(
     })
       .select('optionIds startDate endDate reason')
       .lean();
+
+    const tour = await Tour.findById(tourId).select('bookingOptions').lean();
+    const optionIds = Array.isArray((tour as any)?.bookingOptions)
+      ? (tour as any).bookingOptions
+          .map((option: any, index: number) => option?.id || option?._id?.toString?.() || `option-${index}`)
+          .filter(Boolean)
+      : [];
 
     // Roll each stop-sale range into a per-day status map. A tour-level stop
     // sale (`optionIds: []`) marks the day as fully blocked; option-level
@@ -95,6 +104,23 @@ export async function GET(
     // Dedupe per-day option lists
     for (const key of Object.keys(days)) {
       days[key].stoppedOptionIds = Array.from(new Set(days[key].stoppedOptionIds));
+
+      if (days[key].status === 'partial' && optionIds.length === 0) {
+        days[key] = {
+          status: 'full',
+          stoppedOptionIds: [],
+          reasons: Object.keys(days[key].reasons).length > 0 ? days[key].reasons : {},
+        };
+      } else if (days[key].status === 'partial' && optionIds.length > 0) {
+        const allStopped = optionIds.every((optionId: string) => days[key].stoppedOptionIds.includes(optionId));
+        if (allStopped) {
+          days[key] = {
+            status: 'full',
+            stoppedOptionIds: [],
+            reasons: Object.keys(days[key].reasons).length > 0 ? days[key].reasons : {},
+          };
+        }
+      }
     }
 
     return NextResponse.json({
