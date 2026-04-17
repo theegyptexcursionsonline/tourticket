@@ -85,12 +85,63 @@ interface TourEnhancement {
   localCustoms?: string[];
 }
 
+const inferItineraryIcon = (item: ItineraryItem): string => {
+  const content = [item.title, item.description, item.location]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const matches = (...keywords: string[]) => keywords.some((keyword) => content.includes(keyword));
+
+  if (matches('pickup', 'pick up', 'hotel', 'transfer', 'drop off', 'dropoff', 'return to hotel', 'back to hotel')) {
+    return 'transport';
+  }
+
+  if (matches('boat', 'cruise', 'yacht', 'sail', 'sailing', 'aboard', 'on board', 'jetty', 'harbor', 'harbour', 'marina')) {
+    return 'boat';
+  }
+
+  if (matches('snorkel', 'snorkeling', 'snorkelling', 'reef', 'coral', 'dive', 'diving', 'freediv', 'swim', 'swimming')) {
+    return 'water';
+  }
+
+  if (matches('island', 'beach', 'bay', 'lagoon', 'sandbank', 'sand bar', 'relax', 'sunbathe', 'sunbath')) {
+    return 'beach';
+  }
+
+  if (matches('lunch', 'dinner', 'breakfast', 'meal', 'buffet', 'bbq', 'barbecue', 'drinks', 'tea', 'coffee')) {
+    return 'food';
+  }
+
+  if (matches('photo', 'photos', 'photography', 'sunset', 'viewpoint', 'panorama', 'scenic')) {
+    return 'camera';
+  }
+
+  if (matches('museum', 'temple', 'pyramid', 'monument', 'tomb', 'mosque', 'church', 'fort', 'citadel', 'valley')) {
+    return 'monument';
+  }
+
+  if (matches('shop', 'shopping', 'market', 'bazaar', 'souvenir')) {
+    return 'shopping';
+  }
+
+  if (matches('briefing', 'instruction', 'instructions', 'safety', 'introduction', 'orientation', 'check-in', 'check in')) {
+    return 'info';
+  }
+
+  if (matches('walk', 'explore', 'visit', 'discover', 'experience', 'stop', 'activity')) {
+    return 'activity';
+  }
+
+  return 'location';
+};
+
 // Extract enhancement data from the actual tour object with SMART fallbacks
 const extractEnhancementData = (tour: ITour): TourEnhancement => {
   return {
     itinerary: tour.itinerary && tour.itinerary.length > 0 ? tour.itinerary.map(item => ({
       ...item,
-      icon: item.icon || 'location'
+      icon: item.icon && item.icon !== 'location' ? item.icon : inferItineraryIcon(item)
     })) : [],
     
     whatToBring: tour.whatToBring && tour.whatToBring.length > 0 ? tour.whatToBring : [
@@ -395,6 +446,9 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   const icons: { [key: string]: JSX.Element } = {
     location: <MapPin className={className} />,
     transport: <Bus className={className} />,
+    boat: <Navigation className={className} />,
+    water: <Navigation className={className} />,
+    beach: <Sun className={className} />,
     monument: <Mountain className={className} />,
     camera: <Camera className={className} />,
     food: <Utensils className={className} />,
