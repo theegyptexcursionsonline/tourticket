@@ -339,7 +339,12 @@ const CalendarWidget: React.FC<{
   onDateSelect: (date: Date) => void;
   availabilityData?: { [key: string]: 'high' | 'medium' | 'low' | 'full' };
   availableDays?: number[]; // 0-6 for Sunday-Saturday
-}> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays }) => {
+  // When false, stop-sale data hasn't been fetched yet. We suppress the
+  // colored availability dots + click handling during that window so a
+  // stop-saled date doesn't briefly render as "available" before flipping
+  // to "Unavailable" once the overlay loads.
+  hasLoadedStopSales?: boolean;
+}> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays, hasLoadedStopSales = true }) => {
   const locale = useLocale();
   const rtl = isRTL(locale);
   const PrevMonthIcon = rtl ? ChevronRight : ChevronLeft;
@@ -409,7 +414,9 @@ const CalendarWidget: React.FC<{
       // Check if day of week is available (if availableDays is provided)
       const dayOfWeek = currentDate.getDay();
       const isDayUnavailable = availableDays && availableDays.length > 0 && !availableDays.includes(dayOfWeek);
-      const isUnavailable = isPast || isFull || isDayUnavailable;
+      // Disable clicks during the stop-sale loading window so a stop-saled
+      // date can't be picked in the sub-second gap before the overlay lands.
+      const isUnavailable = isPast || isFull || isDayUnavailable || !hasLoadedStopSales;
 
       const unavailableTitle = isPast
         ? undefined
@@ -433,13 +440,15 @@ const CalendarWidget: React.FC<{
               ? 'bg-gradient-to-br from-red-100 to-red-200 text-red-700 border-red-300 font-bold'
               : isPast || isDayUnavailable
               ? 'text-gray-300 bg-gray-50 border-gray-100 cursor-not-allowed'
+              : !hasLoadedStopSales
+              ? 'bg-white border-gray-100 text-gray-400 animate-pulse'
               : availability
               ? getAvailabilityColor(availability) + ' hover:scale-105'
               : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:scale-105'
           }`}
         >
           {day}
-          {availability && availability !== 'full' && !isDayUnavailable && (
+          {hasLoadedStopSales && availability && availability !== 'full' && !isDayUnavailable && (
             <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full ${
               availability === 'high' ? 'bg-green-400' :
               availability === 'medium' ? 'bg-yellow-400' :
@@ -503,7 +512,7 @@ const CalendarWidget: React.FC<{
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full bg-red-400"></div>
-          <span className="text-gray-600">Full</span>
+          <span className="text-gray-600">Unavailable</span>
         </div>
       </div>
 
@@ -1147,6 +1156,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
   // as unclickable — before this, a user could pick a blocked date and only
   // discover the block on the next step.
   const [stopSaleDates, setStopSaleDates] = useState<Record<string, StopSaleDayInfo>>({});
+  // Flipped true after the first stop-sale fetch completes (success or
+  // failure). The calendar suppresses availability dots + date clicks until
+  // this is true so stop-saled dates can't briefly render as "available".
+  const [hasLoadedStopSales, setHasLoadedStopSales] = useState(false);
 
   const fetchStopSaleDates = useCallback(async (monthsOverride?: Array<{ month: number; year: number }>) => {
     const tourId = tour?.id || tour?._id;
@@ -1215,6 +1228,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
       if (Object.keys(next).length > 0) {
         setStopSaleDates((prev) => ({ ...prev, ...next }));
       }
+      setHasLoadedStopSales(true);
     })();
 
     return () => {
@@ -2039,6 +2053,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour }
                         onDateSelect={handleDateSelect}
                         availabilityData={calendarAvailability}
                         availableDays={tour?.availability?.availableDays}
+                        hasLoadedStopSales={hasLoadedStopSales}
                       />
                     </motion.div>
                   )}
