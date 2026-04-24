@@ -1861,11 +1861,11 @@ export default function AISearchWidget() {
                         }
                       }}
                       placeholder={chatMode ? t('chatPlaceholder') : placeholderTexts[placeholderIndex]}
-                      className={`ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold ${isExpanded ? 'text-gray-900' : 'text-white'} placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight`}
+                      className="ai-search-input w-full pl-14 md:pl-16 pr-24 md:pr-28 py-3.5 md:py-4 text-sm md:text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent outline-none cursor-text relative z-10 rounded-full tracking-tight"
                       style={{
-                        color: isExpanded ? '#111827' : '#ffffff',
-                        WebkitTextFillColor: isExpanded ? '#111827' : '#ffffff',
-                        caretColor: isExpanded ? '#111827' : '#ffffff',
+                        color: '#111827',
+                        WebkitTextFillColor: '#111827',
+                        caretColor: '#111827',
                       }}
                     />
 
