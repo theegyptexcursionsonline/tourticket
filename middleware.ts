@@ -18,7 +18,9 @@ export function middleware(request: NextRequest) {
   if (isDashboardSubdomain && !pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
     const url = request.nextUrl.clone();
     url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
-    return NextResponse.rewrite(url);
+    const response = NextResponse.rewrite(url);
+    response.headers.set('Cache-Control', 'no-store, must-revalidate');
+    return response;
   }
 
   // Redirect main domain /admin to dashboard subdomain
