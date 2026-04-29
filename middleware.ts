@@ -15,7 +15,26 @@ export function middleware(request: NextRequest) {
     hostname.startsWith('dashboard2.') ||
     hostname.startsWith('admin.');
 
-  if (isDashboardSubdomain && !pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+  // Paths that must resolve at the root (NOT be rewritten under /admin)
+  // even when served from a dashboard subdomain. Keep /monitoring as a
+  // passthrough for cached clients that still post to the old Sentry tunnel.
+  const dashboardPassthroughPaths = [
+    '/admin',
+    '/api',
+    '/_next',
+    '/monitoring',
+    '/sentry-example-page',
+    '/favicon.ico',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/manifest.json',
+  ];
+
+  const isDashboardPassthrough = dashboardPassthroughPaths.some(
+    (p) => pathname === p || pathname.startsWith(p + '/')
+  );
+
+  if (isDashboardSubdomain && !isDashboardPassthrough) {
     const url = request.nextUrl.clone();
     url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
     const response = NextResponse.rewrite(url);

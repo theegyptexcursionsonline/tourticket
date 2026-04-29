@@ -205,7 +205,6 @@ module.exports = withSentryConfig(withNextIntl(nextConfig), {
   project: 'javascript-nextjs',
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  tunnelRoute: '/monitoring',
   disableLogger: true,
   automaticVercelMonitors: true,
   hideSourceMaps: true,

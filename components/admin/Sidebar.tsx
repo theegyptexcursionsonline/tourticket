@@ -27,6 +27,7 @@ import {
   Shield,
   CalendarCheck,
   Gift,
+  Loader2,
 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 
@@ -70,9 +71,12 @@ const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const pathname = usePathname();
   const showLabel = isOpen || (isMobile && isMobileOpen);
   const { hasAnyPermission } = useAdminAuth();
+  const pendingNavItem = navItems.find((item) => item.href === pendingHref);
+  const isNavigating = Boolean(pendingHref && pendingHref !== pathname);
 
   // Handle mobile detection & keep sidebar responsive
   useEffect(() => {
@@ -98,6 +102,7 @@ const AdminSidebar = () => {
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileOpen(false);
+    setPendingHref(null);
   }, [pathname]);
 
   // Prevent scroll when mobile menu is open
@@ -143,6 +148,33 @@ const AdminSidebar = () => {
     }
   };
 
+  const handleNavClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    if (href === pathname) {
+      return;
+    }
+
+    event.preventDefault();
+    setPendingHref(href);
+    if (isMobile) {
+      setIsMobileOpen(false);
+    }
+
+    window.setTimeout(() => {
+      window.location.assign(href);
+    }, 80);
+  };
+
   const sidebarWidth = isMobile ? "w-72" : isOpen ? "w-72" : "w-20";
   const mobileClass = isMobile
     ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
@@ -152,6 +184,18 @@ const AdminSidebar = () => {
 
   return (
     <>
+      {isNavigating && (
+        <>
+          <div className="fixed inset-x-0 top-0 z-[80] h-1 bg-slate-200">
+            <div className="h-full w-1/2 animate-pulse rounded-r-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500" />
+          </div>
+          <div className="fixed bottom-6 right-6 z-[80] flex items-center gap-3 rounded-2xl border border-blue-100 bg-white/95 px-4 py-3 text-sm font-semibold text-slate-700 shadow-2xl backdrop-blur">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            <span>Opening {pendingNavItem?.label ?? "page"}...</span>
+          </div>
+        </>
+      )}
+
       {/* Mobile Overlay */}
       {isMobile && isMobileOpen && (
         <div
@@ -220,17 +264,20 @@ const AdminSidebar = () => {
               const active =
                 pathname === href ||
                 (href !== "/admin" && pathname.startsWith(href));
+              const pending = pendingHref === href;
 
               return (
                 <li key={href}>
                   <Link
                     href={href}
+                    onClick={(event) => handleNavClick(event, href)}
+                    aria-busy={pending}
                     className={`relative group flex items-center rounded-2xl transition-all duration-200 overflow-hidden ${
                       showLabel
                         ? "gap-4 px-4 py-3.5"
                         : "justify-center p-3.5 mx-auto w-14"
                     } ${
-                      active
+                      active || pending
                         ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 shadow-sm border border-blue-100/50"
                         : "hover:bg-slate-50 text-slate-700 hover:text-slate-900"
                     } ${!showLabel ? "hover:scale-105" : "hover:translate-x-1"}`}
@@ -246,29 +293,29 @@ const AdminSidebar = () => {
                     {/* Icon */}
                     <div
                       className={`p-2 rounded-xl transition-all duration-200 flex-shrink-0 ${
-                        active
+                        active || pending
                           ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
                           : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-600"
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
                     </div>
 
                     {/* Label */}
                     {showLabel && (
                       <span
                         className={`font-medium transition-all duration-300 truncate min-w-0 ${
-                          active
+                          active || pending
                             ? "text-slate-800"
                             : "text-slate-600 group-hover:text-slate-800"
                         }`}
                       >
-                        {label}
+                        {pending ? `Opening ${label}...` : label}
                       </span>
                     )}
 
                     {/* Active glow */}
-                    {active && (
+                    {(active || pending) && (
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-2xl"></div>
                     )}
 
