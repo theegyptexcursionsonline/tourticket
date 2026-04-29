@@ -9,6 +9,9 @@ import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import { Loader2 } from 'lucide-react';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -33,7 +36,7 @@ export async function generateMetadata({ params }: SearchPageProps): Promise<Met
   };
 }
 
-async function getFilters() {
+async function getFilters(locale: string) {
     // Skip database fetch during build if MONGODB_URI is not set
     if (!process.env.MONGODB_URI) {
         console.warn('⚠️ Skipping search filters fetch - MONGODB_URI not set');
@@ -42,7 +45,7 @@ async function getFilters() {
 
     try {
         await dbConnect();
-        const tours = await Tour.find({ isPublished: true })
+        const tours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
             .select('category destination')
             .lean();
 
@@ -82,8 +85,41 @@ async function getFilters() {
         ]);
 
         return {
-            categories: JSON.parse(JSON.stringify(filterVisibleTaxonomyEntries(categories))),
-            destinations: JSON.parse(JSON.stringify(filterVisibleTaxonomyEntries(destinations))),
+            categories: JSON.parse(JSON.stringify(filterVisibleTaxonomyEntries(
+              selectLocalizedTaxonomyEntries(
+                categories as Record<string, unknown>[],
+                locale,
+                ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+              ).map((category: Record<string, unknown>) =>
+                localizeEntityFields(category, locale, [
+                  'name',
+                  'description',
+                  'longDescription',
+                  'highlights',
+                  'features',
+                  'metaTitle',
+                  'metaDescription',
+                ])
+              )
+            ))),
+            destinations: JSON.parse(JSON.stringify(filterVisibleTaxonomyEntries(
+              selectLocalizedTaxonomyEntries(
+                destinations as Record<string, unknown>[],
+                locale,
+                ['name', 'country', 'description', 'longDescription', 'highlights', 'thingsToDo', 'metaTitle', 'metaDescription']
+              ).map((destination: Record<string, unknown>) =>
+                localizeEntityFields(destination, locale, [
+                  'name',
+                  'country',
+                  'description',
+                  'longDescription',
+                  'highlights',
+                  'thingsToDo',
+                  'metaTitle',
+                  'metaDescription',
+                ])
+              )
+            ))),
         };
     } catch (error) {
         console.error("Failed to fetch filters:", error);
@@ -104,7 +140,7 @@ function Loading({ label }: { label: string }) {
 export default async function SearchPage({ params }: SearchPageProps) {
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: 'searchPage' });
-    const { categories, destinations } = await getFilters();
+    const { categories, destinations } = await getFilters(locale);
 
     return (
         <Suspense fallback={<Loading label={t('loadingTours')} />}>

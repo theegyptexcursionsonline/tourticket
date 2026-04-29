@@ -10,6 +10,8 @@ import ToursClientPage from './ToursClientPage';
 import ToursListSchema from '@/components/schema/ToursListSchema';
 import { ITour } from '@/lib/models/Tour';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { selectLocalizedTours } from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -38,123 +40,6 @@ const getPageMeta = (locale: string) =>
     : locale.startsWith('de')
       ? toursPageMeta.de
       : toursPageMeta.en;
-
-const defaultTenantFilter = {
-  $or: [
-    { tenantId: 'default' },
-    { tenantId: { $exists: false } },
-    { tenantId: null },
-    { tenantId: '' },
-  ],
-};
-
-const getLocaleBucket = (
-  translations: unknown,
-  locale: string
-): Record<string, unknown> | undefined => {
-  if (!translations || typeof translations !== 'object' || Array.isArray(translations)) {
-    return undefined;
-  }
-
-  const record = translations as Record<string, unknown>;
-  const normalizedLocale = locale.toLowerCase();
-  const baseLocale = normalizedLocale.split('-')[0];
-
-  for (const key of [normalizedLocale, locale, baseLocale]) {
-    const bucket = record[key];
-    if (bucket && typeof bucket === 'object' && !Array.isArray(bucket)) {
-      return bucket as Record<string, unknown>;
-    }
-  }
-
-  return undefined;
-};
-
-const hasUsableLocaleContent = (
-  bucket: Record<string, unknown> | undefined,
-  fields: string[]
-) =>
-  fields.some((field) => {
-    const value = bucket?.[field];
-    if (typeof value === 'string') return value.trim().length > 0;
-    if (Array.isArray(value)) {
-      return value.some((item) => typeof item === 'string' && item.trim().length > 0);
-    }
-    return false;
-  });
-
-const germanContentPattern =
-  /\b(und|mit|von|nach|tage|stunden|uhr|abholung|ausflug|kreuzfahrt|erlebnis|ganzt[aä]gig|halbt[aä]gig|gef[üu]hrte|privat|inklusive|schnorchel|nil|pyramiden|entdeckung)\b/i;
-
-function tourHasGermanContent(tour: Record<string, unknown>) {
-  if (
-    hasUsableLocaleContent(getLocaleBucket(tour.translations, 'de'), [
-      'title',
-      'description',
-      'duration',
-      'highlights',
-      'includes',
-      'metaTitle',
-      'metaDescription',
-    ])
-  ) {
-    return true;
-  }
-
-  const snippets = [
-    tour.title,
-    tour.description,
-    tour.duration,
-    tour.metaTitle,
-    tour.metaDescription,
-    ...(Array.isArray(tour.highlights) ? tour.highlights : []),
-    ...(Array.isArray(tour.includes) ? tour.includes : []),
-  ]
-    .map((value) => String(value || '').replace(/<[^>]+>/g, ' ').trim())
-    .filter(Boolean);
-
-  return snippets.some((value) => germanContentPattern.test(value));
-}
-
-function shouldIncludeTourForLocale(tour: Record<string, unknown>, locale: string) {
-  if (!locale.startsWith('de')) {
-    return true;
-  }
-
-  return tourHasGermanContent(tour);
-}
-
-function scoreTourForLocale(tour: Record<string, unknown>, locale: string) {
-  const tenantId = String(tour.tenantId || '');
-  let score = 0;
-
-  if (tenantId === 'default') score += 4;
-  else if (!tenantId) score += 2;
-
-  if (locale.startsWith('de') && tourHasGermanContent(tour)) {
-    score += 6;
-  }
-
-  if (tour.isFeatured) score += 1;
-
-  return score;
-}
-
-function dedupeToursBySlug(tours: Record<string, unknown>[], locale: string) {
-  const bestBySlug = new Map<string, Record<string, unknown>>();
-
-  for (const tour of tours) {
-    const slug = String(tour.slug || '');
-    if (!slug) continue;
-
-    const existing = bestBySlug.get(slug);
-    if (!existing || scoreTourForLocale(tour, locale) > scoreTourForLocale(existing, locale)) {
-      bestBySlug.set(slug, tour);
-    }
-  }
-
-  return Array.from(bestBySlug.values());
-}
 
 // Generate metadata for SEO
 export async function generateMetadata({
@@ -198,7 +83,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
   try {
     await dbConnect();
 
-    const baseTours = await Tour.find({ isPublished: true, ...defaultTenantFilter })
+    const baseTours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
       .populate('destination', 'name description country translations')
       .populate('category', 'name description longDescription translations')
       .sort({ featured: -1, createdAt: -1 }) // Featured first, then most recent
@@ -223,10 +108,10 @@ async function getAllTours(locale: string): Promise<ITour[]> {
       serializedCandidates = JSON.parse(JSON.stringify(localizedCandidates)) as Record<string, unknown>[];
     }
 
-    const filteredTours = dedupeToursBySlug(
+    const filteredTours = selectLocalizedTours(
       serializedCandidates.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),
       locale
-    ).filter((tour) => shouldIncludeTourForLocale(tour, locale));
+    );
 
     return filteredTours.map((tour: Record<string, unknown>) => {
       const localizedTour = localizeEntityFields(tour, locale, [

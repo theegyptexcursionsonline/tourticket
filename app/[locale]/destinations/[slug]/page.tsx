@@ -8,6 +8,11 @@ import ReviewModel from '@/lib/models/Review';
 import DestinationPageClient from './DestinationPageClient';
 import DestinationSchema from '@/components/schema/DestinationSchema';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import {
+  selectLocalizedTaxonomyEntries,
+  selectLocalizedTours,
+} from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for fast page loads
 export const revalidate = 60;
@@ -28,11 +33,16 @@ export async function generateMetadata({
   try {
     const { locale, slug } = await params;
     await dbConnect();
-    const destinationRaw = await DestinationModel.findOne({ slug })
+    const destinationMatches = await DestinationModel.find({ slug })
       .select('name description image country metaTitle metaDescription translations')
       .lean();
-    const destination = destinationRaw
-      ? localizeEntityFields(destinationRaw as Record<string, unknown>, locale, [
+    const destinationCandidate = selectLocalizedTaxonomyEntries(
+      JSON.parse(JSON.stringify(destinationMatches)) as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'country', 'longDescription', 'metaTitle', 'metaDescription']
+    )[0];
+    const destination = destinationCandidate
+      ? localizeEntityFields(destinationCandidate, locale, [
           'name',
           'description',
           'country',
@@ -79,8 +89,8 @@ export async function generateMetadata({
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const destinationRaw = await DestinationModel.findOne({ slug }).lean();
-  if (!destinationRaw) {
+  const destinationMatches = await DestinationModel.find({ slug }).lean();
+  if (destinationMatches.length === 0) {
     return {
       destination: null,
       destinationTours: [],
@@ -90,16 +100,72 @@ async function getPageData(slug: string, locale: string) {
     };
   }
 
-  // Fetch published tours for this destination
-  const destinationTours = await TourModel.find({
-    destination: (destinationRaw as any)._id,
-    isPublished: true
-  }).lean();
+  const serializedDestinationMatches = JSON.parse(JSON.stringify(destinationMatches)) as Record<string, unknown>[];
+  const destinationCandidate = selectLocalizedTaxonomyEntries(
+    serializedDestinationMatches,
+    locale,
+    [
+      'name',
+      'country',
+      'description',
+      'longDescription',
+      'bestTimeToVisit',
+      'currency',
+      'timezone',
+      'climate',
+      'visaRequirements',
+      'languagesSpoken',
+      'highlights',
+      'thingsToDo',
+      'localCustoms',
+      'metaTitle',
+      'metaDescription',
+    ]
+  )[0];
+
+  if (!destinationCandidate) {
+    return {
+      destination: null,
+      destinationTours: [],
+      allCategories: [],
+      reviews: [],
+      relatedDestinations: []
+    };
+  }
+
+  const destinationIds = serializedDestinationMatches.map((destination) => (destination as any)._id);
+  const baseDestinationTours = await TourModel.find({
+    destination: { $in: destinationIds },
+    isPublished: true,
+    ...DEFAULT_TENANT_FILTER,
+  }).populate('destination').populate('category').lean();
 
   const allCategories = await CategoryModel.find({}).lean();
 
   // Fetch reviews for tours in this destination
-  const tourIds = destinationTours.map(tour => (tour as any)._id);
+  const serializedBaseTours = JSON.parse(JSON.stringify(baseDestinationTours)) as Record<string, unknown>[];
+  const candidateSlugs = serializedBaseTours
+    .map((tour) => String(tour.slug || ''))
+    .filter(Boolean);
+
+  let serializedTourCandidates = serializedBaseTours;
+
+  if (locale.startsWith('de') && candidateSlugs.length > 0) {
+    const localizedTourMatches = await TourModel.find({
+      destination: { $in: destinationIds },
+      isPublished: true,
+      slug: { $in: candidateSlugs },
+    }).populate('destination').populate('category').lean();
+
+    serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
+  }
+
+  const selectedDestinationTours = selectLocalizedTours(
+    serializedTourCandidates.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),
+    locale
+  );
+
+  const tourIds = selectedDestinationTours.map((tour) => (tour as any)._id);
   const reviews = await ReviewModel.find({
     tour: { $in: tourIds },
     verified: true
@@ -110,9 +176,9 @@ async function getPageData(slug: string, locale: string) {
 
   // Fetch related destinations (same country or similar)
   const relatedDestinationsRaw = await DestinationModel.find({
-    _id: { $ne: (destinationRaw as any)._id },
+    _id: { $nin: destinationIds },
     $or: [
-      { country: (destinationRaw as any).country },
+      { country: (destinationCandidate as any).country },
       { featured: true }
     ]
   })
@@ -124,7 +190,8 @@ async function getPageData(slug: string, locale: string) {
     relatedDestinationsRaw.map(async (dest) => {
       const tourCount = await TourModel.countDocuments({
         destination: dest._id,
-        isPublished: true
+        isPublished: true,
+        ...DEFAULT_TENANT_FILTER,
       });
       return {
         ...dest,
@@ -133,13 +200,19 @@ async function getPageData(slug: string, locale: string) {
     })
   );
 
-  const serializedDestination = JSON.parse(JSON.stringify(destinationRaw));
-  const serializedTours = JSON.parse(JSON.stringify(destinationTours));
   const serializedCategories = JSON.parse(JSON.stringify(allCategories));
   const serializedReviews = JSON.parse(JSON.stringify(reviews));
   const serializedRelatedDest = JSON.parse(JSON.stringify(relatedDestinations));
+  const relatedDestinationCountBySlug = new Map<string, number>();
 
-  const localizedDestination = localizeEntityFields(serializedDestination, locale, [
+  for (const destination of serializedRelatedDest as Record<string, unknown>[]) {
+    const slug = String(destination.slug || '');
+    if (!slug) continue;
+    const count = Number(destination.tourCount) || 0;
+    relatedDestinationCountBySlug.set(slug, Math.max(relatedDestinationCountBySlug.get(slug) || 0, count));
+  }
+
+  const localizedDestination = localizeEntityFields(destinationCandidate, locale, [
     'name',
     'country',
     'description',
@@ -157,7 +230,7 @@ async function getPageData(slug: string, locale: string) {
     'metaDescription',
   ]);
 
-  const localizedTours = serializedTours.map((tour: Record<string, unknown>) =>
+  const localizedTours = selectedDestinationTours.map((tour: Record<string, unknown>) =>
     localizeEntityFields(tour, locale, [
       'title',
       'description',
@@ -186,8 +259,10 @@ async function getPageData(slug: string, locale: string) {
     ])
   );
 
-  const localizedRelatedDestinations = serializedRelatedDest.map((dest: Record<string, unknown>) =>
-    localizeEntityFields(dest, locale, [
+  const localizedRelatedDestinations = selectLocalizedTaxonomyEntries(
+    serializedRelatedDest,
+    locale,
+    [
       'name',
       'country',
       'description',
@@ -196,7 +271,24 @@ async function getPageData(slug: string, locale: string) {
       'thingsToDo',
       'metaTitle',
       'metaDescription',
-    ])
+    ]
+  ).map((dest: Record<string, unknown>) =>
+    ({
+      ...localizeEntityFields(dest, locale, [
+        'name',
+        'country',
+        'description',
+        'longDescription',
+        'highlights',
+        'thingsToDo',
+        'metaTitle',
+        'metaDescription',
+      ]),
+      tourCount:
+        relatedDestinationCountBySlug.get(String(dest.slug || '')) ||
+        Number(dest.tourCount) ||
+        0,
+    })
   );
 
   return {
@@ -234,11 +326,11 @@ export default async function DestinationPage({
         tours={destinationTours.map((t: any) => ({ title: t.title, slug: t.slug, image: t.image, discountPrice: t.discountPrice, originalPrice: t.originalPrice, rating: t.rating, reviewCount: t.reviewCount }))}
       />
       <DestinationPageClient
-        destination={destination}
-        destinationTours={destinationTours}
+        destination={destination as any}
+        destinationTours={destinationTours as any}
         allCategories={allCategories}
         reviews={reviews}
-        relatedDestinations={relatedDestinations}
+        relatedDestinations={relatedDestinations as any}
       />
     </>
   );

@@ -4,12 +4,17 @@ import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import Tour from '@/lib/models/Tour';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const featuredOnly = new URL(request.url).searchParams.get('featured') === 'true';
+    const searchParams = new URL(request.url).searchParams;
+    const featuredOnly = searchParams.get('featured') === 'true';
+    const locale = searchParams.get('locale') || 'en';
 
     const categories = await Category.find({
       ...(featuredOnly ? { featured: true } : {}),
@@ -23,6 +28,7 @@ export async function GET(request: NextRequest) {
       {
         $match: {
           isPublished: true,
+          ...DEFAULT_TENANT_FILTER,
           category: { $in: categoryIds },
         },
       },
@@ -37,7 +43,23 @@ export async function GET(request: NextRequest) {
       tourCount: countMap.get(category._id?.toString()) || 0,
     }));
 
-    const visibleCategories = filterVisibleTaxonomyEntries(categoriesWithCounts, {
+    const localizedCategories = selectLocalizedTaxonomyEntries(
+      JSON.parse(JSON.stringify(categoriesWithCounts)),
+      locale,
+      ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+    ).map((category: Record<string, unknown>) =>
+      localizeEntityFields(category, locale, [
+        'name',
+        'description',
+        'longDescription',
+        'highlights',
+        'features',
+        'metaTitle',
+        'metaDescription',
+      ])
+    );
+
+    const visibleCategories = filterVisibleTaxonomyEntries(localizedCategories, {
       requireTours: true,
     }).sort((a: any, b: any) => {
       const orderA = typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER;

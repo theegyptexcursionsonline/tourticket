@@ -50,6 +50,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import 'instantsearch.css/themes/satellite.css';
 
 // =================================================================
@@ -64,6 +65,7 @@ const INDEX_BLOGS = 'blogs';
 const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+const DEFAULT_SEARCH_TENANT = 'default';
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -201,7 +203,8 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -216,7 +219,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             Tours
           </span>
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
-            {hits.length}
+            {tenantHits.length}
           </span>
         </div>
       </div>
@@ -282,7 +285,8 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const uniqueHits = getUniqueSearchHits(tenantHits as any[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -345,7 +349,8 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const uniqueHits = getUniqueSearchHits(tenantHits as any[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -401,7 +406,8 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
 
 function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -416,7 +422,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             Blog Posts
           </span>
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">
-            {hits.length}
+            {tenantHits.length}
           </span>
         </div>
       </div>
@@ -669,12 +675,20 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
   // Render tool outputs (tours)
   const renderToolOutput = (obj: any) => {
     if (Array.isArray(obj)) {
-      const tours = obj.filter(item => item.title && item.slug);
+      const tours = filterSearchHitsByTenant(
+        obj.filter(item => item.title && item.slug),
+        DEFAULT_SEARCH_TENANT
+      );
       if (tours.length > 0) return <TourSlider tours={tours} />;
     }
-    if (obj.title && obj.slug) return <TourSlider tours={[obj]} />;
+    if (obj.title && obj.slug && filterSearchHitsByTenant([obj], DEFAULT_SEARCH_TENANT).length > 0) {
+      return <TourSlider tours={[obj]} />;
+    }
     if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter((item: any) => item.title && item.slug);
+      const tours = filterSearchHitsByTenant(
+        obj.hits.filter((item: any) => item.title && item.slug),
+        DEFAULT_SEARCH_TENANT
+      );
       if (tours.length > 0) return <TourSlider tours={tours} />;
     }
     return (

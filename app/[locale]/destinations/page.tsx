@@ -10,6 +10,8 @@ import DestinationsClientPage from './DestinationsClientPage';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import { IDestination } from '@/lib/models/Destination';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -78,11 +80,10 @@ async function getDestinationsWithTourCounts(locale: string): Promise<IDestinati
     // For each destination, count the number of published tours
     const destinationsWithCounts = await Promise.all(
       destinations.map(async (dest) => {
-        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const tourCount = await Tour.countDocuments({
           destination: dest._id,
           isPublished: true,
-          ...defaultTenantFilter
+          ...DEFAULT_TENANT_FILTER
         });
         return {
           ...dest,
@@ -91,8 +92,28 @@ async function getDestinationsWithTourCounts(locale: string): Promise<IDestinati
       })
     );
 
-    const serialized = JSON.parse(JSON.stringify(destinationsWithCounts));
-    return serialized.map((destination: Record<string, unknown>) =>
+    const serialized = JSON.parse(JSON.stringify(destinationsWithCounts)) as Record<string, unknown>[];
+    return selectLocalizedTaxonomyEntries(
+      serialized,
+      locale,
+      [
+        'name',
+        'country',
+        'description',
+        'longDescription',
+        'bestTimeToVisit',
+        'currency',
+        'timezone',
+        'climate',
+        'visaRequirements',
+        'languagesSpoken',
+        'highlights',
+        'thingsToDo',
+        'localCustoms',
+        'metaTitle',
+        'metaDescription',
+      ]
+    ).map((destination: Record<string, unknown>) =>
       localizeEntityFields(destination, locale, [
         'name',
         'country',
@@ -110,7 +131,7 @@ async function getDestinationsWithTourCounts(locale: string): Promise<IDestinati
         'metaTitle',
         'metaDescription',
       ])
-    ) as IDestination[];
+    ) as unknown as IDestination[];
   } catch (error) {
     console.error('Failed to fetch destinations:', error);
     return [];

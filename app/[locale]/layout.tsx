@@ -18,6 +18,8 @@ import ConditionalAIWidgets from "@/components/ConditionalAIWidgets";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
+import { localizeEntityFields } from "@/lib/i18n/contentLocalization";
+import { selectLocalizedTaxonomyEntries } from "@/lib/i18n/localizedCollections";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -78,57 +80,66 @@ export function generateStaticParams() {
 // every single static page (272× on tourticket) — without a cache, every page
 // re-hits MongoDB twice, which cumulatively pushed individual page renders
 // past Next.js's 60s SSG budget and timed out the Netlify build. The cache
-// below drops each worker process from 272 DB round-trips to 1 per TTL
+// below drops each worker process from 272 DB round-trips to 1 per locale/TTL
 // window, which is all we need during a build and still safe at runtime.
 type NavCache = { destinations: any[]; categories: any[] };
-let _navDataCache: NavCache | null = null;
+type LocaleNavCache = Record<string, NavCache | undefined>;
+let _navDataCache: LocaleNavCache = {};
 let _navDataCacheExpiry = 0;
 const NAV_DATA_TTL_MS = 60_000;
 
-function dedupeByNormalizedName<T extends { name?: string }>(items: T[]): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const item of items) {
-    const key = (item.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    result.push(item);
-  }
-  return result;
-}
-
-async function getNavData(): Promise<NavCache> {
+async function getNavData(locale: string): Promise<NavCache> {
   const now = Date.now();
-  if (_navDataCache && now < _navDataCacheExpiry) {
-    return _navDataCache;
+  const cached = _navDataCache[locale];
+  if (cached && now < _navDataCacheExpiry) {
+    return cached;
   }
 
   try {
     await dbConnect();
     // Plain `.find().lean()` (cheap and index-friendly) followed by a JS-side
-    // dedupe by normalized name. The old code used a `$group` aggregation to
-    // collapse the 26+ duplicate category clusters live in the DB, but that
-    // pipeline was orders of magnitude slower than doing the dedup in Node,
-    // and had to run once per SSG page. The defensive property we care about
-    // — "the menu never shows duplicate names" — is satisfied just as well
-    // by `dedupeByNormalizedName` below.
+    // locale-aware dedupe. The old code used a `$group` aggregation to collapse
+    // duplicate category clusters live in the DB, but that pipeline was orders
+    // of magnitude slower than doing the selection in Node and had to run once
+    // per SSG page. We still keep the "menu never shows duplicate or wrong-
+    // language items" guarantee while staying cheap during build/runtime.
     const [destinations, categories] = await Promise.all([
       Destination.find({ isPublished: true, featured: true })
-        .select('_id name slug image description country featured tourCount')
+        .select('_id name slug image description country featured tourCount translations')
         .sort({ tourCount: -1, name: 1 })
         .lean(),
       Category.find({ isPublished: true, featured: true })
-        .select('_id name slug icon description order')
+        .select('_id name slug icon description order translations')
         .sort({ order: 1, name: 1 })
         .lean(),
     ]);
 
     const result: NavCache = {
-      destinations: JSON.parse(JSON.stringify(dedupeByNormalizedName(destinations as any[]))),
-      categories: JSON.parse(JSON.stringify(dedupeByNormalizedName(categories as any[]))),
+      destinations: selectLocalizedTaxonomyEntries(
+        JSON.parse(JSON.stringify(destinations as any[])),
+        locale,
+        ['name', 'description', 'country', 'metaTitle', 'metaDescription']
+      ).map((destination: Record<string, unknown>) =>
+        localizeEntityFields(destination, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
+      ),
+      categories: selectLocalizedTaxonomyEntries(
+        JSON.parse(JSON.stringify(categories as any[])),
+        locale,
+        ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
+      ).map((category: Record<string, unknown>) =>
+        localizeEntityFields(category, locale, [
+          'name',
+          'description',
+          'longDescription',
+          'metaTitle',
+          'metaDescription',
+          'highlights',
+          'features',
+        ])
+      ),
     };
 
-    _navDataCache = result;
+    _navDataCache = { [locale]: result };
     _navDataCacheExpiry = now + NAV_DATA_TTL_MS;
     return result;
   } catch (error) {
@@ -154,7 +165,7 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   const messages = await getMessages();
-  const { destinations, categories } = await getNavData();
+  const { destinations, categories } = await getNavData(locale);
   const dir = isRTL(locale) ? 'rtl' : 'ltr';
   const fontClass = isRTL(locale) ? 'font-arabic' : 'font-sans';
 

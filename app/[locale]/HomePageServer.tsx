@@ -29,6 +29,8 @@ import PopularInterestServer from '@/components/PopularInterestServer';
 import DayTripsServer from '@/components/DayTripsServer';
 import { getLocale } from 'next-intl/server';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // ISR - Static generation with 60-second revalidation
 // This makes the homepage 10x faster by serving cached static pages
@@ -40,8 +42,6 @@ async function getHomePageData(locale: string) {
     await dbConnect();
 
     // Only show tours from the main (default) tenant — exclude German/other tenant tours
-    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
-
     // Fetch all data in parallel for speed
     const [
       destinations,
@@ -63,7 +63,7 @@ async function getHomePageData(locale: string) {
         .lean(),
 
       // Featured tours (exclude German tenant tours)
-      Tour.find({ isPublished: true, isFeatured: true, ...defaultTenantFilter })
+      Tour.find({ isPublished: true, isFeatured: true, ...DEFAULT_TENANT_FILTER })
         .populate('destination', 'name')
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings translations')
         .sort({ updatedAt: -1, createdAt: -1 })
@@ -104,7 +104,7 @@ async function getHomePageData(locale: string) {
         .lean(),
 
       // Day trips (all published tours, limited to 12, exclude German tenant tours)
-      Tour.find({ isPublished: true, ...defaultTenantFilter })
+      Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
         .select('title slug image discountPrice originalPrice duration rating reviewCount bookings tags translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
@@ -146,7 +146,7 @@ async function getHomePageData(locale: string) {
         const count = await Tour.countDocuments({
           destination: dest._id,
           isPublished: true,
-          ...defaultTenantFilter
+          ...DEFAULT_TENANT_FILTER
         });
         return {
           ...JSON.parse(JSON.stringify(dest)),
@@ -161,7 +161,7 @@ async function getHomePageData(locale: string) {
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
           isPublished: true,
-          ...defaultTenantFilter
+          ...DEFAULT_TENANT_FILTER
         });
         return {
           ...JSON.parse(JSON.stringify(category)),
@@ -177,7 +177,7 @@ async function getHomePageData(locale: string) {
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
           isPublished: true,
-          ...defaultTenantFilter
+          ...DEFAULT_TENANT_FILTER
         });
         return {
           type: 'category' as const,
@@ -214,7 +214,7 @@ async function getHomePageData(locale: string) {
         if (searchQueries.length > 0) {
           tourCount = await Tour.countDocuments({
             isPublished: true,
-            ...defaultTenantFilter,
+            ...DEFAULT_TENANT_FILTER,
             $and: [{ $or: searchQueries }]
           });
         }
@@ -235,7 +235,11 @@ async function getHomePageData(locale: string) {
     const allInterests = [...categoriesWithCounts, ...attractionsWithCounts];
     const featuredInterests = allInterests.filter(item => item.featured === true);
 
-    const localizedDestinations = destinationsWithCounts.map((dest: Record<string, unknown>) =>
+    const localizedDestinations = selectLocalizedTaxonomyEntries(
+      destinationsWithCounts as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'country', 'metaTitle', 'metaDescription']
+    ).map((dest: Record<string, unknown>) =>
       localizeEntityFields(dest, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
     );
 
@@ -267,7 +271,11 @@ async function getHomePageData(locale: string) {
       return localized;
     });
 
-    const localizedCategories = interestGridCategories.map((category: Record<string, unknown>) =>
+    const localizedCategories = selectLocalizedTaxonomyEntries(
+      interestGridCategories as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+    ).map((category: Record<string, unknown>) =>
       localizeEntityFields(category, locale, [
         'name',
         'description',
@@ -297,11 +305,19 @@ async function getHomePageData(locale: string) {
       ])
     );
 
-    const localizedHeaderDestinations = JSON.parse(JSON.stringify(headerDestinations)).map((dest: Record<string, unknown>) =>
+    const localizedHeaderDestinations = selectLocalizedTaxonomyEntries(
+      JSON.parse(JSON.stringify(headerDestinations)) as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'country', 'metaTitle', 'metaDescription']
+    ).map((dest: Record<string, unknown>) =>
       localizeEntityFields(dest, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
     );
 
-    const localizedHeaderCategories = JSON.parse(JSON.stringify(headerCategories)).map((category: Record<string, unknown>) =>
+    const localizedHeaderCategories = selectLocalizedTaxonomyEntries(
+      JSON.parse(JSON.stringify(headerCategories)) as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+    ).map((category: Record<string, unknown>) =>
       localizeEntityFields(category, locale, [
         'name',
         'description',
@@ -412,8 +428,8 @@ export default async function HomePageServer() {
       />
       <main>
       <Header
-        initialDestinations={headerDestinations}
-        initialCategories={headerCategories}
+        initialDestinations={headerDestinations as any}
+        initialCategories={headerCategories as any}
       />
       <HeroSection initialSettings={heroSettings} />
 

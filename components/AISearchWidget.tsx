@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Algolia Config ---
@@ -26,6 +27,7 @@ const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 // Create search client outside component to avoid recreating on every render
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+const DEFAULT_SEARCH_TENANT = 'default';
 
 // Tour card creation helper
 const createTourCardHTML = (tour: any): string => {
@@ -752,7 +754,7 @@ export default function AISearchWidget() {
         }]);
         const firstResult = response.results[0] as SearchResponse<any>;
         if (firstResult?.hits && firstResult.hits.length > 0) {
-          setFeaturedTours(firstResult.hits);
+          setFeaturedTours(filterSearchHitsByTenant(firstResult.hits, DEFAULT_SEARCH_TENANT));
         } else {
           // Fallback: fetch any tours if no featured tours
           const fallbackResponse = await searchClient.search([{
@@ -763,7 +765,7 @@ export default function AISearchWidget() {
             }
           }]);
           const fallbackResult = fallbackResponse.results[0] as SearchResponse<any>;
-          setFeaturedTours(fallbackResult?.hits || []);
+          setFeaturedTours(filterSearchHitsByTenant(fallbackResult?.hits || [], DEFAULT_SEARCH_TENANT));
         }
       } catch (error) {
         console.error('Error fetching featured tours:', error);
@@ -848,6 +850,7 @@ export default function AISearchWidget() {
 
   const handleInputChange = (value: string) => {
     setInputValue(value);
+    setIsExpanded(true);
     if (!chatMode) {
       setSearchQuery(value);
     }
@@ -920,25 +923,27 @@ export default function AISearchWidget() {
               indexName: INDEX_TOURS,
               params: {
                 query: tourTitle,
-                hitsPerPage: 1, // Only get 1 result per tour
+                hitsPerPage: 8,
               }
             }]);
             let firstResult = response.results[0] as SearchResponse<any>;
+            let scopedHits = filterSearchHitsByTenant((firstResult?.hits || []) as any[], DEFAULT_SEARCH_TENANT);
 
             // If no results, try with just keywords
-            if (!firstResult?.hits?.length) {
+            if (scopedHits.length === 0) {
               const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
               response = await searchClient.search([{
                 indexName: INDEX_TOURS,
                 params: {
                   query: keywords,
-                  hitsPerPage: 1, // Only get 1 result per tour
+                  hitsPerPage: 8,
                 }
               }]);
               firstResult = response.results[0] as SearchResponse<any>;
+              scopedHits = filterSearchHitsByTenant((firstResult?.hits || []) as any[], DEFAULT_SEARCH_TENANT);
             }
 
-            return firstResult?.hits?.[0];
+            return scopedHits[0];
           } catch (error) {
             console.error('Error searching for tour:', tourTitle, error);
             return null;
@@ -1010,11 +1015,11 @@ export default function AISearchWidget() {
               indexName: INDEX_DESTINATIONS,
               params: {
                 query: destName,
-                hitsPerPage: 1,
+                hitsPerPage: 8,
               }
             }]);
             const firstResult = response.results[0] as SearchResponse<any>;
-            return firstResult?.hits?.[0];
+            return filterSearchHitsByTenant((firstResult?.hits || []) as any[], DEFAULT_SEARCH_TENANT)[0];
           } catch (error) {
             console.error('Error searching for destination:', destName, error);
             return null;
@@ -1046,12 +1051,16 @@ export default function AISearchWidget() {
   // Render tool outputs (tours)
   const renderToolOutput = useCallback((obj: any) => {
     if (Array.isArray(obj)) {
-      const tours = obj.filter(item => item.title && item.slug);
+      const tours = filterSearchHitsByTenant(obj, DEFAULT_SEARCH_TENANT)
+        .filter(item => item.title && item.slug);
       if (tours.length > 0) return <TourSlider tours={tours} />;
     }
-    if (obj.title && obj.slug) return <TourSlider tours={[obj]} />;
+    if (obj.title && obj.slug && filterSearchHitsByTenant([obj], DEFAULT_SEARCH_TENANT).length > 0) {
+      return <TourSlider tours={[obj]} />;
+    }
     if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter((item: any) => item.title && item.slug);
+      const tours = filterSearchHitsByTenant(obj.hits, DEFAULT_SEARCH_TENANT)
+        .filter((item: any) => item.title && item.slug);
       if (tours.length > 0) return <TourSlider tours={tours} />;
     }
     return (

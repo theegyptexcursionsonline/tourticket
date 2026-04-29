@@ -8,6 +8,9 @@ import Footer from '@/components/Footer';
 import AISearchWidget from '@/components/AISearchWidget';
 import InterestsClientPage from './InterestsClientPage';
 import { ICategory } from '@/lib/models/Category';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -28,7 +31,7 @@ interface CategoryWithCount extends ICategory {
 }
 
 // Server-side function to fetch all categories and their tour counts
-async function getCategoriesWithTourCounts(): Promise<CategoryWithCount[]> {
+async function getCategoriesWithTourCounts(locale: string): Promise<CategoryWithCount[]> {
   // Skip database fetch during build if MONGODB_URI is not set
   if (!process.env.MONGODB_URI) {
     console.warn('⚠️ Skipping interests fetch - MONGODB_URI not set');
@@ -46,11 +49,10 @@ async function getCategoriesWithTourCounts(): Promise<CategoryWithCount[]> {
     // For each category, count the number of published tours
     const categoriesWithCounts = await Promise.all(
       categories.map(async (cat) => {
-        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const tourCount = await Tour.countDocuments({
           category: { $in: [cat._id] },
           isPublished: true,
-          ...defaultTenantFilter
+          ...DEFAULT_TENANT_FILTER
         });
         return {
           ...cat,
@@ -60,7 +62,21 @@ async function getCategoriesWithTourCounts(): Promise<CategoryWithCount[]> {
     );
 
     // Serialize the data to pass to the client component
-    return JSON.parse(JSON.stringify(categoriesWithCounts));
+    return selectLocalizedTaxonomyEntries(
+      JSON.parse(JSON.stringify(categoriesWithCounts)) as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+    ).map((category: Record<string, unknown>) =>
+      localizeEntityFields(category, locale, [
+        'name',
+        'description',
+        'longDescription',
+        'highlights',
+        'features',
+        'metaTitle',
+        'metaDescription',
+      ])
+    ) as unknown as CategoryWithCount[];
   } catch (error) {
     console.error('Failed to fetch interests:', error);
     return [];
@@ -68,8 +84,13 @@ async function getCategoriesWithTourCounts(): Promise<CategoryWithCount[]> {
 }
 
 // The main server component for the /interests route
-export default async function InterestsIndexPage() {
-  const categories = await getCategoriesWithTourCounts();
+export default async function InterestsIndexPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const categories = await getCategoriesWithTourCounts(locale);
 
   return (
     <>
@@ -83,4 +104,3 @@ export default async function InterestsIndexPage() {
     </>
   );
 }
-

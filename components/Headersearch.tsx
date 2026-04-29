@@ -13,6 +13,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
+import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import 'instantsearch.css/themes/satellite.css';
 
 // =================================================================
@@ -23,6 +24,7 @@ const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f4
 const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+const DEFAULT_SEARCH_TENANT = 'default';
 
 const useSlidingText = (texts: string[], interval = 3000) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -388,7 +390,8 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -400,7 +403,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             <Landmark className="w-3 h-3 text-white" />
           </div>
           <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
-            Tours ({hits.length})
+            Tours ({tenantHits.length})
           </span>
         </div>
       </div>

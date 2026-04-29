@@ -6,7 +6,7 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { Destination } from '@/types';
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 interface DestinationWithTourCount extends Destination {
   tourCount: number;
@@ -14,6 +14,7 @@ interface DestinationWithTourCount extends Destination {
 
 export default function Destinations() {
   const t = useTranslations('destinations');
+  const locale = useLocale();
   const [destinations, setDestinations] = useState<DestinationWithTourCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export default function Destinations() {
         setError(null);
 
         // Fetch from new cached API endpoint
-        const response = await fetch('/api/destinations');
+        const response = await fetch(`/api/destinations?locale=${encodeURIComponent(locale)}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch destinations: ${response.statusText}`);
@@ -97,7 +98,7 @@ export default function Destinations() {
     };
 
     fetchDestinations();
-  }, []);
+  }, [locale]);
 
   if (isLoading) {
     return (
