@@ -7,6 +7,11 @@ import { Tour, Category } from '@/types';
 import CategoryPageClient from './CategoryPageClient';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import {
+  selectLocalizedTaxonomyEntries,
+  selectLocalizedTours,
+} from '@/lib/i18n/localizedCollections';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -28,12 +33,18 @@ export async function generateMetadata({
     const { locale, slug } = await params;
     await dbConnect();
     
-    const categoryRaw = await CategoryModel.findOne({ slug })
+    const categoryMatches = await CategoryModel.find({ slug })
       .select('name description heroImage metaTitle metaDescription keywords translations')
       .lean();
 
-    const category = categoryRaw
-      ? localizeEntityFields(categoryRaw as Record<string, unknown>, locale, [
+    const categoryCandidate = selectLocalizedTaxonomyEntries(
+      JSON.parse(JSON.stringify(categoryMatches)) as Record<string, unknown>[],
+      locale,
+      ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
+    )[0];
+
+    const category = categoryCandidate
+      ? localizeEntityFields(categoryCandidate, locale, [
           'name',
           'description',
           'longDescription',
@@ -74,20 +85,47 @@ export async function generateMetadata({
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const categoryRaw = await CategoryModel.findOne({ slug }).lean();
-  if (!categoryRaw) {
+  const categoryMatches = await CategoryModel.find({ slug }).lean();
+  if (categoryMatches.length === 0) {
     return { category: null, categoryTours: [] };
   }
 
-  const categoryTours = await TourModel.find({
-    category: { $in: [(categoryRaw as any)._id] },
-    isPublished: true
-  }).populate('destination').lean();
-  
-  const serializedCategory = JSON.parse(JSON.stringify(categoryRaw));
-  const serializedTours = JSON.parse(JSON.stringify(categoryTours));
+  const serializedCategories = JSON.parse(JSON.stringify(categoryMatches)) as Record<string, unknown>[];
+  const categoryCandidate = selectLocalizedTaxonomyEntries(
+    serializedCategories,
+    locale,
+    ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+  )[0];
 
-  const localizedCategory = localizeEntityFields(serializedCategory, locale, [
+  if (!categoryCandidate) {
+    return { category: null, categoryTours: [] };
+  }
+
+  const categoryIds = serializedCategories.map((category) => (category as any)._id);
+  const baseTours = await TourModel.find({
+    category: { $in: categoryIds },
+    isPublished: true,
+    ...DEFAULT_TENANT_FILTER,
+  }).populate('destination').populate('category').lean();
+
+  const serializedBaseTours = JSON.parse(JSON.stringify(baseTours)) as Record<string, unknown>[];
+  const candidateSlugs = serializedBaseTours
+    .map((tour) => String(tour.slug || ''))
+    .filter(Boolean);
+
+  let serializedTourCandidates = serializedBaseTours;
+
+  if (locale.startsWith('de') && candidateSlugs.length > 0) {
+    const localizedTourMatches = await TourModel.find({
+      category: { $in: categoryIds },
+      isPublished: true,
+      slug: { $in: candidateSlugs },
+    }).populate('destination').populate('category').lean();
+
+    serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
+  }
+
+  const localizedCategory = localizeEntityFields(categoryCandidate, locale, [
     'name',
     'description',
     'longDescription',
@@ -97,7 +135,10 @@ async function getPageData(slug: string, locale: string) {
     'metaDescription',
   ]);
 
-  const localizedTours = serializedTours.map((tour: Record<string, unknown>) => {
+  const localizedTours = selectLocalizedTours(
+    serializedTourCandidates.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),
+    locale
+  ).map((tour: Record<string, unknown>) => {
     const localizedTour = localizeEntityFields(tour, locale, [
       'title',
       'description',
@@ -171,8 +212,20 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
   ]).catch(() => []);
 
   const countMap = new Map(counts.map((item: any) => [String(item._id), Number(item.count) || 0]));
+  const slugCountMap = new Map<string, number>();
 
-  return relatedCategories
+  for (const category of relatedCategories as any[]) {
+    const slug = String(category.slug || '');
+    if (!slug) continue;
+    const count = countMap.get(String(category._id)) || 0;
+    slugCountMap.set(slug, Math.max(slugCountMap.get(slug) || 0, count));
+  }
+
+  return selectLocalizedTaxonomyEntries(
+    JSON.parse(JSON.stringify(relatedCategories)) as Record<string, unknown>[],
+    locale,
+    ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
+  )
     .map((category: any) => {
       const localized = localizeEntityFields(category, locale, ['name', 'description']);
       return {
@@ -182,7 +235,7 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
         name: String((localized as any).name || category.name || ''),
         image: category.heroImage,
         featured: Boolean(category.featured),
-        products: countMap.get(String(category._id)) || 0,
+        products: slugCountMap.get(String(category.slug || '')) || countMap.get(String(category._id)) || 0,
       };
     })
     .filter((category) => category.products > 0);
@@ -218,8 +271,8 @@ export default async function CategoryPage({
         items={categoryTours.map((t: any) => ({ name: t.title, url: `/tour/${t.slug}`, image: t.image }))}
       />
       <CategoryPageClient
-        category={category}
-        categoryTours={categoryTours}
+        category={category as unknown as Category}
+        categoryTours={categoryTours as unknown as Tour[]}
         relatedInterests={relatedInterests}
       />
     </>
