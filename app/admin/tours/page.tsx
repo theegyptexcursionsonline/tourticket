@@ -1,6 +1,7 @@
 // app/admin/tours/page.tsx
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { PopulatedTour } from '@/types';
 import Link from 'next/link';
 import { ToursListClient } from './ToursListClient';
@@ -8,12 +9,17 @@ import { ToursListClient } from './ToursListClient';
 async function getTours(): Promise<PopulatedTour[]> {
   try {
     await dbConnect();
-    const tours = await Tour.find({})
+    // Scope the main EEO admin to the default tenant. Other-tenant tours
+    // (e.g. German `aegypten-ausfluege` records living in the shared DB) are
+    // managed from their own admin and must not leak into this list — that's
+    // what was producing duplicate "Geführte private Luxor-Touren" /
+    // "El Gouna Pferdereittour" rows here.
+    const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER })
       .populate('destination')
       .populate('category') // Added missing category population
       .sort({ createdAt: -1 })
       .lean(); // Using .lean() for better performance since we're serializing anyway
-    
+
     return JSON.parse(JSON.stringify(tours));
   } catch (error) {
     console.error('Failed to fetch tours:', error);

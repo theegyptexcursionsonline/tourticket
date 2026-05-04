@@ -4,6 +4,7 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
             const categoryId = typeof page.categoryId === 'object' ? (page.categoryId as any)._id : page.categoryId;
             tourCount = await Tour.countDocuments({
               category: categoryId,
-              isPublished: true
+              isPublished: true,
+              ...DEFAULT_TENANT_FILTER,
             });
           } else if (page.pageType === 'attraction') {
             // Count tours that match this attraction
@@ -80,8 +82,9 @@ export async function GET(request: NextRequest) {
               tourCount = await Tour.countDocuments({
                 $and: [
                   { isPublished: true },
-                  { $or: searchQueries }
-                ]
+                  DEFAULT_TENANT_FILTER,
+                  { $or: searchQueries },
+                ],
               });
             }
           }

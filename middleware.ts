@@ -8,6 +8,12 @@ const intlMiddleware = createMiddleware(routing);
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
+  const normalizedHostname = hostname.split(':')[0];
+  const isLocalhost =
+    normalizedHostname === 'localhost' ||
+    normalizedHostname === '127.0.0.1' ||
+    normalizedHostname === '0.0.0.0' ||
+    normalizedHostname === '[::1]';
 
   // Subdomain routing: dashboard/dashboard2/admin.* → /admin
   const isDashboardSubdomain =
@@ -43,7 +49,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect main domain /admin to dashboard subdomain
-  if (!isDashboardSubdomain && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
+  if (!isLocalhost && !isDashboardSubdomain && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
     const adminPath = pathname.replace(/^\/admin/, '') || '/';
     const dashboardUrl = new URL(`https://dashboard2.egypt-excursionsonline.com${adminPath}`);
     dashboardUrl.search = request.nextUrl.search;

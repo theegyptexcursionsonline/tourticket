@@ -5,6 +5,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MongoError } from 'mongodb';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateDestination } from '@/lib/i18n/autoTranslate';
+import Tour from '@/lib/models/Tour';
+import {
+  dedupeAdminDestinations,
+  normalizeDestinationSlug,
+} from '@/lib/admin/destinationDeduplication';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -13,8 +19,25 @@ export async function GET(request: NextRequest) {
 
   await dbConnect();
   try {
-    const destinations = await Destination.find({}).sort({ name: 1 });
-    return NextResponse.json({ success: true, data: destinations });
+    const [destinations, tours] = await Promise.all([
+      // Default-tenant scope so other-tenant Destination records (e.g.
+      // German aegypten-ausfluege variants) don't appear as duplicate
+      // cards in the EEO admin.
+      Destination.find({ ...DEFAULT_TENANT_FILTER }).sort({ name: 1 }).lean(),
+      Tour.find({ ...DEFAULT_TENANT_FILTER }).select('destination').lean(),
+    ]);
+    const tourCounts: Record<string, number> = {};
+    tours.forEach((tour) => {
+      const destId = tour.destination?.toString();
+      if (destId) {
+        tourCounts[destId] = (tourCounts[destId] || 0) + 1;
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: dedupeAdminDestinations(destinations, tourCounts),
+    });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
@@ -42,12 +65,29 @@ export async function POST(request: NextRequest) {
     
     // Auto-generate slug if not provided
     if (!body.slug && body.name) {
-      body.slug = body.name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim();
+      body.slug = normalizeDestinationSlug(body.name);
+    }
+
+    if (body.slug) {
+      body.slug = normalizeDestinationSlug(body.slug);
+    }
+
+    const duplicateQuery: Array<Record<string, string>> = [];
+    if (body.slug) duplicateQuery.push({ slug: String(body.slug) });
+    if (body.name) duplicateQuery.push({ name: String(body.name).trim() });
+
+    if (duplicateQuery.length > 0) {
+      const existingDestination = await Destination.findOne({ $or: duplicateQuery }).collation({
+        locale: 'en',
+        strength: 2,
+      });
+
+      if (existingDestination) {
+        return NextResponse.json({
+          success: false,
+          error: `Destination "${body.name || body.slug}" already exists.`,
+        }, { status: 409 });
+      }
     }
     
     // Set default values for required fields if not provided

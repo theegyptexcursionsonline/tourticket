@@ -6,13 +6,36 @@ import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import { IDestination } from '@/lib/models/Destination';
 import DestinationManager from './DestinationManager';
+import { dedupeAdminDestinations } from '@/lib/admin/destinationDeduplication';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+
+type LeanDestination = Record<string, unknown> & {
+  _id?: { toString: () => string } | string;
+  name?: string;
+  country?: string;
+  description?: string;
+  image?: string;
+  slug?: string;
+  coordinates?: {
+    lat?: number;
+    lng?: number;
+  };
+};
 
 async function getDestinations(): Promise<IDestination[]> {
   await dbConnect();
-  const destinations = await Destination.find({}).sort({ name: 1 });
+  // Scope to the default tenant. Other-tenant Destination records (e.g.
+  // German `aegypten-ausfluege` variants of Alexandria/Cairo) live in the
+  // shared DB and otherwise show up here as duplicate cards. The dedupe
+  // helper can't always collapse them because tenant variants get
+  // different slugs (alexandria-de, etc.).
+  const destinations = await Destination.find({ ...DEFAULT_TENANT_FILTER })
+    .sort({ name: 1 })
+    .lean<LeanDestination[]>();
 
-  // Get all tours to calculate tour counts per destination
-  const tours = await Tour.find({}).select('destination').lean();
+  // Tour counts also scoped to the default tenant so other-tenant tours
+  // don't inflate destination counts in the EEO admin.
+  const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER }).select('destination').lean();
 
   // Count tours per destination
   const tourCounts: Record<string, number> = {};
@@ -24,9 +47,8 @@ async function getDestinations(): Promise<IDestination[]> {
   });
 
   // Sanitize all destinations by providing defaults for missing coordinates
-  const sanitizedDestinations = destinations.map(dest => {
-    const destObj = dest.toObject();
-    const destId = destObj._id.toString();
+  const sanitizedDestinations = destinations.map(destObj => {
+    const destId = destObj._id?.toString() || '';
     return {
       ...destObj,
       coordinates: {
@@ -42,7 +64,7 @@ async function getDestinations(): Promise<IDestination[]> {
     };
   });
 
-  return JSON.parse(JSON.stringify(sanitizedDestinations));
+  return JSON.parse(JSON.stringify(dedupeAdminDestinations(sanitizedDestinations, tourCounts)));
 }
 
 export default async function DestinationsPage() {

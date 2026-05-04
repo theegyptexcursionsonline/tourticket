@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
   const auth = await verifyAdmin(request);
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
   await dbConnect();
 
   try {
-    const tours = await Tour.find({})
+    const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER })
       .select('title bookingOptions')
       .sort({ title: 1 })
       .lean();

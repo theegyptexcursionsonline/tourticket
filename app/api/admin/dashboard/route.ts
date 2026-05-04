@@ -5,6 +5,7 @@ import Tour from '@/lib/models/Tour';
 import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       recentBookingsCount,
       recentBookings
     ] = await Promise.allSettled([
-      Tour.countDocuments({ isPublished: true }),
+      Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER }),
       Booking.countDocuments(),
       User.countDocuments(),
       Booking.aggregate([

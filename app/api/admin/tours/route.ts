@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { syncTourToAlgolia } from '@/lib/algolia';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper function to clean booking options
 function cleanBookingOptions(bookingOptions: any[]): any[] {
@@ -67,8 +68,12 @@ function cleanBookingOptions(bookingOptions: any[]): any[] {
 }
 
 async function fetchToursWithPopulate() {
+  // Scope the EEO admin tours API to the default tenant — other tenants
+  // (e.g. German aegypten-ausfluege) have their own admin and must not
+  // appear in this response.
+  const tenantFilter = { ...DEFAULT_TENANT_FILTER };
   try {
-    return await Tour.find({})
+    return await Tour.find(tenantFilter)
       .populate('category')
       .populate('destination')
       .populate('reviews')
@@ -77,7 +82,7 @@ async function fetchToursWithPopulate() {
       .lean();
   } catch (err) {
     console.warn('Populate failed, retrying with strictPopulate:false', err);
-    return await Tour.find({})
+    return await Tour.find(tenantFilter)
       .populate({ path: 'category', strictPopulate: false })
       .populate({ path: 'destination', strictPopulate: false })
       .populate({ path: 'reviews', strictPopulate: false })
