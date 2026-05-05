@@ -6,6 +6,7 @@ import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateDestination } from '@/lib/i18n/autoTranslate';
+import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 
 export async function PUT(
   request: NextRequest,
@@ -58,7 +59,7 @@ export async function PUT(
     
     // Basic fields
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.slug !== undefined) updateData.slug = normalizeDestinationSlug(data.slug);
     if (data.country !== undefined) updateData.country = data.country;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.longDescription !== undefined) updateData.longDescription = data.longDescription;
@@ -124,12 +125,25 @@ export async function PUT(
     
     // Auto-generate slug if name is updated but slug is not provided
     if (data.name && !data.slug) {
-      updateData.slug = data.name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim();
+      updateData.slug = normalizeDestinationSlug(data.name);
+    }
+
+    const duplicateQuery: Array<Record<string, string>> = [];
+    if (updateData.slug) duplicateQuery.push({ slug: String(updateData.slug) });
+    if (updateData.name) duplicateQuery.push({ name: String(updateData.name).trim() });
+
+    if (duplicateQuery.length > 0) {
+      const duplicateDestination = await Destination.findOne({
+        _id: { $ne: id },
+        $or: duplicateQuery,
+      }).collation({ locale: 'en', strength: 2 });
+
+      if (duplicateDestination) {
+        return NextResponse.json({
+          success: false,
+          error: `Destination "${updateData.name || updateData.slug}" already exists.`,
+        }, { status: 409 });
+      }
     }
     
     const destination = await Destination.findByIdAndUpdate(

@@ -611,12 +611,14 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
                   {destination.description}
                 </p>
               )}
+              {Number(destination.tourCount) > 0 && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-1 text-gray-500 text-[11px]">
                   <MapPin className="w-3 h-3 text-emerald-500" />
-                  <span>{copy.toursCount(destination.tourCount || 0)}</span>
+                  <span>{copy.toursCount(Number(destination.tourCount))}</span>
                 </div>
               </div>
+              )}
             </div>
           </a>
         ))}
@@ -1082,7 +1084,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
             name: dest.name || copy.untitledDestination,
             image: dest.image || dest.images?.[0] || dest.primaryImage,
             description: dest.description,
-            tourCount: dest.tourCount || 0,
+            tourCount: Number(dest.tourCount) > 0 ? Number(dest.tourCount) : undefined,
             isFeatured: dest.isFeatured,
           }));
         }
@@ -2154,10 +2156,12 @@ const RelatedDestinationsSection = ({ destinations }: { destinations: Destinatio
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4">
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-1">{dest.name}</h3>
-                  <p className="text-white/90 text-xs sm:text-sm flex items-center gap-1">
-                    <MapPin size={14} />
-                    {copy.toursAvailable(dest.tourCount || 0)}
-                  </p>
+                  {Number(dest.tourCount) > 0 && (
+                    <p className="text-white/90 text-xs sm:text-sm flex items-center gap-1">
+                      <MapPin size={14} />
+                      {copy.toursAvailable(Number(dest.tourCount))}
+                    </p>
+                  )}
                 </div>
               </div>
             </a>

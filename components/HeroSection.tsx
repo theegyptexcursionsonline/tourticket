@@ -513,7 +513,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
                     {hit.country}
                   </span>
                 )}
-                {hit.tourCount && (
+                {Number(hit.tourCount) > 0 && (
                   <span className="bg-emerald-100 backdrop-blur-sm px-2.5 py-1 rounded-lg font-semibold text-emerald-700">
                     {hit.tourCount} {copy.tours}
                   </span>
@@ -584,7 +584,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
                 {hit.name || copy.untitledCategory}
               </div>
               <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                {hit.tourCount && (
+                {Number(hit.tourCount) > 0 && (
                   <span className="bg-purple-100 backdrop-blur-sm px-2.5 py-1 rounded-lg font-semibold text-purple-700">
                     {hit.tourCount} {copy.tours}
                   </span>
@@ -930,15 +930,17 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
                   {destination.description}
                 </p>
               )}
+              {Number(destination.tourCount) > 0 && (
                 <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                   <div className="flex items-center gap-1.5 text-gray-500 text-xs">
                     <MapPin className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
-                  <span className="font-medium">{destination.tourCount || 0} {copy.tours}</span>
+                    <span className="font-medium">{Number(destination.tourCount)} {copy.tours}</span>
+                  </div>
+                  <span className="text-emerald-600 text-xs font-semibold group-hover:translate-x-1 transition-transform">
+                    {copy.exploreArrow}
+                  </span>
                 </div>
-                <span className="text-emerald-600 text-xs font-semibold group-hover:translate-x-1 transition-transform">
-                  {copy.exploreArrow}
-                </span>
-              </div>
+              )}
             </div>
           </a>
         ))}
@@ -1262,7 +1264,7 @@ const HeroSearchBar = ({
             name: dest.name || copy.untitledDestination,
             image: dest.image || dest.images?.[0] || dest.primaryImage,
             description: dest.description,
-            tourCount: dest.tourCount || 0,
+            tourCount: Number(dest.tourCount) > 0 ? Number(dest.tourCount) : undefined,
             isFeatured: dest.isFeatured,
           }));
         }

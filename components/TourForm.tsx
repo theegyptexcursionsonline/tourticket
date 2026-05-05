@@ -54,6 +54,9 @@ interface Category {
 interface Destination {
     _id: string;
     name: string;
+    duplicateIds?: string[];
+    duplicateCount?: number;
+    tourCount?: number;
 }
 
 interface AttractionInterest {
@@ -516,7 +519,24 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 const catData = await catRes.json();
                 const attractionsData = await attractionsRes.json();
 
-                if (destData?.success) setDestinations(destData.data);
+                if (destData?.success) {
+                    const destinationOptions: Destination[] = destData.data || [];
+                    setDestinations(destinationOptions);
+                    setFormData((prev) => {
+                        if (!prev.destination) return prev;
+
+                        const canonicalDestination = destinationOptions.find((destination) =>
+                            destination._id === prev.destination ||
+                            destination.duplicateIds?.includes(prev.destination)
+                        );
+
+                        if (!canonicalDestination || canonicalDestination._id === prev.destination) {
+                            return prev;
+                        }
+
+                        return { ...prev, destination: canonicalDestination._id };
+                    });
+                }
                 if (catData?.success) setCategories(catData.data);
                 if (attractionsData?.success) {
                     setAttractions(attractionsData.data.attractions || []);

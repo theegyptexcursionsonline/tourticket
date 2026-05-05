@@ -4,6 +4,7 @@ import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 
 export async function PUT(
   request: NextRequest,
@@ -26,6 +27,32 @@ export async function PUT(
       }, { status: 400 });
     }
     
+    if (data.slug !== undefined) {
+      data.slug = normalizeDestinationSlug(data.slug);
+    }
+
+    if (data.name && !data.slug) {
+      data.slug = normalizeDestinationSlug(data.name);
+    }
+
+    const duplicateQuery: Array<Record<string, string>> = [];
+    if (data.slug) duplicateQuery.push({ slug: String(data.slug) });
+    if (data.name) duplicateQuery.push({ name: String(data.name).trim() });
+
+    if (duplicateQuery.length > 0) {
+      const duplicateDestination = await Destination.findOne({
+        _id: { $ne: id },
+        $or: duplicateQuery,
+      }).collation({ locale: 'en', strength: 2 });
+
+      if (duplicateDestination) {
+        return NextResponse.json({
+          success: false,
+          error: `Destination "${data.name || data.slug}" already exists.`,
+        }, { status: 409 });
+      }
+    }
+
     const destination = await Destination.findByIdAndUpdate(
       id, 
       data, 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ArrowLeft, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star, Send } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
@@ -14,6 +14,7 @@ import rehypeRaw from 'rehype-raw';
 import { useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
+import { shouldRenderAISearchWidgetForHost } from '@/lib/aiSearchWidgetHosts';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Algolia Config ---
@@ -28,6 +29,9 @@ const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 // Create search client outside component to avoid recreating on every render
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 const DEFAULT_SEARCH_TENANT = 'default';
+const subscribeToHostSnapshot = () => () => {};
+const getCurrentHostSnapshot = () => (typeof window === 'undefined' ? '' : window.location.hostname);
+const getServerHostSnapshot = () => '';
 
 // Tour card creation helper
 const createTourCardHTML = (tour: any): string => {
@@ -615,12 +619,14 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
                   {destination.description}
                 </p>
               )}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-1 text-gray-500 text-[11px]">
-                  <MapPin className="w-3 h-3 text-blue-500" />
-                  <span>{t('toursCount', { count: destination.tourCount || 0 })}</span>
+              {Number(destination.tourCount) > 0 && (
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-1 text-gray-500 text-[11px]">
+                    <MapPin className="w-3 h-3 text-blue-500" />
+                    <span>{t('toursCount', { count: Number(destination.tourCount) })}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </a>
         ))}
@@ -636,6 +642,12 @@ export default function AISearchWidget() {
   const [inputValue, setInputValue] = useState('');
   const [featuredTours, setFeaturedTours] = useState<any[]>([]);
   const [algoliaError, setAlgoliaError] = useState<string | null>(null);
+  const currentHost = useSyncExternalStore(
+    subscribeToHostSnapshot,
+    getCurrentHostSnapshot,
+    getServerHostSnapshot
+  );
+  const isAllowedHost = shouldRenderAISearchWidgetForHost(currentHost);
   const [isVisible, setIsVisible] = useState(false);
   const [chatMode, setChatMode] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -680,6 +692,8 @@ export default function AISearchWidget() {
 
   // Scroll detection - show widget after scrolling past hero section (throttled)
   useEffect(() => {
+    if (!isAllowedHost) return;
+
     let ticking = false;
 
     const handleScroll = () => {
@@ -697,7 +711,7 @@ export default function AISearchWidget() {
     handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isAllowedHost]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -742,6 +756,8 @@ export default function AISearchWidget() {
 
   // Fetch featured tours from Algolia
   useEffect(() => {
+    if (!isAllowedHost) return;
+
     const fetchFeaturedTours = async () => {
       try {
         const response = await searchClient.search([{
@@ -772,7 +788,7 @@ export default function AISearchWidget() {
       }
     };
     fetchFeaturedTours();
-  }, []);
+  }, [isAllowedHost]);
 
   // Smart auto-scroll: only scroll if user is already near bottom
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -1036,7 +1052,7 @@ export default function AISearchWidget() {
             name: dest.name || 'Untitled Destination',
             image: dest.image || dest.images?.[0] || dest.primaryImage,
             description: dest.description,
-            tourCount: dest.tourCount || 0,
+            tourCount: Number(dest.tourCount) > 0 ? Number(dest.tourCount) : undefined,
             isFeatured: dest.isFeatured,
           }));
           return transformedDestinations;
@@ -1268,7 +1284,7 @@ export default function AISearchWidget() {
   }, [markdownComponents]);
 
   // Don't render anything if not visible
-  if (!isVisible) return null;
+  if (!isAllowedHost || !isVisible) return null;
 
   return (
     <>
