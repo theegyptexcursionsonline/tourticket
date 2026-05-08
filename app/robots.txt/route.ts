@@ -47,9 +47,6 @@ Disallow: /_next/*
 Disallow: /coming-soon
 Disallow: /maintenance
 Disallow: /offline
-Disallow: /showcase
-Disallow: /showcase/*
-Disallow: /showcase-v2
 Crawl-delay: 1
 
 # -----------------------------------------------
@@ -76,8 +73,6 @@ Disallow: /_next
 Disallow: /coming-soon
 Disallow: /maintenance
 Disallow: /offline
-Disallow: /showcase
-Disallow: /showcase-v2
 
 # -----------------------------------------------
 # Googlebot-Image — allow image directories
@@ -113,7 +108,6 @@ Disallow: /_next
 Disallow: /coming-soon
 Disallow: /maintenance
 Disallow: /offline
-Disallow: /showcase
 Crawl-delay: 1
 
 # -----------------------------------------------
