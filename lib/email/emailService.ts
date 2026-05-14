@@ -36,6 +36,23 @@ export class EmailService {
     'operator-booking-update': '🔔 Booking Updated - {{bookingId}} - {{tourTitle}}'
   };
 
+  private static getDefaultTemplateData(baseUrl?: string) {
+    const website = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+    const normalizedWebsite = website.startsWith('http') ? website : `https://${website}`;
+
+    return {
+      companyName: 'Egypt Excursions Online',
+      companyLogo: `${normalizedWebsite.replace(/\/$/, '')}/EEO-logo.png`,
+      primaryColor: '#dc2626',
+      secondaryColor: '#0f172a',
+      accentColor: '#f97316',
+      contactEmail: 'booking@egypt-excursionsonline.com',
+      contactPhone: '+20 11 42255624',
+      supportEmail: 'booking@egypt-excursionsonline.com',
+      website: normalizedWebsite,
+    };
+  }
+
   private static async generateEmailTemplate(
     type: EmailType,
     data: Record<string, any>
@@ -43,6 +60,7 @@ export class EmailService {
     try {
       const templateData = {
         year: new Date().getFullYear(),
+        ...this.getDefaultTemplateData(data.baseUrl),
         ...data,
       };
       const htmlTemplate = await TemplateEngine.loadTemplate(type);

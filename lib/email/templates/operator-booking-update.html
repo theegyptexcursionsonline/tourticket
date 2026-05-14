@@ -77,7 +77,7 @@
     <div class="wrapper">
         <div class="container">
             <div class="hero">
-                <img src="https://egypt-excursionsonline.com/EEO-logo.png" alt="Egypt Excursions Online" class="logo">
+                <img src="{{companyLogo}}" alt="{{companyName}}" class="logo">
                 <div class="hero-eyebrow">Operator Alert</div>
                 <div class="hero-title">Booking Updated</div>
                 <div class="hero-meta">{{tourTitle}} · Ref: {{bookingId}}</div>
@@ -207,10 +207,9 @@
 
             <div class="footer">
                 <p>This is an automated notification from the booking management system.</p>
-                <p>© {{year}} Egypt Excursions Online · Cairo, Egypt</p>
+                <p>© {{year}} {{companyName}} · Cairo, Egypt</p>
             </div>
         </div>
     </div>
 </body>
 </html>
-

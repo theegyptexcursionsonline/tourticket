@@ -14,6 +14,10 @@ Handlebars.registerHelper('or', function(...args) {
   return values.some(value => !!value);
 });
 
+Handlebars.registerHelper('gt', function(a, b) {
+  return Number(a) > Number(b);
+});
+
 export class TemplateEngine {
   private static templateCache = new Map<string, HandlebarsTemplateDelegate>();
   private static templatesPath = path.join(process.cwd(), 'lib/email/templates');
@@ -36,6 +40,14 @@ export class TemplateEngine {
   }
 
   static generateSubject(template: string, data: Record<string, unknown> | any): string {
-    return this.replaceVariables(template, data);
+    // Subjects are plain text, so decode entities that Handlebars escapes.
+    const rendered = this.replaceVariables(template, data);
+    return rendered
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'");
   }
 }
