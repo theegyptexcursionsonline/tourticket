@@ -19,9 +19,14 @@ const nextConfig = {
   // Server external packages configuration
   serverExternalPackages: ['mongoose'],
 
-  // Image optimization configuration - Fixed for Netlify
+  // Image optimization configuration - Fixed for Netlify.
+  // Use a custom Cloudinary loader instead of `unoptimized: true`. Netlify
+  // doesn't run Next's built-in optimizer, so we offload resizing/compression
+  // to the Cloudinary CDN via lib/cloudinaryLoader.ts. This stops full-res
+  // multi-MB originals from being shipped to phones (the iOS Safari memory
+  // crash). next/image still generates a responsive srcSet from the sizes below.
   images: {
-    unoptimized: true, // Enable for Netlify deployment
+    loaderFile: './lib/cloudinaryLoader.ts',
     remotePatterns: [
       // Cloudinary
       {
