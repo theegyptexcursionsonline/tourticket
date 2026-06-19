@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
+import { cdnImg } from '@/utils/cloudinary';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ArrowLeft, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star, Send } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
@@ -44,7 +45,7 @@ const createTourCardHTML = (tour: any): string => {
        class="tour-card-link group bg-white border border-blue-100 rounded-lg overflow-hidden hover:shadow-md hover:border-blue-300 transition-all duration-300 block cursor-pointer flex-shrink-0 w-[240px]">
       ${(tour.image || tour.images?.[0] || tour.primaryImage) ? `
         <div class="relative w-full h-32 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
-          <img src="${tour.image || tour.images?.[0] || tour.primaryImage}"
+          <img src="${cdnImg(tour.image || tour.images?.[0] || tour.primaryImage)}"
                alt="${tour.title || 'Tour'}"
                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ${tour.isFeatured ? `
@@ -219,7 +220,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                 {tour.image && (
                   <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
                     <img
-                      src={tour.image}
+                      src={cdnImg(tour.image)}
                       alt={tour.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
@@ -470,7 +471,7 @@ const TourCard = ({ tour }: { tour: any }) => (
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
         <img
-          src={tour.image}
+          src={cdnImg(tour.image)}
           alt={tour.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
@@ -598,7 +599,7 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
             {destination.image && (
               <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
                 <img
-                  src={destination.image}
+                  src={cdnImg(destination.image)}
                   alt={destination.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
