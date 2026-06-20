@@ -106,7 +106,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: dest.updatedAt || new Date(),
           changeFrequency: 'weekly',
           priority: 0.8,
+          alternates: getAlternates(`/destinations/${dest.slug}`),
         });
+        for (const locale of locales) {
+          if (locale === defaultLocale) continue;
+          entries.push({
+            url: `${BASE_URL}/${locale}/destinations/${dest.slug}`,
+            lastModified: dest.updatedAt || new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.75,
+            alternates: getAlternates(`/destinations/${dest.slug}`),
+          });
+        }
       }
     }
 
@@ -124,7 +135,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: cat.updatedAt || new Date(),
           changeFrequency: 'weekly',
           priority: 0.7,
+          alternates: getAlternates(`/categories/${cat.slug}`),
         });
+        for (const locale of locales) {
+          if (locale === defaultLocale) continue;
+          entries.push({
+            url: `${BASE_URL}/${locale}/categories/${cat.slug}`,
+            lastModified: cat.updatedAt || new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.65,
+            alternates: getAlternates(`/categories/${cat.slug}`),
+          });
+        }
       }
     }
 
@@ -142,7 +164,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: post.updatedAt || post.publishedAt || new Date(),
           changeFrequency: 'monthly',
           priority: 0.7,
+          alternates: getAlternates(`/blog/${post.slug}`),
         });
+        for (const locale of locales) {
+          if (locale === defaultLocale) continue;
+          entries.push({
+            url: `${BASE_URL}/${locale}/blog/${post.slug}`,
+            lastModified: post.updatedAt || post.publishedAt || new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.65,
+            alternates: getAlternates(`/blog/${post.slug}`),
+          });
+        }
       }
     }
 
@@ -160,7 +193,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: attraction.updatedAt || new Date(),
           changeFrequency: 'monthly',
           priority: 0.7,
+          alternates: getAlternates(`/attraction/${attraction.slug}`),
         });
+        for (const locale of locales) {
+          if (locale === defaultLocale) continue;
+          entries.push({
+            url: `${BASE_URL}/${locale}/attraction/${attraction.slug}`,
+            lastModified: attraction.updatedAt || new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.65,
+            alternates: getAlternates(`/attraction/${attraction.slug}`),
+          });
+        }
       }
     }
   } catch (error) {

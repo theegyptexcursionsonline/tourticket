@@ -13,6 +13,7 @@ import {
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 // Enable ISR with 60 second revalidation for fast page loads
 export const revalidate = 60;
@@ -70,6 +71,7 @@ export async function generateMetadata({
     return {
       title,
       description,
+      alternates: metadataAlternates(locale, `/destinations/${slug}`),
       openGraph: {
         title: `${destination.name}, ${destination.country}`,
         description,

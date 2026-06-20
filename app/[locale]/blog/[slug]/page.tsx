@@ -8,6 +8,7 @@ import BlogPostClient from './BlogPostClient';
 import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import type { IBlog } from '@/lib/models/Blog';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 type Params = { locale: string; slug: string };
 
@@ -24,7 +25,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<Params> }) {
   try {
     await dbConnect();
-    const { slug } = await params;
+    const { slug, locale } = await params;
     const blog = await Blog.findOne({ slug, status: 'published' }).lean();
 
     if (!blog) return { title: 'Blog Post Not Found' };
@@ -32,6 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
     return {
       title: blog.metaTitle || blog.title,
       description: blog.metaDescription || blog.excerpt,
+      alternates: metadataAlternates(locale, `/blog/${slug}`),
       openGraph: {
         title: blog.metaTitle || blog.title,
         description: blog.metaDescription || blog.excerpt,

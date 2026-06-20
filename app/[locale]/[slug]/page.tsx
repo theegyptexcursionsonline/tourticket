@@ -16,6 +16,7 @@ import {
 } from '@/lib/i18n/localizedCollections';
 import { getStopSaleDatesForTour } from '@/lib/stopSaleFetcher';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -160,6 +161,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: localizedTour.metaTitle || `${localizedTour.title} | ${destination?.name || 'Travel'} Tours`,
     description: localizedTour.metaDescription || localizedTour.description,
     keywords: localizedTour.keywords || [localizedTour.title, destination?.name].filter(Boolean),
+    alternates: metadataAlternates(locale, `/${slug}`),
     openGraph: {
       title: localizedTour.title,
       description: localizedTour.description,
