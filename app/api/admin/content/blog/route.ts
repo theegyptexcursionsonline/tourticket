@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       authorBio: payload.authorBio,
       featuredImage:
         payload.featuredImage ??
-        "https://images.unsplash.com/photo-1539650116574-75c0c6d73d8b?auto=format&fit=crop&w=1200&q=80",
+        "https://res.cloudinary.com/dm3sxllch/image/upload/v1781977478/foxes-content-engine/heroes/loxyoywr6qhln7dnpaig.jpg",
       metaTitle: payload.metaTitle,
       metaDescription: payload.metaDescription,
       readTime: payload.readTime,
