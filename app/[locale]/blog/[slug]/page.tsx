@@ -7,8 +7,9 @@ import Footer from '@/components/Footer';
 import BlogPostClient from './BlogPostClient';
 import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import type { IBlog } from '@/lib/models/Blog';
+import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 
-type Params = { slug: string };
+type Params = { locale: string; slug: string };
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 60;
@@ -86,11 +87,17 @@ async function getBlogPost(slug: string) {
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<Params> }) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const { blog, relatedPosts } = await getBlogPost(slug);
 
   if (!blog) {
     notFound();
+  }
+
+  // Localize in-content links to this page's locale so they don't get
+  // cookie-redirected to the wrong locale (see localizeHtmlLinks).
+  if (blog.content) {
+    blog.content = localizeHtmlLinks(blog.content, locale);
   }
 
   return (
