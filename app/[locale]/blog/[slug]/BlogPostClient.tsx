@@ -106,7 +106,7 @@ function ShareAndLike({ blog }: { blog: IBlog }) {
         <button
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 hover:bg-indigo-50 transition"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 hover:bg-amber-50 transition"
         >
           <Share2 className="h-4 w-4" />
           <span>Share</span>
@@ -145,7 +145,7 @@ function MiniTourCard({ tour }: { tour: ITour }) {
         <div className="text-sm font-semibold text-slate-900 line-clamp-2">{tour?.title}</div>
         <div className="text-xs text-slate-500 mt-1">{tour?.duration || 'Half day'}</div>
         <div className="mt-2 flex items-center justify-between">
-          <div className="text-sm font-medium text-indigo-600">{tour?.discountPrice ? `$${tour.discountPrice}` : tour?.price ? `$${tour.price}` : 'From $49'}</div>
+          <div className="text-sm font-medium text-amber-600">{tour?.discountPrice ? `$${tour.discountPrice}` : tour?.price ? `$${tour.price}` : 'From $49'}</div>
           <div className="text-xs text-slate-500">per person</div>
         </div>
       </div>
@@ -188,7 +188,7 @@ function AuthorCard({ author }: { author: any }) {
             </a>
           )}
           {author.website && (
-            <a href={author.website} target="_blank" rel="noreferrer" className="ml-auto text-sm text-indigo-600 font-medium hover:underline inline-flex items-center gap-2">
+            <a href={author.website} target="_blank" rel="noreferrer" className="ml-auto text-sm text-amber-600 font-medium hover:underline inline-flex items-center gap-2">
               Visit site <ArrowRight className="h-3 w-3" />
             </a>
           )}
@@ -198,7 +198,7 @@ function AuthorCard({ author }: { author: any }) {
           {authorSlug ? (
             <Link href={`/author/${authorSlug}`} className="px-3 py-2 border rounded-lg text-sm text-slate-700 hover:bg-slate-50">More articles</Link>
           ) : null}
-          <a href={`mailto:${author.email || ''}`} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Contact author</a>
+          <a href={`mailto:${author.email || ''}`} className="px-3 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700">Contact author</a>
         </div>
       </div>
     </div>
@@ -225,14 +225,14 @@ function Sidebar({ blog }: { blog: IBlog }) {
               {relatedTours.slice(0, 2).map((t) => <MiniTourCard key={t._id || t.slug} tour={t} />)}
             </div>
           ) : (
-            <div className="text-sm text-slate-500 mb-4">No direct tours linked — browse all tours <Link href="/tours" className="text-indigo-600 font-medium">here</Link>.</div>
+            <div className="text-sm text-slate-500 mb-4">No direct tours linked — browse all tours <Link href="/tours" className="text-amber-600 font-medium">here</Link>.</div>
           )}
 
-          <Link href="/tours" className="block text-center w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
+          <Link href="/tours" className="block text-center w-full px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition">
             Browse All Tours
           </Link>
 
-          <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-indigo-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 mr-1" /> <bdi dir="ltr">+20 11 42255624</bdi></a></div>
+          <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-amber-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 mr-1" /> <bdi dir="ltr">+20 11 42255624</bdi></a></div>
         </div>
 
         {/* Popular Destinations */}
@@ -256,9 +256,9 @@ function Sidebar({ blog }: { blog: IBlog }) {
         <div className="bg-white rounded-2xl shadow p-6">
           <h4 className="font-semibold mb-3">Travel Essentials</h4>
           <ul className="text-sm text-slate-600 space-y-2">
-            <li className="flex items-start gap-2"><MapPin className="h-4 w-4 text-indigo-500 mt-1" /> Passport & visa check</li>
-            <li className="flex items-start gap-2"><Star className="h-4 w-4 text-indigo-500 mt-1" /> Comfortable walking shoes</li>
-            <li className="flex items-start gap-2"><Clock className="h-4 w-4 text-indigo-500 mt-1" /> Plan mornings & evenings</li>
+            <li className="flex items-start gap-2"><MapPin className="h-4 w-4 text-amber-500 mt-1" /> Passport & visa check</li>
+            <li className="flex items-start gap-2"><Star className="h-4 w-4 text-amber-500 mt-1" /> Comfortable walking shoes</li>
+            <li className="flex items-start gap-2"><Clock className="h-4 w-4 text-amber-500 mt-1" /> Plan mornings & evenings</li>
           </ul>
         </div>
 
@@ -268,12 +268,32 @@ function Sidebar({ blog }: { blog: IBlog }) {
           <p className="text-sm text-slate-600 mb-3">Subscribe for the best Egypt tours & insider tips.</p>
           <form onSubmit={(e) => { e.preventDefault(); toast.success('Subscribed'); }}>
             <input type="email" required placeholder="Your email" className="w-full px-3 py-2 rounded border mb-3 text-sm" />
-            <button className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Subscribe</button>
+            <button className="w-full px-3 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Subscribe</button>
           </form>
         </div>
 
       </div>
     </aside>
+  );
+}
+
+/* ---------- Reading progress bar ---------- */
+function ReadingProgress() {
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = document.documentElement;
+      const max = el.scrollHeight - el.clientHeight;
+      setPct(max > 0 ? Math.min(100, Math.max(0, (el.scrollTop / max) * 100)) : 0);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent" aria-hidden>
+      <div className="h-full bg-amber-600 transition-[width] duration-150 ease-out" style={{ width: `${pct}%` }} />
+    </div>
   );
 }
 
@@ -285,34 +305,36 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
   });
 
   return (
-    <div className="bg-slate-50 min-h-screen">
+    <div className="bg-stone-50 min-h-screen">
+      <ReadingProgress />
+
       {/* Back / breadcrumb */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-stone-200">
         <div className="container mx-auto px-4 py-3">
-          <Link href="/blog" className="inline-flex items-center gap-2 text-slate-600 hover:text-indigo-600">
+          <Link href="/blog" className="inline-flex items-center gap-2 text-stone-600 hover:text-amber-700">
             <ChevronLeft className="h-4 w-4" /> Back to articles
           </Link>
         </div>
       </div>
 
       {/* Hero */}
-      <header className="relative h-96 md:h-[420px]">
+      <header className="relative h-[440px] md:h-[540px]">
         {blog.featuredImage ? (
           <Image src={blog.featuredImage} alt={blog.title} fill className="object-cover" priority />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-emerald-500" />
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-700 to-stone-800" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10"></div>
 
         <div className="absolute left-0 right-0 bottom-0 p-6 md:p-12 container mx-auto max-w-4xl text-white">
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <span className="px-3 py-1 rounded-full bg-indigo-600/90 text-xs font-semibold">{blog.categoryDisplay || blog.category}</span>
-            {blog.featured && <span className="px-3 py-1 rounded-full bg-yellow-500/90 text-xs font-semibold">Featured</span>}
+          <div className="flex flex-wrap items-center gap-3 mb-5">
+            <span className="px-3 py-1 rounded-full bg-amber-600/95 text-xs font-semibold uppercase tracking-wide">{blog.categoryDisplay || blog.category}</span>
+            {blog.featured && <span className="px-3 py-1 rounded-full bg-yellow-500/95 text-stone-900 text-xs font-semibold inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Featured</span>}
           </div>
 
-          <h1 className="text-2xl md:text-4xl font-extrabold leading-tight mb-4">{blog.title}</h1>
+          <h1 className="blog-serif text-3xl md:text-5xl font-bold leading-[1.12] mb-5 max-w-4xl">{blog.title}</h1>
 
-          <div className="flex items-center gap-4 text-sm text-slate-200">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-stone-200">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4" />
               {authorSlug ? (
@@ -334,33 +356,31 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
       <main className="container mx-auto px-4 py-12 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <article className="lg:col-span-3 space-y-6">
-            {/* Excerpt & actions */}
-            <div className="bg-white rounded-2xl shadow p-6 flex items-start justify-between gap-4">
-              <div className="prose prose-slate max-w-none">
-                <p className="text-lg text-slate-700 font-medium">{blog.excerpt}</p>
-              </div>
-              <div>
+            {/* Standfirst (lead) + actions */}
+            <div className="flex items-start justify-between gap-6">
+              {blog.excerpt ? (
+                <p className="blog-serif text-xl md:text-2xl leading-relaxed text-stone-600 border-l-4 border-amber-500 pl-5">
+                  {blog.excerpt}
+                </p>
+              ) : <span />}
+              <div className="shrink-0 pt-1">
                 <ShareAndLike blog={blog} />
               </div>
             </div>
 
-            {/* ---
-              FIX #1: Applied prose classes AND content HTML to the SAME element.
-              This is the correct way to apply Tailwind's typography styles.
-              ---
-            */}
+            {/* Article body — editorial styles live in the global block below */}
             <div
-              className="bg-white rounded-2xl shadow p-6 md:p-8 lg:p-10 prose prose-lg max-w-none"
+              className="bg-white rounded-2xl shadow-sm ring-1 ring-stone-100 p-6 md:p-10 blog-content"
               dangerouslySetInnerHTML={{ __html: blog.content }}
             />
 
             {/* Tags */}
             {Array.isArray(blog.tags) && blog.tags.length > 0 && (
               <div className="bg-white rounded-2xl shadow p-6">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Tag className="h-4 w-4 text-indigo-600" /> Tags</h3>
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><Tag className="h-4 w-4 text-amber-600" /> Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {blog.tags.map((t: string) => (
-                    <Link key={t} href={`/blog?tag=${encodeURIComponent(t)}`} className="px-3 py-1 bg-slate-100 rounded-full text-sm hover:bg-indigo-50">
+                    <Link key={t} href={`/blog?tag=${encodeURIComponent(t)}`} className="px-3 py-1 bg-slate-100 rounded-full text-sm hover:bg-amber-50">
                       #{t}
                     </Link>
                   ))}
@@ -404,117 +424,166 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
         </div>
       </main>
 
-      {/* ---
-        FIX #2: Added global styles to enhance the ".prose" classes.
-        This provides the "perfect markdown blog" look you wanted,
-        styling headings, code, blockquotes, and lists.
-        ---
-      */}
+      {/* Editorial styling for the rendered markdown — serif headings, a warm
+          accent that harmonizes with the EEO brand, a drop cap, and a
+          comfortable reading measure. */}
       <style jsx global>{`
-        /* Enhance Tailwind Prose for a "Perfect" Markdown Blog */
-        
-        .prose h2 {
-          font-size: 1.875rem; /* 3xl */
+        .blog-serif {
+          font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+        }
+
+        .blog-content {
+          color: #292524; /* stone-800 */
+          font-size: 1.125rem;
+          line-height: 1.8;
+        }
+        /* comfortable reading measure for prose, full-width for media */
+        .blog-content > p,
+        .blog-content > ul,
+        .blog-content > ol,
+        .blog-content > h2,
+        .blog-content > h3,
+        .blog-content > h4,
+        .blog-content > blockquote {
+          max-width: 68ch;
+        }
+
+        .blog-content h2,
+        .blog-content h3,
+        .blog-content h4 {
+          font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+          color: #1c1917; /* stone-900 */
+          letter-spacing: -0.01em;
+          scroll-margin-top: 5rem;
+        }
+        .blog-content h2 {
+          font-size: 1.9rem;
           font-weight: 700;
-          letter-spacing: -0.025em;
-          margin-top: 2em;
-          margin-bottom: 1em;
-          padding-bottom: 0.5em;
-          border-bottom: 1px solid #e5e7eb; /* slate-200 */
+          margin-top: 2.2em;
+          margin-bottom: 0.7em;
+          padding-bottom: 0.35em;
+          border-bottom: 2px solid #f3e9d9; /* warm hairline */
         }
-        .prose h3 {
-          font-size: 1.5rem; /* 2xl */
-          font-weight: 600;
-          margin-top: 1.6em;
-          margin-bottom: 0.8em;
+        .blog-content h3 {
+          font-size: 1.45rem;
+          font-weight: 700;
+          margin-top: 1.7em;
+          margin-bottom: 0.6em;
         }
-        .prose h4 {
-          font-size: 1.25rem; /* xl */
-          font-weight: 600;
-          margin-top: 1.5em;
+        .blog-content h4 {
+          font-size: 1.18rem;
+          font-weight: 700;
+          margin-top: 1.4em;
           margin-bottom: 0.5em;
         }
-        .prose p {
-          line-height: 1.75;
-          margin-top: 1.25em;
-          margin-bottom: 1.25em;
+        .blog-content p {
+          margin-top: 1.15em;
+          margin-bottom: 1.15em;
         }
-        .prose a {
-          color: #4f46e5; /* indigo-600 */
-          font-weight: 500;
+        /* Drop cap on the opening paragraph — editorial touch */
+        .blog-content > p:first-of-type::first-letter {
+          float: left;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: 3.6em;
+          line-height: 0.72;
+          font-weight: 700;
+          color: #b45309; /* amber-700 */
+          padding: 0.06em 0.1em 0 0;
+        }
+        .blog-content a {
+          color: #b45309; /* amber-700 */
+          font-weight: 600;
           text-decoration: none;
-          transition: all 0.2s ease;
+          background-image: linear-gradient(#f5d5a8, #f5d5a8);
+          background-size: 100% 1px;
+          background-position: 0 1.15em;
+          background-repeat: no-repeat;
+          transition: color 0.15s ease, background-size 0.15s ease;
         }
-        .prose a:hover {
-          text-decoration: underline;
-          color: #3730a3; /* indigo-800 */
+        .blog-content a:hover {
+          color: #92400e; /* amber-800 */
+          background-size: 100% 2px;
         }
-        .prose blockquote {
-          border-left-width: 4px;
-          border-left-color: #6366f1; /* indigo-500 */
-          padding-left: 1.25rem;
-          margin-top: 1.6em;
-          margin-bottom: 1.6em;
+        .blog-content strong {
+          color: #1c1917;
+          font-weight: 700;
+        }
+        .blog-content blockquote {
+          border-left: 3px solid #d97706; /* amber-600 */
+          background: #fdf7ee;
+          padding: 0.9rem 1.25rem;
+          border-radius: 0 0.5rem 0.5rem 0;
+          margin: 1.8em 0;
+          font-family: Georgia, serif;
           font-style: italic;
-          color: #475569; /* slate-600 */
+          font-size: 1.18rem;
+          color: #44403c; /* stone-700 */
         }
-        .prose blockquote p {
+        .blog-content blockquote p {
           margin: 0;
         }
-        .prose ul,
-        .prose ol {
-          margin-top: 1.25em;
-          margin-bottom: 1.25em;
-          padding-left: 1.75rem;
+        .blog-content ul,
+        .blog-content ol {
+          margin-top: 1.1em;
+          margin-bottom: 1.1em;
+          padding-left: 1.6rem;
         }
-        .prose li {
-          margin-top: 0.5em;
-          margin-bottom: 0.5em;
+        .blog-content li {
+          margin-top: 0.45em;
+          margin-bottom: 0.45em;
+          padding-left: 0.2rem;
         }
-        .prose ul > li::marker {
-          color: #6366f1; /* indigo-500 */
+        .blog-content ul > li::marker,
+        .blog-content ol > li::marker {
+          color: #d97706; /* amber-600 */
+          font-weight: 700;
         }
-        .prose ol > li::marker {
-          color: #6366f1; /* indigo-500 */
+        .blog-content code:not(pre > code) {
+          background-color: #f5f5f4; /* stone-100 */
+          color: #b45309;
+          padding: 0.2em 0.45em;
+          border-radius: 0.375rem;
+          font-size: 0.88em;
+          font-weight: 600;
         }
-        .prose code:not(pre > code) {
-          background-color: #f1f5f9; /* slate-100 */
-          color: #e11d48; /* rose-600 */
-          padding: 0.25em 0.5em;
-          border-radius: 0.375rem; /* rounded-md */
-          font-size: 0.9em;
-          font-weight: 500;
-        }
-        .prose pre {
-          background-color: #111827; /* gray-900 */
-          color: #e5e7eb; /* gray-200 */
-          border-radius: 0.75rem; /* rounded-xl */
-          padding: 1.25rem;
-          margin-top: 1.6em;
-          margin-bottom: 1.6em;
+        .blog-content pre {
+          background-color: #1c1917; /* stone-900 */
+          color: #e7e5e4;
+          border-radius: 0.75rem;
+          padding: 1.25rem 1.4rem;
+          margin: 1.8em 0;
           overflow-x: auto;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
         }
-        .prose pre code {
-          background-color: transparent;
+        .blog-content pre code {
+          background: transparent;
           color: inherit;
           padding: 0;
-          font-size: 0.875rem; /* text-sm */
+          font-size: 0.875rem;
           line-height: 1.7;
         }
-        .prose img {
-          border-radius: 0.75rem; /* rounded-xl */
-          margin-top: 2em;
-          margin-bottom: 2em;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        .blog-content img {
+          border-radius: 0.85rem;
+          margin: 2em 0;
+          box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.22);
         }
-        .prose hr {
-          border-color: #e5e7eb; /* slate-200 */
-          margin-top: 3em;
-          margin-bottom: 3em;
+        .blog-content hr {
+          border: 0;
+          height: 1px;
+          background: #ece3d4;
+          margin: 2.8em 0;
+        }
+        @media (max-width: 640px) {
+          .blog-content {
+            font-size: 1.05rem;
+          }
+          .blog-content h2 {
+            font-size: 1.6rem;
+          }
+          .blog-content > p:first-of-type::first-letter {
+            font-size: 3em;
+          }
         }
       `}</style>
-
     </div>
   );
 }
