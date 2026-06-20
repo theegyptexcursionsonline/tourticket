@@ -14,6 +14,7 @@ import {
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 
 // Enable ISR with 60 second revalidation for fast page loads
 export const revalidate = 60;
@@ -231,6 +232,14 @@ async function getPageData(slug: string, locale: string) {
     'metaTitle',
     'metaDescription',
   ]);
+
+  // Localize in-content links in the destination body to this page's locale.
+  for (const field of ['longDescription', 'description'] as const) {
+    const ld = localizedDestination as Record<string, unknown>;
+    if (typeof ld[field] === 'string') {
+      ld[field] = localizeHtmlLinks(ld[field] as string, locale);
+    }
+  }
 
   const localizedTours = selectedDestinationTours.map((tour: Record<string, unknown>) =>
     localizeEntityFields(tour, locale, [

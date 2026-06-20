@@ -2,6 +2,8 @@
 import { notFound } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import TourModel from '@/lib/models/Tour';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogPostClient from './BlogPostClient';
@@ -77,20 +79,47 @@ async function getBlogPost(slug: string) {
     category: blog.category,
     _id: { $ne: blog._id }
   })
-    .limit(3)
+    .limit(8)
     .sort({ publishedAt: -1 })
     .select('title slug excerpt featuredImage author publishedAt readTime')
     .lean();
 
+  // Relevant bookable tours for the "Tours you'll love" section: match by the
+  // post's tags, then backfill with featured/recent tours so it's never empty.
+  const blogTags: string[] = Array.isArray((blog as { tags?: unknown }).tags)
+    ? ((blog as { tags?: string[] }).tags as string[])
+    : [];
+  const tourSelect = 'title slug image images price discountPrice duration location';
+  let relevantTours = blogTags.length
+    ? await TourModel.find({ isPublished: true, ...DEFAULT_TENANT_FILTER, tags: { $in: blogTags } })
+        .limit(6)
+        .select(tourSelect)
+        .lean()
+    : [];
+  if (relevantTours.length < 3) {
+    const have = new Set(relevantTours.map((t) => String(t._id)));
+    const backfill = await TourModel.find({
+      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
+      _id: { $nin: Array.from(have) },
+    })
+      .sort({ featured: -1, createdAt: -1 })
+      .limit(6 - relevantTours.length)
+      .select(tourSelect)
+      .lean();
+    relevantTours = [...relevantTours, ...backfill];
+  }
+
   return {
     blog: JSON.parse(JSON.stringify(blog)) as IBlog,
     relatedPosts: JSON.parse(JSON.stringify(relatedPosts)) as IBlog[],
+    relevantTours: JSON.parse(JSON.stringify(relevantTours)) as Record<string, unknown>[],
   };
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<Params> }) {
   const { slug, locale } = await params;
-  const { blog, relatedPosts } = await getBlogPost(slug);
+  const { blog, relatedPosts, relevantTours } = await getBlogPost(slug);
 
   if (!blog) {
     notFound();
@@ -117,7 +146,7 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
       />
       <Header startSolid />
       <main className="pt-20">
-        <BlogPostClient blog={blog} relatedPosts={relatedPosts} />
+        <BlogPostClient blog={blog} relatedPosts={relatedPosts} relevantTours={relevantTours} />
       </main>
       <Footer />
     </>

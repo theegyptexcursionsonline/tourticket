@@ -31,6 +31,7 @@ type IDestination = any;
 interface Props {
   blog: IBlog;
   relatedPosts: IBlog[];
+  relevantTours?: ITour[];
 }
 
 /**
@@ -279,7 +280,7 @@ function ReadingProgress() {
 }
 
 /* ---------- Main component ---------- */
-export default function BlogPostClient({ blog, relatedPosts }: Props) {
+export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] }: Props) {
   const authorSlug = getAuthorRouteSlug({
     slug: blog.authorSlug,
     name: blog.author,
@@ -384,15 +385,57 @@ export default function BlogPostClient({ blog, relatedPosts }: Props) {
               }} />
             </div>
 
-            {/* Related posts (inline) */}
+            {/* Tours you'll love — bookable tours relevant to this post */}
+            {relevantTours && relevantTours.length > 0 && (
+              <div className="bg-white rounded-2xl shadow p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-amber-600" /> Tours you&apos;ll love
+                </h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {relevantTours.slice(0, 6).map((t) => {
+                    const img = t?.image || (Array.isArray(t?.images) ? t.images[0] : undefined);
+                    return (
+                      <Link key={t._id || t.slug} href={`/${t.slug}`} className="group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
+                        <div className="relative h-32 bg-slate-100">
+                          {img ? (
+                            <Image src={img} alt={t.title} fill className="object-cover transition group-hover:scale-105" />
+                          ) : null}
+                        </div>
+                        <div className="p-3">
+                          <div className="text-sm font-semibold text-slate-900 line-clamp-2">{t.title}</div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-xs text-slate-500">{t.duration || 'Day trip'}</span>
+                            <span className="text-sm font-semibold text-amber-600">
+                              {t.discountPrice ? `$${t.discountPrice}` : t.price ? `$${t.price}` : 'Book'}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+                <Link href="/tours" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-800">
+                  Browse all tours <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
+
+            {/* Related posts — horizontal carousel */}
             {relatedPosts && relatedPosts.length > 0 && (
               <div className="bg-white rounded-2xl shadow p-6">
                 <h3 className="font-semibold mb-4">Related Articles</h3>
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
                   {relatedPosts.map((p) => (
-                    <Link key={p._id} href={`/blog/${p.slug}`} className="block p-3 rounded-lg border hover:shadow-md transition bg-white">
-                      <div className="text-sm font-semibold">{p.title}</div>
-                      <div className="text-xs text-slate-500 mt-1 line-clamp-2">{p.excerpt}</div>
+                    <Link key={p._id} href={`/blog/${p.slug}`} className="snap-start shrink-0 w-64 rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
+                      <div className="relative h-32 bg-slate-100">
+                        {p.featuredImage ? (
+                          <Image src={p.featuredImage} alt={p.title} fill className="object-cover" />
+                        ) : null}
+                      </div>
+                      <div className="p-3">
+                        <div className="text-sm font-semibold line-clamp-2">{p.title}</div>
+                        <div className="text-xs text-slate-500 mt-1 line-clamp-2">{p.excerpt}</div>
+                      </div>
                     </Link>
                   ))}
                 </div>

@@ -17,6 +17,7 @@ import {
 import { getStopSaleDatesForTour } from '@/lib/stopSaleFetcher';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -218,6 +219,14 @@ export default async function TourDetailPage({ params }: PageProps) {
       locale,
       ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
     ) as any;
+  }
+
+  // Localize in-content links in the tour body to this page's locale.
+  if (typeof localizedTour.longDescription === 'string') {
+    localizedTour.longDescription = localizeHtmlLinks(localizedTour.longDescription, locale);
+  }
+  if (typeof localizedTour.description === 'string') {
+    localizedTour.description = localizeHtmlLinks(localizedTour.description, locale);
   }
 
   const localizedRelatedTours = relatedTours.map((relatedTour) => {
