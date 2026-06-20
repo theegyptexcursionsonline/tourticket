@@ -207,10 +207,8 @@ function AuthorCard({ author }: { author: any }) {
 
 /* ---------- Structured Sidebar component (travel-focused) ---------- */
 function Sidebar({ blog }: { blog: IBlog }) {
-  // prepare lists from blog.relatedTours / relatedDestinations
+  // prepare lists from blog.relatedTours
   const relatedTours: ITour[] = blog.relatedTours || [];
-  const relatedDestinations: IDestination[] = blog.relatedDestinations || [];
-  const popularDestinations: IDestination[] = blog.popularDestinations || relatedDestinations.slice(0, 4);
 
   return (
     <aside className="lg:col-span-1">
@@ -233,23 +231,6 @@ function Sidebar({ blog }: { blog: IBlog }) {
           </Link>
 
           <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-amber-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 mr-1" /> <bdi dir="ltr">+20 11 42255624</bdi></a></div>
-        </div>
-
-        {/* Popular Destinations */}
-        <div className="bg-white rounded-2xl shadow p-6">
-          <h4 className="font-semibold mb-3">Popular Destinations</h4>
-          <div className="grid grid-cols-2 gap-3">
-            {popularDestinations.length ? popularDestinations.map((d: any) => (
-              <Link key={d._id || d.slug} href={`/destinations/${d.slug}`} className="flex flex-col items-center gap-2 p-2 rounded hover:bg-slate-50 transition">
-                <div className="w-full h-20 rounded-lg overflow-hidden bg-slate-100">
-                  {d.image ? <Image src={d.image} alt={d.name} width={300} height={200} className="object-cover" /> : <div className="w-full h-full bg-slate-100" />}
-                </div>
-                <div className="text-sm text-center font-medium text-slate-800">{d.name}</div>
-              </Link>
-            )) : (
-              <div className="text-sm text-slate-500">No destinations available</div>
-            )}
-          </div>
         </div>
 
         {/* Travel Essentials */}
