@@ -57,8 +57,17 @@ export const cdnImg = (url?: string | null, width = 600): string => {
   if (url.includes("res.cloudinary.com") && url.includes("/upload/")) {
     const [base, rest] = url.split("/upload/");
     const firstSeg = rest.split("/")[0];
-    if (/(^|,)(w|h|c|q|f|dpr|e|g|ar)_/.test(firstSeg)) return url;
-    return `${base}/upload/f_auto,q_auto,c_limit,w_${width}/${rest}`;
+    const safeWidth = Math.min(width, 1200);
+    const sizeTransform = `c_limit,w_${safeWidth}`;
+    const alreadyTransformed = /(^|,)(w|h|c|q|f|dpr|e|g|ar)_/.test(firstSeg);
+    if (alreadyTransformed) {
+      const normalizedTransforms = firstSeg
+        .split(",")
+        .filter(Boolean)
+        .filter((part) => part !== "dpr_auto" && part !== "c_limit" && !/^w_\d+$/.test(part));
+      return `${base}/upload/${[...normalizedTransforms, sizeTransform].join(",")}/${rest.split("/").slice(1).join("/")}`;
+    }
+    return `${base}/upload/f_auto,q_auto,${sizeTransform}/${rest}`;
   }
   return url;
 };

@@ -1,17 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  signInWithPopup,
-  updateProfile,
-  User as FirebaseUser,
-} from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase/config';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 // --- Interfaces ---
 interface User {
@@ -71,8 +63,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const loadFirebaseAuth = async () => {
+    const [{ auth, googleProvider }, firebaseAuth] = await Promise.all([
+      import('@/lib/firebase/config'),
+      import('firebase/auth'),
+    ]);
+
+    return {
+      auth,
+      googleProvider,
+      ...firebaseAuth,
+    };
+  };
+
+  const shouldInitializeAuthForPath = () => {
+    if (typeof window === 'undefined') return false;
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    if (!isMobile) return true;
+
+    const path = pathname || '';
+    return [
+      '/login',
+      '/signup',
+      '/forgot',
+      '/checkout',
+      '/booking',
+      '/user',
+    ].some((segment) => path.includes(segment));
+  };
 
   // --- Sync Firebase user with MongoDB and get user data ---
   const syncUserWithBackend = async (fbUser: FirebaseUser) => {
@@ -118,7 +140,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // --- Firebase auth state listener ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    if (!shouldInitializeAuthForPath()) {
+      setIsLoading(false);
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    setIsLoading(true);
+
+    loadFirebaseAuth().then(({ auth, onAuthStateChanged }) => {
+      if (cancelled) return;
+
+      unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       try {
         if (fbUser) {
           setFirebaseUser(fbUser);
@@ -174,10 +208,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
       }
     });
+    }).catch((error) => {
+      console.error('Failed to initialize auth listener:', error);
+      setIsLoading(false);
+    });
 
     // Cleanup subscription
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [pathname]);
 
   // --- Refresh user data ---
   const refreshUser = async () => {
@@ -216,6 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
+      const { auth, signInWithEmailAndPassword } = await loadFirebaseAuth();
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       // User state will be updated by onAuthStateChanged listener
     } catch (error: any) {
@@ -246,6 +288,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signup = async (data: SignupData): Promise<void> => {
     setIsLoading(true);
     try {
+      const {
+        auth,
+        createUserWithEmailAndPassword,
+        updateProfile,
+      } = await loadFirebaseAuth();
       // Create Firebase user - Firebase handles duplicate email detection
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -282,6 +329,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async (): Promise<void> => {
     setIsLoading(true);
     try {
+      const { auth, googleProvider, signInWithPopup } = await loadFirebaseAuth();
       const userCredential = await signInWithPopup(auth, googleProvider);
       // User state will be updated by onAuthStateChanged listener
     } catch (error: any) {
@@ -307,6 +355,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // --- Logout Function ---
   const logout = async () => {
     try {
+      const { auth, signOut } = await loadFirebaseAuth();
       await signOut(auth);
       setUser(null);
       setFirebaseUser(null);

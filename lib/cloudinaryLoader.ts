@@ -26,16 +26,26 @@ export default function cloudinaryLoader({src, width, quality}: LoaderArgs): str
   // Cloudinary delivery URLs look like: .../image/upload/<transforms?>/<public_id>
   if (src.includes('res.cloudinary.com') && src.includes('/upload/')) {
     const [base, rest] = src.split('/upload/');
-    // Don't double-transform if the URL already carries a transform segment.
+    const safeWidth = Math.min(width, 1600);
+    const sizeTransform = `c_limit,w_${safeWidth}`;
+
+    // Normalize existing transforms too: CMS images may already have
+    // f_auto/q_auto/w_* plus dpr_auto. Next's srcSet already accounts for DPR,
+    // so keeping dpr_auto can inflate decoded bitmap size on iPhone Safari.
     const firstSegment = rest.split('/')[0];
     const alreadyTransformed = /(^|,)(w|h|c|q|f|dpr|e|g|ar)_/.test(firstSegment);
-    if (alreadyTransformed) return src;
+    if (alreadyTransformed) {
+      const normalizedTransforms = firstSegment
+        .split(',')
+        .filter(Boolean)
+        .filter((part) => part !== 'dpr_auto' && part !== 'c_limit' && !/^w_\d+$/.test(part));
+      return `${base}/upload/${[...normalizedTransforms, sizeTransform].join(',')}/${rest.split('/').slice(1).join('/')}`;
+    }
+
     const transforms = [
       'f_auto',
       quality ? `q_${quality}` : 'q_auto',
-      'c_limit',
-      `w_${width}`,
-      'dpr_auto',
+      sizeTransform,
     ].join(',');
     return `${base}/upload/${transforms}/${rest}`;
   }

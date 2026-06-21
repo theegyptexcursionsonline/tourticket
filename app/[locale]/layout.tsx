@@ -13,8 +13,7 @@ import { NavDataProvider } from "@/contexts/NavDataContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
-import IntercomClient from "@/components/IntercomClient";
-import ConditionalAIWidgets from "@/components/ConditionalAIWidgets";
+import DeferredIntercom from "@/components/DeferredIntercom";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
@@ -182,7 +181,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <body className={`${inter.variable} ${almarai.variable} ${fontClass}`} suppressHydrationWarning>
         {/* Google Tag Manager (noscript) */}
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W9WCZFKM" height="0" width="0" style={{display:'none',visibility:'hidden'}}></iframe></noscript>
-        <IntercomClient />
+        <DeferredIntercom />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
             <SettingsProvider initialLocale={locale}>
@@ -192,7 +191,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                     {children}
                     <CartSidebar />
                     <WishlistSidebar />
-                    <ConditionalAIWidgets />
                     <Toaster
                       position={dir === 'rtl' ? 'top-left' : 'top-right'}
                       reverseOrder={false}

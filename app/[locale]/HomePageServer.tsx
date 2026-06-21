@@ -8,13 +8,9 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import HeroSettings from '@/lib/models/HeroSettings';
 import SpecialOffer from '@/lib/models/SpecialOffer';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import HeroSection from '@/components/HeroSection';
-import IcebarPromo from '@/components/IcebarPromo';
-import AboutUs from '@/components/AboutUs';
-import Reviews from '@/components/Reviews';
-import FAQ from '@/components/FAQ';
-import AISearchWidget from '@/components/AISearchWidget';
+import HeroSectionStable from '@/components/HeroSectionStable';
+import DeferredAISearchWidget from '@/components/DeferredAISearchWidget';
+import HomeDeferredSections from '@/components/HomeDeferredSections';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
 import WebSiteSchema from '@/components/schema/WebSiteSchema';
@@ -23,10 +19,6 @@ import ToursListSchema from '@/components/schema/ToursListSchema';
 
 // Import client-side versions that accept props
 import DestinationsServer from '@/components/DestinationsServer';
-import FeaturedToursServer from '@/components/FeaturedToursServer';
-import InterestGridServer from '@/components/InterestGridServer';
-import PopularInterestServer from '@/components/PopularInterestServer';
-import DayTripsServer from '@/components/DayTripsServer';
 import { getLocale } from 'next-intl/server';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
@@ -431,21 +423,17 @@ export default async function HomePageServer() {
         initialDestinations={headerDestinations as any}
         initialCategories={headerCategories as any}
       />
-      <HeroSection initialSettings={heroSettings} />
+      <HeroSectionStable initialSettings={heroSettings} />
 
-      {/* Pass pre-fetched data as props */}
       <DestinationsServer destinations={destinations as any} />
-      <IcebarPromo />
-      <FeaturedToursServer tours={tours} />
-      <PopularInterestServer interests={featuredInterests as any} categoryPages={categoryPages as any} />
-      <InterestGridServer categories={categories as any} />
-      <DayTripsServer tours={dayTrips} />
-
-      <AboutUs />
-      <Reviews />
-      <FAQ />
-      <Footer />
-      <AISearchWidget />
+      <HomeDeferredSections
+        tours={tours as any}
+        featuredInterests={featuredInterests as any}
+        categoryPages={categoryPages as any}
+        categories={categories as any}
+        dayTrips={dayTrips as any}
+      />
+      <DeferredAISearchWidget />
     </main>
     </>
   );

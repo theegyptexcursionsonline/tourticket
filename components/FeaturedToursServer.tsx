@@ -1,15 +1,17 @@
 // components/FeaturedToursServer.tsx
 'use client';
 
-import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon, Tag } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
-import BookingSidebar from '@/components/BookingSidebar';
 import { Link } from '@/i18n/routing';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+
+const BookingSidebar = dynamic(() => import('@/components/BookingSidebar'), { ssr: false });
 
 interface FeaturedToursServerProps {
   tours: Tour[];
@@ -242,6 +244,18 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
   const SeeAllArrow = rtl ? ArrowLeft : ArrowRight;
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia('(max-width: 767px)').matches;
+  });
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobileViewport(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
 
   const handleAddToCartClick = (tour: Tour) => {
     setSelectedTour(tour);
@@ -267,9 +281,10 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
     tags: Array.isArray(tour.tags) ? tour.tags : [],
   }));
 
-  // Duplicate tours for seamless scrolling
-  const duplicatedTours = validatedTours.length > 0 ? [...validatedTours, ...validatedTours] : [];
-  const shouldAnimateMarquee = validatedTours.length > 4;
+  const displayedTours = isMobileViewport ? validatedTours.slice(0, 8) : validatedTours;
+  // Duplicate only the displayed cards for seamless scrolling.
+  const duplicatedTours = displayedTours.length > 0 ? [...displayedTours, ...displayedTours] : [];
+  const shouldAnimateMarquee = displayedTours.length > (isMobileViewport ? 3 : 4);
 
   if (tours.length === 0) {
     return null;
@@ -332,7 +347,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
             <div className="py-4 sm:py-6">
               <div className="container mx-auto px-4 md:px-8">
                 <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
-                  {validatedTours.map((tour, idx) => (
+                  {displayedTours.map((tour, idx) => (
                     <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="px-1 sm:px-2">
                       <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
                     </div>

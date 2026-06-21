@@ -2038,38 +2038,32 @@ const BackgroundSlideshow = ({
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
-      {slides.map((s, i) => {
-        const visible = i === index;
-        const isPriority = i === 0; // First image gets priority loading
+      {(() => {
+        const activeIndex = index % slides.length;
+        const activeSlide = slides[activeIndex];
+        const isPriority = activeIndex === 0;
+
         return (
           <div
-            key={`${s.src}-${i}`}
-            aria-hidden={!visible}
+            key={`${activeSlide.src}-${activeIndex}`}
             className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out"
-            style={{
-              opacity: visible ? 1 : 0,
-              transitionDuration: `${fadeMs}ms`,
-              transform: visible ? 'scale(1)' : 'scale(1.02)',
-            }}
+            style={{ transitionDuration: `${fadeMs}ms` }}
           >
-            {/* Using Next.js Image for automatic optimization, WebP/AVIF conversion, and blur placeholder */}
             <Image
-              src={s.src}
-              alt={s.alt}
+              src={activeSlide.src}
+              alt={activeSlide.alt}
               fill
               priority={isPriority}
-              quality={85}
+              quality={75}
               sizes="100vw"
               loading={isPriority ? 'eager' : 'lazy'}
               className="object-cover"
-              style={{
-                objectFit: 'cover',
-              }}
+              style={{ objectFit: 'cover' }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
           </div>
         );
-      })}
+      })()}
     </div>
   );
 };
@@ -2087,7 +2081,7 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
 
   // Create slides from settings with defensive check
   const slides = (settings.backgroundImages || []).map(img => ({
-    src: img.desktop,
+    src: img.mobile || img.desktop,
     alt: img.alt,
     caption: img.alt
   }));
@@ -2293,12 +2287,10 @@ export default function HeroSection({ initialSettings }: HeroSectionProps = {}) 
           -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Image optimization */
+        /* Keep image rendering stable without globally promoting every bitmap. */
         img { 
           backface-visibility: hidden; 
           -webkit-backface-visibility: hidden;
-          transform: translateZ(0);
-          -webkit-transform: translateZ(0);
         }
 
         /* Smooth transitions */

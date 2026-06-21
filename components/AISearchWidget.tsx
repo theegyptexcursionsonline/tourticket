@@ -836,8 +836,11 @@ export default function AISearchWidget() {
 
   // Listen for floating button click (openAIAgent event)
   useEffect(() => {
-    const openHandler = (e: any) => {
-      const query = e.detail?.query || '';
+    const openHandler = (e?: any) => {
+      const query = e?.detail?.query || '';
+      (window as any).__pendingAIOpenAgent = false;
+      (window as any).__pendingAIOpenAgentQuery = '';
+      setIsVisible(true);
       setIsExpanded(true);
       setChatMode(true);
       if (query) {
@@ -846,6 +849,13 @@ export default function AISearchWidget() {
     };
 
     window.addEventListener('openAIAgent', openHandler);
+    if ((window as any).__pendingAIOpenAgent) {
+      openHandler({
+        detail: {
+          query: (window as any).__pendingAIOpenAgentQuery || '',
+        },
+      });
+    }
     return () => window.removeEventListener('openAIAgent', openHandler);
   }, [sendMessage]);
 
