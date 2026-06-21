@@ -11,6 +11,9 @@ import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import type { IBlog } from '@/lib/models/Blog';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+
+const LOCALIZED_BLOG_FIELDS = ['title', 'excerpt', 'content', 'metaTitle', 'metaDescription'];
 
 type Params = { locale: string; slug: string };
 
@@ -32,13 +35,23 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
 
     if (!blog) return { title: 'Blog Post Not Found' };
 
+    // Serialize first so the translations Map becomes a plain object that
+    // localizeEntityFields can read; keep `blog` for the Date fields.
+    const lz = localizeEntityFields(
+      JSON.parse(JSON.stringify(blog)) as Record<string, unknown>,
+      locale,
+      LOCALIZED_BLOG_FIELDS,
+    );
+    const title = (lz.metaTitle as string) || (lz.title as string);
+    const description = (lz.metaDescription as string) || (lz.excerpt as string);
+
     return {
-      title: blog.metaTitle || blog.title,
-      description: blog.metaDescription || blog.excerpt,
+      title,
+      description,
       alternates: metadataAlternates(locale, `/blog/${slug}`),
       openGraph: {
-        title: blog.metaTitle || blog.title,
-        description: blog.metaDescription || blog.excerpt,
+        title,
+        description,
         images: blog.featuredImage ? [blog.featuredImage] : undefined,
         type: 'article',
         publishedTime: blog.publishedAt?.toISOString(),
@@ -46,8 +59,8 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
       },
       twitter: {
         card: 'summary_large_image',
-        title: blog.metaTitle || blog.title,
-        description: blog.metaDescription || blog.excerpt,
+        title,
+        description,
         images: blog.featuredImage ? [blog.featuredImage] : undefined,
       },
     };
@@ -125,28 +138,33 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
     notFound();
   }
 
-  // Localize in-content links to this page's locale so they don't get
-  // cookie-redirected to the wrong locale (see localizeHtmlLinks).
-  if (blog.content) {
-    blog.content = localizeHtmlLinks(blog.content, locale);
+  // Overlay the locale's translation onto the post (English fallback per field),
+  // then fix in-content links to match the page locale.
+  const localized = localizeEntityFields(
+    blog as unknown as Record<string, unknown>,
+    locale,
+    LOCALIZED_BLOG_FIELDS,
+  ) as unknown as typeof blog;
+  if (localized.content) {
+    localized.content = localizeHtmlLinks(localized.content, locale);
   }
 
   return (
     <>
       <BlogPostSchema
-        title={blog.title}
+        title={localized.title}
         slug={slug}
-        description={blog.metaDescription || blog.excerpt}
-        excerpt={blog.excerpt}
-        image={blog.featuredImage}
-        author={blog.author}
-        publishedAt={blog.publishedAt?.toString()}
-        updatedAt={blog.updatedAt?.toString()}
-        tags={blog.tags}
+        description={localized.metaDescription || localized.excerpt}
+        excerpt={localized.excerpt}
+        image={localized.featuredImage}
+        author={localized.author}
+        publishedAt={localized.publishedAt?.toString()}
+        updatedAt={localized.updatedAt?.toString()}
+        tags={localized.tags}
       />
       <Header startSolid />
       <main className="pt-20">
-        <BlogPostClient blog={blog} relatedPosts={relatedPosts} relevantTours={relevantTours} />
+        <BlogPostClient blog={localized} relatedPosts={relatedPosts} relevantTours={relevantTours} />
       </main>
       <Footer />
     </>

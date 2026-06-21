@@ -46,6 +46,7 @@ type IncomingPayload = {
 type IncomingBody = {
   tenantId?: string;
   payload?: IncomingPayload;
+  translations?: Record<string, Record<string, unknown>>;
 };
 
 function liveUrlForBlog(slug: string): string {
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest) {
       readTime: payload.readTime,
       status: payload.status === "draft" ? "draft" : "published",
       featured: payload.featured === true,
+      translations: body.translations ?? {},
     });
 
     return NextResponse.json(
@@ -178,6 +180,9 @@ export async function PUT(req: NextRequest) {
   if (payload.featuredImage) existing.featuredImage = payload.featuredImage;
   if (payload.author) existing.author = payload.author;
   if (typeof payload.featured === "boolean") existing.featured = payload.featured;
+  if (body.translations) {
+    existing.translations = body.translations as typeof existing.translations;
+  }
 
   try {
     await existing.save();

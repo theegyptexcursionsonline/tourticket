@@ -41,11 +41,35 @@ export interface IBlog extends Document {
   // Related Content
   relatedDestinations?: mongoose.Schema.Types.ObjectId[];
   relatedTours?: mongoose.Schema.Types.ObjectId[];
-  
+
+  // Localized overrides by locale code (e.g. ar, es, fr, de). When a locale is
+  // missing a field, the base (English) value is used.
+  translations?: Record<
+    string,
+    {
+      title?: string;
+      excerpt?: string;
+      content?: string;
+      metaTitle?: string;
+      metaDescription?: string;
+    }
+  >;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
 }
+
+const BlogTranslationSchema = new Schema(
+  {
+    title: { type: String, trim: true, maxlength: 200 },
+    excerpt: { type: String, trim: true, maxlength: 300 },
+    content: { type: String },
+    metaTitle: { type: String, trim: true, maxlength: 60 },
+    metaDescription: { type: String, trim: true, maxlength: 160 },
+  },
+  { _id: false },
+);
 
 const BlogSchema: Schema<IBlog> = new Schema({
   // Basic Info
@@ -220,6 +244,12 @@ const BlogSchema: Schema<IBlog> = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
   }],
+
+  // Localized field overrides, keyed by locale code.
+  translations: {
+    type: Map,
+    of: BlogTranslationSchema,
+  },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
