@@ -42,6 +42,9 @@ export interface IBlog extends Document {
   relatedDestinations?: mongoose.Schema.Types.ObjectId[];
   relatedTours?: mongoose.Schema.Types.ObjectId[];
 
+  // FAQ Q&A pairs (from the content engine) → rendered as FAQPage JSON-LD.
+  faqs?: { question: string; answer: string }[];
+
   // Localized overrides by locale code (e.g. ar, es, fr, de). When a locale is
   // missing a field, the base (English) value is used.
   translations?: Record<
@@ -244,6 +247,18 @@ const BlogSchema: Schema<IBlog> = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
   }],
+
+  // FAQ pairs for FAQPage structured data.
+  faqs: {
+    type: [
+      {
+        question: { type: String, trim: true },
+        answer: { type: String, trim: true },
+        _id: false,
+      },
+    ],
+    default: [],
+  },
 
   // Localized field overrides, keyed by locale code.
   translations: {

@@ -8,6 +8,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogPostClient from './BlogPostClient';
 import BlogPostSchema from '@/components/schema/BlogPostSchema';
+import FAQSchema from '@/components/schema/FAQSchema';
 import type { IBlog } from '@/lib/models/Blog';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
@@ -161,6 +162,13 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
         publishedAt={localized.publishedAt?.toString()}
         updatedAt={localized.updatedAt?.toString()}
         tags={localized.tags}
+      />
+      <FAQSchema
+        items={
+          (localized as unknown as {
+            faqs?: { question: string; answer: string }[];
+          }).faqs ?? []
+        }
       />
       <Header startSolid />
       <main className="pt-20">

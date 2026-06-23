@@ -41,7 +41,23 @@ type IncomingPayload = {
   readTime?: number;
   status?: string;
   featured?: boolean;
+  faqs?: unknown;
 };
+
+// Keep only well-formed { question, answer } pairs from the engine payload.
+function sanitizeFaqs(input: unknown): { question: string; answer: string }[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((f) => {
+      const o = (f ?? {}) as { question?: unknown; answer?: unknown };
+      return {
+        question: typeof o.question === "string" ? o.question.trim() : "",
+        answer: typeof o.answer === "string" ? o.answer.trim() : "",
+      };
+    })
+    .filter((f) => f.question.length > 0 && f.answer.length > 0)
+    .slice(0, 10);
+}
 
 type IncomingBody = {
   tenantId?: string;
@@ -111,6 +127,7 @@ export async function POST(req: NextRequest) {
       content: payload.content,
       category: payload.category,
       tags,
+      faqs: sanitizeFaqs(payload.faqs),
       author: payload.author?.trim() || "EEO Editorial Team",
       authorAvatar: payload.authorAvatar,
       authorBio: payload.authorBio,
@@ -175,6 +192,7 @@ export async function PUT(req: NextRequest) {
   existing.content = payload.content!;
   existing.category = payload.category!;
   existing.tags = tags;
+  if (Array.isArray(payload.faqs)) existing.faqs = sanitizeFaqs(payload.faqs);
   if (payload.metaTitle) existing.metaTitle = payload.metaTitle;
   if (payload.metaDescription) existing.metaDescription = payload.metaDescription;
   if (payload.featuredImage) existing.featuredImage = payload.featuredImage;
