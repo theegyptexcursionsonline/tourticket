@@ -4,8 +4,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { Calculator, Wallet, MapPin, ShieldCheck } from 'lucide-react';
 
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { ToolsHeader, ToolsFooter } from '@/components/tools/ToolsChrome';
 import TripCostCalculator from '@/components/tools/TripCostCalculator';
 import EmbedCode from '@/components/tools/EmbedCode';
 import { getTripCostConfig, computeTripCost, formatUsd } from '@/lib/toolsApi';
@@ -38,7 +37,7 @@ export default async function TripCostCalculatorPage() {
 
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <Header />
+      <ToolsHeader name="Egypt Excursions Online" logoUrl="/EEO-mark.png" accent={ACCENT} />
 
       <main className="flex-grow">
         <section className="bg-slate-50 border-b border-slate-100">
@@ -142,7 +141,7 @@ export default async function TripCostCalculatorPage() {
         </section>
       </main>
 
-      <Footer />
+      <ToolsFooter name="Egypt Excursions Online" accent={ACCENT} />
     </div>
   );
 }

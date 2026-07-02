@@ -3,8 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Calculator, ArrowRight } from 'lucide-react';
 
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { ToolsHeader, ToolsFooter } from '@/components/tools/ToolsChrome';
 import { getSeoAlternates } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +19,7 @@ export const metadata: Metadata = {
 export default function ToolsIndexPage() {
   return (
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <Header />
+      <ToolsHeader name="Egypt Excursions Online" logoUrl="/EEO-mark.png" accent={ACCENT} />
       <main className="container mx-auto px-4 py-12 flex-grow">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-extrabold text-slate-900 mb-2">Free travel tools</h1>
@@ -45,7 +44,7 @@ export default function ToolsIndexPage() {
           </Link>
         </div>
       </main>
-      <Footer />
+      <ToolsFooter name="Egypt Excursions Online" accent={ACCENT} />
     </div>
   );
 }
