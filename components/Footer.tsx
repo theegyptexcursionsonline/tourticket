@@ -89,8 +89,12 @@ export default function Footer() {
   // Listen for open-chatbot events (dispatched by openChatbot)
   useEffect(() => {
     const handler = () => {
-      // Prefer openIntercom helper if available, then window.Intercom("show")
+      // Prefer the FoxesConnect widget, then Intercom fallbacks
       try {
+        if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
+          (window as any).FoxesConnect.open();
+          return;
+        }
         if (typeof (window as any).openIntercom === 'function') {
           (window as any).openIntercom();
           return;
