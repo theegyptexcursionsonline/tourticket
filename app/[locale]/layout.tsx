@@ -13,7 +13,6 @@ import { NavDataProvider } from "@/contexts/NavDataContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import { Toaster } from 'react-hot-toast';
-import DeferredIntercom from "@/components/DeferredIntercom";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
@@ -182,7 +181,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <body className={`${inter.variable} ${almarai.variable} ${fontClass}`} suppressHydrationWarning>
         {/* Google Tag Manager (noscript) */}
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W9WCZFKM" height="0" width="0" style={{display:'none',visibility:'hidden'}}></iframe></noscript>
-        <DeferredIntercom />
         {/* FoxesConnect support widget — EEO main site only (test phase).
             Host check runs CLIENT-side so pages stay statically rendered. */}
         <script

@@ -153,18 +153,10 @@ export default function ContactClientPage() {
 
   const openChatbot = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Try to open Intercom directly
+    // Open the FoxesConnect support widget
     try {
       if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
         (window as any).FoxesConnect.open();
-        return;
-      }
-      if (typeof (window as any).openIntercom === 'function') {
-        (window as any).openIntercom();
-        return;
-      }
-      if (typeof (window as any).Intercom === 'function') {
-        (window as any).Intercom('show');
         return;
       }
       // Fallback to event dispatch
@@ -172,7 +164,7 @@ export default function ContactClientPage() {
         window.dispatchEvent(new CustomEvent('open-chatbot'));
       }
     } catch (err) {
-      console.error('Failed to open Intercom:', err);
+      console.error('Failed to open support chat:', err);
       // Fallback to event dispatch
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('open-chatbot'));

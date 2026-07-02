@@ -89,28 +89,15 @@ export default function Footer() {
   // Listen for open-chatbot events (dispatched by openChatbot)
   useEffect(() => {
     const handler = () => {
-      // Prefer the FoxesConnect widget, then Intercom fallbacks
+      // Open the FoxesConnect support widget
       try {
         if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
           (window as any).FoxesConnect.open();
           return;
         }
-        if (typeof (window as any).openIntercom === 'function') {
-          (window as any).openIntercom();
-          return;
-        }
-        if (typeof (window as any).Intercom === 'function') {
-          (window as any).Intercom('show');
-          return;
-        }
-        // Try messenger instance directly
-        if ((window as any).__intercomMessenger && typeof (window as any).__intercomMessenger.showMessenger === 'function') {
-          (window as any).__intercomMessenger.showMessenger();
-          return;
-        }
-        console.warn('Intercom not initialized yet');
+        console.warn('Support widget not loaded yet');
       } catch (err) {
-        console.error('Failed to open Intercom:', err);
+        console.error('Failed to open support chat:', err);
       }
     };
 
@@ -158,98 +145,24 @@ export default function Footer() {
   };
 
   const openChatbot = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    
-    console.log('🔵 Footer: Chat button clicked');
-    
-    // Try to open Intercom directly
+    if (e) e.preventDefault();
+    // Open the FoxesConnect support widget. The embed loads async, so retry
+    // briefly if a visitor clicks immediately after page load.
     try {
-      if (typeof window === 'undefined') {
-        console.warn('🔴 Footer: window is undefined');
-        return;
-      }
-      
       const win = window as any;
-      
-      console.log('🔵 Footer: Checking Intercom availability...');
-      console.log('  - openIntercom:', typeof win.openIntercom);
-      console.log('  - Intercom:', typeof win.Intercom);
-      console.log('  - __intercomMessenger:', !!win.__intercomMessenger);
-      
-      // Method 1: Try openIntercom helper
-      if (typeof win.openIntercom === 'function') {
-        console.log('✅ Footer: Using openIntercom()');
-        win.openIntercom();
+      if (win.FoxesConnect && typeof win.FoxesConnect.open === 'function') {
+        win.FoxesConnect.open();
         return;
       }
-      
-      // Method 2: Try window.Intercom('show')
-      if (typeof win.Intercom === 'function') {
-        console.log('✅ Footer: Using Intercom("show")');
-        win.Intercom('show');
-        return;
-      }
-      
-      // Method 3: Try messenger instance directly
-      if (win.__intercomMessenger) {
-        console.log('🔵 Footer: Found __intercomMessenger, checking methods...');
-        console.log('  - showMessenger:', typeof win.__intercomMessenger.showMessenger);
-        console.log('  - show:', typeof win.__intercomMessenger.show);
-        console.log('  - Methods:', Object.keys(win.__intercomMessenger));
-        
-        if (typeof win.__intercomMessenger.showMessenger === 'function') {
-          console.log('✅ Footer: Using __intercomMessenger.showMessenger()');
-          win.__intercomMessenger.showMessenger();
-          return;
-        }
-        if (typeof win.__intercomMessenger.show === 'function') {
-          console.log('✅ Footer: Using __intercomMessenger.show()');
-          win.__intercomMessenger.show();
-          return;
-        }
-      }
-      
-      console.warn('⚠️ Footer: Intercom not available, will retry...');
-      
-      // Method 4: Wait a bit and retry (in case Intercom is still loading)
       setTimeout(() => {
-        console.log('🔵 Footer: Retrying after 500ms...');
-        if (typeof win.openIntercom === 'function') {
-          console.log('✅ Footer: Retry - Using openIntercom()');
-          win.openIntercom();
-          return;
+        if (win.FoxesConnect && typeof win.FoxesConnect.open === 'function') {
+          win.FoxesConnect.open();
+        } else {
+          window.dispatchEvent(new CustomEvent('open-chatbot'));
         }
-        if (typeof win.Intercom === 'function') {
-          console.log('✅ Footer: Retry - Using Intercom("show")');
-          win.Intercom('show');
-          return;
-        }
-        if (win.__intercomMessenger) {
-          if (typeof win.__intercomMessenger.showMessenger === 'function') {
-            console.log('✅ Footer: Retry - Using __intercomMessenger.showMessenger()');
-            win.__intercomMessenger.showMessenger();
-            return;
-          }
-          if (typeof win.__intercomMessenger.show === 'function') {
-            console.log('✅ Footer: Retry - Using __intercomMessenger.show()');
-            win.__intercomMessenger.show();
-            return;
-          }
-        }
-        console.warn('⚠️ Footer: All methods failed, dispatching event');
-        window.dispatchEvent(new CustomEvent('open-chatbot'));
-      }, 500);
-      
-      // Also dispatch event immediately as fallback
+      }, 600);
+    } catch {
       window.dispatchEvent(new CustomEvent('open-chatbot'));
-      
-    } catch (err) {
-      console.error('🔴 Footer: Failed to open Intercom:', err);
-      // Fallback to event dispatch
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('open-chatbot'));
-      }
     }
   };
 

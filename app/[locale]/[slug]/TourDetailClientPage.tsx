@@ -1563,19 +1563,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         (window as any).FoxesConnect.open();
         return;
       }
-      if (typeof (window as any).openIntercom === 'function') {
-                            (window as any).openIntercom();
-                            return;
-                          }
-                          if (typeof (window as any).Intercom === 'function') {
-                            (window as any).Intercom('show');
-                            return;
-                          }
                           if (typeof window !== 'undefined') {
                             window.dispatchEvent(new CustomEvent('open-chatbot'));
                           }
                         } catch (err) {
-                          console.error('Failed to open Intercom:', err);
+                          console.error('Failed to open support chat:', err);
                           if (typeof window !== 'undefined') {
                             window.dispatchEvent(new CustomEvent('open-chatbot'));
                           }
