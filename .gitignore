@@ -71,3 +71,14 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+# internal reference docs — not for publication
+INFRA.md
+ENV.md
+RUNBOOK.md
+DECISIONS.md
+GLOSSARY.md
+PROJECT-TRACKER.md
+
+# local QA artifacts
+qa-screenshots/

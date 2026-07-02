@@ -67,7 +67,7 @@ export default async function TripCostCalculatorPage() {
           <div className="max-w-3xl mx-auto mt-14">
             <EmbedCode
               accent={ACCENT}
-              snippet={`<script src="${config.embedBase}/embed.js" data-tool="trip-cost-calculator" async></script>`}
+              snippet={`<script src="https://${host}/tools/embed.js" data-tool="trip-cost-calculator" async></script>`}
             />
           </div>
 
