@@ -7,6 +7,7 @@ import { Calculator, Wallet, MapPin, ShieldCheck } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TripCostCalculator from '@/components/tools/TripCostCalculator';
+import EmbedCode from '@/components/tools/EmbedCode';
 import { getTripCostConfig, computeTripCost, formatUsd } from '@/lib/toolsApi';
 import { getSeoAlternates } from '@/lib/seo';
 
@@ -129,6 +130,13 @@ export default async function TripCostCalculatorPage() {
               >
                 Browse Egypt Excursions Online tours &amp; day trips
               </Link>
+            </div>
+
+            <div className="mt-12">
+              <EmbedCode
+                accent={ACCENT}
+                snippet={`<script src="${config.embedBase}/embed.js" data-tool="trip-cost-calculator" async></script>`}
+              />
             </div>
           </div>
         </section>
