@@ -1559,7 +1559,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       onClick={(e) => {
                         e.preventDefault();
                         try {
-                          if (typeof (window as any).openIntercom === 'function') {
+                          if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
+        (window as any).FoxesConnect.open();
+        return;
+      }
+      if (typeof (window as any).openIntercom === 'function') {
                             (window as any).openIntercom();
                             return;
                           }
