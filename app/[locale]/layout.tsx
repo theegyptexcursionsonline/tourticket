@@ -147,6 +147,8 @@ async function getNavData(locale: string): Promise<NavCache> {
   }
 }
 
+import { headers } from 'next/headers';
+
 export default async function LocaleLayout({
   children,
   params,
@@ -165,6 +167,13 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
   const { destinations, categories } = await getNavData(locale);
+
+  // FoxesConnect live-chat/ticket widget — EEO main site only for the test phase
+  // (per the onboarding agreement: main site first, tenant sites after sign-off).
+  // Positioned bottom-left so it doesn't collide with Intercom.
+  const reqHost = ((await headers()).get('x-forwarded-host') || (await headers()).get('host') || '')
+    .split(',')[0].split(':')[0].toLowerCase().replace(/^www\./, '');
+  const showSupportWidget = reqHost === 'egypt-excursionsonline.com';
   const dir = isRTL(locale) ? 'rtl' : 'ltr';
   const fontClass = isRTL(locale) ? 'font-arabic' : 'font-sans';
 
@@ -182,6 +191,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         {/* Google Tag Manager (noscript) */}
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W9WCZFKM" height="0" width="0" style={{display:'none',visibility:'hidden'}}></iframe></noscript>
         <DeferredIntercom />
+        {showSupportWidget && (
+          <script
+            src="https://foxesconnect-production.up.railway.app/embed.js"
+            data-org="eeo"
+            data-color="#E05D1A"
+            data-position="left"
+            async
+          />
+        )}
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
             <SettingsProvider initialLocale={locale}>
