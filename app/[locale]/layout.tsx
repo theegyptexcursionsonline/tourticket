@@ -184,7 +184,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         {/* FoxesConnect support widget — EEO main site only (test phase).
             Host check runs CLIENT-side so pages stay statically rendered. */}
         <script
-          dangerouslySetInnerHTML={{ __html: `(function(){try{var h=location.hostname.toLowerCase().replace(/^www\\./,'');if(h!=='egypt-excursionsonline.com')return;var s=document.createElement('script');s.src='https://connect.foxestechnology.com/embed.js';s.async=true;s.setAttribute('data-org','eeo');s.setAttribute('data-color','#dc2626');s.setAttribute('data-position','right');s.setAttribute('data-launcher','none');s.setAttribute('data-open-event','open-chatbot');document.body.appendChild(s);}catch(e){}})();` }}
+          dangerouslySetInnerHTML={{ __html: `(function(){try{var h=location.hostname.toLowerCase().replace(/^www\\./,'');if(h!=='egypt-excursionsonline.com')return;var s=document.createElement('script');s.src='https://connect.foxestechnology.com/embed.js';s.async=true;s.setAttribute('data-org','eeo');s.setAttribute('data-color','#2563EB');s.setAttribute('data-position','right');s.setAttribute('data-launcher','none');s.setAttribute('data-open-event','open-chatbot');document.body.appendChild(s);}catch(e){}})();` }}
         />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
