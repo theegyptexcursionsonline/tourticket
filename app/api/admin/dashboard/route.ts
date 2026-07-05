@@ -39,9 +39,14 @@ export async function GET(request: NextRequest) {
       recentBookings
     ] = await Promise.allSettled([
       Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER }),
-      Booking.countDocuments(),
+      // Bookings/revenue are scoped to this (default/EEO) site, like tours —
+      // never count the white-label brands' bookings here. Revenue is collected
+      // money only (cancelled/refunded excluded). Users register on this
+      // flagship site, so Total Users stays the full registered count.
+      Booking.countDocuments(DEFAULT_TENANT_FILTER),
       User.countDocuments(),
       Booking.aggregate([
+        { $match: { ...DEFAULT_TENANT_FILTER, status: { $nin: ['cancelled', 'Cancelled', 'refunded', 'Refunded', 'partial_refunded'] } } },
         { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
       ]),
       (async () => {
@@ -49,9 +54,10 @@ export async function GET(request: NextRequest) {
         twentyFourHoursAgo.setDate(twentyFourHoursAgo.getDate() - 1);
         return await Booking.countDocuments({
           createdAt: { $gte: twentyFourHoursAgo },
+          ...DEFAULT_TENANT_FILTER,
         });
       })(),
-      Booking.find()
+      Booking.find(DEFAULT_TENANT_FILTER)
         .sort({ createdAt: -1 })
         .limit(5)
         .populate({ path: 'tour', model: Tour, select: 'title' })
