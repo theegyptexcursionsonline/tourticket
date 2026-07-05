@@ -174,8 +174,10 @@ const BookingsPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const url = buildBookingsUrl(effectiveSearch);
-      const response = await fetch(url, { headers: getAuthHeaders() });
+      // Cache-buster + no-store: the admin list must never serve a stale
+      // (edge-cached) page, otherwise a just-deleted booking reappears.
+      const url = `${buildBookingsUrl(effectiveSearch)}&_t=${Date.now()}`;
+      const response = await fetch(url, { headers: getAuthHeaders(), cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch bookings');
       const data: BookingsResponse = await response.json();
       if (!data?.success) throw new Error('Failed to fetch bookings');

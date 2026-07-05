@@ -46,6 +46,11 @@ function formatBookingDate(dateString: string | Date | undefined): string {
   });
 }
 
+// Never edge/CDN-cache the admin bookings list — it must reflect deletes/edits
+// immediately (a cached page was making just-deleted bookings reappear).
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
