@@ -1,10 +1,12 @@
 // lib/models/Category.ts
 import mongoose, { Document, Schema, models } from 'mongoose';
+import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 
 export interface ICategory extends Document {
   // Basic Info
   name: string;
   slug: string;
+  urlType?: UrlType;
   description?: string;
   longDescription?: string;
   
@@ -84,6 +86,12 @@ const CategorySchema: Schema<ICategory> = new Schema({
     trim: true,
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
     index: true,
+  },
+  // Admin-chosen public URL shape (see lib/content/contentUrl.ts).
+  urlType: {
+    type: String,
+    enum: URL_TYPES,
+    default: 'default',
   },
   description: {
     type: String,

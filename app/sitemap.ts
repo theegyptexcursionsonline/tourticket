@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import mongoose from 'mongoose';
 import { locales, defaultLocale } from '@/i18n/config';
+import { contentPath } from '@/lib/content/contentUrl';
 
 const BASE_URL = 'https://egypt-excursionsonline.com';
 
@@ -68,25 +69,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Tour) {
       const tours = await Tour.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1 }
+        { slug: 1, updatedAt: 1, urlType: 1 }
       ).lean();
 
       for (const tour of tours) {
+        const path = contentPath('tour', tour.slug, tour.urlType);
         entries.push({
-          url: `${BASE_URL}/${tour.slug}`,
+          url: `${BASE_URL}${path}`,
           lastModified: tour.updatedAt || new Date(),
           changeFrequency: 'weekly',
           priority: 0.9,
-          alternates: getAlternates(`/${tour.slug}`),
+          alternates: getAlternates(path),
         });
         for (const locale of locales) {
           if (locale === defaultLocale) continue;
           entries.push({
-            url: `${BASE_URL}/${locale}/${tour.slug}`,
+            url: `${BASE_URL}/${locale}${path}`,
             lastModified: tour.updatedAt || new Date(),
             changeFrequency: 'weekly',
             priority: 0.85,
-            alternates: getAlternates(`/${tour.slug}`),
+            alternates: getAlternates(path),
           });
         }
       }
@@ -96,26 +98,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const Destination = mongoose.models.Destination;
     if (Destination) {
       const destinations = await Destination.find(
-        {},
-        { slug: 1, updatedAt: 1 }
+        { isPublished: { $ne: false } },
+        { slug: 1, updatedAt: 1, urlType: 1 }
       ).lean();
 
       for (const dest of destinations) {
+        const path = contentPath('destination', dest.slug, dest.urlType);
         entries.push({
-          url: `${BASE_URL}/destinations/${dest.slug}`,
+          url: `${BASE_URL}${path}`,
           lastModified: dest.updatedAt || new Date(),
           changeFrequency: 'weekly',
           priority: 0.8,
-          alternates: getAlternates(`/destinations/${dest.slug}`),
+          alternates: getAlternates(path),
         });
         for (const locale of locales) {
           if (locale === defaultLocale) continue;
           entries.push({
-            url: `${BASE_URL}/${locale}/destinations/${dest.slug}`,
+            url: `${BASE_URL}/${locale}${path}`,
             lastModified: dest.updatedAt || new Date(),
             changeFrequency: 'weekly',
             priority: 0.75,
-            alternates: getAlternates(`/destinations/${dest.slug}`),
+            alternates: getAlternates(path),
           });
         }
       }
@@ -126,25 +129,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Category) {
       const categories = await Category.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1 }
+        { slug: 1, updatedAt: 1, urlType: 1 }
       ).lean();
 
       for (const cat of categories) {
+        const path = contentPath('category', cat.slug, cat.urlType);
         entries.push({
-          url: `${BASE_URL}/categories/${cat.slug}`,
+          url: `${BASE_URL}${path}`,
           lastModified: cat.updatedAt || new Date(),
           changeFrequency: 'weekly',
           priority: 0.7,
-          alternates: getAlternates(`/categories/${cat.slug}`),
+          alternates: getAlternates(path),
         });
         for (const locale of locales) {
           if (locale === defaultLocale) continue;
           entries.push({
-            url: `${BASE_URL}/${locale}/categories/${cat.slug}`,
+            url: `${BASE_URL}/${locale}${path}`,
             lastModified: cat.updatedAt || new Date(),
             changeFrequency: 'weekly',
             priority: 0.65,
-            alternates: getAlternates(`/categories/${cat.slug}`),
+            alternates: getAlternates(path),
           });
         }
       }

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { 
+import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
+import {
   PlusCircle, 
   Edit, 
   Trash2, 
@@ -42,6 +43,7 @@ interface Tour {
 interface FormData {
   name: string;
   slug: string;
+  urlType: UrlType;
   country: string;
   image: string;
   images: string[];
@@ -98,6 +100,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [formData, setFormData] = useState<FormData>({
     name: '',
     slug: '',
+    urlType: 'default',
     country: '',
     image: '',
     images: [],
@@ -151,6 +154,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     setFormData({
       name: '',
       slug: '',
+      urlType: 'default',
       country: '',
       image: '',
       images: [],
@@ -195,6 +199,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     setFormData({
       name: dest.name || '',
       slug: dest.slug || '',
+      urlType: ((dest as any).urlType as UrlType) || 'default',
       country: dest.country || '',
       image: dest.image || '',
       images: dest.images || [],
@@ -837,9 +842,28 @@ setTimeout(() => router.refresh(), 0);
                           className={`${inputStyles} pr-20`} 
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200">
-                          /{formData.slug || 'slug'}
+                          {contentPath('destination', formData.slug || 'slug', formData.urlType)}
                         </div>
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-indigo-500" />
+                        <label htmlFor="urlType" className="text-sm font-bold text-slate-700">URL Type</label>
+                      </div>
+                      <select
+                        id="urlType"
+                        name="urlType"
+                        value={formData.urlType || 'default'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, urlType: e.target.value as UrlType }))}
+                        className={inputStyles}
+                      >
+                        {URL_TYPES.map((ut) => (
+                          <option key={ut} value={ut}>{URL_TYPE_LABELS[ut]}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500">Choose the public URL shape. Changing it 301-redirects the old URL.</p>
                     </div>
 
                     {/* Description Fields */}

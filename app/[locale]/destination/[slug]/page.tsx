@@ -1,6 +1,3 @@
-// app/[locale]/categories/[slug]/page.tsx
-// Default category URL (/categories/{slug}). Renders categories still on the
-// default URL type; 301-redirects any whose admin-chosen URL type moved.
 import { notFound, permanentRedirect } from 'next/navigation';
 import { Metadata } from 'next';
 import { decideForSegment } from '@/lib/content/resolveContentBySlug';
@@ -10,26 +7,25 @@ interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
 }
 
-const SEGMENT = 'categories';
+// Serves items an admin set to the singular "/destination/{slug}" URL type;
+// anything else with this slug 301-redirects to its own canonical URL.
+const SEGMENT = 'destination';
 
-export const revalidate = 60;
-export const dynamicParams = true;
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug, locale } = await params;
+  const decision = await decideForSegment(slug, SEGMENT, locale);
+  if (decision.action === 'render') {
+    return (await getContentMatchMetadata(decision.match, locale)) || { title: 'Not Found' };
+  }
+  return { title: 'Not Found' };
+}
 
 export async function generateStaticParams() {
   return [];
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { locale, slug } = await params;
-  const decision = await decideForSegment(slug, SEGMENT, locale);
-  if (decision.action === 'render') {
-    return (await getContentMatchMetadata(decision.match, locale)) || { title: 'Category Not Found' };
-  }
-  return { title: 'Category Not Found' };
-}
-
-export default async function CategoryPage({ params }: PageProps) {
-  const { locale, slug } = await params;
+export default async function DestinationPrefixPage({ params }: PageProps) {
+  const { slug, locale } = await params;
   const decision = await decideForSegment(slug, SEGMENT, locale);
 
   if (decision.action === 'redirect') {
@@ -43,3 +39,6 @@ export default async function CategoryPage({ params }: PageProps) {
   if (!element) notFound();
   return element;
 }
+
+export const revalidate = 60;
+export const dynamicParams = true;

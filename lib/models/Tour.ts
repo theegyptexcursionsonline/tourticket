@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import './Review';
+import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 
 export interface IItineraryItem {
   time?: string;
@@ -96,6 +97,7 @@ export interface ITour extends Document {
   // Basic fields
   title: string;
   slug: string;
+  urlType?: UrlType;
   destination: mongoose.Schema.Types.ObjectId;
   category: mongoose.Schema.Types.ObjectId | mongoose.Schema.Types.ObjectId[];
   description: string;
@@ -458,7 +460,13 @@ const TourSchema: Schema<ITour> = new Schema({
     maxlength: [100, 'Slug cannot exceed 100 characters'],
     index: true
   },
-  destination: { 
+  // Admin-chosen public URL shape (see lib/content/contentUrl.ts).
+  urlType: {
+    type: String,
+    enum: URL_TYPES,
+    default: 'default',
+  },
+  destination: {
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Destination', 
     required: [true, 'Destination is required'],

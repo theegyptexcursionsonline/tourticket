@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
+import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
 import {
     Loader2,
     XCircle,
@@ -119,6 +120,7 @@ interface AddOn {
 interface TourFormData {
     title: string;
     slug: string;
+    urlType: UrlType;
     description: string;
     longDescription: string;
     duration: string;
@@ -355,6 +357,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
     const [formData, setFormData] = useState<TourFormData>({
         title: '',
         slug: '',
+        urlType: 'default',
         description: '',
         longDescription: '',
         duration: '',
@@ -401,6 +404,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             const initialData: Partial<TourFormData> = {
                 title: tourToEdit.title || '',
                 slug: tourToEdit.slug || '',
+                urlType: (tourToEdit.urlType as UrlType) || 'default',
                 description: tourToEdit.description || '',
                 longDescription: tourToEdit.longDescription || '',
                 duration: tourToEdit.duration || '',
@@ -562,6 +566,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         setFormData({
             title: '',
             slug: '',
+            urlType: 'default',
             description: '',
             longDescription: '',
             duration: '',
@@ -879,6 +884,7 @@ const addItineraryItem = () => {
             const payload = {
                 title: cleanedData.title.trim(),
                 slug: cleanedData.slug.trim(),
+                urlType: cleanedData.urlType || 'default',
                 description: cleanedData.description.trim(),
                 duration: cleanedData.duration.trim(),
                 price: parseFloat(String(cleanedData.discountPrice)) || 0,
@@ -1129,20 +1135,38 @@ const addItineraryItem = () => {
                                             </div>
                                             <div className="space-y-3">
                                                 <FormLabel icon={Tag} required>URL Slug</FormLabel>
-                                                <input 
-                                                    name="slug" 
-                                                    value={formData.slug || ''} 
-                                                    onChange={handleChange} 
-                                                    className={inputBase} 
-                                                    placeholder="auto-generated-from-title" 
-                                                    required 
+                                                <input
+                                                    name="slug"
+                                                    value={formData.slug || ''}
+                                                    onChange={handleChange}
+                                                    className={inputBase}
+                                                    placeholder="auto-generated-from-title"
+                                                    required
                                                 />
                                                 <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                                                     <span className="text-xs font-medium text-slate-500">Preview:</span>
                                                     <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                                        /{formData.slug || 'your-slug'}
+                                                        {contentPath('tour', formData.slug || 'your-slug', formData.urlType)}
                                                     </span>
                                                 </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <FormLabel icon={Globe}>URL Type</FormLabel>
+                                                <div className="relative">
+                                                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                    <select
+                                                        name="urlType"
+                                                        value={formData.urlType || 'default'}
+                                                        onChange={handleChange}
+                                                        className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                                                    >
+                                                        {URL_TYPES.map((ut) => (
+                                                            <option key={ut} value={ut}>{URL_TYPE_LABELS[ut]}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                </div>
+                                                <SmallHint>Choose the public URL shape. Changing it 301-redirects the old URL.</SmallHint>
                                             </div>
                                         </div>
 

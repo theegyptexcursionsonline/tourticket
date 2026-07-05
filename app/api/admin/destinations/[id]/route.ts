@@ -117,6 +117,7 @@ export async function PUT(
     if (data.featured !== undefined) updateData.featured = data.featured;
     if (data.isPublished !== undefined) updateData.isPublished = data.isPublished;
     if (data.tourCount !== undefined) updateData.tourCount = data.tourCount;
+    if (data.urlType !== undefined) updateData.urlType = data.urlType;
     
     // SEO & meta
     if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;

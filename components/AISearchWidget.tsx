@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
 import { cdnImg } from '@/utils/cloudinary';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ArrowLeft, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star, Send } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import type { SearchResponse } from 'algoliasearch';
@@ -1299,27 +1299,29 @@ export default function AISearchWidget() {
 
   return (
     <>
-      {/* Backdrop Blur Overlay */}
-      <AnimatePresence mode="wait">
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(false);
-            }}
-            className="fixed inset-0 z-[10] cursor-pointer"
-            style={{
-              backdropFilter: 'blur(8px)',
-              background: 'rgba(0, 0, 0, 0.15)',
-              pointerEvents: 'auto'
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Backdrop Blur Overlay — always mounted, driven purely by isExpanded via
+          a CSS transition (not framer). This guarantees it fully clears when
+          closed: opacity 0 + pointer-events:none, so it never leaves a dark tint
+          or an invisible click-blocker over the page. */}
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsExpanded(false);
+        }}
+        aria-hidden={!isExpanded}
+        className="fixed inset-0 z-[10] cursor-pointer"
+        style={{
+          backdropFilter: isExpanded ? 'blur(8px)' : 'none',
+          WebkitBackdropFilter: isExpanded ? 'blur(8px)' : 'none',
+          // Background + blur gated on isExpanded so the overlay is fully
+          // transparent when closed regardless of any opacity/compositor quirk —
+          // no lingering dark veil, no invisible click-blocker.
+          background: isExpanded ? 'rgba(0, 0, 0, 0.15)' : 'transparent',
+          opacity: isExpanded ? 1 : 0,
+          pointerEvents: isExpanded ? 'auto' : 'none',
+          transition: 'opacity 0.15s ease, background 0.15s ease',
+        }}
+      />
 
       {/* Main Container */}
       <motion.div
@@ -1333,12 +1335,11 @@ export default function AISearchWidget() {
           <div className="ai-search-container relative">
 
             {/* Search Results Panel Above Search Bar */}
-            <AnimatePresence mode="wait">
-              {isExpanded && (
+            {isExpanded && (
                 <motion.div
+                  key="ai-search-results"
                   initial={{ opacity: 0, y: 30, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 30, scale: 0.94 }}
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="absolute bottom-full mb-3 left-0 right-0 rounded-2xl md:rounded-3xl overflow-hidden motion-div-results"
                   style={{
@@ -1823,7 +1824,6 @@ export default function AISearchWidget() {
                 </div>
                 </motion.div>
               )}
-            </AnimatePresence>
 
             {/* Search Bar - Always Visible */}
             <motion.div
@@ -1957,11 +1957,14 @@ export default function AISearchWidget() {
                           </motion.button>
                           {isExpanded && (
                             <motion.div
+                              role="button"
+                              aria-label="Close AI search"
+                              onClick={() => setIsExpanded(false)}
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.8 }}
                               transition={{ duration: 0.2 }}
-                              className="w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-xl"
+                              className="w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-xl cursor-pointer"
                               style={{
                                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                                 boxShadow: '0 8px 20px -4px rgba(59, 130, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
@@ -2010,11 +2013,14 @@ export default function AISearchWidget() {
 
                           {isExpanded && (
                             <motion.div
+                              role="button"
+                              aria-label="Close AI search"
+                              onClick={() => setIsExpanded(false)}
                               initial={{ rotate: 180, opacity: 0, scale: 0.5 }}
                               animate={{ rotate: 0, opacity: 1, scale: 1 }}
                               exit={{ rotate: -180, opacity: 0, scale: 0.5 }}
                               transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-xl overflow-hidden"
+                              className="relative w-8 md:w-9 h-8 md:h-9 rounded-xl flex items-center justify-center shadow-xl overflow-hidden cursor-pointer"
                               style={{
                                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                                 boxShadow: '0 8px 20px -4px rgba(59, 130, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'

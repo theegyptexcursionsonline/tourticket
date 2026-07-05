@@ -12,10 +12,12 @@ import {
 import Image from 'next/image';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import { categoryTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
+import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
 
 interface CategoryFormData {
   name: string;
   slug: string;
+  urlType: UrlType;
   description: string;
   longDescription: string;
   heroImage: string;
@@ -40,6 +42,7 @@ interface CategoryFormProps {
 const defaultFormData: CategoryFormData = {
   name: '',
   slug: '',
+  urlType: 'default',
   description: '',
   longDescription: '',
   heroImage: '',
@@ -111,6 +114,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
         setFormData({
           name: category.name || '',
           slug: category.slug || '',
+          urlType: (category.urlType as UrlType) || 'default',
           description: category.description || '',
           longDescription: category.longDescription || '',
           heroImage: category.heroImage || '',
@@ -394,9 +398,27 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                               <span className="text-xs font-medium text-slate-500">Preview:</span>
                               <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                /category/{formData.slug || 'your-slug'}
+                                {contentPath('category', formData.slug || 'your-slug', formData.urlType)}
                               </span>
                             </div>
+                          </div>
+                          <div className="space-y-3">
+                            <FormLabel icon={Globe}>URL Type</FormLabel>
+                            <div className="relative">
+                              <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <select
+                                name="urlType"
+                                value={formData.urlType || 'default'}
+                                onChange={handleChange}
+                                className={`${inputBase} pl-10 appearance-none cursor-pointer`}
+                              >
+                                {URL_TYPES.map((ut) => (
+                                  <option key={ut} value={ut}>{URL_TYPE_LABELS[ut]}</option>
+                                ))}
+                              </select>
+                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                            </div>
+                            <p className="text-xs text-slate-500">Choose the public URL shape. Changing it 301-redirects the old URL.</p>
                           </div>
                         </div>
 

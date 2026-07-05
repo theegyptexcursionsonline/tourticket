@@ -48,10 +48,10 @@ async function getHomePageData(locale: string) {
       dayTrips,
       activeOffers
     ] = await Promise.all([
-      // Destinations with tour count (only featured)
+      // Featured destinations (candidates — narrowed below to those that
+      // actually have tours on this default site, ranked by tour count).
       Destination.find({ isPublished: true, featured: true })
         .select('name slug image description country translations')
-        .limit(8)
         .lean(),
 
       // Featured tours (exclude German tenant tours)
@@ -132,20 +132,26 @@ async function getHomePageData(locale: string) {
       }
     }
 
-    // Calculate tour counts for destinations
-    const destinationsWithCounts = await Promise.all(
-      destinations.map(async (dest) => {
-        const count = await Tour.countDocuments({
-          destination: dest._id,
-          isPublished: true,
-          ...DEFAULT_TENANT_FILTER
-        });
-        return {
-          ...JSON.parse(JSON.stringify(dest)),
-          tourCount: count
-        };
-      })
+    // Tour counts per destination for THIS default site (one aggregation).
+    const destinationCountAgg = await Tour.aggregate([
+      { $match: { isPublished: true, ...DEFAULT_TENANT_FILTER } },
+      { $group: { _id: '$destination', tourCount: { $sum: 1 } } },
+    ]);
+    const tourCountByDestination = new Map<string, number>(
+      destinationCountAgg.map((row: any) => [String(row._id), row.tourCount])
     );
+
+    // Only surface destinations that actually have tours here, ranked by count.
+    // This also drops duplicate/other-tenant destination records (which have 0
+    // default-tenant tours) so the homepage never shows empty "0 tours" cards.
+    const destinationsWithCounts = destinations
+      .map((dest: any) => ({
+        ...JSON.parse(JSON.stringify(dest)),
+        tourCount: tourCountByDestination.get(String(dest._id)) || 0,
+      }))
+      .filter((dest) => dest.tourCount > 0)
+      .sort((a, b) => b.tourCount - a.tourCount)
+      .slice(0, 8);
 
     // Calculate tour counts for InterestGrid categories
     const interestGridCategories = await Promise.all(

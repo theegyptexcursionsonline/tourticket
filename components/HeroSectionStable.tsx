@@ -1,14 +1,9 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-
-const DeferredAISearchWidget = dynamic(() => import('@/components/AISearchWidget'), {
-  ssr: false,
-});
 
 interface HeroSettings {
   backgroundImages?: {
@@ -124,8 +119,6 @@ function BackgroundSlideshow({
 export default function HeroSectionStable({ initialSettings }: HeroSectionStableProps) {
   const locale = useLocale();
   const tHero = useTranslations('hero');
-  const [aiWidgetEnabled, setAiWidgetEnabled] = useState(false);
-  const [pendingAiOpen, setPendingAiOpen] = useState(false);
   const isEnglishLocale = locale === 'en';
   const images = initialSettings?.backgroundImages?.length
     ? initialSettings.backgroundImages
@@ -157,29 +150,23 @@ export default function HeroSectionStable({ initialSettings }: HeroSectionStable
     ? (initialSettings?.trustIndicators?.rating || tHero('ratingScore'))
     : tHero('ratingScore');
 
-  useEffect(() => {
-    if (!aiWidgetEnabled || !pendingAiOpen) return;
-
-    const openDelays = [350, 800, 1400, 2200, 3200, 5000, 7500];
-    const timeouts = openDelays.map((delay) => window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('openAIAgent', { detail: { query: '' } }));
-    }, delay));
-
-    const clearPendingTimeout = window.setTimeout(() => {
-      setPendingAiOpen(false);
-    }, 8000);
-
-    return () => {
-      timeouts.forEach((timeout) => window.clearTimeout(timeout));
-      window.clearTimeout(clearPendingTimeout);
-    };
-  }, [aiWidgetEnabled, pendingAiOpen]);
-
+  // The AI search widget is mounted once per page (the sticky singleton). The
+  // hero button just nudges that instance open instead of mounting a second
+  // copy — a couple of short, self-cancelling retries cover the case where the
+  // lazily-hydrated widget isn't listening yet. Once the widget consumes the
+  // pending flag it stops re-opening, so the user's close click always sticks.
   const openAiWidget = () => {
-    (window as any).__pendingAIOpenAgent = true;
-    (window as any).__pendingAIOpenAgentQuery = '';
-    setAiWidgetEnabled(true);
-    setPendingAiOpen(true);
+    const w = window as any;
+    w.__pendingAIOpenAgent = true;
+    w.__pendingAIOpenAgentQuery = '';
+
+    const fire = () => {
+      if (!w.__pendingAIOpenAgent) return; // widget already opened; don't reopen
+      window.dispatchEvent(new CustomEvent('openAIAgent', { detail: { query: '' } }));
+    };
+
+    fire();
+    [300, 900, 1800].forEach((delay) => window.setTimeout(fire, delay));
   };
 
   const overlayOpacity = overlay.opacity ?? 0.6;
@@ -251,8 +238,6 @@ export default function HeroSectionStable({ initialSettings }: HeroSectionStable
           </div>
         </div>
       </section>
-
-      {aiWidgetEnabled && <DeferredAISearchWidget />}
     </>
   );
 }
