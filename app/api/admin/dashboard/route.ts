@@ -1,5 +1,6 @@
 // app/api/admin/dashboard/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Booking from '@/lib/models/Booking';
@@ -101,8 +102,36 @@ export async function GET(request: NextRequest) {
           })
       : [];
 
+    // Real month-over-month trends: each total now vs. its value one month ago
+    // (docs are dated by their _id timestamp, present on every document).
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const cutoffId = mongoose.Types.ObjectId.createFromTime(Math.floor(oneMonthAgo.getTime() / 1000));
+    const revStatusFilter = { $nin: ['cancelled', 'Cancelled', 'refunded', 'Refunded', 'partial_refunded'] };
+    const [prevBookings, prevRevenueAgg, prevTours, prevUsers] = await Promise.all([
+      Booking.countDocuments({ ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
+      Booking.aggregate([
+        { $match: { ...DEFAULT_TENANT_FILTER, status: revStatusFilter, _id: { $lt: cutoffId } } },
+        { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
+      ]),
+      Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
+      User.countDocuments({ _id: { $lt: cutoffId } }),
+    ]).catch(() => [0, [] as any[], 0, 0] as const);
+    const prevRevenue = Array.isArray(prevRevenueAgg) && prevRevenueAgg[0] ? (prevRevenueAgg[0].totalRevenue || 0) : 0;
+    const trendOf = (cur: number, prev: number) => ({
+      value: Math.round(prev > 0 ? ((cur - prev) / prev) * 100 : (cur > 0 ? 100 : 0)),
+      isPositive: cur >= prev,
+    });
+    const trends = {
+      bookings: trendOf(stats.totalBookings, prevBookings as number),
+      revenue: trendOf(stats.totalRevenue, prevRevenue),
+      tours: trendOf(stats.totalTours, prevTours as number),
+      users: trendOf(stats.totalUsers, prevUsers as number),
+    };
+
     const responseData = {
       ...stats,
+      trends,
       recentActivities,
     };
 
