@@ -5,6 +5,7 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -27,7 +28,8 @@ export async function GET(request: NextRequest) {
         {
           $match: {
             createdAt: { $gte: monthStart, $lte: monthEnd },
-            status: { $in: ['Confirmed', 'Pending'] }
+            status: { $in: ['Confirmed', 'Pending'] },
+            ...DEFAULT_TENANT_FILTER,
           },
         },
         {
@@ -48,7 +50,8 @@ export async function GET(request: NextRequest) {
     const topToursData = await Booking.aggregate([
       {
         $match: {
-          status: { $in: ['Confirmed', 'Pending'] }
+          status: { $in: ['Confirmed', 'Pending'] },
+          ...DEFAULT_TENANT_FILTER,
         }
       },
       {
@@ -89,14 +92,15 @@ export async function GET(request: NextRequest) {
     const totalRevenueResult = await Booking.aggregate([
       {
         $match: {
-          status: { $in: ['Confirmed', 'Pending'] }
+          status: { $in: ['Confirmed', 'Pending'] },
+          ...DEFAULT_TENANT_FILTER,
         }
       },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ]);
-    
+
     const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
-    const totalBookings = await Booking.countDocuments({ status: { $in: ['Confirmed', 'Pending'] } });
+    const totalBookings = await Booking.countDocuments({ status: { $in: ['Confirmed', 'Pending'] }, ...DEFAULT_TENANT_FILTER });
     const averageBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
 
     const kpis = {
