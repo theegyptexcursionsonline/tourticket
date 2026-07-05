@@ -30,6 +30,22 @@ export async function GET(request: NextRequest) {
       new Promise((_, reject) => setTimeout(() => reject(new Error('Database connection timeout')), 10000))
     ]);
 
+    // Fire the month-over-month trend queries concurrently with the main stats
+    // batch (one DB round-trip instead of two). Docs are dated by their _id.
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const cutoffId = mongoose.Types.ObjectId.createFromTime(Math.floor(oneMonthAgo.getTime() / 1000));
+    const revStatusFilter = { $nin: ['cancelled', 'Cancelled', 'refunded', 'Refunded', 'partial_refunded'] };
+    const trendsPromise = Promise.all([
+      Booking.countDocuments({ ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
+      Booking.aggregate([
+        { $match: { ...DEFAULT_TENANT_FILTER, status: revStatusFilter, _id: { $lt: cutoffId } } },
+        { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
+      ]),
+      Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
+      User.countDocuments({ _id: { $lt: cutoffId } }),
+    ]).catch(() => [0, [] as any[], 0, 0] as const);
+
     // Fetch all stats in parallel with error handling for each
     const [
       totalTours,
@@ -102,21 +118,8 @@ export async function GET(request: NextRequest) {
           })
       : [];
 
-    // Real month-over-month trends: each total now vs. its value one month ago
-    // (docs are dated by their _id timestamp, present on every document).
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    const cutoffId = mongoose.Types.ObjectId.createFromTime(Math.floor(oneMonthAgo.getTime() / 1000));
-    const revStatusFilter = { $nin: ['cancelled', 'Cancelled', 'refunded', 'Refunded', 'partial_refunded'] };
-    const [prevBookings, prevRevenueAgg, prevTours, prevUsers] = await Promise.all([
-      Booking.countDocuments({ ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
-      Booking.aggregate([
-        { $match: { ...DEFAULT_TENANT_FILTER, status: revStatusFilter, _id: { $lt: cutoffId } } },
-        { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
-      ]),
-      Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
-      User.countDocuments({ _id: { $lt: cutoffId } }),
-    ]).catch(() => [0, [] as any[], 0, 0] as const);
+    // Trend queries were fired concurrently above — resolve them now.
+    const [prevBookings, prevRevenueAgg, prevTours, prevUsers] = await trendsPromise;
     const prevRevenue = Array.isArray(prevRevenueAgg) && prevRevenueAgg[0] ? (prevRevenueAgg[0].totalRevenue || 0) : 0;
     const trendOf = (cur: number, prev: number) => ({
       value: Math.round(prev > 0 ? ((cur - prev) / prev) * 100 : (cur > 0 ? 100 : 0)),
