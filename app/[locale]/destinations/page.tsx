@@ -74,8 +74,8 @@ async function getDestinationsWithTourCounts(locale: string): Promise<IDestinati
   try {
     await dbConnect();
     
-    // Fetch all destinations
-    const destinations = await Destination.find({}).lean();
+    // Fetch all destinations (default site only — tenant docs stay on their sites)
+    const destinations = await Destination.find({ ...DEFAULT_TENANT_FILTER }).lean();
     
     // For each destination, count the number of published tours
     const destinationsWithCounts = await Promise.all(

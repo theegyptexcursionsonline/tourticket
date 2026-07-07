@@ -15,6 +15,7 @@ import Tour from "@/lib/models/Tour";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
 
 type ItineraryItem = { time?: string; title: string; description: string };
 type FAQItem = { question: string; answer: string };
@@ -101,11 +102,12 @@ export async function POST(req: NextRequest) {
   if (p.location) {
     const d = await Destination.findOne({
       name: { $regex: `^${p.location.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, $options: "i" },
+      ...DEFAULT_TENANT_FILTER,
     });
     if (d) destinationId = d._id;
   }
   if (!destinationId) {
-    const fallback = await Destination.findOne({}).sort({ createdAt: 1 });
+    const fallback = await Destination.findOne({ ...DEFAULT_TENANT_FILTER }).sort({ createdAt: 1 });
     destinationId = fallback?._id;
   }
   if (!destinationId) {

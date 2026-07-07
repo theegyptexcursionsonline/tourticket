@@ -8,6 +8,9 @@ export interface IDestination extends Document {
   slug: string;
   urlType?: UrlType;
   country?: string;
+
+  // Owning tenant for multi-tenant publishing; absent = default EEO site.
+  tenantId?: string;
   
   // Media
   image?: string;
@@ -131,7 +134,6 @@ const DestinationSchema: Schema<IDestination> = new Schema({
   name: {
     type: String,
     required: [true, 'Destination name is required'],
-    unique: true,
     trim: true,
     minlength: [2, 'Name must be at least 2 characters'],
     maxlength: [100, 'Name cannot exceed 100 characters'],
@@ -140,10 +142,15 @@ const DestinationSchema: Schema<IDestination> = new Schema({
   slug: {
     type: String,
     required: [true, 'Slug is required'],
-    unique: true,
     lowercase: true,
     trim: true,
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
+    index: true,
+  },
+  // Owning tenant; absent/null means the default EEO site (see DEFAULT_TENANT_FILTER).
+  tenantId: {
+    type: String,
+    trim: true,
     index: true,
   },
   // Admin-chosen public URL shape (see lib/content/contentUrl.ts).
@@ -349,6 +356,12 @@ metaDescription: {
 });
 
 // Indexes for performance
+// Slug and name are unique per tenant (legacy default-site docs all index
+// tenantId as null). Ops note: the old single-field unique indexes `slug_1`
+// and `name_1` must be dropped in prod before two tenants can share a
+// slug/name (same migration as the blogs `slug_1` index).
+DestinationSchema.index({ slug: 1, tenantId: 1 }, { unique: true });
+DestinationSchema.index({ name: 1, tenantId: 1 }, { unique: true });
 DestinationSchema.index({ name: 'text', description: 'text', country: 'text' });
 DestinationSchema.index({ featured: 1, isPublished: 1 });
 DestinationSchema.index({ country: 1, featured: 1 });

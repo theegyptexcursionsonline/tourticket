@@ -50,7 +50,7 @@ async function getHomePageData(locale: string) {
     ] = await Promise.all([
       // Featured destinations (candidates — narrowed below to those that
       // actually have tours on this default site, ranked by tour count).
-      Destination.find({ isPublished: true, featured: true })
+      Destination.find({ isPublished: true, featured: true, ...DEFAULT_TENANT_FILTER })
         .select('name slug image description country translations')
         .lean(),
 
@@ -81,7 +81,7 @@ async function getHomePageData(locale: string) {
         .lean(),
 
       // Header destinations (featured)
-      Destination.find({ isPublished: true, featured: true })
+      Destination.find({ isPublished: true, featured: true, ...DEFAULT_TENANT_FILTER })
         .select('name slug image description country translations')
         .lean(),
 

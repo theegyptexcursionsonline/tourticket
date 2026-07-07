@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
 
 export async function GET(
   req: NextRequest,
@@ -17,7 +18,10 @@ export async function GET(
   const { slug } = await ctx.params;
   await dbConnect();
 
-  const blog = await Blog.findOne({ slug }).lean();
+  // Optional ?tenantId= scopes the lookup; absent means the default site,
+  // matching how the publish routes namespace slugs per tenant.
+  const tenantId = req.nextUrl.searchParams.get("tenantId");
+  const blog = await Blog.findOne(tenantSlugFilter(slug, tenantId)).lean();
   if (!blog) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -27,6 +31,7 @@ export async function GET(
     slug: blog.slug,
     title: blog.title,
     status: blog.status,
+    tenantId: blog.tenantId ?? null,
     updatedAt: blog.updatedAt,
   });
 }

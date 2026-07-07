@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   try {
     await dbConnect();
     const { slug, locale } = await params;
-    const blog = await Blog.findOne({ slug, status: 'published' }).lean();
+    const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER }).lean();
 
     if (!blog) return { title: 'Blog Post Not Found' };
 
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
 async function getBlogPost(slug: string) {
   await dbConnect();
 
-  const blog = await Blog.findOne({ slug, status: 'published' })
+  const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER })
     .populate('relatedDestinations', 'name slug image')
     .populate('relatedTours', 'title slug image discountPrice')
     .lean();
@@ -91,7 +91,8 @@ async function getBlogPost(slug: string) {
   const relatedPosts = await Blog.find({
     status: 'published',
     category: blog.category,
-    _id: { $ne: blog._id }
+    _id: { $ne: blog._id },
+    ...DEFAULT_TENANT_FILTER,
   })
     .limit(8)
     .sort({ publishedAt: -1 })

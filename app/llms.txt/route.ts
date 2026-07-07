@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import DestinationModel from '@/lib/models/Destination';
 import BlogModel from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
@@ -31,7 +32,7 @@ export async function GET() {
   try {
     await dbConnect();
 
-    const dests = await DestinationModel.find({}, { name: 1, slug: 1 })
+    const dests = await DestinationModel.find({ ...DEFAULT_TENANT_FILTER }, { name: 1, slug: 1 })
       .limit(30)
       .lean();
     if (dests.length) {
@@ -43,7 +44,7 @@ export async function GET() {
     }
 
     const posts = await BlogModel.find(
-      { status: 'published' },
+      { status: 'published', ...DEFAULT_TENANT_FILTER },
       { title: 1, slug: 1, excerpt: 1 },
     )
       .sort({ publishedAt: -1 })

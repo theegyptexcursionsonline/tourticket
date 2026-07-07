@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Link } from '@/i18n/routing';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CollectionSchema from '@/components/schema/CollectionSchema';
@@ -61,7 +62,7 @@ function formatCategory(value?: string) {
 async function getAuthorPosts(authorSlug: string) {
   await dbConnect();
 
-  const posts = await Blog.find({ status: 'published' })
+  const posts = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
     .sort({ publishedAt: -1, createdAt: -1 })
     .select(
       'title slug excerpt featuredImage category author authorAvatar authorBio publishedAt readTime views likes tags featured'

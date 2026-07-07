@@ -32,7 +32,7 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
 
   const [tour, destination, category] = await Promise.all([
     Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
-    Destination.findOne({ slug }).select('slug urlType isPublished').lean(),
+    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
     Category.findOne({ slug }).select('slug urlType isPublished').lean(),
   ]);
 

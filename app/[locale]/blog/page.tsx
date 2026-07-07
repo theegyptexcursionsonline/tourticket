@@ -2,6 +2,7 @@ import React from 'react';
 import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
@@ -65,13 +66,13 @@ async function getBlogsWithCategoryCounts(): Promise<{
     await dbConnect();
     
     // Get all published blogs
-    const blogs = await Blog.find({ status: 'published' })
+    const blogs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
       .populate('relatedDestinations', 'name slug')
       .populate('relatedTours', 'title slug');
 
     // Get featured posts
-    const featuredPosts = await Blog.find({ status: 'published', featured: true })
+    const featuredPosts = await Blog.find({ status: 'published', featured: true, ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
       .limit(3)
       .populate('relatedDestinations', 'name slug')
@@ -80,9 +81,10 @@ async function getBlogsWithCategoryCounts(): Promise<{
     // Get category counts
     const categoryCounts = await Promise.all(
       categories.map(async (category) => {
-        const count = await Blog.countDocuments({ 
-          status: 'published', 
-          category: category.value 
+        const count = await Blog.countDocuments({
+          status: 'published',
+          category: category.value,
+          ...DEFAULT_TENANT_FILTER,
         });
         return { ...category, count };
       })

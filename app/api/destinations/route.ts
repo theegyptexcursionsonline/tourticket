@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const destinations = await Destination.find({
       isPublished: true,
       ...(featuredOnly ? { featured: true } : {}),
+      ...DEFAULT_TENANT_FILTER,
     })
       .select('_id name slug country image description featured tourCount')
       .sort({ featured: -1, tourCount: -1, name: 1 })

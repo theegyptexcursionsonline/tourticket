@@ -6,7 +6,10 @@ export interface IBlog extends Document {
   slug: string;
   excerpt: string;
   content: string;
-  
+
+  // Owning tenant for multi-tenant publishing; absent = default EEO site.
+  tenantId?: string;
+
   // Media
   featuredImage: string;
   images?: string[];
@@ -87,10 +90,15 @@ const BlogSchema: Schema<IBlog> = new Schema({
   slug: {
     type: String,
     required: [true, 'Slug is required'],
-    unique: true,
     lowercase: true,
     trim: true,
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
+    index: true,
+  },
+  // Owning tenant; absent/null means the default EEO site (see DEFAULT_TENANT_FILTER).
+  tenantId: {
+    type: String,
+    trim: true,
     index: true,
   },
   excerpt: {
@@ -272,6 +280,10 @@ const BlogSchema: Schema<IBlog> = new Schema({
 });
 
 // Indexes for performance
+// Slug is unique per tenant (legacy default-site docs all index tenantId as null).
+// Ops note: the old single-field unique index `slug_1` must be dropped in prod
+// before two tenants can share a slug.
+BlogSchema.index({ slug: 1, tenantId: 1 }, { unique: true });
 BlogSchema.index({ title: 'text', excerpt: 'text', content: 'text' });
 BlogSchema.index({ status: 1, publishedAt: -1 });
 BlogSchema.index({ category: 1, status: 1 });

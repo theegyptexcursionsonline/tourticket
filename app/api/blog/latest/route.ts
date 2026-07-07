@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,7 +14,7 @@ export async function GET() {
   try {
     if (!process.env.MONGODB_URI) return NextResponse.json({ posts: [] });
     await dbConnect();
-    const docs = await Blog.find({ status: 'published' })
+    const docs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
       .sort({ featured: -1, publishedAt: -1 })
       .limit(6)
       .select('slug title excerpt featuredImage category readTime publishedAt translations')

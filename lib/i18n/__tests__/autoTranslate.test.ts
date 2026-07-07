@@ -240,8 +240,16 @@ describe('autoTranslateTour', () => {
       de: { title: 'Pyramiden-Tour', description: 'Pyramiden besuchen' },
     };
 
-    mockCreate.mockResolvedValue({
-      choices: [{ message: { content: JSON.stringify(mockTranslations) } }],
+    // tours translate one locale per call — answer each call with just that locale's
+    // fields, matched on the "into <Language> (<code>)" phrase (the rules text
+    // mentions Arabic in an example, so matching the bare language name is not enough)
+    mockCreate.mockImplementation((req: { messages: { content: string }[] }) => {
+      const prompt = req.messages.map((m) => m.content).join('\n');
+      const locale = (Object.keys(mockTranslations) as (keyof typeof mockTranslations)[])
+        .find((code) => prompt.includes(`(${code})`));
+      return Promise.resolve({
+        choices: [{ message: { content: JSON.stringify(locale ? mockTranslations[locale] : {}) } }],
+      });
     });
 
     const { autoTranslateTour } = await import('../autoTranslate');

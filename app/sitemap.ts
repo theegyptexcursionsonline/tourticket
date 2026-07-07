@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import mongoose from 'mongoose';
 import { locales, defaultLocale } from '@/i18n/config';
 import { contentPath } from '@/lib/content/contentUrl';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 const BASE_URL = 'https://egypt-excursionsonline.com';
 
@@ -98,7 +99,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const Destination = mongoose.models.Destination;
     if (Destination) {
       const destinations = await Destination.find(
-        { isPublished: { $ne: false } },
+        { isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER },
         { slug: 1, updatedAt: 1, urlType: 1 }
       ).lean();
 
@@ -158,7 +159,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const Blog = mongoose.models.Blog;
     if (Blog) {
       const posts = await Blog.find(
-        { status: 'published' },
+        { status: 'published', ...DEFAULT_TENANT_FILTER },
         { slug: 1, updatedAt: 1, publishedAt: 1 }
       ).lean();
 

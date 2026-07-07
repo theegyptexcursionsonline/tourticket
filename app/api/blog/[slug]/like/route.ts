@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function POST(
   request: NextRequest,
@@ -11,7 +12,7 @@ export async function POST(
     
     const { slug } = await params;
     
-    const blog = await Blog.findOne({ slug, status: 'published' });
+    const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER });
     
     if (!blog) {
       return NextResponse.json({ 

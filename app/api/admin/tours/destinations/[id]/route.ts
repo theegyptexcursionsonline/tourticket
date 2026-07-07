@@ -5,6 +5,7 @@ import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function PUT(
   request: NextRequest,
@@ -42,7 +43,7 @@ export async function PUT(
     if (duplicateQuery.length > 0) {
       const duplicateDestination = await Destination.findOne({
         _id: { $ne: id },
-        $or: duplicateQuery,
+        $and: [DEFAULT_TENANT_FILTER, { $or: duplicateQuery }],
       }).collation({ locale: 'en', strength: 2 });
 
       if (duplicateDestination) {

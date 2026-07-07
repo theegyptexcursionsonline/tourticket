@@ -79,7 +79,8 @@ async function getFilters(locale: string) {
             destinationIds.length
                 ? Destination.find({
                     isPublished: true,
-                    _id: { $in: destinationIds }
+                    _id: { $in: destinationIds },
+                    ...DEFAULT_TENANT_FILTER
                 }).sort({ featured: -1, name: 1 }).lean()
                 : []
         ]);

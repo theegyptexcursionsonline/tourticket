@@ -1,7 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Calculator, ArrowRight } from 'lucide-react';
+import { Calculator, StampIcon, ArrowRight } from 'lucide-react';
 
 import { ToolsHeader, ToolsFooter } from '@/components/tools/ToolsChrome';
 import { getSeoAlternates } from '@/lib/seo';
@@ -12,9 +12,24 @@ const ACCENT = '#E05D1A';
 
 export const metadata: Metadata = {
   title: 'Free Travel Tools | Egypt Excursions Online',
-  description: 'Free planning tools for your Egypt trip from Egypt Excursions Online — budget calculators and more.',
+  description: 'Free planning tools for your Egypt trip from Egypt Excursions Online — trip cost calculator, visa checker and more.',
   alternates: getSeoAlternates('/tools'),
 };
+
+const TOOLS = [
+  {
+    href: '/tools/trip-cost-calculator',
+    Icon: Calculator,
+    title: 'Egypt Trip Cost Calculator',
+    desc: 'Estimate your full budget — hotels, food, transport, tours and visa.',
+  },
+  {
+    href: '/tools/visa-checker',
+    Icon: StampIcon,
+    title: 'Egypt Visa Checker',
+    desc: 'Do you need a visa? Entry requirements by nationality — cost, stay and steps.',
+  },
+];
 
 export default function ToolsIndexPage() {
   return (
@@ -25,23 +40,26 @@ export default function ToolsIndexPage() {
           <h1 className="text-4xl font-extrabold text-slate-900 mb-2">Free travel tools</h1>
           <p className="text-lg text-slate-600 mb-10">Plan your Egypt trip with quick, free tools.</p>
 
-          <Link
-            href="/tools/trip-cost-calculator"
-            className="group flex items-center justify-between border border-slate-200 rounded-2xl p-6 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-center gap-4">
-              <span className="rounded-xl p-3" style={{ backgroundColor: `${ACCENT}14`, color: ACCENT }}>
-                <Calculator className="w-6 h-6" />
-              </span>
-              <span>
-                <span className="block text-lg font-bold text-slate-900">Egypt Trip Cost Calculator</span>
-                <span className="block text-sm text-slate-500">
-                  Estimate your full budget — hotels, food, transport, tours and visa.
-                </span>
-              </span>
-            </div>
-            <ArrowRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {TOOLS.map(({ href, Icon, title, desc }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group flex items-center justify-between border border-slate-200 rounded-2xl p-6 hover:shadow-lg transition-shadow"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="rounded-xl p-3 shrink-0" style={{ backgroundColor: `${ACCENT}14`, color: ACCENT }}>
+                    <Icon className="w-6 h-6" />
+                  </span>
+                  <span>
+                    <span className="block text-lg font-bold text-slate-900">{title}</span>
+                    <span className="block text-sm text-slate-500">{desc}</span>
+                  </span>
+                </div>
+                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0" />
+              </Link>
+            ))}
+          </div>
         </div>
       </main>
       <ToolsFooter name="Egypt Excursions Online" accent={ACCENT} />

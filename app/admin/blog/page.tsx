@@ -2,12 +2,13 @@ import React from 'react';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import { IBlog } from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import BlogManager from './BlogManager';
 
 async function getBlogs(): Promise<IBlog[]> {
   try {
     await dbConnect();
-    const blogs = await Blog.find({})
+    const blogs = await Blog.find({ ...DEFAULT_TENANT_FILTER })
       .sort({ createdAt: -1 })
       .populate('relatedDestinations', 'name slug')
       .populate('relatedTours', 'title slug')

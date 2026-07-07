@@ -18,6 +18,7 @@ import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
 import { localizeEntityFields } from "@/lib/i18n/contentLocalization";
 import { selectLocalizedTaxonomyEntries } from "@/lib/i18n/localizedCollections";
+import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -102,7 +103,7 @@ async function getNavData(locale: string): Promise<NavCache> {
     // per SSG page. We still keep the "menu never shows duplicate or wrong-
     // language items" guarantee while staying cheap during build/runtime.
     const [destinations, categories] = await Promise.all([
-      Destination.find({ isPublished: true, featured: true })
+      Destination.find({ isPublished: true, featured: true, ...DEFAULT_TENANT_FILTER })
         .select('_id name slug image description country featured tourCount translations')
         .sort({ tourCount: -1, name: 1 })
         .lean(),

@@ -21,7 +21,7 @@ import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 
 export async function getDestinationMetadata(slug: string, locale: string, canonicalPath: string): Promise<Metadata | null> {
   await dbConnect();
-  const destinationMatches = await DestinationModel.find({ slug })
+  const destinationMatches = await DestinationModel.find({ slug, ...DEFAULT_TENANT_FILTER })
     .select('name description image country metaTitle metaDescription translations')
     .lean();
   const destinationCandidate = selectLocalizedTaxonomyEntries(
@@ -66,7 +66,7 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const destinationMatches = await DestinationModel.find({ slug }).lean();
+  const destinationMatches = await DestinationModel.find({ slug, ...DEFAULT_TENANT_FILTER }).lean();
   if (destinationMatches.length === 0) {
     return {
       destination: null,
@@ -152,9 +152,14 @@ async function getPageData(slug: string, locale: string) {
 
   const relatedDestinationsRaw = await DestinationModel.find({
     _id: { $nin: destinationIds },
-    $or: [
-      { country: (destinationCandidate as any).country },
-      { featured: true }
+    $and: [
+      DEFAULT_TENANT_FILTER,
+      {
+        $or: [
+          { country: (destinationCandidate as any).country },
+          { featured: true }
+        ]
+      }
     ]
   })
     .limit(4)

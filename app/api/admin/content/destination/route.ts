@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import { storedTenantId, tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
 
 type IncomingPayload = {
   name?: string;
@@ -73,10 +74,20 @@ export async function POST(req: NextRequest) {
 
   await dbConnect();
 
-  const existing = await Destination.findOne({ slug: p.slug });
+  // Slugs and names are namespaced per tenant — the same slug/name may exist
+  // on another tenant.
+  const existing = await Destination.findOne(tenantSlugFilter(p.slug!, body.tenantId));
   if (existing) {
     return NextResponse.json(
       { error: `A destination with slug "${p.slug}" already exists`, existingId: String(existing._id) },
+      { status: 409 },
+    );
+  }
+
+  const existingName = await Destination.findOne({ name: p.name, ...tenantFilter(body.tenantId) });
+  if (existingName) {
+    return NextResponse.json(
+      { error: `A destination named "${p.name}" already exists`, existingId: String(existingName._id) },
       { status: 409 },
     );
   }
@@ -99,7 +110,7 @@ export async function POST(req: NextRequest) {
       featuredImage: p.featuredImage,
       featured: p.featured === true,
       isPublished: p.published !== false,
-      tenantId: body.tenantId,
+      tenantId: storedTenantId(body.tenantId),
       translations: body.translations ?? {},
     });
 

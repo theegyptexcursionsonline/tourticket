@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import { storedTenantId, tenantSlugFilter } from "@/lib/tenant/tenantScope";
+import { filterSupportedTranslations } from "@/lib/i18n/supportedTranslations";
 
 const BLOG_CATEGORIES = new Set([
   "travel-tips",
@@ -105,7 +107,8 @@ export async function POST(req: NextRequest) {
 
   await dbConnect();
 
-  const existing = await Blog.findOne({ slug: payload.slug });
+  // Slugs are namespaced per tenant — the same slug may exist on another tenant.
+  const existing = await Blog.findOne(tenantSlugFilter(payload.slug!, body.tenantId));
   if (existing) {
     return NextResponse.json(
       { error: `A blog post with slug "${payload.slug}" already exists`, existingId: String(existing._id) },
@@ -118,6 +121,8 @@ export async function POST(req: NextRequest) {
         .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
         .slice(0, 10)
     : [];
+
+  const { translations, droppedLocales } = filterSupportedTranslations(body.translations);
 
   try {
     const doc = await Blog.create({
@@ -139,7 +144,8 @@ export async function POST(req: NextRequest) {
       readTime: payload.readTime,
       status: payload.status === "draft" ? "draft" : "published",
       featured: payload.featured === true,
-      translations: body.translations ?? {},
+      tenantId: storedTenantId(body.tenantId),
+      translations,
     });
 
     return NextResponse.json(
@@ -147,6 +153,7 @@ export async function POST(req: NextRequest) {
         id: String(doc._id),
         slug: doc.slug,
         liveUrl: liveUrlForBlog(doc.slug),
+        droppedLocales,
       },
       { status: 201 },
     );
@@ -173,7 +180,7 @@ export async function PUT(req: NextRequest) {
 
   await dbConnect();
 
-  const existing = await Blog.findOne({ slug: payload.slug });
+  const existing = await Blog.findOne(tenantSlugFilter(payload.slug!, body.tenantId));
   if (!existing) {
     return NextResponse.json(
       { error: `No blog post with slug "${payload.slug}"` },
@@ -198,8 +205,11 @@ export async function PUT(req: NextRequest) {
   if (payload.featuredImage) existing.featuredImage = payload.featuredImage;
   if (payload.author) existing.author = payload.author;
   if (typeof payload.featured === "boolean") existing.featured = payload.featured;
+  let droppedLocales: string[] = [];
   if (body.translations) {
-    existing.translations = body.translations as typeof existing.translations;
+    const filtered = filterSupportedTranslations(body.translations);
+    droppedLocales = filtered.droppedLocales;
+    existing.translations = filtered.translations as typeof existing.translations;
   }
 
   try {
@@ -208,6 +218,7 @@ export async function PUT(req: NextRequest) {
       id: String(existing._id),
       slug: existing.slug,
       liveUrl: liveUrlForBlog(existing.slug),
+      droppedLocales,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Update failed";

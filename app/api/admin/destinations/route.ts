@@ -77,7 +77,10 @@ export async function POST(request: NextRequest) {
     if (body.name) duplicateQuery.push({ name: String(body.name).trim() });
 
     if (duplicateQuery.length > 0) {
-      const existingDestination = await Destination.findOne({ $or: duplicateQuery }).collation({
+      // Admin creates default-site destinations only — tenant docs may reuse names/slugs.
+      const existingDestination = await Destination.findOne({
+        $and: [DEFAULT_TENANT_FILTER, { $or: duplicateQuery }],
+      }).collation({
         locale: 'en',
         strength: 2,
       });
