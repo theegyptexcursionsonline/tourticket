@@ -205,7 +205,7 @@ const nextConfig = {
 // Export with next-intl and Sentry configuration
 module.exports = withSentryConfig(withNextIntl(nextConfig), {
   org: 'egyptexcursionsonline',
-  project: 'javascript-nextjs',
+  project: 'egypt-excursionsonline-web',
   silent: !process.env.CI,
   widenClientFileUpload: true,
   disableLogger: true,
