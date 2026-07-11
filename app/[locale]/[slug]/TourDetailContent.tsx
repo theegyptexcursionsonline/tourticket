@@ -20,6 +20,7 @@ import { getStopSaleDatesForTour } from '@/lib/stopSaleFetcher';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
+import type { Review as ReviewData } from '@/types';
 
 const localizeTourFields = (tour: ITour, locale: string) =>
   localizeTour(tour as unknown as Record<string, unknown>, locale) as unknown as ITour;
@@ -27,15 +28,13 @@ const localizeTourFields = (tour: ITour, locale: string) =>
 const localizeTaxonomyFields = (entity: unknown, locale: string, fields: string[]) =>
   localizeEntityFields(entity as Record<string, unknown>, locale, fields);
 
-type TourReview = { _id: string; rating: number; [key: string]: unknown };
-
 const getEntityId = (value: unknown): string | undefined => {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
   if (typeof value !== 'object' || value === null || !('_id' in value)) return undefined;
   return value._id == null ? undefined : String(value._id);
 };
 
-export async function getTourBySlug(slug: string, locale: string): Promise<{ tour: ITour; reviews: TourReview[] } | null> {
+export async function getTourBySlug(slug: string, locale: string): Promise<{ tour: ITour; reviews: ReviewData[] } | null> {
   try {
     await dbConnect();
 
@@ -74,7 +73,7 @@ export async function getTourBySlug(slug: string, locale: string): Promise<{ tou
 
     return {
       tour: JSON.parse(JSON.stringify(tour)),
-      reviews: JSON.parse(JSON.stringify(reviews)) as TourReview[]
+      reviews: JSON.parse(JSON.stringify(reviews)) as ReviewData[]
     };
   } catch (error) {
     console.error(`[TourDetail] Error loading tour "${slug}":`, error);

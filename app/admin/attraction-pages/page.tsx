@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Edit, Trash2, Eye, Search } from 'lucide-react';
 import { AttractionPage } from '@/types';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import Image from 'next/image';
 
 export default function AttractionPagesAdmin() {
   const { token } = useAdminAuth();
@@ -15,14 +16,14 @@ export default function AttractionPagesAdmin() {
   const [filterType, setFilterType] = useState<'all' | 'attraction' | 'category'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
-  const fetchPages = async () => {
+  const fetchPages = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/attraction-pages', {
         headers: getAuthHeaders(),
@@ -45,11 +46,11 @@ export default function AttractionPagesAdmin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     void Promise.resolve().then(fetchPages);
-  }, []);
+  }, [fetchPages]);
 
   const deletePage = async (id: string, title: string) => {
     if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
@@ -198,10 +199,12 @@ export default function AttractionPagesAdmin() {
                   <tr key={page._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <img
+                        <Image
                           className="h-12 w-12 rounded-lg object-cover"
                           src={page.heroImage}
                           alt={page.title}
+                          width={48}
+                          height={48}
                         />
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">

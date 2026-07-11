@@ -1,7 +1,7 @@
 // app/admin/reviews/page.tsx
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Star, MessageSquare, Map, Trash2, CheckCircle, ShieldCheck, Clock } from 'lucide-react';
@@ -86,12 +86,12 @@ const ReviewsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
   // --- Fetch all reviews ---
   useEffect(() => {
@@ -114,7 +114,7 @@ const ReviewsPage = () => {
       }
     };
     fetchReviews();
-  }, []);
+  }, [getAuthHeaders]);
 
   const stats = useMemo(() => calculateStats(reviews), [reviews]);
   const filteredReviews = useMemo(() => {

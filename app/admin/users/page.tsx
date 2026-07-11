@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2, Search, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -64,7 +64,7 @@ const UsersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { token } = useAdminAuth();
 
-  const computeStats = (data: User[]): UserStats => {
+  const computeStats = useCallback((data: User[]): UserStats => {
     const totalUsers = data.length;
     const totalBookings = data.reduce((sum, user) => sum + user.bookingCount, 0);
     const currentMonth = new Date().getMonth();
@@ -75,9 +75,9 @@ const UsersPage = () => {
     }).length;
     const averageBookingsPerUser = totalUsers > 0 ? Math.round((totalBookings / totalUsers) * 10) / 10 : 0;
     return { totalUsers, totalBookings, activeThisMonth, averageBookingsPerUser };
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
     try {
@@ -98,14 +98,14 @@ const UsersPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [computeStats, token]);
 
   useEffect(() => {
     if (token) {
       const timeoutId = window.setTimeout(() => void fetchUsers(), 0);
       return () => window.clearTimeout(timeoutId);
     }
-  }, [token]);
+  }, [fetchUsers, token]);
 
   const getUserDisplayName = (user: User) => {
     // Prefer firstName + lastName

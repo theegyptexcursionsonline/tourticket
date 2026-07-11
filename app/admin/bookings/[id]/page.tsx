@@ -1,7 +1,7 @@
 // app/admin/bookings/[id]/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import withAuth from '@/components/admin/withAuth';
 import {
@@ -299,15 +299,15 @@ const BookingDetailPage = () => {
     }
   }, [booking]);
 
-  const getAuthHeaders = (): HeadersInit => {
+  const getAuthHeaders = useCallback((): HeadersInit => {
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return headers;
-  };
+  }, [token]);
 
-  const fetchBooking = async () => {
+  const fetchBooking = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -329,14 +329,14 @@ const BookingDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders, id]);
 
   useEffect(() => {
     if (id) {
       const timeoutId = window.setTimeout(() => void fetchBooking(), 0);
       return () => window.clearTimeout(timeoutId);
     }
-  }, [id]);
+  }, [fetchBooking, id]);
 
   const updateBookingStatus = async (newStatus: string) => {
     if (!booking) return;

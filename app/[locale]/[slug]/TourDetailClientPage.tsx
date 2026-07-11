@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
@@ -32,6 +32,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { ITour } from '@/lib/models/Tour';
 import toast from 'react-hot-toast';
 import { toDateOnlyString } from '@/utils/date';
+import type { CartItem, Review as ReviewData, Tour as WishlistTour } from '@/types';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -62,10 +63,12 @@ interface FAQ {
   answer: string;
 }
 
-interface Review {
-  _id: string;
-  rating: number;
-  [key: string]: unknown;
+type Review = ReviewData;
+
+declare global {
+  interface Window {
+    FoxesConnect?: { open: () => void };
+  }
 }
 
 interface TourEnhancement {
@@ -220,15 +223,15 @@ const getDisplayTags = (tags?: string[]) => {
 const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], selectedIndex: number, onClose: () => void }) => {
   const [currentIndex, setCurrentIndex] = useState(selectedIndex);
 
-  const nextImage = (e?: React.MouseEvent) => {
+  const nextImage = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  };
+  }, [images.length]);
 
-  const prevImage = (e?: React.MouseEvent) => {
+  const prevImage = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
-  };
+  }, [images.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -239,7 +242,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [nextImage, onClose, prevImage]);
 
   return (
     <motion.div
@@ -923,8 +926,8 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
       
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <ReviewList
-          reviews={currentReviews as any}
-          onReviewUpdated={handleReviewUpdated as any}
+          reviews={currentReviews}
+          onReviewUpdated={handleReviewUpdated}
           onReviewDeleted={handleReviewDeleted}
         />
 
@@ -1037,7 +1040,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       removeFromWishlist(String(tour._id));
       toast.success('Removed from wishlist');
     } else {
-      addToWishlist(tour as any);
+      addToWishlist(tour as unknown as WishlistTour);
       toast.success('Added to wishlist!');
     }
   };
@@ -1053,14 +1056,14 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-      } catch (err: unknown) {
-        console.error('Error sharing:', err);
+      } catch (error: unknown) {
+        console.error('Error sharing:', error);
       }
     } else {
       try {
         await navigator.clipboard.writeText(window.location.href);
         toast.success('Tour link copied to clipboard!');
-      } catch (err: unknown) {
+      } catch {
         toast.error('Could not copy link.');
       }
     }
@@ -1149,16 +1152,17 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     setLiveMessage('Adding tour to cart');
 
     try {
-      const quickAddCartItem = {
-        ...(tour as any),
+      const quickAddCartItem: CartItem = {
+        ...(tour as unknown as WishlistTour),
         uniqueId: `${tour._id}-quick-add-${Date.now()}`,
         quantity: 1,
         childQuantity: 0,
+        infantQuantity: 0,
         selectedDate: toDateOnlyString(new Date()),
         selectedTime: 'Anytime',
         selectedAddOns: {},
         totalPrice: tour.discountPrice,
-      } as any;
+      };
       addToCart(quickAddCartItem);
       setAdded(true);
       setLiveMessage('Added to cart');
@@ -1312,7 +1316,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
-                        <span>{typeof tour.destination === 'string' ? tour.destination : (tour.destination as any)?.name || 'Destination'}</span>
+                        <span>{typeof tour.destination === 'string' ? tour.destination : (tour.destination as unknown as { name?: string })?.name || 'Destination'}</span>
                       </div>
                     </div>
                   </div>
@@ -1562,8 +1566,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       onClick={(e) => {
                         e.preventDefault();
                         try {
-                          if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
-        (window as any).FoxesConnect.open();
+                          if (window.FoxesConnect && typeof window.FoxesConnect.open === 'function') {
+        window.FoxesConnect.open();
         return;
       }
                           if (typeof window !== 'undefined') {
@@ -1601,7 +1605,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       </main>
 
 
-      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as any} initialStopSaleDates={initialStopSaleDates} />
+      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as unknown as React.ComponentProps<typeof BookingSidebar>['tour']} initialStopSaleDates={initialStopSaleDates} />
 
       <StickyBookButton
         price={tour.discountPrice}

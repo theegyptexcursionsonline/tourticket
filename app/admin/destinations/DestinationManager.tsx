@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -33,6 +33,7 @@ import { IDestination } from '@/lib/models/Destination';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import { destinationTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import Image from 'next/image';
 
 interface Tour {
   _id: string;
@@ -88,12 +89,12 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const router = useRouter();
   const { token } = useAdminAuth();
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,7 +154,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       }
     };
     fetchTours();
-  }, []);
+  }, [getAuthHeaders]);
 
   const resetForm = () => {
     setFormData({
@@ -547,10 +548,12 @@ setTimeout(() => router.refresh(), 0);
             {/* Image Container */}
             <div className="relative h-56 overflow-hidden">
               {dest.image ? (
-                <img 
+                <Image
                   src={dest.image} 
                   alt={dest.name} 
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               ) : (
                 <div className="h-full w-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
@@ -735,11 +738,13 @@ setTimeout(() => router.refresh(), 0);
                       
                       <div className="relative">
                         {formData.image ? (
-                          <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
-                            <img 
+                          <div className="group relative h-64 overflow-hidden rounded-2xl border-2 border-slate-200">
+                            <Image
                               src={formData.image} 
                               alt="Preview" 
-                              className="w-full h-64 object-cover" 
+                              fill
+                              sizes="(max-width: 1024px) 100vw, 768px"
+                              className="object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                               <button 

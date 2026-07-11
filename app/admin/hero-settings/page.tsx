@@ -1,7 +1,7 @@
 // app/admin/hero-settings/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
@@ -74,14 +74,14 @@ const HeroSettingsPage = () => {
   const [newTag, setNewTag] = useState('');
   const [newSuggestion, setNewSuggestion] = useState('');
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
-const fetchHeroSettings = async () => {
+const fetchHeroSettings = useCallback(async () => {
   try {
     setIsLoading(true);
     const response = await fetch('/api/admin/hero-settings', {
@@ -105,11 +105,11 @@ const fetchHeroSettings = async () => {
   } finally {
     setIsLoading(false);
   }
-};
+}, [getAuthHeaders]);
 
   useEffect(() => {
     void Promise.resolve().then(fetchHeroSettings);
-  }, []);
+  }, [fetchHeroSettings]);
 
 const handleAddBackgroundImage = async () => {
   if (!newImage.desktop || !newImage.alt) {

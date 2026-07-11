@@ -1,7 +1,7 @@
 // app/admin/reports/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -55,12 +55,12 @@ const ReportsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -82,7 +82,7 @@ const ReportsPage = () => {
       }
     };
     fetchReportData();
-  }, []);
+  }, [getAuthHeaders]);
 
   if (isLoading) {
     return <div className="p-6">Loading reports...</div>;

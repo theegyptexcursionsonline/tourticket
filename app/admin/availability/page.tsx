@@ -47,6 +47,30 @@ const isTourOption = (value: unknown): value is TourOption =>
   'id' in value && typeof value.id === 'string' &&
   'title' in value && typeof value.title === 'string';
 
+async function loadAvailabilityForMonth(
+  tourId: string,
+  month: number,
+  year: number,
+  token: string | null,
+): Promise<Map<string, AvailabilityData>> {
+  const params = new URLSearchParams({
+    tourId,
+    month: String(month + 1),
+    year: String(year),
+  });
+  const response = await fetch(`/api/admin/availability?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json();
+  const availability = new Map<string, AvailabilityData>();
+  if (data.success) {
+    data.data.forEach((item: AvailabilityData) => {
+      availability.set(toDateOnlyString(new Date(item.date)), item);
+    });
+  }
+  return availability;
+}
+
 // Calendar helper functions
 const getDaysInMonth = (year: number, month: number) => {
   return new Date(year, month + 1, 0).getDate();
@@ -113,7 +137,7 @@ const AvailabilityPage = () => {
     if (token) {
       fetchTours();
     }
-  }, [token]);
+  }, [selectedTour, token]);
 
   // Fetch availability for selected tour and month
   const fetchAvailability = async () => {
@@ -121,25 +145,7 @@ const AvailabilityPage = () => {
 
     setIsLoading(true);
     try {
-      const params = new URLSearchParams({
-        tourId: selectedTour,
-        month: String(month + 1),
-        year: String(year),
-      });
-
-      const response = await fetch(`/api/admin/availability?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        const availMap = new Map<string, AvailabilityData>();
-        data.data.forEach((item: AvailabilityData) => {
-          const dateKey = toDateOnlyString(new Date(item.date));
-          availMap.set(dateKey, item);
-        });
-        setAvailability(availMap);
-      }
+      setAvailability(await loadAvailabilityForMonth(selectedTour, month, year, token));
     } catch (error) {
       console.error('Error fetching availability:', error);
     } finally {
@@ -148,9 +154,16 @@ const AvailabilityPage = () => {
   };
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => void fetchAvailability(), 0);
+    if (!selectedTour) return;
+    const timeoutId = window.setTimeout(() => {
+      setIsLoading(true);
+      void loadAvailabilityForMonth(selectedTour, month, year, token)
+        .then(setAvailability)
+        .catch((error) => console.error('Error fetching availability:', error))
+        .finally(() => setIsLoading(false));
+    }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [selectedTour, month, year, token]);
+  }, [month, selectedTour, token, year]);
 
   // Navigation handlers
   const goToPreviousMonth = () => {
@@ -422,8 +435,6 @@ const AvailabilityPage = () => {
             const avail = availability.get(dateStr);
             const isSelected = selectedDates.has(dateStr);
             const isPast = new Date(dateStr) < new Date(new Date().toDateString());
-            const hasStopSale = status === 'stopSaleFull' || status === 'stopSalePartial' || avail?.stopSale;
-
             return (
               <div
                 key={day}

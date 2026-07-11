@@ -9,7 +9,6 @@ import Footer from '@/components/Footer';
 import BlogPostClient, { type BlogPost, type TourPreview } from './BlogPostClient';
 import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import FAQSchema from '@/components/schema/FAQSchema';
-import type { IBlog } from '@/lib/models/Blog';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';

@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { parseLocalDate } from '@/utils/date';
 
@@ -134,10 +135,12 @@ export default function BookingVerificationPage() {
           {/* Tour Image */}
           {booking.tour.image && (
             <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative overflow-hidden">
-              <img 
+              <Image
                 src={booking.tour.image} 
                 alt={booking.tour.title}
-                className="w-full h-full object-cover opacity-80"
+                fill
+                sizes="(max-width: 896px) 100vw, 896px"
+                className="object-cover opacity-80"
               />
             </div>
           )}

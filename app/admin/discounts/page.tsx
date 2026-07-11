@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
@@ -42,12 +42,12 @@ const DiscountsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
   // --- Form State ---
   const [code, setCode] = useState('');
@@ -57,7 +57,7 @@ const DiscountsPage = () => {
   const [formError, setFormError] = useState<string | null>(null);
 
   // --- Fetch Discounts ---
-  const fetchDiscounts = async () => {
+  const fetchDiscounts = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/admin/discounts', {
@@ -75,11 +75,11 @@ const DiscountsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     void Promise.resolve().then(fetchDiscounts);
-  }, []);
+  }, [fetchDiscounts]);
 
   // --- Form Submission ---
   const handleSubmit = async (e: FormEvent) => {
@@ -389,7 +389,7 @@ const DiscountsPage = () => {
             // Cards View
             <div className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {discounts.map((discount, index) => (
+                {discounts.map((discount) => (
                   <div 
                     key={discount._id}
                     className="group bg-white border border-slate-200/60 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"

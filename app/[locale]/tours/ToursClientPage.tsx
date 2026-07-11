@@ -270,7 +270,7 @@ export default function ToursClientPage({ tours }: ToursClientPageProps) {
 
   // Filter and sort tours
   const filteredTours = useMemo(() => {
-    let filtered = tours.filter(tour => {
+    const filtered = tours.filter(tour => {
       const matchesSearch = tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            tour.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDestination = selectedDestination === 'all' || tour.destination?.name === selectedDestination;

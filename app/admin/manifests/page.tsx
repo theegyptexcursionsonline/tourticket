@@ -1,7 +1,7 @@
 // app/admin/manifests/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import {
@@ -66,12 +66,12 @@ const ManifestsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getAuthHeaders = (contentType = true): HeadersInit => {
+  const getAuthHeaders = useCallback((contentType = true): HeadersInit => {
     const headers: HeadersInit = {};
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
+  }, [token]);
 
   // Fetch all tours for the dropdown selector
   useEffect(() => {
@@ -99,7 +99,7 @@ const ManifestsPage = () => {
       }
     };
     fetchTours();
-  }, []);
+  }, [getAuthHeaders]);
 
   const handleGenerateManifest = async () => {
     if (!selectedTour || !selectedDate) {
