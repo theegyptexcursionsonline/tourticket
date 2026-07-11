@@ -30,8 +30,8 @@ const SafeImage = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setImageError(false);
-    setIsLoading(true);
+    const timer = window.setTimeout(() => { setImageError(false); setIsLoading(true); }, 0);
+    return () => window.clearTimeout(timer);
   }, [src]);
 
   if (!src || src.trim() === '' || imageError) {
@@ -147,7 +147,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         {/* Price pill (overlay bottom-left) */}
         <div className="absolute left-4 bottom-4 z-20">
           <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 rounded-full font-black shadow-xl text-lg border-2 border-white/20">
-            {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
+            <span className="text-xs font-medium">From </span>{formatPrice(tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0)}
             {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
               <span className="ml-3 text-sm font-medium line-through text-red-100">
                 {formatPrice(tour.originalPrice)}
@@ -203,7 +203,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             <div className="text-sm text-gray-500 mb-1">Starting from</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl md:text-3xl font-black text-gray-900">
-                {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
+                <span className="text-xs font-medium">From </span>{formatPrice(tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0)}
               </span>
               {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
                 <span className="text-sm text-gray-400 line-through">
@@ -326,7 +326,7 @@ export default function FeaturedTours() {
         <div className="container mx-auto px-4 md:px-8">
           <div className="text-center bg-white rounded-3xl shadow-lg p-12 border border-gray-100">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Tours</h2>
-            <p className="text-gray-600 mb-8 text-lg">We couldn't load featured tours right now.</p>
+            <p className="text-gray-600 mb-8 text-lg">We couldn&apos;t load featured tours right now.</p>
             <button 
               onClick={retryFetch} 
               className="px-8 py-4 rounded-full bg-gradient-to-r from-red-600 to-red-500 text-white font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"

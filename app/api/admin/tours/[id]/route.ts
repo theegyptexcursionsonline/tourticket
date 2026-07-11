@@ -6,6 +6,7 @@ import Category from "@/lib/models/Category";
 import mongoose from "mongoose";
 import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 
 // Helper function to find a tour by ID or Slug with safe population
@@ -181,7 +182,7 @@ export async function PUT(
 
         // Clean booking options to remove invalid enum values
         if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
-            body.bookingOptions = cleanBookingOptions(body.bookingOptions);
+            body.bookingOptions = ensureBookingOptionPricingKeys(id, cleanBookingOptions(body.bookingOptions));
         }
 
         // Clean main tour difficulty field

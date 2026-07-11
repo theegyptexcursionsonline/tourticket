@@ -164,7 +164,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         {/* Price Badge */}
         <div className="absolute left-4 bottom-4 z-20">
           <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-3 py-2 rounded-full font-black text-sm sm:text-base border-2 border-white/20" style={{ boxShadow: 'none' }}>
-            {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
+            <span className="text-xs font-medium">From </span>{formatPrice(tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0)}
             {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
               <span className="ml-2 text-xs font-medium line-through text-red-100">
                 {formatPrice(tour.originalPrice)}
@@ -217,7 +217,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             <div className="text-xs text-gray-500 mb-0.5">{t('startingFrom')}</div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg sm:text-xl md:text-2xl font-black text-gray-900">
-                {formatPrice(tour.discountPrice || tour.originalPrice || 0)}
+                <span className="text-xs font-medium">From </span>{formatPrice(tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0)}
               </span>
               {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
                 <span className="text-xs text-gray-400 line-through">

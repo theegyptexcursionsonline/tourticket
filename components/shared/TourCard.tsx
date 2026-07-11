@@ -49,6 +49,7 @@ const TourCard: React.FC<TourCardProps> = ({
   }
 
   const tourIsWishlisted = isWishlisted(tour._id);
+  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice;
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -87,6 +88,8 @@ const TourCard: React.FC<TourCardProps> = ({
         selectedDate: toDateOnlyString(new Date()),
         selectedTime: 'Anytime',
         selectedAddOns: {},
+        guestPrices: { adult: tour.discountPrice, child: Math.round(tour.discountPrice * 50) / 100, infant: 0 },
+        priceVersion: 0,
         totalPrice: tour.discountPrice,
       };
 
@@ -213,9 +216,9 @@ const TourCard: React.FC<TourCardProps> = ({
 
               <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg text-right">
                 <div className="text-lg font-bold text-slate-900">
-                  {formatPrice(tour.discountPrice)}
+                  <span className="text-[10px] font-medium text-slate-500">From </span>{formatPrice(displayedPrice)}
                 </div>
-                {tour.originalPrice && tour.originalPrice > tour.discountPrice && (
+                {tour.originalPrice && tour.originalPrice > displayedPrice && (
                   <div className="text-xs text-slate-500 line-through">
                     {formatPrice(tour.originalPrice)}
                   </div>

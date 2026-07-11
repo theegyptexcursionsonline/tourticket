@@ -102,6 +102,10 @@ interface TimeSlot {
   isPopular?: boolean;
   originalAvailable?: number;
   discount?: number;
+  guestPrices?: { adult: number; child: number; infant: number };
+  priceVersion?: number;
+  priceExecutionId?: string | null;
+  priceOverrideId?: string | null;
 }
 
 interface AddOnTour {
@@ -138,6 +142,7 @@ interface AvailabilityData {
 
 interface TourOption {
   id: string;
+  pricingKey?: string;
   title: string;
   price: number;
   originalPrice?: number;
@@ -674,7 +679,7 @@ const TourOptionCard: React.FC<{
       {/* Highlights */}
       {option.highlights && (
         <div className="mb-2">
-          <h4 className="font-semibold text-gray-800 text-xs mb-1">What's Included</h4>
+          <h4 className="font-semibold text-gray-800 text-xs mb-1">What&apos;s Included</h4>
           <div className="grid grid-cols-1 gap-1">
             {option.highlights.slice(0, 3).map((highlight, index) => (
               <div key={index} className="flex items-center gap-1.5 bg-green-50 rounded-full px-2.5 py-1">
@@ -1435,6 +1440,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           const baseTimeSlots = option.timeSlots || generateTimeSlotsFromAvailability(optionPrice, index);
           return {
             id: optionId,
+            pricingKey: option.pricingKey,
             title: option.label || option.title || 'Tour Option',
             price: optionPrice,
             originalPrice: option.originalPrice || optionPrice,
@@ -1465,6 +1471,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         tourOptions = [
           {
             id: fallbackOptionId,
+            pricingKey: 'standard',
             title: 'Standard Tour Experience',
             price: standardPrice,
             originalPrice: tourDisplayData?.originalPrice || standardPrice,
@@ -1557,7 +1564,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       originalBasePrice = tourDisplayData.originalPrice || tourDisplayData.discountPrice;
     }
 
-    const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * basePrice * 0.5);
+    const childPrice = bookingData.selectedTimeSlot?.guestPrices?.child ?? basePrice * 0.5;
+    const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * childPrice);
     const originalSubtotal = (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
 
     const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
@@ -1732,13 +1740,40 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
   }, [calendarAvailability]);
 
-  const handleTimeSlotSelect = useCallback((timeSlot: TimeSlot) => {
+  const handleTimeSlotSelect = useCallback(async (timeSlot: TimeSlot) => {
     if (timeSlot.available === 0) {
       toast.error('This time slot is fully booked');
       return;
     }
 
-    setBookingData(prev => ({ ...prev, selectedTimeSlot: timeSlot }));
+    let effectiveSlot = timeSlot;
+    try {
+      const selectedOption = availability?.tourOptions.find((option) => option.timeSlots.some((slot) => slot.id === timeSlot.id));
+      const tourId = tour._id || tour.id;
+      if (tourId && bookingData.selectedDate) {
+        const query = new URLSearchParams({
+          date: toDateOnlyString(bookingData.selectedDate),
+          time: timeSlot.time,
+          optionKey: selectedOption?.pricingKey || 'standard',
+        });
+        const response = await fetch(`/api/tours/${tourId}/quote?${query}`, { cache: 'no-store' });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error?.message || 'Unable to confirm the live price.');
+        effectiveSlot = {
+          ...timeSlot,
+          price: payload.quote.prices.adult,
+          guestPrices: payload.quote.prices,
+          priceVersion: payload.quote.version,
+          priceExecutionId: payload.quote.executionId,
+          priceOverrideId: payload.quote.overrideId,
+        };
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to confirm the live price.');
+      return;
+    }
+
+    setBookingData(prev => ({ ...prev, selectedTimeSlot: effectiveSlot }));
 
     // Prevent duplicate toasts in React Strict Mode
     const toastId = `${timeSlot.id}-${timeSlot.time}`;
@@ -1754,7 +1789,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         lastToastTimeSlotRef.current = null;
       }, 2100);
     }
-  }, []);
+  }, [availability, bookingData.selectedDate, tour]);
 
   // Enhanced participant controls
   const handleParticipantChange = useCallback((type: 'adults' | 'children' | 'infants', increment: boolean) => {
@@ -1852,8 +1887,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       // Prepare selected booking option details
       const selectedBookingOptionDetails = selectedOption ? {
         id: selectedOption.id,
+        pricingKey: selectedOption.pricingKey || 'standard',
         title: selectedOption.title,
-        price: selectedOption.price,
+        price: selectedTimeSlot.price,
         originalPrice: selectedOption.originalPrice,
         duration: selectedOption.duration,
         badge: selectedOption.badge,
@@ -1872,9 +1908,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         selectedAddOns: bookingData.selectedAddOns,
         selectedAddOnDetails,
         selectedBookingOption: selectedBookingOptionDetails,
-        price: selectedOption?.price || tourDisplayData.discountPrice,
+        guestPrices: selectedTimeSlot.guestPrices,
+        priceVersion: selectedTimeSlot.priceVersion,
+        priceExecutionId: selectedTimeSlot.priceExecutionId,
+        priceOverrideId: selectedTimeSlot.priceOverrideId,
+        price: selectedTimeSlot.price,
         originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
-        discountPrice: selectedOption?.price || tourDisplayData.discountPrice,
+        discountPrice: selectedTimeSlot.price,
         totalPrice: 0,
       };
 

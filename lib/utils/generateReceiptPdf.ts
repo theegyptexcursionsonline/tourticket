@@ -53,7 +53,7 @@ const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): 
 const calculateItemTotal = (item: ReceiptOrderedItem) => {
   const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
   const adultPrice = basePrice * (item.quantity || 1);
-  const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+  const childPrice = Number((item as any).guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
   let tourTotal = adultPrice + childPrice;
 
   let addOnsTotal = 0;

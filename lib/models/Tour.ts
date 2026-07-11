@@ -36,6 +36,7 @@ export interface IFAQ {
 }
 
 export interface IBookingOption {
+  pricingKey?: string;
   type: string;
   label: string;
   price: number;
@@ -174,6 +175,7 @@ export interface ITour extends Document {
 
   // Localized overrides by locale code (e.g. en, ar, de)
   translations?: Record<string, ITourTranslation>;
+  pricingSummary?: { fromPrice: number; currency: string; version: number; validThrough?: Date };
 }
 
 const ItineraryItemSchema = new Schema<IItineraryItem>({
@@ -288,6 +290,12 @@ const FAQSchema = new Schema<IFAQ>({
 }, { _id: false });
 
 const BookingOptionSchema = new Schema<IBookingOption>({
+  pricingKey: {
+    type: String,
+    trim: true,
+    immutable: true,
+    match: [/^[a-z0-9][a-z0-9_-]{2,79}$/, 'Invalid pricing key'],
+  },
   type: {
     type: String,
     required: true,
@@ -777,6 +785,12 @@ const TourSchema: Schema<ITour> = new Schema({
       availableDays: [0, 1, 2, 3, 4, 5, 6],
       slots: [{ time: '10:00', capacity: 10 }]
     })
+  },
+  pricingSummary: {
+    fromPrice: { type: Number, min: 0 },
+    currency: { type: String, default: 'USD' },
+    version: { type: Number, default: 0 },
+    validThrough: { type: Date },
   },
   attractions: [{
     type: mongoose.Schema.Types.ObjectId,

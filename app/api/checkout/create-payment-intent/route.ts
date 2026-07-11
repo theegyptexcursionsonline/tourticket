@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
-import { secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       const adults = toNumberQty(item?.quantity ?? 1, 1);
       const children = toNumberQty(item?.childQuantity ?? 0, 0);
       const adultPrice = Number(basePrice) * adults;
-      const childPrice = (Number(basePrice) / 2) * children;
+      const childPrice = Number(item?.guestPrices?.child ?? Number(basePrice) / 2) * children;
       return sum + adultPrice + childPrice + calculateAddOnsTotal(item);
     }, 0));
 
@@ -148,6 +148,11 @@ export async function POST(request: Request) {
       bp: item.selectedBookingOption?.price || item.discountPrice || item.price, // base price
       bo: item.selectedBookingOption?.id, // booking option ID
       bot: item.selectedBookingOption?.title, // booking option title
+      ok: item.selectedBookingOption?.pricingKey,
+      gp: item.guestPrices,
+      pv: item.priceVersion,
+      pe: item.priceExecutionId,
+      po: item.priceOverrideId,
       // Add-ons (short keys): [{id,q,p,pg,t}]
       ao: (() => {
         const addOns: any[] = [];
@@ -235,6 +240,10 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Create PaymentIntent error:', error);
+
+    if (error instanceof PriceChangedError) {
+      return NextResponse.json({ success: false, code: error.code, message: error.message, quote: error.quote }, { status: 409 });
+    }
 
     // Provide more specific error messages
     let errorMessage = 'Failed to initialize payment. Please try again.';

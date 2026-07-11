@@ -12,6 +12,11 @@ jest.mock('@/lib/models/Tour', () => ({
   default: { findOne: (...args: any[]) => (findOne as any)(...args) },
 }));
 
+jest.mock('@/lib/revenue/pricingResolver', () => ({
+  STANDARD_OPTION_KEY: 'standard',
+  resolveEffectivePrice: jest.fn(),
+}));
+
 import { secureCartPricing } from '@/lib/checkout/serverCartPricing';
 
 describe('secureCartPricing', () => {

@@ -48,11 +48,19 @@ export interface IBooking extends Document {
   selectedAddOns?: { [key: string]: number };
   selectedBookingOption?: {
     id: string;
+    pricingKey?: string;
     title: string;
     price: number;
     originalPrice?: number;
     duration?: string;
     badge?: string;
+  };
+  priceSnapshot?: {
+    guestPrices: { adult: number; child: number; infant: number };
+    version: number;
+    executionId?: string;
+    overrideId?: string;
+    capturedAt: Date;
   };
   selectedAddOnDetails?: {
     [key: string]: {
@@ -243,11 +251,23 @@ const BookingSchema: Schema<IBooking> = new Schema({
   selectedBookingOption: {
     type: {
       id: String,
+      pricingKey: String,
       title: String,
       price: Number,
       originalPrice: Number,
       duration: String,
       badge: String,
+    },
+    required: false,
+  },
+
+  priceSnapshot: {
+    type: {
+      guestPrices: { adult: Number, child: Number, infant: Number },
+      version: { type: Number, required: true },
+      executionId: String,
+      overrideId: String,
+      capturedAt: { type: Date, required: true },
     },
     required: false,
   },

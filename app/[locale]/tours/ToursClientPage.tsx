@@ -127,6 +127,7 @@ const TOURS_PAGE_COPY: Record<'en' | 'ar' | 'de', ToursPageCopy> = {
 
 const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageCopy; rtl: boolean }) => {
   const { formatPrice } = useSettings();
+  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice;
   const discountPercent = tour.originalPrice && tour.discountPrice
     ? Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)
     : 0;
@@ -211,14 +212,14 @@ const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageC
           {/* Price Section */}
           <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
             <div>
-              {tour.originalPrice && tour.discountPrice < tour.originalPrice && (
+              {tour.originalPrice && displayedPrice < tour.originalPrice && (
                 <div className="text-sm text-slate-400 line-through">
                   {formatPrice(tour.originalPrice)}
                 </div>
               )}
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-blue-600">
-                  {formatPrice(tour.discountPrice)}
+                  <span className="text-xs font-medium text-slate-500">From </span>{formatPrice(displayedPrice)}
                 </span>
                 <span className="text-xs text-slate-500">{copy.perPerson}</span>
               </div>

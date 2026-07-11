@@ -178,6 +178,7 @@ export interface Tour {
   discountPrice: number;
   originalPrice?: number;
   price?: number;
+  pricingSummary?: { fromPrice: number; currency: string; version: number; validThrough?: string | Date };
   duration: string;
   rating?: number;
   bookings?: number;
@@ -385,12 +386,17 @@ export interface CartItem extends Tour {
   };
   selectedBookingOption?: {
     id: string;
+    pricingKey?: string;
     title: string;
     price: number;
     originalPrice?: number;
     duration?: string;
     badge?: string;
   };
+  guestPrices?: { adult: number; child: number; infant: number };
+  priceVersion?: number;
+  priceExecutionId?: string | null;
+  priceOverrideId?: string | null;
   totalPrice: number;
 }
 

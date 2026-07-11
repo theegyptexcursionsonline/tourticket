@@ -298,7 +298,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       // Calculate price for this item
       const basePrice = item.bp || 0;
       const adultPrice = basePrice * (item.a || 1);
-      const childPrice = (basePrice / 2) * (item.c || 0);
+      const childPrice = Number(item.gp?.child ?? basePrice / 2) * (item.c || 0);
       let itemSubtotal = adultPrice + childPrice;
 
       // Add-ons from metadata (ao: [{id,q,p,pg,t}])
@@ -375,8 +375,16 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         selectedAddOnDetails: Object.keys(selectedAddOnDetails).length > 0 ? selectedAddOnDetails : undefined,
         selectedBookingOption: item.bo ? {
           id: item.bo,
+          pricingKey: item.ok,
           title: item.bot || '',
           price: item.bp || 0,
+        } : undefined,
+        priceSnapshot: item.gp ? {
+          guestPrices: item.gp,
+          version: Number(item.pv || 0),
+          executionId: item.pe || undefined,
+          overrideId: item.po || undefined,
+          capturedAt: new Date(),
         } : undefined,
         // Store discount info if a promo code was applied
         discountCode: discountCode,

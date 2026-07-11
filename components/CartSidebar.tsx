@@ -25,7 +25,7 @@ const CartSidebar: FC = () => {
         const basePrice = item.selectedBookingOption?.price || item.discountPrice || 0;
         
         const adultPrice = basePrice * (item.quantity || 1);
-        const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+        const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
         let tourTotal = adultPrice + childPrice;
 
         let addOnsTotal = 0;

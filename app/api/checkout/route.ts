@@ -11,7 +11,7 @@ import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference, generateUniqueBookingReference } from '@/lib/utils/bookingReference';
 import { currencies } from '@/utils/localization';
-import { secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
 import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
 import { signToken } from '@/lib/jwt';
 
@@ -129,7 +129,7 @@ const calculateCartSubtotal = (cart: any[]): number => {
   return round2((cart || []).reduce((sum, item) => {
     const basePrice = item?.selectedBookingOption?.price || item?.discountPrice || item?.price || 0;
     const adultPrice = Number(basePrice) * (item?.quantity || 1);
-    const childPrice = (Number(basePrice) / 2) * (item?.childQuantity || 0);
+    const childPrice = Number(item?.guestPrices?.child ?? Number(basePrice) / 2) * (item?.childQuantity || 0);
     const itemSubtotal = adultPrice + childPrice + calculateAddOnsTotal(item);
     return sum + itemSubtotal;
   }, 0));
@@ -479,7 +479,7 @@ export async function POST(request: NextRequest) {
         // NOTE: overall discount is computed from computedPricing.subtotal (no fees/tax), so we prorate using the same basis.
         const basePrice = cartItem.selectedBookingOption?.price || cartItem.discountPrice || cartItem.price || 0;
         const adultPrice = basePrice * (cartItem.quantity || 1);
-        const childPrice = (basePrice / 2) * (cartItem.childQuantity || 0);
+        const childPrice = Number(cartItem.guestPrices?.child ?? basePrice / 2) * (cartItem.childQuantity || 0);
         const addOnsTotal = calculateAddOnsTotal(cartItem);
 
         const itemSubtotal = round2(adultPrice + childPrice + addOnsTotal);
@@ -529,6 +529,13 @@ export async function POST(request: NextRequest) {
           infantGuests: cartItem.infantQuantity || 0,
           selectedAddOns: cartItem.selectedAddOns || {},
           selectedBookingOption: cartItem.selectedBookingOption,
+          priceSnapshot: {
+            guestPrices: cartItem.guestPrices,
+            version: cartItem.priceVersion,
+            executionId: cartItem.priceExecutionId || undefined,
+            overrideId: cartItem.priceOverrideId || undefined,
+            capturedAt: new Date(),
+          },
           selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
           // Store discount info if a promo code was applied
           discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
@@ -580,7 +587,7 @@ export async function POST(request: NextRequest) {
     const orderedItemsSummary = cart.map((item: any) => {
       const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
       const adultPrice = basePrice * (item.quantity || 1);
-      const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+      const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
       let total = adultPrice + childPrice;
 
       total += calculateAddOnsTotal(item);
@@ -656,7 +663,7 @@ export async function POST(request: NextRequest) {
     }
     if (childCount > 0) {
       const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
-      const childPrice = basePrice / 2;
+      const childPrice = Number(mainCartItem?.guestPrices?.child ?? basePrice / 2);
       participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
     }
     if (infantCount > 0) {
@@ -686,7 +693,7 @@ export async function POST(request: NextRequest) {
         const getItemTotal = (item: any) => {
           const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
           const adultPrice = basePrice * (item.quantity || 1);
-          const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+          const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
           let tourTotal = adultPrice + childPrice;
 
           let addOnsTotal = 0;
@@ -826,6 +833,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Checkout error:', error);
+
+    if (error instanceof PriceChangedError) {
+      return NextResponse.json({ success: false, code: error.code, message: error.message, quote: error.quote }, { status: 409 });
+    }
     
     if (error.message.includes('Payment processing failed')) {
       return NextResponse.json(

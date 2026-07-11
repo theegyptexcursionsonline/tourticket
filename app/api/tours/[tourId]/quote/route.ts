@@ -1,0 +1,24 @@
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/dbConnect';
+import { resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest, context: { params: Promise<{ tourId: string }> }) {
+  try {
+    await dbConnect();
+    const { tourId } = await context.params;
+    const date = request.nextUrl.searchParams.get('date') || '';
+    const time = request.nextUrl.searchParams.get('time') || '';
+    const optionKey = request.nextUrl.searchParams.get('optionKey') || undefined;
+    if (!date || !time) {
+      return NextResponse.json({ error: { code: 'INVALID_QUOTE_TARGET', message: 'date and time are required.' } }, { status: 400 });
+    }
+    const quote = await resolveEffectivePrice({ tourId, date, time, optionKey });
+    return NextResponse.json({ quote }, { headers: { 'Cache-Control': 'no-store, private' } });
+  } catch (error: any) {
+    const message = error?.message || 'Unable to resolve price';
+    const status = /Invalid|required/.test(message) ? 400 : /unavailable/.test(message) ? 404 : 500;
+    return NextResponse.json({ error: { code: 'QUOTE_UNAVAILABLE', message } }, { status });
+  }
+}

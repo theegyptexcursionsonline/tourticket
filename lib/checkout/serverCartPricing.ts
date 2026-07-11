@@ -1,6 +1,16 @@
 import mongoose from 'mongoose';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
+
+export class PriceChangedError extends Error {
+  code = 'PRICE_CHANGED';
+  quote: any;
+  constructor(quote: any) {
+    super('The selected price changed. Review the new quote before continuing.');
+    this.quote = quote;
+  }
+}
 
 const FALLBACK_ADDONS = [
   { id: 'photo-package-fallback', title: 'Professional Photography Package', price: 35, category: 'Photography', perGuest: false },
@@ -34,18 +44,20 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
     const optionId = rawItem?.selectedBookingOption?.id
       ? String(rawItem.selectedBookingOption.id)
       : '';
+    const requestedPricingKey = rawItem?.selectedBookingOption?.pricingKey ? String(rawItem.selectedBookingOption.pricingKey) : '';
     let option: any;
     if (optionId && optionId !== 'standard-default') {
       const match = optionId.match(/^option-(\d+)$/);
-      const optionIndex = match
-        ? Number(match[1])
-        : tour.bookingOptions?.findIndex((candidate: any) => String(candidate?._id || '') === optionId);
+      const optionIndex = requestedPricingKey
+        ? tour.bookingOptions?.findIndex((candidate: any) => candidate?.pricingKey === requestedPricingKey)
+        : match ? Number(match[1]) : tour.bookingOptions?.findIndex((candidate: any) => String(candidate?._id || '') === optionId);
       if (optionIndex === undefined || optionIndex < 0 || !tour.bookingOptions?.[optionIndex]) {
         throw new Error('Invalid booking option');
       }
       const dbOption = tour.bookingOptions[optionIndex];
       option = {
         id: optionId,
+        pricingKey: dbOption.pricingKey,
         title: dbOption.label || `${tour.title} - ${dbOption.type}`,
         price: Number(dbOption.price),
         originalPrice: Number(dbOption.originalPrice || tour.originalPrice || dbOption.price),
@@ -55,6 +67,7 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
     } else {
       option = {
         id: 'standard-default',
+        pricingKey: STANDARD_OPTION_KEY,
         title: `${tour.title} - Standard Experience`,
         price: Number(tour.discountPrice),
         originalPrice: Number(tour.originalPrice || tour.discountPrice),
@@ -62,6 +75,20 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
     }
 
     if (!Number.isFinite(option.price) || option.price < 0) throw new Error('Invalid catalogue price');
+
+    let quote: any = null;
+    if (rawItem?.selectedDate && rawItem?.selectedTime) {
+      quote = await resolveEffectivePrice({
+        tourId,
+        optionKey: option.pricingKey || STANDARD_OPTION_KEY,
+        date: String(rawItem.selectedDate).slice(0, 10),
+        time: String(rawItem.selectedTime),
+      });
+      if ((process.env.REVENUEPILOT_PRICING_API_ENABLED === 'true' && rawItem?.priceVersion === undefined) || (rawItem?.priceVersion !== undefined && Number(rawItem.priceVersion) !== quote.version)) {
+        throw new PriceChangedError(quote);
+      }
+      option.price = quote.prices.adult;
+    }
 
     const catalogueAddons = tour.addOns?.length
       ? tour.addOns.map((addon: any, index: number) => ({
@@ -107,6 +134,10 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
       discountPrice: option.price,
       originalPrice: option.originalPrice,
       selectedBookingOption: option,
+      guestPrices: quote?.prices || { adult: option.price, child: Math.round(option.price * 50) / 100, infant: 0 },
+      priceVersion: quote?.version || 0,
+      priceExecutionId: quote?.executionId || null,
+      priceOverrideId: quote?.overrideId || null,
       selectedAddOns,
       selectedAddOnDetails,
     };

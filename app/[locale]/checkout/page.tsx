@@ -204,7 +204,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const getItemTotal = (item: CartItem) => {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
     const adultPrice = basePrice * (item.quantity || 1);
-    const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+    const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
     let tourTotal = adultPrice + childPrice;
 
     let addOnsTotal = 0;
@@ -1036,7 +1036,7 @@ const handleDownloadReceipt = async () => {
                   const getItemTotal = (item: CartItem) => {
                     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
                     const adultPrice = basePrice * (item.quantity || 1);
-                    const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+                    const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
                     let tourTotal = adultPrice + childPrice;
                     let addOnsTotal = 0;
                     if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -1230,7 +1230,7 @@ export default function CheckoutPage() {
   const getItemTotal = (item: CartItem) => {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
     const adultPrice = basePrice * (item.quantity || 1);
-    const childPrice = (basePrice / 2) * (item.childQuantity || 0);
+    const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
     let tourTotal = adultPrice + childPrice;
 
     let addOnsTotal = 0;
