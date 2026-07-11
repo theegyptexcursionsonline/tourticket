@@ -532,7 +532,7 @@ setTimeout(() => router.refresh(), 0);
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {initialDestinations.map((dest, index) => (
           <motion.div
-            key={dest._id as string}
+            key={String(dest._id)}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -565,7 +565,7 @@ setTimeout(() => router.refresh(), 0);
                   <Edit size={16} />
                 </button>
                 <button
-                  onClick={() => handleDelete(dest._id as string, dest.name)} 
+                  onClick={() => handleDelete(String(dest._id), dest.name)}
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Delete destination"
                 >
@@ -1350,7 +1350,7 @@ setTimeout(() => router.refresh(), 0);
                       value={formData.translations}
                       onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
                       modelType="destination"
-                      entityId={editingDestination?._id as string}
+                      entityId={editingDestination?._id ? String(editingDestination._id) : undefined}
                     />
                   </div>
                 )}

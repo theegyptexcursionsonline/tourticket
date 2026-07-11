@@ -82,7 +82,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     // exclusively from the httpOnly cookie.
     localStorage.removeItem('admin-auth-token');
     localStorage.removeItem('admin-user');
-    void Promise.resolve().then(refreshUserWithToken).finally(() => setIsLoading(false));
+    void Promise.resolve().then(() => refreshUserWithToken()).finally(() => setIsLoading(false));
   }, [refreshUserWithToken]);
 
   const login = useCallback(
