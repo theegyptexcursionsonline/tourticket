@@ -101,8 +101,10 @@ const AdminSidebar = () => {
 
   // Close mobile menu when route changes
   useEffect(() => {
-    setIsMobileOpen(false);
-    setPendingHref(null);
+    queueMicrotask(() => {
+      setIsMobileOpen(false);
+      setPendingHref(null);
+    });
   }, [pathname]);
 
   // Prevent scroll when mobile menu is open

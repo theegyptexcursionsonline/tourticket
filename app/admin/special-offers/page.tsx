@@ -124,8 +124,7 @@ const SpecialOffersPage = () => {
   }, [token]);
 
   useEffect(() => {
-    fetchOffers();
-    fetchTours();
+    void Promise.resolve().then(() => Promise.all([fetchOffers(), fetchTours()]));
   }, [fetchOffers, fetchTours]);
 
   // Handle delete

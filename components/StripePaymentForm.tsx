@@ -224,25 +224,25 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
     // Validate customer data before creating PaymentIntent
     if (!customer.email || !customer.firstName || !customer.lastName) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
     // Validate email format
     if (!isValidEmail(customer.email)) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
     // Validate cart has items
     if (!cart || cart.length === 0) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
     // Validate pricing
     if (!pricing || pricing.total <= 0) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
@@ -251,7 +251,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     
     // If we already have a payment intent and cart hasn't changed, don't create another
     if (paymentIntentCreatedRef.current && clientSecret && lastCartHashRef.current === currentCartHash) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 

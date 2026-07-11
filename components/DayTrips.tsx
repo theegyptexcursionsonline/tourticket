@@ -29,8 +29,10 @@ const SafeImage = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setImageError(false);
-    setIsLoading(true);
+    queueMicrotask(() => {
+      setImageError(false);
+      setIsLoading(true);
+    });
   }, [src]);
 
   if (!src || src.trim() === '' || imageError) {

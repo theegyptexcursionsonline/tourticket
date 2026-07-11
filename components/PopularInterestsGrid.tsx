@@ -252,8 +252,10 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
         return b.products - a.products;
       });
 
-      setInterests(filtered.slice(0, limit));
-      setLoading(false);
+      queueMicrotask(() => {
+        setInterests(filtered.slice(0, limit));
+        setLoading(false);
+      });
       return;
     }
 

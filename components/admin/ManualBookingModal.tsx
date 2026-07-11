@@ -148,12 +148,12 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       const tax = subtotal * 0.05;
       const total = subtotal + serviceFee + tax;
 
-      setFormData(prev => ({
+      queueMicrotask(() => setFormData(prev => ({
         ...prev,
         serviceFee: parseFloat(serviceFee.toFixed(2)),
         tax: parseFloat(tax.toFixed(2)),
         totalPrice: parseFloat(total.toFixed(2)),
-      }));
+      })));
     }
   }, [formData.bookingOptionPrice, formData.basePrice, formData.adultGuests, formData.childGuests, formData.customPrice]);
 
@@ -918,4 +918,3 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
 };
 
 export default ManualBookingModal;
-

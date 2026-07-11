@@ -68,15 +68,6 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
         setShowAIChat(true);
     };
 
-    // Show AI chat when user starts typing
-    useEffect(() => {
-        if (searchQuery.trim().length > 0) {
-            setShowAIChat(true);
-        } else {
-            setShowAIChat(false);
-        }
-    }, [searchQuery]);
-
     // Handle search form submission
     const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
         e?.preventDefault();
@@ -193,7 +184,10 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
                                     <input
                                         type="text"
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                            setShowAIChat(e.target.value.trim().length > 0);
+                                        }}
                                         placeholder="Ask me anything... e.g., 'Find romantic sunset cruises in Cairo'"
                                         autoFocus
                                         className="w-full text-sm sm:text-base md:text-lg pl-12 sm:pl-16 pr-12 sm:pr-6 py-4 sm:py-5 bg-white/80 backdrop-blur-sm border-2 border-slate-200 rounded-xl sm:rounded-2xl focus:outline-none focus:border-red-500 focus:bg-white focus:shadow-xl transition-all placeholder:text-slate-400"
@@ -201,7 +195,10 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
                                     {searchQuery && (
                                         <button
                                             type="button"
-                                            onClick={() => setSearchQuery('')}
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setShowAIChat(false);
+                                            }}
                                             className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors"
                                         >
                                             <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />

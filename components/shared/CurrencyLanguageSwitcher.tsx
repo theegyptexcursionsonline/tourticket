@@ -1,7 +1,7 @@
 // components/shared/CurrencyLanguageSwitcher.tsx
 'use client';
 
-import React, { useState, useEffect, FC } from 'react';
+import React, { useState, useEffect, useMemo, FC } from 'react';
 import { X, Search, Globe, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -25,20 +25,13 @@ const SettingsModal = <T extends Item>({
   searchPlaceholder = "Search..."
 }: SettingsModalProps<T>) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredItems, setFilteredItems] = useState<T[]>(items);
-
-  // Filter items based on search term
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredItems(items);
-    } else {
-      const filtered = items.filter(item =>
+  const filteredItems = useMemo(() => {
+    if (!searchTerm.trim()) return items;
+    return items.filter(item =>
         Object.values(item).some(value => 
           String(value).toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
-      setFilteredItems(filtered);
-    }
   }, [searchTerm, items]);
 
   useEffect(() => { 

@@ -133,12 +133,12 @@ export default function HotelPickupMap({
   useEffect(() => {
     if (pickupOption !== 'now') return;
     if (!GOOGLE_MAPS_API_KEY) {
-      setMapError(true);
+      queueMicrotask(() => setMapError(true));
       return;
     }
 
     if (window.google && window.google.maps) {
-      setScriptLoaded(true);
+      queueMicrotask(() => setScriptLoaded(true));
       return;
     }
 

@@ -141,13 +141,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // --- Firebase auth state listener ---
   useEffect(() => {
     if (!shouldInitializeAuthForPath()) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
-    setIsLoading(true);
+    queueMicrotask(() => setIsLoading(true));
 
     loadFirebaseAuth().then(({ auth, onAuthStateChanged }) => {
       if (cancelled) return;

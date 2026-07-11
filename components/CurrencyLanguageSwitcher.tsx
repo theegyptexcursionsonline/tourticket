@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, FC } from 'react';
+import React, { useState, useEffect, useSyncExternalStore, FC } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,12 +37,11 @@ const SettingsModal = <T extends Item>({
   renderItem 
 }: SettingsModalProps<T>) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!isOpen) {

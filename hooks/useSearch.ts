@@ -5,7 +5,7 @@ export const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   useEffect(() => {
     try {
       const storedItems = window.localStorage.getItem(storageKey);
-      if (storedItems) setRecentSearches(JSON.parse(storedItems));
+      if (storedItems) queueMicrotask(() => setRecentSearches(JSON.parse(storedItems)));
     } catch (error) { console.error("Failed to load recent searches", error); }
   }, [storageKey]);
 

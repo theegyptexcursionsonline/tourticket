@@ -22,10 +22,6 @@ export default function AttractionPagesAdmin() {
     return headers;
   };
 
-  useEffect(() => {
-    fetchPages();
-  }, []);
-
   const fetchPages = async () => {
     try {
       const response = await fetch('/api/admin/attraction-pages', {
@@ -50,6 +46,10 @@ export default function AttractionPagesAdmin() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchPages);
+  }, []);
 
   const deletePage = async (id: string, title: string) => {
     if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {

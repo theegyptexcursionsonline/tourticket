@@ -317,7 +317,7 @@ export default function InterestGrid() {
   };
 
   useEffect(() => {
-    fetchData();
+    void Promise.resolve().then(fetchData);
   }, []);
 
   const getCategoryPageForInterest = (interest: Interest): CategoryPage | undefined => {

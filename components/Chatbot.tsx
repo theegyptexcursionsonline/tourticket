@@ -27,9 +27,9 @@ export default function Chatbot() {
   // Add initial welcome message when chat opens
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      setMessages([
+      queueMicrotask(() => setMessages([
         { id: 1, text: "Hi there! 👋 I'm here to help. How can I assist you with your travel plans today?", sender: 'bot' }
-      ]);
+      ]));
     }
   }, [isOpen, messages.length]);
 

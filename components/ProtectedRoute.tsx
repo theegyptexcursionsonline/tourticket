@@ -1,5 +1,5 @@
 'use client';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -11,13 +11,9 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, fallback }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-
   useEffect(() => {
     // Wait for auth context to finish loading
     if (!isLoading) {
-      setHasCheckedAuth(true);
-      
       // Only redirect if we're sure the user is not authenticated
       if (!isAuthenticated && !user) {
         router.push('/login');
@@ -26,7 +22,7 @@ export default function ProtectedRoute({ children, fallback }: ProtectedRoutePro
   }, [isLoading, isAuthenticated, user, router]);
 
   // Show loading while auth context is initializing or during redirect
-  if (isLoading || !hasCheckedAuth) {
+  if (isLoading) {
     return (
       fallback || (
         <div className="min-h-screen bg-white flex items-center justify-center">

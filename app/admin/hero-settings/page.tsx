@@ -81,10 +81,6 @@ const HeroSettingsPage = () => {
     return headers;
   };
 
-  useEffect(() => {
-    fetchHeroSettings();
-  }, []);
-
 const fetchHeroSettings = async () => {
   try {
     setIsLoading(true);
@@ -110,6 +106,10 @@ const fetchHeroSettings = async () => {
     setIsLoading(false);
   }
 };
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchHeroSettings);
+  }, []);
 
 const handleAddBackgroundImage = async () => {
   if (!newImage.desktop || !newImage.alt) {

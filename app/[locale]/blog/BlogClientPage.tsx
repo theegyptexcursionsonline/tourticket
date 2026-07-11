@@ -149,10 +149,7 @@ const FeaturedBlogCard = ({ blog }: { blog: BlogWithVirtuals }) => (
 export default function BlogClientPage({ blogs, categories, featuredPosts }: BlogClientPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [filteredBlogs, setFilteredBlogs] = useState(blogs);
-
-  // Filter blogs based on search and category
-  React.useEffect(() => {
+  const filteredBlogs = React.useMemo(() => {
     let filtered = blogs;
     
     if (searchTerm) {
@@ -167,7 +164,7 @@ export default function BlogClientPage({ blogs, categories, featuredPosts }: Blo
       filtered = filtered.filter(blog => blog.category === selectedCategory);
     }
     
-    setFilteredBlogs(filtered);
+    return filtered;
   }, [searchTerm, selectedCategory, blogs]);
 
   return (

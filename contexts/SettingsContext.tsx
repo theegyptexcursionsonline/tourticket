@@ -63,7 +63,7 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
         // Try to parse as JSON first
         try {
           const parsedItem = JSON.parse(item);
-          setState(parsedItem);
+          queueMicrotask(() => setState(parsedItem));
         } catch {
           console.log(`Item ${key} in localStorage is not valid JSON, checking if it's a simple string value`);
           
@@ -72,17 +72,17 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
             // If it's just a language code like "es", find the language object
             const language = languages.find(lang => lang.code === item);
             if (language) {
-              setState(language as T);
+              queueMicrotask(() => setState(language as T));
             }
           } else if (key === 'selectedCurrency') {
             // If it's just a currency code like "USD", find the currency object
             const currency = currencies.find(curr => curr.code === item);
             if (currency) {
-              setState(currency as T);
+              queueMicrotask(() => setState(currency as T));
             }
           } else {
             // For other cases, try to use the raw string value
-            setState(item as T);
+            queueMicrotask(() => setState(item as T));
           }
         }
       }
@@ -95,7 +95,7 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
         console.error(`Error clearing corrupted ${key} from localStorage:`, clearError);
       }
     } finally {
-      setIsLoaded(true);
+      queueMicrotask(() => setIsLoaded(true));
     }
   }, [key]);
   

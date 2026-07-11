@@ -61,14 +61,9 @@ function ShareAndLike({ blog }: { blog: IBlog }) {
   const [open, setOpen] = useState(false);
   const [likes, setLikes] = useState(blog?.likes ?? 0);
   const [liked, setLiked] = useState(false);
-  const [url, setUrl] = useState('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') setUrl(window.location.href);
-  }, []);
 
   const handleShare = (type: 'facebook' | 'twitter' | 'copy') => {
-    if (!url) return;
+    const url = window.location.href;
     if (type === 'facebook') {
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'noopener');
     } else if (type === 'twitter') {

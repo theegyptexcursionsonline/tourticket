@@ -1095,14 +1095,16 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   const isFaqInView = useInView(faqRef, inViewOptions);
 
   useEffect(() => {
-    if (isFaqInView) setActiveTab('faq');
-    else if (isReviewsInView) setActiveTab('reviews');
-    else if (isCulturalInView) setActiveTab('cultural');
-    else if (isPoliciesInView) setActiveTab('policies');
-    else if (isAccessibilityInView) setActiveTab('accessibility');
-    else if (isPracticalInView) setActiveTab('practical');
-    else if (isItineraryInView) setActiveTab('itinerary');
-    else if (isOverviewInView) setActiveTab('overview');
+    const visibleTab = isFaqInView ? 'faq'
+      : isReviewsInView ? 'reviews'
+      : isCulturalInView ? 'cultural'
+      : isPoliciesInView ? 'policies'
+      : isAccessibilityInView ? 'accessibility'
+      : isPracticalInView ? 'practical'
+      : isItineraryInView ? 'itinerary'
+      : isOverviewInView ? 'overview'
+      : null;
+    if (visibleTab) queueMicrotask(() => setActiveTab(visibleTab));
   }, [
     isOverviewInView, isItineraryInView, isPracticalInView, isAccessibilityInView,
     isPoliciesInView, isCulturalInView, isReviewsInView, isFaqInView

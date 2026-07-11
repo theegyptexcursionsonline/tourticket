@@ -227,8 +227,10 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
       const filtered = initialInterests
         .filter((interest: Interest) => interest.slug !== currentSlug && interest.products > 0)
         .slice(0, limit);
-      setInterests(filtered);
-      setLoading(false);
+      queueMicrotask(() => {
+        setInterests(filtered);
+        setLoading(false);
+      });
       return;
     }
 

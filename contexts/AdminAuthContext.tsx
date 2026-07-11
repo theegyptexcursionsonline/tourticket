@@ -35,14 +35,6 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Remove credentials persisted by older releases, then restore the session
-    // exclusively from the httpOnly cookie.
-    localStorage.removeItem('admin-auth-token');
-    localStorage.removeItem('admin-user');
-    refreshUserWithToken().finally(() => setIsLoading(false));
-  }, []);
-
   const persistSession = useCallback((newUser: AdminUser) => {
     // Non-secret compatibility flag for existing components. The credential
     // itself is only in the httpOnly cookie and is never exposed to JS.
@@ -84,6 +76,14 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     },
     [token, clearSession, persistSession],
   );
+
+  useEffect(() => {
+    // Remove credentials persisted by older releases, then restore the session
+    // exclusively from the httpOnly cookie.
+    localStorage.removeItem('admin-auth-token');
+    localStorage.removeItem('admin-user');
+    void Promise.resolve().then(refreshUserWithToken).finally(() => setIsLoading(false));
+  }, [refreshUserWithToken]);
 
   const login = useCallback(
     async (email: string, password: string) => {

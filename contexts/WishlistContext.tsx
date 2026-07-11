@@ -28,18 +28,36 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   const { user, token, isAuthenticated } = useAuth();
 
+  // Sync to server helper
+  const syncToServer = useCallback(async (items: Tour[]) => {
+    if (!isAuthenticated || !token) return;
+
+    try {
+      await fetch('/api/user/wishlist', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ wishlist: items }),
+      });
+    } catch (error) {
+      console.error('Failed to sync wishlist to server:', error);
+    }
+  }, [isAuthenticated, token]);
+
   // Load wishlist from localStorage (for guests or initial load)
   useEffect(() => {
     if (!isAuthenticated) {
       try {
         const storedWishlist = localStorage.getItem('wishlist');
         if (storedWishlist) {
-          setWishlist(JSON.parse(storedWishlist));
+          queueMicrotask(() => setWishlist(JSON.parse(storedWishlist)));
         }
       } catch (error) {
         console.error("Failed to parse wishlist from localStorage", error);
       }
-      setHasSyncedFromServer(false);
+      queueMicrotask(() => setHasSyncedFromServer(false));
     }
   }, [isAuthenticated]);
 
@@ -91,26 +109,8 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    syncFromServer();
-  }, [isAuthenticated, token, hasSyncedFromServer]);
-
-  // Sync to server helper
-  const syncToServer = useCallback(async (items: Tour[]) => {
-    if (!isAuthenticated || !token) return;
-
-    try {
-      await fetch('/api/user/wishlist', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ wishlist: items }),
-      });
-    } catch (error) {
-      console.error('Failed to sync wishlist to server:', error);
-    }
-  }, [isAuthenticated, token]);
+    void Promise.resolve().then(syncFromServer);
+  }, [isAuthenticated, token, hasSyncedFromServer, syncToServer]);
 
   // Save to localStorage (for guests) whenever wishlist changes
   useEffect(() => {

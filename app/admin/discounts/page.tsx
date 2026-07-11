@@ -79,7 +79,7 @@ const DiscountsPage = () => {
   };
 
   useEffect(() => {
-    fetchDiscounts();
+    void Promise.resolve().then(fetchDiscounts);
   }, []);
 
   // --- Form Submission ---

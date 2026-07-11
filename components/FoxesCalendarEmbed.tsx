@@ -25,15 +25,17 @@ export default function FoxesCalendarEmbed({
 
   useEffect(() => {
     if (!orgId || !apiUrl) {
-      setError('Missing required configuration: orgId and apiUrl are required');
-      setIsLoading(false);
+      queueMicrotask(() => {
+        setError('Missing required configuration: orgId and apiUrl are required');
+        setIsLoading(false);
+      });
       return;
     }
 
     // Check if script already exists
     const existingScript = document.querySelector(`script[data-foxes-widget="${containerId}"]`);
     if (existingScript) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
