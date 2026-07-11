@@ -30,11 +30,11 @@ export default function HomeDeferredSections({
   dayTrips,
 }: HomeDeferredSectionsProps) {
   const isMobile = useIsMobileViewport();
-  const showFeatured = useInViewOnce<HTMLDivElement>('500px 0px');
-  const showPopular = useInViewOnce<HTMLDivElement>('450px 0px');
-  const showCategories = useInViewOnce<HTMLDivElement>('400px 0px');
-  const showDayTrips = useInViewOnce<HTMLDivElement>('350px 0px');
-  const showInfo = useInViewOnce<HTMLDivElement>('300px 0px');
+  const { ready: featuredReady, ref: featuredRef } = useInViewOnce<HTMLDivElement>('500px 0px');
+  const { ready: popularReady, ref: popularRef } = useInViewOnce<HTMLDivElement>('450px 0px');
+  const { ready: categoriesReady, ref: categoriesRef } = useInViewOnce<HTMLDivElement>('400px 0px');
+  const { ready: dayTripsReady, ref: dayTripsRef } = useInViewOnce<HTMLDivElement>('350px 0px');
+  const { ready: infoReady, ref: infoRef } = useInViewOnce<HTMLDivElement>('300px 0px');
   const featuredTours = isMobile ? tours.slice(0, 8) : tours;
   const popularInterests = isMobile ? featuredInterests.slice(0, 8) : featuredInterests;
   const interestCategories = isMobile ? categories.slice(0, 10) : categories;
@@ -42,41 +42,41 @@ export default function HomeDeferredSections({
 
   return (
     <>
-      {showFeatured.ready ? (
+      {featuredReady ? (
         <>
           <IcebarPromo />
           <FeaturedToursServer tours={featuredTours as any} />
         </>
       ) : (
-        <DeferredSentinel ref={showFeatured.ref} minHeight="40vh" />
+        <DeferredSentinel ref={featuredRef} minHeight="40vh" />
       )}
 
-      {showFeatured.ready && (
-        showPopular.ready ? (
+      {featuredReady && (
+        popularReady ? (
           <PopularInterestServer interests={popularInterests as any} categoryPages={categoryPages as any} />
         ) : (
-          <DeferredSentinel ref={showPopular.ref} minHeight="28vh" />
+          <DeferredSentinel ref={popularRef} minHeight="28vh" />
         )
       )}
 
-      {showPopular.ready && (
-        showCategories.ready ? (
+      {popularReady && (
+        categoriesReady ? (
           <InterestGridServer categories={interestCategories as any} />
         ) : (
-          <DeferredSentinel ref={showCategories.ref} minHeight="24vh" />
+          <DeferredSentinel ref={categoriesRef} minHeight="24vh" />
         )
       )}
 
-      {showCategories.ready && (
-        showDayTrips.ready ? (
+      {categoriesReady && (
+        dayTripsReady ? (
           <DayTripsServer tours={featuredDayTrips as any} />
         ) : (
-          <DeferredSentinel ref={showDayTrips.ref} minHeight="24vh" />
+          <DeferredSentinel ref={dayTripsRef} minHeight="24vh" />
         )
       )}
 
-      {showDayTrips.ready && (
-        showInfo.ready ? (
+      {dayTripsReady && (
+        infoReady ? (
           <>
             <AboutUs />
             <Reviews />
@@ -85,7 +85,7 @@ export default function HomeDeferredSections({
             <Footer />
           </>
         ) : (
-          <DeferredSentinel ref={showInfo.ref} minHeight="30vh" />
+          <DeferredSentinel ref={infoRef} minHeight="30vh" />
         )
       )}
     </>
