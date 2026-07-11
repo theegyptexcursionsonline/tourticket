@@ -17,7 +17,8 @@ jest.mock('@/lib/revenue/pricingResolver', () => ({
   resolveEffectivePrice: jest.fn(),
 }));
 
-import { secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
 
 describe('secureCartPricing', () => {
   beforeEach(() => {
@@ -27,7 +28,7 @@ describe('secureCartPricing', () => {
       title: 'Catalogue Tour',
       discountPrice: 80,
       originalPrice: 100,
-      bookingOptions: [{ label: 'Premium', type: 'Per Person', price: 120 }],
+      bookingOptions: [{ label: 'Premium', type: 'Per Person', price: 120, pricingKey: 'premium-key' }],
       addOns: [{ name: 'Lunch', description: 'Lunch package', price: 25, category: 'Food' }],
     });
   });
@@ -55,5 +56,24 @@ describe('secureCartPricing', () => {
       id: '507f1f77bcf86cd799439011',
       selectedAddOns: { invented: 1 },
     }])).rejects.toThrow('Invalid add-on');
+  });
+
+  it('rejects a stale quote version instead of silently repricing checkout', async () => {
+    jest.mocked(resolveEffectivePrice).mockResolvedValue({ version: 2, prices: { adult: 126, child: 63, infant: 0 } } as any);
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011', selectedDate: '2026-08-01', selectedTime: '10:00', priceVersion: 1,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'premium-key' },
+    }])).rejects.toBeInstanceOf(PriceChangedError);
+  });
+
+  it('uses explicit guest prices from the authoritative quote', async () => {
+    jest.mocked(resolveEffectivePrice).mockResolvedValue({ version: 2, prices: { adult: 126, child: 70, infant: 5 }, executionId: 'exec-1', overrideId: 'override-1' } as any);
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011', selectedDate: '2026-08-01', selectedTime: '10:00', priceVersion: 2,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'premium-key' },
+    }]);
+    expect(item.guestPrices).toEqual({ adult: 126, child: 70, infant: 5 });
+    expect(item.selectedBookingOption.price).toBe(126);
+    expect(item.priceExecutionId).toBe('exec-1');
   });
 });
