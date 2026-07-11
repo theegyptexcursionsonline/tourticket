@@ -42,13 +42,16 @@ export async function getCategoryMetadata(slug: string, locale: string): Promise
 
   if (!category) return null;
 
+  const categoryName = String(category.name || 'Category');
+  const categoryDescription = String(category.description || '');
+
   return {
-    title: (category as any).metaTitle || `${(category as any).name} Tours | Egypt Excursions Online`,
-    description: (category as any).metaDescription || String((category as any).description || '').substring(0, 160) || `Explore ${(category as any).name} tours and activities`,
-    keywords: Array.isArray((category as any).keywords) ? (category as any).keywords.join(', ') : undefined,
+    title: String(category.metaTitle || `${categoryName} Tours | Egypt Excursions Online`),
+    description: String(category.metaDescription || categoryDescription.substring(0, 160) || `Explore ${categoryName} tours and activities`),
+    keywords: Array.isArray(category.keywords) ? category.keywords.map(String).join(', ') : undefined,
     openGraph: {
-      title: (category as any).name,
-      description: String((category as any).description || '').substring(0, 160),
+      title: categoryName,
+      description: categoryDescription.substring(0, 160),
       images: category.heroImage ? [category.heroImage as string] : [],
       type: 'website',
     },
@@ -74,7 +77,7 @@ async function getPageData(slug: string, locale: string) {
     return { category: null, categoryTours: [] };
   }
 
-  const categoryIds = serializedCategories.map((category) => (category as any)._id);
+  const categoryIds = serializedCategories.map((category) => String(category._id));
   const baseTours = await TourModel.find({
     category: { $in: categoryIds },
     isPublished: true,
@@ -167,8 +170,8 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
     return [];
   }
 
-  const categoryIds = relatedCategories.map((category: any) => category._id);
-  const counts = await TourModel.aggregate([
+  const categoryIds = relatedCategories.map((category) => category._id);
+  const counts = await TourModel.aggregate<{ _id: unknown; count: number }>([
     {
       $match: {
         isPublished: true,
@@ -184,10 +187,10 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
     },
   ]).catch(() => []);
 
-  const countMap = new Map(counts.map((item: any) => [String(item._id), Number(item.count) || 0]));
+  const countMap = new Map(counts.map((item) => [String(item._id), Number(item.count) || 0]));
   const slugCountMap = new Map<string, number>();
 
-  for (const category of relatedCategories as any[]) {
+  for (const category of relatedCategories) {
     const slug = String(category.slug || '');
     if (!slug) continue;
     const count = countMap.get(String(category._id)) || 0;
@@ -199,14 +202,14 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
     locale,
     ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
   )
-    .map((category: any) => {
+    .map((category) => {
       const localized = localizeEntityFields(category, locale, ['name', 'description']);
       return {
         type: 'category' as const,
         _id: String(category._id),
-        slug: category.slug,
-        name: String((localized as any).name || category.name || ''),
-        image: category.heroImage,
+        slug: String(category.slug || ''),
+        name: String(localized.name || category.name || ''),
+        image: typeof category.heroImage === 'string' ? category.heroImage : undefined,
         featured: Boolean(category.featured),
         products: slugCountMap.get(String(category.slug || '')) || countMap.get(String(category._id)) || 0,
       };
@@ -220,7 +223,7 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
   if (!category) return null;
 
   const relatedInterests = await getRelatedCategoryInterests(
-    String((category as any)._id),
+    String(category._id),
     slug,
     locale
   );
@@ -228,10 +231,14 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
   return (
     <>
       <CollectionSchema
-        name={(category as any).name}
-        description={(category as any).description}
+        name={String(category.name || '')}
+        description={String(category.description || '')}
         url={`/categories/${slug}`}
-        items={categoryTours.map((t: any) => ({ name: t.title, url: `/tour/${t.slug}`, image: t.image }))}
+        items={categoryTours.map((tour) => ({
+          name: String(tour.title || ''),
+          url: `/tour/${String(tour.slug || '')}`,
+          image: typeof tour.image === 'string' ? tour.image : undefined,
+        }))}
       />
       <CategoryPageClient
         category={category as unknown as CategoryType}

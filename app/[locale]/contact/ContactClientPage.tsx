@@ -15,7 +15,12 @@ import Footer from "@/components/Footer";
 // Extend Window interface for reCAPTCHA
 declare global {
   interface Window {
-    grecaptcha: any;
+    grecaptcha?: {
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+    FoxesConnect?: {
+      open: () => void;
+    };
   }
 }
 
@@ -156,8 +161,8 @@ export default function ContactClientPage() {
     e.preventDefault();
     // Open the FoxesConnect support widget
     try {
-      if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
-        (window as any).FoxesConnect.open();
+      if (window.FoxesConnect && typeof window.FoxesConnect.open === 'function') {
+        window.FoxesConnect.open();
         return;
       }
       // Fallback to event dispatch
@@ -208,10 +213,11 @@ export default function ContactClientPage() {
     try {
       // Get reCAPTCHA token
       let recaptchaToken = '';
-      if (recaptchaLoaded && window.grecaptcha) {
+      const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      if (recaptchaLoaded && window.grecaptcha && recaptchaSiteKey) {
         try {
           recaptchaToken = await window.grecaptcha.execute(
-            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+            recaptchaSiteKey,
             { action: 'contact_form' }
           );
         } catch (error) {
@@ -244,8 +250,8 @@ export default function ContactClientPage() {
       setFormData({ name: '', email: '', message: '', website: '' }); // Reset form
       formLoadTime.current = Date.now(); // Reset timer
 
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to send message.', { id: toastId });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send message.', { id: toastId });
     } finally {
       setIsLoading(false);
     }

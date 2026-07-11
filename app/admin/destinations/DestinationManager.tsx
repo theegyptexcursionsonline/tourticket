@@ -40,6 +40,10 @@ interface Tour {
   slug: string;
 }
 
+interface TourApiRecord extends Tour {
+  destination?: string | { _id?: string } | null;
+}
+
 interface FormData {
   name: string;
   slug: string;
@@ -137,7 +141,8 @@ export default function DestinationManager({ initialDestinations }: { initialDes
         const response = await fetch('/api/admin/tours', { headers: getAuthHeaders() });
         const data = await response.json();
         if (data.success) {
-          setAvailableTours(data.data.map((tour: any) => ({
+          const tours = Array.isArray(data.data) ? data.data as TourApiRecord[] : [];
+          setAvailableTours(tours.map((tour) => ({
             _id: tour._id,
             title: tour.title,
             slug: tour.slug
@@ -199,7 +204,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     setFormData({
       name: dest.name || '',
       slug: dest.slug || '',
-      urlType: ((dest as any).urlType as UrlType) || 'default',
+      urlType: dest.urlType || 'default',
       country: dest.country || '',
       image: dest.image || '',
       images: dest.images || [],
@@ -229,7 +234,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       metaTitle: dest.metaTitle || '',
       metaDescription: dest.metaDescription || '',
       tags: dest.tags || [],
-      translations: normalizeTranslations((dest as any).translations),
+      translations: normalizeTranslations(dest.translations),
       linkedTours: []
     });
 
@@ -240,12 +245,13 @@ export default function DestinationManager({ initialDestinations }: { initialDes
         .then(data => {
           if (data.success) {
             // Find tours that have this destination
-            const toursForThisDestination = data.data
-              .filter((tour: any) => {
+            const tours = Array.isArray(data.data) ? data.data as TourApiRecord[] : [];
+            const toursForThisDestination = tours
+              .filter((tour) => {
                 const tourDestId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;
-                return tourDestId === (dest._id as any).toString();
+                return tourDestId === String(dest._id);
               })
-              .map((tour: any) => tour._id);
+              .map((tour) => tour._id);
 
             setFormData(prev => ({ ...prev, linkedTours: toursForThisDestination }));
           }
@@ -267,7 +273,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaE
     const [parent, child] = name.split('.');
     setFormData(prev => ({
       ...prev,
-      [parent]: { ...(prev[parent as keyof FormData] as Record<string, any>), [child]: value }
+      [parent]: { ...(prev[parent as keyof FormData] as Record<string, unknown>), [child]: value }
     }));
   } else {
     setFormData(prev => ({ 
@@ -431,7 +437,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 ? tourData.data.destination
                 : tourData.data.destination?._id;
 
-              if (tourDestId === (editingDestination._id as any).toString()) {
+              if (tourDestId === String(editingDestination._id)) {
                 return fetch(`/api/admin/tours/${tour._id}`, {
                   method: 'PUT',
                   headers: getAuthHeaders(),
@@ -456,7 +462,7 @@ toast.success(result);
 
 // Refresh in background (non-blocking)
 setTimeout(() => router.refresh(), 0);
-} catch (error: any) {
+} catch (error: unknown) {
   setIsSubmitting(false);
   toast.error(error instanceof Error ? error.message : 'Failed to save destination');
 }

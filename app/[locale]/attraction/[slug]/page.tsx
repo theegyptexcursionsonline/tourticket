@@ -99,7 +99,15 @@ export default async function AttractionPage({ params }: AttractionPageProps) {
   return (
     <>
       <Header startSolid />
-      <AttractionLandingPage attraction={page as any} />
+      <AttractionLandingPage
+        attraction={{
+          ...page,
+          tours: page.tours ?? [],
+          totalTours: page.totalTours ?? 0,
+          reviews: page.reviews ?? [],
+          showStats: page.showStats ?? true,
+        }}
+      />
       <Footer />
     </>
   );

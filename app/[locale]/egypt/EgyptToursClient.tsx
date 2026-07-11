@@ -256,7 +256,7 @@ export default function EgyptToursClient({ tours }: EgyptToursClientProps) {
         <BookingSidebar
           isOpen={isBookingSidebarOpen}
           onClose={closeSidebar}
-          tour={selectedTour as any}
+          tour={selectedTour as unknown as React.ComponentProps<typeof BookingSidebar>['tour']}
         />
       )}
 

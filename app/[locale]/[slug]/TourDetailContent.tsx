@@ -27,7 +27,15 @@ const localizeTourFields = (tour: ITour, locale: string) =>
 const localizeTaxonomyFields = (entity: unknown, locale: string, fields: string[]) =>
   localizeEntityFields(entity as Record<string, unknown>, locale, fields);
 
-export async function getTourBySlug(slug: string, locale: string): Promise<{ tour: ITour; reviews: any[] } | null> {
+type TourReview = { _id: string; rating: number; [key: string]: unknown };
+
+const getEntityId = (value: unknown): string | undefined => {
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value !== 'object' || value === null || !('_id' in value)) return undefined;
+  return value._id == null ? undefined : String(value._id);
+};
+
+export async function getTourBySlug(slug: string, locale: string): Promise<{ tour: ITour; reviews: TourReview[] } | null> {
   try {
     await dbConnect();
 
@@ -66,7 +74,7 @@ export async function getTourBySlug(slug: string, locale: string): Promise<{ tou
 
     return {
       tour: JSON.parse(JSON.stringify(tour)),
-      reviews: JSON.parse(JSON.stringify(reviews))
+      reviews: JSON.parse(JSON.stringify(reviews)) as TourReview[]
     };
   } catch (error) {
     console.error(`[TourDetail] Error loading tour "${slug}":`, error);
@@ -75,7 +83,7 @@ export async function getTourBySlug(slug: string, locale: string): Promise<{ tou
 }
 
 async function getRelatedTours(
-  categoryIds: string | string[] | any,
+  categoryIds: unknown,
   currentTourId: string,
   locale: string
 ): Promise<ITour[]> {
@@ -83,9 +91,9 @@ async function getRelatedTours(
 
   let categoryIdArray: string[] = [];
   if (Array.isArray(categoryIds)) {
-    categoryIdArray = categoryIds.map(cat => typeof cat === 'object' ? cat._id?.toString() : cat?.toString()).filter(Boolean);
+    categoryIdArray = categoryIds.map(getEntityId).filter((id): id is string => Boolean(id));
   } else if (categoryIds) {
-    const catId = typeof categoryIds === 'object' ? categoryIds._id?.toString() : categoryIds?.toString();
+    const catId = getEntityId(categoryIds);
     if (catId) categoryIdArray = [catId];
   }
 
@@ -140,12 +148,14 @@ export async function getTourMetadata(slug: string, locale: string, canonicalPat
   if (!result) return null;
 
   const localizedTour = localizeTourFields(result.tour, locale);
-  const destination = typeof localizedTour.destination === 'object' ? (localizedTour.destination as any) : null;
+  const destination = typeof localizedTour.destination === 'object'
+    ? localizedTour.destination as unknown as { name?: string }
+    : null;
 
   return {
     title: localizedTour.metaTitle || `${localizedTour.title} | ${destination?.name || 'Travel'} Tours`,
     description: localizedTour.metaDescription || localizedTour.description,
-    keywords: localizedTour.keywords || [localizedTour.title, destination?.name].filter(Boolean),
+    keywords: localizedTour.keywords || [localizedTour.title, destination?.name].filter((keyword): keyword is string => Boolean(keyword)),
     alternates: metadataAlternates(locale, canonicalPath),
     openGraph: {
       title: localizedTour.title,
@@ -162,7 +172,7 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
 
   const { tour, reviews } = result;
 
-  const tourIdString = (tour._id as any)?.toString?.() || '';
+  const tourIdString = String(tour._id || '');
   const [relatedToursResult, initialStopSaleDates] = await Promise.all([
     getRelatedTours(tour.category, tourIdString, locale).catch((error) => {
       console.error(`[TourDetail] Failed to load related tours for: ${slug}`, error);
@@ -179,7 +189,7 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
       localizedTour.destination as unknown,
       locale,
       ['name', 'description', 'country', 'metaTitle', 'metaDescription']
-    ) as any;
+    ) as unknown as ITour['destination'];
   }
 
   if (localizedTour.category && !Array.isArray(localizedTour.category) && typeof localizedTour.category === 'object') {
@@ -187,7 +197,7 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
       localizedTour.category as unknown,
       locale,
       ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
-    ) as any;
+    ) as unknown as ITour['category'];
   }
 
   if (typeof localizedTour.longDescription === 'string') {
@@ -205,7 +215,7 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
         localizedRelated.destination as unknown,
         locale,
         ['name', 'description', 'country', 'metaTitle', 'metaDescription']
-      ) as any;
+      ) as unknown as ITour['destination'];
     }
 
     if (localizedRelated.category && !Array.isArray(localizedRelated.category) && typeof localizedRelated.category === 'object') {
@@ -213,7 +223,7 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
         localizedRelated.category as unknown,
         locale,
         ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
-      ) as any;
+      ) as unknown as ITour['category'];
     }
 
     return localizedRelated;

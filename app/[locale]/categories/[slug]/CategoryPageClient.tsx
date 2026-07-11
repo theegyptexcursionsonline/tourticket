@@ -473,11 +473,9 @@ const SearchAndFilter = ({
 
 // --- StatsSection Component ---
 const StatsSection = ({
-  category,
   tours,
   copy,
 }: {
-  category: Category;
   tours: Tour[];
   copy: CategoryPageCopy;
 }) => {
@@ -496,7 +494,7 @@ const StatsSection = ({
   // Calculate happy customers from bookings or use default
   let happyCustomers = '10K+';
   if (tours && tours.length > 0) {
-    const totalBookings = tours.reduce((acc, t) => acc + ((t as any).bookings || 0), 0);
+    const totalBookings = tours.reduce((total, tour) => total + (tour.bookings || 0), 0);
     if (totalBookings > 0) {
       if (totalBookings >= 1000) {
         happyCustomers = `${Math.floor(totalBookings / 1000)}K+`;
@@ -543,11 +541,11 @@ const AboutSection = ({
   copy: CategoryPageCopy;
   insights: CategoryInsights;
 }) => {
-  const highlights = ((category as any).highlights || []).length > 0
-    ? (category as any).highlights
+  const highlights = (category.highlights || []).length > 0
+    ? category.highlights || []
     : insights.expectationItems;
-  const features = ((category as any).features || []).length > 0
-    ? (category as any).features
+  const features = (category.features || []).length > 0
+    ? category.features || []
     : insights.travelerTypes;
   const popularDestinations = insights.popularDestinations;
 
@@ -812,7 +810,7 @@ const CategoryHeroSection = ({
   copy: CategoryPageCopy;
   rtl: boolean;
 }) => {
-  const heroImage = (category as any).heroImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=80&fm=jpg';
+  const heroImage = category.heroImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=80&fm=jpg';
 
   return (
     <section className="relative w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]">
@@ -1126,7 +1124,7 @@ export default function CategoryPageClient({
 
             <main className="min-h-screen bg-slate-50" dir={rtl ? 'rtl' : 'ltr'}>
                 {/* Stats Section */}
-                <StatsSection category={category} tours={categoryTours} copy={copy} />
+                <StatsSection tours={categoryTours} copy={copy} />
 
                 {/* About Section */}
                 <AboutSection category={category} copy={copy} insights={categoryInsights} />
@@ -1214,11 +1212,11 @@ export default function CategoryPageClient({
             {/* AI Search Widget */}
             <AISearchWidget />
 
-            <BookingSidebar
+            {selectedTour && <BookingSidebar
                 isOpen={isBookingSidebarOpen}
                 onClose={closeSidebar}
-                tour={selectedTour as any}
-            />
+                tour={selectedTour as unknown as React.ComponentProps<typeof BookingSidebar>['tour']}
+            />}
         </>
     );
 }

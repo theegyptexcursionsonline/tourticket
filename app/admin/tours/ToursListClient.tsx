@@ -22,6 +22,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import Image from 'next/image';
+import type { LucideIcon } from 'lucide-react';
 import { TourActions } from './TourActions';
 import Link from 'next/link';
 
@@ -45,7 +46,7 @@ type TourType = {
 function Badge({ children, className = '', icon: Icon }: { 
   children: React.ReactNode; 
   className?: string;
-  icon?: any;
+  icon?: LucideIcon;
 }) {
   return (
     <span
@@ -239,7 +240,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
               </div>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 appearance-none cursor-pointer text-slate-700 font-medium"
               >
                 <option value="newest">📅 Newest First</option>

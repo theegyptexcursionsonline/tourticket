@@ -153,11 +153,11 @@ export default async function DestinationsIndexPage({
         name="All Destinations"
         description="Explore amazing destinations across Egypt"
         url="/destinations"
-        items={(destinations as any[]).map((d: any) => ({ name: d.name, url: `/destinations/${d.slug}`, image: d.image }))}
+        items={destinations.map((destination) => ({ name: destination.name, url: `/destinations/${destination.slug}`, image: destination.image }))}
       />
       <Header startSolid />
       <main className="min-h-screen bg-slate-50 pt-20">
-        <DestinationsClientPage destinations={destinations as any} />
+        <DestinationsClientPage destinations={destinations as (IDestination & { tourCount: number })[]} />
       </main>
       <Footer />
       {/* AI Search Widget */}

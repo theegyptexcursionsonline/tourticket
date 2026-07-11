@@ -18,6 +18,7 @@ import {
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
+import type { Category, Destination, Review, Tour } from '@/types';
 
 export async function getDestinationMetadata(slug: string, locale: string, canonicalPath: string): Promise<Metadata | null> {
   await dbConnect();
@@ -110,7 +111,7 @@ async function getPageData(slug: string, locale: string) {
     };
   }
 
-  const destinationIds = serializedDestinationMatches.map((destination) => (destination as any)._id);
+  const destinationIds = serializedDestinationMatches.map((destination) => String(destination._id));
   const baseDestinationTours = await TourModel.find({
     destination: { $in: destinationIds },
     isPublished: true,
@@ -141,7 +142,7 @@ async function getPageData(slug: string, locale: string) {
     locale
   );
 
-  const tourIds = selectedDestinationTours.map((tour) => (tour as any)._id);
+  const tourIds = selectedDestinationTours.map((tour) => String(tour._id));
   const reviews = await ReviewModel.find({
     tour: { $in: tourIds },
     verified: true
@@ -156,7 +157,7 @@ async function getPageData(slug: string, locale: string) {
       DEFAULT_TENANT_FILTER,
       {
         $or: [
-          { country: (destinationCandidate as any).country },
+          { country: String(destinationCandidate.country || '') },
           { featured: true }
         ]
       }
@@ -180,8 +181,8 @@ async function getPageData(slug: string, locale: string) {
   );
 
   const serializedCategories = JSON.parse(JSON.stringify(allCategories));
-  const serializedReviews = JSON.parse(JSON.stringify(reviews));
-  const serializedRelatedDest = JSON.parse(JSON.stringify(relatedDestinations));
+  const serializedReviews = JSON.parse(JSON.stringify(reviews)) as Review[];
+  const serializedRelatedDest = JSON.parse(JSON.stringify(relatedDestinations)) as Record<string, unknown>[];
   const relatedDestinationCountBySlug = new Map<string, number>();
 
   for (const destination of serializedRelatedDest as Record<string, unknown>[]) {
@@ -278,11 +279,11 @@ async function getPageData(slug: string, locale: string) {
   );
 
   return {
-    destination: localizedDestination,
-    destinationTours: localizedTours,
-    allCategories: localizedCategories,
+    destination: localizedDestination as unknown as Destination,
+    destinationTours: localizedTours as unknown as Tour[],
+    allCategories: localizedCategories as unknown as Category[],
     reviews: serializedReviews,
-    relatedDestinations: localizedRelatedDestinations
+    relatedDestinations: localizedRelatedDestinations as unknown as Destination[]
   };
 }
 
@@ -299,14 +300,14 @@ export async function renderDestinationDetail(slug: string, locale: string): Pro
         description={destination.description as string}
         image={destination.image as string}
         country={destination.country as string}
-        tours={destinationTours.map((t: any) => ({ title: t.title, slug: t.slug, image: t.image, discountPrice: t.discountPrice, originalPrice: t.originalPrice, rating: t.rating, reviewCount: t.reviewCount }))}
+        tours={destinationTours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount }))}
       />
       <DestinationPageClient
-        destination={destination as any}
-        destinationTours={destinationTours as any}
+        destination={destination}
+        destinationTours={destinationTours}
         allCategories={allCategories}
         reviews={reviews}
-        relatedDestinations={relatedDestinations as any}
+        relatedDestinations={relatedDestinations}
       />
     </>
   );

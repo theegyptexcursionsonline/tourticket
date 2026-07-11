@@ -110,7 +110,7 @@ export default async function BlogIndexPage() {
         name="Travel Blog"
         description="Discover travel tips, destination guides, and inspiring stories from Egypt"
         url="/blog"
-        items={(blogs as any[]).map((b: any) => ({ name: b.title, url: `/blog/${b.slug}`, image: b.featuredImage }))}
+        items={blogs.map((blog) => ({ name: blog.title, url: `/blog/${blog.slug}`, image: blog.featuredImage }))}
       />
       <Header startSolid />
       <main className="min-h-screen pt-20">

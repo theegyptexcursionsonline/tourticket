@@ -122,8 +122,8 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
   
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<any[]>>, value: any) => {
-    setter((prev: any[]) => (prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value]));
+  const handleFilterChange = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, value: T) => {
+    setter((previous) => previous.includes(value) ? previous.filter((item) => item !== value) : [...previous, value]);
   };
 
   const clearAllFilters = useCallback(() => {
@@ -151,9 +151,9 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
             if (!res.ok) throw new Error('Failed to fetch tours');
             const data = await res.json();
             setTours(Array.isArray(data) ? data : []);
-          } catch (err: any) {
-            if (err.name !== 'AbortError') {
-              console.error('Initial tours fetch error:', err);
+          } catch (error: unknown) {
+            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+              console.error('Initial tours fetch error:', error);
               setTours([]);
             }
           } finally {
@@ -187,9 +187,9 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
         if (!res.ok) throw new Error('Failed to fetch tours');
         const data = await res.json();
         setTours(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error('Search fetch error:', err);
+      } catch (error: unknown) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Search fetch error:', error);
           setTours([]);
         }
       } finally {

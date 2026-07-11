@@ -11,6 +11,7 @@ import { isRTL } from '@/i18n/config';
 
 interface CategoryWithCount extends ICategory {
   tourCount: number;
+  image?: string;
 }
 
 interface InterestsClientPageProps {
@@ -21,7 +22,7 @@ const CategoryCard = ({ category, rtl }: { category: CategoryWithCount; rtl: boo
   <Link href={`/interests/${category.slug}`} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
     <div className="relative h-48">
       <Image
-        src={category.heroImage || (category as any).image || '/hero2.jpg'}
+        src={category.heroImage || category.image || '/hero2.jpg'}
         alt={`Image of ${category.name}`}
         fill
         className="object-cover transition-transform duration-300 group-hover:scale-105"

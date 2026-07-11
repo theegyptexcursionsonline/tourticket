@@ -5,12 +5,13 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { Clock, Star, MapPin, Search, X, SlidersHorizontal, Tag } from 'lucide-react';
 import { ITour } from '@/lib/models/Tour';
+import type { Destination } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from 'next-intl';
 
 type TourWithDetails = Omit<ITour, 'destination'> & {
-  destination?: any;
+  destination?: Destination;
   categories?: { name: string }[];
   reviewCount?: number;
 }
@@ -382,7 +383,7 @@ export default function ToursClientPage({ tours }: ToursClientPageProps) {
               <label className="text-sm font-medium text-slate-600 whitespace-nowrap">{copy.sortBy}</label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 className="flex-1 sm:flex-none bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-700"
               >
                 <option value="newest">{copy.newestFirst}</option>

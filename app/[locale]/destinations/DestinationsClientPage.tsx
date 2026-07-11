@@ -109,8 +109,25 @@ const DESTINATIONS_COPY: Record<'en' | 'ar', DestinationsCopy> = {
   },
 };
 
+interface ChatTour {
+  slug: string;
+  title: string;
+  image?: string;
+  duration?: string;
+  location?: string;
+  rating?: number;
+  reviews?: number;
+  price?: number;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isChatTour = (value: unknown): value is ChatTour =>
+  isRecord(value) && typeof value.slug === 'string' && typeof value.title === 'string';
+
 // Tour Card Component for AI Chat
-const TourCard = ({ tour }: { tour: any }) => (
+const TourCard = ({ tour }: { tour: ChatTour }) => (
   <motion.div whileHover={{ y: -4 }}>
     <Link
       href={`/${tour.slug}`}
@@ -118,10 +135,12 @@ const TourCard = ({ tour }: { tour: any }) => (
     >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        <img
+        <Image
           src={tour.image}
           alt={tour.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          fill
+          sizes="240px"
+          className="object-cover group-hover:scale-110 transition-transform duration-300"
         />
         {tour.duration && (
           <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
@@ -159,7 +178,7 @@ const TourCard = ({ tour }: { tour: any }) => (
 );
 
 // Tour Slider Component for AI Chat
-const TourSlider = ({ tours }: { tours: any[] }) => {
+const TourSlider = ({ tours }: { tours: ChatTour[] }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -334,14 +353,14 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
   }, [showAIChat]);
 
   // Render tool outputs (tours)
-  const renderToolOutput = (obj: any) => {
+  const renderToolOutput = (obj: unknown) => {
     if (Array.isArray(obj)) {
-      const tours = obj.filter(item => item.title && item.slug);
+      const tours = obj.filter(isChatTour);
       if (tours.length > 0) return <TourSlider tours={tours} />;
     }
-    if (obj.title && obj.slug) return <TourSlider tours={[obj]} />;
-    if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter((item: any) => item.title && item.slug);
+    if (isChatTour(obj)) return <TourSlider tours={[obj]} />;
+    if (isRecord(obj) && Array.isArray(obj.hits)) {
+      const tours = obj.hits.filter(isChatTour);
       if (tours.length > 0) return <TourSlider tours={tours} />;
     }
     return (
@@ -352,21 +371,23 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
   };
 
   // Render message content
-  const renderContent = (parts: any[]) => {
-    return parts.map((p: any, idx: number) => {
-      if (p.type === 'tool-result') {
+  const renderContent = (parts: unknown[]) => {
+    return parts.map((part, idx) => {
+      if (!isRecord(part)) return null;
+      const text = typeof part.text === 'string' ? part.text : '';
+      if (part.type === 'tool-result') {
         try {
-          const obj = JSON.parse(p.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+          return <pre key={idx} className="text-[10px]">{text}</pre>;
         }
       }
-      if (p.type === 'text') {
+      if (part.type === 'text') {
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[11px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-              {p.text}
+              {text}
             </ReactMarkdown>
           </div>
         );

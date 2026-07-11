@@ -81,13 +81,15 @@ async function fetchCategories(): Promise<Category[]> {
       })
     );
 
+    const serializedCategories = JSON.parse(JSON.stringify(categoriesWithCounts)) as (Category & { tourCount: number })[];
+
     // Filter published categories with tours
-    const publishedCategories = categoriesWithCounts.filter(
-      (c: any) => c.isPublished !== false && (c.tourCount || 0) > 0
+    const publishedCategories = serializedCategories.filter(
+      (category) => category.isPublished !== false && category.tourCount > 0
     );
 
     // Convert MongoDB documents to plain objects
-    return JSON.parse(JSON.stringify(publishedCategories.slice(0, 8)));
+    return publishedCategories.slice(0, 8);
   } catch (error) {
     console.error('Failed to fetch categories:', error);
     return [];

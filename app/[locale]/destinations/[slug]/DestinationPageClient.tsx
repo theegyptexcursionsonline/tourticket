@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -36,6 +36,80 @@ interface DestinationPageClientProps {
   reviews?: Review[];
   relatedDestinations?: Destination[];
 }
+
+interface SearchHit {
+  objectID: string;
+  slug?: string;
+  title?: string;
+  name?: string;
+  image?: string;
+  images?: string[];
+  primaryImage?: string;
+  description?: string;
+  country?: string;
+  location?: string;
+  duration?: string;
+  rating?: number;
+  reviews?: number;
+  price?: number;
+  discountPrice?: number;
+  tourCount?: number;
+  isFeatured?: boolean;
+}
+
+interface SearchTour {
+  slug: string;
+  title: string;
+  image?: string;
+  location?: string;
+  duration?: string;
+  rating?: number;
+  reviews?: number;
+  price?: number;
+  discountPrice?: number;
+  originalPrice?: number;
+  isFeatured?: boolean;
+}
+
+interface SearchDestination {
+  slug: string;
+  name: string;
+  image?: string;
+  description?: string;
+  tourCount?: number;
+  isFeatured?: boolean;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isSearchHit = (value: unknown): value is SearchHit =>
+  isRecord(value) && typeof value.objectID === 'string';
+
+const toSearchTour = (hit: SearchHit, fallbackTitle: string): SearchTour | null => {
+  const slug = hit.slug || hit.objectID;
+  const title = hit.title || fallbackTitle;
+  if (!slug || !title) return null;
+  return {
+    slug,
+    title,
+    image: hit.image || hit.images?.[0] || hit.primaryImage,
+    location: hit.location,
+    duration: hit.duration,
+    rating: hit.rating,
+    reviews: hit.reviews,
+    price: hit.discountPrice || hit.price,
+    discountPrice: hit.discountPrice,
+    originalPrice: hit.price,
+    isFeatured: hit.isFeatured,
+  };
+};
+
+const getSearchHits = (value: unknown): SearchHit[] => {
+  if (Array.isArray(value)) return value.filter(isSearchHit);
+  if (isRecord(value) && Array.isArray(value.hits)) return value.hits.filter(isSearchHit);
+  return [];
+};
 
 type DestinationPageCopy = {
   featured: string;
@@ -216,7 +290,7 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     faqBestTimeA: (destination: string) =>
       `The best time to visit ${destination} is during the cooler months from October to April, when temperatures are pleasant for sightseeing and outdoor activities. The weather is ideal for exploring attractions and participating in tours.`,
     faqDaysQ: (destination: string) => `How many days should I spend in ${destination}?`,
-    faqDaysA: (destination: string) =>
+    faqDaysA: (_destination: string) =>
       `We recommend spending at least 3-5 days to experience the main attractions comfortably. However, a week or more allows for a more relaxed pace and exploration of hidden gems, local neighborhoods, and day trips to nearby areas.`,
     faqSafeQ: (destination: string) => `Is ${destination} safe for tourists?`,
     faqSafeA: (destination: string) =>
@@ -338,7 +412,7 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     faqBestTimeA: (destination: string) =>
       `أفضل وقت لزيارة ${destination} يكون عادة خلال الأشهر المعتدلة من أكتوبر إلى أبريل، حيث تكون درجات الحرارة مناسبة للجولات والأنشطة الخارجية.`,
     faqDaysQ: (destination: string) => `كم يومًا أحتاج في ${destination}؟`,
-    faqDaysA: (destination: string) =>
+    faqDaysA: (_destination: string) =>
       `نوصي بقضاء 3 إلى 5 أيام على الأقل لاكتشاف أهم المعالم براحة. وإذا رغبت بوتيرة أهدأ واستكشاف أعمق، فالأسبوع أو أكثر خيار ممتاز.`,
     faqSafeQ: (destination: string) => `هل ${destination} آمنة للسياح؟`,
     faqSafeA: (destination: string) =>
@@ -404,26 +478,9 @@ const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f4
 const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
 const INDEX_DESTINATIONS = 'destinations';
 const INDEX_CATEGORIES = 'categories';
-const INDEX_BLOGS = 'blogs';
 const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
-
-// --- Hero Helper Hooks ---
-const useIsMobile = (breakpoint = 768) => {
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < breakpoint);
-    if (typeof window !== "undefined") {
-      checkIsMobile();
-      window.addEventListener("resize", checkIsMobile);
-      return () => window.removeEventListener("resize", checkIsMobile);
-    }
-  }, [breakpoint]);
-  
-  return isMobile;
-};
 
 const useSlidingText = (texts: string[], interval = 3000) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -452,7 +509,7 @@ const useSlidingText = (texts: string[], interval = 3000) => {
   return texts[currentIndex] || texts[0] || "Search...";
 };
 
-const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) => (
+const TourCard = ({ tour, onHitClick }: { tour: SearchTour; onHitClick?: () => void }) => (
   <motion.div whileHover={{ y: -4 }}>
     <Link
       href={`/${tour.slug}`}
@@ -461,10 +518,12 @@ const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) 
     >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        <img
+        <Image
           src={tour.image}
           alt={tour.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          fill
+          sizes="240px"
+          className="object-cover group-hover:scale-110 transition-transform duration-300"
         />
         {tour.duration && (
           <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
@@ -501,7 +560,7 @@ const TourCard = ({ tour, onHitClick }: { tour: any; onHitClick?: () => void }) 
   </motion.div>
 );
 
-const TourSlider = ({ tours, onHitClick }: { tours: any[]; onHitClick?: () => void }) => {
+const TourSlider = ({ tours, onHitClick }: { tours: SearchTour[]; onHitClick?: () => void }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -544,7 +603,7 @@ const TourSlider = ({ tours, onHitClick }: { tours: any[]; onHitClick?: () => vo
 };
 
 // Destination Slider Component for AI Chat
-const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
+const DestinationSlider = ({ destinations }: { destinations: SearchDestination[] }) => {
   const copy = useDestinationPageCopy();
   const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -589,10 +648,12 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
           >
             {destination.image && (
               <div className="relative h-36 bg-gradient-to-br from-emerald-100 to-teal-100 overflow-hidden">
-                <img
+                <Image
                   src={destination.image}
                   alt={destination.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  fill
+                  sizes="260px"
+                  className="object-cover group-hover:scale-110 transition-transform duration-300"
                 />
                 {destination.isFeatured && (
                   <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
@@ -628,7 +689,7 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
 };
 
 // Custom SearchBox component
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -647,19 +708,9 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
   if (limitedHits.length === 0) return null;
 
   // Transform hits to tour objects
-  const tours = limitedHits.map((hit: any) => ({
-    slug: hit.slug || hit.objectID,
-    title: hit.title || copy.untitledTour,
-    image: hit.image || hit.images?.[0] || hit.primaryImage,
-    location: hit.location,
-    duration: hit.duration,
-    rating: hit.rating,
-    reviews: hit.reviews,
-    price: hit.discountPrice || hit.price,
-    isFeatured: hit.isFeatured,
-    discountPrice: hit.discountPrice,
-    originalPrice: hit.price,
-  }));
+  const tours = (limitedHits as unknown as SearchHit[])
+    .map((hit) => toSearchTour(hit, copy.untitledTour))
+    .filter((tour): tour is SearchTour => tour !== null);
 
   return (
     <div>
@@ -706,7 +757,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any) => (
+      {(limitedHits as unknown as SearchHit[]).map((hit) => (
         <a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
@@ -764,7 +815,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
           </span>
                   </div>
                 </div>
-      {limitedHits.map((hit: any) => (
+      {(limitedHits as unknown as SearchHit[]).map((hit) => (
         <a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
@@ -807,8 +858,8 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
-  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, any[]>>({});
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, SearchTour[]>>({});
+  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, SearchDestination[]>>({});
 
   const {
     messages,
@@ -899,9 +950,19 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     };
   }, [chatMode]);
 
-  const handleCloseDropdown = () => {
+  const handleCloseDropdown = useCallback(() => {
     setIsExpanded(false);
     setChatMode(false);
+  }, []);
+
+  const submitQuery = () => {
+    if (!query.trim()) return;
+    if (chatMode) {
+      sendMessage({ text: query });
+      setQuery('');
+    } else {
+      setIsExpanded(true);
+    }
   };
 
   const handleClearChat = () => {
@@ -936,13 +997,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    if (chatMode) {
-      sendMessage({ text: query });
-      setQuery('');
-    } else {
-      setIsExpanded(true);
-    }
+    submitQuery();
   };
 
   const detectAndFetchTours = useCallback(async (text: string) => {
@@ -980,7 +1035,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 hitsPerPage: 1,
               }
             }]);
-            let firstResult = response.results[0] as any;
+            let firstResult = response.results[0] as unknown as { hits?: SearchHit[] };
 
             if (!firstResult?.hits?.length) {
               const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
@@ -991,7 +1046,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                   hitsPerPage: 1,
                 }
               }]);
-              firstResult = response.results[0] as any;
+              firstResult = response.results[0] as unknown as { hits?: SearchHit[] };
             }
 
             return firstResult?.hits?.[0];
@@ -1001,36 +1056,22 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           }
         });
 
-        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        const tours = (await Promise.all(searchPromises)).filter((tour): tour is SearchHit => Boolean(tour));
         if (tours.length > 0) {
-          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
-            const tourId = tour.slug || tour.objectID;
-            if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
-              acc.push(tour);
-            }
-            return acc;
-          }, []);
+          const uniqueTours = Array.from(new Map(
+            tours.map((tour) => [tour.slug || tour.objectID, tour])
+          ).values());
 
-          return uniqueTours.map((tour: any) => ({
-            slug: tour.slug || tour.objectID,
-            title: tour.title || copy.untitledTour,
-            image: tour.image || tour.images?.[0] || tour.primaryImage,
-            location: tour.location,
-            duration: tour.duration,
-            rating: tour.rating,
-            reviews: tour.reviews,
-            price: tour.discountPrice || tour.price,
-            discountPrice: tour.discountPrice,
-            originalPrice: tour.price,
-            isFeatured: tour.isFeatured,
-          }));
+          return uniqueTours
+            .map((tour) => toSearchTour(tour, copy.untitledTour))
+            .filter((tour): tour is SearchTour => tour !== null);
         }
       }
     } catch (error) {
       console.error('Error detecting tours:', error);
     }
     return [];
-  }, []);
+  }, [copy.untitledTour]);
 
   const detectAndFetchDestinations = useCallback(async (text: string) => {
     try {
@@ -1061,7 +1102,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 hitsPerPage: 1,
               }
             }]);
-            const firstResult = response.results[0] as any;
+            const firstResult = response.results[0] as unknown as { hits?: SearchHit[] };
             return firstResult?.hits?.[0];
           } catch (error) {
             console.error('Error searching for destination:', destName, error);
@@ -1069,17 +1110,13 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           }
         });
 
-        const destinations = (await Promise.all(searchPromises)).filter(Boolean);
+        const destinations = (await Promise.all(searchPromises)).filter((destination): destination is SearchHit => Boolean(destination));
         if (destinations.length > 0) {
-          const uniqueDestinations = destinations.reduce((acc: any[], dest: any) => {
-            const destId = dest.slug || dest.objectID;
-            if (!acc.find(d => (d.slug || d.objectID) === destId)) {
-              acc.push(dest);
-            }
-            return acc;
-          }, []);
+          const uniqueDestinations = Array.from(new Map(
+            destinations.map((destination) => [destination.slug || destination.objectID, destination])
+          ).values());
 
-          return uniqueDestinations.map((dest: any) => ({
+          return uniqueDestinations.map((dest) => ({
             slug: dest.slug || dest.objectID,
             name: dest.name || copy.untitledDestination,
             image: dest.image || dest.images?.[0] || dest.primaryImage,
@@ -1093,48 +1130,27 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
       console.error('Error detecting destinations:', error);
     }
     return [];
-  }, []);
+  }, [copy.untitledDestination]);
 
-  const renderToolOutput = useCallback((obj: any) => {
-    if (Array.isArray(obj)) {
-      const tours = obj
-        .map((item) => ({
-          slug: item.slug || item.objectID,
-          title: item.title,
-          image: item.image || item.images?.[0] || item.primaryImage,
-          location: item.location,
-          duration: item.duration,
-          rating: item.rating,
-          reviews: item.reviews,
-          price: item.discountPrice || item.price,
-        }))
-        .filter((item) => item.title && item.slug);
-      if (tours.length > 0) return <TourSlider tours={tours} onHitClick={handleCloseDropdown} />;
-    }
-    if (obj?.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits
-        .map((item: any) => ({
-          slug: item.slug || item.objectID,
-          title: item.title,
-          image: item.image || item.images?.[0] || item.primaryImage,
-          location: item.location,
-          duration: item.duration,
-          rating: item.rating,
-          reviews: item.reviews,
-          price: item.discountPrice || item.price,
-        }))
-        .filter((item: any) => item.title && item.slug);
-      if (tours.length > 0) return <TourSlider tours={tours} onHitClick={handleCloseDropdown} />;
-    }
-    if (obj?.title && obj?.slug) {
-      return <TourSlider tours={[obj]} onHitClick={handleCloseDropdown} />;
+  const renderToolOutput = useCallback((value: unknown) => {
+    const tours = getSearchHits(value)
+      .map((hit) => toSearchTour(hit, copy.untitledTour))
+      .filter((tour): tour is SearchTour => tour !== null);
+    if (tours.length > 0) return <TourSlider tours={tours} onHitClick={handleCloseDropdown} />;
+
+    if (isRecord(value) && typeof value.title === 'string' && typeof value.slug === 'string') {
+      return <TourSlider tours={[{
+        slug: value.slug,
+        title: value.title,
+        image: typeof value.image === 'string' ? value.image : undefined,
+      }]} onHitClick={handleCloseDropdown} />;
     }
     return (
       <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
+        {JSON.stringify(value, null, 2)}
       </pre>
     );
-  }, [handleCloseDropdown]);
+  }, [copy.untitledTour, handleCloseDropdown]);
 
   useEffect(() => {
     if (isGenerating) return;
@@ -1150,8 +1166,8 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         return;
       }
 
-      const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
-      const fullText = textParts.map((p: any) => p.text).join(' ');
+      const textParts = lastMessage.parts?.filter((part) => part.type === 'text') || [];
+      const fullText = textParts.map((part) => part.text).join(' ');
 
       // Detect if it's a destination-focused response (no prices, mentions destinations)
       const hasDestinationPattern = /destination/i.test(fullText) &&
@@ -1185,17 +1201,18 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
     }
   }, [messages, isGenerating, detectAndFetchTours, detectAndFetchDestinations, detectedToursByMessage, detectedDestinationsByMessage]);
 
-  const renderContent = useCallback((parts: any[], messageId?: string, hideDetails: boolean = false, isUser: boolean = false) => {
+  const renderContent = useCallback((parts: unknown[], messageId?: string, hideDetails: boolean = false, isUser: boolean = false) => {
     const hasDetectedTours = messageId && detectedToursByMessage[messageId];
-    const hasDetectedDestinations = messageId && detectedDestinationsByMessage[messageId];
 
-    return parts.map((part: any, idx: number) => {
+    return parts.map((part, idx: number) => {
+      if (!isRecord(part)) return null;
+      const text = typeof part.text === 'string' ? part.text : '';
       if (part.type === 'tool-result') {
         try {
-          const obj = JSON.parse(part.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx} className="text-[10px]">{part.text}</pre>;
+          return <pre key={idx} className="text-[10px]">{text}</pre>;
         }
       }
       if (part.type === 'text') {
@@ -1203,14 +1220,14 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         if (isUser) {
           return (
             <div key={idx} className="leading-relaxed font-medium">
-              {part.text}
+              {text}
             </div>
           );
         }
 
         // If we have detected tours/destinations, show a simplified version of the text
         if (hideDetails) {
-          const lines = part.text.split('\n');
+          const lines = text.split('\n');
           const introLines = [];
           let foundTourContent = false;
 
@@ -1263,14 +1280,14 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
         return (
         <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-            {part.text}
+            {text}
           </ReactMarkdown>
         </div>
         );
       }
       return null;
     }).filter(Boolean);
-  }, [renderToolOutput, detectedToursByMessage, detectedDestinationsByMessage, handleCloseDropdown, copy.hereAreTours, copy.hereAreDestinations]);
+  }, [renderToolOutput, detectedToursByMessage, copy.hereAreTours, copy.hereAreDestinations]);
 
   return (
     <div className="mt-4 sm:mt-6 lg:mt-8 w-full flex justify-center md:justify-start px-2 sm:px-4 md:px-0" ref={containerRef}>
@@ -1354,7 +1371,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                           if (isGenerating) {
                             stop();
                           } else {
-                            handleSubmit(new Event('submit') as any);
+                            submitQuery();
                           }
                         }}
                         className={`px-3 md:px-3.5 py-1.5 md:py-2 rounded-xl font-semibold text-white flex items-center gap-1.5 transition-all ${
@@ -1504,11 +1521,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                           <div key={msg.id}>
                             <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[85%] ${isUser ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3' : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200'}`}>
-                                {isUser ? (
-                                  <p className="text-sm leading-relaxed">{(msg as any).content}</p>
-                                ) : (
-                                  renderContent(msg.parts, msg.id, hasDetectedContent, isUser)
-                                )}
+                                {renderContent(msg.parts, msg.id, hasDetectedContent, isUser)}
                               </div>
                             </div>
                             
@@ -1542,7 +1555,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
                 ) : (
                   query ? (
                     <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                      <CustomSearchBox searchQuery={query} onSearchChange={setQuery} />
+                      <CustomSearchBox searchQuery={query} />
 
                       <Index indexName={INDEX_TOURS}>
                         <Configure hitsPerPage={5} />
@@ -1644,7 +1657,7 @@ const BackgroundSlideshow = ({
               transform: visible ? 'scale(1)' : 'scale(1.02)',
             }}
           >
-            <img src={s.src} alt={s.alt} className="w-full h-full object-cover" />
+            <Image src={s.src} alt={s.alt} fill sizes="100vw" className="object-cover" />
           </div>
         );
       })}
@@ -2241,7 +2254,9 @@ export default function DestinationPageClient({
   const destinationCategories = allCategories.map(category => ({
     ...category,
     tourCount: destinationTours.filter(tour => 
-      typeof tour.category === 'object' && !Array.isArray(tour.category) ? (tour.category as any)._id === category._id : tour.category === category._id
+      typeof tour.category === 'object' && !Array.isArray(tour.category)
+        ? String(tour.category._id) === String(category._id)
+        : tour.category === category._id
     ).length
   })).filter(category => category.tourCount > 0);
 
@@ -2381,7 +2396,7 @@ export default function DestinationPageClient({
         <BookingSidebar
           isOpen={isBookingSidebarOpen}
           onClose={closeSidebar}
-          tour={selectedTour as any}
+          tour={selectedTour as unknown as React.ComponentProps<typeof BookingSidebar>['tour']}
         />
       )}
 

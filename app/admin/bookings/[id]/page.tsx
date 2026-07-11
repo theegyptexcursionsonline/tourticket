@@ -427,7 +427,11 @@ const BookingDetailPage = () => {
     
     setUpdating(true);
     try {
-      const updates: Record<string, any> = {};
+      const updates: {
+        dateString?: string;
+        time?: string;
+        selectedBookingOption?: BookingOption;
+      } = {};
       
       // Check what changed
       const currentDate = booking.dateString || booking.date.split('T')[0];

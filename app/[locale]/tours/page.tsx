@@ -157,7 +157,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
       }
 
       return localizedTour as unknown as ITour;
-    }).sort((left: any, right: any) => {
+    }).sort((left, right) => {
       const leftFeatured = left.isFeatured ? 1 : 0;
       const rightFeatured = right.isFeatured ? 1 : 0;
       if (leftFeatured !== rightFeatured) return rightFeatured - leftFeatured;
@@ -194,13 +194,13 @@ export default async function ToursIndexPage({
   return (
     <>
       <ToursListSchema
-        tours={(tours as any[]).map((t: any) => ({ title: t.title, slug: t.slug, image: t.image, discountPrice: t.discountPrice, originalPrice: t.originalPrice, rating: t.rating, reviewCount: t.reviewCount, duration: t.duration }))}
+        tours={tours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount, duration: tour.duration }))}
         listName={schemaListName}
         listDescription={schemaListDescription}
       />
       <Header startSolid />
       <main className="min-h-screen bg-slate-50 pt-20">
-        <ToursClientPage tours={tours} />
+        <ToursClientPage tours={tours as unknown as React.ComponentProps<typeof ToursClientPage>['tours']} />
       </main>
       <Footer />
       {/* AI Search Widget */}

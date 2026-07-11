@@ -51,9 +51,9 @@ async function getFilters(locale: string) {
 
         const categoryIds = Array.from(
             new Set(
-                tours.flatMap((tour: any) =>
+                tours.flatMap((tour) =>
                     Array.isArray(tour.category)
-                        ? tour.category.map((id: any) => String(id))
+                        ? tour.category.map((id) => String(id))
                         : tour.category
                             ? [String(tour.category)]
                             : []
@@ -64,7 +64,7 @@ async function getFilters(locale: string) {
         const destinationIds = Array.from(
             new Set(
                 tours
-                    .map((tour: any) => (tour.destination ? String(tour.destination) : null))
+                    .map((tour) => (tour.destination ? String(tour.destination) : null))
                     .filter(Boolean)
             )
         );

@@ -6,6 +6,7 @@ import InterestLandingPage from '@/components/InterestLandingPage';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
+import type { Category as CategoryData, Review, Tour } from '@/types';
 
 // Types
 interface InterestPageProps {
@@ -17,11 +18,11 @@ interface InterestData {
   slug: string;
   description: string;
   longDescription?: string;
-  category?: any;
-  tours: any[];
+  category?: CategoryData;
+  tours: Tour[];
   totalTours: number;
-  reviews: any[];
-  relatedCategories: any[];
+  reviews: Review[];
+  relatedCategories: CategoryData[];
   heroImage: string;
   type?: string;
   highlights: string[];
@@ -131,7 +132,7 @@ export default async function Page(props: InterestPageProps) {
         name={interest.name}
         description={interest.description}
         url={`/interests/${params.slug}`}
-        items={interest.tours.map((t: any) => ({ name: t.title, url: `/tour/${t.slug}`, image: t.image }))}
+        items={interest.tours.map((tour) => ({ name: tour.title, url: `/tour/${tour.slug}`, image: tour.image }))}
       />
       <Header startSolid />
       <InterestLandingPage interest={interest} />

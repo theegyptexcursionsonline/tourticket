@@ -99,7 +99,6 @@ function RichTextEditor({
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = value || '';
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Generic exec for most formatting
@@ -303,8 +302,8 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       scheduledFor: blog.scheduledFor ? new Date(blog.scheduledFor).toISOString().slice(0, 16) : '',
       featured: blog.featured || false,
       allowComments: blog.allowComments ?? true,
-      relatedDestinations: blog.relatedDestinations?.map((d:any) => d.toString()) || [],
-      relatedTours: blog.relatedTours?.map((t:any) => t.toString()) || []
+      relatedDestinations: blog.relatedDestinations?.map((destination) => destination.toString()) || [],
+      relatedTours: blog.relatedTours?.map((tour) => tour.toString()) || []
     });
     setActiveTab('content');
     setIsPanelOpen(true);
@@ -422,7 +421,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
     return errors;
   };
 
-  const handleSubmit = async (e: React.FormEvent, action: 'save' | 'publish' = 'save') => {
+  const handleSubmit = async (e: React.SyntheticEvent, action: 'save' | 'publish' = 'save') => {
     e.preventDefault();
 
     const errors = validateForm();
@@ -470,7 +469,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
         router.refresh();
         return action === 'publish' ? 'Blog post published successfully!' : 'Blog post saved successfully!';
       },
-      error: (err) => (err as any).message || 'Failed to save blog post.',
+      error: (error) => error instanceof Error ? error.message : 'Failed to save blog post.',
     }).finally(() => {
       setIsSubmitting(false)
     });
@@ -594,7 +593,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredBlogs.map((blog, index) => (
           <motion.div
-            key={blog._id as any}
+            key={String(blog._id)}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -621,7 +620,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                   <Edit size={16} />
                 </button>
                 <button
-                  onClick={() => handleDelete(blog._id as any, blog.title)}
+                  onClick={() => handleDelete(String(blog._id), blog.title)}
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Delete blog post"
                 >
@@ -1310,7 +1309,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
 
                 <button
                   type="button"
-                  onClick={(e) => handleSubmit(e as any, 'save')}
+                  onClick={(e) => handleSubmit(e, 'save')}
                   disabled={isSubmitting || isUploading}
                   className="inline-flex items-center gap-3 px-6 py-3 text-white font-bold bg-slate-600 rounded-xl hover:bg-slate-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1329,7 +1328,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
 
                 <button
                   type="button"
-                  onClick={(e) => handleSubmit(e as any, 'publish')}
+                  onClick={(e) => handleSubmit(e, 'publish')}
                   disabled={isSubmitting || isUploading || !formData.title || !formData.content || !formData.featuredImage || !formData.author}
                   className="flex-1 inline-flex justify-center items-center gap-3 px-6 py-3 text-white font-bold bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 disabled:transform-none"
                 >

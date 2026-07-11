@@ -25,14 +25,65 @@ import {
 import toast from 'react-hot-toast';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
-type IBlog = any;
-type ITour = any;
-type IDestination = any;
+interface AuthorProfile {
+  name: string;
+  slug?: string;
+  role?: string;
+  bio?: string;
+  avatar?: string;
+  twitter?: string;
+  facebook?: string;
+  website?: string;
+  email?: string;
+  postsCount?: number;
+}
+
+export interface TourPreview {
+  _id?: string;
+  slug: string;
+  title: string;
+  image?: string;
+  images?: string[];
+  duration?: string;
+  discountPrice?: number;
+  price?: number;
+}
+
+export interface BlogPost {
+  _id: string;
+  slug: string;
+  title: string;
+  content: string;
+  excerpt?: string;
+  featuredImage?: string;
+  metaDescription?: string;
+  updatedAt?: string | Date;
+  category?: string;
+  categoryDisplay?: string;
+  featured?: boolean;
+  publishedAt?: string | Date;
+  readTime?: number;
+  readTimeText?: string;
+  views?: number;
+  likes?: number;
+  tags?: string[];
+  relatedTours?: TourPreview[];
+  author: string;
+  authorSlug?: string;
+  authorRole?: string;
+  authorBio?: string;
+  authorAvatar?: string;
+  authorTwitter?: string;
+  authorFacebook?: string;
+  authorWebsite?: string;
+  authorPostsCount?: number;
+  authorObject?: AuthorProfile;
+}
 
 interface Props {
-  blog: IBlog;
-  relatedPosts: IBlog[];
-  relevantTours?: ITour[];
+  blog: BlogPost;
+  relatedPosts: BlogPost[];
+  relevantTours?: TourPreview[];
 }
 
 /**
@@ -50,14 +101,14 @@ function formatDate(date?: string | Date) {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function ReadTimeText(blog: IBlog) {
+function ReadTimeText(blog: BlogPost) {
   if (blog.readTimeText) return blog.readTimeText;
   if (blog.readTime) return `${blog.readTime} min read`;
   return '5 min read';
 }
 
 /* ---------- Share & Like (kept lightweight) ---------- */
-function ShareAndLike({ blog }: { blog: IBlog }) {
+function ShareAndLike({ blog }: { blog: BlogPost }) {
   const [open, setOpen] = useState(false);
   const [likes, setLikes] = useState(blog?.likes ?? 0);
   const [liked, setLiked] = useState(false);
@@ -128,7 +179,7 @@ function ShareAndLike({ blog }: { blog: IBlog }) {
 }
 
 /* ---------- Small Tour Card used in sidebar CTA ---------- */
-function MiniTourCard({ tour }: { tour: ITour }) {
+function MiniTourCard({ tour }: { tour: TourPreview }) {
   return (
     <Link href={tour?.slug ? `/tour/${tour.slug}` : '#'} className="flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
       <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
@@ -151,7 +202,7 @@ function MiniTourCard({ tour }: { tour: ITour }) {
 }
 
 /* ---------- Author Card ---------- */
-function AuthorCard({ author }: { author: any }) {
+function AuthorCard({ author }: { author: AuthorProfile }) {
   if (!author) return null;
 
   const avatar = author.avatar || `/api/avatars/${encodeURIComponent(author.name || 'author')}`;
@@ -203,9 +254,9 @@ function AuthorCard({ author }: { author: any }) {
 }
 
 /* ---------- Structured Sidebar component (travel-focused) ---------- */
-function Sidebar({ blog }: { blog: IBlog }) {
+function Sidebar({ blog }: { blog: BlogPost }) {
   // prepare lists from blog.relatedTours
-  const relatedTours: ITour[] = blog.relatedTours || [];
+  const relatedTours = blog.relatedTours || [];
 
   return (
     <aside className="lg:col-span-1">

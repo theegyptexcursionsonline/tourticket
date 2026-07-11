@@ -69,7 +69,7 @@ async function getAuthorPosts(authorSlug: string) {
     )
     .lean();
 
-  const authorPosts = posts.filter((post: any) => matchesAuthorSlug(post.author, authorSlug));
+  const authorPosts = posts.filter((post) => matchesAuthorSlug(post.author, authorSlug));
 
   if (authorPosts.length === 0) {
     return null;

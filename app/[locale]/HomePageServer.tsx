@@ -23,6 +23,26 @@ import { getLocale } from 'next-intl/server';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { Category as CategoryData, Destination as DestinationData, Tour as TourData } from '@/types';
+
+type FeaturedInterest = {
+  _id: string;
+  type: 'category' | 'attraction';
+  name: string;
+  slug: string;
+  products: number;
+  featured?: boolean;
+  image?: string;
+};
+
+type CategoryPageSummary = {
+  _id: string;
+  slug: string;
+  pageType: 'category';
+  isPublished: boolean;
+  heroImage?: string;
+  categoryId?: { name: string; slug: string };
+};
 
 // ISR - Static generation with 60-second revalidation
 // This makes the homepage 10x faster by serving cached static pages
@@ -117,35 +137,35 @@ async function getHomePageData(locale: string) {
     // Build tour → best offer map (highest priority wins, then highest discount)
     const tourOfferMap = new Map<string, { badgeText: string; offerType: string; discountValue: number; priority: number }>();
     for (const offer of activeOffers) {
-      for (const tourId of (offer as any).applicableTours || []) {
+      for (const tourId of offer.applicableTours || []) {
         const key = tourId.toString();
         const existing = tourOfferMap.get(key);
-        if (!existing || (offer as any).priority > existing.priority ||
-            ((offer as any).priority === existing.priority && (offer as any).discountValue > existing.discountValue)) {
+        if (!existing || offer.priority > existing.priority ||
+            (offer.priority === existing.priority && offer.discountValue > existing.discountValue)) {
           tourOfferMap.set(key, {
-            badgeText: (offer as any).featuredBadgeText || (offer as any).name,
-            offerType: (offer as any).type,
-            discountValue: (offer as any).discountValue,
-            priority: (offer as any).priority,
+            badgeText: offer.featuredBadgeText || offer.name,
+            offerType: offer.type,
+            discountValue: offer.discountValue,
+            priority: offer.priority,
           });
         }
       }
     }
 
     // Tour counts per destination for THIS default site (one aggregation).
-    const destinationCountAgg = await Tour.aggregate([
+    const destinationCountAgg = await Tour.aggregate<{ _id: unknown; tourCount: number }>([
       { $match: { isPublished: true, ...DEFAULT_TENANT_FILTER } },
       { $group: { _id: '$destination', tourCount: { $sum: 1 } } },
     ]);
     const tourCountByDestination = new Map<string, number>(
-      destinationCountAgg.map((row: any) => [String(row._id), row.tourCount])
+      destinationCountAgg.map((row) => [String(row._id), row.tourCount])
     );
 
     // Only surface destinations that actually have tours here, ranked by count.
     // This also drops duplicate/other-tenant destination records (which have 0
     // default-tenant tours) so the homepage never shows empty "0 tours" cards.
     const destinationsWithCounts = destinations
-      .map((dest: any) => ({
+      .map((dest) => ({
         ...JSON.parse(JSON.stringify(dest)),
         tourCount: tourCountByDestination.get(String(dest._id)) || 0,
       }))
@@ -155,7 +175,7 @@ async function getHomePageData(locale: string) {
 
     // Calculate tour counts for InterestGrid categories
     const interestGridCategories = await Promise.all(
-      categories.map(async (category: any) => {
+      categories.map(async (category) => {
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
           isPublished: true,
@@ -170,7 +190,7 @@ async function getHomePageData(locale: string) {
 
     // Build interests (categories + attractions with tour counts) for PopularInterest
     const categoriesWithCounts = await Promise.all(
-      allCategories.map(async (category: any) => {
+      allCategories.map(async (category) => {
         // Category is an array field in Tour model, so we need to use $in
         const tourCount = await Tour.countDocuments({
           category: { $in: [category._id] },
@@ -191,7 +211,7 @@ async function getHomePageData(locale: string) {
     );
 
     const attractionsWithCounts = await Promise.all(
-      attractionPages.map(async (page: any) => {
+      attractionPages.map(async (page) => {
         let tourCount = 0;
         const searchQueries = [];
 
@@ -354,15 +374,15 @@ async function getHomePageData(locale: string) {
     });
 
     return {
-      destinations: localizedDestinations,
-      tours: localizedTours,
-      categories: localizedCategories,
-      featuredInterests: localizedFeaturedInterests,
-      categoryPages: localizedCategoryPages,
-      headerDestinations: localizedHeaderDestinations,
-      headerCategories: localizedHeaderCategories,
+      destinations: localizedDestinations as unknown as (DestinationData & { tourCount: number })[],
+      tours: localizedTours as unknown as TourData[],
+      categories: localizedCategories as unknown as CategoryData[],
+      featuredInterests: localizedFeaturedInterests as unknown as FeaturedInterest[],
+      categoryPages: localizedCategoryPages as unknown as CategoryPageSummary[],
+      headerDestinations: localizedHeaderDestinations as unknown as DestinationData[],
+      headerCategories: localizedHeaderCategories as unknown as CategoryData[],
       heroSettings: heroSettings ? JSON.parse(JSON.stringify(heroSettings)) : null,
-      dayTrips: localizedDayTrips
+      dayTrips: localizedDayTrips as unknown as TourData[]
     };
   } catch (error) {
     console.error('Error fetching homepage data:', error);
@@ -411,33 +431,33 @@ export default async function HomePageServer() {
         ]}
       />
       <ToursListSchema
-        tours={(tours as any[]).map((t: any) => ({
-          title: t.title,
-          slug: t.slug,
-          image: t.image,
-          discountPrice: t.discountPrice,
-          originalPrice: t.originalPrice,
-          rating: t.rating,
-          reviewCount: t.reviewCount,
-          duration: t.duration,
+        tours={tours.map((tour) => ({
+          title: tour.title,
+          slug: tour.slug,
+          image: tour.image,
+          discountPrice: tour.discountPrice,
+          originalPrice: tour.originalPrice,
+          rating: tour.rating,
+          reviewCount: tour.reviewCount,
+          duration: tour.duration,
         }))}
         listName="Featured Tours & Excursions in Egypt"
         listDescription="Discover the most popular tours, day trips, and activities across Egypt"
       />
       <main>
       <Header
-        initialDestinations={headerDestinations as any}
-        initialCategories={headerCategories as any}
+        initialDestinations={headerDestinations}
+        initialCategories={headerCategories}
       />
       <HeroSectionStable initialSettings={heroSettings} />
 
-      <DestinationsServer destinations={destinations as any} />
+      <DestinationsServer destinations={destinations} />
       <HomeDeferredSections
-        tours={tours as any}
-        featuredInterests={featuredInterests as any}
-        categoryPages={categoryPages as any}
-        categories={categories as any}
-        dayTrips={dayTrips as any}
+        tours={tours}
+        featuredInterests={featuredInterests}
+        categoryPages={categoryPages}
+        categories={categories}
+        dayTrips={dayTrips}
       />
       <DeferredAISearchWidget />
     </main>

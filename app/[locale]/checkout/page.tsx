@@ -36,7 +36,28 @@ import { CartItem } from '@/types';
 import toast from 'react-hot-toast';
 import { parseLocalDate } from '@/utils/date';
 
-const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false }: any) => (
+interface PricingSummary {
+  subtotal: number;
+  serviceFee: number;
+  tax: number;
+  total: number;
+  discount: number;
+  currency: string;
+  symbol: string;
+}
+
+interface FormInputProps {
+  label: string;
+  name: string;
+  type?: React.HTMLInputTypeAttribute;
+  placeholder?: string;
+  required?: boolean;
+  value: string;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  disabled?: boolean;
+}
+
+const FormInput = ({ label, name, type = 'text', placeholder, required = true, value, onChange, disabled = false }: FormInputProps) => (
   <div>
     <label htmlFor={name} className="block text-sm font-medium text-slate-700 mb-2">
       {label}
@@ -163,7 +184,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
     const adultPrice = basePrice * (item.quantity || 1);
     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-    let tourTotal = adultPrice + childPrice;
+    const tourTotal = adultPrice + childPrice;
 
     let addOnsTotal = 0;
     if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -253,7 +274,17 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   );
 };
 
-const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage }: any) => {
+interface BookingSummaryProps {
+  pricing: PricingSummary;
+  promoCode: string;
+  setPromoCode: React.Dispatch<React.SetStateAction<string>>;
+  applyPromoCode: () => void;
+  isProcessing: boolean;
+  isApplyingCoupon: boolean;
+  couponMessage: string;
+}
+
+const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage }: BookingSummaryProps) => {
   const { formatPrice } = useSettings();
   const { cart } = useCart();
 
@@ -374,9 +405,9 @@ const CheckoutFormStep = ({
   customerType: 'guest' | 'login' | 'signup';
   setCustomerType: (type: 'guest' | 'login' | 'signup') => void;
   onAuthModalOpen: (mode: 'login' | 'signup') => void;
-  user: any;
-  pricing: any;
-  cart: any[];
+  user: ReturnType<typeof useAuth>['user'];
+  pricing: PricingSummary;
+  cart: CartItem[];
   promoCode: string;
   paymentIntentId: string;
   setPaymentIntentId: (id: string) => void;
@@ -599,7 +630,10 @@ const CheckoutFormStep = ({
                       hotelPickupLocation: formData.hotelPickupLocation || undefined,
                       specialRequests: formData.specialRequests,
                     }}
-                    cart={cart}
+                    cart={cart.map((item) => ({
+                      ...item,
+                      id: item.id == null ? undefined : String(item.id),
+                    }))}
                     pricing={pricing}
                     discountCode={promoCode}
                     onSuccess={(paymentIntent) => {
@@ -687,7 +721,7 @@ const ThankYouPage = ({
   receiptToken,
 }: {
   orderedItems: CartItem[];
-  pricing: any;
+  pricing: PricingSummary;
   customer: FormDataShape | null;
   lastOrderId?: string;
   receiptToken?: string;
@@ -991,7 +1025,7 @@ const handleDownloadReceipt = async () => {
                     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
                     const adultPrice = basePrice * (item.quantity || 1);
                     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-                    let tourTotal = adultPrice + childPrice;
+                    const tourTotal = adultPrice + childPrice;
                     let addOnsTotal = 0;
                     if (item.selectedAddOns && item.selectedAddOnDetails) {
                       Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
@@ -1146,7 +1180,7 @@ export default function CheckoutPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
-  const [finalPricing, setFinalPricing] = useState<any>(null);
+  const [finalPricing, setFinalPricing] = useState<PricingSummary | null>(null);
   const [finalCustomer, setFinalCustomer] = useState<FormDataShape | null>(null);
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
@@ -1185,7 +1219,7 @@ export default function CheckoutPage() {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
     const adultPrice = basePrice * (item.quantity || 1);
     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-    let tourTotal = adultPrice + childPrice;
+    const tourTotal = adultPrice + childPrice;
 
     let addOnsTotal = 0;
     if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -1408,7 +1442,7 @@ export default function CheckoutPage() {
               {isConfirmed ? (
                 <ThankYouPage 
                   orderedItems={orderedItems} 
-                  pricing={finalPricing} 
+                  pricing={finalPricing || pricing}
                   customer={finalCustomer} 
                   lastOrderId={lastOrderId} 
                   receiptToken={receiptToken}

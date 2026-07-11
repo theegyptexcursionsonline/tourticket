@@ -37,6 +37,16 @@ interface Tour {
   title: string;
 }
 
+interface TourOption {
+  id: string;
+  title: string;
+}
+
+const isTourOption = (value: unknown): value is TourOption =>
+  typeof value === 'object' && value !== null &&
+  'id' in value && typeof value.id === 'string' &&
+  'title' in value && typeof value.title === 'string';
+
 // Calendar helper functions
 const getDaysInMonth = (year: number, month: number) => {
   return new Date(year, month + 1, 0).getDate();
@@ -564,14 +574,14 @@ function StopSaleRangeModal({
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        const opts = Array.isArray(data) ? data : [];
-        setOptions(opts.map((o: any) => ({ id: o.id, title: o.title })));
+        const options = Array.isArray(data) ? data.filter(isTourOption) : [];
+        setOptions(options.map((option) => ({ id: option.id, title: option.title })));
       } catch {
         setOptions([]);
       }
     };
     load();
-  }, [tourId]);
+  }, [token, tourId]);
 
   const toggleOption = (id: string) => {
     const next = new Set(selectedOptionIds);
@@ -832,8 +842,8 @@ function SlotEditorModal({
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        const opts = Array.isArray(data) ? data : [];
-        setTourOptions(opts.map((o: any) => ({ id: o.id, label: o.title })));
+        const options = Array.isArray(data) ? data.filter(isTourOption) : [];
+        setTourOptions(options.map((option) => ({ id: option.id, label: option.title })));
       } catch {
         setTourOptions([]);
       }
@@ -841,7 +851,7 @@ function SlotEditorModal({
     if (tourId) {
       loadOptions();
     }
-  }, [tourId]);
+  }, [token, tourId]);
 
   const setAllOptionsStopSale = async (enabled: boolean) => {
     setIsStopSaleLoading(true);

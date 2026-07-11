@@ -6,7 +6,7 @@ import TourModel from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import BlogPostClient from './BlogPostClient';
+import BlogPostClient, { type BlogPost, type TourPreview } from './BlogPostClient';
 import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import FAQSchema from '@/components/schema/FAQSchema';
 import type { IBlog } from '@/lib/models/Blog';
@@ -80,7 +80,7 @@ async function getBlogPost(slug: string) {
     .lean();
 
   if (!blog) {
-    return { blog: null, relatedPosts: [] };
+    return { blog: null, relatedPosts: [] as BlogPost[], relevantTours: [] as TourPreview[] };
   }
 
   // increment views (fire-and-forget style)
@@ -126,9 +126,9 @@ async function getBlogPost(slug: string) {
   }
 
   return {
-    blog: JSON.parse(JSON.stringify(blog)) as IBlog,
-    relatedPosts: JSON.parse(JSON.stringify(relatedPosts)) as IBlog[],
-    relevantTours: JSON.parse(JSON.stringify(relevantTours)) as Record<string, unknown>[],
+    blog: JSON.parse(JSON.stringify(blog)) as BlogPost,
+    relatedPosts: JSON.parse(JSON.stringify(relatedPosts)) as BlogPost[],
+    relevantTours: JSON.parse(JSON.stringify(relevantTours)) as TourPreview[],
   };
 }
 

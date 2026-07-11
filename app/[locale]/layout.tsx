@@ -19,6 +19,8 @@ import Category from "@/lib/models/Category";
 import { localizeEntityFields } from "@/lib/i18n/contentLocalization";
 import { selectLocalizedTaxonomyEntries } from "@/lib/i18n/localizedCollections";
 import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
+import type { Category as CategoryData, Destination as DestinationData } from '@/types';
+import GoogleTagManager from './GoogleTagManager';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -81,7 +83,7 @@ export function generateStaticParams() {
 // past Next.js's 60s SSG budget and timed out the Netlify build. The cache
 // below drops each worker process from 272 DB round-trips to 1 per locale/TTL
 // window, which is all we need during a build and still safe at runtime.
-type NavCache = { destinations: any[]; categories: any[] };
+type NavCache = { destinations: DestinationData[]; categories: CategoryData[] };
 type LocaleNavCache = Record<string, NavCache | undefined>;
 let _navDataCache: LocaleNavCache = {};
 let _navDataCacheExpiry = 0;
@@ -115,14 +117,14 @@ async function getNavData(locale: string): Promise<NavCache> {
 
     const result: NavCache = {
       destinations: selectLocalizedTaxonomyEntries(
-        JSON.parse(JSON.stringify(destinations as any[])),
+        JSON.parse(JSON.stringify(destinations)) as Record<string, unknown>[],
         locale,
         ['name', 'description', 'country', 'metaTitle', 'metaDescription']
       ).map((destination: Record<string, unknown>) =>
         localizeEntityFields(destination, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
-      ),
+      ) as unknown as DestinationData[],
       categories: selectLocalizedTaxonomyEntries(
-        JSON.parse(JSON.stringify(categories as any[])),
+        JSON.parse(JSON.stringify(categories)) as Record<string, unknown>[],
         locale,
         ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
       ).map((category: Record<string, unknown>) =>
@@ -135,7 +137,7 @@ async function getNavData(locale: string): Promise<NavCache> {
           'highlights',
           'features',
         ])
-      ),
+      ) as unknown as CategoryData[],
     };
 
     _navDataCache = { [locale]: result };
@@ -171,15 +173,9 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <head>
-        {/* Google Tag Manager */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-W9WCZFKM');` }} />
-      </head>
+      <head />
       <body className={`${inter.variable} ${almarai.variable} ${fontClass}`} suppressHydrationWarning>
+        <GoogleTagManager containerId="GTM-W9WCZFKM" />
         {/* Google Tag Manager (noscript) */}
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W9WCZFKM" height="0" width="0" style={{display:'none',visibility:'hidden'}}></iframe></noscript>
         {/* FoxesConnect support widget — EEO main site only (test phase).

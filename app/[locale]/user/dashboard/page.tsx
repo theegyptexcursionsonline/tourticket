@@ -78,7 +78,7 @@ const BookingCard = ({ booking }: { booking: PopulatedBooking & { dateString?: s
           />
           
           <div className="absolute left-3 top-3 px-3 py-1 rounded-lg bg-black/70 text-white text-xs font-semibold backdrop-blur-sm">
-            {(booking.tour.destination as any)?.name || 'Tour'}
+            {typeof booking.tour.destination === 'object' ? booking.tour.destination.name : 'Tour'}
           </div>
           
           {isPast && (
