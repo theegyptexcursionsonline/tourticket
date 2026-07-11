@@ -1,7 +1,7 @@
 // app/egypt/EgyptHeroClient.tsx
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { motion } from 'framer-motion';
@@ -11,17 +11,11 @@ export default function EgyptHeroClient() {
   const bgRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastScrollRef = useRef<number>(0);
-  const [loaded, setLoaded] = useState(false);
 
   const prefersReducedMotion =
     typeof window !== 'undefined' && window.matchMedia
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : false;
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoaded(true), 60);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     if (prefersReducedMotion) return;

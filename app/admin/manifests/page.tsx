@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
-import toast from 'react-hot-toast';
 import {
   ListPlus,
   Printer,

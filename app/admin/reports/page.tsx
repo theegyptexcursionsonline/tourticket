@@ -6,7 +6,6 @@ import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DollarSign, BookOpen, Percent, TrendingUp, Crown } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 // --- Type Definitions for Report Data ---
 interface KpiData {

@@ -16,7 +16,6 @@ import {
   Calendar,
   User,
   Eye,
-  EyeOff,
   Star,
   Clock,
   Tag,
@@ -26,7 +25,6 @@ import {
   Send,
   AlertCircle,
   Search,
-  Filter,
   Heart,
   BarChart3
 } from 'lucide-react';

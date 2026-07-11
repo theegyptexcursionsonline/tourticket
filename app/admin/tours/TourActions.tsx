@@ -57,7 +57,6 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
     }
   }, [isOpen]);
 
-  const openMenu = () => setIsOpen(true);
   const toggleMenu = () => setIsOpen(v => !v);
 
   const handleDelete = async () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Mail, Lock, User } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Link } from '@/i18n/routing';
@@ -33,8 +33,8 @@ const SignupClient: React.FC = () => {
       await signup({ firstName, lastName, email, password });
       toast.success(t('toasts.signupSuccess'));
       router.push('/'); // Redirect on success
-    } catch (err: any) {
-      toast.error(err.message || t('toasts.signupFailed'));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t('toasts.signupFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -47,10 +47,11 @@ const SignupClient: React.FC = () => {
       await loginWithGoogle();
       toast.success(t('toasts.googleSuccess'));
       router.push('/');
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
       // Only show error if it's not a user-cancelled action
-      if (!err.message?.includes('closed') && !err.message?.includes('cancelled')) {
-        toast.error(err.message || t('toasts.googleFailed'));
+      if (!message.includes('closed') && !message.includes('cancelled')) {
+        toast.error(message || t('toasts.googleFailed'));
       }
     } finally {
       setIsGoogleLoading(false);

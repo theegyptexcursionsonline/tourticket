@@ -43,24 +43,27 @@ export default function ForgotPasswordClient() {
       setSuccessMessage(t('success.emailSent'));
       setEmail('');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password reset error:', error);
+      const errorCode = typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : '';
 
       // Provide user-friendly error messages
       let errorMessage = t('errors.unexpected');
 
-      if (error.code === 'auth/user-not-found') {
+      if (errorCode === 'auth/user-not-found') {
         // For security, we don't want to reveal if a user exists
         errorMessage = t('success.emailSent');
         setIsSuccess(true);
         setSuccessMessage(errorMessage);
         setEmail('');
         return;
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (errorCode === 'auth/invalid-email') {
         errorMessage = t('errors.invalidEmailWithPeriod');
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (errorCode === 'auth/too-many-requests') {
         errorMessage = t('errors.tooManyRequests');
-      } else if (error.code === 'auth/user-disabled') {
+      } else if (errorCode === 'auth/user-disabled') {
         errorMessage = t('errors.userDisabled');
       }
 

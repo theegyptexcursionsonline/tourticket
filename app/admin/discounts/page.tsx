@@ -19,7 +19,6 @@ import {
   AlertCircle,
   Check,
   Users,
-  Calendar,
   TrendingUp,
   Zap
 } from 'lucide-react';

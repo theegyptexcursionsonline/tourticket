@@ -13,6 +13,7 @@ import {
   Legend,
   Filler, // Important for the gradient fill
 } from 'chart.js';
+import type { ScriptableContext, TooltipItem } from 'chart.js';
 
 // Register the necessary components for Chart.js
 ChartJS.register(
@@ -39,7 +40,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
         data: data.map(d => d.revenue),
         fill: true,
         borderColor: '#ef4444', // Red-500
-        backgroundColor: (context: any) => {
+        backgroundColor: (context: ScriptableContext<'line'>) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 200);
           gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
@@ -74,7 +75,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
           size: 14,
         },
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<'line'>) {
             let label = context.dataset.label || '';
             if (label) {
               label += ': ';
@@ -105,8 +106,8 @@ const SalesChart = ({ data }: SalesChartProps) => {
         },
         ticks: {
           color: '#64748b', // Slate-500
-          callback: function (value: any) {
-            return '$' + (value / 1000) + 'k';
+          callback: function (value: string | number) {
+            return '$' + (Number(value) / 1000) + 'k';
           },
         },
       },

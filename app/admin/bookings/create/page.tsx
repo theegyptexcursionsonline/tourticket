@@ -229,8 +229,8 @@ export default withAuth(function CreateManualBookingPage() {
       const ref = data?.bookingReference || data?._id || '';
       toast.success(`Manual booking created${ref ? `: ${ref}` : ''}`);
       router.push('/admin/bookings');
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to create booking');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create booking');
     } finally {
       setIsSubmitting(false);
     }

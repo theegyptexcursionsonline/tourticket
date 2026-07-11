@@ -31,6 +31,9 @@ interface TeamMember {
   createdAt?: string;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 const permissionLabels: Record<string, string> = {
   manageDashboard: 'Dashboard',
   manageBookings: 'Bookings',
@@ -90,8 +93,8 @@ const TeamPage = () => {
       }
       const data = await response.json();
       setMembers(data.data || []);
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to load team');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to load team'));
     } finally {
       setIsLoading(false);
     }
@@ -128,8 +131,8 @@ const TeamPage = () => {
         role: 'operations',
         permissions: ['manageBookings'],
       });
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to add member');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to add member'));
     } finally {
       setIsInviting(false);
     }
@@ -155,8 +158,8 @@ const TeamPage = () => {
         throw new Error(data.error || 'Failed to update member');
       }
       toast.success('Team member updated');
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to update member');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to update member'));
       setMembers(previous);
     }
   };
@@ -186,8 +189,8 @@ const TeamPage = () => {
         throw new Error(data.error || 'Failed to update status');
       }
       toast.success(`Access ${member.isActive ? 'revoked' : 'restored'}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to change status');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to change status'));
       setMembers((prev) =>
         prev.map((item) =>
           item._id === member._id ? { ...item, isActive: previous } : item,
@@ -217,8 +220,8 @@ const TeamPage = () => {
       
       setMembers((prev) => prev.filter((item) => item._id !== member._id));
       toast.success(`${member.firstName} ${member.lastName} has been deleted`);
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to delete member');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to delete member'));
     }
   };
 
@@ -251,8 +254,8 @@ const TeamPage = () => {
         showPassword: false,
         isResetting: false,
       });
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to reset password');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to reset password'));
       setPasswordResetModal((prev) => ({ ...prev, isResetting: false }));
     }
   };
@@ -271,8 +274,8 @@ const TeamPage = () => {
       }
 
       toast.success(`Invitation resent to ${member.email}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to resend invitation');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to resend invitation'));
     }
   };
 

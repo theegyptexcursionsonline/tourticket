@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
-import { Star, MessageSquare, User, Map, Trash2, CheckCircle, ShieldCheck, Clock, TrendingUp, Users, Filter } from 'lucide-react';
+import { Star, MessageSquare, Map, Trash2, CheckCircle, ShieldCheck, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -272,7 +272,7 @@ const ReviewsPage = () => {
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveFilter(tab.key as any)}
+              onClick={() => setActiveFilter(tab.key as typeof activeFilter)}
               className={`px-6 py-4 font-semibold transition-colors flex items-center space-x-2 ${
                 activeFilter === tab.key
                   ? 'text-red-600 border-b-2 border-red-600 bg-red-50'

@@ -6,7 +6,6 @@ import InterestLandingPage from '@/components/InterestLandingPage';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
-import AttractionPage from '@/lib/models/AttractionPage';
 
 // Types
 interface InterestPageProps {

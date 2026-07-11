@@ -12,7 +12,6 @@ import {
   BarChart2,
   DollarSign,
   BookOpen,
-  Clock,
   Users,
   TrendingUp,
   Activity,
@@ -33,6 +32,11 @@ const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: fa
 const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+
+const formatRevenueTooltip: NonNullable<React.ComponentProps<typeof Tooltip>['formatter']> = (value) => [
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value)),
+  'Revenue',
+];
 
 interface TrendValue { value: number; isPositive: boolean }
 
@@ -263,9 +267,9 @@ const AdminDashboard = () => {
           });
           clearTimeout(timeout);
           return response;
-        } catch (error: any) {
+        } catch (error: unknown) {
           clearTimeout(timeout);
-          if (error.name === 'AbortError') {
+          if (error instanceof DOMException && error.name === 'AbortError') {
             throw new Error('Request timeout - server is taking too long to respond');
           }
           throw error;
@@ -504,10 +508,7 @@ const AdminDashboard = () => {
                     axisLine={false}
                   />
                   <Tooltip
-                    formatter={((value: number) => [
-                      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value),
-                      'Revenue'
-                    ]) as any}
+                    formatter={formatRevenueTooltip}
                     contentStyle={{
                       backgroundColor: 'white',
                       border: '1px solid #E2E8F0',
@@ -549,7 +550,7 @@ const AdminDashboard = () => {
 
           <div className="space-y-4 max-h-80 overflow-y-auto">
             {stats.recentActivities.length > 0 ? (
-              stats.recentActivities.map((activity, index) => (
+              stats.recentActivities.map((activity) => (
                 <div key={activity.id} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0">
                     <BookOpen className="h-4 w-4 text-blue-600"/>

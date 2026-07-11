@@ -46,8 +46,8 @@ export default function LoginClient() {
       setTimeout(() => {
         router.push(redirectTarget);
       }, 100);
-    } catch (error: any) {
-      toast.error(error.message || t('toasts.loginFailed'));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t('toasts.loginFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -64,10 +64,11 @@ export default function LoginClient() {
       setTimeout(() => {
         router.push(redirectTarget);
       }, 100);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
       // Only show error if it's not a user-cancelled action
-      if (!error.message?.includes('closed') && !error.message?.includes('cancelled')) {
-        toast.error(error.message || t('toasts.googleFailed'));
+      if (!message.includes('closed') && !message.includes('cancelled')) {
+        toast.error(message || t('toasts.googleFailed'));
       }
     } finally {
       setIsGoogleLoading(false);

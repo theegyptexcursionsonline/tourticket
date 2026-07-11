@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { 
   PlusCircle, Edit, Trash2, Loader2, X, Tag, Image as ImageIcon,
-  Save, Upload, Sparkles, Eye, EyeOff
+  Save, Upload, Sparkles
 } from 'lucide-react';
 import { ICategory } from '@/lib/models/Category';
 import Image from 'next/image';
@@ -258,7 +258,7 @@ export default function CategoryManager({ initialCategories }: { initialCategori
                             {categories.length > 0 ? (
                                 categories.map(cat => (
                                     <motion.tr 
-                                        key={cat._id as any} 
+                                        key={String(cat._id)}
                                         className="hover:bg-slate-50 transition-colors duration-150"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -395,7 +395,7 @@ export default function CategoryManager({ initialCategories }: { initialCategori
                                 ].map((tab) => (
                                     <button
                                         key={tab.id}
-                                        onClick={() => setCurrentTab(tab.id as any)}
+                                        onClick={() => setCurrentTab(tab.id as typeof currentTab)}
                                         className={`flex items-center gap-2 px-4 py-3 font-medium transition-all ${
                                             currentTab === tab.id
                                                 ? 'text-indigo-600 border-b-2 border-indigo-600'

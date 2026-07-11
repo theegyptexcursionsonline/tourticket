@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Eye, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Search } from 'lucide-react';
 import { AttractionPage } from '@/types';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
@@ -136,7 +136,7 @@ export default function AttractionPagesAdmin() {
           <select
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
+            onChange={(e) => setFilterType(e.target.value as typeof filterType)}
           >
             <option value="all">All Types</option>
             <option value="attraction">Attraction</option>
@@ -146,7 +146,7 @@ export default function AttractionPagesAdmin() {
           <select
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
+            onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
           >
             <option value="all">All Status</option>
             <option value="published">Published</option>

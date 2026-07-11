@@ -6,10 +6,10 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { 
-  Image as ImageIcon, Settings, Upload, Trash2, Check, 
-  Eye, EyeOff, Plus, Edit, Save, X, Monitor, Smartphone,
-  Palette, Type, MousePointer, Users, Star, RefreshCw,
-  Hash, Search, Play, Pause, Zap, Globe, Timer, Sparkles
+  Image as ImageIcon, Upload, Trash2, Check,
+  Eye, EyeOff, Plus, Save, X, Monitor, Smartphone,
+  Palette, Type, Users, RefreshCw,
+  Hash, Search, Play, Pause, Globe, Timer, Sparkles
 } from 'lucide-react';
 
 
@@ -397,7 +397,7 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50'
@@ -1127,7 +1127,7 @@ const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
                             ...editingSettings,
                             overlaySettings: { 
                               ...editingSettings.overlaySettings, 
-                              gradientType: type as any 
+                              gradientType: type as HeroSettings['overlaySettings']['gradientType']
                             }
                           })}
                           className={`p-3 rounded-lg border-2 transition-all capitalize ${

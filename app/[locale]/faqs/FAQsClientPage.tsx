@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState } from "react";
-import { 
-  Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, 
-  Menu, Search, ChevronDown, Plus, Minus
-} from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
