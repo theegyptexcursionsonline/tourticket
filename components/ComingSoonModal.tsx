@@ -52,7 +52,7 @@ const ComingSoonModal: FC<ComingSoonModalProps> = ({ isOpen, onClose, destinatio
             </div>
             <h2 className="text-2xl font-bold text-slate-800">Coming Soon!</h2>
             <p className="text-slate-600 mt-2">
-              We're working hard to bring you exciting tours and tickets for <span className="font-bold">{destination}</span>.
+              We&apos;re working hard to bring you exciting tours and tickets for <span className="font-bold">{destination}</span>.
             </p>
             <p className="text-sm text-slate-500 mt-4">
               Please check back later!

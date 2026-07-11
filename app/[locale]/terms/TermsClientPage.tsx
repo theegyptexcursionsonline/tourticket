@@ -70,10 +70,10 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">1. Introduction</h2>
               <p className="leading-relaxed mb-4">
-                Welcome to <strong>Egypt Excursions Online</strong> (<strong>"Company"</strong>, <strong>"we"</strong>, <strong>"our"</strong>, <strong>"us"</strong>). These Terms of Service (<strong>"Terms"</strong>) govern your access to and use of our website located at www.egypt-excursionsonline.com and any related pages, content, features, or services we operate (collectively, the <strong>"Service"</strong>).
+                Welcome to <strong>Egypt Excursions Online</strong> (<strong>&quot;Company&quot;</strong>, <strong>&quot;we&quot;</strong>, <strong>&quot;our&quot;</strong>, <strong>&quot;us&quot;</strong>). These Terms of Service (<strong>&quot;Terms&quot;</strong>) govern your access to and use of our website located at www.egypt-excursionsonline.com and any related pages, content, features, or services we operate (collectively, the <strong>&quot;Service&quot;</strong>).
               </p>
               <p className="leading-relaxed mb-4">
-                Egypt Excursions Online is operated by <a href="https://www.excursions.online" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-bold">Excursions Online LLC FZ</a> (the <strong>"Mother Company"</strong>).
+                Egypt Excursions Online is operated by <a href="https://www.excursions.online" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-bold">Excursions Online LLC FZ</a> (the <strong>&quot;Mother Company&quot;</strong>).
               </p>
               <p className="leading-relaxed">
                 Our Privacy Policy (published on a separate page) explains how we collect, safeguard, and disclose personal data. These Terms of Service govern your access to and use of the Service. <strong>By accessing or using the Service you agree to be bound by these Terms.</strong> For privacy matters, please refer to the Privacy Policy. If you have questions, contact us at <strong>info@egypt-excursionsonline.com</strong>.
@@ -92,7 +92,7 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">3. Tour Booking</h2>
               <p className="leading-relaxed mb-4">
-                If you book any service made available through the Service (a <strong>"Tour Booking"</strong>), you may be asked to provide information including, without limitation, your payment card details, billing address, hotel/accommodation information, and participant details.
+                If you book any service made available through the Service (a <strong>&quot;Tour Booking&quot;</strong>), you may be asked to provide information including, without limitation, your payment card details, billing address, hotel/accommodation information, and participant details.
               </p>
               <p className="leading-relaxed mb-4">
                 You represent and warrant that <strong>(i)</strong> you have the legal right to use any payment method in connection with a Tour Booking, and <strong>(ii)</strong> all information you supply is true, correct, and complete. We may use third-party services to process payments and to complete bookings. By submitting your information, you grant us the right to provide that information to third parties subject to our Privacy Policy.
@@ -129,7 +129,7 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">4. Contests, Sweepstakes, and Promotions</h2>
               <p className="leading-relaxed">
-                Any contests, sweepstakes, or other promotions (collectively, <strong>"Promotions"</strong>) made available through the Service may be governed by rules separate from these Terms. If you participate in any Promotions, please review the applicable rules and our Privacy Policy. If Promotion rules conflict with these Terms, the Promotion rules will apply.
+                Any contests, sweepstakes, or other promotions (collectively, <strong>&quot;Promotions&quot;</strong>) made available through the Service may be governed by rules separate from these Terms. If you participate in any Promotions, please review the applicable rules and our Privacy Policy. If Promotion rules conflict with these Terms, the Promotion rules will apply.
               </p>
             </div>
 
@@ -137,7 +137,7 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">5. Refunds & Cancellations</h2>
               <p className="leading-relaxed mb-6">
-                We issue refunds for bookings within <strong>1 day (24 hours)</strong> of the original purchase unless otherwise stated in the specific product's cancellation policy or required by applicable law.
+                We issue refunds for bookings within <strong>1 day (24 hours)</strong> of the original purchase unless otherwise stated in the specific product&apos;s cancellation policy or required by applicable law.
               </p>
 
               <h3 className="text-xl font-bold text-slate-900 mb-3 mt-8">5.1 Cancellation Scale (unless otherwise stated)</h3>
@@ -150,7 +150,7 @@ export default function TermsAndConditionsPage() {
                 If the Company cancels your trip for any reason, a <strong>full refund</strong> will be provided.
               </p>
               <p className="leading-relaxed mb-6">
-                Cancellations due to sickness may require a doctor's certificate; refunds in such cases are at management's discretion.
+                Cancellations due to sickness may require a doctor&apos;s certificate; refunds in such cases are at management&apos;s discretion.
               </p>
 
               <h3 className="text-xl font-bold text-slate-900 mb-3 mt-8">5A. Payment Policy</h3>
@@ -192,14 +192,14 @@ export default function TermsAndConditionsPage() {
               <ol className="space-y-2 ml-6 mb-4 list-decimal">
                 <li className="leading-relaxed">In any way that violates any applicable national or international law or regulation.</li>
                 <li className="leading-relaxed">To exploit, harm, or attempt to exploit or harm minors in any way.</li>
-                <li className="leading-relaxed">To transmit or procure the sending of any unsolicited advertising or promotional material ("spam").</li>
+                <li className="leading-relaxed">To transmit or procure the sending of any unsolicited advertising or promotional material (&quot;spam&quot;).</li>
                 <li className="leading-relaxed">To impersonate the Company, a Company employee, another user, or any other person or entity.</li>
                 <li className="leading-relaxed">In any way that infringes upon the rights of others or is illegal, threatening, fraudulent, or harmful.</li>
-                <li className="leading-relaxed">To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service or that may harm the Company or users of the Service or expose them to liability.</li>
+                <li className="leading-relaxed">To engage in any other conduct that restricts or inhibits anyone&apos;s use or enjoyment of the Service or that may harm the Company or users of the Service or expose them to liability.</li>
               </ol>
               <p className="leading-relaxed mb-4"><strong>Additionally, you agree not to:</strong></p>
               <ol className="space-y-2 ml-6 list-decimal">
-                <li className="leading-relaxed">Use the Service in any manner that could disable, overburden, damage, or impair the Service or interfere with others' use of the Service.</li>
+                <li className="leading-relaxed">Use the Service in any manner that could disable, overburden, damage, or impair the Service or interfere with others&apos; use of the Service.</li>
                 <li className="leading-relaxed">Use any robot, spider, or other automatic device, process, or means to access the Service for any purpose, including monitoring or copying material on the Service.</li>
                 <li className="leading-relaxed">Use any manual process to monitor or copy any material on the Service without our prior written consent.</li>
                 <li className="leading-relaxed">Use any device, software, or routine that interferes with the proper working of the Service.</li>
@@ -239,10 +239,10 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">11. Copyright Policy</h2>
               <p className="leading-relaxed mb-4">
-                We respect the intellectual property rights of others and will respond to claims that content posted on the Service infringes the copyright or other intellectual property rights of any person or entity. If you believe your copyrighted work has been copied in a way that constitutes infringement, please email <strong>info@egypt-excursionsonline.com</strong> with the subject line <strong>"Copyright Infringement"</strong>, including the details set forth below under Section 12.
+                We respect the intellectual property rights of others and will respond to claims that content posted on the Service infringes the copyright or other intellectual property rights of any person or entity. If you believe your copyrighted work has been copied in a way that constitutes infringement, please email <strong>info@egypt-excursionsonline.com</strong> with the subject line <strong>&quot;Copyright Infringement&quot;</strong>, including the details set forth below under Section 12.
               </p>
               <p className="leading-relaxed">
-                You may be held liable for damages (including costs and attorneys' fees) for misrepresentation or bad-faith claims.
+                You may be held liable for damages (including costs and attorneys&apos; fees) for misrepresentation or bad-faith claims.
               </p>
             </div>
 
@@ -258,7 +258,7 @@ export default function TermsAndConditionsPage() {
                 <li className="leading-relaxed">Identification of the URL or other specific location on the Service where the material that you claim is infringing is located.</li>
                 <li className="leading-relaxed">Your address, telephone number, and email address.</li>
                 <li className="leading-relaxed">A statement by you that you have a good-faith belief that the disputed use is not authorized by the copyright owner, its agent, or the law.</li>
-                <li className="leading-relaxed">A statement by you, made under penalty of perjury, that the information in your notice is accurate and that you are authorized to act on the copyright owner's behalf.</li>
+                <li className="leading-relaxed">A statement by you, made under penalty of perjury, that the information in your notice is accurate and that you are authorized to act on the copyright owner&apos;s behalf.</li>
               </ol>
               <p className="leading-relaxed"><strong>Copyright Agent Contact:</strong> info@egypt-excursionsonline.com</p>
             </div>
@@ -267,7 +267,7 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">13. Error Reporting and Feedback</h2>
               <p className="leading-relaxed">
-                You may provide us with feedback, suggestions for improvements, ideas, problems, or other matters related to the Service (<strong>"Feedback"</strong>) by emailing <strong>info@egypt-excursionsonline.com</strong> or via third-party tools. You agree that <strong>(i)</strong> you will not retain or assert any IP or other rights in the Feedback; <strong>(ii)</strong> the Company may have developed ideas similar to the Feedback; <strong>(iii)</strong> Feedback is non-confidential; and <strong>(iv)</strong> the Company has no obligation of confidentiality with respect to the Feedback. Where ownership transfer is not possible under applicable law, you grant the Company an exclusive, transferable, irrevocable, royalty-free, sublicensable, perpetual license to use and commercialize the Feedback.
+                You may provide us with feedback, suggestions for improvements, ideas, problems, or other matters related to the Service (<strong>&quot;Feedback&quot;</strong>) by emailing <strong>info@egypt-excursionsonline.com</strong> or via third-party tools. You agree that <strong>(i)</strong> you will not retain or assert any IP or other rights in the Feedback; <strong>(ii)</strong> the Company may have developed ideas similar to the Feedback; <strong>(iii)</strong> Feedback is non-confidential; and <strong>(iv)</strong> the Company has no obligation of confidentiality with respect to the Feedback. Where ownership transfer is not possible under applicable law, you grant the Company an exclusive, transferable, irrevocable, royalty-free, sublicensable, perpetual license to use and commercialize the Feedback.
               </p>
             </div>
 
@@ -283,7 +283,7 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">15. Disclaimer of Warranty</h2>
               <p className="leading-relaxed mb-4 uppercase text-sm">
-                <strong>The Service is provided on an "as is" and "as available" basis. The Company makes no representations or warranties of any kind, express or implied, regarding the operation of the Service or the information, content, or materials included therein. You expressly agree that your use of the Service is at your sole risk.</strong>
+                <strong>The Service is provided on an &quot;as is&quot; and &quot;as available&quot; basis. The Company makes no representations or warranties of any kind, express or implied, regarding the operation of the Service or the information, content, or materials included therein. You expressly agree that your use of the Service is at your sole risk.</strong>
               </p>
               <p className="leading-relaxed mb-4 uppercase text-sm">
                 <strong>Neither the Company nor any person associated with the Company makes any warranty or representation with respect to the completeness, security, reliability, quality, accuracy, or availability of the Service. Without limiting the foregoing, neither the Company nor anyone associated with the Company represents or warrants that the Service or its content will be accurate, reliable, error-free, or uninterrupted, that defects will be corrected, that the Service or the server that makes it available are free of viruses or other harmful components, or that the Service will otherwise meet your needs or expectations.</strong>
@@ -297,7 +297,7 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">16. Limitation of Liability</h2>
               <p className="leading-relaxed uppercase text-sm">
-                <strong>Except as prohibited by law, you will hold us and our officers, directors, employees, and agents harmless for any indirect, punitive, special, incidental, or consequential damage, however it arises (including attorneys' fees and all related costs), whether in an action of contract, negligence, or other tort, arising out of or in connection with these Terms or the Service. Except as prohibited by law, if liability is found on the part of the Company, it will be limited to the amount paid for the products and/or services, and in no event shall there be consequential or punitive damages. Some jurisdictions do not allow the exclusion or limitation of certain damages; in such jurisdictions, the above limitations shall apply to the maximum extent permitted by law.</strong>
+                <strong>Except as prohibited by law, you will hold us and our officers, directors, employees, and agents harmless for any indirect, punitive, special, incidental, or consequential damage, however it arises (including attorneys&apos; fees and all related costs), whether in an action of contract, negligence, or other tort, arising out of or in connection with these Terms or the Service. Except as prohibited by law, if liability is found on the part of the Company, it will be limited to the amount paid for the products and/or services, and in no event shall there be consequential or punitive damages. Some jurisdictions do not allow the exclusion or limitation of certain damages; in such jurisdictions, the above limitations shall apply to the maximum extent permitted by law.</strong>
               </p>
             </div>
 

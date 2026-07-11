@@ -105,7 +105,11 @@ interface AlgoliaChatProps {
 }
 
 export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaChatProps) {
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(() =>
+    !ALGOLIA_APP_ID || !ALGOLIA_SEARCH_KEY
+      ? 'Algolia credentials are missing. Please check your environment variables.'
+      : null
+  );
 
   // Log configuration for debugging
   useEffect(() => {
@@ -117,11 +121,6 @@ export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaCh
         hasSearchKey: !!ALGOLIA_SEARCH_KEY
       });
 
-      // Verify credentials
-      if (!ALGOLIA_APP_ID || !ALGOLIA_SEARCH_KEY) {
-        setError('Algolia credentials are missing. Please check your environment variables.');
-        return;
-      }
     }
   }, []);
 
@@ -176,7 +175,7 @@ export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaCh
                     <Sparkles className="w-10 h-10 text-blue-500 mb-3" />
                     <h3 className="text-sm font-semibold text-slate-800 mb-1">AI-Powered Search</h3>
                     <p className="text-xs text-slate-600 mb-4">
-                      Ask naturally: "tours under $100", "romantic Nile cruise", "family trips"
+                      Ask naturally: &quot;tours under $100&quot;, &quot;romantic Nile cruise&quot;, &quot;family trips&quot;
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center max-w-md">
                       {['Pyramids of Giza', 'tours under $100', 'Nile cruise', 'Desert safari'].map((tag) => (
@@ -433,7 +432,7 @@ export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaCh
                 <div>
                   <p className="text-xs text-blue-900 font-semibold mb-1">AI-Powered Intelligent Search</p>
                   <p className="text-xs text-blue-700">
-                    Ask naturally and get smart results. Try queries like "tours under $100", "romantic Nile cruises", or "family-friendly pyramids tour".
+                    Ask naturally and get smart results. Try queries like &quot;tours under $100&quot;, &quot;romantic Nile cruises&quot;, or &quot;family-friendly pyramids tour&quot;.
                   </p>
                 </div>
               </div>

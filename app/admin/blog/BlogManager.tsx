@@ -962,7 +962,7 @@ export default function BlogManager({ initialBlogs }: { initialBlogs: IBlog[] })
                           </div>
                         ))}
                         {formData.tags.length === 0 && (
-                          <p className="text-sm text-slate-500 italic col-span-2">No tags added yet. Click "Add Tag" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic col-span-2">No tags added yet. Click &quot;Add Tag&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>

@@ -94,12 +94,6 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    if (categoryId) {
-      fetchCategoryData();
-    }
-  }, [categoryId]);
-
   const fetchCategoryData = async () => {
     if (!categoryId) return;
     
@@ -143,6 +137,10 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (categoryId) queueMicrotask(() => void fetchCategoryData());
+  }, [categoryId]);
 
   const generateSlug = (name: string) => {
     return name
@@ -595,7 +593,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                           ) : (
                             <div className="text-center py-8 text-slate-500">
                               <Grid3x3 className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                              <p>No gallery images yet. Click "Add Image" to upload photos.</p>
+                              <p>No gallery images yet. Click &quot;Add Image&quot; to upload photos.</p>
                             </div>
                           )}
                         </div>

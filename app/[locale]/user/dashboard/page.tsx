@@ -162,7 +162,7 @@ const DashboardContent = () => {
 
   useEffect(() => {
     if (!token) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
@@ -246,7 +246,7 @@ const DashboardContent = () => {
                 Welcome back, {userName.split(' ')[0] || 'Traveler'}!
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1 leading-relaxed">
-                Here's a summary of your adventures.
+                Here&apos;s a summary of your adventures.
               </p>
             </div>
           </div>

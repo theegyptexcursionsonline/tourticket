@@ -1128,7 +1128,7 @@ setTimeout(() => router.refresh(), 0);
                           </div>
                         ))}
                         {formData.highlights.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">No highlights added yet. Click "Add" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic">No highlights added yet. Click &quot;Add&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>
@@ -1170,7 +1170,7 @@ setTimeout(() => router.refresh(), 0);
                           </div>
                         ))}
                         {formData.thingsToDo.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">No activities added yet. Click "Add" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic">No activities added yet. Click &quot;Add&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>
@@ -1212,7 +1212,7 @@ setTimeout(() => router.refresh(), 0);
                           </div>
                         ))}
                         {formData.localCustoms.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">No customs added yet. Click "Add" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic">No customs added yet. Click &quot;Add&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>
@@ -1254,7 +1254,7 @@ setTimeout(() => router.refresh(), 0);
                           </div>
                         ))}
                         {formData.weatherWarnings.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">No warnings added yet. Click "Add" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic">No warnings added yet. Click &quot;Add&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>
@@ -1318,7 +1318,7 @@ setTimeout(() => router.refresh(), 0);
                           </div>
                         ))}
                         {formData.languagesSpoken.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">No languages added yet. Click "Add" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic">No languages added yet. Click &quot;Add&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>
@@ -1470,7 +1470,7 @@ setTimeout(() => router.refresh(), 0);
                           </div>
                         ))}
                         {formData.tags.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">No tags added yet. Click "Add" to create the first one.</p>
+                          <p className="text-sm text-slate-500 italic">No tags added yet. Click &quot;Add&quot; to create the first one.</p>
                         )}
                       </div>
                     </div>

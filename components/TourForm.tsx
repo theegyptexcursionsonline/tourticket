@@ -399,6 +399,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
 
     useEffect(() => {
         if (tourToEdit) {
+            queueMicrotask(() => {
             setIsSlugManuallyEdited(Boolean(tourToEdit.slug));
             
             const initialData: Partial<TourFormData> = {
@@ -506,6 +507,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             if ((initialData.bookingOptions?.length ?? 0) > 0) setExpandedOptionIndex(0);
             if ((initialData.itinerary?.length ?? 0) > 0) setExpandedItineraryIndex(0);
             if ((initialData.faqs?.length ?? 0) > 0) setExpandedFaqIndex(0);
+            });
         }
 
         const fetchData = async () => {
@@ -1044,7 +1046,7 @@ const addItineraryItem = () => {
 
     return (
         <div className="space-y-8">
-            {!isPanelOpen && <TourOverview />}
+            {!isPanelOpen && TourOverview()}
             
             {/* Backdrop Overlay */}
             <AnimatePresence>
@@ -1524,7 +1526,7 @@ const addItineraryItem = () => {
                                             ) : (
                                                 <div className="text-center py-8 text-slate-500">
                                                     <Grid3x3 className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                                    <p>No gallery images yet. Click "Add Image" to upload photos.</p>
+                                                    <p>No gallery images yet. Click &quot;Add Image&quot; to upload photos.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -1570,7 +1572,7 @@ const addItineraryItem = () => {
                                             </div>
                                             
                                             <div className="space-y-4">
-                                                <FormLabel icon={Check}>What's Included</FormLabel>
+                                                <FormLabel icon={Check}>What&apos;s Included</FormLabel>
                                                 <div className="space-y-3">
                                                     {formData.includes.map((it: string, i: number) => (
                                                         <div key={i} className="flex items-center gap-3">
@@ -1606,7 +1608,7 @@ const addItineraryItem = () => {
                                         {/* Detailed Inclusions */}
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                             <div className="space-y-3">
-                                                <FormLabel icon={Check}>What's Included (List)</FormLabel>
+                                                <FormLabel icon={Check}>What&apos;s Included (List)</FormLabel>
                                                 <textarea 
                                                     value={formData.whatsIncluded.join('\n')} 
                                                     onChange={(e) => handleTextAreaArrayChange('whatsIncluded', e)}
@@ -1617,7 +1619,7 @@ const addItineraryItem = () => {
                                                 <SmallHint>Each line will be a separate item in the list.</SmallHint>
                                             </div>
                                             <div className="space-y-3">
-                                                <FormLabel icon={X}>What's Not Included (List)</FormLabel>
+                                                <FormLabel icon={X}>What&apos;s Not Included (List)</FormLabel>
                                                 <textarea 
                                                     value={formData.whatsNotIncluded.join('\n')} 
                                                     onChange={(e) => handleTextAreaArrayChange('whatsNotIncluded', e)}
@@ -2084,7 +2086,7 @@ const addItineraryItem = () => {
                                         {formData.addOns.length === 0 && (
                                             <div className="text-center py-8 text-slate-500">
                                                 <Zap className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                                <p>No add-ons yet. Click "Add Tour Enhancement" to create optional extras.</p>
+                                                <p>No add-ons yet. Click &quot;Add Tour Enhancement&quot; to create optional extras.</p>
                                             </div>
                                         )}
                                     </div>
@@ -2339,7 +2341,8 @@ const addItineraryItem = () => {
                             {/* Save Progress Indicator */}
                             {tourToEdit && (
                                 <div className="mt-4 text-center text-xs text-slate-500">
-                                    Changes are automatically saved when you click "Update Tour"
+
+                                    Changes are automatically saved when you click &quot;Update Tour&quot;
                                 </div>
                             )}
                         </div>

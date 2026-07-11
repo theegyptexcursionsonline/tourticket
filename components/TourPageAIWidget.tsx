@@ -313,7 +313,7 @@ export default function TourPageAIWidget() {
                     className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Ask AI about "{searchQuery.slice(0, 20)}{searchQuery.length > 20 ? '...' : ''}"
+                    Ask AI about &quot;{searchQuery.slice(0, 20)}{searchQuery.length > 20 ? '...' : ''}&quot;
                   </button>
                 </div>
               )}

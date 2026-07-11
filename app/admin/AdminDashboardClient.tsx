@@ -226,7 +226,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Memoized fetch function with retry logic
-  const fetchDashboardData = useCallback(async (retryCount = 0) => {
+  const fetchDashboardData = useCallback(async function fetchDashboardData(retryCount = 0) {
     const cacheKey = 'admin-dashboard-cache:main';
     // Stale-while-revalidate: on the first attempt, paint the last-known data
     // instantly (no skeleton) and refresh in the background — keeps the
@@ -388,7 +388,7 @@ const AdminDashboard = () => {
               <span className="text-xs font-medium text-emerald-700">Live</span>
             </div>
           </div>
-          <p className="text-slate-600 text-lg">Welcome back! Here's what's happening with your business today.</p>
+          <p className="text-slate-600 text-lg">Welcome back! Here&apos;s what&apos;s happening with your business today.</p>
         </div>
         <Link
           href="/admin/tours/new"

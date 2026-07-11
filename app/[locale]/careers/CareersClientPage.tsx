@@ -51,7 +51,7 @@ export default function CareersClientPage({ jobOpenings }: CareersClientPageProp
               Join Our Team
             </h1>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Are you passionate about travel and creating unforgettable experiences? We're a team of dedicated experts committed to providing the best of Egypt to the world.
+              Are you passionate about travel and creating unforgettable experiences? We&apos;re a team of dedicated experts committed to providing the best of Egypt to the world.
             </p>
           </section>
           
@@ -102,10 +102,10 @@ export default function CareersClientPage({ jobOpenings }: CareersClientPageProp
 
           <section className="text-center mt-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
-              Don't see a role for you?
+              Don&apos;t see a role for you?
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-6">
-              We're always looking for talented people to join our team. Send us your resume and tell us how you can help us grow.
+              We&apos;re always looking for talented people to join our team. Send us your resume and tell us how you can help us grow.
             </p>
             <Link 
               href="/contact" 

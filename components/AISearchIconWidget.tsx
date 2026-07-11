@@ -317,7 +317,7 @@ export default function AISearchIconWidget() {
                     {/* Ask AI Button */}
                     {searchQuery && (
                       <div className="border-t border-white/20 px-3 md:px-7 py-3 md:py-5 backdrop-blur-xl bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5">
-                        <button onClick={handleAskAI} className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" />Ask AI about "{searchQuery.slice(0, 30)}{searchQuery.length > 30 ? '...' : ''}"</button>
+                        <button onClick={handleAskAI} className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" />Ask AI about &quot;{searchQuery.slice(0, 30)}{searchQuery.length > 30 ? '...' : ''}&quot;</button>
                       </div>
                     )}
                   </div>

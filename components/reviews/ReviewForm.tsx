@@ -250,7 +250,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
             {hasExistingReview.title && (
               <h4 className="font-semibold text-gray-800 mb-1">{hasExistingReview.title}</h4>
             )}
-            <p className="text-sm text-gray-700 italic">"{hasExistingReview.comment}"</p>
+            <p className="text-sm text-gray-700 italic">&quot;{hasExistingReview.comment}&quot;</p>
           </div>
           <div className="flex items-center justify-center gap-2 text-blue-600">
             <Edit2 size={16} />

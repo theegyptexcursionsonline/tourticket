@@ -141,7 +141,7 @@ export default function InterestsClientPage({ categories }: InterestsClientPageP
           {query ? (
             <>
               <p className="text-slate-500 mb-4">
-                No categories found matching "{query}"
+                No categories found matching &quot;{query}&quot;
               </p>
               <button
                 onClick={() => setQuery('')}

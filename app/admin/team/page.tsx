@@ -99,7 +99,7 @@ const TeamPage = () => {
 
   useEffect(() => {
     if (token) {
-      fetchMembers();
+      queueMicrotask(() => void fetchMembers());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -319,7 +319,7 @@ const TeamPage = () => {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base md:text-lg font-semibold text-slate-900">Invite teammate</h2>
-              <p className="text-xs md:text-sm text-slate-500">They'll receive an email to set their password</p>
+              <p className="text-xs md:text-sm text-slate-500">They&apos;ll receive an email to set their password</p>
             </div>
           </div>
 
@@ -634,4 +634,3 @@ const TeamPage = () => {
 };
 
 export default withAuth(TeamPage, { permissions: ['manageUsers'] });
-

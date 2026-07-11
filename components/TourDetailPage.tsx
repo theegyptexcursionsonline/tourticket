@@ -802,7 +802,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
           <div className="bg-white/60 p-6 rounded-2xl border border-slate-100 backdrop-blur-sm">
             <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
               <CheckCircle size={20} className="text-green-600" />
-              What's included
+              What&apos;s included
             </h3>
             <ul className="space-y-3">
               {tour.includes.map((item, index) => (
@@ -933,14 +933,16 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
   const isFaqInView = useInView(faqRef, inViewOptions);
 
   useEffect(() => {
-    if (isFaqInView) setActiveTab('faq');
-    else if (isReviewsInView) setActiveTab('reviews');
-    else if (isCulturalInView) setActiveTab('cultural');
-    else if (isPoliciesInView) setActiveTab('policies');
-    else if (isAccessibilityInView) setActiveTab('accessibility');
-    else if (isPracticalInView) setActiveTab('practical');
-    else if (isItineraryInView) setActiveTab('itinerary');
-    else if (isOverviewInView) setActiveTab('overview');
+    const nextTab = isFaqInView ? 'faq'
+      : isReviewsInView ? 'reviews'
+      : isCulturalInView ? 'cultural'
+      : isPoliciesInView ? 'policies'
+      : isAccessibilityInView ? 'accessibility'
+      : isPracticalInView ? 'practical'
+      : isItineraryInView ? 'itinerary'
+      : isOverviewInView ? 'overview'
+      : null;
+    if (nextTab) queueMicrotask(() => setActiveTab(nextTab));
   }, [
     isOverviewInView, isItineraryInView, isPracticalInView, isAccessibilityInView,
     isPoliciesInView, isCulturalInView, isReviewsInView, isFaqInView

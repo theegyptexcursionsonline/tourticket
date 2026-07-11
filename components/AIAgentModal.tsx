@@ -126,7 +126,7 @@ export default function AIAgentModal() {
       const hasTourPattern = /(?:Tour|tour).*?\$\d+/i.test(fullText);
 
       if (hasTourPattern) {
-        detectAndFetchTours(fullText);
+        queueMicrotask(() => void detectAndFetchTours(fullText));
       }
     }
   }, [messages]);
@@ -387,10 +387,10 @@ export default function AIAgentModal() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800 text-sm mb-1">
-                        Hi! I'm your AI Egypt Travel Assistant
+                        Hi! I&apos;m your AI Egypt Travel Assistant
                       </p>
                       <p className="text-gray-500 text-xs leading-relaxed">
-                        Ask me anything — I'll help you find tours, trips, prices, destinations & more.
+                        Ask me anything — I&apos;ll help you find tours, trips, prices, destinations & more.
                       </p>
                     </div>
                   </div>
@@ -435,7 +435,7 @@ export default function AIAgentModal() {
                 </div>
               ))}
 
-              {isLoading && <TypingDots />}
+              {isLoading && TypingDots()}
             </div>
 
             {/* Input */}

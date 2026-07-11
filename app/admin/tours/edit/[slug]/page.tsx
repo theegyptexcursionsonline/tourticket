@@ -233,8 +233,10 @@ const EditTourPage = () => {
                     setLoading(false);
                 });
         } else {
-            setError('No tour slug provided');
-            setLoading(false);
+            queueMicrotask(() => {
+                setError('No tour slug provided');
+                setLoading(false);
+            });
         }
     }, [slug, token]);
 
@@ -303,7 +305,7 @@ const EditTourPage = () => {
                         </div>
                         <div className="space-y-2">
                             <h3 className="text-xl font-semibold text-slate-800">Tour not found</h3>
-                            <p className="text-slate-500">The tour you're looking for doesn't exist or has been removed.</p>
+                            <p className="text-slate-500">The tour you&apos;re looking for doesn&apos;t exist or has been removed.</p>
                         </div>
                         <button 
                             onClick={() => router.back()}

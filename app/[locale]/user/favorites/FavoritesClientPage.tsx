@@ -15,7 +15,7 @@ export default function FavoritesClientPage() {
       <div className="bg-white rounded-xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-100 mb-6 sm:mb-8">
         <h1 className="text-3xl font-bold text-slate-900">My Favorites</h1>
         <p className="mt-2 text-slate-600">
-          Here are the tours you've saved. Easily access them here to book your next adventure.
+          Here are the tours you&apos;ve saved. Easily access them here to book your next adventure.
         </p>
       </div>
 
@@ -42,7 +42,7 @@ export default function FavoritesClientPage() {
             </div>
             <h2 className="text-2xl font-semibold text-slate-700 mb-2">Your wishlist is empty</h2>
             <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-              Save tours you love by clicking the heart icon. They'll appear here for you to easily find later.
+              Save tours you love by clicking the heart icon. They&apos;ll appear here for you to easily find later.
             </p>
             <Link
               href="/search"

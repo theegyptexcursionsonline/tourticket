@@ -116,7 +116,7 @@ export default async function AboutEgyptLanding() {
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Our Vision</h2>
               <p className="text-lg text-gray-600 mb-4 leading-relaxed">
-                We craft travel experiences that combine the grandeur of Egypt's ancient wonders with modern comforts and curated local encounters.
+                We craft travel experiences that combine the grandeur of Egypt&apos;s ancient wonders with modern comforts and curated local encounters.
               </p>
               <p className="text-lg text-gray-600 leading-relaxed">
                 From private Nile cruises to exclusive after-hours temple access, our team builds tailored journeys that become lifelong memories.

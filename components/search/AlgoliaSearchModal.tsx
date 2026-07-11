@@ -78,7 +78,7 @@ export default function AlgoliaSearchModal({ isOpen, onClose }: AlgoliaSearchMod
                 </div>
                 <div>
                   <h2 className="text-white font-bold text-lg">AI-Powered Tour Search</h2>
-                  <p className="text-white/70 text-xs">Discover Egypt's amazing tours instantly</p>
+                  <p className="text-white/70 text-xs">Discover Egypt&apos;s amazing tours instantly</p>
                 </div>
               </div>
               <button

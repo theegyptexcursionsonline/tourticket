@@ -161,7 +161,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
 
   // Reset page when filters change
   useEffect(() => {
-    setPage(1);
+    queueMicrotask(() => setPage(1));
   }, [query, sortBy, activeTab]);
 
   // Calculate counts for each tab
@@ -293,7 +293,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
               {query && (
                 <>
                   <span>for</span>
-                  <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-semibold">"{query}"</span>
+                  <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-semibold">&quot;{query}&quot;</span>
                 </>
               )}
             </div>

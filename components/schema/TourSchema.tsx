@@ -3,6 +3,8 @@ import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+const SCHEMA_START_DATE = new Date().toISOString().split('T')[0];
+const SCHEMA_END_DATE = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
 interface Review {
   _id?: string;
@@ -153,8 +155,8 @@ export default function TourSchema({ tour, reviews = [] }: Props) {
           availability: 'https://schema.org/InStock',
           url: tourUrl,
         },
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        startDate: SCHEMA_START_DATE,
+        endDate: SCHEMA_END_DATE,
         ...(tour.maxGroupSize ? { maximumAttendeeCapacity: tour.maxGroupSize } : {}),
       },
 

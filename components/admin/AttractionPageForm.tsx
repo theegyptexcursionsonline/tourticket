@@ -80,16 +80,6 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-    fetchTours();
-    if (pageId) {
-      fetchPageData();
-    } else {
-      setIsPanelOpen(true); // Auto-open for new pages
-    }
-  }, [pageId]);
-
   const fetchTours = async () => {
     try {
       const response = await fetch('/api/admin/tours');
@@ -165,6 +155,15 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetchCategories();
+      void fetchTours();
+      if (pageId) void fetchPageData();
+      else setIsPanelOpen(true);
+    });
+  }, [pageId]);
 
   const generateSlug = (title: string) => {
     return title
@@ -416,7 +415,7 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
         </div>
 
         <div className="space-y-8">
-          {!isPanelOpen && <PageOverview />}
+          {!isPanelOpen && PageOverview()}
           
           {/* Panel */}
           <AnimatePresence>
@@ -682,7 +681,7 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
                           ) : (
                             <div className="text-center py-8 text-slate-500">
                               <Grid3x3 className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                              <p>No gallery images yet. Click "Add Image" to upload photos.</p>
+                              <p>No gallery images yet. Click &quot;Add Image&quot; to upload photos.</p>
                             </div>
                           )}
                         </div>

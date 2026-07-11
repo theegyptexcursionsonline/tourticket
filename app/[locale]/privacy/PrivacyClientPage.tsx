@@ -70,7 +70,7 @@ export default function PrivacyPolicyPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">1. Who We Are</h2>
               <p className="leading-relaxed">
-                This Privacy Policy explains how <strong>Egypt Excursions Online</strong> (operated by <strong>Excursions Online LLC FZ</strong>) collects, uses, shares, and protects personal data when you visit our website or book our tours and related services (the <strong>"Service"</strong>).
+                This Privacy Policy explains how <strong>Egypt Excursions Online</strong> (operated by <strong>Excursions Online LLC FZ</strong>) collects, uses, shares, and protects personal data when you visit our website or book our tours and related services (the <strong>&quot;Service&quot;</strong>).
               </p>
             </div>
 

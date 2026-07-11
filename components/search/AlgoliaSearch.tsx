@@ -46,7 +46,11 @@ const NoResultsBoundary = ({ children, fallback }: { children: React.ReactNode; 
 };
 
 export default function AlgoliaSearch() {
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(() =>
+    !ALGOLIA_APP_ID || !ALGOLIA_SEARCH_KEY
+      ? 'Algolia credentials are missing. Please check your environment variables.'
+      : null
+  );
 
   // Log configuration for debugging
   useEffect(() => {
@@ -57,11 +61,6 @@ export default function AlgoliaSearch() {
         hasSearchKey: !!ALGOLIA_SEARCH_KEY
       });
 
-      // Verify credentials
-      if (!ALGOLIA_APP_ID || !ALGOLIA_SEARCH_KEY) {
-        setError('Algolia credentials are missing. Please check your environment variables.');
-        return;
-      }
     }
   }, []);
 
@@ -203,7 +202,7 @@ export default function AlgoliaSearch() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-2">Start Your Journey</h3>
                   <p className="text-slate-600 mb-6 max-w-md">
-                    Search for amazing tours and experiences in Egypt. Try searching for "Pyramids", "Nile", or "Cairo"
+                    Search for amazing tours and experiences in Egypt. Try searching for &quot;Pyramids&quot;, &quot;Nile&quot;, or &quot;Cairo&quot;
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Cairo Tours'].map((tag) => (
@@ -233,7 +232,7 @@ export default function AlgoliaSearch() {
                     </div>
                     <h3 className="text-xl font-bold text-slate-800 mb-2">No Tours Found</h3>
                     <p className="text-slate-600 mb-4 max-w-md">
-                      We couldn't find any tours matching your search. Try different keywords or browse our popular destinations.
+                      We couldn&apos;t find any tours matching your search. Try different keywords or browse our popular destinations.
                     </p>
                   </div>
                 }

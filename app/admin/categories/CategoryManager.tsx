@@ -65,7 +65,7 @@ export default function CategoryManager({ initialCategories }: { initialCategori
     const [currentTab, setCurrentTab] = useState<'basic' | 'content' | 'seo'>('basic');
 
     useEffect(() => {
-        setCategories(initialCategories);
+        queueMicrotask(() => setCategories(initialCategories));
     }, [initialCategories]);
 
     const openPanelForCreate = () => {
@@ -341,7 +341,7 @@ export default function CategoryManager({ initialCategories }: { initialCategori
                             ) : (
                                 <tr>
                                     <td colSpan={5} className="p-8 text-center text-slate-500">
-                                        No categories found. Click 'Add Category' to create one.
+                                        No categories found. Click &apos;Add Category&apos; to create one.
                                     </td>
                                 </tr>
                             )}

@@ -71,15 +71,16 @@ const DEFAULT_SEARCH_TENANT = 'default';
 // --- HELPER HOOKS & DATA ---
 // =================================================================
 const useRecentSearches = (storageKey = 'recentTravelSearches') => {
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  useEffect(() => {
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
     try {
       const storedItems = window.localStorage.getItem(storageKey);
-      if (storedItems) setRecentSearches(JSON.parse(storedItems));
+      return storedItems ? JSON.parse(storedItems) : [];
     } catch (error) {
       console.error('Failed to load recent searches', error);
+      return [];
     }
-  }, [storageKey]);
+  });
 
   const addSearchTerm = (term: string) => {
     const trimmed = term.trim();
@@ -880,10 +881,10 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                             </div>
                             <div>
                               <p className="font-semibold text-gray-800 text-sm mb-1">
-                                Hi! I'm your AI Egypt Travel Assistant
+                                Hi! I&apos;m your AI Egypt Travel Assistant
                               </p>
                               <p className="text-gray-500 text-xs leading-relaxed">
-                                Ask me anything — I'll help you find tours, trips, prices, destinations & more.
+                                Ask me anything — I&apos;ll help you find tours, trips, prices, destinations & more.
                               </p>
                             </div>
                           </div>
@@ -1004,6 +1005,7 @@ const SearchSuggestion: FC<{
     )}
   </div>
 ));
+SearchSuggestion.displayName = 'SearchSuggestion';
 
 const TourResultSkeleton = () => (
   <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">

@@ -85,11 +85,6 @@ export default function ImageCleaner() {
   const [cleanResult, setCleanResult] = useState<CleanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-check on component mount
-  useEffect(() => {
-    checkPlaceholderImages();
-  }, []);
-
   const checkPlaceholderImages = async () => {
     setIsChecking(true);
     setError(null);
@@ -109,6 +104,11 @@ export default function ImageCleaner() {
       setIsChecking(false);
     }
   };
+
+  // Auto-check on component mount
+  useEffect(() => {
+    queueMicrotask(() => void checkPlaceholderImages());
+  }, []);
 
   const cleanPlaceholderImages = async () => {
     setIsCleaning(true);
@@ -396,7 +396,7 @@ export default function ImageCleaner() {
           </div>
         </div>
         <div className="mt-3 text-xs text-slate-500">
-          <strong>Safe operation:</strong> Only removes URLs containing 'your-cdn.com', 'placeholder', or 'example.com'. Valid images are preserved.
+          <strong>Safe operation:</strong> Only removes URLs containing &apos;your-cdn.com&apos;, &apos;placeholder&apos;, or &apos;example.com&apos;. Valid images are preserved.
         </div>
       </div>
     </div>
