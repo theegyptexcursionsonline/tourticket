@@ -18,15 +18,19 @@ interface RequireAdminOptions {
   requireAll?: boolean;
 }
 
-const UNAUTHORIZED_RESPONSE = NextResponse.json(
-  { success: false, error: 'Admin authorization required' },
-  { status: 401 },
-);
+function unauthorizedResponse() {
+  return NextResponse.json(
+    { success: false, error: 'Admin authorization required' },
+    { status: 401 },
+  );
+}
 
-const FORBIDDEN_RESPONSE = NextResponse.json(
-  { success: false, error: 'You do not have permission to perform this action.' },
-  { status: 403 },
-);
+function forbiddenResponse() {
+  return NextResponse.json(
+    { success: false, error: 'You do not have permission to perform this action.' },
+    { status: 403 },
+  );
+}
 
 export async function requireAdminAuth(
   request: NextRequest,
@@ -43,7 +47,7 @@ export async function requireAdminAuth(
   const cookieToken = request.cookies.get('authToken')?.value?.trim() || '';
   const token = bearerToken || cookieToken;
   if (!token) {
-    return UNAUTHORIZED_RESPONSE;
+    return unauthorizedResponse();
   }
 
   // Cookie authentication is convenient for same-origin admin forms/uploads,
@@ -51,13 +55,13 @@ export async function requireAdminAuth(
   if (!bearerToken && cookieToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
     const origin = request.headers.get('origin');
     if (!origin || new URL(origin).host !== request.nextUrl.host) {
-      return FORBIDDEN_RESPONSE;
+      return forbiddenResponse();
     }
   }
 
   const payload = await verifyToken(token);
   if (!payload || payload.scope !== 'admin') {
-    return UNAUTHORIZED_RESPONSE;
+    return unauthorizedResponse();
   }
 
   const role = (payload.role as AdminRole) || 'customer';
@@ -82,7 +86,7 @@ export async function requireAdminAuth(
     : permissions.some((perm) => authContext.permissions.includes(perm) || role === 'super_admin');
 
   if (!hasPermissions) {
-    return FORBIDDEN_RESPONSE;
+    return forbiddenResponse();
   }
 
   return authContext;

@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Admin Authentication', () => {
   test('admin routes on main domain redirect to dashboard subdomain', async ({ request }) => {
-    const response = await request.get('/admin', { maxRedirects: 0 });
+    const response = await request.get('/admin', {
+      headers: { host: 'egypt-excursionsonline.com' },
+      maxRedirects: 0,
+    });
     // Should redirect (307) to dashboard2.egypt-excursionsonline.com
     expect(response.status()).toBe(307);
     const location = response.headers()['location'];
