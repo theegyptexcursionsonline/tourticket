@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
-import User from '@/lib/models/user';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(
   request: NextRequest,
@@ -21,16 +21,14 @@ export async function GET(
     }
 
     // Find booking by reference
-    const booking = await Booking.findOne({ bookingReference: reference })
+    const booking = await Booking.findOne({
+      bookingReference: reference,
+      ...DEFAULT_TENANT_FILTER,
+    })
       .populate({
         path: 'tour',
         model: Tour,
         select: 'title slug image duration rating',
-      })
-      .populate({
-        path: 'user',
-        model: User,
-        select: 'firstName lastName email',
       })
       .lean();
 
@@ -43,7 +41,6 @@ export async function GET(
 
     // Transform booking data for frontend
     const tour = booking.tour as any;
-    const user = booking.user as any;
     const transformedBooking = {
       bookingReference: booking.bookingReference,
       tour: {
@@ -51,23 +48,13 @@ export async function GET(
         image: tour.image,
         duration: tour.duration,
       },
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-      },
       date: booking.date,
       time: booking.time,
       guests: booking.guests,
-      adultGuests: booking.adultGuests,
-      childGuests: booking.childGuests,
-      infantGuests: booking.infantGuests,
-      totalPrice: booking.totalPrice,
       status: booking.status,
-      selectedBookingOption: booking.selectedBookingOption,
-      specialRequests: booking.specialRequests,
-      emergencyContact: booking.emergencyContact,
-      createdAt: booking.createdAt,
+      selectedBookingOption: booking.selectedBookingOption
+        ? { title: booking.selectedBookingOption.title }
+        : undefined,
     };
 
     return NextResponse.json(
@@ -89,4 +76,3 @@ export async function GET(
     );
   }
 }
-

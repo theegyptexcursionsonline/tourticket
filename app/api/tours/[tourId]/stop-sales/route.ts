@@ -12,6 +12,7 @@ import dbConnect from '@/lib/dbConnect';
 import StopSale from '@/lib/models/StopSale';
 import Tour from '@/lib/models/Tour';
 import { toDateOnlyString } from '@/utils/date';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,13 @@ export async function GET(
     const rangeStart = toDateOnly(new Date(year, month - 1, 1));
     const rangeEnd = toDateOnly(new Date(year, month, 0));
 
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
+      .select('bookingOptions')
+      .lean();
+    if (!tour) {
+      return NextResponse.json({ success: false, error: 'Tour not found' }, { status: 404 });
+    }
+
     const stopSales = await StopSale.find({
       tourId,
       startDate: { $lte: rangeEnd },
@@ -55,7 +63,6 @@ export async function GET(
       .select('optionIds startDate endDate reason')
       .lean();
 
-    const tour = await Tour.findById(tourId).select('bookingOptions').lean();
     const optionIds = Array.isArray((tour as any)?.bookingOptions)
       ? (tour as any).bookingOptions
           .map((option: any, index: number) => option?.id || option?._id?.toString?.() || `option-${index}`)

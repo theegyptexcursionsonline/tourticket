@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
+import { secureCartPricing } from '@/lib/checkout/serverCartPricing';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -23,10 +24,10 @@ function getStripe(): Stripe {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { customer, pricing, cart, discountCode } = body;
+    const { customer, pricing, cart: requestedCart, discountCode } = body;
 
     // Validate required fields
-    if (!customer || !pricing || !cart || cart.length === 0) {
+    if (!customer || !pricing || !requestedCart || requestedCart.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required payment information' },
         { status: 400 }
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     // Always compute the amount server-side from the cart.
     // This guarantees Stripe amount matches booking summary, even if client pricing is stale.
     await dbConnect();
+    const cart = await secureCartPricing(requestedCart);
 
     const round2 = (n: number) => Math.round(n * 100) / 100;
     const toNumberQty = (value: any, fallback = 0): number => {
@@ -177,16 +179,6 @@ export async function POST(request: Request) {
     // The display currency is for user convenience only - Stripe handles card currency conversion
     const stripe = getStripe();
     
-    // Prepare hotel pickup location as compressed JSON (if available)
-    const hotelPickupLocationJson = customer.hotelPickupLocation 
-      ? JSON.stringify({
-          lat: customer.hotelPickupLocation.lat,
-          lng: customer.hotelPickupLocation.lng,
-          name: customer.hotelPickupLocation.name?.substring(0, 100) || '',
-          address: customer.hotelPickupLocation.address?.substring(0, 150) || '',
-        })
-      : '';
-
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100), // Stripe expects amount in cents
       currency: 'usd', // Always charge in USD - prices are stored in USD
@@ -197,12 +189,9 @@ export async function POST(request: Request) {
         customer_name: `${customer.firstName} ${customer.lastName}`,
         customer_first_name: customer.firstName,
         customer_last_name: customer.lastName,
-        customer_phone: customer.phone || '',
-        // Hotel pickup info (essential for operator/admin emails)
-        hotel_pickup_details: (customer.hotelPickupDetails || '').substring(0, 300),
-        hotel_pickup_location: hotelPickupLocationJson.substring(0, 500),
-        // Special requests
-        special_requests: (customer.specialRequests || '').substring(0, 500),
+        // Do not copy phone numbers, hotel geolocation, emergency contacts, or
+        // special requests into Stripe metadata. Those fields remain in the
+        // first-party checkout request and booking record only.
         // Tour info
         tours: cart.map((item: any) => item.title).join(', ').substring(0, 500),
         tour_count: String(cart.length),

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(
   request: Request,
@@ -15,7 +16,7 @@ export async function GET(
   try {
     await dbConnect();
 
-    const tour = await Tour.findById(tourId).lean();
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER }).lean();
 
     if (!tour) {
       return NextResponse.json({ message: 'Tour not found' }, { status: 404 });

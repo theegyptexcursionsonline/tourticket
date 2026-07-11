@@ -2,8 +2,8 @@
 // Simple admin authentication helper for API routes
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/jwt';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { AdminPermission } from '@/lib/constants/adminPermissions';
 
 export interface AdminInfo {
   id: string;
@@ -26,50 +26,51 @@ export interface AdminInfo {
  * 
  * @returns AdminInfo if authenticated, NextResponse error if not
  */
+function permissionForPath(pathname: string): AdminPermission | null {
+  if (pathname.includes('/bookings') || pathname.includes('/manifests')) return 'manageBookings';
+  if (pathname.includes('/reports')) return 'manageReports';
+  if (pathname.includes('/discounts')) return 'manageDiscounts';
+  if (
+    pathname.includes('/tours') ||
+    pathname.includes('/availability') ||
+    pathname.includes('/special-offers')
+  ) return 'manageTours';
+  if (
+    pathname.includes('/blog') ||
+    pathname.includes('/reviews') ||
+    pathname.includes('/destinations') ||
+    pathname.includes('/attraction-pages') ||
+    pathname.includes('/hero-settings') ||
+    pathname.includes('/translate')
+  ) return 'manageContent';
+  return null;
+}
+
 export async function verifyAdmin(request?: NextRequest): Promise<AdminInfo | NextResponse> {
   try {
-    // Try cookie first, then Authorization header as fallback
-    const cookieStore = await cookies();
-    let token = cookieStore.get('authToken')?.value;
-
-    // Fallback: check Authorization header if cookie is missing
-    if (!token && request) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
-      }
-    }
-
-    if (!token) {
+    if (!request) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const payload = await verifyToken(token);
-    
-    if (!payload) {
+    const permission = permissionForPath(request.nextUrl.pathname);
+    if (!permission) {
       return NextResponse.json(
-        { success: false, error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has admin role
-    const role = payload.role as string;
-    if (role !== 'admin' && role !== 'super_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
+        { success: false, error: 'No permission policy is configured for this route' },
         { status: 403 }
       );
     }
 
+    const auth = await requireAdminAuth(request, { permissions: [permission] });
+    if (auth instanceof NextResponse) return auth;
+
     return {
-      id: payload.sub as string,
-      email: payload.email as string,
-      name: (payload.name as string) || (payload.email as string) || 'Admin',
-      role: role,
+      id: auth.userId,
+      email: auth.email || '',
+      name: auth.email || 'Admin',
+      role: auth.role,
     };
   } catch (error) {
     console.error('Admin auth error:', error);

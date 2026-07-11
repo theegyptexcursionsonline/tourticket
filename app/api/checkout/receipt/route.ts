@@ -1,87 +1,84 @@
-// app/api/checkout/receipt/route.ts - Premium Ticket-Style Receipt
-// Uses the shared generateReceiptPdf utility for consistency
 import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/dbConnect';
+import Booking from '@/lib/models/Booking';
+import Tour from '@/lib/models/Tour';
+import User from '@/lib/models/user';
+import { verifyToken } from '@/lib/jwt';
 import { generateReceiptPdf } from '@/lib/utils/generateReceiptPdf';
+import { formatBookingDate } from '@/lib/utils/receiptDate';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
+    const { receiptToken } = await request.json();
+    if (!receiptToken || typeof receiptToken !== 'string') {
+      return NextResponse.json({ error: 'Receipt authorization required' }, { status: 401 });
+    }
 
-    const {
-      orderId,
-      customer = {},
-      orderedItems = [],
-      pricing = {},
-      booking = {},
-      qrData,
-      notes,
-    } = body;
+    const payload = await verifyToken(receiptToken);
+    if (!payload || payload.scope !== 'receipt' || !payload.paymentId || !payload.sub) {
+      return NextResponse.json({ error: 'Invalid or expired receipt authorization' }, { status: 401 });
+    }
 
-    const parseMoney = (value: unknown): number | undefined => {
-      if (typeof value === 'number' && Number.isFinite(value)) return value;
-      if (typeof value !== 'string') return undefined;
-      const normalized = value.replace(/\s/g, '').replace(/,/g, '.');
-      const cleaned = normalized.replace(/[^0-9.-]/g, '');
-      const parsed = Number(cleaned);
-      return Number.isFinite(parsed) ? parsed : undefined;
-    };
+    await dbConnect();
+    const bookings: any[] = await Booking.find({
+      paymentId: String(payload.paymentId),
+      user: String(payload.sub),
+      ...DEFAULT_TENANT_FILTER,
+    })
+      .populate({ path: 'tour', model: Tour, select: 'title' })
+      .populate({ path: 'user', model: User, select: 'firstName lastName email phone' })
+      .sort({ createdAt: 1 })
+      .lean();
 
-    // If pricing is missing or inconsistent, recompute from ordered items totals.
-    // This prevents wrong totals in the PDF even if the client sends stale pricing.
-    const computedSubtotal = Array.isArray(orderedItems)
-      ? orderedItems.reduce((sum: number, item: any) => {
-          const itemTotal =
-            parseMoney(item.totalPrice) ??
-            parseMoney(item.finalPrice) ??
-            (typeof item.totalPrice === 'number' ? item.totalPrice : undefined) ??
-            (typeof item.finalPrice === 'number' ? item.finalPrice : undefined) ??
-            0;
-          return sum + (Number.isFinite(itemTotal) ? itemTotal : 0);
-        }, 0)
-      : 0;
+    if (bookings.length === 0) {
+      return NextResponse.json({ error: 'Receipt not found' }, { status: 404 });
+    }
 
-    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const first = bookings[0];
+    const user = first.user || {};
+    const total = bookings.reduce((sum, booking) => sum + Number(booking.totalPrice || 0), 0);
+    const orderId = bookings.length === 1
+      ? first.bookingReference
+      : `PAYMENT-${String(payload.paymentId).slice(-10).toUpperCase()}`;
 
-    const safePricing = {
-      ...(pricing || {}),
-      subtotal: round2(computedSubtotal),
-      serviceFee: round2(computedSubtotal * 0.03),
-      tax: round2(computedSubtotal * 0.05),
-    };
-
-    const discount = round2(
-      parseMoney((pricing || {}).discount) ??
-      (typeof (pricing || {}).discount === 'number' ? (pricing || {}).discount : 0)
-    );
-
-    safePricing.discount = discount;
-    safePricing.total = round2(safePricing.subtotal + safePricing.serviceFee + safePricing.tax - discount);
-
-    // Use the shared PDF generation utility
     const pdfBuffer = await generateReceiptPdf({
       orderId,
-      customer,
-      orderedItems,
-      pricing: safePricing,
-      booking,
-      qrData,
-      notes,
+      customer: {
+        name: [user.firstName, user.lastName].filter(Boolean).join(' '),
+        email: user.email,
+        phone: user.phone,
+      },
+      orderedItems: bookings.map((booking) => ({
+        title: booking.tour?.title || 'Tour booking',
+        quantity: booking.adultGuests || booking.guests || 1,
+        childQuantity: booking.childGuests || 0,
+        infantQuantity: booking.infantGuests || 0,
+        totalPrice: booking.totalPrice,
+        selectedBookingOption: booking.selectedBookingOption,
+        selectedAddOns: booking.selectedAddOns,
+        selectedAddOnDetails: booking.selectedAddOnDetails,
+      })),
+      pricing: { total, currency: first.currency || 'USD', symbol: '$' },
+      booking: {
+        date: formatBookingDate(first.date),
+        time: first.time,
+        guests: bookings.reduce((sum, booking) => sum + Number(booking.guests || 0), 0),
+        specialRequests: first.specialRequests,
+      },
+      qrData: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/booking/verify/${first.bookingReference}`,
     });
 
     return new NextResponse(pdfBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="ticket-${orderId ?? Date.now()}.pdf"`,
+        'Content-Disposition': `attachment; filename="receipt-${orderId}.pdf"`,
+        'Cache-Control': 'private, no-store',
       },
     });
-
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('Receipt route error:', message);
-    return NextResponse.json({
-      message: 'Failed to generate receipt',
-      error: message
-    }, { status: 500 });
+  } catch (error) {
+    console.error('Receipt generation failed');
+    return NextResponse.json({ error: 'Failed to generate receipt' }, { status: 500 });
   }
 }

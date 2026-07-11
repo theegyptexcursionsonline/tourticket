@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
           email: customer.email,
           password: 'manual-booking-' + Math.random().toString(36).substring(2, 15),
         });
-        console.log(`[Manual Booking] Created new user: ${customer.email}`);
+        console.log('[Manual Booking] Created new user');
       } catch (userError: unknown) {
         const err = userError as { code?: number };
         if (err?.code === 11000) {
@@ -395,7 +395,7 @@ export async function POST(request: NextRequest) {
       }],
     });
 
-    console.log(`[Manual Booking] Created booking ${bookingReference} for ${customer.email}`);
+    console.log(`[Manual Booking] Created booking ${bookingReference}`);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     const formatMoney = (value: number) => `$${value.toFixed(2)}`;
@@ -489,7 +489,7 @@ export async function POST(request: NextRequest) {
         timeUntil: timeUntilTour,
         dateBadge,
       });
-      console.log(`[Manual Booking] Sent confirmation email to ${customer.email}`);
+      console.log('[Manual Booking] Sent confirmation email');
     } catch (emailError) {
       console.error('[Manual Booking] Failed to send confirmation email:', emailError);
       // Don't fail the booking if email fails

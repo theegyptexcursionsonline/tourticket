@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     } catch (verifyError: any) {
       console.error('Firebase token verification error:', verifyError);
       return NextResponse.json(
-        { success: false, error: `Token verification failed: ${verifyError.message || 'Unknown error'}` },
+        { success: false, error: 'Token verification failed' },
         { status: 401 }
       );
     }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     } catch (syncError: any) {
       console.error('MongoDB sync error:', syncError);
       return NextResponse.json(
-        { success: false, error: `Database sync failed: ${syncError.message || 'Unknown error'}` },
+        { success: false, error: 'Account synchronization failed' },
         { status: 500 }
       );
     }
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Firebase sync error:', error);
     return NextResponse.json(
-      { success: false, error: `Internal server error: ${error.message || 'Unknown error'}` },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

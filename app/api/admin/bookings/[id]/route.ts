@@ -413,7 +413,7 @@ export async function PATCH(
             cancellationReason: 'Status changed to cancelled by administrator',
             baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
           });
-          console.log(`✅ Cancellation email sent to customer: ${customerEmail}`);
+          console.log('✅ Cancellation email sent to customer');
         } else {
           // Send booking update email
           const statusChanged = changesForNotification.some(c => c.field === 'Status');
@@ -435,7 +435,7 @@ export async function PATCH(
                 : undefined),
             baseUrl: process.env.NEXT_PUBLIC_BASE_URL || ''
           });
-          console.log(`✅ Update email sent to customer: ${customerEmail}`);
+          console.log('✅ Update email sent to customer');
         }
       } catch (emailError) {
         console.error('❌ Failed to send customer email notification:', emailError);

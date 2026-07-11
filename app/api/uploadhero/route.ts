@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -18,6 +19,9 @@ function bufferToStream(buffer: Buffer): Readable {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdminAuth(request, { permissions: ['manageContent'] });
+    if (auth instanceof NextResponse) return auth;
+
     const data = await request.formData();
     const file: File | null = data.get('file') as unknown as File;
 

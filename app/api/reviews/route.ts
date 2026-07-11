@@ -2,16 +2,13 @@ import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
 import { NextResponse } from 'next/server';
 
-// POST a new review
-export async function POST(request: Request) {
-  await dbConnect();
-  try {
-    const body = await request.json();
-    const review = await Review.create(body);
-    return NextResponse.json({ success: true, data: review }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });
-  }
+// Reviews must be created through /api/tours/[tourId]/reviews, which verifies
+// the customer and an eligible completed booking.
+export async function POST() {
+  return NextResponse.json(
+    { success: false, error: 'Use the verified tour review endpoint.' },
+    { status: 405, headers: { Allow: 'GET' } },
+  );
 }
 
 // GET reviews for a specific tour
@@ -23,9 +20,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, message: 'Tour ID is required' }, { status: 400 });
   }
   try {
-    const reviews = await Review.find({ tourId: tourId }).sort({ date: -1 });
+    const reviews = await Review.find({ tour: tourId })
+      .select('rating title comment userName verified helpful createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
     return NextResponse.json({ success: true, data: reviews });
   } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch reviews' }, { status: 500 });
   }
 }

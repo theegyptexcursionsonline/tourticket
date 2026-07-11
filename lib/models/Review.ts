@@ -2,6 +2,7 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IReview extends Document {
+  tenantId: string;
   tour: mongoose.Schema.Types.ObjectId;  // Changed from tourId
   user: mongoose.Schema.Types.ObjectId;  // Changed from userId
   userName: string;
@@ -17,6 +18,12 @@ export interface IReview extends Document {
 }
 
 const ReviewSchema: Schema<IReview> = new Schema({
+  tenantId: {
+    type: String,
+    default: 'default',
+    trim: true,
+    index: true,
+  },
   tour: {  // Changed from tourId
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
@@ -74,6 +81,7 @@ const ReviewSchema: Schema<IReview> = new Schema({
 
 // Compound index to prevent duplicate reviews
 ReviewSchema.index({ tour: 1, user: 1 }, { unique: true });
+ReviewSchema.index({ tenantId: 1, tour: 1, createdAt: -1 });
 
 // Index for sorting by date
 ReviewSchema.index({ createdAt: -1 });

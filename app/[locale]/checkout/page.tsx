@@ -726,12 +726,14 @@ const ThankYouPage = ({
   pricing,
   customer,
   lastOrderId,
+  receiptToken,
   discount = 0,
 }: {
   orderedItems: CartItem[];
   pricing: any;
   customer: FormDataShape | null;
   lastOrderId?: string;
+  receiptToken?: string;
   discount?: number;
 }) => {
   const { formatPrice, convertPrice, selectedCurrency } = useSettings();
@@ -782,90 +784,10 @@ const handleDownloadReceipt = async () => {
   try {
     const orderId = lastOrderId ?? `ORD-${Date.now()}`;
 
-    // PDF shows actual charged amount in USD (base currency)
-    // Plus approximate equivalent in user's display currency for reference
-    const isDisplayCurrencyDifferent = selectedCurrency.code !== 'USD';
-    
-    const pricingForPdf = {
-      // Actual charged amounts (USD)
-      subtotal: pricing.subtotal,
-      serviceFee: pricing.serviceFee,
-      tax: pricing.tax,
-      discount: pricing.discount,
-      total: pricing.total,
-      currency: 'USD',
-      symbol: '$',
-      // Display currency equivalent (for reference)
-      ...(isDisplayCurrencyDifferent && {
-        displayCurrency: selectedCurrency.code,
-        displaySymbol: selectedCurrency.symbol,
-        displayTotal: convertPrice(pricing.total),
-      }),
-    };
-
-    const orderedItemsForPdf = orderedItems.map((item) => {
-      const getItemTotal = (item: CartItem) => {
-        const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-        const adultPrice = basePrice * (item.quantity || 1);
-        const childPrice = (basePrice / 2) * (item.childQuantity || 0);
-        let tourTotal = adultPrice + childPrice;
-
-        let addOnsTotal = 0;
-        if (item.selectedAddOns && item.selectedAddOnDetails) {
-          Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
-            const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-            if (addOnDetail && quantity > 0) {
-              const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
-              const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
-              addOnsTotal += addOnDetail.price * addOnQuantity;
-            }
-          });
-        }
-
-        return tourTotal + addOnsTotal;
-      };
-
-      // Keep item prices in USD (actual charged amount)
-      const itemTotalUsd = getItemTotal(item);
-      return {
-        ...item,
-        totalPrice: itemTotalUsd,
-        finalPrice: itemTotalUsd,
-      };
-    });
-
-    const customerForPdf = {
-      name: customer ? `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() : 'Guest',
-      email: customer?.email,
-      phone: customer?.phone,
-    };
-
-    const firstItem = orderedItems[0];
-    const bookingForPdf = {
-      date: formatBookingDate(firstItem?.selectedDate),
-      time: firstItem?.selectedTime,
-      guests: orderedItems.reduce((sum, item) =>
-        sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0), 0
-      ),
-      specialRequests: customer?.specialRequests ?? '',
-    };
-
-    const qrData = `https://your-site.example.com/booking/${orderId}`;
-
-    const payload = {
-      orderId,
-      customer: customerForPdf,
-      orderedItems: orderedItemsForPdf,
-      pricing: pricingForPdf,
-      booking: bookingForPdf,
-      qrData,
-      notes: customer?.specialRequests || 'Receipt requested from Thank You page',
-    };
-
     const res = await fetch('/api/checkout/receipt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ receiptToken }),
     });
 
     if (!res.ok) {
@@ -1264,7 +1186,7 @@ const TrustIndicators = () => (
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const { formatPrice, selectedCurrency } = useSettings();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const router = useRouter();
 
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -1275,6 +1197,7 @@ export default function CheckoutPage() {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [lastOrderId, setLastOrderId] = useState<string | undefined>(undefined);
+  const [receiptToken, setReceiptToken] = useState<string | undefined>(undefined);
 
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState('');
@@ -1449,7 +1372,10 @@ export default function CheckoutPage() {
       // Call the checkout API
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(bookingPayload),
       });
 
@@ -1461,6 +1387,7 @@ export default function CheckoutPage() {
         setFinalPricing(pricing);
         setFinalCustomer(formData);
         setLastOrderId(result.bookingId || `ORD-${Date.now()}`);
+        setReceiptToken(result.receiptToken);
 
         clearCart();
         setIsConfirmed(true);
@@ -1530,6 +1457,7 @@ export default function CheckoutPage() {
                   pricing={finalPricing} 
                   customer={finalCustomer} 
                   lastOrderId={lastOrderId} 
+                  receiptToken={receiptToken}
                   discount={discount} 
                 />
               ) : (

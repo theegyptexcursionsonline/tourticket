@@ -1,5 +1,5 @@
 // app/api/checkout/route.ts (With booking reference generation)
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
@@ -11,6 +11,9 @@ import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference, generateUniqueBookingReference } from '@/lib/utils/bookingReference';
 import { currencies } from '@/utils/localization';
+import { secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
+import { signToken } from '@/lib/jwt';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -132,24 +135,23 @@ const calculateCartSubtotal = (cart: any[]): number => {
   }, 0));
 };
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
     const body = await request.json();
     const {
       customer,
-      cart,
+      cart: requestedCart,
       pricing,
       paymentMethod = 'card',
       paymentDetails,
-      userId,
       isGuest = false,
       discountCode = null
     } = body;
 
     // Validation
-    if (!customer || !cart || cart.length === 0) {
+    if (!customer || !requestedCart || requestedCart.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required booking information' },
         { status: 400 }
@@ -163,6 +165,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const cart = await secureCartPricing(requestedCart);
+
     // IDEMPOTENCY CHECK: If we have a paymentIntentId, check if booking already exists
     // This prevents duplicate bookings when both webhook and frontend try to create
     if (paymentDetails?.paymentIntentId && paymentMethod === 'card') {
@@ -172,6 +176,11 @@ export async function POST(request: Request) {
       
       if (existingBooking) {
         console.log(`[Checkout] Booking already exists for payment ${paymentDetails.paymentIntentId} - returning existing`);
+        const receiptToken = await signToken({
+          sub: String(existingBooking.user),
+          scope: 'receipt',
+          paymentId: paymentDetails.paymentIntentId,
+        }, { expiresIn: '1h' });
         
         // Return success with existing booking info
         return NextResponse.json({
@@ -180,6 +189,7 @@ export async function POST(request: Request) {
           bookingId: existingBooking.bookingReference,
           bookings: [existingBooking._id],
           paymentId: paymentDetails.paymentIntentId,
+          receiptToken,
           customer: {
             name: `${customer.firstName} ${customer.lastName}`,
             email: customer.email,
@@ -282,14 +292,15 @@ export async function POST(request: Request) {
           }
         }
       }
-    } else if (userId) {
-      user = await User.findById(userId);
-      if (!user) {
+    } else {
+      const authResult = await authenticateFirebaseUser(request);
+      if (!authResult.success || !authResult.user) {
         return NextResponse.json(
-          { success: false, message: 'User not found' },
-          { status: 404 }
+          { success: false, message: authResult.error || 'Authentication required' },
+          { status: authResult.statusCode || 401 },
         );
       }
+      user = authResult.user;
     }
 
     if (!user) {
@@ -316,8 +327,8 @@ export async function POST(request: Request) {
       paymentResult = {
         paymentId: `BANK-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         status: 'pending',
-        amount: pricing.total,
-        currency: (pricing.currency || 'USD').toUpperCase(),
+        amount: computedPricing.total,
+        currency: 'USD',
       };
     } else {
       // Process payment with Stripe for card payments
@@ -346,8 +357,8 @@ export async function POST(request: Request) {
         } else {
           // Fallback: Create and auto-confirm PaymentIntent (for backward compatibility)
           const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(pricing.total * 100),
-            currency: (pricing.currency || 'USD').toLowerCase(),
+            amount: Math.round(computedPricing.total * 100),
+            currency: 'usd',
             description: `Booking for ${cart.length} tour${cart.length > 1 ? 's' : ''}`,
             metadata: {
               customer_email: customer.email,
@@ -502,7 +513,7 @@ export async function POST(request: Request) {
           time: bookingTime,
           guests: totalGuests,
           totalPrice: itemTotalPrice,
-            currency: paymentResult.currency || pricing.currency || 'USD', // Store the currency
+            currency: paymentResult.currency || 'USD',
           // Card payments: "Pending" until webhook confirms payment succeeded
           // Bank transfers: "Pending" until manual confirmation
           // Webhook will update card payments to "Confirmed" when payment succeeds
@@ -790,12 +801,19 @@ export async function POST(request: Request) {
     }
 
     // Return success response
+    const receiptToken = await signToken({
+      sub: String(user._id),
+      scope: 'receipt',
+      paymentId: paymentResult.paymentId,
+    }, { expiresIn: '1h' });
+
     return NextResponse.json({
       success: true,
       message: 'Booking completed successfully!',
       bookingId: bookingId,
       bookings: createdBookings.map(booking => booking._id),
       paymentId: paymentResult.paymentId,
+      receiptToken,
       customer: {
         name: `${customer.firstName} ${customer.lastName}`,
         email: customer.email,

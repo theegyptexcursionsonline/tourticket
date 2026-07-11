@@ -1,8 +1,9 @@
 // File: app/api/upload/route.ts
 
 import { v2 as cloudinary } from 'cloudinary';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Readable } from 'stream';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
 // Configure Cloudinary with credentials from .env.local
 cloudinary.config({
@@ -19,13 +20,25 @@ function bufferToStream(buffer: Buffer): Readable {
   return stream;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdminAuth(request, { permissions: ['manageContent'] });
+    if (auth instanceof NextResponse) return auth;
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'No file uploaded.' }, { status: 400 });
+    }
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+    if (!validTypes.includes(file.type)) {
+      return NextResponse.json({ success: false, error: 'Only JPEG, PNG, WebP, and AVIF images are allowed.' }, { status: 400 });
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ success: false, error: 'File too large. Maximum size is 5MB.' }, { status: 400 });
     }
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -59,6 +72,6 @@ export async function POST(request: Request) {
     if (errorMessage.toLowerCase().includes('upload preset not found')) {
         return NextResponse.json({ success: false, error: 'Server configuration error: Cloudinary upload preset is missing or invalid. Please check your .env.local file.' }, { status: 500 });
     }
-    return NextResponse.json({ success: false, error: `Upload failed on the server: ${errorMessage}` }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Upload failed on the server.' }, { status: 500 });
   }
 }

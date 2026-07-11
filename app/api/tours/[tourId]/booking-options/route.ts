@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function PUT(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function PUT(
     const { index, option } = await request.json();
     const { tourId } = await params;
 
-    const tour = await Tour.findById(tourId);
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });
     if (!tour) {
       return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
     }
@@ -48,7 +49,7 @@ export async function PUT(
   } catch (error: any) {
     console.error('Update booking option error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update booking option' },
+      { error: 'Failed to update booking option' },
       { status: 500 }
     );
   }

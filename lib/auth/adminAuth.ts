@@ -33,13 +33,26 @@ export async function requireAdminAuth(
   options: RequireAdminOptions = {},
 ): Promise<AdminAuthContext | NextResponse> {
   const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const presentedBearer = authHeader?.startsWith('Bearer ')
+    ? authHeader.replace('Bearer ', '').trim()
+    : '';
+  // Older admin components still use the context's `token` as a readiness
+  // flag. It now contains this non-secret sentinel; authentication remains
+  // exclusively in the httpOnly cookie.
+  const bearerToken = presentedBearer === 'cookie-session' ? '' : presentedBearer;
+  const cookieToken = request.cookies.get('authToken')?.value?.trim() || '';
+  const token = bearerToken || cookieToken;
+  if (!token) {
     return UNAUTHORIZED_RESPONSE;
   }
 
-  const token = authHeader.replace('Bearer ', '').trim();
-  if (!token) {
-    return UNAUTHORIZED_RESPONSE;
+  // Cookie authentication is convenient for same-origin admin forms/uploads,
+  // but state-changing requests must also prove they came from this origin.
+  if (!bearerToken && cookieToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    const origin = request.headers.get('origin');
+    if (!origin || new URL(origin).host !== request.nextUrl.host) {
+      return FORBIDDEN_RESPONSE;
+    }
   }
 
   const payload = await verifyToken(token);
@@ -74,4 +87,3 @@ export async function requireAdminAuth(
 
   return authContext;
 }
-

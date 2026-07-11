@@ -27,10 +27,8 @@ interface AdminAuthContextValue {
   hasAnyPermission: (permissions: string[]) => boolean;
 }
 
-const STORAGE_TOKEN_KEY = 'admin-auth-token';
-const STORAGE_USER_KEY = 'admin-user';
-
 const AdminAuthContext = createContext<AdminAuthContextValue | undefined>(undefined);
+const COOKIE_SESSION_SENTINEL = 'cookie-session';
 
 export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -38,47 +36,32 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const existingToken = localStorage.getItem(STORAGE_TOKEN_KEY);
-    const existingUser = localStorage.getItem(STORAGE_USER_KEY);
-
-    if (existingToken && existingUser) {
-      setToken(existingToken);
-      setUser(JSON.parse(existingUser));
-    }
-
-    if (existingToken) {
-      refreshUserWithToken(existingToken).finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
+    // Remove credentials persisted by older releases, then restore the session
+    // exclusively from the httpOnly cookie.
+    localStorage.removeItem('admin-auth-token');
+    localStorage.removeItem('admin-user');
+    refreshUserWithToken().finally(() => setIsLoading(false));
   }, []);
 
-  const persistSession = useCallback((newToken: string, newUser: AdminUser) => {
-    setToken(newToken);
+  const persistSession = useCallback((newUser: AdminUser) => {
+    // Non-secret compatibility flag for existing components. The credential
+    // itself is only in the httpOnly cookie and is never exposed to JS.
+    setToken(COOKIE_SESSION_SENTINEL);
     setUser(newUser);
-    localStorage.setItem(STORAGE_TOKEN_KEY, newToken);
-    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(newUser));
   }, []);
 
   const clearSession = useCallback(() => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem(STORAGE_TOKEN_KEY);
-    localStorage.removeItem(STORAGE_USER_KEY);
   }, []);
 
   const refreshUserWithToken = useCallback(
     async (activeToken?: string) => {
       const authToken = activeToken || token;
-      if (!authToken) {
-        return;
-      }
 
       try {
         const response = await fetch('/api/admin/auth/me', {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
         });
 
         if (!response.ok) {
@@ -93,7 +76,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
             id: data.user.id || data.user._id,
             permissions: data.user.permissions || [],
           };
-          persistSession(authToken, normalizedUser);
+          persistSession(normalizedUser);
         }
       } catch (error) {
         console.error('Failed to refresh admin session', error);
@@ -134,7 +117,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
           permissions: data.user.permissions || [],
         };
 
-        persistSession(data.token, normalizedUser);
+        persistSession(normalizedUser);
         toast.success('Welcome back!');
       } catch (error: any) {
         toast.error(error.message || 'Failed to log in');
@@ -147,6 +130,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   );
 
   const logout = useCallback(() => {
+    void fetch('/api/auth/logout', { method: 'POST' });
     clearSession();
     toast.success('You have been logged out.');
   }, [clearSession]);
@@ -176,7 +160,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
       user,
       token,
       isLoading,
-      isAuthenticated: Boolean(user && token),
+      isAuthenticated: Boolean(user),
       login,
       logout,
       refreshUser: refreshUserWithToken,
@@ -196,4 +180,3 @@ export const useAdminAuth = () => {
   }
   return context;
 };
-

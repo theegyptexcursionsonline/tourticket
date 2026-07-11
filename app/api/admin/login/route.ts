@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
 
       const response = NextResponse.json({
         success: true,
-        token,
         user: buildAdminUserPayload(pseudoUser, permissions),
       });
 
@@ -145,7 +144,6 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      token,
       user: buildAdminUserPayload(user, permissions),
     });
 

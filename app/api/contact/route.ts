@@ -106,7 +106,13 @@ export async function POST(request: Request) {
     }
 
     // --- reCAPTCHA Verification ---
-    if (process.env.RECAPTCHA_SECRET_KEY && recaptchaToken) {
+    if (process.env.RECAPTCHA_SECRET_KEY) {
+      if (!recaptchaToken) {
+        return NextResponse.json(
+          { error: 'Security verification is required.' },
+          { status: 400 }
+        );
+      }
       const isValid = await verifyRecaptcha(recaptchaToken);
       if (!isValid) {
         console.log('reCAPTCHA verification failed');

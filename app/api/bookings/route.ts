@@ -149,10 +149,19 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Booking creation must go through /api/checkout, where catalogue prices,
+  // discounts, and payment status are verified server-side. This legacy route
+  // previously trusted totalPrice and created Confirmed bookings directly.
+  return NextResponse.json(
+    { success: false, error: 'Direct booking creation is disabled. Use checkout.' },
+    { status: 405, headers: { Allow: 'GET' } },
+  );
+
+  /* istanbul ignore next -- legacy implementation retained temporarily */
   await dbConnect();
 
   try {
-    const authHeader = request.headers.get('Authorization');
+    const authHeader = request.headers.get('Authorization') as string;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
@@ -168,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     if (firebaseResult.success && firebaseResult.uid) {
       // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+      const user: any = await User.findOne({ firebaseUid: firebaseResult.uid });
       if (!user) {
         return NextResponse.json(
           { success: false, error: 'User not found' },
@@ -178,7 +187,7 @@ export async function POST(request: NextRequest) {
       userId = (user._id as any).toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
-      const payload = await verifyToken(token);
+      const payload: any = await verifyToken(token);
       if (!payload || !payload.sub) {
         return NextResponse.json(
           { success: false, error: 'Invalid or expired token' },

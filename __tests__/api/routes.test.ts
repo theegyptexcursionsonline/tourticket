@@ -106,12 +106,21 @@ jest.mock('@/lib/models/user', () => {
   return { __esModule: true, default: mock };
 });
 
+const bookingChain = chainable([]);
 jest.mock('@/lib/models/Booking', () => {
+  const mock: any = jest.fn().mockReturnValue(bookingChain);
+  Object.assign(mock, bookingChain);
+  mock.find = jest.fn().mockReturnValue(bookingChain);
+  mock.findOne = jest.fn().mockReturnValue(bookingChain);
+  mock.countDocuments = jest.fn().mockResolvedValue(0);
+  return { __esModule: true, default: mock };
+});
+
+jest.mock('@/lib/models/Review', () => {
   const chain = chainable([]);
   const mock: any = jest.fn().mockReturnValue(chain);
   Object.assign(mock, chain);
   mock.find = jest.fn().mockReturnValue(chain);
-  mock.countDocuments = jest.fn().mockResolvedValue(0);
   return { __esModule: true, default: mock };
 });
 
@@ -245,6 +254,103 @@ describe('API Route Handlers', () => {
 
       expect(bookingOptionsResponse.status).toBe(401);
       expect(algoliaResponse.status).toBe(401);
+    });
+
+    it('rejects unauthenticated image uploads', async () => {
+      const uploadRoute = await import('@/app/api/upload/route');
+      const heroUploadRoute = await import('@/app/api/uploadhero/route');
+
+      const uploadResponse = await uploadRoute.POST(createRequest('POST', '/api/upload'));
+      const heroUploadResponse = await heroUploadRoute.POST(
+        createRequest('POST', '/api/uploadhero'),
+      );
+
+      expect(uploadResponse.status).toBe(401);
+      expect(heroUploadResponse.status).toBe(401);
+    });
+
+    it('disables legacy client-priced booking and review creation', async () => {
+      const bookingsRoute = await import('@/app/api/bookings/route');
+      const reviewsRoute = await import('@/app/api/reviews/route');
+
+      const bookingResponse = await bookingsRoute.POST(
+        createRequest('POST', '/api/bookings', { totalPrice: 0.01 }),
+      );
+      const reviewResponse = await reviewsRoute.POST();
+
+      expect(bookingResponse.status).toBe(405);
+      expect(reviewResponse.status).toBe(405);
+    });
+
+    it('rejects receipt generation without a signed receipt token', async () => {
+      const receiptRoute = await import('@/app/api/checkout/receipt/route');
+      const response = await receiptRoute.POST(
+        createRequest('POST', '/api/checkout/receipt', {
+          orderId: 'FORGED',
+          pricing: { total: 0.01 },
+          customer: { email: 'victim@example.com' },
+        }),
+      );
+
+      expect(response.status).toBe(401);
+    });
+
+    it('requires booking-management permission for the admin cancellation route', async () => {
+      const route = await import('@/app/api/admin/bookings/[id]/cancel/route');
+      const response = await route.POST(
+        createRequest('POST', '/api/admin/bookings/not-an-id/cancel'),
+        { params: Promise.resolve({ id: 'not-an-id' }) },
+      );
+
+      expect(response.status).toBe(401);
+    });
+
+    it('fails closed when cron authentication is not configured', async () => {
+      const previousSecret = process.env.CRON_SECRET;
+      delete process.env.CRON_SECRET;
+      const reminders = await import('@/app/api/cron/trip-reminders/route');
+      const completion = await import('@/app/api/cron/trip-completion/route');
+
+      const maliciousHeader = new Headers({ Authorization: 'Bearer undefined' });
+      const reminderRequest = createRequest('GET', '/api/cron/trip-reminders');
+      const completionRequest = createRequest('GET', '/api/cron/trip-completion');
+      reminderRequest.headers = maliciousHeader;
+      completionRequest.headers = maliciousHeader;
+
+      expect((await reminders.GET(reminderRequest)).status).toBe(503);
+      expect((await completion.GET(completionRequest)).status).toBe(503);
+      if (previousSecret) process.env.CRON_SECRET = previousSecret;
+    });
+
+    it('returns only the public booking verification allowlist', async () => {
+      bookingChain.lean.mockResolvedValueOnce({
+        bookingReference: 'SAFE-REFERENCE',
+        tour: { title: 'Tour', image: 'image.jpg', duration: '2h' },
+        user: { firstName: 'Private', lastName: 'Guest', email: 'private@example.com' },
+        date: new Date('2026-07-20T00:00:00.000Z'),
+        time: '09:00',
+        guests: 2,
+        totalPrice: 200,
+        status: 'Confirmed',
+        selectedBookingOption: { title: 'Morning', price: 100 },
+        specialRequests: 'Private request',
+        emergencyContact: 'Private contact',
+      });
+      const { GET } = await import('@/app/api/booking/verify/[reference]/route');
+
+      const response = await GET(
+        createRequest('GET', '/api/booking/verify/SAFE-REFERENCE'),
+        { params: Promise.resolve({ reference: 'SAFE-REFERENCE' }) },
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(Object.keys(data.booking).sort()).toEqual([
+        'bookingReference', 'date', 'guests', 'selectedBookingOption', 'status', 'time', 'tour',
+      ]);
+      expect(data.booking).not.toHaveProperty('user');
+      expect(data.booking).not.toHaveProperty('totalPrice');
+      expect(data.booking.selectedBookingOption).toEqual({ title: 'Morning' });
     });
   });
 });

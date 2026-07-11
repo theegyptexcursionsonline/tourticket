@@ -16,13 +16,15 @@ export async function GET(request: Request, { params }: { params: Promise<Params
   try {
     const { id } = await params;
     
-    const review = await Review.findById(id).populate('user', 'firstName lastName name picture');
+    const review = await Review.findById(id)
+      .select('rating title comment userName verified helpful createdAt user')
+      .populate('user', 'firstName lastName name picture');
     if (!review) {
       return NextResponse.json({ success: false, message: 'Review not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, data: review });
   } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch review' }, { status: 400 });
   }
 }
 

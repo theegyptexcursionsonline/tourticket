@@ -48,7 +48,6 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   const metadata = paymentIntent.metadata;
 
   console.log(`[Webhook] Processing payment ${paymentId}`);
-  console.log(`[Webhook] Metadata:`, JSON.stringify(metadata));
 
   // Check if booking data is available in metadata
   if (metadata.has_booking_data !== 'true') {
@@ -261,7 +260,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         email: customerEmail,
         password: 'guest-' + Math.random().toString(36).substring(2, 15),
       });
-      console.log(`[Webhook] Created guest user ${customerEmail}`);
+      console.log('[Webhook] Created guest user');
     } catch (userError: any) {
       if (userError.code === 11000) {
         user = await User.findOne({ email: customerEmail });
@@ -272,7 +271,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   }
 
   if (!user) {
-    console.error(`[Webhook] Could not find or create user for ${customerEmail}`);
+    console.error('[Webhook] Could not find or create user');
     return { created: false, reason: 'user_creation_failed' };
   }
 
@@ -562,7 +561,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         : undefined,
     });
 
-    console.log(`[Webhook] Sent booking confirmation to ${customerEmail}`);
+    console.log('[Webhook] Sent booking confirmation');
 
     // Extract discount info for admin email
     const emailDiscountCode = metadata.discount_code && metadata.discount_code !== 'none' 
@@ -644,6 +643,11 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('Stripe webhook is not configured');
+      return NextResponse.json({ error: 'Webhook unavailable' }, { status: 503 });
+    }
+
     const body = await request.text();
     const headersList = await headers();
     const signature = headersList.get('stripe-signature');
@@ -665,9 +669,9 @@ export async function POST(request: Request) {
         getWebhookSecret()
       );
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      console.error('Webhook signature verification failed');
       return NextResponse.json(
-        { error: `Webhook Error: ${err.message}` },
+        { error: 'Invalid webhook signature' },
         { status: 400 }
       );
     }
@@ -685,8 +689,9 @@ export async function POST(request: Request) {
           console.log(`[Webhook] Process result for ${paymentIntent.id}:`, result);
         } catch (processError: any) {
           console.error(`[Webhook] Failed to process payment ${paymentIntent.id}:`, processError);
-          // Still return 200 to acknowledge the webhook, but log the error
-          // We don't want Stripe to keep retrying if there's a data issue
+          // Return 500 so Stripe retries transient failures instead of losing a
+          // paid booking after acknowledging the event.
+          return NextResponse.json({ error: 'Payment processing failed' }, { status: 500 });
         }
         break;
 

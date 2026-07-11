@@ -130,14 +130,25 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
 }
 
 function generateContactFormHTML(data: ContactFormData): string {
+  const escapeHtml = (value: unknown) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const safeName = escapeHtml(data.name);
+  const safeEmail = escapeHtml(data.fromEmail);
+  const safeMessage = escapeHtml(data.message).replace(/\r?\n/g, '<br>');
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${data.name}</p>
-      <p><strong>Email:</strong> ${data.fromEmail}</p>
+      <p><strong>Name:</strong> ${safeName}</p>
+      <p><strong>Email:</strong> ${safeEmail}</p>
       <p><strong>Message:</strong></p>
       <div style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
-        ${data.message?.replace(/\n/g, '<br>') ?? ''}
+        ${safeMessage}
       </div>
     </div>
   `;

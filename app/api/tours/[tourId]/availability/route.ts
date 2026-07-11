@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Booking from '@/lib/models/Booking';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(
   request: Request,
@@ -18,7 +19,8 @@ export async function GET(
       return NextResponse.json({ message: 'Month parameter is required' }, { status: 400 });
     }
 
-    const tour = await Tour.findById(tourId).select('availability');
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
+      .select('availability tenantId');
     if (!tour || !tour.availability) {
       return NextResponse.json({ message: 'Tour or availability rules not found' }, { status: 404 });
     }
@@ -31,6 +33,7 @@ export async function GET(
     // --- Get all bookings for the tour in the given month ---
     const existingBookings = await Booking.find({
       tour: tourId,
+      tenantId: (tour as any).tenantId || 'default',
       date: { $gte: startDate, $lte: endDate },
     }).select('date time guests');
 
@@ -85,6 +88,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Failed to get availability:', error);
-    return NextResponse.json({ message: 'Failed to get availability', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to get availability' }, { status: 500 });
   }
 }

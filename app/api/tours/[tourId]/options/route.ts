@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper function to check if string is a valid MongoDB ObjectId
 const isValidObjectId = (id: string): boolean => {
@@ -25,9 +26,9 @@ export async function GET(
 
     // Check if tourId is an ObjectId or a slug
     if (isValidObjectId(tourId)) {
-      tour = await Tour.findById(tourId).lean();
+      tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER }).lean();
     } else {
-      tour = await Tour.findOne({ slug: tourId }).lean();
+      tour = await Tour.findOne({ slug: tourId, ...DEFAULT_TENANT_FILTER }).lean();
     }
 
     if (!tour) {
