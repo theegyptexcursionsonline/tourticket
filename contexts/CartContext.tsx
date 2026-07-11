@@ -20,6 +20,55 @@ interface CartContextType {
 // Create and EXPORT the context
 export const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const toNumberQty = (value: unknown, fallback = 1): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+    if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        return toNumberQty(record.quantity ?? record.qty ?? record.count, fallback);
+    }
+    return fallback;
+};
+
+const syncCartToServer = async (token: string, items: CartItem[]) => {
+    const serverCart = items.map(item => ({
+        id: item._id || item.id,
+        tourId: item._id || item.id,
+        tourSlug: item.slug,
+        tourTitle: item.title,
+        tourImage: (item as any).images?.[0]?.url || item.image,
+        selectedDate: item.selectedDate,
+        selectedTime: item.selectedTime,
+        quantity: item.quantity,
+        childQuantity: item.childQuantity,
+        adultPrice: (item as any).pricing?.adult || item.discountPrice || 0,
+        childPrice: (item as any).pricing?.child || 0,
+        selectedAddOns: item.selectedAddOnDetails
+            ? Object.values(item.selectedAddOnDetails).map(addon => ({
+                id: addon.id,
+                name: addon.title,
+                price: addon.price,
+                quantity: toNumberQty((item.selectedAddOns as any)?.[addon.id], 1),
+                category: addon.category || 'add-on',
+                perGuest: addon.perGuest ?? false,
+            }))
+            : [],
+        uniqueId: item.uniqueId,
+    }));
+
+    await fetch('/api/user/cart', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cart: serverCart }),
+    });
+};
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -27,20 +76,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [hasSyncedFromServer, setHasSyncedFromServer] = useState(false);
 
     const { token, isAuthenticated } = useAuth();
-
-    const toNumberQty = useCallback((value: any, fallback = 1): number => {
-        if (typeof value === 'number' && Number.isFinite(value)) return value;
-        if (typeof value === 'string') {
-            const parsed = Number(value);
-            if (Number.isFinite(parsed)) return parsed;
-            return fallback;
-        }
-        if (value && typeof value === 'object') {
-            const inner = (value as any).quantity ?? (value as any).qty ?? (value as any).count;
-            return toNumberQty(inner, fallback);
-        }
-        return fallback;
-    }, []);
 
     const normalizeCartItem = useCallback((item: any): CartItem => {
         // Normalize selectedAddOns into the client format:
@@ -102,22 +137,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
 
         return nextItem as CartItem;
-    }, [toNumberQty]);
+    }, []);
 
     // Load cart from localStorage (for guests or initial load)
     useEffect(() => {
         if (!isAuthenticated) {
-            try {
-                const storedCart = localStorage.getItem('cart');
-                if (storedCart) {
-                    const parsed = JSON.parse(storedCart);
-                    setCart(Array.isArray(parsed) ? parsed.map(normalizeCartItem) : []);
+            const timeoutId = window.setTimeout(() => {
+                try {
+                    const storedCart = localStorage.getItem('cart');
+                    if (storedCart) {
+                        const parsed = JSON.parse(storedCart);
+                        setCart(Array.isArray(parsed) ? parsed.map(normalizeCartItem) : []);
+                    }
+                } catch (error) {
+                    console.error("Failed to parse cart from localStorage", error);
+                    localStorage.removeItem('cart');
                 }
-            } catch (error) {
-                console.error("Failed to parse cart from localStorage", error);
-                localStorage.removeItem('cart');
-            }
-            setHasSyncedFromServer(false);
+                setHasSyncedFromServer(false);
+            }, 0);
+            return () => window.clearTimeout(timeoutId);
         }
     }, [isAuthenticated, normalizeCartItem]);
 
@@ -166,7 +204,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
                         // If there were local items not on server, sync them
                         if (localCart.some((item: CartItem) => !serverIds.has(item.uniqueId))) {
-                            await syncToServer(mergedCart);
+                            await syncCartToServer(token, mergedCart);
                         }
 
                         // Clear local storage since we're now using server
@@ -184,49 +222,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         syncFromServer();
     }, [isAuthenticated, token, hasSyncedFromServer, normalizeCartItem]);
 
-    // Sync to server helper
-    const syncToServer = useCallback(async (items: CartItem[]) => {
-        if (!isAuthenticated || !token) return;
-
-        try {
-            // Transform CartItem to server format
-            const serverCart = items.map(item => ({
-                id: item._id || item.id,
-                tourId: item._id || item.id,
-                tourSlug: item.slug,
-                tourTitle: item.title,
-                tourImage: (item as any).images?.[0]?.url || item.image,
-                selectedDate: item.selectedDate,
-                selectedTime: item.selectedTime,
-                quantity: item.quantity,
-                childQuantity: item.childQuantity,
-                adultPrice: (item as any).pricing?.adult || item.discountPrice || 0,
-                childPrice: (item as any).pricing?.child || 0,
-                selectedAddOns: item.selectedAddOnDetails ?
-                    Object.values(item.selectedAddOnDetails).map(addon => ({
-                        id: addon.id,
-                        name: addon.title,
-                        price: addon.price,
-                        quantity: toNumberQty((item.selectedAddOns as any)?.[addon.id], 1),
-                        category: addon.category || 'add-on',
-                        perGuest: addon.perGuest ?? false,
-                    })) : [],
-                uniqueId: item.uniqueId,
-            }));
-
-            await fetch('/api/user/cart', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({ cart: serverCart }),
-            });
-        } catch (error) {
-            console.error('Failed to sync cart to server:', error);
-        }
-    }, [isAuthenticated, token, toNumberQty]);
-
     // Save to localStorage (for guests) whenever cart changes
     useEffect(() => {
         if (!isAuthenticated) {
@@ -237,6 +232,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     }, [cart, isAuthenticated]);
+
+    const openCart = useCallback(() => setIsCartOpen(true), []);
+    const closeCart = useCallback(() => setIsCartOpen(false), []);
 
     const addToCart = useCallback(async (item: CartItem, openCartSidebar = true) => {
         const normalizedItem = normalizeCartItem(item);
@@ -296,7 +294,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 console.error('Failed to add to cart on server:', error);
             }
         }
-    }, [isAuthenticated, token, normalizeCartItem, toNumberQty]);
+    }, [isAuthenticated, token, normalizeCartItem, openCart]);
 
     const removeFromCart = useCallback(async (uniqueId: string) => {
         setCart(prevCart => prevCart.filter(item => item.uniqueId !== uniqueId));
@@ -334,9 +332,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     }, [isAuthenticated, token]);
-
-    const openCart = () => setIsCartOpen(true);
-    const closeCart = () => setIsCartOpen(false);
 
     const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0), 0);
 

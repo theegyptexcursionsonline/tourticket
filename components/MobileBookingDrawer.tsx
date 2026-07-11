@@ -34,8 +34,6 @@ export default function MobileBookingDrawer({
   // Fetch product ID if not provided
   useEffect(() => {
     if (initialProductId) {
-      setResolvedProductId(initialProductId);
-      setLoading(false);
       return;
     }
 
@@ -56,13 +54,15 @@ export default function MobileBookingDrawer({
       }
     }
 
-    fetchFirstProduct();
+    const timeoutId = window.setTimeout(() => void fetchFirstProduct(), 0);
+    return () => window.clearTimeout(timeoutId);
   }, [orgId, apiUrl, initialProductId]);
 
   // Reset iframe loaded state when drawer closes
   useEffect(() => {
     if (!isOpen) {
-      setIframeLoaded(false);
+      const timeoutId = window.setTimeout(() => setIframeLoaded(false), 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [isOpen]);
 

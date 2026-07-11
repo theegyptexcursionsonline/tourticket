@@ -1200,8 +1200,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     !!initialStopSaleDates,
   );
 
+  const stopSaleTourId = tour?.id || tour?._id;
   const fetchStopSaleDates = useCallback(async (monthsOverride?: Array<{ month: number; year: number }>) => {
-    const tourId = tour?.id || tour?._id;
+    const tourId = stopSaleTourId;
     if (!tourId) return {} as Record<string, StopSaleDayInfo>;
 
     try {
@@ -1244,11 +1245,6 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         }
       }
 
-      setStopSaleDates((prev) => {
-        const merged = { ...prev, ...next };
-        return merged;
-      });
-
       return next;
     } catch (err) {
       // Non-fatal: the calendar degrades to its pre-stop-sale behavior if
@@ -1256,7 +1252,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       console.warn('[BookingSidebar] stop-sale month fetch failed:', err);
       return {} as Record<string, StopSaleDayInfo>;
     }
-  }, [tour?.id, tour?._id]);
+  }, [stopSaleTourId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1277,7 +1273,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
   useEffect(() => {
     if (!isOpen || !showDatePicker) return;
-    void fetchStopSaleDates();
+    void fetchStopSaleDates().then((next) => {
+      if (Object.keys(next).length > 0) {
+        setStopSaleDates((prev) => ({ ...prev, ...next }));
+      }
+    });
   }, [isOpen, showDatePicker, fetchStopSaleDates]);
 
   // Generate calendar availability based on tour's availability settings
@@ -1358,7 +1358,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
 
     return availabilityMap;
-  }, [tour?.availability, stopSaleDates]);
+  }, [tour, stopSaleDates]);
 
   // Get tour display data with proper fallbacks
   const tourDisplayData = useMemo(() => {
@@ -1600,25 +1600,28 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   // Reset when sidebar opens
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(1);
-      setIsProcessing(false);
-      setIsLoading(false);
-      setError('');
-      setShowParticipantsDropdown(false);
-      setShowDatePicker(false);
-      setAvailability(null);
-      setAnimationKey(0);
-      setBookingData({
-        selectedDate: null,
-        selectedTimeSlot: null,
-        adults: 2,
-        children: 0,
-        infants: 0,
-        selectedAddOns: {},
-        selectedLanguage: 'English',
-        specialRequests: '',
-      });
-      lastToastTimeSlotRef.current = null; // Reset toast tracking
+      const timeoutId = window.setTimeout(() => {
+        setCurrentStep(1);
+        setIsProcessing(false);
+        setIsLoading(false);
+        setError('');
+        setShowParticipantsDropdown(false);
+        setShowDatePicker(false);
+        setAvailability(null);
+        setAnimationKey(0);
+        setBookingData({
+          selectedDate: null,
+          selectedTimeSlot: null,
+          adults: 2,
+          children: 0,
+          infants: 0,
+          selectedAddOns: {},
+          selectedLanguage: 'English',
+          specialRequests: '',
+        });
+        lastToastTimeSlotRef.current = null;
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [isOpen]);
 

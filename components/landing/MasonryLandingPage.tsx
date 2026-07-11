@@ -29,6 +29,14 @@ interface MasonryLandingPageProps {
   };
 }
 
+const FLOATING_PARTICLES = Array.from({ length: 6 }, (_, index) => ({
+  x: ((index * 37) % 101) - 50,
+  duration: 4 + ((index * 29) % 20) / 10,
+  delay: ((index * 17) % 20) / 10,
+  left: `${(index * 41) % 100}%`,
+  top: `${(index * 67) % 100}%`,
+}));
+
 export default function MasonryLandingPage({ 
   page, 
   content = [],
@@ -70,23 +78,23 @@ export default function MasonryLandingPage({
           
           {/* Floating Elements */}
           <div className="absolute inset-0 overflow-hidden">
-            {Array.from({ length: 6 }, (_, i) => (
+            {FLOATING_PARTICLES.map((particle, i) => (
               <motion.div
                 key={i}
                 className="absolute w-2 h-2 bg-white/20 rounded-full"
                 animate={{
                   y: [0, -100, 0],
-                  x: [0, Math.random() * 100 - 50, 0],
+                  x: [0, particle.x, 0],
                   opacity: [0.2, 0.8, 0.2]
                 }}
                 transition={{
-                  duration: 4 + Math.random() * 2,
+                  duration: particle.duration,
                   repeat: Infinity,
-                  delay: Math.random() * 2
+                  delay: particle.delay
                 }}
                 style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`
+                  left: particle.left,
+                  top: particle.top
                 }}
               />
             ))}

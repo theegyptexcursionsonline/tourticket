@@ -33,21 +33,25 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    setMode(initialMode);
+    const timeoutId = window.setTimeout(() => setMode(initialMode), 0);
+    return () => window.clearTimeout(timeoutId);
   }, [initialMode]);
 
   useEffect(() => {
     if (isOpen) {
-      // Reset form when modal opens
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-      });
-      setErrors({});
-      setShowPassword(false);
+      const timeoutId = window.setTimeout(() => {
+        // Reset form when modal opens
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+        });
+        setErrors({});
+        setShowPassword(false);
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [isOpen]);
 

@@ -5,6 +5,7 @@ import withAuth from '@/components/admin/withAuth';
 import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2, Search, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import type { LucideIcon } from 'lucide-react';
 
 interface User {
   _id: string;
@@ -28,6 +29,27 @@ interface UserStats {
 // Firebase UIDs and other non-human names are long alphanumeric strings
 const looksLikeUid = (name: string) => /^[a-zA-Z0-9]{20,}$/.test(name.replace(/\s/g, ''));
 
+const StatCard = ({ icon: Icon, title, value, subtitle, color = "slate" }: {
+  icon: LucideIcon;
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  color?: string;
+}) => (
+  <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
+        <p className="text-2xl font-bold text-slate-800">{value}</p>
+        {subtitle && <p className="text-slate-400 text-xs mt-1">{subtitle}</p>}
+      </div>
+      <div className={`p-3 rounded-lg ${color === 'red' ? 'bg-red-100' : 'bg-slate-100'}`}>
+        <Icon className={`h-6 w-6 ${color === 'red' ? 'text-red-600' : 'text-slate-600'}`} />
+      </div>
+    </div>
+  </div>
+);
+
 const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<UserStats>({
@@ -41,12 +63,6 @@ const UsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const { token } = useAdminAuth();
-
-  useEffect(() => {
-    if (token) {
-      fetchUsers();
-    }
-  }, [token]);
 
   const computeStats = (data: User[]): UserStats => {
     const totalUsers = data.length;
@@ -83,6 +99,13 @@ const UsersPage = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (token) {
+      const timeoutId = window.setTimeout(() => void fetchUsers(), 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [token]);
 
   const getUserDisplayName = (user: User) => {
     // Prefer firstName + lastName
@@ -218,27 +241,6 @@ const UsersPage = () => {
       </div>
     );
   }
-
-  const StatCard = ({ icon: Icon, title, value, subtitle, color = "slate" }: {
-    icon: any;
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    color?: string;
-  }) => (
-    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
-          <p className="text-2xl font-bold text-slate-800">{value}</p>
-          {subtitle && <p className="text-slate-400 text-xs mt-1">{subtitle}</p>}
-        </div>
-        <div className={`p-3 rounded-lg ${color === 'red' ? 'bg-red-100' : 'bg-slate-100'}`}>
-          <Icon className={`h-6 w-6 ${color === 'red' ? 'text-red-600' : 'text-slate-600'}`} />
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">

@@ -38,6 +38,26 @@ import {
 import Image from 'next/image';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
+
+const DetailItem = ({
+  icon: Icon,
+  label,
+  value,
+  className = "",
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number | React.ReactNode;
+  className?: string;
+}) => (
+  <div className={`flex items-start text-slate-700 ${className}`}>
+    <Icon className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
+    <div className="min-w-0 flex-1">
+      <span className="font-semibold text-slate-600">{label}:</span>
+      <div className="mt-1">{value}</div>
+    </div>
+  </div>
+);
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 // Valid booking statuses
@@ -313,7 +333,8 @@ const BookingDetailPage = () => {
 
   useEffect(() => {
     if (id) {
-      fetchBooking();
+      const timeoutId = window.setTimeout(() => void fetchBooking(), 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [id]);
 
@@ -620,27 +641,6 @@ const BookingDetailPage = () => {
   }
 
   const pricing = calculatePricing();
-
-  // Helper component for displaying details
-  const DetailItem = ({ 
-    icon: Icon, 
-    label, 
-    value, 
-    className = "" 
-  }: { 
-    icon: React.ElementType; 
-    label: string; 
-    value: string | number | React.ReactNode; 
-    className?: string;
-  }) => (
-    <div className={`flex items-start text-slate-700 ${className}`}>
-      <Icon className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
-      <div className="min-w-0 flex-1">
-        <span className="font-semibold text-slate-600">{label}:</span>
-        <div className="mt-1">{value}</div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

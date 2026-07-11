@@ -1,7 +1,7 @@
 // app/admin/availability/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import {
@@ -72,15 +72,6 @@ const AvailabilityPage = () => {
   const firstDay = getFirstDayOfMonth(year, month);
   const monthName = currentDate.toLocaleString('default', { month: 'long' });
 
-  useEffect(() => {
-    const selected = tours.find((tour) => tour._id === selectedTour);
-    if (selected) {
-      setTourSearch(selected.title);
-    } else if (!selectedTour) {
-      setTourSearch('');
-    }
-  }, [selectedTour, tours]);
-
   // Fetch tours
   useEffect(() => {
     const fetchTours = async () => {
@@ -100,6 +91,7 @@ const AvailabilityPage = () => {
           setTours(tourList);
           if (tourList.length > 0 && !selectedTour) {
             setSelectedTour(tourList[0]._id);
+            setTourSearch(tourList[0].title);
           }
         }
       } catch (error) {
@@ -114,7 +106,7 @@ const AvailabilityPage = () => {
   }, [token]);
 
   // Fetch availability for selected tour and month
-  const fetchAvailability = useCallback(async () => {
+  const fetchAvailability = async () => {
     if (!selectedTour) return;
 
     setIsLoading(true);
@@ -143,11 +135,12 @@ const AvailabilityPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedTour, month, year, token]);
+  };
 
   useEffect(() => {
-    fetchAvailability();
-  }, [fetchAvailability]);
+    const timeoutId = window.setTimeout(() => void fetchAvailability(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedTour, month, year, token]);
 
   // Navigation handlers
   const goToPreviousMonth = () => {

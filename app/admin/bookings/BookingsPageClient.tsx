@@ -193,7 +193,10 @@ const BookingsPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildBookingsUrl, token]);
 
-  useEffect(() => { fetchTourOptions(); }, [fetchTourOptions]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => void fetchTourOptions(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchTourOptions]);
 
   // Debounced fetch when filters change
   useEffect(() => {
@@ -208,11 +211,17 @@ const BookingsPage = () => {
   );
 
   useEffect(() => {
-    setPage(1);
-    setSelectedBookings(new Set());
+    const timeoutId = window.setTimeout(() => {
+      setPage(1);
+      setSelectedBookings(new Set());
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [filtersKey]);
 
-  useEffect(() => { setSelectedBookings(new Set()); }, [page]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSelectedBookings(new Set()), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [page]);
 
   const handleRowClick = (id: string) => router.push(`/admin/bookings/${id}`);
 
