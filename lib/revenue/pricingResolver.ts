@@ -2,8 +2,26 @@ import mongoose from 'mongoose';
 import Tour from '@/lib/models/Tour';
 import RevenuePriceOverride, { type GuestPrices } from '@/lib/models/RevenuePriceOverride';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { IBookingOption } from '@/lib/models/Tour';
+import type { Types } from 'mongoose';
 
 export const STANDARD_OPTION_KEY = 'standard';
+
+type CatalogueTour = {
+  _id: Types.ObjectId;
+  title: string;
+  discountPrice: number;
+  originalPrice?: number;
+  bookingOptions?: IBookingOption[];
+};
+
+type PriceOverride = {
+  _id: Types.ObjectId;
+  currency: string;
+  prices: GuestPrices;
+  version: number;
+  executionId?: string;
+};
 
 export function normalizePriceDate(value: string | Date) {
   const raw = value instanceof Date ? value.toISOString().slice(0, 10) : value;
@@ -19,19 +37,19 @@ export async function resolveEffectivePrice(input: { tourId: string; optionKey?:
   if (!mongoose.Types.ObjectId.isValid(input.tourId)) throw new Error('Invalid tour');
   const tenantId = input.tenantId || 'default';
   const optionKey = input.optionKey || STANDARD_OPTION_KEY;
-  const tour: any = await Tour.findOne({ _id: input.tourId, ...DEFAULT_TENANT_FILTER })
+  const tour = await Tour.findOne({ _id: input.tourId, ...DEFAULT_TENANT_FILTER })
     .select('_id title discountPrice originalPrice bookingOptions')
-    .lean();
+    .lean<CatalogueTour | null>();
   if (!tour) throw new Error('Tour unavailable');
   const option = optionKey === STANDARD_OPTION_KEY
     ? null
-    : tour.bookingOptions?.find((candidate: any) => candidate.pricingKey === optionKey);
+    : tour.bookingOptions?.find((candidate) => candidate.pricingKey === optionKey);
   if (optionKey !== STANDARD_OPTION_KEY && !option) throw new Error('Pricing option unavailable');
   const adult = Number(option?.price ?? tour.discountPrice);
   if (!Number.isFinite(adult) || adult < 0) throw new Error('Invalid catalogue price');
   const cataloguePrices = catalogueGuestPrices(adult);
   const date = normalizePriceDate(input.date);
-  const override: any = await RevenuePriceOverride.findOne({ tenantId, tourId: tour._id, optionKey, date, time: input.time, active: true }).lean();
+  const override = await RevenuePriceOverride.findOne({ tenantId, tourId: tour._id, optionKey, date, time: input.time, active: true }).lean<PriceOverride | null>();
   const prices = override?.prices ?? cataloguePrices;
   return {
     tourId: String(tour._id),

@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Price apply failed.';
+
 export async function POST(request: NextRequest) {
   const bodyText = await request.text();
   const auth = await authenticateRevenueRequest(request, bodyText, 'write');
@@ -27,7 +29,8 @@ export async function POST(request: NextRequest) {
       revalidatePath('/[locale]/destinations/[slug]', 'page');
     }
     return NextResponse.json(result, { status: result.state === 'replayed' ? 200 : 201, headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
-    return revenueError(/Missing|Invalid|Only USD/.test(error?.message) ? 400 : 500, 'PRICE_APPLY_FAILED', error?.message || 'Price apply failed.');
+  } catch (error: unknown) {
+    const message = errorMessage(error);
+    return revenueError(/Missing|Invalid|Only USD/.test(message) ? 400 : 500, 'PRICE_APPLY_FAILED', message);
   }
 }

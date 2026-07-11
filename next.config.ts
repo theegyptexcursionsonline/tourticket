@@ -230,9 +230,12 @@ module.exports = withSentryConfig(withNextIntl(nextConfig), {
   project: 'egypt-excursionsonline-web',
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  disableLogger: true,
-  automaticVercelMonitors: true,
   hideSourceMaps: true,
-  disableServerWebpackPlugin: process.env.NODE_ENV === 'development',
-  disableClientWebpackPlugin: process.env.NODE_ENV === 'development',
+  webpack: {
+    automaticVercelMonitors: true,
+    disableSentryConfig: process.env.NODE_ENV === 'development',
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });

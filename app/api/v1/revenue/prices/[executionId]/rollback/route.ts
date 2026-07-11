@@ -19,6 +19,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ex
   const receipt = await RevenuePriceExecution.findOne({ executionId, tenantId: 'default' });
   if (!receipt) return revenueError(404, 'EXECUTION_NOT_FOUND', 'Execution not found.');
   if (receipt.state === 'rollback_applied') return NextResponse.json({ state: 'rollback_applied', replayed: true, receipt });
+  if (receipt.appliedVersion === undefined) return revenueError(409, 'ROLLBACK_UNAVAILABLE', 'Execution has no applied version to roll back.');
   const updated = await RevenuePriceOverride.findOneAndUpdate(
     { executionId, version: receipt.appliedVersion, active: true },
     { $set: { prices: receipt.previousPrices, previousPrices: receipt.effectivePrices, version: receipt.appliedVersion + 1, source: 'revenuepilot', executionId: `${executionId}:rollback`, revertedAt: new Date() } },

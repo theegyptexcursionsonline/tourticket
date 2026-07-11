@@ -1,8 +1,33 @@
-import mongoose, { Schema, type Model } from 'mongoose';
+import mongoose, { type Document, Schema, type Model, type Types } from 'mongoose';
+
+type ExecutionPrices = { adult: number; child: number; infant: number };
+
+export interface IRevenuePriceExecution extends Document {
+  executionId: string;
+  idempotencyKey: string;
+  tenantId: string;
+  recommendationId: string;
+  actor: string;
+  mode: 'manual' | 'assist' | 'autopilot' | 'rollback';
+  target: { tourId: Types.ObjectId; optionKey: string; date: Date; time: string };
+  currency: string;
+  expectedVersion: number;
+  appliedVersion?: number;
+  previousPrices?: ExecutionPrices;
+  requestedPrices?: ExecutionPrices;
+  effectivePrices?: ExecutionPrices;
+  policyHash: string;
+  sourceVersion: string;
+  requestHash: string;
+  state: 'applied' | 'replayed' | 'conflict' | 'blocked' | 'verified' | 'rollback_applied' | 'rollback_failed';
+  readbackAttempts: unknown[];
+  events: unknown[];
+  rollbackExecutionId?: string;
+}
 
 const PricesSchema = new Schema({ adult: Number, child: Number, infant: Number }, { _id: false });
 
-const RevenuePriceExecutionSchema = new Schema({
+const RevenuePriceExecutionSchema = new Schema<IRevenuePriceExecution>({
   executionId: { type: String, required: true, unique: true, index: true },
   idempotencyKey: { type: String, required: true, unique: true, index: true },
   tenantId: { type: String, required: true, index: true },
@@ -30,7 +55,8 @@ const RevenuePriceExecutionSchema = new Schema({
   rollbackExecutionId: { type: String },
 }, { timestamps: true, minimize: false });
 
-const RevenuePriceExecution: Model<any> = mongoose.models.RevenuePriceExecution
-  || mongoose.model('RevenuePriceExecution', RevenuePriceExecutionSchema);
+const RevenuePriceExecution: Model<IRevenuePriceExecution> =
+  (mongoose.models.RevenuePriceExecution as Model<IRevenuePriceExecution> | undefined)
+  || mongoose.model<IRevenuePriceExecution>('RevenuePriceExecution', RevenuePriceExecutionSchema);
 
 export default RevenuePriceExecution;
