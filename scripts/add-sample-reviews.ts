@@ -199,7 +199,7 @@ async function addSampleReviews() {
       // Update tour rating
       try {
         const reviewStats = await Review.aggregate([
-          { $match: { tour: new mongoose.Types.ObjectId(tour._id as string) } },
+          { $match: { tour: new mongoose.Types.ObjectId(String(tour._id)) } },
           {
             $group: {
               _id: null,

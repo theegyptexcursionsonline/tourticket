@@ -122,7 +122,9 @@ const ReportsPage = () => {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip 
-                    formatter={(value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)}
+                    formatter={(value) => typeof value === 'number'
+                      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+                      : String(value ?? '')}
                     cursor={{fill: 'rgba(241, 245, 249, 0.6)'}} // slate-100 with opacity
                 />
                 <Legend />
