@@ -111,39 +111,7 @@ async function ensureInitialized() {
       }
     }
 
-    // Strategy 3: Fetch from public remote URL (DEPRECATED - less secure)
-    if (!initialized) {
-      const remoteJsonUrl = process.env.FIREBASE_SERVICE_ACCOUNT_URL;
-
-      if (remoteJsonUrl) {
-        try {
-          console.log('⚠️  Using public URL (deprecated - consider using private Cloudinary resource)');
-          console.log('🔄 Fetching Firebase service account from remote URL...');
-
-          const response = await fetch(remoteJsonUrl, {
-            headers: {
-              'Cache-Control': 'max-age=3600', // Cache for 1 hour
-            },
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch service account: ${response.status} ${response.statusText}`);
-          }
-
-          const serviceAccountJSON = await response.json();
-
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccountJSON),
-          });
-          console.log('✅ Firebase Admin initialized from remote URL');
-          initialized = true;
-        } catch (error) {
-          console.error('❌ Error fetching remote service account:', error);
-        }
-      }
-    }
-
-    // Strategy 4: Try individual environment variables (fallback)
+    // Strategy 3: Try individual environment variables (fallback)
     if (!initialized) {
       const projectId = process.env.FIREBASE_PROJECT_ID;
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
@@ -166,7 +134,7 @@ async function ensureInitialized() {
       }
     }
 
-    // Strategy 5: Try loading from file (for local development)
+    // Strategy 4: Try loading from file (for local development)
     if (!initialized) {
       try {
         const path = await import('path');
@@ -193,9 +161,8 @@ async function ensureInitialized() {
         '1. FIREBASE_SERVICE_ACCOUNT_KEY (JSON string - recommended)\n' +
         '2. FIREBASE_SERVICE_ACCOUNT_BASE64 (base64-encoded JSON)\n' +
         '3. FIREBASE_CLOUDINARY_PUBLIC_ID + CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_SECRET (private Cloudinary)\n' +
-        '4. FIREBASE_SERVICE_ACCOUNT_URL (public URL - deprecated)\n' +
-        '5. FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (individual credentials)\n' +
-        '6. .firebase/service-account.json (local file for development)'
+        '4. FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (individual credentials)\n' +
+        '5. .firebase/service-account.json (local file for development)'
       );
     }
   })();

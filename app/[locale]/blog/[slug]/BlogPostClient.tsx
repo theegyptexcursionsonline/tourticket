@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
 type IBlog = any;
 type ITour = any;
@@ -353,7 +354,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             {/* Article body — editorial styles live in the global block below */}
             <div
               className="bg-white rounded-2xl shadow-sm ring-1 ring-stone-100 p-6 md:p-10 blog-content"
-              dangerouslySetInnerHTML={{ __html: blog.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(blog.content) }}
             />
 
             {/* Tags */}

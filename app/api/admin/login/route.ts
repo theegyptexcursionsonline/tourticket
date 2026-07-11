@@ -8,11 +8,34 @@ import {
   AdminPermission,
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
+import { nextAdminLoginFailure } from '@/lib/security/adminLoginLockout';
 
-const INVALID_RESPONSE = NextResponse.json(
-  { success: false, error: 'Invalid credentials' },
-  { status: 401 },
-);
+const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.8HtM5QX69q7OVWdfPQV3vF5wPfhJQmC';
+
+function invalidResponse() {
+  return NextResponse.json(
+    { success: false, error: 'Invalid credentials' },
+    { status: 401 },
+  );
+}
+
+function lockedResponse(lockUntil: Date) {
+  const retryAfter = Math.max(1, Math.ceil((lockUntil.getTime() - Date.now()) / 1000));
+  return NextResponse.json(
+    { success: false, error: 'Too many failed attempts. Try again later.' },
+    { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+  );
+}
+
+async function recordFailedAttempt(user: any): Promise<Date | null> {
+  const state = nextAdminLoginFailure(Number(user.adminLoginAttempts || 0));
+  const lockUntil = state.lockUntil || null;
+
+  user.adminLoginAttempts = state.attempts;
+  user.adminLockUntil = lockUntil || undefined;
+  await user.save({ validateBeforeSave: false });
+  return lockUntil;
+}
 
 function buildAdminUserPayload(user: any, permissions: AdminPermission[]) {
   return {
@@ -44,6 +67,7 @@ export async function POST(request: NextRequest) {
     const envPassword = process.env.ADMIN_PASSWORD;
 
     if (
+      process.env.NODE_ENV !== 'production' &&
       envUsername &&
       envPassword &&
       identifier === envUsername &&
@@ -78,7 +102,7 @@ export async function POST(request: NextRequest) {
 
       response.cookies.set('authToken', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: false,
         sameSite: 'lax',
         maxAge: 60 * 60 * 8,
         path: '/',
@@ -89,9 +113,21 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
-    const user = await User.findOne({ email: identifier }).select('+password');
+    const user = await User.findOne({ email: identifier })
+      .select('+password +adminLoginAttempts +adminLockUntil');
     if (!user) {
-      return INVALID_RESPONSE;
+      // Keep missing-account and wrong-password response timing comparable.
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      return invalidResponse();
+    }
+
+    if (user.adminLockUntil && user.adminLockUntil.getTime() > Date.now()) {
+      return lockedResponse(user.adminLockUntil);
+    }
+
+    if (user.adminLockUntil) {
+      user.adminLockUntil = undefined;
+      user.adminLoginAttempts = 0;
     }
 
     if (!user.isActive) {
@@ -102,12 +138,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.password) {
-      return INVALID_RESPONSE;
+      return invalidResponse();
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return INVALID_RESPONSE;
+      const lockUntil = await recordFailedAttempt(user);
+      return lockUntil ? lockedResponse(lockUntil) : invalidResponse();
     }
 
     if (!user.role || user.role === 'customer') {
@@ -123,6 +160,8 @@ export async function POST(request: NextRequest) {
         : getDefaultPermissions(user.role);
 
     user.lastLoginAt = new Date();
+    user.adminLoginAttempts = 0;
+    user.adminLockUntil = undefined;
     if (!user.permissions || user.permissions.length === 0) {
       user.permissions = permissions;
     }

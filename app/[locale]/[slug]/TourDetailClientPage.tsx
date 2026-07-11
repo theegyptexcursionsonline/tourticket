@@ -23,6 +23,7 @@ import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import ElfsightWidget from '@/components/ElfsightWidget';
+import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
 // Hooks and contexts
 import { useSettings } from '@/hooks/useSettings';
@@ -949,7 +950,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
       <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">About this experience</h2>
       <div
         className="prose prose-slate max-w-none mb-6"
-        dangerouslySetInnerHTML={{ __html: tour.longDescription || tour.description }}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(tour.longDescription || tour.description) }}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {tour.includes && tour.includes.length > 0 && (
