@@ -10,7 +10,18 @@ export async function GET() {
     // Only show tours from the default tenant (exclude German/other tenant tours)
     const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
     const tours = await Tour.find(
-      { isActive: true, isPublished: true, ...defaultTenantFilter },
+      {
+        isPublished: true,
+        $and: [
+          {
+            $or: [
+              { isActive: true },
+              { isActive: { $exists: false } },
+            ],
+          },
+          defaultTenantFilter,
+        ],
+      },
       { 
         destination: 1, 
         title: 1, 
