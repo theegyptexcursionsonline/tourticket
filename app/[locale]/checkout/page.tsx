@@ -828,24 +828,24 @@ const handleDownloadReceipt = async () => {
               key={i}
               initial={{
                 y: -20,
-                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+                x: `${(i * 37) % 100}vw`,
                 rotate: 0,
                 opacity: 1
               }}
               animate={{
                 y: typeof window !== 'undefined' ? window.innerHeight + 100 : 1000,
-                rotate: Math.random() * 720 - 360,
+                rotate: ((i * 137) % 720) - 360,
                 opacity: 0
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
-                delay: Math.random() * 0.5,
+                duration: 3 + ((i * 17) % 20) / 10,
+                delay: ((i * 13) % 5) / 10,
                 ease: "linear"
               }}
               className="absolute w-3 h-3"
               style={{
                 backgroundColor: confettiColors[i % confettiColors.length],
-                borderRadius: Math.random() > 0.5 ? '50%' : '0%',
+                borderRadius: i % 2 === 0 ? '50%' : '0%',
               }}
             />
           ))}
@@ -1269,9 +1269,9 @@ export default function CheckoutPage() {
 
   // Set customer type based on authentication status
   useEffect(() => {
-    if (user) {
-      setCustomerType('login'); // Will show authenticated flow
-    }
+    if (!user) return;
+    const timer = window.setTimeout(() => setCustomerType('login'), 0);
+    return () => window.clearTimeout(timer);
   }, [user]);
 
   const handleApplyCoupon = async () => {

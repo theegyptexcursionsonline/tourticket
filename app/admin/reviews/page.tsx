@@ -1,10 +1,11 @@
 // app/admin/reviews/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Star, MessageSquare, User, Map, Trash2, CheckCircle, ShieldCheck, Clock, TrendingUp, Users, Filter } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // --- Type Definitions ---
@@ -29,6 +30,38 @@ interface ReviewStats {
   averageRating: number;
 }
 
+const calculateStats = (reviewsData: Review[]): ReviewStats => {
+  const totalReviews = reviewsData.length;
+  const pendingReviews = reviewsData.filter((review) => !review.verified).length;
+  const approvedReviews = reviewsData.filter((review) => review.verified).length;
+  const averageRating = totalReviews > 0
+    ? Math.round((reviewsData.reduce((sum, review) => sum + review.rating, 0) / totalReviews) * 10) / 10
+    : 0;
+
+  return { totalReviews, pendingReviews, approvedReviews, averageRating };
+};
+
+const StatCard = ({ icon: Icon, title, value, subtitle, color = "slate" }: {
+  icon: LucideIcon;
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  color?: string;
+}) => (
+  <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
+        <p className="text-2xl font-bold text-slate-800">{value}</p>
+        {subtitle && <p className="text-slate-400 text-xs mt-1">{subtitle}</p>}
+      </div>
+      <div className={`p-3 rounded-lg ${color === 'red' ? 'bg-red-100' : color === 'yellow' ? 'bg-yellow-100' : 'bg-slate-100'}`}>
+        <Icon className={`h-6 w-6 ${color === 'red' ? 'text-red-600' : color === 'yellow' ? 'text-yellow-600' : 'text-slate-600'}`} />
+      </div>
+    </div>
+  </div>
+);
+
 // --- Star Rating Component ---
 const StarRating = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' }) => (
   <div className="flex items-center">
@@ -49,14 +82,7 @@ const StarRating = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg
 const ReviewsPage = () => {
   const { token } = useAdminAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'approved'>('all');
-  const [stats, setStats] = useState<ReviewStats>({
-    totalReviews: 0,
-    pendingReviews: 0,
-    approvedReviews: 0,
-    averageRating: 0
-  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,18 +91,6 @@ const ReviewsPage = () => {
     if (contentType) headers['Content-Type'] = 'application/json';
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  };
-
-  // --- Calculate stats from reviews ---
-  const calculateStats = (reviewsData: Review[]): ReviewStats => {
-    const totalReviews = reviewsData.length;
-    const pendingReviews = reviewsData.filter((r: Review) => !r.verified).length;
-    const approvedReviews = reviewsData.filter((r: Review) => r.verified).length;
-    const averageRating = totalReviews > 0
-      ? Math.round((reviewsData.reduce((sum: number, r: Review) => sum + r.rating, 0) / totalReviews) * 10) / 10
-      : 0;
-
-    return { totalReviews, pendingReviews, approvedReviews, averageRating };
   };
 
   // --- Fetch all reviews ---
@@ -93,7 +107,6 @@ const ReviewsPage = () => {
         }
         const data = await response.json();
         setReviews(data);
-        setStats(calculateStats(data));
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -103,22 +116,15 @@ const ReviewsPage = () => {
     fetchReviews();
   }, []);
 
-  // --- Recalculate stats whenever reviews change ---
-  useEffect(() => {
-    setStats(calculateStats(reviews));
-  }, [reviews]);
-
-  // Filter reviews based on active filter
-  useEffect(() => {
+  const stats = useMemo(() => calculateStats(reviews), [reviews]);
+  const filteredReviews = useMemo(() => {
     switch (activeFilter) {
       case 'pending':
-        setFilteredReviews(reviews.filter(r => !r.verified));
-        break;
+        return reviews.filter((review) => !review.verified);
       case 'approved':
-        setFilteredReviews(reviews.filter(r => r.verified));
-        break;
+        return reviews.filter((review) => review.verified);
       default:
-        setFilteredReviews(reviews);
+        return reviews;
     }
   }, [reviews, activeFilter]);
 
@@ -166,27 +172,6 @@ const ReviewsPage = () => {
       toast.error(`Error: ${(err as Error).message}`, { id: loadingToast });
     }
   };
-
-  const StatCard = ({ icon: Icon, title, value, subtitle, color = "slate" }: {
-    icon: any;
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    color?: string;
-  }) => (
-    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
-          <p className="text-2xl font-bold text-slate-800">{value}</p>
-          {subtitle && <p className="text-slate-400 text-xs mt-1">{subtitle}</p>}
-        </div>
-        <div className={`p-3 rounded-lg ${color === 'red' ? 'bg-red-100' : color === 'yellow' ? 'bg-yellow-100' : 'bg-slate-100'}`}>
-          <Icon className={`h-6 w-6 ${color === 'red' ? 'text-red-600' : color === 'yellow' ? 'text-yellow-600' : 'text-slate-600'}`} />
-        </div>
-      </div>
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -356,7 +341,7 @@ const ReviewsPage = () => {
                 {/* Review Comment */}
                 <div className="bg-slate-50 rounded-lg p-4 mb-4">
                   <p className="text-slate-700 italic leading-relaxed">
-                    "{review.comment}"
+                    &quot;{review.comment}&quot;
                   </p>
                 </div>
 

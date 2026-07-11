@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, Loader2, MapPin, Clock, Send } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -138,11 +138,11 @@ export default function ContactClientPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
-  const [formLoadTime, setFormLoadTime] = useState<number>(0);
+  const formLoadTime = useRef<number>(0);
 
   // Track when form loads to detect bot submissions
   useEffect(() => {
-    setFormLoadTime(Date.now());
+    formLoadTime.current = Date.now();
   }, []);
 
   const socialLinks = [
@@ -195,7 +195,7 @@ export default function ContactClientPage() {
     }
 
     // Timing check - prevent submissions faster than 3 seconds (likely bots)
-    const timeSinceLoad = Date.now() - formLoadTime;
+    const timeSinceLoad = Date.now() - formLoadTime.current;
     if (timeSinceLoad < 3000) {
       console.log('Submission too fast - possible bot');
       toast.error('Please wait a moment before submitting.');
@@ -242,7 +242,7 @@ export default function ContactClientPage() {
 
       toast.success('Message sent successfully!', { id: toastId });
       setFormData({ name: '', email: '', message: '', website: '' }); // Reset form
-      setFormLoadTime(Date.now()); // Reset timer
+      formLoadTime.current = Date.now(); // Reset timer
 
     } catch (error: any) {
       toast.error(error.message || 'Failed to send message.', { id: toastId });

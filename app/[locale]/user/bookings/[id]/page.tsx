@@ -134,6 +134,21 @@ const formatDisplayDate = (dateString: string | Date | undefined): string => {
   });
 };
 
+const DetailItem = ({ icon: Icon, label, value, className = "" }: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number | React.ReactNode;
+  className?: string;
+}) => (
+  <div className={`flex items-start text-slate-700 ${className}`}>
+    <Icon className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
+    <div className="min-w-0 flex-1">
+      <span className="font-semibold text-slate-600">{label}:</span>
+      <div className="mt-1">{value}</div>
+    </div>
+  </div>
+);
+
 const UserBookingDetailPage = () => {
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -206,9 +221,9 @@ const UserBookingDetailPage = () => {
   };
 
   useEffect(() => {
-    if (id) {
-      fetchBooking();
-    }
+    if (!id) return;
+    const timer = window.setTimeout(() => void fetchBooking(), 0);
+    return () => window.clearTimeout(timer);
   }, [id, token]);
 
   const handleCancelBooking = async () => {
@@ -412,7 +427,7 @@ const UserBookingDetailPage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold text-slate-700 mb-2">Booking not found</h3>
-            <p className="text-slate-500 mb-4">This booking may have been deleted or you don't have access to it.</p>
+            <p className="text-slate-500 mb-4">This booking may have been deleted or you don&apos;t have access to it.</p>
             <button 
               onClick={() => router.back()}
               className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
@@ -426,26 +441,6 @@ const UserBookingDetailPage = () => {
   }
 
   const pricing = calculatePricing();
-
-  const DetailItem = ({ 
-    icon: Icon, 
-    label, 
-    value, 
-    className = "" 
-  }: { 
-    icon: React.ElementType; 
-    label: string; 
-    value: string | number | React.ReactNode; 
-    className?: string;
-  }) => (
-    <div className={`flex items-start text-slate-700 ${className}`}>
-      <Icon className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
-      <div className="min-w-0 flex-1">
-        <span className="font-semibold text-slate-600">{label}:</span>
-        <div className="mt-1">{value}</div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-12 px-4">

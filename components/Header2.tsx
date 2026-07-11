@@ -47,12 +47,22 @@ const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   useEffect(() => {
+    let active = true;
     try {
       const storedItems = window.localStorage.getItem(storageKey);
-      if (storedItems) setRecentSearches(JSON.parse(storedItems));
+      if (storedItems) {
+        const parsedItems = JSON.parse(storedItems);
+        queueMicrotask(() => {
+          if (active) setRecentSearches(parsedItems);
+        });
+      }
     } catch (error) {
       console.error('Failed to load recent searches', error);
     }
+
+    return () => {
+      active = false;
+    };
   }, [storageKey]);
 
   const addSearchTerm = (term: string) => {
@@ -173,6 +183,8 @@ const SearchSuggestion: FC<{
     )}
   </div>
 ));
+
+SearchSuggestion.displayName = 'SearchSuggestion';
 
 // =================================================================
 // --- ALGOLIA SEARCH COMPONENTS ---
