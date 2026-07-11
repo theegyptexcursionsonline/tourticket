@@ -8,10 +8,8 @@ import {
   X, ArrowRight, ArrowLeft, Calendar, ShoppingCart, CreditCard,
   Loader2, Clock, User, Users, Plus, Minus, Check, Languages,
   ChevronDown, ChevronLeft, ChevronRight, Star, MapPin, Shield,
-  ChevronUp, Info, Zap, Award, Heart, Eye, Camera, Car,
-  Gift, Sparkles, TrendingUp, CheckCircle, AlertCircle,
-  Phone, Mail, MessageCircle, Globe, Wifi, Coffee, Calculator,
-  BadgeDollarSign, Edit, Edit3, Settings, RefreshCw,
+  Heart, Camera, Car, Gift, Sparkles, TrendingUp, CheckCircle,
+  Coffee, Calculator, BadgeDollarSign, Edit,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
@@ -19,11 +17,14 @@ import { useSettings } from '@/hooks/useSettings';
 import { toDateOnlyString } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import type { CartItem } from '@/types';
+import { getErrorMessage } from './componentTypes';
 
 // Enhanced Types with database compatibility
 interface Tour {
   id?: string;
   _id?: string;
+  pricingKey?: string;
   title: string;
   image: string;
   originalPrice?: number;
@@ -77,6 +78,8 @@ interface Tour {
 
 interface BookingOption {
   id?: string;
+  _id?: string;
+  pricingKey?: string;
   type: string;
   label: string;
   price: number;
@@ -92,6 +95,7 @@ interface BookingOption {
   discount?: number;
   isRecommended?: boolean;
   timeSlots?: TimeSlot[];
+  title?: string;
 }
 
 interface TimeSlot {
@@ -106,10 +110,12 @@ interface TimeSlot {
   priceVersion?: number;
   priceExecutionId?: string | null;
   priceOverrideId?: string | null;
+  originalPrice?: number;
 }
 
 interface AddOnTour {
   id: string;
+  _id?: string;
   name?: string;
   title?: string;
   duration?: string;
@@ -821,8 +827,6 @@ const AddOnCard: React.FC<{
   const isSelected = quantity > 0;
   
   const calculatedQuantity = addOn.perGuest ? guestCount : 1;
-  const totalPrice = isSelected ? addOn.price * calculatedQuantity : 0;
-  const totalSavings = isSelected && addOn.savings ? addOn.savings * calculatedQuantity : 0;
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -931,8 +935,6 @@ const BookingSummaryCard: React.FC<{
   availability: AvailabilityData | null;
   onEditClick: (section: 'date' | 'guests' | 'language') => void;
 }> = ({ bookingData, tour, availability, onEditClick }) => {
-  const { formatPrice } = useSettings();
-
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -1390,7 +1392,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   }, [tour]);
 
   // Helper function to generate time slots from tour availability settings
-  const generateTimeSlotsFromAvailability = (price: number, optionIndex: number): TimeSlot[] => {
+  const generateTimeSlotsFromAvailability = useCallback((price: number, optionIndex: number): TimeSlot[] => {
     // Use actual slots from tour.availability if available
     if (tour?.availability?.slots && tour.availability.slots.length > 0) {
       return tour.availability.slots.map((slot, slotIndex) => ({
@@ -1408,10 +1410,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       { id: `slot-${optionIndex}-1`, time: '09:00', available: 15, price: price, isPopular: false },
       { id: `slot-${optionIndex}-2`, time: '14:00', available: 15, price: price, isPopular: true },
     ];
-  };
+  }, [tour]);
 
   // OPTIMIZED: Use pre-fetched data from tour prop (SSR/ISR) instead of client-side API calls
-  const fetchAvailability = async (date: Date, totalGuests: number) => {
+  const fetchAvailability = useCallback(async (date: Date) => {
     setIsLoading(true);
     setError('');
 
@@ -1432,7 +1434,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       let tourOptions: TourOption[];
       if (tour.bookingOptions && tour.bookingOptions.length > 0) {
         // Transform pre-fetched bookingOptions to TourOption format
-        tourOptions = tour.bookingOptions.map((option: any, index: number) => {
+        tourOptions = tour.bookingOptions.map((option, index) => {
           const optionPrice = option.price || tourDisplayData?.discountPrice || 50;
           const optionId = option.id || option._id || `option-${index}`;
           const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(optionId);
@@ -1499,7 +1501,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       let addOnsToUse;
       if (tour.addOns && tour.addOns.length > 0) {
         // Transform pre-fetched addOns to the expected format
-        addOnsToUse = tour.addOns.map((addon: any, index: number) => ({
+        addOnsToUse = tour.addOns.map((addon, index) => ({
           id: addon.id || addon._id || `addon-${index}`,
           title: addon.name || addon.title || 'Tour Enhancement',
           description: addon.description || 'Enhance your tour experience',
@@ -1541,7 +1543,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [generateTimeSlotsFromAvailability, stopSaleDates, tour, tourDisplayData]);
 
   // Enhanced price calculations with savings
   const { subtotal, addOnsTotal, total, totalSavings } = useMemo(() => {
@@ -1556,7 +1558,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
       );
       
-      originalBasePrice = (bookingData.selectedTimeSlot as any).originalPrice ||
+      originalBasePrice = bookingData.selectedTimeSlot.originalPrice ||
                          selectedOption?.originalPrice ||
                          bookingData.selectedTimeSlot.price;
     } else if (tourDisplayData) {
@@ -1571,7 +1573,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
       const addOn = availability?.addOns.find(a => a.id === addOnId);
       if (addOn) {
-        const itemQuantity = addOn.perGuest ? totalGuests : 1;
+        const itemQuantity = addOn.perGuest ? totalGuests : quantity;
         return acc + (addOn.price * itemQuantity);
       }
       return acc;
@@ -1580,7 +1582,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     const addOnsSavings = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
       const addOn = availability?.addOns.find(a => a.id === addOnId);
       if (addOn && addOn.savings) {
-        const itemQuantity = addOn.perGuest ? totalGuests : 1;
+        const itemQuantity = addOn.perGuest ? totalGuests : quantity;
         return acc + (addOn.savings * itemQuantity);
       }
       return acc;
@@ -1704,7 +1706,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
 
     setError('');
-    fetchAvailability(bookingData.selectedDate, totalGuests);
+    fetchAvailability(bookingData.selectedDate);
   }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability, fetchStopSaleDates, stopSaleDates]);
 
   // Enhanced date selection
@@ -1771,8 +1773,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           priceOverrideId: payload.quote.overrideId,
         };
       }
-    } catch (error: any) {
-      toast.error(error?.message || 'Unable to confirm the live price.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Unable to confirm the live price.'));
       return;
     }
 
@@ -1873,15 +1875,15 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       const normalizedDate = toDateOnlyString(selectedDateValue);
 
       // Prepare add-on details for cart storage
-      const selectedAddOnDetails: { [key: string]: any } = {};
+      const selectedAddOnDetails: NonNullable<CartItem['selectedAddOnDetails']> = {};
       Object.keys(bookingData.selectedAddOns).forEach(addOnId => {
         const addOnData = availability?.addOns.find(a => a.id === addOnId);
         if (addOnData) {
           selectedAddOnDetails[addOnId] = {
             id: addOnData.id,
-            title: addOnData.title,
+            title: addOnData.title || addOnData.name || 'Tour enhancement',
             price: addOnData.price,
-            category: addOnData.category,
+            category: addOnData.category || 'Experience',
             perGuest: addOnData.perGuest || false,
           };
         }
@@ -1921,7 +1923,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         totalPrice: 0,
       };
 
-      addToCart(newCartItem as any, false);
+      addToCart(newCartItem as unknown as CartItem, false);
 
       toast.dismiss(loadingToast);
       onClose();
@@ -1944,13 +1946,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           style: { background: '#059669', color: 'white' }
         });
       }
-    } catch (error) {
+    } catch {
       toast.dismiss(loadingToast);
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, onClose, router, bookingData, availability, tourDisplayData, addToCart, total]);
+  }, [isProcessing, onClose, router, bookingData, availability, tourDisplayData, addToCart]);
 
   const formatDate = useCallback((date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -2335,7 +2337,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                     if (!addOn) return null;
                     
                     const IconComponent = addOn.icon || Gift;
-                    const totalPrice = addOn.price * (addOn.perGuest ? (bookingData.adults + bookingData.children) : 1);
+                    const totalPrice = addOn.price * (addOn.perGuest ? (bookingData.adults + bookingData.children) : quantity);
                     
                     return (
                       <div key={addOnId} className="flex items-center gap-3 bg-white p-3 rounded-2xl">

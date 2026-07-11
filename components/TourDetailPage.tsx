@@ -2,17 +2,17 @@
 // Add these lines to your existing imports
 import { useWishlist } from '@/contexts/WishlistContext';
 import toast from 'react-hot-toast';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
 import {
   ArrowLeft, Clock, Star, Users, ShoppingCart, Calendar, MapPin,
   Info, CheckCircle, Heart, Share2, MessageCircle, Camera, ChevronDown,
-  ChevronUp, Shield, Umbrella, Thermometer, Bus, Utensils, Mountain,
-  Languages, CreditCard, Phone, Mail, AlertCircle, Car, Plane,
-  Navigation, Backpack, Sun, CloudRain, Snowflake, Eye, Gift,
-  Accessibility, Baby, PawPrint, Smartphone, Wifi, Headphones,
+  ChevronUp, Shield, Umbrella, Bus, Utensils, Mountain,
+  Languages, CreditCard, Phone, Mail,
+  Backpack, Sun, Snowflake, Eye,
+  Accessibility, Smartphone, Headphones,
   ChevronLeft, ChevronRight, X, ZoomIn
 } from 'lucide-react';
 
@@ -26,15 +26,16 @@ import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 // Add these new imports for reviews
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
-import Reviews from '@/components/Reviews';
 import ElfsightWidget from '@/components/ElfsightWidget';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
 // Hooks and Types
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
-import { Tour, CartItem, Review as ReviewType } from '@/types';
+import { Tour, CartItem, Review as ReviewType, FAQ } from '@/types';
 import { toDateOnlyString } from '@/utils/date';
+import type { LucideIcon } from 'lucide-react';
+import type { EeoWindow } from './componentTypes';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -145,15 +146,15 @@ const extractEnhancementData = (tour: Tour): TourEnhancement => {
 const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], selectedIndex: number, onClose: () => void }) => {
   const [currentIndex, setCurrentIndex] = useState(selectedIndex);
 
-  const nextImage = (e?: React.MouseEvent) => {
+  const nextImage = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  };
+  }, [images.length]);
 
-  const prevImage = (e?: React.MouseEvent) => {
+  const prevImage = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
-  };
+  }, [images.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,7 +165,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [nextImage, onClose, prevImage]);
 
   return (
     <motion.div
@@ -242,7 +243,20 @@ function useScrollDirection() {
   return { scrollY, isVisible };
 }
 
-const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: any) => {
+interface TourTab {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface TabNavigationProps {
+  activeTab: string;
+  tabs: TourTab[];
+  scrollToSection: (id: string) => void;
+  isHeaderVisible: boolean;
+}
+
+const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: TabNavigationProps) => {
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
   const navRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -330,7 +344,7 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: an
             role="tablist"
             aria-label="Tour sections"
           >
-            {tabs.map((tab: any) => (
+            {tabs.map((tab) => (
               <a
                 key={tab.id}
                 href={`#${tab.id}`}
@@ -650,7 +664,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 );
 
 // Enhanced FAQ Component - Updated to accept faqs as props
-const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: any[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[]; sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Use provided faqs if available, otherwise use fallback
@@ -898,7 +912,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
       try {
         await navigator.clipboard.writeText(window.location.href);
         toast.success('Tour link copied to clipboard!');
-      } catch (err) {
+      } catch {
         toast.error('Could not copy link.');
       }
     }
@@ -1391,12 +1405,13 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                       onClick={(e) => {
                         e.preventDefault();
                         try {
-                          if (typeof (window as any).openIntercom === 'function') {
-                            (window as any).openIntercom();
+                          const supportWindow = window as EeoWindow;
+                          if (typeof supportWindow.openIntercom === 'function') {
+                            supportWindow.openIntercom();
                             return;
                           }
-                          if (typeof (window as any).Intercom === 'function') {
-                            (window as any).Intercom('show');
+                          if (typeof window.Intercom === 'function') {
+                            window.Intercom('show');
                             return;
                           }
                           if (typeof window !== 'undefined') {
@@ -1435,7 +1450,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
 
       <Footer />
 
-      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as any} />
+      <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as React.ComponentProps<typeof BookingSidebar>['tour']} />
 
       <StickyBookButton
         price={tour.discountPrice}

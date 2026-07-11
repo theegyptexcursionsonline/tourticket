@@ -1,4 +1,5 @@
 export interface SearchHit {
+  [key: string]: unknown;
   objectID?: string;
   _id?: string;
   slug?: string;
@@ -73,6 +74,10 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function isSearchHit(value: unknown): value is SearchHit {
   return isRecord(value);
+}
+
+export function isPresent<T>(value: T | null | undefined): value is T {
+  return value != null;
 }
 
 export function isTextPart(value: unknown): value is ChatTextPart {

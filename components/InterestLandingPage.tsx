@@ -10,7 +10,7 @@ import {
   MessageCircle, Star, Search, CheckCircle, Shield,
   Award, Navigation, Camera, TrendingUp
 } from 'lucide-react';
-import { Tour, Review } from '@/types';
+import { Category, Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import RelatedInterests from './RelatedInterests';
 import PopularInterestsGrid from './PopularInterestsGrid';
@@ -22,11 +22,11 @@ interface InterestData {
   slug: string;
   description: string;
   longDescription?: string;
-  category?: any;
+  category?: Category;
   tours: Tour[];
   totalTours: number;
   reviews: Review[];
-  relatedCategories: any[];
+  relatedCategories: Category[];
   heroImage: string;
   highlights: string[];
   features: string[];
@@ -230,7 +230,7 @@ const StatsSection = ({ interest }: { interest: InterestData }) => {
   // Calculate happy customers from bookings
   let happyCustomers = '10K+';
   if (interest.tours && interest.tours.length > 0) {
-    const totalBookings = interest.tours.reduce((acc, t) => acc + ((t as any).bookings || 0), 0);
+    const totalBookings = interest.tours.reduce((acc, tour) => acc + (tour.bookings || 0), 0);
     if (totalBookings > 0) {
       if (totalBookings >= 1000) {
         happyCustomers = `${Math.floor(totalBookings / 1000)}K+`;
@@ -465,7 +465,7 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
   const [selectedDuration, setSelectedDuration] = useState('');
   const [priceRange, setPriceRange] = useState('');
 
-  const availableTours = interest.tours || [];
+  const availableTours = React.useMemo(() => interest.tours || [], [interest.tours]);
 
   // Filter and sort tours
   const filteredAndSortedTours = React.useMemo(() => {

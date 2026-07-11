@@ -4,6 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { cdnImg } from '@/utils/cloudinary';
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Package,
@@ -41,14 +42,14 @@ import {
   Send,
   X,
   MapPin,
-  Clock,
-  DollarSign
+  Clock
 } from "lucide-react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Grid } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import { Category } from '@/types';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import type { SearchResponse } from 'algoliasearch';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
@@ -58,6 +59,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
 import 'swiper/css';
@@ -89,7 +91,7 @@ interface Interest {
 }
 
 // Icon Mapping System
-const getIconForInterest = (name: string, slug: string) => {
+const getIconForInterest = (name: string) => {
   const lowerName = name.toLowerCase();
 
   if (lowerName.includes('pyramid') || lowerName.includes('giza')) return { Icon: Landmark, gradient: 'from-amber-500 to-yellow-600' };
@@ -135,7 +137,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
   const locale = useLocale();
   const rtl = isRTL(locale);
   const ArrowIcon = rtl ? ArrowLeft : ArrowRight;
-  const { Icon, gradient } = getIconForInterest(interest.name, interest.slug);
+  const { Icon, gradient } = getIconForInterest(interest.name);
   const linkUrl = `/categories/${interest.slug}`;
 
   return (
@@ -191,7 +193,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
 };
 
 // Custom SearchBox component
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -204,7 +206,8 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 // Tour Hits Component with card layout
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const t = useTranslations('interestGrid');
-  const { hits } = useHits();
+  const { hits: rawHits } = useHits();
+  const hits = rawHits as unknown as SearchHit[];
   const limitedHits = hits.slice(0, limit);
   const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -219,7 +222,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
     });
   };
 
-  const tours = limitedHits.map((hit: any) => ({
+  const tours = limitedHits.map((hit) => ({
     slug: hit.slug || hit.objectID,
     title: hit.title || t('untitledTour'),
     image: hit.image || hit.images?.[0] || hit.primaryImage,
@@ -282,10 +285,13 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
               >
                 {tour.image && (
                   <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-                    <img
+                    <Image
                       src={cdnImg(tour.image)}
                       alt={tour.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      fill
+                      unoptimized
+                      sizes="260px"
+                      className="object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     {tour.isFeatured && (
                       <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
@@ -351,7 +357,8 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const t = useTranslations('interestGrid');
-  const { hits } = useHits();
+  const { hits: rawHits } = useHits();
+  const hits = rawHits as unknown as SearchHit[];
   const limitedHits = hits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -371,7 +378,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
@@ -407,7 +414,8 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const t = useTranslations('interestGrid');
-  const { hits } = useHits();
+  const { hits: rawHits } = useHits();
+  const hits = rawHits as unknown as SearchHit[];
   const limitedHits = hits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -427,7 +435,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
@@ -473,7 +481,6 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
     messages,
     sendMessage,
     status,
-    stop,
   } = useChat({
     transport: new DefaultChatTransport({
       api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
@@ -550,7 +557,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
   }, [messages, isGenerating]);
 
   // State for detected content
-  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, SearchHit[]>>({});
 
   // Parse tour information from text and fetch from Algolia
   const detectAndFetchTours = useCallback(async (text: string) => {
@@ -589,10 +596,10 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
                 hitsPerPage: 1,
               }
             }]);
-            let firstResult = response.results[0] as any;
+            let firstResult = response.results[0] as SearchResponse<SearchHit>;
 
             if (!firstResult?.hits?.length) {
-              const keywords = tourTitle.split(/\s+/).filter((w: string) => w.length > 3).slice(0, 4).join(' ');
+              const keywords = tourTitle.split(/\s+/).filter((word) => word.length > 3).slice(0, 4).join(' ');
               response = await searchClient.search([{
                 indexName: INDEX_TOURS,
                 params: {
@@ -600,7 +607,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
                   hitsPerPage: 1,
                 }
               }]);
-              firstResult = response.results[0] as any;
+              firstResult = response.results[0] as SearchResponse<SearchHit>;
             }
 
             return firstResult?.hits?.[0];
@@ -610,9 +617,9 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
           }
         });
 
-        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        const tours = (await Promise.all(searchPromises)).filter(isPresent);
         if (tours.length > 0) {
-          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
+          const uniqueTours = tours.reduce<SearchHit[]>((acc, tour) => {
             const tourId = tour.slug || tour.objectID;
             if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
               acc.push(tour);
@@ -620,7 +627,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
             return acc;
           }, []);
 
-          return uniqueTours.map((tour: any) => ({
+          return uniqueTours.map((tour) => ({
             slug: tour.slug || tour.objectID,
             title: tour.title || t('untitledTour'),
             image: tour.image || tour.images?.[0] || tour.primaryImage,
@@ -656,8 +663,8 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
         return;
       }
 
-      const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
-      const fullText = textParts.map((p: any) => p.text).join(' ');
+      const textParts = lastMessage.parts?.filter((part) => part.type === 'text') || [];
+      const fullText = textParts.map((part) => part.text).join(' ');
 
       const hasTourPattern = /\$\d+/i.test(fullText) ||
                             (/tour/i.test(fullText) && /\(\$\d+\)/i.test(fullText));
@@ -676,57 +683,46 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
   }, [messages, isGenerating, detectAndFetchTours, detectedToursByMessage]);
 
   // Render tool outputs
-  const renderToolOutput = useCallback((obj: any) => {
-    if (Array.isArray(obj)) {
-      const tours = obj.filter(item => item.title && item.slug);
-      if (tours.length > 0) {
-        return (
-          <div className="my-3">
-            <TourHits onHitClick={handleCloseDropdown} limit={tours.length} />
-          </div>
-        );
-      }
-    }
-    if (obj.title && obj.slug) {
+  const renderToolOutput = useCallback((value: unknown) => {
+    const candidates = Array.isArray(value)
+      ? value
+      : isRecord(value) && Array.isArray(value.hits)
+        ? value.hits
+        : [value];
+    const tours = candidates.filter(isSearchHit).filter((item) => item.title && item.slug);
+
+    if (tours.length > 0) {
       return (
         <div className="my-3">
-          <TourHits onHitClick={handleCloseDropdown} limit={1} />
+          <TourHits onHitClick={handleCloseDropdown} limit={tours.length} />
         </div>
       );
     }
-    if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter((item: any) => item.title && item.slug);
-      if (tours.length > 0) {
-        return (
-          <div className="my-3">
-            <TourHits onHitClick={handleCloseDropdown} limit={tours.length} />
-          </div>
-        );
-      }
-    }
+
     return (
       <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
+        {JSON.stringify(value, null, 2)}
       </pre>
     );
   }, []);
 
   // Render message content
-  const renderContent = useCallback((parts: any[], messageId?: string) => {
-    return parts.map((p: any, idx: number) => {
+  const renderContent = useCallback((parts: ChatPart[], messageId?: string) => {
+    return parts.map((p, idx) => {
+      const text = p.text || '';
       if (p.type === 'tool-result') {
         try {
-          const obj = JSON.parse(p.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+          return <pre key={idx} className="text-[10px]">{text}</pre>;
         }
       }
       if (p.type === 'text') {
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-              {p.text}
+              {text}
             </ReactMarkdown>
           </div>
         );
@@ -747,7 +743,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
           </div>
           <div className="px-4 md:px-6 py-4">
             <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1">
-              {detectedToursByMessage[messageId].map((tour: any, idx: number) => (
+              {detectedToursByMessage[messageId].map((tour, idx) => (
                 <a
                   key={idx}
                   href={`/${tour.slug}`}
@@ -758,10 +754,13 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
                 >
                   {tour.image && (
                     <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-                      <img
+                      <Image
                         src={cdnImg(tour.image)}
-                        alt={tour.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        alt={tour.title || t('untitledTour')}
+                        fill
+                        unoptimized
+                        sizes="260px"
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                       {tour.isFeatured && (
                         <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 shadow-md">
@@ -831,8 +830,8 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
     type: 'category' as const,
     name: cat.name,
     slug: cat.slug,
-    products: (cat as any).tourCount || 0,
-    featured: (cat as any).featured || false
+    products: cat.tourCount || 0,
+    featured: cat.featured || false
   }));
 
   // Filter interests based on search (only when not in AI mode)
@@ -1069,7 +1068,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
                     </div>
                   ) : searchTerm ? (
                     <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                      <CustomSearchBox searchQuery={searchTerm} onSearchChange={setSearchTerm} />
+                      <CustomSearchBox searchQuery={searchTerm} />
 
                       {/* Tours Index */}
                       <Index indexName={INDEX_TOURS}>

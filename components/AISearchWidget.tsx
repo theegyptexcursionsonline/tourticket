@@ -9,13 +9,15 @@ import type { SearchResponse } from 'algoliasearch';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import { shouldRenderAISearchWidgetForHost } from '@/lib/aiSearchWidgetHosts';
+import Image from 'next/image';
+import { isPresent, isRecord, isSearchHit, type ChatPart, type EeoWindow, type SearchHit } from './componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Algolia Config ---
@@ -35,8 +37,8 @@ const getCurrentHostSnapshot = () => (typeof window === 'undefined' ? '' : windo
 const getServerHostSnapshot = () => '';
 
 // Tour card creation helper
-const createTourCardHTML = (tour: any): string => {
-  const discountPercent = tour.discountPrice && tour.discountPrice < tour.price
+export const createTourCardHTML = (tour: SearchHit): string => {
+  const discountPercent = tour.discountPrice && tour.price && tour.discountPrice < tour.price
     ? Math.round(((tour.price - tour.discountPrice) / tour.price) * 100)
     : 0;
 
@@ -90,7 +92,7 @@ const createTourCardHTML = (tour: any): string => {
 
         <div class="flex items-center justify-between pt-2 border-t border-slate-100">
           <div class="flex items-center gap-1">
-            ${tour.discountPrice && tour.discountPrice < tour.price ? `
+            ${tour.discountPrice && tour.price && tour.discountPrice < tour.price ? `
               <span class="text-slate-400 text-[10px] line-through">$${tour.price}</span>
               <span class="text-blue-600 font-bold text-base">$${tour.discountPrice}</span>
             ` : tour.price ? `
@@ -107,7 +109,7 @@ const createTourCardHTML = (tour: any): string => {
 };
 
 // Custom SearchBox component
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -156,7 +158,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
   };
 
   // Transform hits to tour objects for TourCard
-  const tours = limitedHits.map((hit: any) => ({
+  const tours = (limitedHits as unknown as SearchHit[]).map((hit) => ({
     slug: hit.slug || hit.objectID,
     title: hit.title || t('untitledTour'),
     image: hit.image || hit.images?.[0] || hit.primaryImage,
@@ -219,9 +221,12 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
               >
                 {tour.image && (
                   <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-                    <img
+                    <Image
                       src={cdnImg(tour.image)}
-                      alt={tour.title}
+                      alt={tour.title || 'Tour'}
+                      fill
+                      unoptimized
+                      sizes="260px"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     {tour.isFeatured && (
@@ -288,7 +293,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as unknown as SearchHit[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
   const t = useTranslations('aiSearch');
 
@@ -309,7 +314,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
@@ -349,7 +354,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as unknown as SearchHit[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
   const t = useTranslations('aiSearch');
 
@@ -370,7 +375,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
@@ -426,7 +431,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {(limitedHits as unknown as SearchHit[]).map((hit) => (
         <a
           key={hit.objectID}
           href={`/blog/${hit.slug || hit.objectID}`}
@@ -443,7 +448,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                 {hit.title || 'Untitled Blog Post'}
               </div>
               <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
-                {hit.category && (
+                {typeof hit.category === 'string' && (
                   <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.category}</span>
                 )}
                 {hit.readTime && (
@@ -461,7 +466,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 }
 
 // Tour Card Component for AI Chat
-const TourCard = ({ tour }: { tour: any }) => (
+const TourCard = ({ tour }: { tour: SearchHit }) => (
   <a
     href={`/${tour.slug}`}
     target="_blank"
@@ -470,9 +475,12 @@ const TourCard = ({ tour }: { tour: any }) => (
   >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        <img
+        <Image
           src={cdnImg(tour.image)}
-          alt={tour.title}
+          alt={tour.title || 'Tour'}
+          fill
+          unoptimized
+          sizes="240px"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
         {tour.duration && (
@@ -510,7 +518,7 @@ const TourCard = ({ tour }: { tour: any }) => (
 );
 
 // Tour Slider Component for AI Chat
-const TourSlider = ({ tours }: { tours: any[] }) => {
+const TourSlider = ({ tours }: { tours: SearchHit[] }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -553,7 +561,7 @@ const TourSlider = ({ tours }: { tours: any[] }) => {
 };
 
 // Destination Slider Component for AI Chat
-const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
+const DestinationSlider = ({ destinations }: { destinations: SearchHit[] }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
   const t = useTranslations('aiSearch');
 
@@ -598,9 +606,12 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
           >
             {destination.image && (
               <div className="relative h-36 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-                <img
+                <Image
                   src={cdnImg(destination.image)}
-                  alt={destination.name}
+                  alt={destination.name || 'Destination'}
+                  fill
+                  unoptimized
+                  sizes="260px"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
                 {destination.isFeatured && (
@@ -641,8 +652,8 @@ export default function AISearchWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [inputValue, setInputValue] = useState('');
-  const [featuredTours, setFeaturedTours] = useState<any[]>([]);
-  const [algoliaError, setAlgoliaError] = useState<string | null>(null);
+  const [featuredTours, setFeaturedTours] = useState<SearchHit[]>([]);
+  const [algoliaError] = useState<string | null>(null);
   const currentHost = useSyncExternalStore(
     subscribeToHostSnapshot,
     getCurrentHostSnapshot,
@@ -769,7 +780,7 @@ export default function AISearchWidget() {
             filters: 'isFeatured:true',
           }
         }]);
-        const firstResult = response.results[0] as SearchResponse<any>;
+        const firstResult = response.results[0] as SearchResponse<SearchHit>;
         if (firstResult?.hits && firstResult.hits.length > 0) {
           setFeaturedTours(filterSearchHitsByTenant(firstResult.hits, DEFAULT_SEARCH_TENANT));
         } else {
@@ -781,7 +792,7 @@ export default function AISearchWidget() {
               hitsPerPage: 3,
             }
           }]);
-          const fallbackResult = fallbackResponse.results[0] as SearchResponse<any>;
+          const fallbackResult = fallbackResponse.results[0] as SearchResponse<SearchHit>;
           setFeaturedTours(filterSearchHitsByTenant(fallbackResult?.hits || [], DEFAULT_SEARCH_TENANT));
         }
       } catch (error) {
@@ -836,10 +847,11 @@ export default function AISearchWidget() {
 
   // Listen for floating button click (openAIAgent event)
   useEffect(() => {
-    const openHandler = (e?: any) => {
-      const query = e?.detail?.query || '';
-      (window as any).__pendingAIOpenAgent = false;
-      (window as any).__pendingAIOpenAgentQuery = '';
+    const widgetWindow = window as EeoWindow;
+    const openHandler = (event?: Event) => {
+      const query = event instanceof CustomEvent && typeof event.detail?.query === 'string' ? event.detail.query : '';
+      widgetWindow.__pendingAIOpenAgent = false;
+      widgetWindow.__pendingAIOpenAgentQuery = '';
       setIsVisible(true);
       setIsExpanded(true);
       setChatMode(true);
@@ -849,12 +861,10 @@ export default function AISearchWidget() {
     };
 
     window.addEventListener('openAIAgent', openHandler);
-    if ((window as any).__pendingAIOpenAgent) {
-      openHandler({
-        detail: {
-          query: (window as any).__pendingAIOpenAgentQuery || '',
-        },
-      });
+    if (widgetWindow.__pendingAIOpenAgent) {
+      openHandler(new CustomEvent('openAIAgent', {
+        detail: { query: widgetWindow.__pendingAIOpenAgentQuery || '' },
+      }));
     }
     return () => window.removeEventListener('openAIAgent', openHandler);
   }, [sendMessage]);
@@ -896,8 +906,8 @@ export default function AISearchWidget() {
   };
 
   // State for detected content - stored per message ID
-  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
-  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, any[]>>({});
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, SearchHit[]>>({});
+  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, SearchHit[]>>({});
 
   // Clear chat function
   const handleClearChat = () => {
@@ -943,7 +953,7 @@ export default function AISearchWidget() {
       if (potentialTours.size > 0) {
         // Search Algolia for these tours - limit to first 4 mentioned tours
         const toursArray = Array.from(potentialTours.entries()).slice(0, 4);
-        const searchPromises = toursArray.map(async ([tourTitle, price]) => {
+        const searchPromises = toursArray.map(async ([tourTitle]) => {
           try {
             // First try exact title match
             let response = await searchClient.search([{
@@ -953,8 +963,8 @@ export default function AISearchWidget() {
                 hitsPerPage: 8,
               }
             }]);
-            let firstResult = response.results[0] as SearchResponse<any>;
-            let scopedHits = filterSearchHitsByTenant((firstResult?.hits || []) as any[], DEFAULT_SEARCH_TENANT);
+            let firstResult = response.results[0] as SearchResponse<SearchHit>;
+            let scopedHits = filterSearchHitsByTenant(firstResult?.hits || [], DEFAULT_SEARCH_TENANT);
 
             // If no results, try with just keywords
             if (scopedHits.length === 0) {
@@ -966,8 +976,8 @@ export default function AISearchWidget() {
                   hitsPerPage: 8,
                 }
               }]);
-              firstResult = response.results[0] as SearchResponse<any>;
-              scopedHits = filterSearchHitsByTenant((firstResult?.hits || []) as any[], DEFAULT_SEARCH_TENANT);
+              firstResult = response.results[0] as SearchResponse<SearchHit>;
+              scopedHits = filterSearchHitsByTenant(firstResult?.hits || [], DEFAULT_SEARCH_TENANT);
             }
 
             return scopedHits[0];
@@ -977,10 +987,10 @@ export default function AISearchWidget() {
           }
         });
 
-        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        const tours = (await Promise.all(searchPromises)).filter(isPresent);
         if (tours.length > 0) {
           // Remove duplicates based on slug/objectID
-          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
+          const uniqueTours = tours.reduce<SearchHit[]>((acc, tour) => {
             const tourId = tour.slug || tour.objectID;
             if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
               acc.push(tour);
@@ -989,7 +999,7 @@ export default function AISearchWidget() {
           }, []);
 
           // Transform tours to ensure they have the right structure
-          const transformedTours = uniqueTours.map((tour: any) => ({
+          const transformedTours = uniqueTours.map((tour) => ({
             slug: tour.slug || tour.objectID,
             title: tour.title || 'Untitled Tour',
             image: tour.image || tour.images?.[0] || tour.primaryImage,
@@ -1045,20 +1055,20 @@ export default function AISearchWidget() {
                 hitsPerPage: 8,
               }
             }]);
-            const firstResult = response.results[0] as SearchResponse<any>;
-            return filterSearchHitsByTenant((firstResult?.hits || []) as any[], DEFAULT_SEARCH_TENANT)[0];
+            const firstResult = response.results[0] as SearchResponse<SearchHit>;
+            return filterSearchHitsByTenant(firstResult?.hits || [], DEFAULT_SEARCH_TENANT)[0];
           } catch (error) {
             console.error('Error searching for destination:', destName, error);
             return null;
           }
         });
 
-        const destinations = getUniqueSearchHits(
-          (await Promise.all(searchPromises)).filter(Boolean) as any[],
+        const destinations = getUniqueSearchHits<SearchHit>(
+          (await Promise.all(searchPromises)).filter(isPresent),
           { requireTours: true }
         );
         if (destinations.length > 0) {
-          const transformedDestinations = destinations.map((dest: any) => ({
+          const transformedDestinations = destinations.map((dest) => ({
             slug: dest.slug || dest.objectID,
             name: dest.name || 'Untitled Destination',
             image: dest.image || dest.images?.[0] || dest.primaryImage,
@@ -1076,23 +1086,19 @@ export default function AISearchWidget() {
   }, []); // No dependencies - function is stable
 
   // Render tool outputs (tours)
-  const renderToolOutput = useCallback((obj: any) => {
-    if (Array.isArray(obj)) {
-      const tours = filterSearchHitsByTenant(obj, DEFAULT_SEARCH_TENANT)
-        .filter(item => item.title && item.slug);
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
-    if (obj.title && obj.slug && filterSearchHitsByTenant([obj], DEFAULT_SEARCH_TENANT).length > 0) {
-      return <TourSlider tours={[obj]} />;
-    }
-    if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = filterSearchHitsByTenant(obj.hits, DEFAULT_SEARCH_TENANT)
-        .filter((item: any) => item.title && item.slug);
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
+  const renderToolOutput = useCallback((value: unknown) => {
+    const candidates = Array.isArray(value)
+      ? value
+      : isRecord(value) && Array.isArray(value.hits)
+        ? value.hits
+        : [value];
+    const tours = filterSearchHitsByTenant(candidates.filter(isSearchHit), DEFAULT_SEARCH_TENANT)
+      .filter((item) => item.title && item.slug);
+    if (tours.length > 0) return <TourSlider tours={tours} />;
+
     return (
       <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
+        {JSON.stringify(value, null, 2)}
       </pre>
     );
   }, []);
@@ -1115,8 +1121,8 @@ export default function AISearchWidget() {
         return;
       }
 
-      const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
-      const fullText = textParts.map((p: any) => p.text).join(' ');
+      const textParts = lastMessage.parts.filter((part) => part.type === 'text');
+      const fullText = textParts.map((part) => part.text).join(' ');
 
       // Detect if it's a destination-focused response (no prices, mentions destinations)
       const hasDestinationPattern = /destination/i.test(fullText) &&
@@ -1153,18 +1159,18 @@ export default function AISearchWidget() {
   }, [messages, isGenerating, detectAndFetchTours, detectAndFetchDestinations, detectedToursByMessage, detectedDestinationsByMessage]);
 
   // Memoize ReactMarkdown components to avoid recreation on every render
-  const markdownComponents = useMemo(() => ({
-    p: ({node, ...props}: any) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-semibold text-gray-900" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="text-lg font-bold text-gray-900 mb-2" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="text-base font-semibold text-gray-900 mb-2" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal list-inside space-y-1 text-gray-700 text-sm" {...props} />,
+  const markdownComponents = useMemo<Components>(() => ({
+    p: ({ children }) => <p className="text-gray-700 text-sm sm:text-base mb-2 leading-relaxed last:mb-0">{children}</p>,
+    strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+    h1: ({ children }) => <h1 className="text-xl font-bold text-gray-900 mb-3">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-lg font-bold text-gray-900 mb-2">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-base font-semibold text-gray-900 mb-2">{children}</h3>,
+    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-gray-700 text-sm">{children}</ol>,
   }), []);
 
   // Render message content (memoized)
-  const renderContent = useCallback((parts: any[], hideDetails: boolean = false, isUser: boolean = false, showSkeleton: boolean = false) => {
+  const renderContent = useCallback((parts: ChatPart[], hideDetails: boolean = false, isUser: boolean = false, showSkeleton: boolean = false) => {
     // If we should show skeleton, show tour card skeletons
     if (showSkeleton) {
       return (
@@ -1191,21 +1197,22 @@ export default function AISearchWidget() {
       );
     }
 
-    return parts.map((p: any, idx: number) => {
-      if (p.type === 'tool-result') {
+    return parts.map((part, idx) => {
+      const text = part.text || '';
+      if (part.type === 'tool-result') {
         try {
-          const obj = JSON.parse(p.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+          return <pre key={idx} className="text-[10px]">{text}</pre>;
         }
       }
-      if (p.type === 'text') {
+      if (part.type === 'text') {
         // User message styling
         if (isUser) {
           return (
             <div key={idx} className="text-white text-sm sm:text-base leading-relaxed">
-              {p.text}
+              {text}
             </div>
           );
         }
@@ -1213,7 +1220,7 @@ export default function AISearchWidget() {
         // If we have detected tours, show a simplified version of the text
         if (hideDetails) {
           // Extract just the intro text before the tour listings
-          const lines = p.text.split('\n');
+          const lines = text.split('\n');
           const introLines = [];
           let foundTourContent = false;
 
@@ -1285,14 +1292,14 @@ export default function AISearchWidget() {
               rehypePlugins={[rehypeRaw]}
               components={markdownComponents}
             >
-              {p.text}
+              {text}
             </ReactMarkdown>
           </div>
         );
       }
       return null;
     });
-  }, [markdownComponents]);
+  }, [markdownComponents, renderToolOutput, t]);
 
   // Don't render anything if not visible
   if (!isAllowedHost || !isVisible) return null;
@@ -1560,8 +1567,8 @@ export default function AISearchWidget() {
 
                             // Check if this message is currently streaming and has content patterns
                             const isStreaming = isLastAssistantMessage && isGenerating;
-                            const textParts = m.parts.filter((p: any) => p.type === 'text');
-                            const fullText = textParts.map((p: any) => p.text).join(' ');
+                            const textParts = m.parts.filter((part) => part.type === 'text');
+                            const fullText = textParts.map((part) => part.text).join(' ');
                             const hasContentPattern = /\$\d+/i.test(fullText) ||
                                                      /tour/i.test(fullText) ||
                                                      /destination/i.test(fullText) ||
@@ -1647,7 +1654,6 @@ export default function AISearchWidget() {
                         <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
                           <CustomSearchBox
                             searchQuery={searchQuery}
-                            onSearchChange={setSearchQuery}
                           />
 
                           <Index indexName={INDEX_TOURS}>
@@ -1673,7 +1679,7 @@ export default function AISearchWidget() {
                       ) : (
                         <div>
                           {featuredTours.length > 0 ? (
-                            featuredTours.map((tour, index) => (
+                            featuredTours.map((tour) => (
                               <a
                                 key={tour.objectID}
                                 href={`/${tour.slug || tour.objectID}`}
@@ -1684,13 +1690,15 @@ export default function AISearchWidget() {
                                 <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
                                   <div className="w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
                                     {(tour.image || tour.images?.[0] || tour.primaryImage) ? (
-                                      <img
-                                        src={tour.image || tour.images?.[0] || tour.primaryImage}
+                                      <Image
+                                        src={tour.image || tour.images?.[0] || tour.primaryImage || ''}
                                         alt={tour.title || 'Tour'}
+                                        fill
+                                        unoptimized
+                                        sizes="80px"
                                         className="w-full h-full object-cover"
                                         onError={(e) => {
                                           e.currentTarget.style.display = 'none';
-                                          e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
                                         }}
                                       />
                                     ) : (

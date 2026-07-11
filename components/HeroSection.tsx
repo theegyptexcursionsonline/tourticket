@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { cdnImg } from '@/utils/cloudinary';
-import { Search, MapPin, Clock, Compass, Tag, FileText, X, Sparkles, ChevronUp, Bot, Loader2, ArrowLeft, Send, ChevronLeft, ChevronRight, DollarSign, Star } from "lucide-react";
+import { Search, MapPin, Clock, Compass, Tag, X, Sparkles, ChevronUp, Bot, Loader2, ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Star } from "lucide-react";
 import Image from "next/image";
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
@@ -15,6 +15,8 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useLocale, useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import type { SearchResponse } from 'algoliasearch';
+import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Types and Constants ---
@@ -94,7 +96,6 @@ const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f4
 const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
 const INDEX_DESTINATIONS = 'destinations';
 const INDEX_CATEGORIES = 'categories';
-const INDEX_BLOGS = 'blogs';
 const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
@@ -221,7 +222,7 @@ const useHeroCopy = () => {
 };
 
 // --- Algolia Search Components ---
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -287,7 +288,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
   if (limitedHits.length === 0) return null;
 
   // Transform hits to tour objects
-  const tours = limitedHits.map((hit: any) => ({
+  const tours = (limitedHits as unknown as SearchHit[]).map((hit) => ({
     slug: hit.slug || hit.objectID,
     title: hit.title || copy.untitledTour,
     image: hit.image || hit.images?.[0] || hit.primaryImage,
@@ -377,9 +378,12 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
               >
                 {tour.image && (
                   <div className="relative h-40 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-hidden">
-                    <img
+                    <Image
                       src={cdnImg(tour.image)}
-                      alt={tour.title}
+                      alt={tour.title || 'Tour'}
+                      fill
+                      unoptimized
+                      sizes="270px"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -456,7 +460,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const copy = useHeroCopy();
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as unknown as SearchHit[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -485,7 +489,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
@@ -532,7 +536,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const copy = useHeroCopy();
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as unknown as SearchHit[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -561,7 +565,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
@@ -601,21 +605,6 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 }
 
 // --- Helper Hooks ---
-const useIsMobile = (breakpoint = 768) => {
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < breakpoint);
-    if (typeof window !== "undefined") {
-      checkIsMobile();
-      window.addEventListener("resize", checkIsMobile);
-      return () => window.removeEventListener("resize", checkIsMobile);
-    }
-  }, [breakpoint]);
-  
-  return isMobile;
-};
-
 const useHeroSettings = (initialSettings?: HeroSettings | null) => {
   // Merge initial settings with defaults to ensure all required fields exist
   const mergeWithDefaults = (settings: HeroSettings | null | undefined): HeroSettings => {
@@ -686,7 +675,7 @@ const useSlidingText = (
 };
 
 // --- Enhanced AI Chat Components ---
-const TourCard = ({ tour }: { tour: any }) => {
+const TourCard = ({ tour }: { tour: SearchHit }) => {
   const copy = useHeroCopy();
   return (
   <motion.a
@@ -700,9 +689,12 @@ const TourCard = ({ tour }: { tour: any }) => {
   >
     {tour.image && (
       <div className="relative h-36 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-hidden">
-        <img
+        <Image
           src={cdnImg(tour.image)}
-          alt={tour.title}
+          alt={tour.title || 'Tour'}
+          fill
+          unoptimized
+          sizes="260px"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -749,7 +741,7 @@ const TourCard = ({ tour }: { tour: any }) => {
   );
 };
 
-const TourSlider = ({ tours }: { tours: any[] }) => {
+const TourSlider = ({ tours }: { tours: SearchHit[] }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
@@ -828,7 +820,7 @@ const TourSlider = ({ tours }: { tours: any[] }) => {
 };
 
 // Destination Slider Component for AI Chat
-const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
+const DestinationSlider = ({ destinations }: { destinations: SearchHit[] }) => {
   const copy = useHeroCopy();
   const sliderRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -909,9 +901,12 @@ const DestinationSlider = ({ destinations }: { destinations: any[] }) => {
           >
             {destination.image && (
               <div className="relative h-40 bg-gradient-to-br from-emerald-100 to-teal-100 overflow-hidden">
-                <img
+                <Image
                   src={cdnImg(destination.image)}
-                  alt={destination.name}
+                  alt={destination.name || 'Destination'}
+                  fill
+                  unoptimized
+                  sizes="280px"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
                 {destination.isFeatured && (
@@ -973,7 +968,6 @@ const HeroSearchBar = ({
     messages,
     sendMessage,
     status,
-    stop,
     setMessages,
   } = useChat({
     transport: new DefaultChatTransport({
@@ -1107,8 +1101,8 @@ const HeroSearchBar = ({
   }, [chatMode]);
 
   // State for detected content - stored per message ID
-  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, any[]>>({});
-  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, any[]>>({});
+  const [detectedToursByMessage, setDetectedToursByMessage] = useState<Record<string, SearchHit[]>>({});
+  const [detectedDestinationsByMessage, setDetectedDestinationsByMessage] = useState<Record<string, SearchHit[]>>({});
 
   // Clear chat function
   const handleClearChat = () => {
@@ -1159,7 +1153,7 @@ const HeroSearchBar = ({
                 hitsPerPage: 1,
               }
             }]);
-            let firstResult = response.results[0] as any;
+            let firstResult = response.results[0] as SearchResponse<SearchHit>;
 
             if (!firstResult?.hits?.length) {
               const keywords = tourTitle.split(/\s+/).filter(w => w.length > 3).slice(0, 4).join(' ');
@@ -1170,7 +1164,7 @@ const HeroSearchBar = ({
                   hitsPerPage: 1,
                 }
               }]);
-              firstResult = response.results[0] as any;
+              firstResult = response.results[0] as SearchResponse<SearchHit>;
             }
 
             return firstResult?.hits?.[0];
@@ -1180,9 +1174,9 @@ const HeroSearchBar = ({
           }
         });
 
-        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        const tours = (await Promise.all(searchPromises)).filter(isPresent);
         if (tours.length > 0) {
-          const uniqueTours = tours.reduce((acc: any[], tour: any) => {
+          const uniqueTours = tours.reduce<SearchHit[]>((acc, tour) => {
             const tourId = tour.slug || tour.objectID;
             if (!acc.find(t => (t.slug || t.objectID) === tourId)) {
               acc.push(tour);
@@ -1190,7 +1184,7 @@ const HeroSearchBar = ({
             return acc;
           }, []);
 
-          return uniqueTours.map((tour: any) => ({
+          return uniqueTours.map((tour) => ({
             slug: tour.slug || tour.objectID,
             title: tour.title || copy.untitledTour,
             image: tour.image || tour.images?.[0] || tour.primaryImage,
@@ -1209,7 +1203,7 @@ const HeroSearchBar = ({
       console.error('Error detecting tours:', error);
     }
     return [];
-  }, []);
+  }, [copy.untitledTour]);
 
   // Parse destination information from text and fetch from Algolia
   const detectAndFetchDestinations = useCallback(async (text: string) => {
@@ -1242,7 +1236,7 @@ const HeroSearchBar = ({
                 hitsPerPage: 1,
               }
             }]);
-            const firstResult = response.results[0] as any;
+            const firstResult = response.results[0] as SearchResponse<SearchHit>;
             return firstResult?.hits?.[0];
           } catch (error) {
             console.error('Error searching for destination:', destName, error);
@@ -1250,9 +1244,9 @@ const HeroSearchBar = ({
           }
         });
 
-        const destinations = (await Promise.all(searchPromises)).filter(Boolean);
+        const destinations = (await Promise.all(searchPromises)).filter(isPresent);
         if (destinations.length > 0) {
-          const uniqueDestinations = destinations.reduce((acc: any[], dest: any) => {
+          const uniqueDestinations = destinations.reduce<SearchHit[]>((acc, dest) => {
             const destId = dest.slug || dest.objectID;
             if (!acc.find(d => (d.slug || d.objectID) === destId)) {
               acc.push(dest);
@@ -1260,7 +1254,7 @@ const HeroSearchBar = ({
             return acc;
           }, []);
 
-          return uniqueDestinations.map((dest: any) => ({
+          return uniqueDestinations.map((dest) => ({
             slug: dest.slug || dest.objectID,
             name: dest.name || copy.untitledDestination,
             image: dest.image || dest.images?.[0] || dest.primaryImage,
@@ -1274,22 +1268,20 @@ const HeroSearchBar = ({
       console.error('Error detecting destinations:', error);
     }
     return [];
-  }, []);
+  }, [copy.untitledDestination]);
 
   // Render tool outputs (tours) - enhanced version
-  const renderToolOutput = useCallback((obj: any) => {
-    if (Array.isArray(obj)) {
-      const tours = obj.filter(item => item.title && item.slug);
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
-    if (obj.title && obj.slug) return <TourSlider tours={[obj]} />;
-    if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter((item: any) => item.title && item.slug);
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
+  const renderToolOutput = useCallback((value: unknown) => {
+    const candidates = Array.isArray(value)
+      ? value
+      : isRecord(value) && Array.isArray(value.hits)
+        ? value.hits
+        : [value];
+    const tours = candidates.filter(isSearchHit).filter((item) => item.title && item.slug);
+    if (tours.length > 0) return <TourSlider tours={tours} />;
     return (
       <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
+        {JSON.stringify(value, null, 2)}
       </pre>
     );
   }, []);
@@ -1309,8 +1301,8 @@ const HeroSearchBar = ({
         return;
       }
 
-      const textParts = lastMessage.parts?.filter((p: any) => p.type === 'text') || [];
-      const fullText = textParts.map((p: any) => p.text).join(' ');
+      const textParts = lastMessage.parts?.filter((part) => part.type === 'text') || [];
+      const fullText = textParts.map((part) => part.text).join(' ');
 
       // Detect if it's a destination-focused response (no prices, mentions destinations)
       const hasDestinationPattern = /destination/i.test(fullText) &&
@@ -1345,32 +1337,32 @@ const HeroSearchBar = ({
   }, [messages, isGenerating, detectAndFetchTours, detectAndFetchDestinations, detectedToursByMessage, detectedDestinationsByMessage]);
 
   // Render message content - enhanced version with hide details option
-  const renderContent = useCallback((parts: any[], messageId?: string, hideDetails: boolean = false, isUser: boolean = false) => {
+  const renderContent = useCallback((parts: ChatPart[], messageId?: string, hideDetails: boolean = false, isUser: boolean = false) => {
     const hasDetectedTours = messageId && detectedToursByMessage[messageId];
-    const hasDetectedDestinations = messageId && detectedDestinationsByMessage[messageId];
 
-    return parts.map((p: any, idx: number) => {
-      if (p.type === 'tool-result') {
+    return parts.map((part, idx) => {
+      const text = part.text || '';
+      if (part.type === 'tool-result') {
         try {
-          const obj = JSON.parse(p.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+          return <pre key={idx} className="text-[10px]">{text}</pre>;
         }
       }
-      if (p.type === 'text') {
+      if (part.type === 'text') {
         // User message styling
         if (isUser) {
           return (
             <div key={idx} className="leading-relaxed font-medium">
-              {p.text}
+              {text}
             </div>
           );
         }
 
         // If we have detected tours/destinations, show a simplified version of the text
         if (hideDetails) {
-          const lines = p.text.split('\n');
+          const lines = text.split('\n');
           const introLines = [];
           let foundTourContent = false;
 
@@ -1424,14 +1416,14 @@ const HeroSearchBar = ({
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-              {p.text}
+              {text}
             </ReactMarkdown>
           </div>
         );
       }
       return null;
     }).filter(Boolean);
-  }, [renderToolOutput, detectedToursByMessage, detectedDestinationsByMessage, copy.hereAreTours, copy.hereAreDestinations]);
+  }, [renderToolOutput, detectedToursByMessage, copy.hereAreTours, copy.hereAreDestinations]);
 
   return (
     <div className="mt-8 lg:mt-10 w-full flex justify-center md:justify-start pointer-events-auto" ref={containerRef} style={{ position: 'relative', zIndex: 1000 }}>
@@ -1875,7 +1867,7 @@ const HeroSearchBar = ({
                   </motion.div>
                 ) : query ? (
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={query} onSearchChange={setQuery} />
+                    <CustomSearchBox searchQuery={query} />
 
                     {/* Tours Index */}
                     <Index indexName={INDEX_TOURS}>

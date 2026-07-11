@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 'react';
+import React, { useState, useEffect, useRef, FC, useCallback } from 'react';
 import {
   ChevronDown,
   Search,
-  Globe,
   ShoppingCart,
   X,
   Landmark,
@@ -12,13 +11,11 @@ import {
   Star,
   Heart,
   Clock,
-  Zap,
   Menu,
   User,
   LogOut,
   Calendar,
   Sparkles,
-  ChevronUp,
   Bot,
   Loader2,
   ArrowLeft,
@@ -37,8 +34,7 @@ import { Link } from '@/i18n/routing';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
-import AuthModal from '@/components/AuthModal';
-import { Destination, Category, Tour } from '@/types';
+import { Destination, Category } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
 import { useSettings } from '@/hooks/useSettings';
@@ -51,6 +47,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
+import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
 // =================================================================
@@ -70,61 +67,6 @@ const DEFAULT_SEARCH_TENANT = 'default';
 // =================================================================
 // --- HELPER HOOKS & DATA ---
 // =================================================================
-const useRecentSearches = (storageKey = 'recentTravelSearches') => {
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const storedItems = window.localStorage.getItem(storageKey);
-      return storedItems ? JSON.parse(storedItems) : [];
-    } catch (error) {
-      console.error('Failed to load recent searches', error);
-      return [];
-    }
-  });
-
-  const addSearchTerm = (term: string) => {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    setRecentSearches(prev => {
-      const newSearches = [trimmed, ...prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(newSearches));
-      } catch (error) {
-        console.error('Failed to save recent searches', error);
-      }
-      return newSearches;
-    });
-  };
-
-  const removeSearchTerm = (term: string) => {
-    setRecentSearches(prev => {
-      const newSearches = prev.filter(s => s.toLowerCase() !== term.toLowerCase());
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(newSearches));
-      } catch (error) {
-        console.error('Failed to save recent searches', error);
-      }
-      return newSearches;
-    });
-  };
-
-  return { recentSearches, addSearchTerm, removeSearchTerm };
-};
-
-const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'CANAL CRUISE'], []);
-
-/** Sliding suggestions for placeholder */
-const SEARCH_SUGGESTIONS = [
-  'Where are you going?',
-  'Find museums near you',
-  'Discover food tours',
-  'Book canal cruises',
-  'Explore art galleries',
-  'City passes & tickets',
-  'Weekend getaways',
-  'Cultural experiences'
-];
-
 function useOnClickOutside(ref: React.RefObject<HTMLElement | null>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
@@ -160,15 +102,6 @@ function useScrollDirection() {
   return { scrollY, isVisible };
 }
 
-const useSlidingText = (texts: string[], interval = 3000) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentIndex(prev => (prev + 1) % texts.length), interval);
-    return () => clearInterval(timer);
-  }, [texts.length, interval]);
-  return texts[currentIndex];
-};
-
 function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?: string; title?: string; tourCount?: number }>(
   hits: T[],
   options?: { requireTours?: boolean }
@@ -192,7 +125,7 @@ function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?
 // =================================================================
 // --- ALGOLIA SEARCH COMPONENTS ---
 // =================================================================
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -204,7 +137,7 @@ function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string;
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const tenantHits = filterSearchHitsByTenant(hits as unknown as SearchHit[], DEFAULT_SEARCH_TENANT);
   const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -224,7 +157,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
           href={`/${hit.slug || hit.objectID}`}
@@ -236,12 +169,15 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
         >
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-indigo-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
           <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
-            <div className="w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
+            <div className="relative w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
               {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
-                <img
-                  src={hit.image || hit.images?.[0] || hit.primaryImage}
+                <Image
+                  src={hit.image || hit.images?.[0] || hit.primaryImage || ''}
                   alt={hit.title || 'Tour'}
-                  className="w-full h-full object-cover"
+                  fill
+                  unoptimized
+                  sizes="(max-width: 768px) 56px, 80px"
+                  className="object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                     e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
@@ -286,8 +222,8 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
-  const uniqueHits = getUniqueSearchHits(tenantHits as any[], { requireTours: true });
+  const tenantHits = filterSearchHitsByTenant(hits as unknown as SearchHit[], DEFAULT_SEARCH_TENANT);
+  const uniqueHits = getUniqueSearchHits<SearchHit>(tenantHits, { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -307,7 +243,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <Link
           key={hit.objectID}
           href={`/destinations/${hit.slug || hit.objectID}`}
@@ -350,8 +286,8 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
-  const uniqueHits = getUniqueSearchHits(tenantHits as any[], { requireTours: true });
+  const tenantHits = filterSearchHitsByTenant(hits as unknown as SearchHit[], DEFAULT_SEARCH_TENANT);
+  const uniqueHits = getUniqueSearchHits<SearchHit>(tenantHits, { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -371,7 +307,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
           href={`/categories/${hit.slug || hit.objectID}`}
@@ -407,7 +343,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
 
 function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const tenantHits = filterSearchHitsByTenant(hits as any[], DEFAULT_SEARCH_TENANT);
+  const tenantHits = filterSearchHitsByTenant(hits as unknown as SearchHit[], DEFAULT_SEARCH_TENANT);
   const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -427,7 +363,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
           href={`/blog/${hit.slug || hit.objectID}`}
@@ -448,7 +384,9 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
               </div>
               <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
                 {hit.category && (
-                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.category}</span>
+                  <span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">
+                    {typeof hit.category === 'string' ? hit.category : hit.category.name}
+                  </span>
                 )}
                 {hit.readTime && (
                   <span className="bg-amber-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-amber-700">
@@ -465,7 +403,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 }
 
 // Tour Card Component for AI Chat
-const TourCard = ({ tour }: { tour: any }) => (
+const TourCard = ({ tour }: { tour: SearchHit }) => (
   <motion.a
     href={`/${tour.slug}`}
     target="_blank"
@@ -475,10 +413,13 @@ const TourCard = ({ tour }: { tour: any }) => (
   >
     {tour.image && (
       <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        <img
+        <Image
           src={tour.image}
-          alt={tour.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          alt={tour.title || 'Tour'}
+          fill
+          unoptimized
+          sizes="240px"
+          className="object-cover group-hover:scale-110 transition-transform duration-300"
         />
         {tour.duration && (
           <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
@@ -515,7 +456,7 @@ const TourCard = ({ tour }: { tour: any }) => (
 );
 
 // Tour Slider Component for AI Chat
-const TourSlider = ({ tours }: { tours: any[] }) => {
+const TourSlider = ({ tours }: { tours: SearchHit[] }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -674,47 +615,43 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
   };
 
   // Render tool outputs (tours)
-  const renderToolOutput = (obj: any) => {
-    if (Array.isArray(obj)) {
-      const tours = filterSearchHitsByTenant(
-        obj.filter(item => item.title && item.slug),
-        DEFAULT_SEARCH_TENANT
-      );
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
-    if (obj.title && obj.slug && filterSearchHitsByTenant([obj], DEFAULT_SEARCH_TENANT).length > 0) {
-      return <TourSlider tours={[obj]} />;
-    }
-    if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = filterSearchHitsByTenant(
-        obj.hits.filter((item: any) => item.title && item.slug),
-        DEFAULT_SEARCH_TENANT
-      );
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
+  const renderToolOutput = (value: unknown) => {
+    const candidates = Array.isArray(value)
+      ? value
+      : isRecord(value) && Array.isArray(value.hits)
+        ? value.hits
+        : [value];
+    const tours = filterSearchHitsByTenant(
+      candidates.filter(isSearchHit),
+      DEFAULT_SEARCH_TENANT
+    ).filter((item) => item.title && item.slug);
+
+    if (tours.length > 0) return <TourSlider tours={tours} />;
+
     return (
       <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
+        {JSON.stringify(value, null, 2)}
       </pre>
     );
   };
 
   // Render message content
-  const renderContent = (parts: any[]) => {
-    return parts.map((p: any, idx: number) => {
+  const renderContent = (parts: ChatPart[]) => {
+    return parts.map((p, idx) => {
       if (p.type === 'tool-result') {
+        const text = p.text || '';
         try {
-          const obj = JSON.parse(p.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx} className="text-[10px]">{p.text}</pre>;
+          return <pre key={idx} className="text-[10px]">{text}</pre>;
         }
       }
       if (p.type === 'text') {
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-              {p.text}
+              {p.text || ''}
             </ReactMarkdown>
           </div>
         );
@@ -917,7 +854,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                     </div>
                   ) : searchQuery ? (
                     <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                      <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                      <CustomSearchBox searchQuery={searchQuery} />
 
                       <Index indexName={INDEX_TOURS}>
                         <Configure hitsPerPage={5} />
@@ -1007,16 +944,6 @@ const SearchSuggestion: FC<{
 ));
 SearchSuggestion.displayName = 'SearchSuggestion';
 
-const TourResultSkeleton = () => (
-  <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-    <div className="w-full h-32 bg-slate-200" />
-    <div className="p-4">
-      <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
-      <div className="h-3 bg-slate-200 rounded w-1/2" />
-    </div>
-  </div>
-);
-
 // SearchModal removed - now using MobileInlineSearch for mobile devices
 
 // =================================================================
@@ -1063,7 +990,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
                       </div>
                       <h4 className="mt-2 font-bold text-gray-900 group-hover:text-red-500">{dest.name.toUpperCase()}</h4>
-                      <p className="text-xs text-gray-500">{(dest as any).country || ''}</p>
+                      <p className="text-xs text-gray-500">{dest.country || ''}</p>
                     </Link>
                   ))}
                 </div>
@@ -1104,7 +1031,9 @@ MegaMenu.displayName = 'MegaMenu';
 // =================================================================
 // --- USER MENU ---
 // =================================================================
-const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) => {
+type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
+
+const UserMenu: FC<{ user: AuthUser; onLogout: () => void }> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { t } = useSettings();
@@ -1160,10 +1089,9 @@ const MobileMenu: FC<{
   isOpen: boolean;
   onClose: () => void;
   onOpenSearch: () => void;
-  onOpenAuth: (state: 'login' | 'signup') => void;
   destinations: Destination[];
   categories: Category[];
-}> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth, destinations, categories }) => {
+}> = React.memo(({ isOpen, onClose, onOpenSearch, destinations, categories }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   const { t } = useSettings();
@@ -1204,7 +1132,7 @@ const MobileMenu: FC<{
           >
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-6 border-b">
-                <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-10 object-contain" />
+                <Image src="/EEO-logo.png" alt="Egypt Excursions Online" width={160} height={40} className="h-10 w-auto object-contain" />
                 <button onClick={onClose} className="p-2 rounded-full text-slate-500 hover:bg-slate-100">
                   <X size={24} />
                 </button>
@@ -1292,7 +1220,6 @@ MobileMenu.displayName = 'MobileMenu';
 // =================================================================
 const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = React.memo(({ onFocus, isTransparent }) => {
   const { t } = useSettings();
-  const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
   const borderColor = isTransparent ? 'border-transparent' : 'border-slate-200';
   return (
     <div className="hidden lg:block flex-1 max-w-2xl mx-8 transition-colors duration-500">
@@ -1324,8 +1251,6 @@ export default function Header({
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [isAuthModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
   const navData = useNavData();
   const destinations = initialDestinations || navData.destinations;
@@ -1337,7 +1262,6 @@ export default function Header({
   const { openWishlistSidebar, wishlist } = useWishlist();
 
   const { scrollY, isVisible } = useScrollDirection();
-  const { addSearchTerm } = useRecentSearches();
 
   const isScrolled = scrollY > 100;
   const isTransparent = !(isScrolled || isMegaMenuOpen || startSolid);
@@ -1348,9 +1272,6 @@ export default function Header({
   const handleMobileSearchClose = useCallback(() => setMobileSearchOpen(false), []);
   const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
   const handleMobileMenuClose = useCallback(() => setMobileMenuOpen(false), []);
-  const handleAuthModalOpen = useCallback((state: 'login' | 'signup') => { setAuthModalState(state); setAuthModalOpen(true); }, []);
-  const handleAuthModalClose = useCallback(() => setAuthModalOpen(false), []);
-  const handleSearch = useCallback((term: string) => addSearchTerm(term), [addSearchTerm]);
 
   const headerBg = isTransparent ? 'bg-transparent' : 'bg-white shadow-lg';
   const headerText = isTransparent ? 'text-white' : 'text-gray-800';
@@ -1368,7 +1289,7 @@ export default function Header({
     <div className="flex items-center justify-between h-16 md:h-20">
       <div className="flex items-center gap-4 lg:gap-8">
         <Link href="/" className="flex items-center h-full">
-          <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
+          <Image src="/EEO-logo.png" alt="Egypt Excursions Online" width={200} height={64} priority className="h-12 md:h-14 lg:h-16 w-auto object-contain transition-colors duration-300" />
         </Link>
 
         <nav className="hidden md:flex items-center relative">
@@ -1449,7 +1370,6 @@ export default function Header({
         isOpen={isMobileMenuOpen}
         onClose={handleMobileMenuClose}
         onOpenSearch={handleMobileSearchOpen}
-        onOpenAuth={handleAuthModalOpen}
         destinations={destinations}
         categories={categories}
       />
@@ -1459,9 +1379,6 @@ export default function Header({
         isOpen={isMobileSearchOpen}
         onClose={handleMobileSearchClose}
       />
-
-      {/* Auth modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialMode={authModalState} />
 
       {/* Global Styles */}
       <style jsx global>{`

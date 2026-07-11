@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useMemo, FC, useCallback } from 're
 import {
   ChevronDown,
   Search,
-  Globe,
   ShoppingCart,
   X,
   Landmark,
@@ -24,13 +23,15 @@ import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
-import AuthModal from '@/components/AuthModal';
 import { Destination, Category, Tour } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import 'instantsearch.css/themes/satellite.css';
+import type { SearchHit } from './componentTypes';
+
+type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
 
 // =================================================================
 // --- ALGOLIA CONFIGURATION ---
@@ -189,7 +190,7 @@ SearchSuggestion.displayName = 'SearchSuggestion';
 // =================================================================
 // --- ALGOLIA SEARCH COMPONENTS ---
 // =================================================================
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -217,7 +218,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           </span>
         </div>
       </div>
-      {limitedHits.map((hit: any) => (
+      {(limitedHits as unknown as SearchHit[]).map((hit) => (
         <a
           key={hit.objectID}
           href={`/tours/${hit.slug || hit.objectID}`}
@@ -227,13 +228,15 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           <div className="flex items-center gap-3">
             <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
               {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
-                <img
-                  src={hit.image || hit.images?.[0] || hit.primaryImage}
+                <Image
+                  src={hit.image || hit.images?.[0] || hit.primaryImage || ''}
                   alt={hit.title || 'Tour'}
+                  fill
+                  unoptimized
+                  sizes="64px"
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>';
                   }}
                 />
               ) : (
@@ -367,7 +370,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                   className="absolute top-full mt-3 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] overflow-y-auto"
                 >
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    <CustomSearchBox searchQuery={searchQuery} />
                     <Index indexName={INDEX_TOURS}>
                       <Configure hitsPerPage={10} />
                       <TourHits onHitClick={onClose} limit={10} />
@@ -412,7 +415,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
 MobileInlineSearch.displayName = 'MobileInlineSearch';
 
 // Old SearchModal component removed - now using MobileInlineSearch
-const SearchModal_REMOVED: FC<{ onClose: () => void; onSearch: (term: string) => void }> = ({ onClose, onSearch }) => {
+export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: string) => void }> = ({ onClose, onSearch }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(false);
@@ -542,13 +545,13 @@ const SearchModal_REMOVED: FC<{ onClose: () => void; onSearch: (term: string) =>
             <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Tours</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {searchResults.map((tour) => (
-                <a key={(tour as any)._id} href={`/tour/${(tour as any).slug}`} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
+                <a key={tour._id} href={`/tour/${tour.slug}`} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
                   <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden relative">
-                    <Image src={(tour as any).image} alt={(tour as any).title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
+                    <Image src={tour.image} alt={tour.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                   </div>
                   <div className="p-4">
-                    <h4 className="font-bold text-gray-900 group-hover:text-red-500 truncate">{(tour as any).title}</h4>
-                    <p className="text-sm text-gray-500">{(tour as any).destination?.name}</p>
+                    <h4 className="font-bold text-gray-900 group-hover:text-red-500 truncate">{tour.title}</h4>
+                    <p className="text-sm text-gray-500">{typeof tour.destination === 'object' ? tour.destination.name : ''}</p>
                   </div>
                 </a>
               ))}
@@ -631,7 +634,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
                       </div>
                       <h4 className="mt-2 font-bold text-gray-900 group-hover:text-red-500">{dest.name.toUpperCase()}</h4>
-                      <p className="text-xs text-gray-500">{(dest as any).country || ''}</p>
+                      <p className="text-xs text-gray-500">{dest.country || ''}</p>
                     </a>
                   ))}
                 </div>
@@ -672,7 +675,7 @@ MegaMenu.displayName = 'MegaMenu';
 // =================================================================
 // --- USER MENU ---
 // =================================================================
-const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) => {
+const UserMenu: FC<{ user: AuthUser; onLogout: () => void }> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -725,10 +728,9 @@ const MobileMenu: FC<{
   isOpen: boolean;
   onClose: () => void;
   onOpenSearch: () => void;
-  onOpenAuth: (state: 'login' | 'signup') => void;
   destinations: Destination[];
   categories: Category[];
-}> = React.memo(({ isOpen, onClose, onOpenSearch, onOpenAuth, destinations, categories }) => {
+}> = React.memo(({ isOpen, onClose, onOpenSearch, destinations, categories }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
 
@@ -768,7 +770,7 @@ const MobileMenu: FC<{
           >
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-6 border-b">
-                <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-10 object-contain" />
+                <Image src="/EEO-logo.png" alt="Egypt Excursions Online" width={160} height={40} className="h-10 w-auto object-contain" />
                 <button onClick={onClose} className="p-2 rounded-full text-slate-500 hover:bg-slate-100">
                   <X size={24} />
                 </button>
@@ -875,8 +877,6 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [isAuthModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalState, setAuthModalState] = useState<'login' | 'signup'>('login');
 
   const { destinations, categories } = useNavData();
 
@@ -885,7 +885,6 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
   const { openWishlistSidebar, wishlist } = useWishlist();
 
   const { scrollY, isVisible } = useScrollDirection();
-  const { addSearchTerm } = useRecentSearches();
 
   const isScrolled = scrollY > 100;
   const isTransparent = !startSolid && scrollY < 100;
@@ -895,8 +894,6 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
   const handleMobileSearchClose = useCallback(() => setMobileSearchOpen(false), []);
   const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
   const handleMobileMenuClose = useCallback(() => setMobileMenuOpen(false), []);
-  const handleAuthModalOpen = useCallback((state: 'login' | 'signup') => { setAuthModalState(state); setAuthModalOpen(true); }, []);
-  const handleAuthModalClose = useCallback(() => setAuthModalOpen(false), []);
 
   const headerBg = 'bg-white shadow-lg';
   const headerText = 'text-gray-800';
@@ -909,7 +906,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
           <div className="flex items-center justify-between h-16 md:h-20">
             <div className="flex items-center gap-4 lg:gap-8">
               <Link href="/" className="flex items-center h-full">
-                <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
+                <Image src="/EEO-logo.png" alt="Egypt Excursions Online" width={240} height={64} className="h-12 md:h-14 lg:h-16 w-auto object-contain transition-colors duration-300" />
               </Link>
 
               <nav className="hidden md:flex items-center relative">
@@ -984,7 +981,6 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
         isOpen={isMobileMenuOpen}
         onClose={handleMobileMenuClose}
         onOpenSearch={handleMobileSearchOpen}
-        onOpenAuth={handleAuthModalOpen}
         destinations={destinations}
         categories={categories}
       />
@@ -996,7 +992,6 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
       />
 
       {/* Auth modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} initialMode={authModalState} />
     </>
   );
 }

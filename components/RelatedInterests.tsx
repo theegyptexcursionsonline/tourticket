@@ -85,7 +85,7 @@ const getInterestImage = (name: string): string => {
 };
 
 // Icon mapping function - matches categories with appropriate icons
-const getIconForInterest = (name: string, slug: string) => {
+const getIconForInterest = (name: string) => {
   const lowerName = name.toLowerCase();
 
   // Historical & Cultural
@@ -139,7 +139,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
   const linkUrl =
     interest.type === 'attraction' ? `/attraction/${interest.slug}` : `/interests/${interest.slug}`;
   const imageUrl = interest.image || getInterestImage(interest.name);
-  const { Icon, gradient } = getIconForInterest(interest.name, interest.slug);
+  const { Icon, gradient } = getIconForInterest(interest.name);
 
   return (
     <Link

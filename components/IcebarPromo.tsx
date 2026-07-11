@@ -4,6 +4,7 @@ import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 import { useTranslations, useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import Image from 'next/image';
 
 /**
  * EgyptPromo - Ultra Premium (parallax removed)
@@ -117,7 +118,7 @@ export default function EgyptPromo() {
       {/* noscript fallback: static hero with LQ image + softer overlay */}
       <noscript>
         <div className="absolute inset-0">
-          <img src={imgMedium} alt="Pyramids of Egypt" className="w-full h-full object-cover" />
+          <Image src={imgMedium} alt="Pyramids of Egypt" fill unoptimized sizes="100vw" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/15 to-transparent" />
         </div>
       </noscript>

@@ -1,7 +1,8 @@
 // components/BackgroundSlideshow.tsx (Updated version)
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 
-const BackgroundSlideshow = ({
+export default function BackgroundSlideshow({
   slides = [], 
   delay = 6000, 
   fadeMs = 900,
@@ -11,7 +12,7 @@ const BackgroundSlideshow = ({
   delay?: number, 
   fadeMs?: number,
   autoplay?: boolean 
-}) => {
+}) {
   const [index, setIndex] = useState(0);
   const timeoutRef = useRef<number | null>(null);
 
@@ -60,11 +61,11 @@ const BackgroundSlideshow = ({
               transform: visible ? 'scale(1)' : 'scale(1.02)',
             }}
           >
-            <img src={s.src} alt={s.alt} className="w-full h-full object-cover" />
+            <Image src={s.src} alt={s.alt} fill unoptimized sizes="100vw" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
           </div>
         );
       })}
     </div>
   );
-};
+}

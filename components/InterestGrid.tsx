@@ -68,7 +68,7 @@ interface CategoryPage {
 }
 
 // Icon Mapping System - Professional category icons
-const getIconForInterest = (name: string, slug: string) => {
+const getIconForInterest = (name: string) => {
   const lowerName = name.toLowerCase();
   
   // Historical & Cultural
@@ -137,7 +137,7 @@ const InterestCard = ({
   };
 
   const linkUrl = getLink();
-  const { Icon, gradient } = getIconForInterest(interest.name, interest.slug);
+  const { Icon, gradient } = getIconForInterest(interest.name);
 
   return (
     <Link

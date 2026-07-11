@@ -9,6 +9,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import type { SearchResponse } from 'algoliasearch';
+import Image from 'next/image';
+import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_API_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
@@ -19,8 +22,7 @@ const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
 
 export default function AIAgentModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [initialQuery, setInitialQuery] = useState('');
-  const [detectedTours, setDetectedTours] = useState<any[]>([]);
+  const [detectedTours, setDetectedTours] = useState<SearchHit[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +31,6 @@ export default function AIAgentModal() {
     messages,
     sendMessage,
     status,
-    stop,
   } = useChat({
     transport: new DefaultChatTransport({
       api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
@@ -43,9 +44,8 @@ export default function AIAgentModal() {
 
   /** ---------- OPEN MODAL FROM FLOATING BUTTON ---------- **/
   useEffect(() => {
-    const openHandler = (e: any) => {
-      const query = e.detail?.query || '';
-      setInitialQuery(query);
+    const openHandler = (event: Event) => {
+      const query = event instanceof CustomEvent && typeof event.detail?.query === 'string' ? event.detail.query : '';
       setIsOpen(true);
 
       // Auto-send query
@@ -98,14 +98,14 @@ export default function AIAgentModal() {
                 hitsPerPage: 1,
               }
             }]);
-            return (response.results[0] as any)?.hits?.[0];
+            return (response.results[0] as SearchResponse<SearchHit>)?.hits?.[0];
           } catch (error) {
             console.error('Error searching for tour:', tourTitle, error);
             return null;
           }
         });
 
-        const tours = (await Promise.all(searchPromises)).filter(Boolean);
+        const tours = (await Promise.all(searchPromises)).filter(isPresent);
         if (tours.length > 0) {
           setDetectedTours(tours);
           return tours;
@@ -121,8 +121,8 @@ export default function AIAgentModal() {
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage && lastMessage.role === 'assistant') {
-      const textParts = lastMessage.parts.filter((p: any) => p.type === 'text');
-      const fullText = textParts.map((p: any) => p.text).join(' ');
+      const textParts = lastMessage.parts.filter((part) => part.type === 'text');
+      const fullText = textParts.map((part) => part.text).join(' ');
       const hasTourPattern = /(?:Tour|tour).*?\$\d+/i.test(fullText);
 
       if (hasTourPattern) {
@@ -132,7 +132,7 @@ export default function AIAgentModal() {
   }, [messages]);
 
   /** ---------- SUBMIT MESSAGE ---------- **/
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
     sendMessage({ text: input });
@@ -167,7 +167,7 @@ export default function AIAgentModal() {
   );
 
   /** ---------- TOUR CARD COMPONENT ---------- **/
-  const TourCard = ({ tour }: { tour: any }) => (
+  const TourCard = ({ tour }: { tour: SearchHit }) => (
     <motion.a
       href={`/${tour.slug}`}
       target="_blank"
@@ -178,9 +178,12 @@ export default function AIAgentModal() {
       {/* Image */}
       {tour.image && (
         <div className="relative h-40 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-          <img
+          <Image
             src={tour.image}
-            alt={tour.title}
+            alt={tour.title || 'Tour'}
+            fill
+            unoptimized
+            sizes="280px"
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />
           {tour.duration && (
@@ -225,7 +228,7 @@ export default function AIAgentModal() {
   );
 
   /** ---------- TOUR SLIDER COMPONENT ---------- **/
-  const TourSlider = ({ tours }: { tours: any[] }) => {
+  const TourSlider = ({ tours }: { tours: SearchHit[] }) => {
     const sliderRef = useRef<HTMLDivElement>(null);
 
     const scroll = (direction: 'left' | 'right') => {
@@ -271,56 +274,44 @@ export default function AIAgentModal() {
   };
 
   /** ---------- TOOL RENDERING (JSON OUTPUT) ---------- **/
-  const renderToolOutput = (obj: any) => {
-    // Check if it's an array of tours
-    if (Array.isArray(obj)) {
-      const tours = obj.filter(item => item.title && item.slug);
-      if (tours.length > 0) {
-        return <TourSlider tours={tours} />;
-      }
-    }
-
-    // Single tour
-    if (obj.title && obj.slug) {
-      return <TourSlider tours={[obj]} />;
-    }
-
-    // Check if object has a hits/results array (Algolia format)
-    if (obj.hits && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter((item: any) => item.title && item.slug);
-      if (tours.length > 0) {
-        return <TourSlider tours={tours} />;
-      }
-    }
+  const renderToolOutput = (value: unknown) => {
+    const candidates = Array.isArray(value)
+      ? value
+      : isRecord(value) && Array.isArray(value.hits)
+        ? value.hits
+        : [value];
+    const tours = candidates.filter(isSearchHit).filter((item) => item.title && item.slug);
+    if (tours.length > 0) return <TourSlider tours={tours} />;
 
     // Fallback for unknown tool formats
     return (
       <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-xs overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
+        {JSON.stringify(value, null, 2)}
       </pre>
     );
   };
 
   /** ---------- MESSAGE RENDERING ---------- **/
-  const renderContent = (parts: any[]) => {
-    return parts.map((p: any, idx: number) => {
-      if (p.type === 'tool-result') {
+  const renderContent = (parts: ChatPart[]) => {
+    return parts.map((part, idx) => {
+      const text = part.text || '';
+      if (part.type === 'tool-result') {
         try {
-          const obj = JSON.parse(p.text);
+          const obj: unknown = JSON.parse(text);
           return <div key={idx}>{renderToolOutput(obj)}</div>;
         } catch {
-          return <pre key={idx}>{p.text}</pre>;
+          return <pre key={idx}>{text}</pre>;
         }
       }
 
-      if (p.type === 'text') {
+      if (part.type === 'text') {
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[13px]">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
             >
-              {p.text}
+              {text}
             </ReactMarkdown>
           </div>
         );
