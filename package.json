@@ -80,6 +80,7 @@
     "remark-gfm": "^4.0.1",
     "sanitize-html": "^2.17.6",
     "stripe": "^18.5.0",
+    "styled-jsx": "5.1.6",
     "swiper": "^12.2.0",
     "tailwind-scrollbar-hide": "^4.0.0",
     "tailwindcss-rtl": "^0.9.0"

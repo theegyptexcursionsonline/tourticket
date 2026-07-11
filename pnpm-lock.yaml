@@ -167,6 +167,9 @@ importers:
       stripe:
         specifier: ^18.5.0
         version: 18.5.0(@types/node@20.19.43)
+      styled-jsx:
+        specifier: 5.1.6
+        version: 5.1.6(@babel/core@7.29.7)(react@19.0.1)
       swiper:
         specifier: ^12.2.0
         version: 12.2.0
