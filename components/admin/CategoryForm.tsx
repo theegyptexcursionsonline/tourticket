@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
     Loader2, X, Plus, Check, ChevronDown, Camera, Grid3x3, Info, Globe,
-    UploadCloud, Trash2, Eye, Tag, FileText, Sparkles, ArrowLeft, Edit,
-    PlusCircle, Minus, HelpCircle, Palette
+    UploadCloud, Trash2, Eye, Tag, FileText, Sparkles, ArrowLeft,
+    Minus, HelpCircle, Palette
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import Image from 'next/image';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import { categoryTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
@@ -63,7 +64,7 @@ const defaultFormData: CategoryFormData = {
 // Helper Components
 const FormLabel = ({ children, icon: Icon, required = false }: {
   children: React.ReactNode;
-  icon?: any;
+  icon?: LucideIcon;
   required?: boolean;
 }) => (
   <div className="flex items-center gap-2 mb-3">
@@ -84,7 +85,7 @@ const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl 
 
 export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const router = useRouter();
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const isPanelOpen = true;
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   
@@ -94,7 +95,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const fetchCategoryData = async () => {
+  const fetchCategoryData = useCallback(async () => {
     if (!categoryId) return;
     
     setLoading(true);
@@ -123,24 +124,24 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
           order: category.order || 0,
           isPublished: category.isPublished !== false,
           featured: category.featured || false,
-          translations: normalizeTranslations((category as any).translations),
+          translations: normalizeTranslations(category.translations),
         });
         setIsSlugManuallyEdited(Boolean(category.slug));
       } else {
         setError(data.error || 'Failed to fetch category data');
         toast.error(data.error || 'Failed to load category');
       }
-    } catch (err) {
+    } catch {
       setError('Network error');
       toast.error('Failed to load category');
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryId]);
 
   useEffect(() => {
     if (categoryId) queueMicrotask(() => void fetchCategoryData());
-  }, [categoryId]);
+  }, [categoryId, fetchCategoryData]);
 
   const generateSlug = (name: string) => {
     return name

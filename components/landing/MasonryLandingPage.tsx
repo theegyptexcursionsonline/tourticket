@@ -1,14 +1,13 @@
 // components/landing/MasonryLandingPage.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { 
-  Search, Star, Clock, MapPin, Users, ArrowRight, 
-  Filter, Eye, Heart, Share2, Award, Calendar,
-  Camera, Grid, List, LayoutGrid, Zap
+  Search, Star, Clock, MapPin, ArrowRight,
+  Eye, Heart, Share2, Award, Camera, Zap
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -22,11 +21,35 @@ interface MasonryLandingPageProps {
     highlights?: string[];
     features?: string[];
   };
-  content: any[];
+  content: MasonryItem[];
   linkTree?: {
     title: string;
     links: { name: string; url: string; icon?: string }[];
   };
+}
+
+interface MasonryItem {
+  _id?: string;
+  type: string;
+  slug?: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  image?: string;
+  icon?: string;
+  price?: number;
+  discountPrice?: number;
+  duration?: string;
+  rating?: number;
+  destination?: { name?: string };
+  tags?: string[];
+  country?: string;
+  tourCount?: number;
+  userName?: string;
+  verified?: boolean;
+  comment?: string;
+  createdAt?: string;
+  helpful?: number;
 }
 
 const FLOATING_PARTICLES = Array.from({ length: 6 }, (_, index) => ({
@@ -326,10 +349,7 @@ export default function MasonryLandingPage({
   );
 }
 
-const MasonryContentCard = ({ item, index }: { item: any; index: number }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [cardHeight, setCardHeight] = useState('auto');
-
+const MasonryContentCard = ({ item, index }: { item: MasonryItem; index: number }) => {
   // Randomize card heights for masonry effect
   const heights = ['h-64', 'h-80', 'h-72', 'h-96', 'h-60'];
   const randomHeight = heights[index % heights.length];
@@ -341,9 +361,9 @@ const MasonryContentCard = ({ item, index }: { item: any; index: number }) => {
       case 'destination':
         return <DestinationMasonryCard item={item} height={randomHeight} />;
       case 'category':
-        return <CategoryMasonryCard item={item} height={randomHeight} />;
+        return <CategoryMasonryCard item={item} />;
       case 'review':
-        return <ReviewMasonryCard item={item} height={randomHeight} />;
+        return <ReviewMasonryCard item={item} />;
       default:
         return <DefaultMasonryCard item={item} height={randomHeight} />;
     }
@@ -367,13 +387,13 @@ const MasonryContentCard = ({ item, index }: { item: any; index: number }) => {
   );
 };
 
-const TourMasonryCard = ({ item, height }: { item: any; height: string }) => (
+const TourMasonryCard = ({ item, height }: { item: MasonryItem; height: string }) => (
   <Link href={`/${item.slug}`} className="group block">
     <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:rotate-1">
       <div className={`relative ${height} overflow-hidden`}>
         <Image 
-          src={item.image} 
-          alt={item.title}
+          src={item.image || '/images/placeholder-tour.jpg'}
+          alt={item.title || 'Tour'}
           fill
           className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
@@ -436,13 +456,13 @@ const TourMasonryCard = ({ item, height }: { item: any; height: string }) => (
   </Link>
 );
 
-const DestinationMasonryCard = ({ item, height }: { item: any; height: string }) => (
+const DestinationMasonryCard = ({ item, height }: { item: MasonryItem; height: string }) => (
   <Link href={`/${item.slug}`} className="group block">
     <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
       <div className={`relative ${height} overflow-hidden`}>
         <Image 
           src={item.image || '/images/placeholder-destination.jpg'} 
-          alt={item.name}
+          alt={item.name || 'Destination'}
           fill
           className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
@@ -474,7 +494,7 @@ const DestinationMasonryCard = ({ item, height }: { item: any; height: string })
   </Link>
 );
 
-const CategoryMasonryCard = ({ item, height }: { item: any; height: string }) => (
+const CategoryMasonryCard = ({ item }: { item: MasonryItem }) => (
   <Link href={`/${item.slug}`} className="group block">
     <div className="bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:rotate-1 p-8">
       <div className="text-center">
@@ -498,7 +518,7 @@ const CategoryMasonryCard = ({ item, height }: { item: any; height: string }) =>
   </Link>
 );
 
-const ReviewMasonryCard = ({ item, height }: { item: any; height: string }) => (
+const ReviewMasonryCard = ({ item }: { item: MasonryItem }) => (
   <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
     <div className="flex items-start gap-4 mb-4">
       <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -515,7 +535,7 @@ const ReviewMasonryCard = ({ item, height }: { item: any; height: string }) => (
           {Array.from({ length: 5 }, (_, i) => (
             <Star 
               key={i} 
-              className={`h-4 w-4 ${i < item.rating ? 'fill-current' : ''}`} 
+              className={`h-4 w-4 ${i < (item.rating || 0) ? 'fill-current' : ''}`}
             />
           ))}
         </div>
@@ -529,7 +549,7 @@ const ReviewMasonryCard = ({ item, height }: { item: any; height: string }) => (
     
     <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
       <span className="text-xs text-slate-500">
-        {new Date(item.createdAt).toLocaleDateString()}
+        {new Date(item.createdAt || 0).toLocaleDateString()}
       </span>
       <div className="flex items-center gap-3">
         <button className="flex items-center gap-1 text-slate-400 hover:text-red-500 transition-colors">
@@ -544,13 +564,13 @@ const ReviewMasonryCard = ({ item, height }: { item: any; height: string }) => (
   </div>
 );
 
-const DefaultMasonryCard = ({ item, height }: { item: any; height: string }) => (
+const DefaultMasonryCard = ({ item, height }: { item: MasonryItem; height: string }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
     {item.image && (
       <div className={`relative ${height} overflow-hidden`}>
         <Image 
           src={item.image} 
-          alt={item.title || item.name}
+          alt={item.title || item.name || 'Content image'}
           fill
           className="object-cover"
         />
@@ -588,9 +608,13 @@ const ImageMasonryGallery = ({ images }: { images: string[] }) => (
         transition={{ delay: index * 0.1 }}
         className="break-inside-avoid relative group cursor-pointer overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300"
       >
-        <img 
+        <Image
           src={image} 
           alt={`Gallery image ${index + 1}`}
+          width={1200}
+          height={900}
+          unoptimized
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">

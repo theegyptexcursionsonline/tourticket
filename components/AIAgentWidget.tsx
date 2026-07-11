@@ -3,11 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Chat } from 'react-instantsearch';
-// ReactMarkdown and remarkGfm are imported but not used in the user's manual-DOM-parser approach.
-// I will leave them in case they are used elsewhere, but they are not used in this component's logic.
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import 'instantsearch.css/themes/satellite.css';
+import { isSearchHit, type SearchHit } from './componentTypes';
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
@@ -16,8 +13,8 @@ const INDEX_NAME = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technolo
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
-const createTourCardHTML = (tour: any): string => {
-  const discountPercent = tour.discountPrice && tour.discountPrice < tour.price
+const createTourCardHTML = (tour: SearchHit): string => {
+  const discountPercent = tour.discountPrice && tour.price && tour.discountPrice < tour.price
     ? Math.round(((tour.price - tour.discountPrice) / tour.price) * 100)
     : 0;
 
@@ -71,7 +68,7 @@ const createTourCardHTML = (tour: any): string => {
 
         <div class="flex items-center justify-between pt-2 border-t border-slate-100">
           <div class="flex items-center gap-1">
-            ${tour.discountPrice && tour.discountPrice < tour.price ? `
+            ${tour.discountPrice && tour.price && tour.discountPrice < tour.price ? `
               <span class="text-slate-400 text-[10px] line-through">$${tour.price}</span>
               <span class="text-blue-600 font-bold text-base">$${tour.discountPrice}</span>
             ` : tour.price ? `
@@ -152,8 +149,8 @@ export default function AIAgentWidget() {
     };
 
     // Helper function to extract JSON objects from text
-    const extractJSONObjects = (text: string): any[] => {
-      const tours: any[] = [];
+    const extractJSONObjects = (text: string): SearchHit[] => {
+      const tours: SearchHit[] = [];
       let depth = 0;
       let jsonStart = -1;
       let inString = false;
@@ -189,12 +186,12 @@ export default function AIAgentWidget() {
           if (depth === 0 && jsonStart !== -1) {
             const jsonStr = text.substring(jsonStart, i + 1);
             try {
-              const obj = JSON.parse(jsonStr);
+              const obj: unknown = JSON.parse(jsonStr);
               // **FIXED:** Check for slug OR objectID
-              if (obj.title && (obj.slug || obj.objectID)) {
+              if (isSearchHit(obj) && obj.title && (obj.slug || obj.objectID)) {
                 tours.push(obj);
               }
-            } catch (e) {
+            } catch {
               // Not valid JSON, skip
             }
             jsonStart = -1;
@@ -300,7 +297,7 @@ export default function AIAgentWidget() {
 
           if (tours.length > 0) {
             // Generate unique ID based on tour slugs for consistency across reloads
-            const tourSlugs = tours.map((t: any) => t.slug || t.objectID).sort().join('-');
+            const tourSlugs = tours.map((tour) => tour.slug || tour.objectID).sort().join('-');
             const messageId = generateMessageId(tourSlugs);
 
             // Check if this message's cards were previously closed

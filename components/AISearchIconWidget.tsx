@@ -6,6 +6,8 @@ import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Ta
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import Image from 'next/image';
+import type { SearchHit } from './componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Algolia Config ---
@@ -39,7 +41,7 @@ function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?
 }
 
 // Custom SearchBox component
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -67,7 +69,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{hits.length}</span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {(limitedHits as unknown as SearchHit[]).map((hit, index) => (
         <motion.a
           key={hit.objectID}
           href={`/${hit.slug || hit.objectID}`}
@@ -81,7 +83,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
             <div className="w-14 md:w-20 h-14 md:h-20 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 shadow-sm group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 ring-1 ring-black/5">
               {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
-                <img src={hit.image || hit.images?.[0] || hit.primaryImage} alt={hit.title || 'Tour'} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>'; }} />
+                <Image src={hit.image || hit.images?.[0] || hit.primaryImage || ''} alt={hit.title || 'Tour'} fill unoptimized sizes="80px" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200"><MapPin className="w-8 h-8 text-blue-600" strokeWidth={2.5} /></div>
               )}
@@ -103,7 +105,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 
 function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as unknown as SearchHit[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
   if (limitedHits.length === 0) return null;
   return (
@@ -115,7 +117,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{uniqueHits.length}</span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a key={hit.objectID} href={`/destinations/${hit.slug || hit.objectID}`} onClick={onHitClick} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/5 group-hover:via-teal-500/5 group-hover:to-cyan-500/5 transition-all duration-500" />
           <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
@@ -136,7 +138,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
 
 function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const uniqueHits = getUniqueSearchHits(hits as any[], { requireTours: true });
+  const uniqueHits = getUniqueSearchHits(hits as unknown as SearchHit[], { requireTours: true });
   const limitedHits = uniqueHits.slice(0, limit);
   if (limitedHits.length === 0) return null;
   return (
@@ -148,7 +150,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{uniqueHits.length}</span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {limitedHits.map((hit, index) => (
         <motion.a key={hit.objectID} href={`/categories/${hit.slug || hit.objectID}`} onClick={onHitClick} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-fuchsia-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-fuchsia-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
           <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
@@ -179,7 +181,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{hits.length}</span>
         </div>
       </div>
-      {limitedHits.map((hit: any, index) => (
+      {(limitedHits as unknown as SearchHit[]).map((hit, index) => (
         <motion.a key={hit.objectID} href={`/blog/${hit.slug || hit.objectID}`} onClick={onHitClick} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-amber-500/5 hover:via-orange-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-orange-500/0 to-red-500/0 group-hover:from-amber-500/5 group-hover:via-orange-500/5 group-hover:to-red-500/5 transition-all duration-500" />
           <div className="flex items-center gap-2.5 md:gap-4 relative z-10">
@@ -187,7 +189,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-gray-900 text-sm md:text-[15px] leading-snug mb-1 md:mb-1.5 truncate group-hover:text-amber-600 transition-colors duration-300">{hit.title || 'Untitled Blog Post'}</div>
               <div className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1.5 md:gap-2.5 flex-wrap">
-                {hit.category && (<span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.category}</span>)}
+                {typeof hit.category === 'string' && (<span className="bg-gray-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium">{hit.category}</span>)}
                 {hit.readTime && (<span className="bg-amber-50/80 backdrop-blur-sm px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg font-medium text-amber-700">{hit.readTime} min read</span>)}
               </div>
             </div>
@@ -201,7 +203,7 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 export default function AISearchIconWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [algoliaError, setAlgoliaError] = useState<string | null>(null);
+  const [algoliaError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   // Scroll detection
@@ -304,7 +306,7 @@ export default function AISearchIconWidget() {
                         <div className="p-16 text-center"><AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" /><p className="text-sm font-semibold text-red-600">{algoliaError}</p></div>
                       ) : searchQuery ? (
                         <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                          <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                      <CustomSearchBox searchQuery={searchQuery} />
                           <Index indexName={INDEX_TOURS}><Configure hitsPerPage={5} /><TourHits onHitClick={handleCloseSearch} limit={5} /></Index>
                           <Index indexName={INDEX_DESTINATIONS}><Configure hitsPerPage={5} /><DestinationHits onHitClick={handleCloseSearch} limit={5} /></Index>
                           <Index indexName={INDEX_CATEGORIES}><Configure hitsPerPage={5} /><CategoryHits onHitClick={handleCloseSearch} limit={5} /></Index>
@@ -359,7 +361,7 @@ export default function AISearchIconWidget() {
               <div className="max-h-[50vh] overflow-y-auto apple-scrollbar">
                 {searchQuery ? (
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    <CustomSearchBox searchQuery={searchQuery} />
                     <Index indexName={INDEX_TOURS}><Configure hitsPerPage={3} /><TourHits onHitClick={handleCloseSearch} limit={3} /></Index>
                     <Index indexName={INDEX_DESTINATIONS}><Configure hitsPerPage={3} /><DestinationHits onHitClick={handleCloseSearch} limit={3} /></Index>
                   </InstantSearch>

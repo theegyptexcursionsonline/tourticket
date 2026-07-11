@@ -2,23 +2,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Search, MapPin, Clock, AlertCircle, Compass, Tag, FileText, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, X, Search, MapPin, Clock, Compass, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import 'instantsearch.css/themes/satellite.css';
+import Image from 'next/image';
+import type { SearchHit } from './componentTypes';
 
 // Algolia Config
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
 const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
 const INDEX_DESTINATIONS = 'destinations';
-const INDEX_CATEGORIES = 'categories';
-const INDEX_BLOGS = 'blogs';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
 // Custom SearchBox component
-function CustomSearchBox({ searchQuery, onSearchChange }: { searchQuery: string; onSearchChange: (value: string) => void }) {
+function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
   const { refine } = useSearchBox();
 
   useEffect(() => {
@@ -63,7 +63,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {limitedHits.map((hit: any, index) => (
+          {(limitedHits as unknown as SearchHit[]).map((hit) => (
             <a
               key={hit.objectID}
               href={`/${hit.slug || hit.objectID}`}
@@ -72,9 +72,12 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             >
               {(hit.image || hit.images?.[0] || hit.primaryImage) && (
                 <div className="relative w-full h-32 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
-                  <img
-                    src={hit.image || hit.images?.[0] || hit.primaryImage}
+                  <Image
+                    src={hit.image || hit.images?.[0] || hit.primaryImage || ''}
                     alt={hit.title || 'Tour'}
+                    fill
+                    unoptimized
+                    sizes="240px"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 </div>
@@ -144,7 +147,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
         </div>
       </div>
       <div className="divide-y divide-gray-100">
-        {limitedHits.map((hit: any) => (
+        {(limitedHits as unknown as SearchHit[]).map((hit) => (
           <a
             key={hit.objectID}
             href={`/destinations/${hit.slug || hit.objectID}`}
@@ -287,7 +290,7 @@ export default function TourPageAIWidget() {
               <div className="max-h-[50vh] overflow-y-auto apple-scrollbar">
                 {searchQuery ? (
                   <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    <CustomSearchBox searchQuery={searchQuery} />
                     <Index indexName={INDEX_TOURS}>
                       <Configure hitsPerPage={5} />
                       <TourHits onHitClick={handleCloseSearch} limit={5} />

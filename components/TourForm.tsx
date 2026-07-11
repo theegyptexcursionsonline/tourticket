@@ -45,6 +45,8 @@ import {
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import TourStructuredTranslationEditor from '@/components/admin/TourStructuredTranslationEditor';
 import { tourTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
+import Image from 'next/image';
+import { isRecord } from './componentTypes';
 
 // --- Interface Definitions ---
 interface Category {
@@ -152,13 +154,22 @@ interface TourFormData {
     translations: Record<string, Record<string, unknown>>;
 }
 
-interface Tour extends Partial<TourFormData> {
+interface Tour extends Omit<Partial<TourFormData>, 'destination' | 'category' | 'attractions' | 'interests'> {
     _id?: string;
     faq?: FAQ[];
     price?: number;
-    destination?: any;
-    category?: any;
+    destination?: unknown;
+    category?: unknown;
+    attractions?: unknown[];
+    interests?: unknown[];
 }
+
+const getReferenceId = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (!isRecord(value)) return '';
+    const id = value._id;
+    return typeof id === 'string' ? id : id != null ? String(id) : '';
+};
 
 // --- Helper Components ---
 const FormLabel = ({ children, icon: Icon, required = false }: {
@@ -411,10 +422,10 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 duration: tourToEdit.duration || '',
                 discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
                 originalPrice: tourToEdit.originalPrice || '',
-                destination: tourToEdit.destination?._id?.toString() || tourToEdit.destination || '',
+                destination: getReferenceId(tourToEdit.destination),
                 category: Array.isArray(tourToEdit.category)
-                    ? tourToEdit.category.map((cat: any) => cat?._id?.toString() || cat?.toString() || cat)
-                    : (tourToEdit.category?._id?.toString() || tourToEdit.category ? [tourToEdit.category?._id?.toString() || tourToEdit.category] : []),
+                    ? tourToEdit.category.map(getReferenceId).filter(Boolean)
+                    : (getReferenceId(tourToEdit.category) ? [getReferenceId(tourToEdit.category)] : []),
                 image: tourToEdit.image || '', 
                 images: tourToEdit.images || [],
                 highlights: (tourToEdit.highlights?.length ?? 0) > 0 ? tourToEdit.highlights! : [''],
@@ -463,7 +474,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 metaTitle: tourToEdit.metaTitle || '',
                 metaDescription: tourToEdit.metaDescription || '',
                 keywords: Array.isArray(tourToEdit.keywords) ? tourToEdit.keywords.join(', ') : (tourToEdit.keywords || ''),
-                translations: normalizeTranslations((tourToEdit as any).translations),
+                translations: normalizeTranslations(tourToEdit.translations),
             };
             
             if (tourToEdit.availability && tourToEdit.availability.slots) {
@@ -482,16 +493,10 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
 
             // Handle attractions and interests - extract IDs if they're populated objects
             const attractionIds = Array.isArray(tourToEdit.attractions)
-                ? tourToEdit.attractions.map((a: any) => {
-                    const id = typeof a === 'string' ? a : (a._id || a);
-                    return typeof id === 'string' ? id : String(id);
-                  })
+                ? tourToEdit.attractions.map(getReferenceId).filter(Boolean)
                 : [];
             const interestIds = Array.isArray(tourToEdit.interests)
-                ? tourToEdit.interests.map((i: any) => {
-                    const id = typeof i === 'string' ? i : (i._id || i);
-                    return typeof id === 'string' ? id : String(id);
-                  })
+                ? tourToEdit.interests.map(getReferenceId).filter(Boolean)
                 : [];
 
             initialData.attractions = attractionIds;
@@ -1429,9 +1434,12 @@ const addItineraryItem = () => {
                                             
                                             {formData.image ? (
                                                 <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
-                                                    <img 
+                                                    <Image
                                                         src={formData.image} 
                                                         alt="Main tour preview" 
+                                                        width={1200}
+                                                        height={256}
+                                                        unoptimized
                                                         className="w-full h-64 object-cover" 
                                                     />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
@@ -1508,9 +1516,12 @@ const addItineraryItem = () => {
                                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                                     {formData.images.map((img: string, i: number) => (
                                                         <div key={i} className="relative group">
-                                                            <img 
+                                                            <Image
                                                                 src={img} 
                                                                 alt={`Gallery ${i}`} 
+                                                                width={320}
+                                                                height={128}
+                                                                unoptimized
                                                                 className="w-full h-32 object-cover rounded-xl border-2 border-slate-200 shadow-sm group-hover:shadow-md transition-all" 
                                                             />
                                                             <button 

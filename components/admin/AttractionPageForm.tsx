@@ -1,24 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
     Loader2, X, Plus, Check, ChevronDown, Camera, Grid3x3, Info, Globe, 
     UploadCloud, Trash2, Eye, Tag, FileText, Sparkles, MapPin,
-    ArrowLeft, Edit, PlusCircle, Minus, XCircle, HelpCircle
+    ArrowLeft, Edit, PlusCircle, Minus, HelpCircle
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { AttractionPageFormData, Category } from '@/types';
+import Image from 'next/image';
 
 interface AttractionPageFormProps {
   pageId?: string;
-}
-
-interface Tour {
-  _id: string;
-  title: string;
-  slug: string;
 }
 
 const defaultFormData: AttractionPageFormData = {
@@ -47,7 +43,7 @@ const defaultFormData: AttractionPageFormData = {
 // Helper Components
 const FormLabel = ({ children, icon: Icon, required = false }: {
   children: React.ReactNode;
-  icon?: any;
+  icon?: LucideIcon;
   required?: boolean;
 }) => (
   <div className="flex items-center gap-2 mb-3">
@@ -74,29 +70,12 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
   
   const [formData, setFormData] = useState<AttractionPageFormData>(defaultFormData);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [availableTours, setAvailableTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const fetchTours = async () => {
-    try {
-      const response = await fetch('/api/admin/tours');
-      const data = await response.json();
-      if (data.success) {
-        setAvailableTours(data.data.map((tour: any) => ({
-          _id: tour._id,
-          title: tour.title,
-          slug: tour.slug
-        })));
-      }
-    } catch (err) {
-      console.error('Error fetching tours:', err);
-    }
-  };
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/categories');
       const data = await response.json();
@@ -106,9 +85,9 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
-  };
+  }, []);
 
-  const fetchPageData = async () => {
+  const fetchPageData = useCallback(async () => {
     if (!pageId) return;
     
     setLoading(true);
@@ -149,21 +128,20 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       } else {
         setError(data.error || 'Failed to fetch page data');
       }
-    } catch (err) {
+    } catch {
       setError('Network error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageId]);
 
   useEffect(() => {
     queueMicrotask(() => {
       void fetchCategories();
-      void fetchTours();
       if (pageId) void fetchPageData();
       else setIsPanelOpen(true);
     });
-  }, [pageId]);
+  }, [fetchCategories, fetchPageData, pageId]);
 
   const generateSlug = (title: string) => {
     return title
@@ -273,11 +251,11 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       const method = pageId ? 'PUT' : 'POST';
 
       // Clean up the form data before sending
-      const cleanedData = { ...formData };
+      const cleanedData: Partial<AttractionPageFormData> = { ...formData };
       
       // If pageType is 'attraction' or categoryId is empty, remove categoryId field entirely
-      if (cleanedData.pageType === 'attraction' || !cleanedData.categoryId.trim()) {
-        delete (cleanedData as any).categoryId;
+      if (cleanedData.pageType === 'attraction' || !cleanedData.categoryId?.trim()) {
+        delete cleanedData.categoryId;
       }
       
       // FIX: Ensure arrays are properly formatted WITHOUT aggressive filtering
@@ -585,9 +563,12 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
                           
                           {formData.heroImage ? (
                             <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200">
-                              <img 
+                              <Image
                                 src={formData.heroImage} 
                                 alt="Hero preview" 
+                                width={1200}
+                                height={256}
+                                unoptimized
                                 className="w-full h-64 object-cover" 
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
@@ -663,9 +644,12 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                               {formData.images.map((img, i) => (
                                 <div key={i} className="relative group">
-                                  <img 
+                                  <Image
                                     src={img} 
                                     alt={`Gallery ${i}`} 
+                                    width={320}
+                                    height={128}
+                                    unoptimized
                                     className="w-full h-32 object-cover rounded-xl border-2 border-slate-200 shadow-sm group-hover:shadow-md transition-all" 
                                   />
                                   <button 

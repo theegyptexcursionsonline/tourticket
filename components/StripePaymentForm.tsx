@@ -1,11 +1,29 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
+import { getErrorMessage, isRecord } from './componentTypes';
+
+interface CheckoutCartItem {
+  _id?: string;
+  id?: string;
+  selectedDate?: string;
+  selectedTime?: string;
+  quantity?: unknown;
+  childQuantity?: unknown;
+  infantQuantity?: unknown;
+  selectedBookingOption?: { id?: string };
+  selectedAddOns?: Record<string, unknown> | Array<{ id?: string; quantity?: unknown }>;
+}
+
+interface CheckoutPricing {
+  currency?: string;
+  total: number;
+}
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -21,7 +39,6 @@ interface PaymentFormProps {
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
-  clientSecret,
   onSuccess,
   onError,
   isProcessing,
@@ -61,9 +78,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         // Payment is still processing
         toast.loading('Payment is being processed...', { duration: 5000 });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Payment error:', err);
-      onError(err.message || 'An unexpected error occurred');
+      onError(getErrorMessage(err, 'An unexpected error occurred'));
       setIsProcessing(false);
     }
   };
@@ -134,8 +151,8 @@ interface StripePaymentFormProps {
     } | null;
     specialRequests?: string;
   };
-  cart: any[];
-  pricing: any;
+  cart: CheckoutCartItem[];
+  pricing: CheckoutPricing;
   discountCode?: string;
   onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
@@ -166,23 +183,42 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   // Use refs to track if we've already created a payment intent for this cart
   const paymentIntentCreatedRef = useRef(false);
   const lastCartHashRef = useRef<string>('');
+  const customerPayload = useMemo(() => ({
+    email: customer.email,
+    firstName: customer.firstName,
+    lastName: customer.lastName,
+    phone: customer.phone,
+    emergencyContact: customer.emergencyContact,
+    hotelPickupDetails: customer.hotelPickupDetails,
+    hotelPickupLocation: customer.hotelPickupLocation,
+    specialRequests: customer.specialRequests,
+  }), [
+    customer.email,
+    customer.firstName,
+    customer.lastName,
+    customer.phone,
+    customer.emergencyContact,
+    customer.hotelPickupDetails,
+    customer.hotelPickupLocation,
+    customer.specialRequests,
+  ]);
   
   // Generate a hash of cart items to detect real changes (includes add-ons + booking option + children)
-  const getCartHash = useCallback((cartItems: any[], pricingData: any, discount?: string) => {
-    const normalizeQty = (v: any) => {
+  const getCartHash = useCallback((cartItems: CheckoutCartItem[], pricingData: CheckoutPricing, discount?: string) => {
+    const normalizeQty = (v: unknown): number => {
       if (typeof v === 'number' && Number.isFinite(v)) return v;
       if (typeof v === 'string') return Number(v) || 0;
-      if (v && typeof v === 'object') return normalizeQty(v.quantity ?? v.qty ?? v.count);
+      if (isRecord(v)) return normalizeQty(v.quantity ?? v.qty ?? v.count);
       return 0;
     };
 
-    const stableAddOns = (item: any) => {
+    const stableAddOns = (item: CheckoutCartItem) => {
       const addOns = item?.selectedAddOns;
       if (!addOns) return '';
       // selectedAddOns can be object or array; we only hash ids + numeric qty
       if (Array.isArray(addOns)) {
         return addOns
-          .map((a: any) => `${a?.id}:${normalizeQty(a?.quantity)}`)
+          .map((addOn) => `${addOn.id || ''}:${normalizeQty(addOn.quantity)}`)
           .sort()
           .join(',');
       }
@@ -269,7 +305,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              customer,
+              customer: customerPayload,
               pricing,
               cart,
               discountCode,
@@ -301,7 +337,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     }, 1500); // Increased debounce to 1.5 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [customer.email, customer.firstName, customer.lastName, cart, pricing, discountCode, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret, paymentIntentId]);
+  }, [customer.email, customer.firstName, customer.lastName, customerPayload, cart, pricing, discountCode, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret, paymentIntentId]);
 
   if (isLoading) {
     return (

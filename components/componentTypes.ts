@@ -32,6 +32,7 @@ export interface SearchHit {
   pageType?: string;
   type?: string;
   content?: string;
+  readTime?: number;
 }
 
 export interface ChatPart {
@@ -61,7 +62,6 @@ export interface EeoWindow extends Window {
   __pendingAIOpenAgentQuery?: string;
   __intercomMessenger?: IntercomMessenger;
   openIntercom?: () => void;
-  FoxesConnect?: { open?: () => void };
   FoxesCalendarEmbed?: {
     init: (options: Record<string, unknown>) => void;
   };

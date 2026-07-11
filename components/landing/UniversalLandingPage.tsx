@@ -7,12 +7,26 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { 
   MapPin, Star, Clock, Users, ArrowRight, 
-  Grid, List, LayoutGrid, Filter, Search, 
-  ChevronDown, Eye, Calendar, Heart, Share2,
+  Grid, List, LayoutGrid, Filter, Search,
   Award, Globe, Camera, Zap
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import type { Category, Destination, Review, Tour } from '@/types';
+
+type LandingTour = Omit<Tour, 'destination'> & { destination?: Destination };
+
+interface RelatedPage {
+  slug: string;
+  title?: string;
+  name?: string;
+  description?: string;
+}
+
+interface LinkTree {
+  title: string;
+  links: Array<{ name: string; url: string; icon?: string }>;
+}
 
 interface LandingPageProps {
   page: {
@@ -28,15 +42,12 @@ interface LandingPageProps {
     metaTitle?: string;
     metaDescription?: string;
   };
-  tours: any[];
-  categories: any[];
-  destinations: any[];
-  relatedPages?: any[];
-  reviews?: any[];
-  linkTree?: {
-    title: string;
-    links: { name: string; url: string; icon?: string }[];
-  };
+  tours: LandingTour[];
+  categories: Category[];
+  destinations: Destination[];
+  relatedPages?: RelatedPage[];
+  reviews?: Review[];
+  linkTree?: LinkTree;
   layout?: 'grid' | 'masonry' | 'list' | 'cards';
 }
 
@@ -56,7 +67,7 @@ export default function UniversalLandingPage({
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter content based on search query
-  const filterContent = (items: any[], query: string) => {
+  const filterContent = <T extends { title?: string; name?: string; description?: string }>(items: T[], query: string): T[] => {
     if (!query.trim()) return items;
     return items.filter(item => 
       item.title?.toLowerCase().includes(query.toLowerCase()) ||
@@ -272,12 +283,12 @@ export default function UniversalLandingPage({
                   
                   {/* Categories Tab */}
                   {activeTab === 'categories' && (
-                    <CategoriesGrid categories={filteredCategories} viewMode={viewMode} />
+                    <CategoriesGrid categories={filteredCategories} />
                   )}
                   
                   {/* Reviews Tab */}
                   {activeTab === 'reviews' && (
-                    <ReviewsGrid reviews={reviews} viewMode={viewMode} />
+                    <ReviewsGrid reviews={reviews} />
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -349,7 +360,7 @@ export default function UniversalLandingPage({
 }
 
 // Sub-components for different content types
-const ToursGrid = ({ tours, viewMode }: { tours: any[], viewMode: string }) => {
+const ToursGrid = ({ tours, viewMode }: { tours: LandingTour[]; viewMode: string }) => {
   if (tours.length === 0) {
     return <EmptyState type="tours" />;
   }
@@ -383,7 +394,7 @@ const ToursGrid = ({ tours, viewMode }: { tours: any[], viewMode: string }) => {
   );
 };
 
-const DestinationsGrid = ({ destinations, viewMode }: { destinations: any[], viewMode: string }) => {
+const DestinationsGrid = ({ destinations, viewMode }: { destinations: Destination[]; viewMode: string }) => {
   if (destinations.length === 0) {
     return <EmptyState type="destinations" />;
   }
@@ -417,7 +428,7 @@ const DestinationsGrid = ({ destinations, viewMode }: { destinations: any[], vie
   );
 };
 
-const CategoriesGrid = ({ categories, viewMode }: { categories: any[], viewMode: string }) => {
+const CategoriesGrid = ({ categories }: { categories: Category[] }) => {
   if (categories.length === 0) {
     return <EmptyState type="categories" />;
   }
@@ -431,7 +442,7 @@ const CategoriesGrid = ({ categories, viewMode }: { categories: any[], viewMode:
   );
 };
 
-const ReviewsGrid = ({ reviews, viewMode }: { reviews: any[], viewMode: string }) => {
+const ReviewsGrid = ({ reviews }: { reviews: Review[] }) => {
   if (reviews.length === 0) {
     return <EmptyState type="reviews" />;
   }
@@ -446,7 +457,7 @@ const ReviewsGrid = ({ reviews, viewMode }: { reviews: any[], viewMode: string }
 };
 
 // Individual Card Components
-const TourCard = ({ tour, index }: { tour: any, index: number }) => (
+const TourCard = ({ tour, index }: { tour: LandingTour; index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -509,7 +520,7 @@ const TourCard = ({ tour, index }: { tour: any, index: number }) => (
   </motion.div>
 );
 
-const TourListItem = ({ tour, index }: { tour: any, index: number }) => (
+const TourListItem = ({ tour, index }: { tour: LandingTour; index: number }) => (
   <motion.div
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
@@ -558,7 +569,7 @@ const TourListItem = ({ tour, index }: { tour: any, index: number }) => (
   </motion.div>
 );
 
-const TourLargeCard = ({ tour, index }: { tour: any, index: number }) => (
+const TourLargeCard = ({ tour, index }: { tour: LandingTour; index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
     animate={{ opacity: 1, y: 0 }}
@@ -614,7 +625,7 @@ const TourLargeCard = ({ tour, index }: { tour: any, index: number }) => (
   </motion.div>
 );
 
-const DestinationCard = ({ destination, index }: { destination: any, index: number }) => (
+const DestinationCard = ({ destination, index }: { destination: Destination; index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -653,7 +664,7 @@ const DestinationCard = ({ destination, index }: { destination: any, index: numb
   </motion.div>
 );
 
-const DestinationListItem = ({ destination, index }: { destination: any, index: number }) => (
+const DestinationListItem = ({ destination, index }: { destination: Destination; index: number }) => (
   <motion.div
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
@@ -689,7 +700,7 @@ const DestinationListItem = ({ destination, index }: { destination: any, index: 
   </motion.div>
 );
 
-const DestinationLargeCard = ({ destination, index }: { destination: any, index: number }) => (
+const DestinationLargeCard = ({ destination, index }: { destination: Destination; index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
     animate={{ opacity: 1, y: 0 }}
@@ -730,7 +741,7 @@ const DestinationLargeCard = ({ destination, index }: { destination: any, index:
   </motion.div>
 );
 
-const CategoryCard = ({ category, index }: { category: any, index: number }) => (
+const CategoryCard = ({ category, index }: { category: Category; index: number }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -750,7 +761,7 @@ const CategoryCard = ({ category, index }: { category: any, index: number }) => 
   </motion.div>
 );
 
-const ReviewCard = ({ review, index }: { review: any, index: number }) => (
+const ReviewCard = ({ review, index }: { review: Review; index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -778,7 +789,7 @@ const ReviewCard = ({ review, index }: { review: any, index: number }) => (
           )}
           <p className="text-slate-600 text-sm line-clamp-3">{review.comment}</p>
           <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-            <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+            <span>{new Date(review.createdAt || 0).toLocaleDateString()}</span>
             {review.verified && (
               <span className="flex items-center gap-1 text-green-600">
                 <Award className="h-3 w-3" />
@@ -793,14 +804,14 @@ const ReviewCard = ({ review, index }: { review: any, index: number }) => (
 );
 
 // Widget Components
-const LinkTreeWidget = ({ linkTree }: { linkTree: any }) => (
+const LinkTreeWidget = ({ linkTree }: { linkTree: LinkTree }) => (
   <div className="bg-white rounded-2xl p-6 shadow-lg">
     <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
       <Zap className="h-5 w-5 text-indigo-500" />
       {linkTree.title}
     </h3>
     <div className="space-y-3">
-      {linkTree.links.map((link: any, index: number) => (
+      {linkTree.links.map((link, index) => (
         <Link
           key={index}
           href={link.url}
@@ -851,7 +862,7 @@ const FeaturesWidget = ({ features }: { features: string[] }) => (
   </div>
 );
 
-const QuickStatsWidget = ({ tours, destinations, categories }: { tours: any[], destinations: any[], categories: any[] }) => (
+const QuickStatsWidget = ({ tours, destinations, categories }: { tours: LandingTour[]; destinations: Destination[]; categories: Category[] }) => (
   <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border border-yellow-100">
     <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
       <Globe className="h-5 w-5 text-yellow-500" />
@@ -874,14 +885,14 @@ const QuickStatsWidget = ({ tours, destinations, categories }: { tours: any[], d
   </div>
 );
 
-const RelatedPagesWidget = ({ pages }: { pages: any[] }) => (
+const RelatedPagesWidget = ({ pages }: { pages: RelatedPage[] }) => (
   <div className="bg-white rounded-2xl p-6 shadow-lg">
     <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
       <Globe className="h-5 w-5 text-slate-500" />
       Related Pages
     </h3>
     <div className="space-y-3">
-      {pages.map((page: any, index: number) => (
+      {pages.map((page, index) => (
         <Link
           key={index}
           href={`/${page.slug}`}
