@@ -12,6 +12,27 @@ import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { getErrorMessage, isRecord } from './componentTypes';
+
+const normalizeDayTrips = (value: unknown, untitledTour: string): Tour[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(isRecord)
+    .filter((tour) => tour.isPublished !== false)
+    .slice(0, 12)
+    .map((tour) => ({
+      ...tour,
+      image: typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : '',
+      title: typeof tour.title === 'string' && tour.title ? tour.title : untitledTour,
+      originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : undefined,
+      discountPrice: typeof tour.discountPrice === 'number'
+        ? tour.discountPrice
+        : typeof tour.originalPrice === 'number' ? tour.originalPrice : 0,
+      rating: typeof tour.rating === 'number' ? tour.rating : 0,
+      bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
+    })) as unknown as Tour[];
+};
 
 // --- Safe Image Component ---
 const SafeImage = ({ 
@@ -93,9 +114,9 @@ const DayTripCard = ({
         />
         
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-          {trip.tags?.find((tag: any) => typeof tag === 'string' && tag.includes('%')) && (
+          {trip.tags?.find((tag) => tag.includes('%')) && (
             <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-              {trip.tags.find((tag: any) => typeof tag === 'string' && tag.includes('%'))}
+              {trip.tags.find((tag) => tag.includes('%'))}
             </div>
           )}
           {trip.specialOffer && (
@@ -226,8 +247,8 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
         console.debug('[DayTrips] raw response body:', bodyText);
 
         if (!response.ok) {
-          let parsedBody: any = bodyText;
-          try { parsedBody = JSON.parse(bodyText); } catch (e) { /* keep text */ }
+          let parsedBody: unknown = bodyText;
+          try { parsedBody = JSON.parse(bodyText); } catch { /* keep text */ }
           console.error('API call failed', {
             url,
             status: response.status,
@@ -251,18 +272,7 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
         // Expecting { success: true, data: [...] } style response
         if (data.success && Array.isArray(data.data)) {
           // Show all published tours (filter removed to show more tours)
-          const dayTrips = (data.data as any[])
-            .filter((t) => t.isPublished !== false) // Only filter out explicitly unpublished tours
-            .slice(0, 12) // Limit to 12 tours
-            .map((tour) => ({
-              ...tour,
-              image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
-              title: tour.title || t('untitledTour'),
-              originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
-              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
-              rating: typeof tour.rating === 'number' ? tour.rating : 0,
-              bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-            }));
+          const dayTrips = normalizeDayTrips(data.data, t('untitledTour'));
 
           if (!aborted) {
             setTours(dayTrips);
@@ -270,18 +280,7 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
           }
         } else if (Array.isArray(data)) {
           // Some APIs return raw array
-          const dayTrips = data
-            .filter((t: any) => t.isPublished !== false)
-            .slice(0, 12)
-            .map((tour: any) => ({
-              ...tour,
-              image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
-              title: tour.title || t('untitledTour'),
-              originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
-              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
-              rating: typeof tour.rating === 'number' ? tour.rating : 0,
-              bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-            }));
+          const dayTrips = normalizeDayTrips(data, t('untitledTour'));
 
           if (!aborted) {
             setTours(dayTrips);
@@ -293,13 +292,13 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
           setFetchError(String(errMsg));
           setTours([]);
         }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
           console.warn('[DayTrips] fetch aborted');
           return;
         }
         console.error('Failed to fetch tours:', error);
-        setFetchError(error?.message ? String(error.message) : t('unknownFetchError'));
+        setFetchError(getErrorMessage(error, t('unknownFetchError')));
         setTours([]);
       } finally {
         if (!aborted) setIsLoading(false);
@@ -339,24 +338,13 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
       const text = await response.text();
       if (!response.ok) {
         let parsed = text;
-        try { parsed = JSON.parse(text); } catch (e) {}
+        try { parsed = JSON.parse(text); } catch {}
         setFetchError(`Server returned ${response.status} ${response.statusText}: ${typeof parsed === 'string' ? parsed : JSON.stringify(parsed).slice(0, 300)}`);
         setTours([]);
       } else {
         const data = text ? JSON.parse(text) : null;
         if (data?.success) {
-          const dayTrips = (data.data || [])
-            .filter((t: any) => t.isPublished !== false)
-            .slice(0, 12)
-            .map((tour: any) => ({
-              ...tour,
-              image: tour.image && typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : null,
-              title: tour.title || t('untitledTour'),
-              originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
-              discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : (typeof tour.originalPrice === 'number' ? tour.originalPrice : 0),
-              rating: typeof tour.rating === 'number' ? tour.rating : 0,
-              bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
-            }));
+          const dayTrips = normalizeDayTrips(data.data, t('untitledTour'));
           setTours(dayTrips);
           setFetchError(dayTrips.length === 0 ? t('noToursFound') : null);
         } else {
@@ -364,8 +352,8 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
           setTours([]);
         }
       }
-    } catch (err: any) {
-      setFetchError(err?.message ? String(err.message) : t('unknownRetryError'));
+    } catch (err: unknown) {
+      setFetchError(getErrorMessage(err, t('unknownRetryError')));
       setTours([]);
     } finally {
       setIsLoading(false);
@@ -491,7 +479,7 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
           >
             {tours.map(trip => (
               <DayTripCard
-                key={(trip as any)._id || trip.slug}
+                key={trip._id || trip.slug}
                 trip={trip}
                 onAddToCartClick={handleAddToCartClick}
               />
@@ -513,7 +501,7 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
         <BookingSidebar
           isOpen={isBookingSidebarOpen}
           onClose={closeSidebar}
-          tour={selectedTour as any}
+          tour={selectedTour as React.ComponentProps<typeof BookingSidebar>['tour']}
         />
       )}
 

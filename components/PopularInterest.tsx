@@ -10,6 +10,7 @@ import { Navigation, Autoplay, EffectCoverflow } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
+import { getErrorMessage } from './componentTypes';
 
 // --- TYPES ---
 interface Interest {
@@ -185,10 +186,10 @@ export default function PopularInterests() {
             setCategoryPages(pagesData.data || []);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching:', err);
         if (!mounted) return;
-        setError(err?.message || 'Failed to load content');
+        setError(getErrorMessage(err, 'Failed to load content'));
       } finally {
         if (mounted) setLoading(false);
       }

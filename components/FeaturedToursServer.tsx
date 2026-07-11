@@ -337,7 +337,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
                 }}
               >
                 {duplicatedTours.map((tour, idx) => (
-                  <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
+                  <div key={`${tour._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
                     <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
                   </div>
                 ))}
@@ -348,7 +348,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
               <div className="container mx-auto px-4 md:px-8">
                 <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
                   {displayedTours.map((tour, idx) => (
-                    <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="px-1 sm:px-2">
+                    <div key={`${tour._id || tour.slug}-${idx}`} className="px-1 sm:px-2">
                       <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
                     </div>
                   ))}
@@ -364,7 +364,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
         <BookingSidebar
           isOpen={isBookingSidebarOpen}
           onClose={closeSidebar}
-          tour={selectedTour as any}
+          tour={selectedTour as React.ComponentProps<typeof BookingSidebar>['tour']}
         />
       )}
 

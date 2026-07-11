@@ -9,6 +9,7 @@ import { useNavData } from '@/contexts/NavDataContext';
 import toast, { Toaster } from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import type { EeoWindow } from './componentTypes';
 
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -91,8 +92,9 @@ export default function Footer() {
     const handler = () => {
       // Open the FoxesConnect support widget
       try {
-        if ((window as any).FoxesConnect && typeof (window as any).FoxesConnect.open === 'function') {
-          (window as any).FoxesConnect.open();
+        const supportWindow = window as EeoWindow;
+        if (supportWindow.FoxesConnect?.open) {
+          supportWindow.FoxesConnect.open();
           return;
         }
         console.warn('Support widget not loaded yet');
@@ -149,13 +151,13 @@ export default function Footer() {
     // Open the FoxesConnect support widget. The embed loads async, so retry
     // briefly if a visitor clicks immediately after page load.
     try {
-      const win = window as any;
-      if (win.FoxesConnect && typeof win.FoxesConnect.open === 'function') {
+      const win = window as EeoWindow;
+      if (win.FoxesConnect?.open) {
         win.FoxesConnect.open();
         return;
       }
       setTimeout(() => {
-        if (win.FoxesConnect && typeof win.FoxesConnect.open === 'function') {
+        if (win.FoxesConnect?.open) {
           win.FoxesConnect.open();
         } else {
           window.dispatchEvent(new CustomEvent('open-chatbot'));

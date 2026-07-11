@@ -7,6 +7,7 @@ import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Link } from '@/i18n/routing';
+import { getErrorMessage } from './componentTypes';
 
 /**
  * Enhanced FeaturedTours - Perfect Card Design with Activity Provider
@@ -255,9 +256,9 @@ export default function FeaturedTours() {
           }));
           setTours(validatedTours);
         } else throw new Error(data.error || 'API returned success: false');
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to fetch tours:', error);
-        setFetchError(error.message || 'Failed to fetch tours');
+        setFetchError(getErrorMessage(error, 'Failed to fetch tours'));
       } finally {
         setIsLoading(false);
       }
@@ -387,7 +388,7 @@ export default function FeaturedTours() {
 
             <div className="flex gap-4 sm:gap-6 md:gap-8 animate-marquee group-hover:[animation-play-state:paused]">
               {duplicatedTours.map((tour, idx) => (
-                <div key={`${(tour as any)._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
+                <div key={`${tour._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
                   <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
                 </div>
               ))}
@@ -400,7 +401,7 @@ export default function FeaturedTours() {
         <BookingSidebar
           isOpen={isBookingSidebarOpen}
           onClose={closeSidebar}
-          tour={selectedTour as any}
+          tour={selectedTour as React.ComponentProps<typeof BookingSidebar>['tour']}
         />
       )}
 

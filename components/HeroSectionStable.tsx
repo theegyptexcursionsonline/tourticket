@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import type { EeoWindow } from './componentTypes';
 
 interface HeroSettings {
   backgroundImages?: {
@@ -156,7 +157,7 @@ export default function HeroSectionStable({ initialSettings }: HeroSectionStable
   // lazily-hydrated widget isn't listening yet. Once the widget consumes the
   // pending flag it stops re-opening, so the user's close click always sticks.
   const openAiWidget = () => {
-    const w = window as any;
+    const w = window as EeoWindow;
     w.__pendingAIOpenAgent = true;
     w.__pendingAIOpenAgentQuery = '';
 

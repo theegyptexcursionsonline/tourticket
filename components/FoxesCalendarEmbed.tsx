@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { EeoWindow } from './componentTypes';
 
 interface FoxesCalendarEmbedProps {
   orgId: string;
@@ -56,8 +57,9 @@ export default function FoxesCalendarEmbed({
     script.onload = () => {
       setIsLoading(false);
       // Initialize widget if programmatic API is available
-      if (typeof window !== 'undefined' && (window as any).FoxesCalendarEmbed) {
-        (window as any).FoxesCalendarEmbed.init({
+      const calendarWindow = window as EeoWindow;
+      if (calendarWindow.FoxesCalendarEmbed) {
+        calendarWindow.FoxesCalendarEmbed.init({
           containerId,
           orgId,
           productId,
