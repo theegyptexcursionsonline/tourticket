@@ -21,8 +21,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     try {
       await login(email, password);
-      // Login success is handled by the AdminAuthContext
-      // The component will automatically re-render when isAuthenticated changes
+      onLoginSuccess();
     } catch (err) {
       // Error is already shown by toast in the context
       console.error('Login error:', err);

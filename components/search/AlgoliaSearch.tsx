@@ -6,6 +6,7 @@ import { AlertCircle, MapPin, Clock, DollarSign, Search as SearchIcon, Star, Spa
 import 'instantsearch.css/themes/satellite.css';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import type { SearchHit } from '../componentTypes';
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
@@ -65,7 +66,7 @@ export default function AlgoliaSearch() {
   }, []);
 
   // Custom Hit component to render tour results
-  const Hit = ({ hit }: any) => {
+  const Hit = ({ hit }: { hit: SearchHit }) => {
     return (
       <a
         href={`/${hit.slug}`}
@@ -74,9 +75,12 @@ export default function AlgoliaSearch() {
         {/* Image */}
         {hit.image && (
           <div className="relative w-full h-48 overflow-hidden bg-slate-100">
-            <img
+            <Image
               src={hit.image}
-              alt={hit.title}
+              alt={hit.title || 'Tour'}
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
             />
             {hit.isFeatured && (
@@ -85,7 +89,7 @@ export default function AlgoliaSearch() {
                 Featured
               </div>
             )}
-            {hit.discountPrice && hit.discountPrice < hit.price && (
+            {hit.discountPrice && hit.price && hit.discountPrice < hit.price && (
               <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
                 Save {Math.round(((hit.price - hit.discountPrice) / hit.price) * 100)}%
               </div>
@@ -126,7 +130,7 @@ export default function AlgoliaSearch() {
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <div>
-              {hit.discountPrice && hit.discountPrice < hit.price ? (
+            {hit.discountPrice && hit.price && hit.discountPrice < hit.price ? (
                 <div className="flex items-center gap-2">
                   <span className="text-slate-400 text-sm line-through">${hit.price}</span>
                   <span className="text-blue-600 font-bold text-lg flex items-center gap-0.5">

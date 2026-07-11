@@ -469,7 +469,7 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
 
   // Filter and sort tours
   const filteredAndSortedTours = React.useMemo(() => {
-    let filtered = availableTours.filter(tour => {
+    const filtered = availableTours.filter(tour => {
       // Search filter
       if (searchQuery && !tour.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !tour.description?.toLowerCase().includes(searchQuery.toLowerCase())) {

@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { parseLocalDate } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import type { CartItem } from '@/types';
 
 const CartSidebar: FC = () => {
     const router = useRouter();
@@ -20,17 +21,17 @@ const CartSidebar: FC = () => {
     const rtl = isRTL(locale);
 
   // Calculate individual item total including add-ons
-    const getItemTotal = (item: any) => {
+    const getItemTotal = (item: CartItem) => {
         // Use selected booking option price if available, otherwise fall back to item price
         const basePrice = item.selectedBookingOption?.price || item.discountPrice || 0;
         
         const adultPrice = basePrice * (item.quantity || 1);
         const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-        let tourTotal = adultPrice + childPrice;
+        const tourTotal = adultPrice + childPrice;
 
         let addOnsTotal = 0;
         if (item.selectedAddOns && item.selectedAddOnDetails) {
-            Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]: [string, any]) => {
+            (Object.entries(item.selectedAddOns) as Array<[string, number]>).forEach(([addOnId, quantity]) => {
                 const addOnDetail = item.selectedAddOnDetails?.[addOnId];
                 if (addOnDetail && quantity > 0) {
                     const totalGuests = item.quantity + item.childQuantity;

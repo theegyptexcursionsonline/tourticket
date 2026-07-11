@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from './componentTypes';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -105,8 +106,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
       }
       onSuccess?.();
       onClose();
-    } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Authentication failed'));
     }
   };
 
@@ -119,9 +120,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
       toast.success(mode === 'login' ? 'Welcome back!' : 'Signed in successfully!');
       onSuccess?.();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.dismiss(toastId);
-      toast.error(error.message || 'Google sign-in failed');
+      toast.error(getErrorMessage(error, 'Google sign-in failed'));
     }
   };
 

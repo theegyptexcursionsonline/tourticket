@@ -9,7 +9,7 @@ import {
   Languages, Award, Zap, Mountain,
   Smartphone, CheckCircle, Tag
 } from 'lucide-react';
-import { Tour } from '@/types';
+import { Category, Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useCart } from '@/hooks/useCart';
@@ -41,9 +41,9 @@ const TourCard: React.FC<TourCardProps> = ({
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
 
   // Handle category as array or single object
-  let categories: any[] = [];
+  let categories: Category[] = [];
   if (Array.isArray(tour.category)) {
-    categories = tour.category.filter(cat => typeof cat === 'object');
+    categories = tour.category.filter((cat): cat is Category => typeof cat === 'object');
   } else if (typeof tour.category === 'object' && tour.category) {
     categories = [tour.category];
   }

@@ -57,7 +57,6 @@ export default function TranslationEditor({
   const [activeLocale, setActiveLocale] = useState(translatableLocales[0]);
   const [isTranslating, setIsTranslating] = useState(false);
   const [localeStatuses, setLocaleStatuses] = useState<Record<string, LocaleStatus>>({});
-  const [currentLocale, setCurrentLocale] = useState('');
   const translationsRef = useRef<Record<string, Record<string, unknown>>>({});
 
   // Keep a stable ref to onChange so the streaming callback always uses the latest version
@@ -121,7 +120,6 @@ export default function TranslationEditor({
   const handleAutoTranslate = async () => {
     if (!canAutoTranslate) return;
     setIsTranslating(true);
-    setCurrentLocale('');
     translationsRef.current = { ...value };
 
     // Initialize all locale statuses to pending
@@ -189,7 +187,6 @@ export default function TranslationEditor({
       setTimeout(() => {
         setIsTranslating(false);
         setLocaleStatuses({});
-        setCurrentLocale('');
       }, 2000);
     }
   };
@@ -198,7 +195,6 @@ export default function TranslationEditor({
     switch (event) {
       case 'translating': {
         const locale = data.locale as string;
-        setCurrentLocale(locale);
         setLocaleStatuses((prev) => ({ ...prev, [locale]: 'translating' }));
         break;
       }

@@ -72,7 +72,7 @@ export default function ReviewsStructuredData() {
   return (
     <script
       type="application/ld+json"
-      // eslint-disable-next-line react/no-danger
+
       dangerouslySetInnerHTML={{ __html: serializeJsonLd(ld, 2) }}
     />
   );

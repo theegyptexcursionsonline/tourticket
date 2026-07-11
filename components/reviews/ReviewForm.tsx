@@ -7,10 +7,13 @@ import { Star, Loader2, User, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from '@/i18n/routing';
 import { useLocale, useTranslations } from 'next-intl';
+import Image from 'next/image';
+import type { Review } from '@/types';
+import { getErrorMessage } from '../componentTypes';
 
 interface ReviewFormProps {
   tourId: string;
-  onReviewSubmitted: (newReview: any) => void;
+  onReviewSubmitted: (newReview: Review & Record<string, unknown>) => void;
   onBookNow?: () => void;
 }
 
@@ -23,7 +26,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
   const [comment, setComment] = useState('');
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasExistingReview, setHasExistingReview] = useState<any>(null);
+  const [hasExistingReview, setHasExistingReview] = useState<Review | null>(null);
   const [canReview, setCanReview] = useState(false);
   const [eligibilityReason, setEligibilityReason] = useState<string | null>(null);
   const [isCheckingExisting, setIsCheckingExisting] = useState(false);
@@ -177,7 +180,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
         toast.success(data.message || t('success.submitted'));
         
         if (data.data) {
-          onReviewSubmitted(data.data);
+          onReviewSubmitted(data.data as Review & Record<string, unknown>);
         }
         
         // Reset form
@@ -189,9 +192,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
         throw new Error(data.error || t('errors.submitFailed'));
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Review submission error:', error);
-      toast.error(error.message || t('errors.unexpected'));
+      toast.error(getErrorMessage(error, t('errors.unexpected')));
     } finally {
       setIsSubmitting(false);
     }
@@ -230,7 +233,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
           <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('existing.title')}</h3>
           <p className="text-gray-600 mb-4">
             {t('existing.subtitle', {
-              date: new Date(hasExistingReview.createdAt).toLocaleDateString(locale),
+              date: new Date(hasExistingReview.createdAt || 0).toLocaleDateString(locale),
             })}
           </p>
           <div className="bg-white p-4 rounded-lg border border-blue-200 mb-4">
@@ -335,9 +338,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
           {user?.picture ? (
-            <img 
+            <Image
               src={user.picture} 
               alt={user.name || t('userFallback')} 
+              width={40}
+              height={40}
+              unoptimized
               className="w-full h-full object-cover"
             />
           ) : (

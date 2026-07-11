@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useSyncExternalStore, FC } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,10 +11,9 @@ import { useSettings } from '@/hooks/useSettings';
 import { Currency, Language } from '@/types';
 
 // --- REUSABLE MODAL COMPONENT WITH PORTAL ---
-interface Item { 
-  code: string; 
-  name: string; 
-  [key: string]: any; 
+interface Item {
+  code: string;
+  name: string;
 }
 
 interface SettingsModalProps<T extends Item> {

@@ -220,7 +220,6 @@ const AdminSidebar = () => {
       <aside
         className={`relative bg-white border-r border-slate-200/60 backdrop-blur-sm flex flex-col transition-all duration-300 ease-out shadow-lg overflow-hidden flex-shrink-0 h-full ${sidebarWidth} ${mobileClass}`}
         aria-label="Admin navigation"
-        aria-expanded={isMobile ? isMobileOpen : isOpen}
       >
         {/* Header */}
         <div

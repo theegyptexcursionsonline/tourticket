@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { Destination } from '@/types';
-import { Loader2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 interface DestinationWithTourCount extends Destination {

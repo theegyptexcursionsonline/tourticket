@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { forwardRef, useEffect, useRef, useState } from 'react';
+import type { Category, Tour } from '@/types';
 
 const IcebarPromo = dynamic(() => import('@/components/IcebarPromo'), { ssr: false });
 const FeaturedToursServer = dynamic(() => import('@/components/FeaturedToursServer'), { ssr: false });
@@ -15,11 +16,26 @@ const Footer = dynamic(() => import('@/components/Footer'), { ssr: false });
 const HomeBlogSection = dynamic(() => import('@/components/HomeBlogSection'), { ssr: false });
 
 interface HomeDeferredSectionsProps {
-  tours: any[];
-  featuredInterests: any[];
-  categoryPages: any[];
-  categories: any[];
-  dayTrips: any[];
+  tours: Tour[];
+  featuredInterests: Array<{
+    _id: string;
+    type: 'category' | 'attraction';
+    name: string;
+    slug: string;
+    products: number;
+    featured?: boolean;
+    image?: string;
+  }>;
+  categoryPages: Array<{
+    _id: string;
+    slug: string;
+    pageType: 'category';
+    isPublished: boolean;
+    heroImage?: string;
+    categoryId?: { name: string; slug: string };
+  }>;
+  categories: Category[];
+  dayTrips: Tour[];
 }
 
 export default function HomeDeferredSections({
@@ -45,7 +61,7 @@ export default function HomeDeferredSections({
       {featuredReady ? (
         <>
           <IcebarPromo />
-          <FeaturedToursServer tours={featuredTours as any} />
+          <FeaturedToursServer tours={featuredTours} />
         </>
       ) : (
         <DeferredSentinel ref={featuredRef} minHeight="40vh" />
@@ -53,7 +69,7 @@ export default function HomeDeferredSections({
 
       {featuredReady && (
         popularReady ? (
-          <PopularInterestServer interests={popularInterests as any} categoryPages={categoryPages as any} />
+          <PopularInterestServer interests={popularInterests} categoryPages={categoryPages} />
         ) : (
           <DeferredSentinel ref={popularRef} minHeight="28vh" />
         )
@@ -61,7 +77,7 @@ export default function HomeDeferredSections({
 
       {popularReady && (
         categoriesReady ? (
-          <InterestGridServer categories={interestCategories as any} />
+          <InterestGridServer categories={interestCategories} />
         ) : (
           <DeferredSentinel ref={categoriesRef} minHeight="24vh" />
         )
@@ -69,7 +85,7 @@ export default function HomeDeferredSections({
 
       {categoriesReady && (
         dayTripsReady ? (
-          <DayTripsServer tours={featuredDayTrips as any} />
+          <DayTripsServer tours={featuredDayTrips} />
         ) : (
           <DeferredSentinel ref={dayTripsRef} minHeight="24vh" />
         )

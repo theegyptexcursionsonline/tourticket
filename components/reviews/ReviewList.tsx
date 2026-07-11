@@ -7,6 +7,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Review } from '@/types';
 import toast from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
+import Image from 'next/image';
+import { getErrorMessage } from '../componentTypes';
+
+interface ReviewUser {
+  _id?: string;
+  id?: string;
+  name?: string;
+  picture?: string;
+}
+
+const getReviewUser = (review: Review): ReviewUser | null =>
+  typeof review.user === 'object' && review.user !== null
+    ? review.user as unknown as ReviewUser
+    : null;
 
 interface ReviewListProps {
   reviews: Review[];
@@ -81,9 +95,9 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
 
       toast.success(t('toasts.updatedSuccess'));
       cancelEdit();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Update review error:', error);
-      toast.error(error.message || t('errors.updateFailed'));
+      toast.error(getErrorMessage(error, t('errors.updateFailed')));
     } finally {
       setIsUpdating(false);
     }
@@ -115,16 +129,16 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
       }
 
       toast.success(t('toasts.deletedSuccess'));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Delete review error:', error);
-      toast.error(error.message || t('errors.deleteFailed'));
+      toast.error(getErrorMessage(error, t('errors.deleteFailed')));
     } finally {
       setIsDeleting(null);
     }
   };
 
   const isReviewOwner = (review: Review) => {
-    const reviewUser = review.user as any;
+    const reviewUser = getReviewUser(review);
     return (
       user &&
       reviewUser &&
@@ -145,19 +159,23 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
       <h3 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h3>
 
       <div className="grid gap-4">
-        {reviews.map((review) => (
-          <article
+        {reviews.map((review) => {
+          const reviewUser = getReviewUser(review);
+          return <article
             key={review._id}
             className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-5"
             aria-labelledby={`review-title-${review._id}`}
           >
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
-                {(review.user as any)?.picture ? (
-                  <img
+                {reviewUser?.picture ? (
+                  <Image
                     className="h-10 w-10 rounded-full object-cover ring-1 ring-gray-200"
-                    src={(review.user as any).picture}
-                    alt={(review.user as any).name || t('reviewerAvatar')}
+                    src={reviewUser.picture}
+                    alt={reviewUser.name || t('reviewerAvatar')}
+                    width={40}
+                    height={40}
+                    unoptimized
                   />
                 ) : (
                   <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center ring-1 ring-gray-200">
@@ -170,7 +188,7 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p id={`review-title-${review._id}`} className="text-base font-semibold text-gray-900">
-                      {(review.user as any)?.name || t('anonymous')}
+                      {reviewUser?.name || t('anonymous')}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {formatDate(review.createdAt || '')}
@@ -302,8 +320,8 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, onReviewUpdated, onRev
                 )}
               </div>
             </div>
-          </article>
-        ))}
+          </article>;
+        })}
       </div>
     </div>
   );

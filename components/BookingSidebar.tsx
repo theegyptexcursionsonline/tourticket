@@ -1815,7 +1815,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
   const getParticipantsText = useCallback(() => {
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
-    let text = `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`;
+    const text = `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`;
     const details = [];
 
     if (bookingData.adults > 0) details.push(`${bookingData.adults} adult${bookingData.adults > 1 ? 's' : ''}`);

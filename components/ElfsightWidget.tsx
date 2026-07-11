@@ -21,6 +21,11 @@ type Props = {
 
 const DEFAULT_APP_ID = '0fea9001-da59-4955-b598-76327377c50c';
 
+interface ElfsightWindow extends Window {
+  elfsightInit?: () => void;
+  Elf?: { init?: () => void };
+}
+
 export default function ElfsightWidget({
   className = '',
   width = '100%',
@@ -29,8 +34,7 @@ export default function ElfsightWidget({
 }: Props) {
   useEffect(() => {
     // Try to initialize/re-init widget after platform.js loads (or if already loaded).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
+    const w = window as ElfsightWindow;
 
     const tryInit = () => {
       try {
@@ -43,7 +47,7 @@ export default function ElfsightWidget({
           // This is safe — it will stop once the script loads.
           // Limit number of retries to avoid runaway loops.
         }
-      } catch (e) {
+      } catch {
         // swallow
       }
     };

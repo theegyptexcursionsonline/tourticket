@@ -1,10 +1,15 @@
 'use client';
 
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
-import { InstantSearch, Chat, SearchBox, Hits, Configure, useInstantSearch } from 'react-instantsearch';
-import { Sparkles, MessageCircle, Zap, Shield, Globe2, AlertCircle, ArrowRight, MapPin, DollarSign, Clock } from 'lucide-react';
+import { InstantSearch, Chat, SearchBox, Hits, useInstantSearch } from 'react-instantsearch';
+import { Sparkles, MessageCircle, Zap, Shield, Globe2, AlertCircle, MapPin, Clock } from 'lucide-react';
 import 'instantsearch.css/themes/satellite.css';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import type { SearchHit } from '../componentTypes';
+
+type ChatProps = React.ComponentProps<typeof Chat> & { placeholder?: string };
+const ChatWithPlaceholder = Chat as React.ComponentType<ChatProps>;
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
@@ -42,7 +47,7 @@ const NoResultsBoundary = ({ children, fallback }: { children: React.ReactNode; 
 };
 
 // Compact hit component for Crunchbase-style display
-const CompactHit = ({ hit }: any) => {
+const CompactHit = ({ hit }: { hit: SearchHit }) => {
   return (
     <a
       href={`/${hit.slug}`}
@@ -52,9 +57,12 @@ const CompactHit = ({ hit }: any) => {
         {/* Tour Image */}
         {hit.image && (
           <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100">
-            <img
+            <Image
               src={hit.image}
-              alt={hit.title}
+              alt={hit.title || 'Tour'}
+              width={48}
+              height={48}
+              unoptimized
               className="w-full h-full object-cover"
             />
           </div>
@@ -407,12 +415,12 @@ export default function AlgoliaChat({ initialQuery, minimal = false }: AlgoliaCh
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-indigo-100/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
-                <Chat
+                <ChatWithPlaceholder
                   agentId={AGENT_ID}
+                  placeholder="Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')"
                   classNames={{
                     root: 'min-h-[500px] algolia-chat-enhanced',
                   }}
-                  {...{ placeholder: "Type your question here... (e.g., 'Find romantic sunset cruises in Cairo')" } as any}
                 />
               </div>
             </div>

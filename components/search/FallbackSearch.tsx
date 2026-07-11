@@ -10,9 +10,26 @@ import {
   Pagination,
   Configure
 } from 'react-instantsearch';
-import { Sparkles, MapPin, Clock, Star, DollarSign } from 'lucide-react';
+import { Sparkles, MapPin, Clock, Star } from 'lucide-react';
 import 'instantsearch.css/themes/satellite.css';
 import { Link } from '@/i18n/routing';
+import Image from 'next/image';
+
+interface TourHitData {
+  slug: string;
+  title: string;
+  image?: string;
+  isFeatured?: boolean;
+  description?: string;
+  location?: string;
+  duration?: string | number;
+  rating?: number;
+  reviewCount?: number;
+  discountPrice?: number;
+  price?: number;
+  category?: { name?: string };
+  destination?: { name?: string };
+}
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '1F31U1NOMS';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || '90dc77f33842e5ca1ad27ba3e42bbc50';
@@ -25,16 +42,19 @@ interface FallbackSearchProps {
 }
 
 // Custom Hit Component for displaying tour results
-function TourHit({ hit }: { hit: any }) {
+function TourHit({ hit }: { hit: TourHitData }) {
   return (
     <Link href={`/${hit.slug}`} className="block">
       <div className="bg-white rounded-xl border-2 border-slate-200 hover:border-blue-400 transition-all hover:shadow-lg p-4 group">
         {/* Tour Image */}
         {hit.image && (
           <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
-            <img
+            <Image
               src={hit.image}
-              alt={hit.title}
+              alt={hit.title || 'Tour'}
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
             {hit.isFeatured && (
@@ -69,10 +89,10 @@ function TourHit({ hit }: { hit: any }) {
                 <span>{hit.duration} {hit.duration === 1 ? 'day' : 'days'}</span>
               </div>
             )}
-            {hit.rating > 0 && (
+            {(hit.rating ?? 0) > 0 && (
               <div className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                <span>{hit.rating.toFixed(1)} ({hit.reviewCount || 0})</span>
+                <span>{hit.rating?.toFixed(1)} ({hit.reviewCount || 0})</span>
               </div>
             )}
           </div>
@@ -80,7 +100,7 @@ function TourHit({ hit }: { hit: any }) {
           {/* Pricing */}
           <div className="flex items-center justify-between pt-2 border-t border-slate-200">
             <div className="flex items-center gap-2">
-              {hit.discountPrice && hit.discountPrice < hit.price ? (
+              {hit.discountPrice && hit.price && hit.discountPrice < hit.price ? (
                 <>
                   <span className="text-lg font-bold text-blue-600">
                     ${hit.discountPrice}

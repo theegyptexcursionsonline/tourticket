@@ -4,10 +4,9 @@ import React, { useState } from 'react';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowRight, Star, Users, Clock, MapPin, Search, Filter, 
-  Grid, List, Eye, Heart, Share2, Award, Calendar, Euro, DollarSign,
-  MessageCircle, ChevronDown, ChevronUp
+import {
+  ArrowRight, Star, Users, Clock, MapPin, Search, Filter,
+  Grid, List, MessageCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { CategoryPageData, Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -85,10 +84,10 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
               <Users className="w-4 h-4" />
               <span>Max {tour.maxGroupSize || 15}</span>
             </div>
-            {(tour as any).reviewCount > 0 && (
+            {(tour.reviewCount ?? 0) > 0 && (
               <div className="flex items-center gap-1">
                 <MessageCircle className="w-4 h-4" />
-                <span>{(tour as any).reviewCount} reviews</span>
+                <span>{tour.reviewCount} reviews</span>
               </div>
             )}
           </div>
@@ -176,10 +175,10 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
                   {destination.name}
                 </span>
               )}
-              {(tour as any).reviewCount > 0 && (
+              {(tour.reviewCount ?? 0) > 0 && (
                 <span className="flex items-center gap-1">
                   <MessageCircle className="h-4 w-4" />
-                  {(tour as any).reviewCount} reviews
+                  {tour.reviewCount} reviews
                 </span>
               )}
             </div>
@@ -428,7 +427,7 @@ export default function AttractionPageTemplate({ page, urlType }: AttractionPage
 
   // Filter and sort tours based on search and sort criteria
   const filteredAndSortedTours = React.useMemo(() => {
-    let filtered = page.tours?.filter(tour =>
+    const filtered = page.tours?.filter(tour =>
       tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tour.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tour.highlights?.some(highlight => 

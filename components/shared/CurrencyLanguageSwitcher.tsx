@@ -1,7 +1,7 @@
 // components/shared/CurrencyLanguageSwitcher.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo, FC } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Globe, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/hooks/useSettings';
@@ -13,7 +13,7 @@ import { routing } from '@/i18n/routing';
 // =================================================================
 // --- REUSABLE MODAL COMPONENT ---
 // =================================================================
-interface Item { code: string; name: string; [key: string]: any; }
+interface Item { code: string; name: string; }
 interface SettingsModalProps<T extends Item> {
   isOpen: boolean; onClose: () => void; title: string; items: T[];
   selectedItem: T; onSelectItem: (item: T) => void; renderItem: (item: T) => React.ReactNode;
@@ -158,7 +158,7 @@ export default function CurrencyLanguageSwitcher({
   const handleLanguageSelect = (language: Language) => {
     setSelectedLanguage(language);
     // Navigate to the locale URL if it's a supported locale
-    if (routing.locales.includes(language.code as any)) {
+    if (routing.locales.includes(language.code as (typeof routing.locales)[number])) {
       router.replace(pathname, { locale: language.code });
     }
   };

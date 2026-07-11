@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { getErrorMessage } from '../componentTypes';
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -58,8 +59,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
 
       // Close modal
       onClose();
-    } catch (error: any) {
-      toast.error(error.message || 'Signup failed. Please try again.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Signup failed. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -79,10 +80,11 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
 
       // Close modal
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Only show error if it's not a user-cancelled action
-      if (!error.message?.includes('closed') && !error.message?.includes('cancelled')) {
-        toast.error(error.message || 'Google sign-in failed.');
+      const message = getErrorMessage(error, 'Google sign-in failed.');
+      if (!message.includes('closed') && !message.includes('cancelled')) {
+        toast.error(message);
       }
     } finally {
       setIsGoogleLoading(false);
