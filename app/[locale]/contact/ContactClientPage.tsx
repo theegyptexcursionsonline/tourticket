@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, Loader2, MapPin, Clock, Send } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import Script from 'next/script';
@@ -80,7 +81,7 @@ function ModernHero() {
           transition={{ delay: 0.7, duration: 0.8 }}
           className="mt-6 text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto text-slate-300 leading-relaxed font-light"
         >
-          Have a question? We're here to help you plan your perfect Egyptian adventure.
+          Have a question? We&apos;re here to help you plan your perfect Egyptian adventure.
           <br />
           <span className="text-red-400 font-medium">Our travel experts are ready to assist you.</span>
         </motion.p>
@@ -383,7 +384,7 @@ export default function ContactClientPage() {
                       <h2 className="text-3xl font-black text-slate-900 mb-2 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
                         Send us a Message
                       </h2>
-                      <p className="text-slate-600 font-medium">We'll get back to you within 24 hours</p>
+                      <p className="text-slate-600 font-medium">We&apos;ll get back to you within 24 hours</p>
 
                       {/* Security badge */}
                       <div className="flex items-center gap-2 mt-3">
@@ -528,9 +529,9 @@ export default function ContactClientPage() {
 
                     <p className="text-xs text-slate-500 text-center leading-relaxed">
                       By submitting this form, you agree to our{' '}
-                      <a href="/privacy" className="text-red-600 hover:text-red-700 font-medium underline">privacy policy</a>
+                      <Link href="/privacy" className="text-red-600 hover:text-red-700 font-medium underline">privacy policy</Link>
                       {' '}and{' '}
-                      <a href="/terms" className="text-red-600 hover:text-red-700 font-medium underline">terms of service</a>.
+                      <Link href="/terms" className="text-red-600 hover:text-red-700 font-medium underline">terms of service</Link>.
                     </p>
 
                     {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
@@ -613,7 +614,7 @@ export default function ContactClientPage() {
                     </div>
 
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Located in the heart of Cairo, we're ready to help you plan your perfect Egyptian adventure. Visit us for personalized consultation.
+                      Located in the heart of Cairo, we&apos;re ready to help you plan your perfect Egyptian adventure. Visit us for personalized consultation.
                     </p>
 
                     {/* Map link button */}
@@ -784,4 +785,3 @@ export default function ContactClientPage() {
     </div>
   );
 }
-

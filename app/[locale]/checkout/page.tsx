@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -363,7 +364,7 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
           {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Complete Booking & Pay</span>}
         </button>
         <p className="text-xs text-slate-500 text-center mt-3">
-          By completing this booking you agree to our <a className="underline" href="/terms">Terms of Service</a>.
+          By completing this booking you agree to our <Link className="underline" href="/terms">Terms of Service</Link>.
         </p>
       </div>
     </aside>

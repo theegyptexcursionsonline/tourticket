@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -545,7 +546,7 @@ const SearchModal_REMOVED: FC<{ onClose: () => void; onSearch: (term: string) =>
 
         {!loading && searchTerm.length > 2 && searchResults.length === 0 && (
           <div className="text-center py-8 text-slate-500">
-            <p>No tours found for "{searchTerm}". Try a different search.</p>
+            <p>No tours found for &quot;{searchTerm}&quot;. Try a different search.</p>
           </div>
         )}
 
@@ -645,7 +646,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                 <Star size={32} className="text-yellow-500 mb-2" />
                 <h3 className="font-bold text-lg text-gray-800">Special Offers</h3>
                 <p className="text-sm text-gray-600 my-2">Save up to 20% on combi deals and city passes!</p>
-                <a href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">View Deals</a>
+                <Link href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">View Deals</Link>
               </div>
             </div>
           </div>
@@ -687,9 +688,9 @@ const UserMenu: FC<{ user: any; onLogout: () => void }> = ({ user, onLogout }) =
             </div>
 
             <div className="py-2">
-              <a href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>My Profile</span></a>
-              <a href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>My Bookings</span></a>
-              <a href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Heart size={16} /><span>Favorites</span></a>
+              <Link href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>My Profile</span></Link>
+              <Link href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>My Bookings</span></Link>
+              <Link href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Heart size={16} /><span>Favorites</span></Link>
             </div>
 
             <div className="border-t py-2">
@@ -777,16 +778,16 @@ const MobileMenu: FC<{
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <a href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Profile</a>
-                    <a href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Bookings</a>
+                    <Link href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Profile</Link>
+                    <Link href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Bookings</Link>
                     <button onClick={() => { logout(); onClose(); }} className="block py-2 text-red-600 hover:text-red-700 w-full text-left">Sign Out</button>
                   </div>
                 </div>
               ) : (
                 <div className="p-6 border-b">
                   <div className="space-y-3">
-                    <a href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">Log In</a>
-                    <a href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">Sign Up</a>
+                    <Link href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">Log In</Link>
+                    <Link href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">Sign Up</Link>
                   </div>
                 </div>
               )}
@@ -895,9 +896,9 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             <div className="flex items-center gap-4 lg:gap-8">
-              <a href="/" className="flex items-center h-full">
+              <Link href="/" className="flex items-center h-full">
                 <img src="/EEO-logo.png" alt="Egypt Excursions Online" className="h-12 md:h-14 lg:h-16 object-contain transition-colors duration-300" />
-              </a>
+              </Link>
 
               <nav className="hidden md:flex items-center relative">
                 <button
@@ -945,8 +946,8 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
                 <UserMenu user={user} onLogout={logout} />
               ) : (
                 <div className="hidden md:flex items-center gap-3">
-                  <a href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>Log In</a>
-                  <a href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">Sign Up</a>
+                  <Link href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>Log In</Link>
+                  <Link href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">Sign Up</Link>
                 </div>
               )}
 

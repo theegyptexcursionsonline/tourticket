@@ -2034,14 +2034,14 @@ const FAQSection = ({ destinationName }: { destinationName: string }) => {
           ))}
         </div>
         <div className="text-center mt-8 sm:mt-12">
-          <a
+          <Link
             href="/faqs"
             className="inline-flex justify-center items-center h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base font-bold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out rounded-full"
             role="button"
             aria-label={copy.faqViewAllAria}
           >
             {copy.faqViewAll}
-          </a>
+          </Link>
         </div>
       </div>
     </section>

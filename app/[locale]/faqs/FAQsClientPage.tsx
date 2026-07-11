@@ -6,6 +6,7 @@ import {
   Menu, Search, ChevronDown, Plus, Minus
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 // Import reusable components
 import Header from "@/components/Header";
@@ -280,12 +281,12 @@ export default function FAQsPage() {
             <p className="text-lg text-slate-700">
               Still have questions? Our team is here to help.
             </p>
-            <a 
+            <Link
               href="/contact" 
               className="mt-4 inline-block px-8 py-3 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition-colors"
             >
               Contact Us
-            </a>
+            </Link>
           </section>
         </div>
       </main>

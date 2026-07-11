@@ -6,6 +6,7 @@ import { X, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -244,7 +245,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
             {/* Footer */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 {onSwitchToSignup ? (
                   <button
                     type="button"
@@ -254,9 +255,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
                     Sign up
                   </button>
                 ) : (
-                  <a href="/signup" className="text-blue-600 hover:underline font-medium">
+                  <Link href="/signup" className="text-blue-600 hover:underline font-medium">
                     Sign up
-                  </a>
+                  </Link>
                 )}
               </p>
             </div>
