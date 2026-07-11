@@ -147,11 +147,11 @@ export async function PUT(
     console.error('❌ Error updating attraction page:', error);
     
     // Handle validation errors
-    if (error instanceof Error && error.name === 'ValidationError') {
+    if (error instanceof Error && (error as Error).name === 'ValidationError') {
       return NextResponse.json({
         success: false,
         error: 'Validation error',
-        details: error.message
+        details: (error as Error).message
       }, { status: 400 });
     }
     

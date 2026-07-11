@@ -7,6 +7,39 @@ import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
 
+interface CategorySummary {
+  _id: unknown;
+  name: string;
+  slug: string;
+}
+
+interface AttractionPageView {
+  _id: unknown;
+  pageType: 'category' | 'attraction';
+  categoryId?: unknown | CategorySummary | null;
+  title: string;
+  keywords?: string[];
+  highlights?: string[];
+}
+
+interface TourView {
+  _id: { toString(): string };
+  title: string;
+  image: string;
+  rating?: number;
+}
+
+interface ReviewView {
+  user?: { firstName?: string; lastName?: string; picture?: string } | null;
+  userName?: string;
+}
+
+interface ReviewStat {
+  _id: { toString(): string };
+  count: number;
+  avgRating: number;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -32,7 +65,7 @@ export async function GET(
     }
 
     // Populate category if exists
-    let populatedPage: any = { ...page };
+    const populatedPage = { ...page } as unknown as AttractionPageView;
     if (page.categoryId) {
       try {
         const category = await Category.findById(page.categoryId).select('name slug').lean();
@@ -43,11 +76,14 @@ export async function GET(
       }
     }
 
-    let tours: any[] = [];
+    let tours: TourView[] = [];
     let totalTours = 0;
 
     if (populatedPage.pageType === 'category' && populatedPage.categoryId) {
       console.log('Fetching tours for category:', populatedPage.categoryId);
+      const categoryId = typeof populatedPage.categoryId === 'object' && '_id' in populatedPage.categoryId
+        ? populatedPage.categoryId._id
+        : populatedPage.categoryId;
 
       // For category/interest pages, fetch tours linked via interests field OR category field
       tours = await Tour.find({
@@ -56,7 +92,7 @@ export async function GET(
           {
             $or: [
               { interests: page._id },
-              { category: populatedPage.categoryId._id || populatedPage.categoryId }
+              { category: categoryId }
             ]
           }
         ]
@@ -72,7 +108,7 @@ export async function GET(
         select: 'name slug'
       })
       .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-      .lean();
+      .lean() as unknown as TourView[];
 
       totalTours = await Tour.countDocuments({
         $and: [
@@ -80,7 +116,7 @@ export async function GET(
           {
             $or: [
               { interests: page._id },
-              { category: populatedPage.categoryId._id || populatedPage.categoryId }
+              { category: categoryId }
             ]
           }
         ]
@@ -104,7 +140,7 @@ export async function GET(
           select: 'name slug'
         })
         .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-        .lean();
+        .lean() as unknown as TourView[];
 
       totalTours = await Tour.countDocuments({
         attractions: page._id,
@@ -158,7 +194,7 @@ export async function GET(
           })
           .sort({ isFeatured: -1, rating: -1, bookings: -1 })
           .limit(50)
-          .lean();
+          .lean() as unknown as TourView[];
 
           totalTours = tours.length;
         }
@@ -182,7 +218,7 @@ export async function GET(
         })
         .sort({ rating: -1, bookings: -1 })
         .limit(20)
-        .lean();
+        .lean() as unknown as TourView[];
 
         totalTours = tours.length;
       }
@@ -192,8 +228,8 @@ export async function GET(
 
     // Fetch reviews for the tours
     const tourIds = tours.map(tour => tour._id);
-    let reviews: any[] = [];
-    let reviewStats: any[] = [];
+    let reviews: ReviewView[] = [];
+    let reviewStats: ReviewStat[] = [];
 
     if (tourIds.length > 0) {
       reviews = await Review.find({
@@ -206,10 +242,10 @@ export async function GET(
       })
       .sort({ createdAt: -1 })
       .limit(50)
-      .lean();
+      .lean() as unknown as ReviewView[];
 
       // Calculate review counts and average ratings for each tour
-      reviewStats = await Review.aggregate([
+      reviewStats = await Review.aggregate<ReviewStat>([
         { $match: { tour: { $in: tourIds } } },
         { 
           $group: { 
@@ -227,7 +263,7 @@ export async function GET(
         avgRating: Math.round(item.avgRating * 10) / 10
       };
       return acc;
-    }, {});
+    }, {} as Record<string, { count: number; avgRating: number }>);
 
     // Update tours with review data
     tours = tours.map(tour => ({

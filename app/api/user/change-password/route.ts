@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const authentication = await authenticateCustomerBearer(request);
     if (!authentication.success) return NextResponse.json({ error: authentication.error }, { status: authentication.status });
-    const userId = (authentication.user._id as any).toString();
+    const userId = String(authentication.user._id);
     const user = await User.findOne({ _id: userId, isActive: true }).select('+password');
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 401 });
     if (user.authProvider === 'firebase' || user.authProvider === 'google') {
@@ -70,11 +70,11 @@ export async function POST(request: NextRequest) {
     console.error('Password change error:', error);
     
     if (error instanceof Error) {
-      if (error.name === 'ValidationError') {
+      if ((error as Error).name === 'ValidationError') {
         return NextResponse.json({ error: 'Invalid data provided' }, { status: 400 });
       }
       
-      if (error.name === 'CastError') {
+      if ((error as Error).name === 'CastError') {
         return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
       }
     }

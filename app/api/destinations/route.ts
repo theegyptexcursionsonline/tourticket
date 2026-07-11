@@ -8,6 +8,11 @@ import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
+interface DestinationListItem extends Record<string, unknown> {
+  tourCount: number;
+  featured?: boolean;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
@@ -38,9 +43,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Add tour counts to destinations
-    const destinationsWithCountsData = destinations.map((dest: any) => ({
+    const destinationsWithCountsData = destinations.map((dest) => ({
       ...dest,
-      tourCount: tourCounts[dest._id.toString()] || 0,
+      tourCount: tourCounts[String(dest._id)] || 0,
     }));
 
     const localizedDestinations = selectLocalizedTaxonomyEntries(
@@ -60,9 +65,9 @@ export async function GET(request: NextRequest) {
       ])
     );
 
-    const destinationsWithCounts = filterVisibleTaxonomyEntries(localizedDestinations)
-      .filter((dest: any) => (dest.tourCount || 0) > 0 || dest.featured)
-      .sort((a: any, b: any) => {
+    const destinationsWithCounts = (filterVisibleTaxonomyEntries(localizedDestinations) as DestinationListItem[])
+      .filter((dest) => (dest.tourCount || 0) > 0 || dest.featured)
+      .sort((a, b) => {
         // Featured first
         if (a.featured && !b.featured) return -1;
         if (!a.featured && b.featured) return 1;

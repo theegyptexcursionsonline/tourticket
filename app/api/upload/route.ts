@@ -1,6 +1,7 @@
 // File: app/api/upload/route.ts
 
 import { v2 as cloudinary } from 'cloudinary';
+import type { UploadApiResponse } from 'cloudinary';
 import { NextRequest, NextResponse } from 'next/server';
 import { Readable } from 'stream';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    const result: any = await new Promise((resolve, reject) => {
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           // --- THIS IS THE REQUIRED FIX ---
@@ -55,8 +56,10 @@ export async function POST(request: NextRequest) {
           if (error) {
             console.error('Cloudinary stream upload error:', error);
             reject(error);
-          } else {
+          } else if (result) {
             resolve(result);
+          } else {
+            reject(new Error('Cloudinary returned no upload result'));
           }
         }
       );

@@ -7,6 +7,7 @@ import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateValue: Date | string | undefined): string {
@@ -56,8 +57,8 @@ export async function POST(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    const user = booking.user as any;
-    const tour = booking.tour as any;
+    const user = booking.user as unknown as PopulatedBookingUser;
+    const tour = booking.tour as unknown as PopulatedBookingTour;
 
     // Check if already cancelled
     if (booking.status === 'Cancelled') {
@@ -90,7 +91,7 @@ export async function POST(
         customerEmail: user.email,
         tourTitle: tour.title,
         bookingDate: formatBookingDate(booking.date),
-        bookingId: (booking._id as any).toString(),
+        bookingId: String(booking._id),
         refundAmount: refundAmount > 0 ? `$${refundAmount.toFixed(2)}` : undefined,
         refundProcessingDays: refundAmount > 0 ? 5 : undefined,
         cancellationReason: reason,
@@ -108,7 +109,7 @@ export async function POST(
       refundPercentage: refundPercentage
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cancellation error:', error);
     return NextResponse.json(
       { error: 'Failed to cancel booking' },

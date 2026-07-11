@@ -36,6 +36,8 @@ export interface IFAQ {
 }
 
 export interface IBookingOption {
+  _id?: mongoose.Types.ObjectId;
+  id?: string;
   pricingKey?: string;
   type: string;
   label: string;
@@ -50,9 +52,11 @@ export interface IBookingOption {
   badge?: string;
   discount?: number;
   isRecommended?: boolean;
+  timeSlots?: string[];
 }
 
 export interface IAddOn {
+  _id?: mongoose.Types.ObjectId;
   name: string;
   description: string;
   price: number;
@@ -95,6 +99,7 @@ export interface ITourTranslation {
 
 // Complete Tour Interface
 export interface ITour extends Document {
+  tenantId?: string;
   // Basic fields
   title: string;
   slug: string;
@@ -172,6 +177,7 @@ export interface ITour extends Document {
 
   // Virtual fields
   reviewDetails?: unknown[];
+  reviewCount?: number;
 
   // Localized overrides by locale code (e.g. en, ar, de)
   translations?: Record<string, ITourTranslation>;

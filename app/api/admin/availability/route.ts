@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         // Ensure bookingOptions[].id exists (needed for option-level stop-sale)
         let changed = false;
         if (Array.isArray(tourDoc.bookingOptions)) {
-          tourDoc.bookingOptions = tourDoc.bookingOptions.map((opt: any) => {
+          tourDoc.bookingOptions = tourDoc.bookingOptions.map((opt) => {
             if (!opt) return opt;
             if (!opt.id) {
               changed = true;
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         if (changed) await tourDoc.save();
 
         const optionIds: string[] = Array.isArray(tourDoc.bookingOptions)
-          ? tourDoc.bookingOptions.map((o: any) => o?.id).filter(Boolean)
+          ? tourDoc.bookingOptions.map((o) => o?.id).filter((id): id is string => typeof id === 'string')
           : [];
 
         // Initialize all days of month to "none" so UI can rely on presence
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge stop-sale info into availability list; also surface legacy Availability.stopSale as full stop-sale.
-    const availabilityByDate = new Map<string, any>();
+    const availabilityByDate = new Map<string, unknown>();
     for (const item of availability) {
       const key = toKey(new Date(item.date));
       const stopSaleInfo = stopSaleByDate[key] || { status: 'none', stoppedOptionIds: [], reasons: {} };
@@ -361,7 +361,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const operations = [];
-    const stopSaleOps: any[] = [];
+    interface StopSaleOperation {
+      updateOne?: { filter: Record<string, unknown>; update: Record<string, unknown>; upsert?: boolean };
+      deleteMany?: { filter: Record<string, unknown> };
+      deleteOne?: { filter: Record<string, unknown> };
+    }
+    const stopSaleOps: StopSaleOperation[] = [];
 
     for (const date of uniqueDates) {
       const updateData: Record<string, unknown> = {};
@@ -496,8 +501,8 @@ export async function PUT(request: NextRequest) {
           await StopSale.deleteOne(op.deleteOne.filter);
           stopSaleDeleted += 1;
         }
-      } catch (opError: any) {
-        if (opError?.code === 11000) {
+      } catch (opError: unknown) {
+        if ((opError as { code?: number }).code === 11000) {
           // Another request created the same record between our filter lookup
           // and the insert. Fall back to a plain update (no upsert) so we still
           // persist the caller's reason/updatedAt.
@@ -526,13 +531,13 @@ export async function PUT(request: NextRequest) {
         stopSaleDeleted,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error bulk updating availability:', error);
 
     // Surface duplicate-key races as a clear 409 so the admin modal can show a
     // specific toast ("already stop-saled, refresh the page") instead of a
     // generic 500 that looks like a server bug.
-    if (error?.code === 11000) {
+    if ((error as { code?: number }).code === 11000) {
       return NextResponse.json(
         {
           success: false,
@@ -548,7 +553,7 @@ export async function PUT(request: NextRequest) {
       {
         success: false,
         code: 'BULK_UPDATE_FAILED',
-        error: error?.message || 'Failed to bulk update availability',
+        error: error instanceof Error ? error.message : 'Failed to bulk update availability',
       },
       { status: 500 }
     );
@@ -579,7 +584,7 @@ export async function DELETE(request: NextRequest) {
 
     if (id) {
       // Delete by availability document ID
-      const candidate: any = await Availability.findById(id).select('tour').lean();
+      const candidate = await Availability.findById(id).select('tour').lean() as { tour?: unknown } | null;
       if (!candidate || !await Tour.exists({ _id: candidate.tour, ...DEFAULT_TENANT_FILTER })) {
         return NextResponse.json({ success: false, error: 'Availability not found' }, { status: 404 });
       }

@@ -1,6 +1,7 @@
 // lib/mailgun.ts (Final Clean Version)
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
+import type { MailgunMessageData } from 'mailgun.js/definitions';
 
 // Lazy initialization to avoid build-time errors when env vars are not set
 let mgClient: ReturnType<InstanceType<typeof Mailgun>['client']> | null = null;
@@ -53,7 +54,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     const DOMAIN = getDomain();
     const FROM_EMAIL = getFromEmail();
 
-    const messageData: any = {
+    const messageData: MailgunMessageData = {
       from: `Egypt Excursions Online <${FROM_EMAIL}>`,
       to: [options.to],
       subject: options.subject,
@@ -91,7 +92,9 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       });
     }
 
-    console.log(`📧 Sending email with inline: ${messageData.inline?.length || 0}, attachments: ${messageData.attachment?.length || 0}`);
+    const inlineCount = Array.isArray(messageData.inline) ? messageData.inline.length : messageData.inline ? 1 : 0;
+    const attachmentCount = Array.isArray(messageData.attachment) ? messageData.attachment.length : messageData.attachment ? 1 : 0;
+    console.log(`📧 Sending email with inline: ${inlineCount}, attachments: ${attachmentCount}`);
     const result = await mg.messages.create(DOMAIN, messageData);
     console.log(`📮 Mailgun response ID: ${result.id}`);
 

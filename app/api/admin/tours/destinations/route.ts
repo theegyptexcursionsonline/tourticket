@@ -124,7 +124,8 @@ export async function POST(request: NextRequest) {
    
   } catch (error) {
     if ((error as MongoError).code === 11000) {
-      const field = Object.keys((error as any).keyValue)[0];
+      const keyValue = (error as MongoError & { keyValue?: Record<string, unknown> }).keyValue || {};
+      const field = Object.keys(keyValue)[0] || 'field';
       return NextResponse.json({ success: false, error: `Destination with this ${field} already exists.` }, { status: 409 });
     }
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });

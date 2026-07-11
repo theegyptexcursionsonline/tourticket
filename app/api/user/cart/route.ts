@@ -3,6 +3,50 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
 
+interface CartAddOnInput {
+  id: string;
+  name?: string;
+  title?: string;
+  price?: number;
+  quantity?: unknown;
+  category?: string;
+  perGuest?: boolean;
+}
+
+interface CartItemInput {
+  id?: string;
+  tourId?: string;
+  slug?: string;
+  tourSlug?: string;
+  title?: string;
+  tourTitle?: string;
+  image?: string;
+  tourImage?: string;
+  selectedDate?: string;
+  selectedTime?: string;
+  quantity?: number;
+  childQuantity?: number;
+  adultPrice?: number;
+  price?: number;
+  childPrice?: number;
+  selectedAddOns?: CartAddOnInput[];
+  uniqueId: string;
+  addedAt?: string | Date;
+}
+
+const toNumberQty = (value: unknown, fallback = 1): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return toNumberQty(record.quantity ?? record.qty ?? record.count, fallback);
+  }
+  return fallback;
+};
+
 /**
  * GET /api/user/cart
  * Get user's cart
@@ -68,22 +112,10 @@ export async function PUT(request: NextRequest) {
 
     await dbConnect();
 
-    const toNumberQty = (value: any, fallback = 1): number => {
-      if (typeof value === 'number' && Number.isFinite(value)) return value;
-      if (typeof value === 'string') {
-        const parsed = Number(value);
-        if (Number.isFinite(parsed)) return parsed;
-        return fallback;
-      }
-      if (value && typeof value === 'object') {
-        const inner = (value as any).quantity ?? (value as any).qty ?? (value as any).count;
-        return toNumberQty(inner, fallback);
-      }
-      return fallback;
-    };
-
     // Transform cart items to match schema
-    const cartItems = cart.map((item: any) => ({
+    const cartItems = cart.map((rawItem) => {
+      const item = rawItem as CartItemInput;
+      return ({
       tourId: item.id || item.tourId,
       tourSlug: item.slug || item.tourSlug,
       tourTitle: item.title || item.tourTitle,
@@ -94,7 +126,7 @@ export async function PUT(request: NextRequest) {
       childQuantity: item.childQuantity || 0,
       adultPrice: item.adultPrice || item.price || 0,
       childPrice: item.childPrice || 0,
-      selectedAddOns: (item.selectedAddOns || []).map((addon: any) => ({
+      selectedAddOns: (item.selectedAddOns || []).map((addon: CartAddOnInput) => ({
         id: addon.id,
         name: addon.name || addon.title,
         price: addon.price || 0,
@@ -104,7 +136,8 @@ export async function PUT(request: NextRequest) {
       })),
       uniqueId: item.uniqueId,
       addedAt: item.addedAt || new Date(),
-    }));
+      });
+    });
 
     const user = await User.findByIdAndUpdate(
       authResult.user!._id,
@@ -147,7 +180,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const item = await request.json();
+    const item = await request.json() as CartItemInput;
 
     if (!item.tourId && !item.id) {
       return NextResponse.json(
@@ -157,20 +190,6 @@ export async function POST(request: NextRequest) {
     }
 
     await dbConnect();
-
-    const toNumberQty = (value: any, fallback = 1): number => {
-      if (typeof value === 'number' && Number.isFinite(value)) return value;
-      if (typeof value === 'string') {
-        const parsed = Number(value);
-        if (Number.isFinite(parsed)) return parsed;
-        return fallback;
-      }
-      if (value && typeof value === 'object') {
-        const inner = (value as any).quantity ?? (value as any).qty ?? (value as any).count;
-        return toNumberQty(inner, fallback);
-      }
-      return fallback;
-    };
 
     const cartItem = {
       tourId: item.id || item.tourId,
@@ -183,7 +202,7 @@ export async function POST(request: NextRequest) {
       childQuantity: item.childQuantity || 0,
       adultPrice: item.adultPrice || item.price || 0,
       childPrice: item.childPrice || 0,
-      selectedAddOns: (item.selectedAddOns || []).map((addon: any) => ({
+      selectedAddOns: (item.selectedAddOns || []).map((addon: CartAddOnInput) => ({
         id: addon.id,
         name: addon.name || addon.title,
         price: addon.price || 0,
@@ -205,7 +224,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existingIndex = user.cart?.findIndex(
-      (c: any) => c.uniqueId === item.uniqueId
+      (c) => c.uniqueId === item.uniqueId
     );
 
     let updatedUser;
@@ -216,7 +235,7 @@ export async function POST(request: NextRequest) {
         {
           $set: {
             [`cart.${existingIndex}.quantity`]:
-              (user.cart![existingIndex] as any).quantity + (item.quantity || 1),
+              user.cart![existingIndex].quantity + (item.quantity || 1),
           },
         },
         { new: true }

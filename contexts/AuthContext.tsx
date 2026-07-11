@@ -59,6 +59,12 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const getFirebaseErrorCode = (error: unknown): string | undefined => {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : undefined;
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -78,22 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       googleProvider,
       ...firebaseAuth,
     };
-  };
-
-  const shouldInitializeAuthForPath = () => {
-    if (typeof window === 'undefined') return false;
-    const isMobile = window.matchMedia('(max-width: 767px)').matches;
-    if (!isMobile) return true;
-
-    const path = pathname || '';
-    return [
-      '/login',
-      '/signup',
-      '/forgot',
-      '/checkout',
-      '/booking',
-      '/user',
-    ].some((segment) => path.includes(segment));
   };
 
   // --- Sync Firebase user with MongoDB and get user data ---
@@ -140,6 +130,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // --- Firebase auth state listener ---
   useEffect(() => {
+    const shouldInitializeAuthForPath = () => {
+      if (typeof window === 'undefined') return false;
+      const isMobile = window.matchMedia('(max-width: 767px)').matches;
+      if (!isMobile) return true;
+
+      const path = pathname || '';
+      return [
+        '/login',
+        '/signup',
+        '/forgot',
+        '/checkout',
+        '/booking',
+        '/user',
+      ].some((segment) => path.includes(segment));
+    };
+
     if (!shouldInitializeAuthForPath()) {
       queueMicrotask(() => setIsLoading(false));
       return;
@@ -258,23 +264,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       const { auth, signInWithEmailAndPassword } = await loadFirebaseAuth();
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       // User state will be updated by onAuthStateChanged listener
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
       let errorMessage = 'Failed to log in. Please check your credentials.';
 
-      if (error.code === 'auth/user-not-found') {
+      const errorCode = getFirebaseErrorCode(error);
+      if (errorCode === 'auth/user-not-found') {
         errorMessage = 'No account found with this email.';
-      } else if (error.code === 'auth/wrong-password') {
+      } else if (errorCode === 'auth/wrong-password') {
         errorMessage = 'Incorrect password.';
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (errorCode === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/user-disabled') {
+      } else if (errorCode === 'auth/user-disabled') {
         errorMessage = 'This account has been disabled.';
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (errorCode === 'auth/too-many-requests') {
         errorMessage = 'Too many failed login attempts. Please try again later.';
-      } else if (error.code === 'auth/invalid-credential') {
+      } else if (errorCode === 'auth/invalid-credential') {
         errorMessage = 'Invalid credentials. Please check your email and password.';
       }
 
@@ -305,17 +312,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await updateProfile(userCredential.user, { displayName });
 
       // User will be synced with backend by onAuthStateChanged listener
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Signup error:', error);
       let errorMessage = 'Failed to create account. Please try again.';
 
-      if (error.code === 'auth/email-already-in-use') {
+      const errorCode = getFirebaseErrorCode(error);
+      if (errorCode === 'auth/email-already-in-use') {
         errorMessage = 'An account with this email already exists. Please log in instead.';
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (errorCode === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/weak-password') {
+      } else if (errorCode === 'auth/weak-password') {
         errorMessage = 'Password should be at least 6 characters.';
-      } else if (error.code === 'auth/operation-not-allowed') {
+      } else if (errorCode === 'auth/operation-not-allowed') {
         errorMessage = 'Email/password accounts are not enabled.';
       }
 
@@ -330,19 +338,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       const { auth, googleProvider, signInWithPopup } = await loadFirebaseAuth();
-      const userCredential = await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
       // User state will be updated by onAuthStateChanged listener
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google login error:', error);
       let errorMessage = 'Failed to sign in with Google.';
 
-      if (error.code === 'auth/popup-closed-by-user') {
+      const errorCode = getFirebaseErrorCode(error);
+      if (errorCode === 'auth/popup-closed-by-user') {
         errorMessage = 'Sign-in popup was closed.';
-      } else if (error.code === 'auth/cancelled-popup-request') {
+      } else if (errorCode === 'auth/cancelled-popup-request') {
         errorMessage = 'Sign-in was cancelled.';
-      } else if (error.code === 'auth/popup-blocked') {
+      } else if (errorCode === 'auth/popup-blocked') {
         errorMessage = 'Sign-in popup was blocked. Please allow popups and try again.';
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
+      } else if (errorCode === 'auth/account-exists-with-different-credential') {
         errorMessage = 'An account already exists with this email using a different sign-in method.';
       }
 

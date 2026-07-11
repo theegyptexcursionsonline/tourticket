@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import Tour from '@/lib/models/Tour';
+import Tour, { type IBookingOption } from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { authenticateRevenueRequest } from '@/lib/revenue/machineResponse';
 import { STANDARD_OPTION_KEY, catalogueGuestPrices } from '@/lib/revenue/pricingResolver';
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const auth = await authenticateRevenueRequest(request);
   if (auth.response) return auth.response;
   await dbConnect();
-  const tours: any[] = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
+  const tours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
     .select('_id title slug discountPrice originalPrice bookingOptions pricingSummary updatedAt')
     .sort({ _id: 1 }).lean();
   return NextResponse.json({
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       pricingSummary: tour.pricingSummary || null,
       options: [
         { key: STANDARD_OPTION_KEY, label: 'Standard Experience', guestPrices: catalogueGuestPrices(Number(tour.discountPrice)) },
-        ...(tour.bookingOptions || []).map((option: any) => ({
+        ...(tour.bookingOptions || []).map((option: IBookingOption) => ({
           key: option.pricingKey, label: option.label, type: option.type,
           guestPrices: catalogueGuestPrices(Number(option.price)),
         })),

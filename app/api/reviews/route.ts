@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .lean();
     return NextResponse.json({ success: true, data: reviews });
-  } catch (error) {
+    } catch {
     return NextResponse.json({ success: false, error: 'Failed to fetch reviews' }, { status: 500 });
   }
 }

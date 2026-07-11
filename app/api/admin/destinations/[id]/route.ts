@@ -1,7 +1,7 @@
 // app/api/admin/destinations/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import Destination from '@/lib/models/Destination';
+import Destination, { type IDestination } from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
@@ -57,7 +57,7 @@ export async function PUT(
     }
     
     // Prepare update data - only update fields that are provided
-    const updateData: any = {};
+    const updateData: Partial<IDestination> = {};
     
     // Basic fields
     if (data.name !== undefined) updateData.name = data.name;
@@ -73,15 +73,17 @@ export async function PUT(
     // Location data
     if (data.coordinates !== undefined) {
       if (data.coordinates && typeof data.coordinates === 'object') {
-        const coords: any = {};
+        const coords: { lat?: number; lng?: number } = {};
         if (data.coordinates.lat !== undefined && data.coordinates.lat !== '') {
           coords.lat = parseFloat(data.coordinates.lat);
         }
         if (data.coordinates.lng !== undefined && data.coordinates.lng !== '') {
           coords.lng = parseFloat(data.coordinates.lng);
         }
-        if (coords.lat !== undefined || coords.lng !== undefined) {
-          updateData.coordinates = coords;
+        const lat = coords.lat ?? existingDestination.coordinates?.lat;
+        const lng = coords.lng ?? existingDestination.coordinates?.lng;
+        if (lat !== undefined && lng !== undefined) {
+          updateData.coordinates = { lat, lng };
         } else {
           updateData.coordinates = undefined;
         }
@@ -96,13 +98,14 @@ export async function PUT(
     if (data.bestTimeToVisit !== undefined) updateData.bestTimeToVisit = data.bestTimeToVisit;
     
     // Content arrays
-    const arrayFields = ['highlights', 'thingsToDo', 'localCustoms', 'languagesSpoken', 'weatherWarnings', 'tags'];
+    type DestinationArrayField = 'highlights' | 'thingsToDo' | 'localCustoms' | 'languagesSpoken' | 'weatherWarnings' | 'tags';
+    const arrayFields: DestinationArrayField[] = ['highlights', 'thingsToDo', 'localCustoms', 'languagesSpoken', 'weatherWarnings', 'tags'];
     arrayFields.forEach(field => {
       if (data[field] !== undefined) {
         if (Array.isArray(data[field])) {
-          updateData[field] = data[field].filter((item: string) => item && item.trim());
+          updateData[field] = data[field].filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0);
         } else {
-          updateData[field] = data[field];
+          updateData[field] = undefined;
         }
       }
     });
@@ -177,19 +180,19 @@ export async function PUT(
       message: 'Destination updated successfully'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating destination:', error);
     
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue || {})[0];
+    if ((error as { code?: string | number }).code === 11000) {
+      const field = Object.keys((error as { keyValue?: Record<string, unknown> }).keyValue || {})[0] || 'field';
       return NextResponse.json({ 
         success: false, 
         error: `${field} already exists` 
       }, { status: 400 });
     }
     
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((e: any) => e.message);
+    if ((error as Error).name === 'ValidationError') {
+      const messages = Object.values((error as { errors: Record<string, Error> }).errors).map((e) => e.message);
       return NextResponse.json({ 
         success: false, 
         error: messages.join(', ') 
@@ -198,7 +201,7 @@ export async function PUT(
     
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Failed to update destination' 
+      error: (error as Error).message || 'Failed to update destination'
     }, { status: 500 });
   }
 }

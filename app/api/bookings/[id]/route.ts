@@ -7,6 +7,7 @@ import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
 import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
 // GET - Fetch a single booking by ID (user must own the booking)
 export async function GET(
@@ -27,7 +28,7 @@ export async function GET(
 
     const authentication = await authenticateCustomerBearer(request);
     if (!authentication.success) return NextResponse.json({ success: false, message: authentication.error }, { status: authentication.status });
-    const userId = (authentication.user._id as any).toString();
+    const userId = String(authentication.user._id);
 
     const { id } = await params;
 
@@ -56,8 +57,8 @@ export async function GET(
       );
     }
 
-    const bookingUser = booking.user as any;
-    const bookingTour = booking.tour as any;
+    const bookingUser = booking.user as unknown as PopulatedBookingUser;
+    const bookingTour = booking.tour as unknown as PopulatedBookingTour;
 
     // Verify ownership
     if (bookingUser._id.toString() !== userId) {
@@ -90,13 +91,13 @@ export async function GET(
       data: transformedBooking,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch booking:', error);
     return NextResponse.json(
       { 
         success: false, 
         message: 'Failed to fetch booking',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     );

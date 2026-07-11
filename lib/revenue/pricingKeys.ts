@@ -9,7 +9,7 @@ export function pricingKeyFor(tourId: string, option: { label?: string; type?: s
   return `${slug(option.label || option.type || 'option')}-${fingerprint}`;
 }
 
-export function ensureBookingOptionPricingKeys(tourId: string, options: any[] | undefined) {
+export function ensureBookingOptionPricingKeys<T extends { pricingKey?: string; label?: string; type?: string }>(tourId: string, options: T[] | undefined) {
   if (!Array.isArray(options)) return options;
   const seen = new Set<string>();
   return options.map((option, index) => {

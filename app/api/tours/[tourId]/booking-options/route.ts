@@ -46,7 +46,7 @@ export async function PUT(
       bookingOptions: tour.bookingOptions 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Update booking option error:', error);
     return NextResponse.json(
       { error: 'Failed to update booking option' },

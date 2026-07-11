@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import Booking from '@/lib/models/Booking';
+import Booking, { type IBooking } from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { verifyToken } from '@/lib/jwt';
 import { generateReceiptPdf } from '@/lib/utils/generateReceiptPdf';
 import { formatBookingDate } from '@/lib/utils/receiptDate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
+
+type ReceiptBookingRecord = Omit<IBooking, 'tour' | 'user'> & {
+  tour: PopulatedBookingTour;
+  user: PopulatedBookingUser;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +27,14 @@ export async function POST(request: NextRequest) {
     }
 
     await dbConnect();
-    const bookings: any[] = await Booking.find({
+    const bookings = await Booking.find({
       paymentId: String(payload.paymentId),
       ...DEFAULT_TENANT_FILTER,
     })
       .populate({ path: 'tour', model: Tour, select: 'title' })
       .populate({ path: 'user', model: User, select: 'firstName lastName email phone' })
       .sort({ createdAt: 1 })
-      .lean();
+      .lean() as unknown as ReceiptBookingRecord[];
 
     if (bookings.length === 0) {
       return NextResponse.json({ error: 'Receipt not found' }, { status: 404 });
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest) {
       qrData: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/booking/verify/${first.bookingReference}`,
     });
 
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
         'Cache-Control': 'private, no-store',
       },
     });
-  } catch (error) {
+  } catch {
     console.error('Receipt generation failed');
     return NextResponse.json({ error: 'Failed to generate receipt' }, { status: 500 });
   }

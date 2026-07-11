@@ -33,7 +33,7 @@ export async function GET(
     // --- Get all bookings for the tour in the given month ---
     const existingBookings = await Booking.find({
       tour: tourId,
-      tenantId: (tour as any).tenantId || 'default',
+      tenantId: tour.tenantId || 'default',
       date: { $gte: startDate, $lte: endDate },
     }).select('date time guests');
 
@@ -51,7 +51,7 @@ export async function GET(
     }
     
     const { availableDays, slots } = tour.availability;
-    const availableSlotsByDate: { [key: string]: any[] } = {};
+    const availableSlotsByDate: Record<string, Array<{ time: string; remaining: number }>> = {};
     const fullyBookedDates: string[] = [];
 
     // --- Iterate through each day of the month to check availability ---

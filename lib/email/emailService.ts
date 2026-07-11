@@ -53,14 +53,15 @@ export class EmailService {
     };
   }
 
-  private static async generateEmailTemplate(
+  private static async generateEmailTemplate<T extends object>(
     type: EmailType,
-    data: Record<string, any>
+    data: T
   ): Promise<EmailTemplate> {
     try {
+      const baseUrl = 'baseUrl' in data && typeof data.baseUrl === 'string' ? data.baseUrl : undefined;
       const templateData = {
         year: new Date().getFullYear(),
-        ...this.getDefaultTemplateData(data.baseUrl),
+        ...this.getDefaultTemplateData(baseUrl),
         ...data,
       };
       const htmlTemplate = await TemplateEngine.loadTemplate(type);
@@ -117,7 +118,7 @@ export class EmailService {
           childQuantity: item.childQuantity ?? item.children ?? 0,
           infantQuantity: item.infantQuantity ?? item.infants ?? 0,
           price: item.price,
-          totalPrice: parseMoney((item as any).totalPrice),
+          totalPrice: parseMoney(item.totalPrice),
           selectedBookingOption: item.selectedBookingOption,
         })),
         pricing: data.pricingRaw || {

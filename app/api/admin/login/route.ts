@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbConnect';
-import User from '@/lib/models/user';
+import User, { type IUser } from '@/lib/models/user';
 import { signToken } from '@/lib/jwt';
 import {
   ADMIN_PERMISSIONS,
@@ -27,7 +27,15 @@ function lockedResponse(lockUntil: Date) {
   );
 }
 
-async function recordFailedAttempt(user: any): Promise<Date | null> {
+interface AdminPayloadSource {
+  _id: unknown;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+async function recordFailedAttempt(user: IUser): Promise<Date | null> {
   const state = nextAdminLoginFailure(Number(user.adminLoginAttempts || 0));
   const lockUntil = state.lockUntil || null;
 
@@ -37,10 +45,10 @@ async function recordFailedAttempt(user: any): Promise<Date | null> {
   return lockUntil;
 }
 
-function buildAdminUserPayload(user: any, permissions: AdminPermission[]) {
+function buildAdminUserPayload(user: AdminPayloadSource, permissions: AdminPermission[]) {
   return {
-    id: user._id.toString(),
-    _id: user._id.toString(),
+    id: String(user._id),
+    _id: String(user._id),
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
@@ -75,7 +83,7 @@ export async function POST(request: NextRequest) {
     ) {
       const pseudoUser = {
         _id: 'env-admin',
-        email: process.env.ADMIN_USERNAME,
+        email: envUsername,
         firstName: 'Super',
         lastName: 'Admin',
         role: 'super_admin',
@@ -170,7 +178,7 @@ export async function POST(request: NextRequest) {
 
     const token = await signToken(
       {
-        sub: (user._id as any).toString(),
+        sub: String(user._id),
         email: user.email,
         given_name: user.firstName,
         family_name: user.lastName,

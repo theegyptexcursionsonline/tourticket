@@ -12,12 +12,17 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
-
-async function defaultTenantEntityExists(model: any, id: string) {
-  if (typeof model.exists === 'function') return model.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
+async function defaultTenantTourExists(id: string) {
+  if (typeof Tour.exists === 'function') return Tour.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
   // Some isolated test doubles expose only findById. Production Mongoose
   // always takes the filtered branch above.
-  const doc = await model.findById(id).lean();
+  const doc = await Tour.findById(id).lean();
+  return doc && (!doc.tenantId || doc.tenantId === 'default');
+}
+
+async function defaultTenantDestinationExists(id: string) {
+  if (typeof Destination.exists === 'function') return Destination.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
+  const doc = await Destination.findById(id).lean() as unknown as { tenantId?: string } | null;
   return doc && (!doc.tenantId || doc.tenantId === 'default');
 }
 
@@ -53,9 +58,9 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
     const inScope = modelType === 'tour'
-      ? await defaultTenantEntityExists(Tour, id)
+      ? await defaultTenantTourExists(id)
       : modelType === 'destination'
-        ? await defaultTenantEntityExists(Destination, id)
+        ? await defaultTenantDestinationExists(id)
         : true;
     if (!inScope) return NextResponse.json({ success: false, error: `${modelType} not found` }, { status: 404 });
 

@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     // Sanitize tourOptionSelections and applicableTours
     const safeTourOptionSelections = Array.isArray(tourOptionSelections)
       ? tourOptionSelections
-          .map((sel: any) => {
+          .map((sel) => {
             const tid = sel?.tourId && typeof sel.tourId === 'object' ? sel.tourId._id : sel?.tourId;
             if (!tid) return null;
             return { ...sel, tourId: String(tid) };
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       : [];
     const safeApplicableTours = Array.isArray(applicableTours)
       ? applicableTours
-          .map((t: any) => {
+          .map((t) => {
             if (!t) return null;
             const id = typeof t === 'object' ? (t._id || t) : t;
             return id ? String(id) : null;
@@ -243,8 +243,9 @@ export async function PUT(request: NextRequest) {
     // Sanitize tourOptionSelections — tourId may arrive as a populated object
     if (Array.isArray(updateData.tourOptionSelections)) {
       updateData.tourOptionSelections = updateData.tourOptionSelections
-        .map((sel: any) => {
-          const tid = sel?.tourId && typeof sel.tourId === 'object' ? sel.tourId._id : sel?.tourId;
+        .map((sel: Record<string, unknown>) => {
+          const tourId = sel?.tourId;
+          const tid = tourId && typeof tourId === 'object' && '_id' in tourId ? tourId._id : tourId;
           if (!tid) return null;
           return { ...sel, tourId: String(tid) };
         })
@@ -254,9 +255,9 @@ export async function PUT(request: NextRequest) {
     // Sanitize applicableTours — may arrive as populated objects or contain null entries
     if (Array.isArray(updateData.applicableTours)) {
       updateData.applicableTours = updateData.applicableTours
-        .map((t: any) => {
+        .map((t: unknown) => {
           if (!t) return null;
-          const id = typeof t === 'object' ? (t._id || t) : t;
+          const id = typeof t === 'object' && '_id' in t ? t._id : t;
           return id ? String(id) : null;
         })
         .filter((id: string | null): id is string => !!id && id !== 'null' && id !== 'undefined');

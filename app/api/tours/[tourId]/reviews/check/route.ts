@@ -47,7 +47,7 @@ export async function GET(
         return NextResponse.json({ hasReview: false });
       }
 
-      userId = (user._id as any).toString();
+      userId = String(user._id);
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
@@ -88,7 +88,7 @@ export async function GET(
     const eligibleBooking = await Booking.findOne({
       tour: new mongoose.Types.ObjectId(tourId),
       user: new mongoose.Types.ObjectId(userId),
-      tenantId: (tour as any).tenantId,
+      tenantId: tour.tenantId,
       status: { $in: REVIEW_ELIGIBLE_STATUSES },
       date: { $lt: new Date() },
     })
@@ -101,7 +101,7 @@ export async function GET(
       reason: eligibleBooking ? null : 'verified_booking_required',
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Check existing review error:', error);
     return NextResponse.json({ hasReview: false, canReview: false, reason: 'review_check_failed' });
   }

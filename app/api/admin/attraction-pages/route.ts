@@ -26,19 +26,18 @@ export async function GET(request: NextRequest) {
     // Then populate categoryId manually for better error handling
     const pagesWithCategories = await Promise.all(
       pages.map(async (page) => {
-        let populatedPage = { ...page };
-        
+        let categoryId: unknown = page.categoryId;
         if (page.categoryId) {
           try {
             const category = await Category.findById(page.categoryId).select('name slug').lean();
-            populatedPage.categoryId = category as any;
+            categoryId = category;
           } catch (error) {
             console.error(`Error populating category for page ${page._id}:`, error);
-            populatedPage.categoryId = null as any;
+            categoryId = null;
           }
         }
-        
-        return populatedPage;
+
+        return { ...page, categoryId };
       })
     );
 
@@ -51,7 +50,9 @@ export async function GET(request: NextRequest) {
         
         try {
           if (page.pageType === 'category' && page.categoryId) {
-            const categoryId = typeof page.categoryId === 'object' ? (page.categoryId as any)._id : page.categoryId;
+            const categoryId = typeof page.categoryId === 'object' && page.categoryId !== null && '_id' in page.categoryId
+              ? page.categoryId._id
+              : page.categoryId;
             tourCount = await Tour.countDocuments({
               category: categoryId,
               isPublished: true,
@@ -185,11 +186,11 @@ export async function POST(request: NextRequest) {
     console.error('Error creating attraction page:', error);
     
     // Handle validation errors
-    if (error instanceof Error && error.name === 'ValidationError') {
+    if (error instanceof Error && (error as Error).name === 'ValidationError') {
       return NextResponse.json({
         success: false,
         error: 'Validation error',
-        details: error.message
+        details: (error as Error).message
       }, { status: 400 });
     }
     

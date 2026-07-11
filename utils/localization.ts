@@ -100,7 +100,7 @@ export const getPreferredCurrency = async (): Promise<Currency> => {
       const currency = currencies.find(c => c.code === currencyCode);
       if (currency) return currency;
     }
-  } catch (error) {
+  } catch {
     console.log('Could not detect location for currency preference');
   }
   
@@ -114,7 +114,7 @@ export const getPreferredLanguage = (): Language => {
     const browserLang = navigator.language.split('-')[0];
     const language = languages.find(l => l.code === browserLang);
     if (language) return language;
-  } catch (error) {
+  } catch {
     console.log('Could not detect browser language');
   }
   
@@ -148,7 +148,7 @@ export const formatCurrencyWithLocale = (
       minimumFractionDigits: currency.code === 'JPY' || currency.code === 'KRW' ? 0 : 2,
       maximumFractionDigits: currency.code === 'JPY' || currency.code === 'KRW' ? 0 : 2,
     }).format(amount);
-  } catch (error) {
+  } catch {
     // Fallback to simple formatting
     const decimals = currency.code === 'JPY' || currency.code === 'KRW' ? 0 : 2;
     return `${currency.symbol}${amount.toLocaleString('en-US', { 

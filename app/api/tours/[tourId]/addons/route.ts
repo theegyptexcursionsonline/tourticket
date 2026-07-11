@@ -24,7 +24,7 @@ export async function GET(
 
     // Generate fallback add-ons if none exist in database
     const addOns = tour.addOns && tour.addOns.length > 0 
-      ? tour.addOns.map((addon: any, index: number) => ({
+      ? tour.addOns.map((addon, index: number) => ({
           id: addon._id || `addon-${index}`,
           title: addon.name || 'Tour Enhancement',
           description: addon.description || 'Enhance your tour experience',

@@ -101,11 +101,11 @@ export async function PUT(
   } catch (error) {
     console.error('Error updating category:', error);
     
-    if (error instanceof Error && error.name === 'ValidationError') {
+    if (error instanceof Error && (error as Error).name === 'ValidationError') {
       return NextResponse.json({
         success: false,
         error: 'Validation error',
-        details: error.message
+        details: (error as Error).message
       }, { status: 400 });
     }
     

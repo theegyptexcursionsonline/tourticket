@@ -7,6 +7,7 @@ import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Connect to database with timeout
-    const dbConnection = await Promise.race([
+    await Promise.race([
       dbConnect(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Database connection timeout')), 10000))
     ]);
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
       ]),
       Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
       User.countDocuments({ _id: { $lt: cutoffId } }),
-    ]).catch(() => [0, [] as any[], 0, 0] as const);
+    ]).catch(() => [0, [] as Array<{ _id: null; totalRevenue: number }>, 0, 0] as const);
 
     // Fetch all stats in parallel with error handling for each
     const [
@@ -96,13 +97,13 @@ export async function GET(request: NextRequest) {
     // Process recent activities with error handling
     const recentActivities = recentBookings.status === 'fulfilled'
       ? recentBookings.value
-          .filter((booking: any) => booking && booking.tour && booking.user) // Filter out null references
-          .map((booking: any) => {
+          .filter((booking) => booking && booking.tour && booking.user) // Filter out null references
+          .map((booking) => {
             try {
-              const tourTitle = booking.tour?.title || 'Unknown Tour';
-              const userName = booking.user 
-                ? `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim() || booking.user.email || 'Unknown User'
-                : 'Unknown User';
+              const tour = booking.tour as unknown as PopulatedBookingTour;
+              const user = booking.user as unknown as PopulatedBookingUser;
+              const tourTitle = tour.title || 'Unknown Tour';
+              const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User';
               
               return {
                 id: booking._id.toString(),

@@ -43,7 +43,7 @@ export async function GET() {
     );
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch tours' }, 
       { status: 500 }

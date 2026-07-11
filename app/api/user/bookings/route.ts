@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
-import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import mongoose from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import type { PopulatedBookingTour } from '@/lib/types/populatedBooking';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: authentication.error }, { status: authentication.status });
     }
     const user = authentication.user;
-    const userId = (user._id as any).toString();
+    const userId = String(user._id);
 
     // 4. Validate MongoDB ObjectId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -54,17 +54,20 @@ export async function GET(request: NextRequest) {
       .lean(); // Use lean() for better performance
 
     // 9. Transform bookings for frontend consistency
-    const transformedBookings = bookings.map(booking => ({
-      ...booking,
-      id: booking._id?.toString() || '',
-      bookingDate: booking.date,
-      bookingTime: booking.time,
-      participants: booking.guests,
-      tour: booking.tour ? {
-        ...(booking.tour as any),
-        id: (booking.tour as any)._id?.toString() || '',
-      } : null,
-    }));
+    const transformedBookings = bookings.map(booking => {
+      const tour = booking.tour as unknown as PopulatedBookingTour | null;
+      return {
+        ...booking,
+        id: booking._id?.toString() || '',
+        bookingDate: booking.date,
+        bookingTime: booking.time,
+        participants: booking.guests,
+        tour: tour ? {
+          ...tour,
+          id: tour._id?.toString() || '',
+        } : null,
+      };
+    });
 
     // 10. Return the data
     return NextResponse.json({ 

@@ -258,7 +258,7 @@
     var srcHost;
     try {
       srcHost = new URL(scriptEl.src, window.location.href).host;
-    } catch (e) {
+    } catch {
       srcHost = window.location.host;
     }
     var brand = resolveBrand(srcHost);
@@ -350,7 +350,7 @@
           update();
         })
         .catch(function () { /* local tables already rendered */ });
-    } catch (e) { /* never break the host page */ }
+    } catch { /* never break the host page */ }
   }
 
   var tool = script && script.getAttribute('data-tool');

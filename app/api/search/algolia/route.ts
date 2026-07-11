@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     const filterString = filters.join(' AND ');
 
     // Build search parameters
-    const searchOptions: any = {
+    const searchOptions: Record<string, unknown> = {
       filters: filterString,
       page,
       hitsPerPage,
@@ -133,10 +133,17 @@ export async function GET(request: Request) {
       }]
     });
 
-    const searchResults = results.results[0] as any;
+    const searchResults = results.results[0] as unknown as {
+      hits: Array<Record<string, unknown> & { objectID: string }>;
+      nbHits: number;
+      page: number;
+      nbPages: number;
+      hitsPerPage: number;
+      query: string;
+    };
 
     // Transform hits to match expected format
-    const transformedHits = searchResults.hits.map((hit: any) => ({
+    const transformedHits = searchResults.hits.map((hit) => ({
       _id: hit.objectID,
       id: hit.objectID,
       ...hit

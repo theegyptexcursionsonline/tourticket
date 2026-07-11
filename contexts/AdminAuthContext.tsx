@@ -27,6 +27,11 @@ interface AdminAuthContextValue {
   hasAnyPermission: (permissions: string[]) => boolean;
 }
 
+interface AdminLoginResponse {
+  error?: string;
+  user?: AdminUser;
+}
+
 const AdminAuthContext = createContext<AdminAuthContextValue | undefined>(undefined);
 const COOKIE_SESSION_SENTINEL = 'cookie-session';
 
@@ -97,11 +102,11 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
           body: JSON.stringify({ email, username: email, password }),
         });
 
-        let data: any = null;
+        let data: AdminLoginResponse = {};
         const contentType = response.headers.get('content-type');
         
         if (contentType && contentType.includes('application/json')) {
-          data = await response.json();
+          data = await response.json() as AdminLoginResponse;
         } else {
           const text = await response.text();
           data = { error: text || 'Server returned non-JSON response' };
@@ -111,16 +116,22 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
           throw new Error(data?.error || `Login failed (${response.status})`);
         }
 
+        if (!data.user) {
+          throw new Error('Login succeeded without an admin profile');
+        }
+        const adminId = data.user.id || data.user._id;
+        if (!adminId) throw new Error('Admin profile has no identifier');
+
         const normalizedUser: AdminUser = {
           ...data.user,
-          id: data.user.id || data.user._id,
+          id: adminId,
           permissions: data.user.permissions || [],
         };
 
         persistSession(normalizedUser);
         toast.success('Welcome back!');
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to log in');
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : 'Failed to log in');
         throw error;
       } finally {
         setIsLoading(false);

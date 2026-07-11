@@ -10,8 +10,7 @@ import Stripe from 'stripe';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference, generateUniqueBookingReference } from '@/lib/utils/bookingReference';
-import { currencies } from '@/utils/localization';
-import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { PriceChangedError, secureCartPricing, type SecureCartItem } from '@/lib/checkout/serverCartPricing';
 import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
 import { signToken } from '@/lib/jwt';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -75,60 +74,36 @@ const computeTimeUntilTour = (dateValue?: string | Date, timeValue?: string) => 
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const getCurrencySymbolFromCode = (code?: string) => {
-  const upper = (code || 'USD').toUpperCase();
-  return currencies.find(c => c.code === upper)?.symbol || (upper === 'EUR' ? '€' : '$');
-};
-
-const toNumberQty = (value: any, fallback = 0): number => {
+const toNumberQty = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   }
   if (value && typeof value === 'object') {
-    const inner = value.quantity ?? value.qty ?? value.count;
+    const record = value as Record<string, unknown>;
+    const inner = record.quantity ?? record.qty ?? record.count;
     return toNumberQty(inner, fallback);
   }
   return fallback;
 };
 
-const calculateAddOnsTotal = (cartItem: any): number => {
+const calculateAddOnsTotal = (cartItem: SecureCartItem): number => {
   const totalGuests = (cartItem?.quantity || 0) + (cartItem?.childQuantity || 0);
   let addOnsTotal = 0;
 
-  // Case 1: selectedAddOns is an array (server/user schema format)
-  if (Array.isArray(cartItem?.selectedAddOns)) {
-    for (const addon of cartItem.selectedAddOns) {
-      const qty = toNumberQty(addon?.quantity, 0);
-      if (qty <= 0) continue;
-      const price = Number(addon?.price || 0);
-      const perGuest = addon?.perGuest ?? false;
-      const multiplier = perGuest ? totalGuests : 1;
-      addOnsTotal += price * multiplier;
-    }
-    return addOnsTotal;
-  }
-
-  // Case 2: selectedAddOns is an object (client format or corrupted format)
-  if (cartItem?.selectedAddOns && typeof cartItem.selectedAddOns === 'object') {
-    for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
-      const qty = toNumberQty(rawQty, 0);
-      const detail =
-        cartItem?.selectedAddOnDetails?.[addOnId] ||
-        (rawQty && typeof rawQty === 'object' ? (rawQty as any) : undefined);
-      if (!detail || qty <= 0) continue;
-      const price = Number((detail as any).price || 0);
-      const perGuest = (detail as any).perGuest ?? false;
-      const multiplier = perGuest ? totalGuests : 1;
-      addOnsTotal += price * multiplier;
-    }
+  for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
+    const qty = toNumberQty(rawQty, 0);
+    const detail = cartItem.selectedAddOnDetails[addOnId];
+    if (!detail || qty <= 0) continue;
+    const multiplier = detail.perGuest ? totalGuests : 1;
+    addOnsTotal += detail.price * multiplier * qty;
   }
 
   return addOnsTotal;
 };
 
-const calculateCartSubtotal = (cart: any[]): number => {
+const calculateCartSubtotal = (cart: SecureCartItem[]): number => {
   return round2((cart || []).reduce((sum, item) => {
     const basePrice = item?.selectedBookingOption?.price || item?.discountPrice || item?.price || 0;
     const adultPrice = Number(basePrice) * (item?.quantity || 1);
@@ -146,7 +121,6 @@ export async function POST(request: NextRequest) {
     const {
       customer,
       cart: requestedCart,
-      pricing,
       paymentMethod = 'card',
       paymentDetails,
       isGuest = false,
@@ -226,16 +200,16 @@ export async function POST(request: NextRequest) {
             // Fetch recommended tours from database
             const Tour = (await import('@/lib/models/Tour')).default;
             const recommendedTours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
-              .select('title slug images pricing')
+              .select('title slug images discountPrice')
               .limit(3)
               .lean();
 
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-            const tourRecommendations = recommendedTours.map((tour: any) => ({
+            const tourRecommendations = recommendedTours.map((tour) => ({
               title: tour.title,
-              image: tour.images?.[0]?.url || `${baseUrl}/pyramid.png`,
-              price: tour.pricing?.adult ? `From $${tour.pricing.adult}` : 'From $99',
+              image: tour.images?.[0] || `${baseUrl}/pyramid.png`,
+              price: tour.discountPrice ? `From $${tour.discountPrice}` : 'From $99',
               link: `${baseUrl}/tour/${tour.slug}`
             }));
 
@@ -260,8 +234,8 @@ export async function POST(request: NextRequest) {
             console.error('Failed to send welcome email:', emailError);
             // Don't fail user creation if welcome email fails
           }
-        } catch (userError: any) {
-          if (userError.code === 11000) {
+        } catch (userError: unknown) {
+          if ((userError as { code?: string | number }).code === 11000) {
             return NextResponse.json(
               { success: false, code: 'ACCOUNT_AUTH_REQUIRED', message: 'An account already exists for this email. Sign in before checking out.' },
               { status: 409 },
@@ -356,9 +330,9 @@ export async function POST(request: NextRequest) {
         } else {
           throw new Error('A verified PaymentIntent is required for card checkout.');
         }
-      } catch (stripeError: any) {
+      } catch (stripeError: unknown) {
         console.error('Stripe payment error:', stripeError);
-        throw new Error(stripeError.message || 'Payment processing failed. Please try again.');
+        throw new Error((stripeError as Error).message || 'Payment processing failed. Please try again.');
       }
     }
 
@@ -385,7 +359,7 @@ export async function POST(request: NextRequest) {
           bookingId: `BOOKING-${Date.now()}`,
           bookingDate: formatBookingDate(cart[0]?.selectedDate),
           bookingTime: cart[0]?.selectedTime || '10:00',
-          participants: `${cart.reduce((sum: number, item: any) => sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0), 0)} participant(s)`,
+          participants: `${cart.reduce((sum, item) => sum + item.quantity + item.childQuantity + item.infantQuantity, 0)} participant(s)`,
           totalPrice: `$${computedPricing.total.toFixed(2)}`,
           bankName: 'Commercial International Bank (CIB)',
           accountName: 'Egypt Excursions Online',
@@ -521,11 +495,12 @@ export async function POST(request: NextRequest) {
           discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
           discountAmount: itemDiscountShare > 0 ? itemDiscountShare : undefined,
         });
-        } catch (createError: any) {
+        } catch (createError: unknown) {
           // E11000 = duplicate key error - booking already exists (commonly from webhook race)
           if (
-            createError.code === 11000 &&
-            (createError.keyPattern?.bookingReference || createError.keyPattern?.paymentId)
+            (createError as { code?: string | number }).code === 11000 &&
+            ((createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.bookingReference ||
+              (createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.paymentId)
           ) {
             console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId} (created concurrently)`);
             const existingBooking = await Booking.findOne({ bookingReference }) ||
@@ -547,9 +522,9 @@ export async function POST(request: NextRequest) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-      } catch (bookingError: any) {
+      } catch (bookingError: unknown) {
         console.error('Error creating booking:', bookingError);
-        throw new Error(`Failed to create booking for ${cartItem.title}: ${bookingError.message}`);
+        throw new Error(`Failed to create booking for ${cartItem.title}: ${(bookingError as Error).message}`);
       }
     }
 
@@ -564,7 +539,7 @@ export async function POST(request: NextRequest) {
     const emailBookingDate = formatBookingDate(mainCartItem?.selectedDate);
     const emailBookingTime = mainCartItem?.selectedTime || mainBooking.time;
     const formatMoney = (value?: number) => formatCurrencyValue(value, currencySymbol);
-    const orderedItemsSummary = cart.map((item: any) => {
+    const orderedItemsSummary = cart.map((item) => {
       const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
       const adultPrice = basePrice * (item.quantity || 1);
       const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
@@ -654,7 +629,7 @@ export async function POST(request: NextRequest) {
     // This ensures admin always knows about booking attempts
     try {
       // Prepare detailed tour information
-      const tourDetails = await Promise.all(cart.map(async (item: any) => {
+      const tourDetails = await Promise.all(cart.map(async (item) => {
         const tour = await Tour.findById(item._id || item.id);
 
         // Get add-ons details
@@ -670,11 +645,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate item price
-        const getItemTotal = (item: any) => {
+        const getItemTotal = (item: SecureCartItem) => {
           const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
           const adultPrice = basePrice * (item.quantity || 1);
           const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-          let tourTotal = adultPrice + childPrice;
+          const tourTotal = adultPrice + childPrice;
 
           let addOnsTotal = 0;
           if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -811,24 +786,24 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Checkout error:', error);
 
     if (error instanceof PriceChangedError) {
-      return NextResponse.json({ success: false, code: error.code, message: error.message, quote: error.quote }, { status: 409 });
+      return NextResponse.json({ success: false, code: (error as { code?: string | number }).code, message: (error as Error).message, quote: error.quote }, { status: 409 });
     }
     if (error instanceof UnavailableTourError) {
-      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: error.message }, { status: 409 });
+      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: (error as Error).message }, { status: 409 });
     }
     
-    if (error.message.includes('Payment processing failed')) {
+    if ((error as Error).message.includes('Payment processing failed')) {
       return NextResponse.json(
-        { success: false, message: error.message },
+        { success: false, message: (error as Error).message },
         { status: 402 }
       );
     }
 
-    if (error.message.includes('Tour not found')) {
+    if ((error as Error).message.includes('Tour not found')) {
       return NextResponse.json(
         { success: false, message: 'One or more tours in your cart are no longer available' },
         { status: 404 }
@@ -839,7 +814,7 @@ export async function POST(request: NextRequest) {
       { 
         success: false, 
         message: 'Booking failed due to a server error. Please try again.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     );

@@ -30,14 +30,15 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const created = await Blog.create(data);
     return NextResponse.json({ success: true, data: created, message: 'Blog post created' }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating blog post:', error);
-    if (error.code === 11000 && error.keyValue) {
-      const field = Object.keys(error.keyValue)[0];
+    const keyValue = (error as { keyValue?: Record<string, unknown> }).keyValue;
+    if ((error as { code?: string | number }).code === 11000 && keyValue) {
+      const field = Object.keys(keyValue)[0] || 'field';
       return NextResponse.json({ success: false, error: `${field} already exists` }, { status: 400 });
     }
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((e: any) => e.message);
+    if ((error as Error).name === 'ValidationError') {
+      const messages = Object.values((error as { errors: Record<string, Error> }).errors).map((e) => e.message);
       return NextResponse.json({ success: false, error: messages.join(', ') }, { status: 400 });
     }
     return NextResponse.json({ success: false, error: 'Failed to create blog post' }, { status: 500 });

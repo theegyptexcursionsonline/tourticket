@@ -2,13 +2,31 @@ import mongoose, { Schema, type Model } from 'mongoose';
 
 export type GuestPrices = { adult: number; child: number; infant: number };
 
+interface RevenuePriceOverrideDocument {
+  tenantId: string;
+  tourId: mongoose.Types.ObjectId;
+  optionKey: string;
+  date: Date;
+  time: string;
+  currency: string;
+  prices: GuestPrices;
+  cataloguePrices: GuestPrices;
+  previousPrices: GuestPrices;
+  version: number;
+  source: 'revenuepilot' | 'manual' | 'legacy';
+  recommendationId?: string;
+  executionId: string;
+  active: boolean;
+  revertedAt?: Date;
+}
+
 const GuestPricesSchema = new Schema({
   adult: { type: Number, required: true, min: 0 },
   child: { type: Number, required: true, min: 0 },
   infant: { type: Number, required: true, min: 0 },
 }, { _id: false });
 
-const RevenuePriceOverrideSchema = new Schema({
+const RevenuePriceOverrideSchema = new Schema<RevenuePriceOverrideDocument>({
   tenantId: { type: String, required: true, default: 'default', index: true },
   tourId: { type: Schema.Types.ObjectId, ref: 'Tour', required: true, index: true },
   optionKey: { type: String, required: true },
@@ -31,7 +49,7 @@ RevenuePriceOverrideSchema.index(
   { unique: true },
 );
 
-const RevenuePriceOverride: Model<any> = mongoose.models.RevenuePriceOverride
-  || mongoose.model('RevenuePriceOverride', RevenuePriceOverrideSchema);
+const RevenuePriceOverride: Model<RevenuePriceOverrideDocument> = mongoose.models.RevenuePriceOverride
+  || mongoose.model<RevenuePriceOverrideDocument>('RevenuePriceOverride', RevenuePriceOverrideSchema);
 
 export default RevenuePriceOverride;

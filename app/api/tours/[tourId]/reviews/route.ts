@@ -9,6 +9,15 @@ import { verifyToken } from '@/lib/jwt';
 import { verifyFirebaseToken } from '@/lib/firebase/admin';
 import mongoose from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { IReview } from '@/lib/models/Review';
+
+interface PopulatedReviewUser {
+  _id: unknown;
+  firstName?: string;
+  lastName?: string;
+}
+
+type PopulatedReview = Omit<IReview, 'user'> & { user: PopulatedReviewUser };
 
 interface Params {
   tourId: string;
@@ -53,7 +62,7 @@ export async function POST(
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = (user._id as any).toString();
+      userId = String(user._id);
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
@@ -108,7 +117,7 @@ export async function POST(
     const eligibleBooking = await Booking.findOne({
       tour: new mongoose.Types.ObjectId(tourId),
       user: new mongoose.Types.ObjectId(userId),
-      tenantId: (tour as any).tenantId,
+      tenantId: tour.tenantId,
       status: { $in: REVIEW_ELIGIBLE_STATUSES },
       date: { $lt: new Date() },
     })
@@ -122,10 +131,10 @@ export async function POST(
     }
 
     const review = await Review.create({
-      tenantId: (tour as any).tenantId || 'default',
+      tenantId: tour.tenantId || 'default',
       tour: new mongoose.Types.ObjectId(tourId),
       user: new mongoose.Types.ObjectId(userId),
-      userName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || (user as any).name || user.email,
+      userName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email,
       userEmail: user.email,
       rating: Number(rating),
       title: title?.trim() || undefined,
@@ -140,7 +149,11 @@ export async function POST(
         path: 'user',
         model: 'User',
         select: 'firstName lastName'
-      }) as any;
+      }) as unknown as PopulatedReview | null;
+
+    if (!populatedReview) {
+      return NextResponse.json({ error: 'Failed to load submitted review' }, { status: 500 });
+    }
 
     // Update tour's average rating (optional - you might want to do this in background)
     try {
@@ -173,25 +186,25 @@ export async function POST(
         comment: populatedReview.comment,
         createdAt: populatedReview.createdAt,
         user: {
-          _id: (populatedReview.user as any)?._id,
+          _id: populatedReview.user?._id,
           name: populatedReview.userName,
         }
       }
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Review submission error:', error);
     
     // Handle duplicate key error specifically
-    if (error.code === 11000) {
+    if ((error as { code?: string | number }).code === 11000) {
       return NextResponse.json({ 
         error: 'You have already reviewed this tour' 
       }, { status: 409 });
     }
 
     // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((err: any) => err.message);
+    if ((error as Error).name === 'ValidationError') {
+      const messages = Object.values((error as { errors: Record<string, Error> }).errors).map((err) => err.message);
       return NextResponse.json({ 
         error: `Validation failed: ${messages.join(', ')}` 
       }, { status: 400 });
@@ -244,7 +257,7 @@ export async function GET(
       comment: review.comment,
       createdAt: review.createdAt,
       user: {
-        _id: (review.user as any)?._id,
+        _id: (review.user as unknown as PopulatedReviewUser | undefined)?._id,
         name: review.userName,
       }
     }));
@@ -254,7 +267,7 @@ export async function GET(
       data: transformedReviews
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get reviews error:', error);
     return NextResponse.json({ 
       error: 'Failed to fetch reviews' 

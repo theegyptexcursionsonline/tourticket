@@ -9,6 +9,7 @@ import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -59,67 +60,6 @@ async function findTour(identifier: string) {
     }
 }
 
-// Helper function to clean booking options
-function cleanBookingOptions(bookingOptions: any[]): any[] {
-    if (!Array.isArray(bookingOptions)) return [];
-    
-    return bookingOptions.map(option => {
-        const cleanedOption = { ...option };
-        
-        // Remove empty or invalid difficulty values
-        if (!cleanedOption.difficulty || cleanedOption.difficulty.trim() === '') {
-            delete cleanedOption.difficulty;
-        } else {
-            // Ensure difficulty is one of the valid enum values
-            const validDifficulties = ['Easy', 'Moderate', 'Challenging', 'Difficult'];
-            if (!validDifficulties.includes(cleanedOption.difficulty)) {
-                delete cleanedOption.difficulty;
-            }
-        }
-        
-        // Clean other optional fields
-        if (!cleanedOption.badge || cleanedOption.badge.trim() === '') {
-            delete cleanedOption.badge;
-        }
-        
-        if (!cleanedOption.description || cleanedOption.description.trim() === '') {
-            delete cleanedOption.description;
-        }
-        
-        if (!cleanedOption.duration || cleanedOption.duration.trim() === '') {
-            delete cleanedOption.duration;
-        }
-        
-        if (!cleanedOption.groupSize || cleanedOption.groupSize.trim() === '') {
-            delete cleanedOption.groupSize;
-        }
-        
-        // Ensure arrays are properly handled
-        if (!Array.isArray(cleanedOption.languages)) {
-            cleanedOption.languages = [];
-        }
-        
-        if (!Array.isArray(cleanedOption.highlights)) {
-            cleanedOption.highlights = [];
-        }
-        
-        // Ensure numeric fields are properly typed
-        if (cleanedOption.price) {
-            cleanedOption.price = Number(cleanedOption.price);
-        }
-        
-        if (cleanedOption.originalPrice) {
-            cleanedOption.originalPrice = Number(cleanedOption.originalPrice);
-        }
-        
-        if (cleanedOption.discount) {
-            cleanedOption.discount = Number(cleanedOption.discount);
-        }
-        
-        return cleanedOption;
-    });
-}
-
 // GET a single tour by ID or Slug
 export async function GET(
     request: NextRequest,
@@ -148,12 +88,12 @@ export async function GET(
 
         return NextResponse.json({ success: true, data: tour });
         
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error fetching tour:', error);
         return NextResponse.json({ 
             success: false, 
-            message: error.message || 'Failed to fetch tour',
-            error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            message: (error as Error).message || 'Failed to fetch tour',
+            error: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
         }, { status: 500 });
     }
 }
@@ -309,35 +249,35 @@ export async function PUT(
 
         return NextResponse.json({ success: true, data: updatedTour });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Tour update error:', error);
         
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern || {})[0];
+        if ((error as { code?: string | number }).code === 11000) {
+            const field = Object.keys((error as { keyPattern?: Record<string, unknown> }).keyPattern || {})[0] || 'field';
             return NextResponse.json({ 
                 success: false, 
                 error: `A tour with this ${field} already exists` 
             }, { status: 409 });
         }
         
-        if (error.name === 'ValidationError') {
-            const validationErrors = Object.values(error.errors).map((err: any) => err.message);
+        if ((error as Error).name === 'ValidationError') {
+            const validationErrors = Object.values((error as { errors: Record<string, Error> }).errors).map((err) => err.message);
             return NextResponse.json({ 
                 success: false, 
                 error: `Validation failed: ${validationErrors.join(', ')}` 
             }, { status: 400 });
         }
 
-        if (error.name === 'CastError') {
+        if ((error as Error).name === 'CastError') {
             return NextResponse.json({ 
                 success: false, 
-                error: `Invalid ${error.path}: ${error.value}` 
+                error: `Invalid ${(error as { path?: string }).path || 'value'}: ${String((error as { value?: unknown }).value)}`
             }, { status: 400 });
         }
 
         return NextResponse.json({ 
             success: false, 
-            error: error.message || 'An unexpected error occurred while updating the tour'
+            error: (error as Error).message || 'An unexpected error occurred while updating the tour'
         }, { status: 500 });
     }
 }
@@ -369,18 +309,18 @@ export async function DELETE(
 
         // Remove from Algolia
         try {
-            await deleteTourFromAlgolia((deletedTour._id as any).toString());
+            await deleteTourFromAlgolia(String(deletedTour._id));
         } catch (algoliaErr) {
             console.warn('Failed to remove deleted tour from Algolia:', algoliaErr);
         }
 
         return NextResponse.json({ success: true, data: {} });
         
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Tour deletion error:', error);
         return NextResponse.json({ 
             success: false, 
-            error: error.message || 'An unexpected error occurred while deleting the tour'
+            error: (error as Error).message || 'An unexpected error occurred while deleting the tour'
         }, { status: 500 });
     }
 }

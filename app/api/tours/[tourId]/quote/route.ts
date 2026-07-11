@@ -16,8 +16,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tou
     }
     const quote = await resolveEffectivePrice({ tourId, date, time, optionKey });
     return NextResponse.json({ quote }, { headers: { 'Cache-Control': 'no-store, private' } });
-  } catch (error: any) {
-    const message = error?.message || 'Unable to resolve price';
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unable to resolve price';
     const status = /Invalid|required/.test(message) ? 400 : /unavailable/.test(message) ? 404 : 500;
     return NextResponse.json({ error: { code: 'QUOTE_UNAVAILABLE', message } }, { status });
   }

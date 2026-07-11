@@ -2,7 +2,16 @@
 import { verifyFirebaseToken } from './admin';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
+import type { IUser } from '@/lib/models/user';
 import { NextRequest } from 'next/server';
+
+interface FirebaseProviderInfo {
+  providerId?: string;
+}
+
+type FirebaseAuthenticationResult =
+  | { success: false; error: string; statusCode: number; user?: never; firebaseUid?: never; email?: never; emailVerified?: never }
+  | { success: true; user: IUser; firebaseUid: string; email?: string; emailVerified?: boolean; error?: never; statusCode?: never };
 
 /**
  * Extract Firebase ID token from request headers
@@ -27,7 +36,7 @@ export function extractFirebaseToken(request: NextRequest): string | null {
  * Verify Firebase token and get MongoDB user
  * This is the main authentication middleware for user routes
  */
-export async function authenticateFirebaseUser(request: NextRequest) {
+export async function authenticateFirebaseUser(request: NextRequest): Promise<FirebaseAuthenticationResult> {
   const token = extractFirebaseToken(request);
 
   if (!token) {
@@ -85,7 +94,7 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
   displayName?: string | null;
   photoURL?: string | null;
   emailVerified: boolean;
-  providerData?: any[];
+  providerData?: FirebaseProviderInfo[];
 }) {
   await dbConnect();
 
@@ -154,8 +163,8 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
     success: true,
     isNewUser,
     user: {
-      id: (user as any)._id.toString(),
-      _id: (user as any)._id.toString(),
+      id: String(user._id),
+      _id: String(user._id),
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -191,7 +200,7 @@ export async function getUserByFirebaseUid(uid: string) {
  * Format user object for client response
  * Removes sensitive fields and formats for consistency
  */
-export function formatUserForClient(user: any) {
+export function formatUserForClient(user: IUser) {
   return {
     id: user._id.toString(),
     _id: user._id.toString(),

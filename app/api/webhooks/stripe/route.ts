@@ -10,6 +10,7 @@ import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference } from '@/lib/utils/bookingReference';
+import type { SecureAddOnDetail } from '@/lib/checkout/serverCartPricing';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -21,7 +22,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY environment variable is not set');
     }
     stripeInstance = new Stripe(key, {
-      apiVersion: '2024-12-18.acacia' as any,
+      apiVersion: '2025-08-27.basil',
     });
   }
   return stripeInstance;
@@ -76,11 +77,6 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       if (tour && user) {
         // Send customer confirmation email (see email sending section below)
         // We'll reuse the email sending logic by setting a flag
-        const bookingsToEmail = [{
-          booking: existingBooking,
-          tour: tour,
-        }];
-        
         // Send confirmation email for the updated booking
         try {
           const bookingDate = formatBookingDate(existingBooking.date);
@@ -233,7 +229,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     if (metadata.hotel_pickup_location) {
       hotelPickupLocation = JSON.parse(metadata.hotel_pickup_location);
     }
-  } catch (e) {
+  } catch {
     console.log(`[Webhook] Could not parse hotel pickup location for ${paymentId}`);
   }
 
@@ -261,8 +257,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         password: 'guest-' + Math.random().toString(36).substring(2, 15),
       });
       console.log('[Webhook] Created guest user');
-    } catch (userError: any) {
-      if (userError.code === 11000) {
+    } catch (userError: unknown) {
+      if ((userError as { code?: string | number }).code === 11000) {
         user = await User.findOne({ email: customerEmail });
       } else {
         throw userError;
@@ -323,7 +319,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex);
 
       const selectedAddOns: Record<string, number> = {};
-      const selectedAddOnDetails: Record<string, any> = {};
+      const selectedAddOnDetails: Record<string, SecureAddOnDetail> = {};
       if (Array.isArray(item.ao)) {
         for (const ao of item.ao) {
           if (!ao?.id) continue;
@@ -401,11 +397,12 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       });
 
       console.log(`[Webhook] Created booking ${bookingReference} for tour ${tour.title}`);
-    } catch (bookingError: any) {
+    } catch (bookingError: unknown) {
       // E11000 = duplicate key error - booking already exists (commonly created by checkout race)
       if (
-        bookingError.code === 11000 &&
-        (bookingError.keyPattern?.bookingReference || bookingError.keyPattern?.paymentId)
+        (bookingError as { code?: string | number }).code === 11000 &&
+        ((bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.bookingReference ||
+          (bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.paymentId)
       ) {
         const itemIndex = Number.isFinite(Number(item?.i)) ? Number(item.i) : cartIndex;
         const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex);
@@ -499,7 +496,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     }
 
     // Build ordered items array for customer email and receipt PDF
-    const orderedItems = createdBookings.map((item: any) => ({
+    const orderedItems = createdBookings.map((item) => ({
       title: item.tour?.title || 'Tour',
       image: item.tour?.image,
       adults: item.booking.adultGuests || 1,
@@ -578,16 +575,16 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     const emailDiscountAmount = pricingDiscount;
 
     // Build tours array for admin email (with all details)
-    const tourDetails = await Promise.all(createdBookings.map(async (item: any) => {
+    const tourDetails = await Promise.all(createdBookings.map(async (item) => {
       // Gather add-on titles
       const addOns: string[] = [];
       if (item.booking.selectedAddOnDetails) {
         const details = item.booking.selectedAddOnDetails;
         // Handle both Map and plain object
-        const entries = details instanceof Map ? Array.from(details.entries()) : Object.entries(details || {});
+        const entries = (details instanceof Map ? Array.from(details.entries()) : Object.entries(details || {})) as unknown as Array<[string, { title?: string }]>;
         for (const [_id, detail] of entries) {
-          if (detail && (detail as any).title) {
-            addOns.push((detail as any).title);
+          if (detail?.title) {
+            addOns.push(detail.title);
           }
         }
       }
@@ -676,7 +673,7 @@ export async function POST(request: Request) {
         signature,
         getWebhookSecret()
       );
-    } catch (err: any) {
+    } catch {
       console.error('Webhook signature verification failed');
       return NextResponse.json(
         { error: 'Invalid webhook signature' },
@@ -695,7 +692,7 @@ export async function POST(request: Request) {
         try {
           const result = await processSuccessfulPayment(paymentIntent);
           console.log(`[Webhook] Process result for ${paymentIntent.id}:`, result);
-        } catch (processError: any) {
+        } catch (processError: unknown) {
           console.error(`[Webhook] Failed to process payment ${paymentIntent.id}:`, processError);
           // Return 500 so Stripe retries transient failures instead of losing a
           // paid booking after acknowledging the event.
@@ -726,7 +723,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Webhook] Error:', error);
     return NextResponse.json(
       { error: 'Webhook handler failed' },

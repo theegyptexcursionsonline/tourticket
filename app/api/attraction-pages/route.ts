@@ -18,21 +18,20 @@ export async function GET() {
     // Populate categories manually for better error handling
     const pagesWithCategories = await Promise.all(
       pages.map(async (page) => {
-        let populatedPage = { ...page };
-        
+        let categoryId: unknown = page.categoryId;
         if (page.categoryId) {
           try {
             const category = await Category.findById(page.categoryId)
               .select('name slug')
               .lean();
-            populatedPage.categoryId = category as any;
+            categoryId = category;
           } catch (error) {
             console.error(`Error populating category for page ${page._id}:`, error);
-            populatedPage.categoryId = null as any;
+            categoryId = null;
           }
         }
-        
-        return populatedPage;
+
+        return { ...page, categoryId };
       })
     );
 

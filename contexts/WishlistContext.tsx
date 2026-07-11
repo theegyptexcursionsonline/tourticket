@@ -26,7 +26,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSyncedFromServer, setHasSyncedFromServer] = useState(false);
 
-  const { user, token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuth();
 
   // Sync to server helper
   const syncToServer = useCallback(async (items: Tour[]) => {
@@ -80,8 +80,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
             // Merge server wishlist with local wishlist
             const localWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
             const serverIds = new Set(data.wishlist.map((t: Tour) => t._id));
-            const localIds = new Set(localWishlist.map((t: Tour) => t._id));
-
             // Combine both, preferring server data for duplicates
             const mergedWishlist = [...data.wishlist];
             for (const item of localWishlist) {

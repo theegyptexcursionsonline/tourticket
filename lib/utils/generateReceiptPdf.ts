@@ -3,13 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 import { Buffer } from 'buffer';
 import { parseLocalDate } from '@/utils/date';
-
-let QR: typeof import('qrcode') | null = null;
-try {
-  QR = require('qrcode');
-} catch {
-  QR = null;
-}
+import * as QR from 'qrcode';
 
 // Helper functions
 const hexToRgb = (hex: string) => {
@@ -53,8 +47,8 @@ const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): 
 const calculateItemTotal = (item: ReceiptOrderedItem) => {
   const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
   const adultPrice = basePrice * (item.quantity || 1);
-  const childPrice = Number((item as any).guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-  let tourTotal = adultPrice + childPrice;
+  const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
+  const tourTotal = adultPrice + childPrice;
 
   let addOnsTotal = 0;
   if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -102,6 +96,7 @@ export interface ReceiptOrderedItem {
   quantity?: number;
   childQuantity?: number;
   infantQuantity?: number;
+  guestPrices?: { child?: number };
   price?: number;
   discountPrice?: number;
   totalPrice?: number;
@@ -111,7 +106,7 @@ export interface ReceiptOrderedItem {
     price?: number;
   };
   selectedAddOns?: Record<string, number>;
-  selectedAddOnDetails?: Record<string, { price: number; perGuest: boolean }>;
+  selectedAddOnDetails?: Record<string, { price: number; perGuest?: boolean }>;
 }
 
 export interface ReceiptPricing {

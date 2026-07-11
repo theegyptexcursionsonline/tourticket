@@ -13,6 +13,12 @@ import StopSale from '@/lib/models/StopSale';
 import Tour from '@/lib/models/Tour';
 import { toDateOnlyString } from '@/utils/date';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { IBookingOption } from '@/lib/models/Tour';
+
+type StoredBookingOption = IBookingOption & {
+  _id?: { toString(): string };
+  id?: string;
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -63,9 +69,9 @@ export async function GET(
       .select('optionIds startDate endDate reason')
       .lean();
 
-    const optionIds = Array.isArray((tour as any)?.bookingOptions)
-      ? (tour as any).bookingOptions
-          .map((option: any, index: number) => option?.id || option?._id?.toString?.() || `option-${index}`)
+    const optionIds = Array.isArray(tour.bookingOptions)
+      ? (tour.bookingOptions as StoredBookingOption[])
+          .map((option, index: number) => option?.id || option?._id?.toString?.() || `option-${index}`)
           .filter(Boolean)
       : [];
 

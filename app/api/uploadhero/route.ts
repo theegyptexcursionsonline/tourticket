@@ -1,6 +1,7 @@
 // app/api/uploadhero/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
+import type { UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 10);
 
-    const result: any = await new Promise((resolve, reject) => {
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'eeo/hero',
@@ -62,7 +63,8 @@ export async function POST(request: NextRequest) {
         },
         (error, result) => {
           if (error) reject(error);
-          else resolve(result);
+          else if (result) resolve(result);
+          else reject(new Error('Cloudinary returned no upload result'));
         }
       );
       bufferToStream(buffer).pipe(uploadStream);

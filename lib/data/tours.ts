@@ -1,5 +1,5 @@
 // Static demo tour data - uses a simplified schema different from the DB Tour model
-export const tours: any[] = [
+export const tours = [
   {
     id: 'new-york-pizza-lovers-canal-cruise',
     title: 'New York Pizza by LOVERS Canal Cruise in Amsterdam',

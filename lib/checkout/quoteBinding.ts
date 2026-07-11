@@ -1,6 +1,17 @@
 import { createHash } from 'crypto';
+interface QuoteCartItem {
+  _id?: unknown;
+  id?: unknown;
+  selectedDate?: string;
+  selectedTime?: string;
+  quantity?: number;
+  childQuantity?: number;
+  infantQuantity?: number;
+  selectedBookingOption?: { id?: string };
+  selectedAddOns?: unknown;
+}
 
-function normalizedCart(cart: any[]) {
+function normalizedCart(cart: QuoteCartItem[]) {
   return cart.map((item) => ({
     tourId: String(item?._id || item?.id || ''),
     date: String(item?.selectedDate || ''),
@@ -8,13 +19,13 @@ function normalizedCart(cart: any[]) {
     adults: Number(item?.quantity || 0),
     children: Number(item?.childQuantity || 0),
     infants: Number(item?.infantQuantity || 0),
-    option: String(item?.selectedBookingOption?.id || item?.selectedBookingOption?._id || ''),
+    option: String(item?.selectedBookingOption?.id || ''),
     addons: item?.selectedAddOns || {},
   }));
 }
 
 export function buildQuoteBinding(input: {
-  cart: any[];
+  cart: QuoteCartItem[];
   customerEmail: string;
   currency: string;
   amountMinor: number;

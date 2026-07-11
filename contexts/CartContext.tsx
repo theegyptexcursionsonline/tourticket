@@ -17,6 +17,26 @@ interface CartContextType {
     isLoading: boolean;
 }
 
+interface RawAddOn {
+    id?: string;
+    name?: string;
+    title?: string;
+    price?: number;
+    quantity?: unknown;
+    category?: string;
+    perGuest?: boolean;
+}
+
+type RawCartItem = Omit<Partial<CartItem>, 'selectedAddOns'> & {
+    selectedAddOns?: Record<string, unknown> | RawAddOn[];
+    tourId?: string | { toString(): string };
+    tourSlug?: string;
+    tourTitle?: string;
+    tourImage?: string;
+    adultPrice?: number;
+    childPrice?: number;
+};
+
 // Create and EXPORT the context
 export const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -39,19 +59,19 @@ const syncCartToServer = async (token: string, items: CartItem[]) => {
         tourId: item._id || item.id,
         tourSlug: item.slug,
         tourTitle: item.title,
-        tourImage: (item as any).images?.[0]?.url || item.image,
+        tourImage: item.images?.[0] || item.image,
         selectedDate: item.selectedDate,
         selectedTime: item.selectedTime,
         quantity: item.quantity,
         childQuantity: item.childQuantity,
-        adultPrice: (item as any).pricing?.adult || item.discountPrice || 0,
-        childPrice: (item as any).pricing?.child || 0,
+        adultPrice: item.guestPrices?.adult || item.discountPrice || 0,
+        childPrice: item.guestPrices?.child || 0,
         selectedAddOns: item.selectedAddOnDetails
             ? Object.values(item.selectedAddOnDetails).map(addon => ({
                 id: addon.id,
                 name: addon.title,
                 price: addon.price,
-                quantity: toNumberQty((item.selectedAddOns as any)?.[addon.id], 1),
+                quantity: toNumberQty(item.selectedAddOns?.[addon.id], 1),
                 category: addon.category || 'add-on',
                 perGuest: addon.perGuest ?? false,
             }))
@@ -77,11 +97,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     const { token, isAuthenticated } = useAuth();
 
-    const normalizeCartItem = useCallback((item: any): CartItem => {
+    const normalizeCartItem = useCallback((item: RawCartItem): CartItem => {
         // Normalize selectedAddOns into the client format:
         // selectedAddOns: { [addOnId]: number }
         // selectedAddOnDetails: { [addOnId]: { id, title, price, category, perGuest } }
-        const nextItem: any = { ...item };
+        const nextItem: RawCartItem = { ...item };
 
         const selectedAddOns: { [key: string]: number } = {};
         const selectedAddOnDetails: {
@@ -90,7 +110,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         // Case 1: Server/user schema format (array)
         if (Array.isArray(nextItem.selectedAddOns)) {
-            nextItem.selectedAddOns.forEach((addon: any) => {
+            nextItem.selectedAddOns.forEach((addon: RawAddOn) => {
                 if (!addon?.id) return;
                 selectedAddOns[addon.id] = toNumberQty(addon.quantity, 1);
                 selectedAddOnDetails[addon.id] = {
@@ -112,7 +132,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                     continue;
                 }
                 if (rawVal && typeof rawVal === 'object') {
-                    const valObj: any = rawVal;
+                    const valObj = rawVal as RawAddOn;
                     const id = valObj.id || key;
                     selectedAddOns[id] = toNumberQty(valObj.quantity, 1);
                     selectedAddOnDetails[id] = {
@@ -179,16 +199,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                         const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
 
                         // Transform server cart to CartItem format (then normalize add-ons)
-                        const serverCart = data.cart.map((item: any) => normalizeCartItem({
-                            ...item,
-                            id: item.tourId?.toString() || item.tourId,
-                            _id: item.tourId?.toString() || item.tourId,
-                            slug: item.tourSlug,
-                            title: item.tourTitle,
-                            image: item.tourImage,
-                            images: item.tourImage ? [{ url: item.tourImage }] : [],
-                            pricing: { adult: item.adultPrice, child: item.childPrice },
-                        }));
+                        const serverCart = (data.cart as RawCartItem[]).map((item) => {
+                            const tourId = item.tourId ? String(item.tourId) : '';
+                            return normalizeCartItem({
+                                ...item,
+                                id: tourId,
+                                _id: tourId,
+                                slug: item.tourSlug,
+                                title: item.tourTitle,
+                                image: item.tourImage,
+                                images: item.tourImage ? [item.tourImage] : [],
+                                discountPrice: item.adultPrice || 0,
+                                guestPrices: { adult: item.adultPrice || 0, child: item.childPrice || 0, infant: 0 },
+                            });
+                        });
 
                         const serverIds = new Set(serverCart.map((c: CartItem) => c.uniqueId));
 
@@ -271,19 +295,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                         tourId: normalizedItem._id || normalizedItem.id,
                         tourSlug: normalizedItem.slug,
                         tourTitle: normalizedItem.title,
-                        tourImage: (normalizedItem as any).images?.[0]?.url || normalizedItem.image,
+                        tourImage: normalizedItem.images?.[0] || normalizedItem.image,
                         selectedDate: normalizedItem.selectedDate,
                         selectedTime: normalizedItem.selectedTime,
                         quantity: normalizedItem.quantity,
                         childQuantity: normalizedItem.childQuantity,
-                        adultPrice: (normalizedItem as any).pricing?.adult || normalizedItem.discountPrice || 0,
-                        childPrice: (normalizedItem as any).pricing?.child || 0,
+                        adultPrice: normalizedItem.guestPrices?.adult || normalizedItem.discountPrice || 0,
+                        childPrice: normalizedItem.guestPrices?.child || 0,
                         selectedAddOns: normalizedItem.selectedAddOnDetails ?
                             Object.values(normalizedItem.selectedAddOnDetails).map(addon => ({
                                 id: addon.id,
                                 name: addon.title,
                                 price: addon.price,
-                                quantity: toNumberQty((normalizedItem.selectedAddOns as any)?.[addon.id], 1),
+                                quantity: toNumberQty(normalizedItem.selectedAddOns?.[addon.id], 1),
                                 category: addon.category || 'add-on',
                                 perGuest: addon.perGuest ?? false,
                             })) : [],

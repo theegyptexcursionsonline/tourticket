@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ex
   if (process.env.REVENUEPILOT_PRICING_API_ENABLED !== 'true') return revenueError(503, 'WRITES_DISABLED', 'RevenuePilot pricing writes are globally disabled.');
   await dbConnect();
   const { executionId } = await context.params;
-  const receipt: any = await RevenuePriceExecution.findOne({ executionId, tenantId: 'default' });
+  const receipt = await RevenuePriceExecution.findOne({ executionId, tenantId: 'default' });
   if (!receipt) return revenueError(404, 'EXECUTION_NOT_FOUND', 'Execution not found.');
   if (receipt.state === 'rollback_applied') return NextResponse.json({ state: 'rollback_applied', replayed: true, receipt });
   const updated = await RevenuePriceOverride.findOneAndUpdate(
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ex
   receipt.events.push({ type: receipt.state, at: new Date().toISOString() });
   await receipt.save();
   if (updated) {
-    const [tour, overrideSummary]: any[] = await Promise.all([
+    const [tour, overrideSummary] = await Promise.all([
       Tour.findById(receipt.target.tourId).select('discountPrice bookingOptions').lean(),
       RevenuePriceOverride.find({ tenantId: receipt.tenantId, tourId: receipt.target.tourId, active: true }).select('prices.adult version').lean(),
     ]);
-    const candidates = [Number(tour?.discountPrice), ...(tour?.bookingOptions || []).map((option: any) => Number(option.price)), ...overrideSummary.map((item: any) => Number(item.prices?.adult))].filter(Number.isFinite);
+    const candidates = [Number(tour?.discountPrice), ...(tour?.bookingOptions || []).map((option) => Number(option.price)), ...overrideSummary.map((item) => Number(item.prices?.adult))].filter(Number.isFinite);
     if (candidates.length) await Tour.updateOne({ _id: receipt.target.tourId }, { $set: { pricingSummary: { fromPrice: Math.min(...candidates), currency: receipt.currency, version: updated.version, validThrough: updated.date } } });
     revalidatePath('/[locale]/[slug]', 'page');
     revalidatePath('/[locale]/tours', 'page');

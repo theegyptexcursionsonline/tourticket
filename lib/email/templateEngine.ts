@@ -33,13 +33,13 @@ export class TemplateEngine {
     }
   }
 
-  static replaceVariables(template: string, data: Record<string, unknown> | any): string {
+  static replaceVariables(template: string, data: object): string {
     // Use Handlebars to compile and render the template
     const compiledTemplate = Handlebars.compile(template);
     return compiledTemplate(data);
   }
 
-  static generateSubject(template: string, data: Record<string, unknown> | any): string {
+  static generateSubject(template: string, data: object): string {
     // Subjects are plain text, so decode entities that Handlebars escapes.
     const rendered = this.replaceVariables(template, data);
     return rendered

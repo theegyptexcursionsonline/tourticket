@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     let verifyResult;
     try {
       verifyResult = await verifyFirebaseToken(idToken);
-    } catch (verifyError: any) {
+    } catch (verifyError: unknown) {
       console.error('Firebase token verification error:', verifyError);
       return NextResponse.json(
         { success: false, error: 'Token verification failed' },
@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
         emailVerified: record.emailVerified,
         providerData: record.providerData,
       });
-    } catch (syncError: any) {
-      if (syncError?.code === 'ACCOUNT_LINK_REQUIRED') {
+    } catch (syncError: unknown) {
+      if ((syncError as { code?: string }).code === 'ACCOUNT_LINK_REQUIRED') {
         return NextResponse.json(
           { success: false, error: 'An account already exists for this email. Sign in with its original method before linking Firebase.' },
           { status: 409 },
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       user: result.user,
       isNewUser: result.isNewUser,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Firebase sync error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

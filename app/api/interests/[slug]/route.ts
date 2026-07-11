@@ -7,6 +7,28 @@ import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
 
+interface InterestTour {
+  _id: { toString(): string };
+  image: string;
+  rating?: number;
+}
+
+interface InterestReview {
+  user?: { firstName?: string; lastName?: string; picture?: string } | null;
+  userName?: string;
+}
+
+interface ReviewStat {
+  _id: { toString(): string };
+  count: number;
+  avgRating: number;
+}
+
+interface InterestCategory {
+  _id: unknown;
+  description?: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -31,17 +53,17 @@ export async function GET(
         { slug: slug },
         { name: { $regex: new RegExp(`^${interestName}$`, 'i') } }
       ]
-    }).lean();
+    }).lean() as unknown as InterestCategory | null;
 
     console.log('Found category:', category);
 
-    let tours: any[] = [];
+    let tours: InterestTour[] = [];
     let totalTours = 0;
 
     if (category) {
       // Find tours in this category
       tours = await Tour.find({
-        category: { $in: [(category as any)._id] },
+        category: { $in: [category._id] },
         isPublished: true
       })
       .populate({
@@ -55,10 +77,10 @@ export async function GET(
         select: 'name slug'
       })
       .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-      .lean();
+      .lean() as unknown as InterestTour[];
 
       totalTours = await Tour.countDocuments({
-        category: { $in: [(category as any)._id] },
+        category: { $in: [category._id] },
         isPublished: true
       });
     } else {
@@ -98,7 +120,7 @@ export async function GET(
         })
         .sort({ isFeatured: -1, rating: -1, bookings: -1 })
         .limit(50)
-        .lean();
+        .lean() as unknown as InterestTour[];
 
         totalTours = tours.length;
       }
@@ -108,8 +130,8 @@ export async function GET(
 
     // Fetch reviews for these tours (optimized with limit)
     const tourIds = tours.slice(0, 20).map(tour => tour._id); // Limit to first 20 tours for reviews
-    let reviews: any[] = [];
-    let reviewStats: any[] = [];
+    let reviews: InterestReview[] = [];
+    let reviewStats: ReviewStat[] = [];
 
     if (tourIds.length > 0) {
       // Run review queries in parallel
@@ -124,9 +146,9 @@ export async function GET(
         })
         .sort({ createdAt: -1 })
         .limit(20) // Reduced limit
-        .lean(),
+        .lean() as unknown as Promise<InterestReview[]>,
 
-        Review.aggregate([
+        Review.aggregate<ReviewStat>([
           { $match: { tour: { $in: tourIds } } },
           {
             $group: {
@@ -145,7 +167,7 @@ export async function GET(
         avgRating: Math.round(item.avgRating * 10) / 10
       };
       return acc;
-    }, {});
+    }, {} as Record<string, { count: number; avgRating: number }>);
 
     // Update tours with review data
     tours = tours.map(tour => ({
@@ -155,10 +177,10 @@ export async function GET(
     }));
 
     // Get related categories (fetch in parallel if possible, but skip during build)
-    let relatedCategories: any[] = [];
+    let relatedCategories: unknown[] = [];
     if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
       relatedCategories = await Category.find({
-        _id: { $ne: (category as any)?._id }
+        _id: { $ne: category?._id }
       }).limit(6).lean();
     }
 
@@ -174,7 +196,7 @@ export async function GET(
     const interestData = {
       name: interestName,
       slug: slug,
-      description: (category as any)?.description || `Discover amazing ${interestName.toLowerCase()} experiences in Egypt`,
+      description: category?.description || `Discover amazing ${interestName.toLowerCase()} experiences in Egypt`,
       longDescription: `Explore our curated collection of ${interestName.toLowerCase()} tours and experiences. From budget-friendly options to luxury adventures, find the perfect way to experience Egypt's incredible ${interestName.toLowerCase()}.`,
       category: category,
       tours: tours,

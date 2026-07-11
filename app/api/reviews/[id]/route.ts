@@ -4,7 +4,17 @@ import User from '@/lib/models/user';
 import { NextResponse, NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { verifyFirebaseToken } from '@/lib/firebase/admin';
-import mongoose from 'mongoose';
+import type { IReview } from '@/lib/models/Review';
+
+interface PopulatedReviewUser {
+  _id: unknown;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  picture?: string;
+}
+
+type PopulatedReview = Omit<IReview, 'user'> & { user: PopulatedReviewUser };
 
 interface Params {
   id: string;
@@ -23,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<Params
       return NextResponse.json({ success: false, message: 'Review not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, data: review });
-  } catch (error) {
+    } catch {
     return NextResponse.json({ success: false, error: 'Failed to fetch review' }, { status: 400 });
   }
 }
@@ -55,7 +65,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = (user as any)._id.toString();
+      userId = String(user._id);
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
@@ -97,7 +107,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
         userEmail: review.userEmail // Keep existing userEmail
       },
       { new: true, runValidators: true }
-    ).populate('user', 'firstName lastName name picture') as any;
+    ).populate('user', 'firstName lastName name picture') as unknown as PopulatedReview | null;
+
+    if (!updatedReview) {
+      return NextResponse.json({ error: 'Review not found' }, { status: 404 });
+    }
 
     // Transform the response to match what the frontend expects
     const transformedReview = {
@@ -147,7 +161,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      userId = (user as any)._id.toString();
+      userId = String(user._id);
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);

@@ -40,8 +40,10 @@ export function performAdvancedSearch(
   if (filters.category) {
     filteredTours = filteredTours.filter(tour => {
       const cat = tour.category;
-      const catId = typeof cat === 'string' ? cat : (cat as any)?._id;
-      return catId === filters.category;
+      const categoryIds = (Array.isArray(cat) ? cat : [cat]).map((entry) =>
+        typeof entry === 'string' ? entry : entry?._id,
+      );
+      return categoryIds.includes(filters.category);
     });
   }
 

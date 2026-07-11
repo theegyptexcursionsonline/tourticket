@@ -12,12 +12,6 @@ const PLACEHOLDER_PATTERNS = [
   'example.com'
 ];
 
-const isPlaceholderUrl = (url: string) => {
-  return PLACEHOLDER_PATTERNS.some(pattern => 
-    url.toLowerCase().includes(pattern.toLowerCase())
-  );
-};
-
 export async function POST(request: NextRequest) {
   // Verify admin authentication
   const auth = await verifyAdmin(request);
@@ -27,10 +21,10 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     
     const results: {
-      tours: { count: number; cleaned: any[] };
-      categories: { count: number; cleaned: any[] };
-      destinations: { count: number; cleaned: any[] };
-      attractionPages: { count: number; cleaned: any[] };
+      tours: { count: number; cleaned: unknown[] };
+      categories: { count: number; cleaned: unknown[] };
+      destinations: { count: number; cleaned: unknown[] };
+      attractionPages: { count: number; cleaned: unknown[] };
     } = {
       tours: { count: 0, cleaned: [] },
       categories: { count: 0, cleaned: [] },
@@ -209,21 +203,21 @@ export async function POST(request: NextRequest) {
     console.error('Error cleaning images:', error);
     return NextResponse.json({
       success: false,
-      error: (error as any).message || 'Failed to clean images'
+      error: error instanceof Error ? error.message : 'Failed to clean images'
     }, { status: 500 });
   }
 }
 
 // GET endpoint to check how many items have placeholder images
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await dbConnect();
     
     const results: {
-      tours: { count: number; items: any[] };
-      categories: { count: number; items: any[] };
-      destinations: { count: number; items: any[] };
-      attractionPages: { count: number; items: any[] };
+      tours: { count: number; items: unknown[] };
+      categories: { count: number; items: unknown[] };
+      destinations: { count: number; items: unknown[] };
+      attractionPages: { count: number; items: unknown[] };
     } = {
       tours: { count: 0, items: [] },
       categories: { count: 0, items: [] },
@@ -318,7 +312,7 @@ export async function GET(request: NextRequest) {
     console.error('Error checking placeholder images:', error);
     return NextResponse.json({
       success: false,
-      error: (error as any).message || 'Failed to check images'
+      error: error instanceof Error ? error.message : 'Failed to check images'
     }, { status: 500 });
   }
 }

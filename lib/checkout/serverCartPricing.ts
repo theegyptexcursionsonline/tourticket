@@ -3,10 +3,98 @@ import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
 
+type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
+
+interface RawBookingOption {
+  id?: unknown;
+  pricingKey?: unknown;
+}
+
+interface RawCartItem extends Record<string, unknown> {
+  _id?: unknown;
+  id?: unknown;
+  selectedBookingOption?: RawBookingOption;
+  selectedDate?: unknown;
+  selectedTime?: unknown;
+  priceVersion?: unknown;
+  quantity?: unknown;
+  childQuantity?: unknown;
+  infantQuantity?: unknown;
+  selectedAddOns?: unknown;
+}
+
+interface LeanBookingOption {
+  _id?: mongoose.Types.ObjectId;
+  pricingKey?: string;
+  label?: string;
+  type: string;
+  price: number;
+  originalPrice?: number;
+  duration?: string;
+  badge?: string;
+}
+
+interface LeanAddOn {
+  _id?: mongoose.Types.ObjectId;
+  name: string;
+  price: number;
+  category?: string;
+}
+
+interface LeanTour {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  discountPrice: number;
+  originalPrice?: number;
+  bookingOptions?: LeanBookingOption[];
+  addOns?: LeanAddOn[];
+}
+
+export interface SecureBookingOption {
+  id: string;
+  pricingKey: string;
+  title: string;
+  price: number;
+  originalPrice: number;
+  duration?: string;
+  badge?: string;
+}
+
+export interface SecureAddOnDetail {
+  id: string;
+  title: string;
+  price: number;
+  category: string;
+  perGuest: boolean;
+}
+
+export interface SecureCartItem extends Record<string, unknown> {
+  _id: string;
+  id: string;
+  title: string;
+  image?: string;
+  images?: string[];
+  quantity: number;
+  childQuantity: number;
+  infantQuantity: number;
+  selectedDate?: string;
+  selectedTime?: string;
+  price: number;
+  discountPrice: number;
+  originalPrice: number;
+  selectedBookingOption: SecureBookingOption;
+  guestPrices: { adult: number; child: number; infant: number };
+  priceVersion: number;
+  priceExecutionId: string | null;
+  priceOverrideId: string | null;
+  selectedAddOns: Record<string, number>;
+  selectedAddOnDetails: Record<string, SecureAddOnDetail>;
+}
+
 export class PriceChangedError extends Error {
   code = 'PRICE_CHANGED';
-  quote: any;
-  constructor(quote: any) {
+  quote: EffectivePriceQuote;
+  constructor(quote: EffectivePriceQuote) {
     super('The selected price changed. Review the new quote before continuing.');
     this.quote = quote;
   }
@@ -25,39 +113,40 @@ function quantity(value: unknown, fallback: number, minimum = 0): number {
   return Math.min(50, Math.max(minimum, Math.floor(parsed)));
 }
 
-export async function secureCartPricing(input: unknown): Promise<any[]> {
+export async function secureCartPricing(input: unknown): Promise<SecureCartItem[]> {
   if (!Array.isArray(input) || input.length === 0 || input.length > 20) {
     throw new Error('Invalid cart');
   }
 
-  return Promise.all(input.map(async (rawItem: any) => {
+  return Promise.all(input.map(async (rawValue) => {
+    const rawItem = rawValue as RawCartItem;
     const tourId = String(rawItem?._id || rawItem?.id || '');
     if (!mongoose.Types.ObjectId.isValid(tourId)) throw new Error('Invalid tour');
 
-    const tour: any = await Tour.findOne({
+    const tour = await Tour.findOne({
       _id: tourId,
       isPublished: true,
       ...DEFAULT_TENANT_FILTER,
-    }).select('_id title discountPrice originalPrice bookingOptions addOns').lean();
+    }).select('_id title discountPrice originalPrice bookingOptions addOns').lean() as unknown as LeanTour | null;
     if (!tour) throw new Error('Tour unavailable');
 
     const optionId = rawItem?.selectedBookingOption?.id
       ? String(rawItem.selectedBookingOption.id)
       : '';
     const requestedPricingKey = rawItem?.selectedBookingOption?.pricingKey ? String(rawItem.selectedBookingOption.pricingKey) : '';
-    let option: any;
+    let option: SecureBookingOption;
     if (optionId && optionId !== 'standard-default') {
       const match = optionId.match(/^option-(\d+)$/);
       const optionIndex = requestedPricingKey
-        ? tour.bookingOptions?.findIndex((candidate: any) => candidate?.pricingKey === requestedPricingKey)
-        : match ? Number(match[1]) : tour.bookingOptions?.findIndex((candidate: any) => String(candidate?._id || '') === optionId);
+        ? tour.bookingOptions?.findIndex((candidate) => candidate?.pricingKey === requestedPricingKey)
+        : match ? Number(match[1]) : tour.bookingOptions?.findIndex((candidate) => String(candidate?._id || '') === optionId);
       if (optionIndex === undefined || optionIndex < 0 || !tour.bookingOptions?.[optionIndex]) {
         throw new Error('Invalid booking option');
       }
       const dbOption = tour.bookingOptions[optionIndex];
       option = {
         id: optionId,
-        pricingKey: dbOption.pricingKey,
+        pricingKey: dbOption.pricingKey || requestedPricingKey,
         title: dbOption.label || `${tour.title} - ${dbOption.type}`,
         price: Number(dbOption.price),
         originalPrice: Number(dbOption.originalPrice || tour.originalPrice || dbOption.price),
@@ -76,7 +165,7 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
 
     if (!Number.isFinite(option.price) || option.price < 0) throw new Error('Invalid catalogue price');
 
-    let quote: any = null;
+    let quote: EffectivePriceQuote | null = null;
     if (rawItem?.selectedDate && rawItem?.selectedTime) {
       quote = await resolveEffectivePrice({
         tourId,
@@ -91,7 +180,7 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
     }
 
     const catalogueAddons = tour.addOns?.length
-      ? tour.addOns.map((addon: any, index: number) => ({
+      ? tour.addOns.map((addon, index: number) => ({
           id: String(addon?._id || `addon-${index}`),
           title: addon.name,
           price: Number(addon.price),
@@ -101,20 +190,20 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
       : FALLBACK_ADDONS;
 
     const selectedAddOns: Record<string, number> = {};
-    const selectedAddOnDetails: Record<string, any> = {};
+    const selectedAddOnDetails: Record<string, SecureAddOnDetail> = {};
     const requested = rawItem?.selectedAddOns;
     const entries: Array<[string, unknown]> = Array.isArray(requested)
-      ? requested.map((addon: any) => [String(addon?.id || ''), addon?.quantity])
+      ? requested.map((addon) => [String(addon?.id || ''), addon?.quantity])
       : requested && typeof requested === 'object'
         ? Object.entries(requested)
         : [];
 
     for (const [id, rawQuantity] of entries) {
-      const count = quantity(rawQuantity && typeof rawQuantity === 'object'
-        ? (rawQuantity as any).quantity
+      const count = quantity(rawQuantity && typeof rawQuantity === 'object' && 'quantity' in rawQuantity
+        ? rawQuantity.quantity
         : rawQuantity, 0);
       if (count === 0) continue;
-      const addon = catalogueAddons.find((candidate: any) => String(candidate.id) === id);
+      const addon = catalogueAddons.find((candidate) => String(candidate.id) === id);
       if (!addon || !Number.isFinite(addon.price) || addon.price < 0) {
         throw new Error('Invalid add-on');
       }
@@ -127,6 +216,8 @@ export async function secureCartPricing(input: unknown): Promise<any[]> {
       _id: tour._id.toString(),
       id: tour._id.toString(),
       title: tour.title,
+      selectedDate: rawItem.selectedDate ? String(rawItem.selectedDate).slice(0, 10) : undefined,
+      selectedTime: rawItem.selectedTime ? String(rawItem.selectedTime) : undefined,
       quantity: quantity(rawItem?.quantity, 1, 1),
       childQuantity: quantity(rawItem?.childQuantity, 0),
       infantQuantity: quantity(rawItem?.infantQuantity, 0),

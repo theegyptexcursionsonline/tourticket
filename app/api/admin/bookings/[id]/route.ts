@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -117,8 +118,8 @@ export async function GET(
     }
 
     // Transform the booking data
-    const tour = booking.tour as any;
-    const user = booking.user as any;
+    const tour = booking.tour as unknown as PopulatedBookingTour;
+    const user = booking.user as unknown as PopulatedBookingUser;
     const transformedBooking = {
       ...booking,
       id: booking._id,
@@ -138,13 +139,13 @@ export async function GET(
 
     return NextResponse.json(transformedBooking);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch booking:', error);
     return NextResponse.json(
       { 
         success: false, 
         message: 'Failed to fetch booking',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     );
@@ -370,8 +371,8 @@ export async function PATCH(
     }
 
     // Send email notifications if there are changes
-    const updatedUser = updatedBooking.user as any;
-    const updatedTour = updatedBooking.tour as any;
+    const updatedUser = updatedBooking.user as unknown as PopulatedBookingUser;
+    const updatedTour = updatedBooking.tour as unknown as PopulatedBookingTour;
     
     if (changesForNotification.length > 0 && updatedUser && updatedTour) {
       const customerName = updatedUser.name || 
@@ -417,7 +418,6 @@ export async function PATCH(
           console.log('✅ Cancellation email sent to customer');
         } else {
           // Send booking update email
-          const statusChanged = changesForNotification.some(c => c.field === 'Status');
           const detailsChanged = changesForNotification.some(c => c.field !== 'Status');
 
           await EmailService.sendBookingStatusUpdate({
@@ -481,8 +481,8 @@ export async function PATCH(
     }
 
     // Transform the booking data
-    const finalTour = updatedBooking.tour as any;
-    const finalUser = updatedBooking.user as any;
+    const finalTour = updatedBooking.tour as unknown as PopulatedBookingTour;
+    const finalUser = updatedBooking.user as unknown as PopulatedBookingUser;
     const transformedBooking = {
       ...updatedBooking,
       id: updatedBooking._id,
@@ -502,13 +502,13 @@ export async function PATCH(
 
     return NextResponse.json(transformedBooking);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update booking:', error);
     return NextResponse.json(
       {
         success: false,
         message: 'Failed to update booking',
-        error: error.message || 'Unknown error',
+        error: (error as Error).message || 'Unknown error',
       },
       { status: 500 }
     );
@@ -544,13 +544,13 @@ export async function DELETE(
       data: { id: deletedBooking._id },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete booking:', error);
     return NextResponse.json(
       { 
         success: false, 
         message: 'Failed to delete booking',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     );

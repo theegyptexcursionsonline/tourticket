@@ -4,6 +4,22 @@ import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { ensureDateOnlyString, parseLocalDate } from '@/utils/date';
 
+interface AvailabilityCartItem {
+  _id?: unknown;
+  id?: unknown;
+  selectedDate?: string;
+  selectedTime?: string;
+  quantity?: number;
+  childQuantity?: number;
+  infantQuantity?: number;
+  selectedBookingOption?: { id?: string };
+}
+
+interface AvailabilityTour {
+  _id: unknown;
+  availability?: { slots?: Array<{ time: string; capacity: number }> };
+}
+
 export class UnavailableTourError extends Error {
   status = 409;
   constructor(message = 'One or more selected departures are no longer available') {
@@ -12,12 +28,12 @@ export class UnavailableTourError extends Error {
   }
 }
 
-export async function assertCartAvailability(cart: any[]) {
+export async function assertCartAvailability(cart: AvailabilityCartItem[]) {
   for (const item of cart) {
     const tourId = String(item?._id || item?.id || '');
-    const tour: any = await Tour.findOne({ _id: tourId, isPublished: true, ...DEFAULT_TENANT_FILTER })
+    const tour = await Tour.findOne({ _id: tourId, isPublished: true, ...DEFAULT_TENANT_FILTER })
       .select('_id availability bookingOptions')
-      .lean();
+      .lean() as unknown as AvailabilityTour | null;
     if (!tour) throw new UnavailableTourError('A selected tour is unavailable');
 
     const day = parseLocalDate(item.selectedDate);
@@ -27,7 +43,7 @@ export async function assertCartAvailability(cart: any[]) {
     }
     const end = new Date(day);
     end.setHours(23, 59, 59, 999);
-    const optionId = String(item?.selectedBookingOption?.id || item?.selectedBookingOption?._id || '');
+    const optionId = String(item?.selectedBookingOption?.id || '');
     const stopSale = await StopSale.exists({
       tourId: tour._id,
       startDate: { $lte: end },
@@ -37,7 +53,7 @@ export async function assertCartAvailability(cart: any[]) {
     if (stopSale) throw new UnavailableTourError();
 
     const requested = Number(item.quantity || 0) + Number(item.childQuantity || 0) + Number(item.infantQuantity || 0);
-    const slot = tour.availability?.slots?.find((candidate: any) => candidate.time === item.selectedTime);
+    const slot = tour.availability?.slots?.find((candidate) => candidate.time === item.selectedTime);
     if (slot && Number.isFinite(Number(slot.capacity))) {
       const sold = await Booking.aggregate([
         { $match: { tour: tour._id, dateString, status: { $nin: ['Cancelled', 'cancelled', 'Refunded', 'refunded'] }, ...DEFAULT_TENANT_FILTER } },

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .sort({ order: 1, name: 1 })
       .lean();
 
-    const categoryIds = categories.map((category: any) => category._id);
+    const categoryIds = categories.map((category) => category._id);
     const tourCounts = await Tour.aggregate([
       {
         $match: {
@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
       { $group: { _id: '$category', count: { $sum: 1 } } },
     ]).catch(() => []);
 
-    const countMap = new Map(tourCounts.map((item: any) => [item._id?.toString(), item.count]));
+    const countMap = new Map(tourCounts.map((item) => [item._id?.toString(), item.count]));
 
-    const categoriesWithCounts = categories.map((category: any) => ({
+    const categoriesWithCounts = categories.map((category) => ({
       ...category,
       tourCount: countMap.get(category._id?.toString()) || 0,
     }));
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     const visibleCategories = filterVisibleTaxonomyEntries(localizedCategories, {
       requireTours: true,
-    }).sort((a: any, b: any) => {
+    }).sort((a, b) => {
       const orderA = typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER;
       const orderB = typeof b.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER;
 
@@ -123,11 +123,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating category:', error);
     
-    if (error instanceof Error && error.name === 'ValidationError') {
+    if (error instanceof Error && (error as Error).name === 'ValidationError') {
       return NextResponse.json({
         success: false,
         error: 'Validation error',
-        details: error.message
+        details: (error as Error).message
       }, { status: 400 });
     }
     

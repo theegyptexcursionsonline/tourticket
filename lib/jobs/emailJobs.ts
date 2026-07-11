@@ -1,9 +1,14 @@
 // lib/jobs/emailJobs.ts
 import dbConnect from '@/lib/dbConnect';
-import Booking from '@/lib/models/Booking';
-import Tour from '@/lib/models/Tour';
-import User from '@/lib/models/user';
+import Booking, { type IBooking } from '@/lib/models/Booking';
+import Tour, { type ITour } from '@/lib/models/Tour';
+import User, { type IUser } from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
+
+type PopulatedBooking = Omit<IBooking, 'tour' | 'user'> & {
+  tour: ITour;
+  user: IUser;
+};
 
 // Helper to format dates consistently and avoid timezone issues
 // MongoDB stores dates in UTC which can cause off-by-one day errors when reformatted
@@ -65,7 +70,7 @@ export async function sendTripReminders() {
 
     console.log(`Found ${upcomingBookings.length} bookings for tomorrow`);
 
-    for (const booking of upcomingBookings as any[]) {
+    for (const booking of upcomingBookings as unknown as PopulatedBooking[]) {
       try {
         await EmailService.sendTripReminder({
           customerName: `${booking.user.firstName} ${booking.user.lastName}`,
@@ -126,7 +131,7 @@ export async function sendTripCompletionEmails() {
 
     console.log(`Found ${completedBookings.length} completed bookings from yesterday`);
 
-    for (const booking of completedBookings as any[]) {
+    for (const booking of completedBookings as unknown as PopulatedBooking[]) {
       try {
         await EmailService.sendTripCompletion({
           customerName: `${booking.user.firstName} ${booking.user.lastName}`,

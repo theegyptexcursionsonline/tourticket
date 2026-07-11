@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
-import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { PriceChangedError, secureCartPricing, type SecureCartItem } from '@/lib/checkout/serverCartPricing';
 import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
 import { assertCartAvailability, UnavailableTourError } from '@/lib/checkout/assertAvailability';
 
@@ -17,7 +17,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY environment variable is not set');
     }
     stripeInstance = new Stripe(key, {
-      apiVersion: '2024-12-18.acacia' as any,
+      apiVersion: '2025-08-27.basil',
     });
   }
   return stripeInstance;
@@ -60,55 +60,36 @@ export async function POST(request: Request) {
     await assertCartAvailability(cart);
 
     const round2 = (n: number) => Math.round(n * 100) / 100;
-    const toNumberQty = (value: any, fallback = 0): number => {
+    const toNumberQty = (value: unknown, fallback = 0): number => {
       if (typeof value === 'number' && Number.isFinite(value)) return value;
       if (typeof value === 'string') {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : fallback;
       }
       if (value && typeof value === 'object') {
-        const inner = (value as any).quantity ?? (value as any).qty ?? (value as any).count;
+        const record = value as Record<string, unknown>;
+        const inner = record.quantity ?? record.qty ?? record.count;
         return toNumberQty(inner, fallback);
       }
       return fallback;
     };
 
-    const calculateAddOnsTotal = (cartItem: any): number => {
+    const calculateAddOnsTotal = (cartItem: SecureCartItem): number => {
       const totalGuests = (cartItem?.quantity || 0) + (cartItem?.childQuantity || 0);
       let addOnsTotal = 0;
 
-      // Array format
-      if (Array.isArray(cartItem?.selectedAddOns)) {
-        for (const addon of cartItem.selectedAddOns) {
-          const qty = toNumberQty(addon?.quantity, 0);
-          if (qty <= 0) continue;
-          const price = Number(addon?.price || 0);
-          const perGuest = addon?.perGuest ?? false;
-          const multiplier = perGuest ? totalGuests : 1;
-          addOnsTotal += price * multiplier * (qty || 1);
-        }
-        return addOnsTotal;
-      }
-
-      // Object format (or corrupted object values)
-      if (cartItem?.selectedAddOns && typeof cartItem.selectedAddOns === 'object') {
-        for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
-          const qty = toNumberQty(rawQty, 0);
-          const detail =
-            cartItem?.selectedAddOnDetails?.[addOnId] ||
-            (rawQty && typeof rawQty === 'object' ? (rawQty as any) : undefined);
-          if (!detail || qty <= 0) continue;
-          const price = Number((detail as any).price || 0);
-          const perGuest = (detail as any).perGuest ?? false;
-          const multiplier = perGuest ? totalGuests : 1;
-          addOnsTotal += price * multiplier * (qty || 1);
-        }
+      for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
+        const qty = toNumberQty(rawQty, 0);
+        const detail = cartItem.selectedAddOnDetails[addOnId];
+        if (!detail || qty <= 0) continue;
+        const multiplier = detail.perGuest ? totalGuests : 1;
+        addOnsTotal += detail.price * multiplier * qty;
       }
 
       return addOnsTotal;
     };
 
-    const subtotal = round2((cart || []).reduce((sum: number, item: any) => {
+    const subtotal = round2(cart.reduce((sum, item) => {
       const basePrice = item?.selectedBookingOption?.price || item?.discountPrice || item?.price || 0;
       const adults = toNumberQty(item?.quantity ?? 1, 1);
       const children = toNumberQty(item?.childQuantity ?? 0, 0);
@@ -140,7 +121,7 @@ export async function POST(request: Request) {
 
     // Prepare cart data for metadata (essential fields only to fit in Stripe's 500 char limit per field)
     // We store tour IDs, quantities, dates, times so webhook can recreate booking if needed
-    const cartSummary = cart.map((item: any, index: number) => ({
+    const cartSummary = cart.map((item, index: number) => ({
       i: index, // index
       t: item._id || item.id, // tour ID
       a: item.quantity || 1, // adults
@@ -158,26 +139,22 @@ export async function POST(request: Request) {
       po: item.priceOverrideId,
       // Add-ons (short keys): [{id,q,p,pg,t}]
       ao: (() => {
-        const addOns: any[] = [];
+        const addOns: Array<{ id: string; q: number; p: number; pg: boolean; t: string }> = [];
         const source = item?.selectedAddOns;
         const details = item?.selectedAddOnDetails || {};
-        const pushAddOn = (id: string, q: any) => {
+        const pushAddOn = (id: string, q: unknown) => {
           const qty = toNumberQty(q, 0);
           if (qty <= 0) return;
-          const d = details?.[id] || (q && typeof q === 'object' ? q : undefined);
+          const d = details[id];
           addOns.push({
             id,
             q: qty,
             p: Number(d?.price || 0),
             pg: d?.perGuest ?? false,
-            t: String(d?.title || d?.name || '').slice(0, 40),
+            t: String(d?.title || '').slice(0, 40),
           });
         };
-        if (Array.isArray(source)) {
-          source.forEach((a: any) => pushAddOn(a?.id, a?.quantity));
-        } else if (source && typeof source === 'object') {
-          Object.entries(source).forEach(([id, q]) => pushAddOn(id, q));
-        }
+        Object.entries(source).forEach(([id, q]) => pushAddOn(id, q));
         return addOns;
       })(),
     }));
@@ -209,7 +186,7 @@ export async function POST(request: Request) {
         // special requests into Stripe metadata. Those fields remain in the
         // first-party checkout request and booking record only.
         // Tour info
-        tours: cart.map((item: any) => item.title).join(', ').substring(0, 500),
+        tours: cart.map((item) => item.title).join(', ').substring(0, 500),
         tour_count: String(cart.length),
         // Cart data (JSON compressed - Stripe allows up to 500 chars per value)
         cart_data: JSON.stringify(cartSummary).substring(0, 500),
@@ -250,24 +227,25 @@ export async function POST(request: Request) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create PaymentIntent error:', error);
 
     if (error instanceof PriceChangedError) {
-      return NextResponse.json({ success: false, code: error.code, message: error.message, quote: error.quote }, { status: 409 });
+      return NextResponse.json({ success: false, code: (error as { code?: string | number }).code, message: (error as Error).message, quote: error.quote }, { status: 409 });
     }
     if (error instanceof UnavailableTourError) {
-      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: error.message }, { status: 409 });
+      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: (error as Error).message }, { status: 409 });
     }
 
     // Provide more specific error messages
     let errorMessage = 'Failed to initialize payment. Please try again.';
 
-    if (error.type === 'StripeInvalidRequestError') {
+    const stripeErrorType = (error as { type?: string }).type;
+    if (stripeErrorType === 'StripeInvalidRequestError') {
       errorMessage = 'Invalid payment request. Please check your information and try again.';
-    } else if (error.type === 'StripeAPIError') {
+    } else if (stripeErrorType === 'StripeAPIError') {
       errorMessage = 'Payment service temporarily unavailable. Please try again in a moment.';
-    } else if (error.type === 'StripeAuthenticationError') {
+    } else if (stripeErrorType === 'StripeAuthenticationError') {
       errorMessage = 'Payment configuration error. Please contact support.';
       console.error('STRIPE AUTHENTICATION ERROR - Check API keys!');
     }
@@ -276,7 +254,7 @@ export async function POST(request: Request) {
       {
         success: false,
         message: errorMessage,
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     );

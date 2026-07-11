@@ -75,19 +75,19 @@ export async function PUT(
       data: destination,
       message: 'Destination updated successfully' 
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating destination:', error);
     
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue)[0];
+    if ((error as { code?: string | number }).code === 11000) {
+      const field = Object.keys((error as { keyValue?: Record<string, unknown> }).keyValue || {})[0] || 'field';
       return NextResponse.json({ 
         success: false, 
         error: `${field} already exists` 
       }, { status: 400 });
     }
     
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((e: any) => e.message);
+    if ((error as Error).name === 'ValidationError') {
+      const messages = Object.values((error as { errors: Record<string, Error> }).errors).map((e) => e.message);
       return NextResponse.json({ 
         success: false, 
         error: messages.join(', ') 

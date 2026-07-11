@@ -6,66 +6,7 @@ import { syncTourToAlgolia } from '@/lib/algolia';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-
-// Helper function to clean booking options
-function cleanBookingOptions(bookingOptions: any[]): any[] {
-  if (!Array.isArray(bookingOptions)) return [];
-  
-  return bookingOptions.map(option => {
-    const cleanedOption = { ...option };
-    
-    // Remove empty or invalid difficulty values
-    if (!cleanedOption.difficulty || cleanedOption.difficulty.trim() === '') {
-      delete cleanedOption.difficulty;
-    } else {
-      const validDifficulties = ['Easy', 'Moderate', 'Challenging', 'Difficult'];
-      if (!validDifficulties.includes(cleanedOption.difficulty)) {
-        delete cleanedOption.difficulty;
-      }
-    }
-    
-    // Clean other optional fields
-    if (!cleanedOption.badge || cleanedOption.badge.trim() === '') {
-      delete cleanedOption.badge;
-    }
-    
-    if (!cleanedOption.description || cleanedOption.description.trim() === '') {
-      delete cleanedOption.description;
-    }
-    
-    if (!cleanedOption.duration || cleanedOption.duration.trim() === '') {
-      delete cleanedOption.duration;
-    }
-    
-    if (!cleanedOption.groupSize || cleanedOption.groupSize.trim() === '') {
-      delete cleanedOption.groupSize;
-    }
-    
-    // Ensure arrays are properly handled
-    if (!Array.isArray(cleanedOption.languages)) {
-      cleanedOption.languages = [];
-    }
-    
-    if (!Array.isArray(cleanedOption.highlights)) {
-      cleanedOption.highlights = [];
-    }
-    
-    // Ensure numeric fields are properly typed
-    if (cleanedOption.price) {
-      cleanedOption.price = Number(cleanedOption.price);
-    }
-    
-    if (cleanedOption.originalPrice) {
-      cleanedOption.originalPrice = Number(cleanedOption.originalPrice);
-    }
-    
-    if (cleanedOption.discount) {
-      cleanedOption.discount = Number(cleanedOption.discount);
-    }
-    
-    return cleanedOption;
-  });
-}
+import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 
 async function fetchToursWithPopulate() {
   // Scope the EEO admin tours API to the default tenant — other tenants
@@ -146,18 +87,18 @@ export async function POST(request: NextRequest) {
 
     // Handle category, attractions and interests arrays
     if (body.category && Array.isArray(body.category)) {
-      body.category = body.category.filter((id: any) => id && id.trim());
+      body.category = body.category.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0);
     }
     if (body.attractions && Array.isArray(body.attractions)) {
-      body.attractions = body.attractions.filter((id: any) => id && id.trim());
+      body.attractions = body.attractions.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0);
     }
     if (body.interests && Array.isArray(body.interests)) {
-      body.interests = body.interests.filter((id: any) => id && id.trim());
+      body.interests = body.interests.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0);
     }
 
     const tour = await Tour.create(body);
     
-    let populated: any = tour;
+    let populated: unknown = tour;
     try {
       populated = await Tour.findById(tour._id)
         .populate('category')
@@ -173,7 +114,7 @@ export async function POST(request: NextRequest) {
     // Sync to Algolia if published
     if (body.isPublished) {
       try {
-        await syncTourToAlgolia(populated ?? tour);
+        await syncTourToAlgolia((populated ?? tour) as Parameters<typeof syncTourToAlgolia>[0]);
       } catch (algoliaErr) {
         console.warn('Failed to sync tour to Algolia:', algoliaErr);
         // Don't fail the request if Algolia sync fails
@@ -181,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fire-and-forget: auto-translate in background
-    autoTranslateTour((tour._id as any).toString()).catch(err =>
+    autoTranslateTour(String(tour._id)).catch(err =>
       console.error('Auto-translate tour failed:', err)
     );
 

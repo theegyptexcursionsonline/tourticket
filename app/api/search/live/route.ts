@@ -1,7 +1,7 @@
 import dbConnect from '@/lib/dbConnect';
-import Tour from '@/lib/models/Tour';
+import Tour, { type ITour } from '@/lib/models/Tour';
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import mongoose, { type FilterQuery } from 'mongoose';
 
 // Helper function for flexible live search
 function createLiveSearchConditions(searchQuery: string) {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
         if (!searchQuery) {
             // Return tours based on filters when no search query
-            const query: any = { isPublished: true, ...defaultTenantFilter };
+            const query: FilterQuery<ITour> = { isPublished: true, ...defaultTenantFilter };
 
             const categories = searchParams.get('categories');
             if (categories) {
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
                 }
             }
             
-            let sortOption: any = { bookings: -1, rating: -1 };
+            let sortOption: Record<string, 1 | -1> = { bookings: -1, rating: -1 };
             const sortBy = searchParams.get('sortBy');
             if (sortBy === 'price-asc') {
                 sortOption = { discountPrice: 1 };

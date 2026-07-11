@@ -53,8 +53,8 @@ export async function claimRevenueNonce(keyId: string, nonce: string) {
   await dbConnect();
   try {
     await RevenueMachineNonce.create({ keyId, nonce, expiresAt: new Date(Date.now() + MAX_CLOCK_SKEW_MS) });
-  } catch (error: any) {
-    if (error?.code === 11000) return false;
+  } catch (error: unknown) {
+    if ((error as { code?: number }).code === 11000) return false;
     throw error;
   }
   return true;

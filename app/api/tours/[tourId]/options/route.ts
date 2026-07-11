@@ -40,7 +40,7 @@ export async function GET(
 
     if (tour.bookingOptions && tour.bookingOptions.length > 0) {
       // Use real booking options from database
-      tourOptions = tour.bookingOptions.map((option: any, index: number) => ({
+      tourOptions = tour.bookingOptions.map((option, index: number) => ({
         id: option._id?.toString() || `option-${index}`,
         title: option.label || `${tour.title} - ${option.type}`,
         type: option.type || 'Per Person',

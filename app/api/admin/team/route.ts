@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
-import User from '@/lib/models/user';
+import User, { type IUser } from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import {
   ADMIN_PERMISSIONS,
@@ -13,9 +13,11 @@ import {
 } from '@/lib/constants/adminPermissions';
 import { EmailService } from '@/lib/email/emailService';
 
-const sanitize = (user: any) => ({
-  id: user._id.toString(),
-  _id: user._id.toString(),
+type AdminUserSource = Pick<IUser, 'firstName' | 'lastName' | 'email' | 'role' | 'permissions' | 'isActive' | 'lastLoginAt' | 'createdAt'> & { _id: unknown };
+
+const sanitize = (user: AdminUserSource) => ({
+  id: String(user._id),
+  _id: String(user._id),
   firstName: user.firstName,
   lastName: user.lastName,
   email: user.email,
@@ -46,11 +48,6 @@ const normalizeRole = (role: unknown): AdminRole => {
     return role as AdminRole;
   }
   return 'operations';
-};
-
-const getPortalLink = () => {
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://tourticket.app';
-  return `${base.replace(/\/$/, '')}/admin`;
 };
 
 const getSupportEmail = () =>
@@ -166,4 +163,3 @@ export async function POST(request: NextRequest) {
     { status: 201 },
   );
 }
-

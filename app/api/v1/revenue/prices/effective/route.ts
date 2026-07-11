@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     const effective = await resolveEffectivePrice({ tourId, optionKey, date, time, tenantId: 'default' });
     return NextResponse.json({ tenantId: 'default', effective }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
-    return revenueError(400, 'EFFECTIVE_PRICE_UNAVAILABLE', error?.message || 'Effective price unavailable.');
+  } catch (error: unknown) {
+    return revenueError(400, 'EFFECTIVE_PRICE_UNAVAILABLE', error instanceof Error ? error.message : 'Effective price unavailable.');
   }
 }

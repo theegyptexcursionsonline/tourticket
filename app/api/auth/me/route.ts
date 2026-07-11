@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       success: true,
       user: userData,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get user error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to get user information' },

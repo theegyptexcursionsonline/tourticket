@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { PopulatedBookingTour } from '@/lib/types/populatedBooking';
 
 export async function GET(
   request: NextRequest,
@@ -40,7 +41,7 @@ export async function GET(
     }
 
     // Transform booking data for frontend
-    const tour = booking.tour as any;
+    const tour = booking.tour as unknown as PopulatedBookingTour;
     const transformedBooking = {
       bookingReference: booking.bookingReference,
       tour: {

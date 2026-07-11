@@ -1,6 +1,99 @@
 // lib/algolia.ts
 import { algoliasearch } from 'algoliasearch';
 
+type SearchId = string | { toString(): string };
+type TaxonomyRef = SearchId | { _id?: SearchId; name?: string; toString(): string };
+
+interface AlgoliaTourSource {
+  _id: SearchId;
+  title?: string;
+  slug?: string;
+  description?: string;
+  location?: string;
+  price?: number;
+  discountPrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  duration?: string | number;
+  image?: string;
+  images?: string[];
+  tags?: string[];
+  category?: TaxonomyRef;
+  destination?: TaxonomyRef;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  bookings?: number;
+  highlights?: string[];
+  included?: string[];
+  excluded?: string[];
+}
+
+interface AlgoliaDestinationSource {
+  _id: unknown;
+  name?: string;
+  slug?: string;
+  description?: string;
+  longDescription?: string;
+  country?: string;
+  image?: string;
+  images?: string[];
+  highlights?: string[];
+  thingsToDo?: string[];
+  tags?: string[];
+  keywords?: string[];
+  isPublished?: boolean;
+  featured?: boolean;
+  tourCount?: number;
+}
+
+interface AlgoliaCategorySource {
+  _id: unknown;
+  name?: string;
+  slug?: string;
+  description?: string;
+  longDescription?: string;
+  heroImage?: string;
+  images?: string[];
+  highlights?: string[];
+  features?: string[];
+  keywords?: string[];
+  isPublished?: boolean;
+  featured?: boolean;
+  tourCount?: number;
+  order?: number;
+}
+
+interface AlgoliaBlogSource {
+  _id: SearchId;
+  title?: string;
+  slug?: string;
+  excerpt?: string;
+  content?: string;
+  category?: string;
+  tags?: string[];
+  author?: string;
+  featuredImage?: string;
+  images?: string[];
+  status?: string;
+  publishedAt?: string | Date | null;
+  featured?: boolean;
+  views?: number;
+  likes?: number;
+  readTime?: number;
+}
+
+const formatTaxonomyRef = (value?: TaxonomyRef) => {
+  if (!value) return null;
+  if (typeof value === 'string') return { _id: value, name: '' };
+  if ('_id' in value || 'name' in value) {
+    return { _id: String(value._id || value), name: value.name || '' };
+  }
+  return { _id: value.toString(), name: '' };
+};
+
+const taxonomyName = (value?: TaxonomyRef) =>
+  value && typeof value !== 'string' && 'name' in value ? value.name || '' : '';
+
 // Lazy-loaded Algolia client
 let algoliaClientInstance: ReturnType<typeof algoliasearch> | null = null;
 
@@ -34,7 +127,7 @@ export const ALGOLIA_INDEX_BLOGS = 'blogs';
 export const ALGOLIA_INDEX_NAME = ALGOLIA_INDEX_TOURS;
 
 // Helper function to format tour data for Algolia
-export const formatTourForAlgolia = (tour: any) => {
+export const formatTourForAlgolia = (tour: AlgoliaTourSource) => {
   return {
     objectID: tour._id.toString(),
     title: tour.title || '',
@@ -49,14 +142,8 @@ export const formatTourForAlgolia = (tour: any) => {
     image: tour.image || '',
     images: tour.images || [],
     tags: tour.tags || [],
-    category: tour.category ? {
-      _id: tour.category._id?.toString() || tour.category.toString(),
-      name: tour.category.name || ''
-    } : null,
-    destination: tour.destination ? {
-      _id: tour.destination._id?.toString() || tour.destination.toString(),
-      name: tour.destination.name || ''
-    } : null,
+    category: formatTaxonomyRef(tour.category),
+    destination: formatTaxonomyRef(tour.destination),
     isPublished: tour.isPublished || false,
     isFeatured: tour.isFeatured || false,
     bookings: tour.bookings || 0,
@@ -65,15 +152,15 @@ export const formatTourForAlgolia = (tour: any) => {
     excluded: tour.excluded || [],
     _tags: [
       ...(tour.tags || []),
-      tour.category?.name || '',
-      tour.destination?.name || '',
+      taxonomyName(tour.category),
+      taxonomyName(tour.destination),
       tour.location || ''
     ].filter(Boolean)
   };
 };
 
 // Sync a single tour to Algolia
-export const syncTourToAlgolia = async (tour: any) => {
+export const syncTourToAlgolia = async (tour: AlgoliaTourSource) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -94,7 +181,7 @@ export const syncTourToAlgolia = async (tour: any) => {
 };
 
 // Sync multiple tours to Algolia
-export const syncToursToAlgolia = async (tours: any[]) => {
+export const syncToursToAlgolia = async (tours: AlgoliaTourSource[]) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -248,9 +335,9 @@ export const configureAlgoliaIndex = async () => {
 // DESTINATIONS
 // =============================================================================
 
-export const formatDestinationForAlgolia = (destination: any) => {
+export const formatDestinationForAlgolia = (destination: AlgoliaDestinationSource) => {
   return {
-    objectID: destination._id.toString(),
+    objectID: String(destination._id),
     name: destination.name || '',
     slug: destination.slug || '',
     description: destination.description || '',
@@ -273,7 +360,7 @@ export const formatDestinationForAlgolia = (destination: any) => {
   };
 };
 
-export const syncDestinationToAlgolia = async (destination: any) => {
+export const syncDestinationToAlgolia = async (destination: AlgoliaDestinationSource) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -293,7 +380,7 @@ export const syncDestinationToAlgolia = async (destination: any) => {
   }
 };
 
-export const syncDestinationsToAlgolia = async (destinations: any[]) => {
+export const syncDestinationsToAlgolia = async (destinations: AlgoliaDestinationSource[]) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -336,9 +423,9 @@ export const deleteDestinationFromAlgolia = async (destinationId: string) => {
 // CATEGORIES
 // =============================================================================
 
-export const formatCategoryForAlgolia = (category: any) => {
+export const formatCategoryForAlgolia = (category: AlgoliaCategorySource) => {
   return {
-    objectID: category._id.toString(),
+    objectID: String(category._id),
     name: category.name || '',
     slug: category.slug || '',
     description: category.description || '',
@@ -359,7 +446,7 @@ export const formatCategoryForAlgolia = (category: any) => {
   };
 };
 
-export const syncCategoryToAlgolia = async (category: any) => {
+export const syncCategoryToAlgolia = async (category: AlgoliaCategorySource) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -379,7 +466,7 @@ export const syncCategoryToAlgolia = async (category: any) => {
   }
 };
 
-export const syncCategoriesToAlgolia = async (categories: any[]) => {
+export const syncCategoriesToAlgolia = async (categories: AlgoliaCategorySource[]) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -422,7 +509,7 @@ export const deleteCategoryFromAlgolia = async (categoryId: string) => {
 // BLOGS
 // =============================================================================
 
-export const formatBlogForAlgolia = (blog: any) => {
+export const formatBlogForAlgolia = (blog: AlgoliaBlogSource) => {
   return {
     objectID: blog._id.toString(),
     title: blog.title || '',
@@ -448,7 +535,7 @@ export const formatBlogForAlgolia = (blog: any) => {
   };
 };
 
-export const syncBlogToAlgolia = async (blog: any) => {
+export const syncBlogToAlgolia = async (blog: AlgoliaBlogSource) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');
@@ -468,7 +555,7 @@ export const syncBlogToAlgolia = async (blog: any) => {
   }
 };
 
-export const syncBlogsToAlgolia = async (blogs: any[]) => {
+export const syncBlogsToAlgolia = async (blogs: AlgoliaBlogSource[]) => {
   const client = getAlgoliaClient();
   if (!client) {
     console.warn('Algolia client not available');

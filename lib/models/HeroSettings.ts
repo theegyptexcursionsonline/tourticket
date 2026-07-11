@@ -281,7 +281,7 @@ HeroSettingsSchema.pre('save', function(next) {
 // Ensure only one settings document is active at a time
 HeroSettingsSchema.pre('save', async function(next) {
   if (this.isActive && this.isNew) {
-    await (this.constructor as any).updateMany(
+    await (this.constructor as Model<IHeroSettings>).updateMany(
       { _id: { $ne: this._id } },
       { $set: { isActive: false } }
     );

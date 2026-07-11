@@ -75,11 +75,11 @@ export async function PUT(request: NextRequest) {
     console.error('Profile update error:', error);
 
     if (error instanceof Error) {
-      if (error.name === 'ValidationError') {
+      if ((error as Error).name === 'ValidationError') {
         return NextResponse.json({ error: 'Invalid data provided' }, { status: 400 });
       }
 
-      if (error.name === 'CastError') {
+      if ((error as Error).name === 'CastError') {
         return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
       }
     }

@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest) {
     await dbConnect();
 
     // Extract tour IDs from the wishlist items
-    const tourIds = wishlist.map((item: any) => item._id || item.id || item);
+    const tourIds = wishlist.map((item) => item._id || item.id || item);
 
     const user = await User.findByIdAndUpdate(
       authResult.user!._id,

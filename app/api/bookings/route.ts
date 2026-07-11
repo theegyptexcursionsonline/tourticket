@@ -9,6 +9,7 @@ import Destination from '@/lib/models/Destination';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,22 +83,23 @@ export async function GET(request: NextRequest) {
 
     const totalPages = Math.ceil(totalCount / limit);
 
-    const transformedBookings = validBookings.map((booking: any) => ({
-      ...booking,
-      id: booking._id,
-      bookingDate: booking.date,
-      bookingTime: booking.time,
-      participants: booking.guests,
-      tour: booking.tour ? {
-        ...booking.tour,
-        id: booking.tour._id,
-      } : null,
-      user: booking.user ? {
-        ...booking.user,
-        id: booking.user._id,
-        name: booking.user.name || `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim(),
-      } : null,
-    }));
+    const transformedBookings = validBookings.map((booking) => {
+      const tour = booking.tour as unknown as PopulatedBookingTour | null;
+      const user = booking.user as unknown as PopulatedBookingUser | null;
+      return {
+        ...booking,
+        id: booking._id,
+        bookingDate: booking.date,
+        bookingTime: booking.time,
+        participants: booking.guests,
+        tour: tour ? { ...tour, id: tour._id } : null,
+        user: user ? {
+          ...user,
+          id: user._id,
+          name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        } : null,
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -111,20 +113,20 @@ export async function GET(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch bookings:', error);
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to fetch bookings',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   // Booking creation must go through /api/checkout, where catalogue prices,
   // discounts, and payment status are verified server-side. This legacy route
   // previously trusted totalPrice and created Confirmed bookings directly.
@@ -132,148 +134,4 @@ export async function POST(request: NextRequest) {
     { success: false, error: 'Direct booking creation is disabled. Use checkout.' },
     { status: 405, headers: { Allow: 'GET' } },
   );
-
-  /* istanbul ignore next -- legacy implementation retained temporarily */
-  await dbConnect();
-
-  try {
-    const authHeader = request.headers.get('Authorization') as string;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    let userId: string;
-
-    // Try Firebase authentication first (for regular users)
-    const firebaseResult = { success: false } as any;
-
-    if (firebaseResult.success && firebaseResult.uid) {
-      // Find user by Firebase UID
-      const user: any = await User.findOne({ firebaseUid: firebaseResult.uid });
-      if (!user) {
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      userId = (user._id as any).toString();
-    } else {
-      // Fallback to JWT (for backwards compatibility)
-      const payload: any = null;
-      if (!payload || !payload.sub) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid or expired token' },
-          { status: 401 }
-        );
-      }
-      userId = payload.sub as string;
-    }
-
-    const body = await request.json();
-    const {
-      tourId,
-      date,
-      time,
-      adults = 1,
-      children = 0,
-      infants = 0,
-      totalPrice,
-      specialRequests,
-      selectedAddOns = {},
-    } = body;
-
-    if (!tourId || !date || !time || !totalPrice) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required booking information' },
-        { status: 400 }
-      );
-    }
-
-    const tour = await Tour.findById(tourId);
-    if (!tour) {
-      return NextResponse.json(
-        { success: false, error: 'Tour not found' },
-        { status: 404 }
-      );
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const totalGuests = adults + children + infants;
-
-    const booking = await Booking.create({
-      tour: tourId,
-      user: userId,
-      date: new Date(date),
-      time,
-      guests: totalGuests,
-      totalPrice: parseFloat(totalPrice),
-      status: 'Confirmed',
-      adultGuests: adults,
-      childGuests: children,
-      infantGuests: infants,
-      specialRequests,
-      selectedAddOns,
-    });
-
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate({
-        path: 'tour',
-        model: Tour,
-        select: 'title slug image duration rating discountPrice',
-      })
-      .populate({
-        path: 'user',
-        model: User,
-        select: 'firstName lastName email',
-      });
-
-    const transformedBooking = {
-      ...populatedBooking?.toObject(),
-      id: populatedBooking?._id,
-      bookingDate: populatedBooking?.date,
-      bookingTime: populatedBooking?.time,
-      participants: populatedBooking?.guests,
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: transformedBooking,
-      message: 'Booking created successfully!',
-    }, { status: 201 });
-
-  } catch (error: any) {
-    console.error('Failed to create booking:', error);
-
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => err.message);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Booking validation failed',
-          errors: validationErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create booking',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      },
-      { status: 500 }
-    );
-  }
 }

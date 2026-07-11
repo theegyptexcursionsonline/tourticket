@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import Tour from '@/lib/models/Tour';
-import mongoose from 'mongoose';
+import Tour, { type ITour } from '@/lib/models/Tour';
+import mongoose, { type FilterQuery } from 'mongoose';
 import Fuse from 'fuse.js';
 
 // Fuse.js configuration for fuzzy search fallback
@@ -18,7 +18,7 @@ const fuseOptions = {
     ignoreLocation: true
 };
 
-async function performTextSearch(searchQuery: string, additionalFilters: any = {}) {
+async function performTextSearch(searchQuery: string, additionalFilters: FilterQuery<ITour> = {}) {
     try {
         // Try MongoDB text search first
         const textSearchResults = await Tour.find({
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
         // Build additional filters - ALWAYS filter for published tours only
         // Exclude German/other tenant tours — only show default tenant content
         const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
-        const additionalFilters: any = {
+        const additionalFilters: FilterQuery<ITour> = {
             isPublished: true,
             ...defaultTenantFilter
         };
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
         const minPrice = searchParams.get('minPrice');
         const maxPrice = searchParams.get('maxPrice');
         if (minPrice || maxPrice) {
-            const priceQuery: any = {};
+            const priceQuery: { $gte?: number; $lte?: number } = {};
             if (minPrice) priceQuery.$gte = Number(minPrice);
             if (maxPrice) priceQuery.$lte = Number(maxPrice);
             if (!additionalFilters.$and) additionalFilters.$and = [];
@@ -181,7 +181,7 @@ export async function GET(request: Request) {
             tours = await performTextSearch(searchQuery.trim(), additionalFilters);
         } else {
             // No search query, just apply filters and show all published tours
-            let sortOption: any = { featured: -1, bookings: -1, rating: -1 }; // Featured first, then popular
+            let sortOption: Record<string, 1 | -1> = { featured: -1, bookings: -1, rating: -1 }; // Featured first, then popular
             const sortBy = searchParams.get('sortBy');
             
             if (sortBy === 'price-asc') {
@@ -204,11 +204,11 @@ export async function GET(request: Request) {
         const sortBy = searchParams.get('sortBy');
         if (tours.length > 0 && sortBy && searchQuery) {
             if (sortBy === 'price-asc') {
-                tours.sort((a: any, b: any) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
+                tours.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
             } else if (sortBy === 'price-desc') {
-                tours.sort((a: any, b: any) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
+                tours.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
             } else if (sortBy === 'rating') {
-                tours.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0));
+                tours.sort((a, b) => (b.rating || 0) - (a.rating || 0));
             }
         }
 

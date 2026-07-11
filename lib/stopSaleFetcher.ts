@@ -54,10 +54,10 @@ export async function getStopSaleDatesForTour(
 
     if (stopSales.length === 0) return {};
 
-    const tourOptionIds = Array.isArray((tour as any)?.bookingOptions)
-      ? (tour as any).bookingOptions
+    const tourOptionIds = Array.isArray(tour?.bookingOptions)
+      ? tour.bookingOptions
           .map(
-            (option: any, index: number) =>
+            (option, index: number) =>
               option?.id || option?._id?.toString?.() || `option-${index}`,
           )
           .filter(Boolean)

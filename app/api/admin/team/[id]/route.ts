@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/dbConnect';
-import User from '@/lib/models/user';
+import User, { type IUser } from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import {
   ADMIN_PERMISSIONS,
@@ -13,9 +13,11 @@ import {
 } from '@/lib/constants/adminPermissions';
 import { EmailService } from '@/lib/email/emailService';
 
-const sanitize = (user: any) => ({
-  id: user._id.toString(),
-  _id: user._id.toString(),
+type AdminUserSource = Pick<IUser, 'firstName' | 'lastName' | 'email' | 'role' | 'permissions' | 'isActive' | 'lastLoginAt' | 'createdAt'> & { _id: unknown };
+
+const sanitize = (user: AdminUserSource) => ({
+  id: String(user._id),
+  _id: String(user._id),
   firstName: user.firstName,
   lastName: user.lastName,
   email: user.email,
@@ -59,7 +61,7 @@ const getSupportEmail = () =>
   process.env.MAILGUN_FROM_EMAIL ||
   'support@tourticket.app';
 
-const formatName = (user: any) => `${user.firstName || ''} ${user.lastName || ''}`.trim();
+const formatName = (user: Pick<IUser, 'firstName' | 'lastName'>) => `${user.firstName || ''} ${user.lastName || ''}`.trim();
 
 export async function PATCH(
   request: NextRequest,
@@ -205,4 +207,3 @@ export async function DELETE(
     message: 'Team member permanently deleted.',
   });
 }
-

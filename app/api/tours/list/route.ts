@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
-import Destination from '@/lib/models/Destination';
-import Category from '@/lib/models/Category';
+
+interface PopulatedTaxonomy {
+  _id?: { toString(): string } | string;
+  name?: string;
+  slug?: string;
+}
 
 export async function GET() {
   try {
@@ -18,7 +22,11 @@ export async function GET() {
       .sort({ createdAt: -1 });
 
     // Format the response
-    const formattedTours = tours.map((tour: any) => ({
+    const formattedTours = tours.map((tour) => {
+      const destination = tour.destination as unknown as PopulatedTaxonomy | null;
+      const categoryValue = Array.isArray(tour.category) ? tour.category[0] : tour.category;
+      const category = categoryValue as unknown as PopulatedTaxonomy | null;
+      return ({
       id: tour._id.toString(),
       title: tour.title,
       slug: tour.slug,
@@ -30,17 +38,18 @@ export async function GET() {
       isPublished: tour.isPublished,
       isFeatured: tour.isFeatured,
       image: tour.image,
-      destination: tour.destination ? {
-        id: tour.destination._id?.toString(),
-        name: tour.destination.name,
-        slug: tour.destination.slug
+      destination: destination ? {
+        id: destination._id?.toString(),
+        name: destination.name,
+        slug: destination.slug
       } : null,
-      category: tour.category ? {
-        id: tour.category._id?.toString(),
-        name: tour.category.name,
-        slug: tour.category.slug
+      category: category ? {
+        id: category._id?.toString(),
+        name: category.name,
+        slug: category.slug
       } : null
-    }));
+      });
+    });
 
     return NextResponse.json({
       success: true,
@@ -52,11 +61,11 @@ export async function GET() {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching tours list:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to fetch tours',
+      error: (error as Error).message || 'Failed to fetch tours',
     }, { status: 500 });
   }
 }

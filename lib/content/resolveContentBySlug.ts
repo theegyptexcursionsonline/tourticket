@@ -27,6 +27,12 @@ export interface ContentMatch {
 // Priority when a slug happens to exist in more than one collection.
 const TYPE_PRIORITY: ContentType[] = ['tour', 'destination', 'category'];
 
+interface ContentDocument {
+  slug: string;
+  urlType?: string;
+  isPublished?: boolean;
+}
+
 export async function resolveContentMatches(slug: string): Promise<ContentMatch[]> {
   await dbConnect();
 
@@ -37,7 +43,7 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
   ]);
 
   const matches: ContentMatch[] = [];
-  const push = (type: ContentType, doc: any) => {
+  const push = (type: ContentType, doc: ContentDocument | null) => {
     if (!doc) return;
     const urlType = normalizeUrlType(doc.urlType);
     matches.push({
@@ -49,9 +55,9 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
     });
   };
 
-  push('tour', tour);
-  push('destination', destination);
-  push('category', category);
+  push('tour', tour as ContentDocument | null);
+  push('destination', destination as ContentDocument | null);
+  push('category', category as ContentDocument | null);
 
   return matches.sort(
     (a, b) => TYPE_PRIORITY.indexOf(a.type) - TYPE_PRIORITY.indexOf(b.type)

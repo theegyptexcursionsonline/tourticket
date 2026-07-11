@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
     await user.save({ validateBeforeSave: false });
     
     // --- Prepare User Data for Token and Response ---
-    const effectiveRole = (user as any).role || 'customer';
+    const effectiveRole = user.role || 'customer';
     const assignedPermissions =
-      (user as any).permissions && (user as any).permissions.length > 0
-        ? (user as any).permissions
+      user.permissions && user.permissions.length > 0
+        ? user.permissions
         : getDefaultPermissions(effectiveRole);
 
     const userPayload = {
-      id: (user._id as any).toString(),
-      _id: (user._id as any).toString(),
+      id: String(user._id),
+      _id: String(user._id),
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // --- Generate JWT ---
     const token = await signToken({
-      sub: (user._id as any).toString(), // Convert ObjectId to string
+      sub: String(user._id), // Convert ObjectId to string
       email: user.email,
       given_name: user.firstName,
       family_name: user.lastName,
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Login Error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred during login.' },

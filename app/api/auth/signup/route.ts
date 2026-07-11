@@ -42,15 +42,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Prepare user data (keep existing)
-    const effectiveRole = (newUser as any).role || 'customer';
+    const effectiveRole = newUser.role || 'customer';
     const assignedPermissions =
-      (newUser as any).permissions && (newUser as any).permissions.length > 0
-        ? (newUser as any).permissions
+      newUser.permissions && newUser.permissions.length > 0
+        ? newUser.permissions
         : getDefaultPermissions(effectiveRole);
 
     const userPayload = {
-      id: (newUser._id as any).toString(),
-      _id: (newUser._id as any).toString(),
+      id: String(newUser._id),
+      _id: String(newUser._id),
       email: newUser.email,
       firstName: newUser.firstName,
       lastName: newUser.lastName,
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     // Generate JWT (keep existing)
     const token = await signToken({
-      sub: (newUser._id as any).toString(),
+      sub: String(newUser._id),
       email: newUser.email,
       given_name: newUser.firstName,
       family_name: newUser.lastName,
@@ -76,16 +76,16 @@ export async function POST(request: NextRequest) {
       // Fetch recommended tours from database
       const Tour = (await import('@/lib/models/Tour')).default;
       const recommendedTours = await Tour.find({})
-        .select('title slug images pricing')
+        .select('title slug images discountPrice')
         .limit(3)
         .lean();
 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-      const tourRecommendations = recommendedTours.map((tour: any) => ({
+      const tourRecommendations = recommendedTours.map((tour) => ({
         title: tour.title,
-        image: tour.images?.[0]?.url || `${baseUrl}/pyramid.png`,
-        price: tour.pricing?.adult ? `From $${tour.pricing.adult}` : 'From $99',
+        image: tour.images?.[0] || `${baseUrl}/pyramid.png`,
+        price: tour.discountPrice ? `From $${tour.discountPrice}` : 'From $99',
         link: `${baseUrl}/tour/${tour.slug}`
       }));
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       user: userPayload,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Signup Error:', error);
     return NextResponse.json(
       { error: 'Could not create account at this time.' },

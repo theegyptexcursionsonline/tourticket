@@ -1,5 +1,6 @@
 // Firebase Admin SDK for server-side operations
 import * as admin from 'firebase-admin';
+import { createHash } from 'crypto';
 
 let initializationPromise: Promise<void> | null = null;
 
@@ -11,8 +12,6 @@ let initializationPromise: Promise<void> | null = null;
  * @returns Signed URL that expires in 1 hour
  */
 function generateSignedCloudinaryUrl(publicId: string, cloudName: string, apiSecret: string): string {
-  const crypto = require('crypto');
-
   // Expiration timestamp (1 hour from now)
   const timestamp = Math.floor(Date.now() / 1000) + 3600;
 
@@ -20,7 +19,7 @@ function generateSignedCloudinaryUrl(publicId: string, cloudName: string, apiSec
   const stringToSign = `${publicId}&timestamp=${timestamp}${apiSecret}`;
 
   // Generate SHA-1 signature
-  const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
+  const signature = createHash('sha1').update(stringToSign).digest('hex');
 
   // Construct authenticated URL
   return `https://res.cloudinary.com/${cloudName}/raw/authenticated/s--${signature}--/v1/${publicId}.json?timestamp=${timestamp}`;
@@ -174,12 +173,6 @@ async function ensureInitialized() {
 async function getAdminAuth() {
   await ensureInitialized();
   return admin.auth();
-}
-
-// Helper to get adminDb with lazy initialization
-async function getAdminDb() {
-  await ensureInitialized();
-  return admin.firestore();
 }
 
 /**
