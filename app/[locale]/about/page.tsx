@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: 'About Us | Egypt Excursions Online',
     description: 'Your trusted partner for extraordinary travel experiences with 15 years of expertise.',
     type: 'website',
-    images: ['/about.png'],
+    images: ['https://egypt-excursionsonline.com/about.png'],
   },
   alternates: getSeoAlternates('/about'),
 };

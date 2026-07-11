@@ -40,14 +40,14 @@ export const metadata: Metadata = {
     siteName: 'Egypt Excursions Online',
     title: 'Egypt Excursions Online - Tours & Day Trips in Egypt',
     description: 'Book the best tours, day trips, and excursions across Egypt. Explore Hurghada, Cairo, Luxor, Sharm El Sheikh and more.',
-    images: ['/og-image.jpg'],
+    images: [`${BASE_URL}/og-image.jpg`],
     locale: 'en',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Egypt Excursions Online - Tours & Day Trips in Egypt',
     description: 'Book the best tours, day trips, and excursions across Egypt.',
-    images: ['/og-image.jpg'],
+    images: [`${BASE_URL}/og-image.jpg`],
   },
   robots: {
     index: true,

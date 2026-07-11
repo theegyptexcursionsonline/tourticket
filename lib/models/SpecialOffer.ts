@@ -58,7 +58,7 @@ const SpecialOfferSchema: Schema<ISpecialOffer> = new Schema({
     default: 'percentage',
   },
   discountValue: { type: Number, required: true, min: 0 },
-  code: { type: String, trim: true, uppercase: true, sparse: true },
+  code: { type: String, trim: true, uppercase: true },
   minDaysInAdvance: { type: Number, min: 1, default: 7 },
   maxDaysBeforeTour: { type: Number, min: 0, default: 2 },
   minBookingValue: { type: Number, min: 0 },

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     title: 'Contact Us | Egypt Excursions Online',
     description: 'Have a question? Contact us for 24/7 support and expert travel advice.',
     type: 'website',
-    images: ['/about.png'],
+    images: ['https://egypt-excursionsonline.com/about.png'],
   },
   alternates: getSeoAlternates('/contact'),
 };
