@@ -41,6 +41,17 @@ jest.mock('next/server', () => {
 // Mock database connection
 jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
 
+jest.mock('mongoose', () => ({
+  __esModule: true,
+  default: {
+    Types: {
+      ObjectId: {
+        isValid: jest.fn().mockReturnValue(false),
+      },
+    },
+  },
+}));
+
 // Chainable mock helper
 function chainable(resolveValue: any = []) {
   const chain: any = {};
@@ -180,6 +191,60 @@ describe('API Route Handlers', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
+    });
+  });
+
+  describe('critical route authorization', () => {
+    it('rejects unauthenticated admin booking exports and userId overrides', async () => {
+      const { GET } = await import('@/app/api/bookings/route');
+
+      const adminResponse = await GET(createRequest('GET', '/api/bookings?admin=true'));
+      const userOverrideResponse = await GET(
+        createRequest('GET', '/api/bookings?userId=someone-else'),
+      );
+
+      expect(adminResponse.status).toBe(401);
+      expect(userOverrideResponse.status).toBe(401);
+    });
+
+    it('rejects unauthenticated category writes', async () => {
+      const collectionRoute = await import('@/app/api/categories/route');
+      const itemRoute = await import('@/app/api/categories/[id]/route');
+      const context = { params: Promise.resolve({ id: 'not-an-id' }) };
+
+      const createResponse = await collectionRoute.POST(
+        createRequest('POST', '/api/categories', {}),
+      );
+      const updateResponse = await itemRoute.PUT(
+        createRequest('PUT', '/api/categories/not-an-id', {}),
+        context,
+      );
+      const deleteResponse = await itemRoute.DELETE(
+        createRequest('DELETE', '/api/categories/not-an-id'),
+        context,
+      );
+
+      expect(createResponse.status).toBe(401);
+      expect(updateResponse.status).toBe(401);
+      expect(deleteResponse.status).toBe(401);
+    });
+
+    it('rejects unauthenticated booking-option and Algolia writes', async () => {
+      const bookingOptionsRoute = await import(
+        '@/app/api/tours/[tourId]/booking-options/route'
+      );
+      const algoliaRoute = await import('@/app/api/algolia/sync/route');
+
+      const bookingOptionsResponse = await bookingOptionsRoute.PUT(
+        createRequest('PUT', '/api/tours/not-an-id/booking-options', {}),
+        { params: Promise.resolve({ tourId: 'not-an-id' }) },
+      );
+      const algoliaResponse = await algoliaRoute.POST(
+        createRequest('POST', '/api/algolia/sync'),
+      );
+
+      expect(bookingOptionsResponse.status).toBe(401);
+      expect(algoliaResponse.status).toBe(401);
     });
   });
 });

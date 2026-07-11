@@ -1,12 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ tourId: string }> }
 ) {
   try {
+    const adminAuth = await requireAdminAuth(request, {
+      permissions: ['manageTours'],
+    });
+    if (adminAuth instanceof NextResponse) {
+      return adminAuth;
+    }
+
     await dbConnect();
     
     const { index, option } = await request.json();

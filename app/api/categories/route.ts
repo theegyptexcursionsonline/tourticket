@@ -7,6 +7,7 @@ import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,8 +83,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const adminAuth = await requireAdminAuth(request, {
+      permissions: ['manageContent'],
+    });
+    if (adminAuth instanceof NextResponse) {
+      return adminAuth;
+    }
+
     await dbConnect();
     
     const body = await request.json();

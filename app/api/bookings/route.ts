@@ -8,33 +8,35 @@ import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
 import { verifyToken } from '@/lib/jwt';
 import { verifyFirebaseToken } from '@/lib/firebase/admin';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
-  await dbConnect();
-
   try {
     const { searchParams } = new URL(request.url);
     const isAdmin = searchParams.get('admin') === 'true';
-    const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const page = parseInt(searchParams.get('page') || '1');
+    const requestedLimit = Number.parseInt(searchParams.get('limit') || '50', 10);
+    const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 1), 100)
+      : 50;
+    const page = Number.isFinite(requestedPage) ? Math.max(requestedPage, 1) : 1;
     const status = searchParams.get('status');
 
-    let query: any = {};
-    let requireAuth = false;
+    const query: Record<string, unknown> = { ...DEFAULT_TENANT_FILTER };
 
     if (isAdmin) {
-      // Admin requests use JWT authentication (unchanged)
+      const adminAuth = await requireAdminAuth(request, {
+        permissions: ['manageBookings'],
+      });
+      if (adminAuth instanceof NextResponse) {
+        return adminAuth;
+      }
+
       if (status) {
         query.status = status;
       }
-    } else if (userId) {
-      query.user = userId;
-      requireAuth = true;
     } else {
-      // User requests use Firebase authentication
-      requireAuth = true;
-
       const authHeader = request.headers.get('Authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return NextResponse.json(
@@ -71,9 +73,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    await dbConnect();
+
     const skip = (page - 1) * limit;
 
-    const bookings = await Booking.find(query)
+    const [bookings, totalCount] = await Promise.all([
+      Booking.find(query)
       .populate({
         path: 'tour',
         model: Tour,
@@ -92,12 +97,13 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean();
+      .lean(),
+      Booking.countDocuments(query),
+    ]);
 
     // Filter out bookings where tour is null (deleted tours)
     const validBookings = bookings.filter(booking => booking.tour !== null);
 
-    const totalCount = validBookings.length;
     const totalPages = Math.ceil(totalCount / limit);
 
     const transformedBookings = validBookings.map((booking: any) => ({
