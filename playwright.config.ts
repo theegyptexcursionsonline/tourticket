@@ -18,7 +18,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    // Next 16's development RSC renderer overflows while serializing this
+    // large page tree in both Turbopack and webpack modes. E2E should exercise
+    // the same optimized runtime that is deployed, so build and start it here.
+    command: 'SKIP_TESTS=1 pnpm build && pnpm start',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
