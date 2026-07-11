@@ -16,14 +16,13 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = await verifyToken(receiptToken);
-    if (!payload || payload.scope !== 'receipt' || !payload.paymentId || !payload.sub) {
+    if (!payload || payload.scope !== 'receipt' || !payload.paymentId || payload.sub !== `receipt:${payload.paymentId}`) {
       return NextResponse.json({ error: 'Invalid or expired receipt authorization' }, { status: 401 });
     }
 
     await dbConnect();
     const bookings: any[] = await Booking.find({
       paymentId: String(payload.paymentId),
-      user: String(payload.sub),
       ...DEFAULT_TENANT_FILTER,
     })
       .populate({ path: 'tour', model: Tour, select: 'title' })

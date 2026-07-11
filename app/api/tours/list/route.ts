@@ -10,7 +10,7 @@ export async function GET() {
 
     // Fetch tours from default tenant only (exclude German/other tenant tours)
     const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
-    const tours = await Tour.find(defaultTenantFilter)
+    const tours = await Tour.find({ isPublished: true, ...defaultTenantFilter })
       .populate('destination', 'name slug')
       .populate('category', 'name slug')
       .select('title slug description price discountPrice duration difficulty isPublished isFeatured image')

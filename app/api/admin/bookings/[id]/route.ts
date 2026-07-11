@@ -9,6 +9,7 @@ import { EmailService } from '@/lib/email/emailService';
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 // Helper to format dates consistently and avoid timezone issues
@@ -55,7 +56,7 @@ async function getAdminInfo(request?: NextRequest): Promise<{ id: string; name: 
     if (!token) return null;
 
     const payload = await verifyToken(token);
-    if (!payload) return null;
+    if (!payload || payload.scope !== 'admin') return null;
 
     return {
       id: payload.sub as string,
@@ -90,7 +91,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const booking = await Booking.findById(id)
+    const booking = await Booking.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
       .populate({
         path: 'tour',
         model: Tour,
@@ -186,7 +187,7 @@ export async function PATCH(
     }
 
     // Get the current booking with populated fields before updating
-    const currentBooking = await Booking.findById(id)
+    const currentBooking = await Booking.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
       .populate({
         path: 'tour',
         model: Tour,
@@ -343,7 +344,7 @@ export async function PATCH(
     await currentBooking.save();
 
     // Reload with lean for response
-    const updatedBooking = await Booking.findById(id)
+    const updatedBooking = await Booking.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
       .populate({
         path: 'tour',
         model: Tour,
@@ -528,7 +529,7 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const deletedBooking = await Booking.findByIdAndDelete(id);
+    const deletedBooking = await Booking.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
 
     if (!deletedBooking) {
       return NextResponse.json(

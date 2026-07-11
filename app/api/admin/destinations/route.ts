@@ -51,6 +51,9 @@ export async function POST(request: NextRequest) {
   await dbConnect();
   try {
     const body = await request.json();
+    body.tenantId = 'default';
+    delete body.$set;
+    delete body.$unset;
     
     // For POST (creation), we still need required fields
     const requiredFields = ['name', 'country', 'description', 'image'];

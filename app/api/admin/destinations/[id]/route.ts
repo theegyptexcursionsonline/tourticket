@@ -21,6 +21,7 @@ export async function PUT(
     await dbConnect();
 
     const data = await request.json();
+    delete data.tenantId;
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -31,7 +32,7 @@ export async function PUT(
     }
 
     // Find the existing destination first
-    const existingDestination = await Destination.findById(id);
+    const existingDestination = await Destination.findOne({ _id: id, ...DEFAULT_TENANT_FILTER });
     if (!existingDestination) {
       return NextResponse.json({ 
         success: false, 
@@ -148,8 +149,8 @@ export async function PUT(
       }
     }
     
-    const destination = await Destination.findByIdAndUpdate(
-      id, 
+    const destination = await Destination.findOneAndUpdate(
+      { _id: id, ...DEFAULT_TENANT_FILTER },
       updateData, 
       { 
         new: true, 
@@ -225,7 +226,9 @@ export async function DELETE(
     }
 
     // Check if destination has tours
-    const tourCount = await Tour.countDocuments({ destination: id });
+    const destinationExists = await Destination.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
+    if (!destinationExists) return NextResponse.json({ success: false, error: 'Destination not found' }, { status: 404 });
+    const tourCount = await Tour.countDocuments({ destination: id, ...DEFAULT_TENANT_FILTER });
     if (tourCount > 0) {
       if (!force) {
         return NextResponse.json({
@@ -237,12 +240,12 @@ export async function DELETE(
 
       // If force delete, unlink tours from this destination
       await Tour.updateMany(
-        { destination: id },
+        { destination: id, ...DEFAULT_TENANT_FILTER },
         { $unset: { destination: "" } }
       );
     }
 
-    const destination = await Destination.findByIdAndDelete(id);
+    const destination = await Destination.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
 
     if (!destination) {
       return NextResponse.json({

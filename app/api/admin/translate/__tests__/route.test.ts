@@ -26,6 +26,16 @@ jest.mock('@/lib/auth/verifyAdmin', () => ({
   verifyAdmin: jest.fn(),
 }));
 
+jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
+jest.mock('@/lib/models/Tour', () => ({
+  __esModule: true,
+  default: { exists: jest.fn().mockResolvedValue(true) },
+}));
+jest.mock('@/lib/models/Destination', () => ({
+  __esModule: true,
+  default: { exists: jest.fn().mockResolvedValue(true) },
+}));
+
 // Mock auto-translate functions
 const mockAutoTranslateTour = jest.fn();
 const mockAutoTranslateDestination = jest.fn();

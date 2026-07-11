@@ -121,6 +121,9 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
+    body.tenantId = 'default';
+    delete body.$set;
+    delete body.$unset;
     
     // Map 'faqs' from form to 'faq' in the database model
     if (body.faqs) {

@@ -4,10 +4,9 @@ import Booking from '@/lib/models/Booking';
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
-import { verifyToken } from '@/lib/jwt';
-import { verifyFirebaseToken } from '@/lib/firebase/admin';
 import mongoose from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,33 +19,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated: No token provided' }, { status: 401 });
     }
 
-    const token = authHeader.split(' ')[1];
-
-    // 3. Verify token - Try Firebase first, fallback to JWT
-    let userId: string;
-    let user;
-
-    // Try Firebase authentication first (for regular users)
-    const firebaseResult = await verifyFirebaseToken(token);
-
-    if (firebaseResult.success && firebaseResult.uid) {
-      // Find user by Firebase UID
-      user = await User.findOne({ firebaseUid: firebaseResult.uid });
-
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      userId = (user._id as any).toString();
-    } else {
-      // Fallback to JWT (for backwards compatibility)
-      const decodedPayload = await verifyToken(token);
-      if (!decodedPayload || !decodedPayload.sub) {
-        return NextResponse.json({ error: 'Not authenticated: Invalid token' }, { status: 401 });
-      }
-
-      userId = decodedPayload.sub as string;
+    const authentication = await authenticateCustomerBearer(request);
+    if (!authentication.success) {
+      return NextResponse.json({ error: authentication.error }, { status: authentication.status });
     }
+    const user = authentication.user;
+    const userId = (user._id as any).toString();
 
     // 4. Validate MongoDB ObjectId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -54,12 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Find the user in database (if not already found via Firebase)
-    if (!user) {
-      user = await User.findById(userId);
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-    }
+    // authenticateCustomerBearer already revalidated the active database user.
 
     // 7. Fetch bookings count first
     const bookingQuery = { user: userId, ...DEFAULT_TENANT_FILTER };

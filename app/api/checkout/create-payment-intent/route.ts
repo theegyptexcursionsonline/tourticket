@@ -4,6 +4,8 @@ import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
 import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
+import { assertCartAvailability, UnavailableTourError } from '@/lib/checkout/assertAvailability';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
     // This guarantees Stripe amount matches booking summary, even if client pricing is stale.
     await dbConnect();
     const cart = await secureCartPricing(requestedCart);
+    await assertCartAvailability(cart);
 
     const round2 = (n: number) => Math.round(n * 100) / 100;
     const toNumberQty = (value: any, fallback = 0): number => {
@@ -183,9 +186,17 @@ export async function POST(request: Request) {
     // IMPORTANT: Always charge in USD since all prices are stored in USD
     // The display currency is for user convenience only - Stripe handles card currency conversion
     const stripe = getStripe();
+    const amountMinor = Math.round(total * 100);
+    const quoteBinding = buildQuoteBinding({
+      cart,
+      customerEmail: customer.email,
+      currency: 'USD',
+      amountMinor,
+      discountCode,
+    });
     
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(total * 100), // Stripe expects amount in cents
+      amount: amountMinor, // Stripe expects amount in cents
       currency: 'usd', // Always charge in USD - prices are stored in USD
       description: `Booking for ${cart.length} tour${cart.length > 1 ? 's' : ''}`,
       metadata: {
@@ -217,6 +228,7 @@ export async function POST(request: Request) {
         discount_code: discountCode || 'none',
         // Flag to indicate this has booking data for webhook processing
         has_booking_data: 'true',
+        quote_binding: quoteBinding,
       },
       // receipt_email removed - we send our own booking confirmation email
       automatic_payment_methods: {
@@ -243,6 +255,9 @@ export async function POST(request: Request) {
 
     if (error instanceof PriceChangedError) {
       return NextResponse.json({ success: false, code: error.code, message: error.message, quote: error.quote }, { status: 409 });
+    }
+    if (error instanceof UnavailableTourError) {
+      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: error.message }, { status: 409 });
     }
 
     // Provide more specific error messages

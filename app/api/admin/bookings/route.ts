@@ -10,6 +10,7 @@ import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper function to generate unique booking reference
 async function generateUniqueBookingReference(): Promise<string> {
@@ -308,7 +309,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify tour exists
-    const tour = await Tour.findById(tourId);
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });
     if (!tour) {
       return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
     }
@@ -364,6 +365,7 @@ export async function POST(request: NextRequest) {
 
     // Create booking
     const newBooking = await Booking.create({
+      tenantId: 'default',
       bookingReference,
       tour: tour._id,
       user: user._id,

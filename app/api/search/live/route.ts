@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
         if (!searchQuery) {
             // Return tours based on filters when no search query
-            const query: any = { ...defaultTenantFilter };
+            const query: any = { isPublished: true, ...defaultTenantFilter };
 
             const categories = searchParams.get('categories');
             if (categories) {
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: true, data: [] });
         }
 
-        const tours = await Tour.find({ ...searchConditions, ...defaultTenantFilter })
+        const tours = await Tour.find({ ...searchConditions, isPublished: true, ...defaultTenantFilter })
             .select('title slug image rating reviews destination location tags')
             .populate('destination', 'name')
             .sort({ rating: -1, bookings: -1 }) // Prioritize high-rated popular tours

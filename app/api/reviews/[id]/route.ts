@@ -49,7 +49,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
 
     if (firebaseResult.success && firebaseResult.uid) {
       // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+      const user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
 
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -59,11 +59,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
-      if (!payload || !payload.sub) {
+      if (!payload || payload.scope !== 'customer' || !payload.sub) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
       }
 
-      userId = payload.sub as string;
+      const activeUser = await User.findOne({ _id: payload.sub, isActive: true }).select('_id').lean();
+      if (!activeUser) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      userId = String(activeUser._id);
     }
 
     const body = await request.json();
@@ -139,7 +141,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     if (firebaseResult.success && firebaseResult.uid) {
       // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+      const user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
 
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -149,11 +151,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
-      if (!payload || !payload.sub) {
+      if (!payload || payload.scope !== 'customer' || !payload.sub) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
       }
 
-      userId = payload.sub as string;
+      const activeUser = await User.findOne({ _id: payload.sub, isActive: true }).select('_id').lean();
+      if (!activeUser) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      userId = String(activeUser._id);
     }
 
     // Find the review and check ownership

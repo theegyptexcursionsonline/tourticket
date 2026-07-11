@@ -112,6 +112,9 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
   let isNewUser = false;
 
   if (user) {
+    if (!user.isActive || user.role !== 'customer') {
+      throw Object.assign(new Error('Firebase sync is restricted to active customer accounts'), { code: 'ACCOUNT_LINK_REQUIRED' });
+    }
     // Update existing user (same Firebase account)
     user.email = firebaseUser.email || user.email;
     user.emailVerified = firebaseUser.emailVerified;
@@ -124,14 +127,10 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
     user = await User.findOne({ email: firebaseUser.email });
 
     if (user) {
-      // Link existing user to Firebase (user had account via different method)
-      user.firebaseUid = firebaseUser.uid;
-      user.authProvider = authProvider;
-      user.emailVerified = firebaseUser.emailVerified;
-      user.photoURL = firebaseUser.photoURL || user.photoURL;
-      user.lastLoginAt = new Date();
-      await user.save();
-      // Not marking as new user since they already had an account
+      // Email ownership alone must never link a new Firebase UID to an
+      // existing local account. Linking requires a separately authenticated
+      // account-recovery flow.
+      throw Object.assign(new Error('Existing account requires explicit linking'), { code: 'ACCOUNT_LINK_REQUIRED' });
     } else {
       // Create new user
       user = await User.create({

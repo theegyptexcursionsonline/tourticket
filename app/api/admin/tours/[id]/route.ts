@@ -8,6 +8,7 @@ import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -15,9 +16,9 @@ async function findTour(identifier: string) {
         let tour;
         
         if (mongoose.Types.ObjectId.isValid(identifier)) {
-            tour = await Tour.findById(identifier);
+            tour = await Tour.findOne({ _id: identifier, ...DEFAULT_TENANT_FILTER });
         } else {
-            tour = await Tour.findOne({ slug: identifier });
+            tour = await Tour.findOne({ slug: identifier, ...DEFAULT_TENANT_FILTER });
         }
 
         if (!tour) {
@@ -170,6 +171,9 @@ export async function PUT(
         await dbConnect();
         const { id } = await params;
         const body = await request.json();
+        delete body.tenantId;
+        delete body.$set;
+        delete body.$unset;
 
         console.log('Updating tour with ID:', id);
         console.log('Request body:', body);
@@ -263,8 +267,8 @@ export async function PUT(
             };
         }
 
-        const updatedTour = await Tour.findByIdAndUpdate(
-            id,
+        const updatedTour = await Tour.findOneAndUpdate(
+            { _id: id, ...DEFAULT_TENANT_FILTER },
             { $set: body },
             {
                 new: true,
@@ -354,9 +358,9 @@ export async function DELETE(
         let deletedTour;
         
         if (mongoose.Types.ObjectId.isValid(id)) {
-            deletedTour = await Tour.findByIdAndDelete(id);
+            deletedTour = await Tour.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
         } else {
-            deletedTour = await Tour.findOneAndDelete({ slug: id });
+            deletedTour = await Tour.findOneAndDelete({ slug: id, ...DEFAULT_TENANT_FILTER });
         }
 
         if (!deletedTour) {

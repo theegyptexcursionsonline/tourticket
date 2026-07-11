@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyFirebaseToken } from '@/lib/firebase/admin';
+import { getFirebaseUser, verifyFirebaseToken } from '@/lib/firebase/admin';
 import { syncFirebaseUserToMongo } from '@/lib/firebase/authHelpers';
 
 /**
@@ -39,30 +39,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get Firebase user data from request body
-    const body = await request.json();
-    const { uid, email, displayName, photoURL, emailVerified, providerData } = body;
-
-    // Validate Firebase UID matches token
-    if (uid !== verifyResult.uid) {
-      return NextResponse.json(
-        { success: false, error: 'UID mismatch' },
-        { status: 400 }
-      );
+    // Never trust profile, email-verification or provider fields supplied by
+    // the browser. Load the authoritative identity from Firebase Admin.
+    const firebaseRecord = await getFirebaseUser(verifyResult.uid);
+    if (!firebaseRecord.success || !firebaseRecord.user) {
+      return NextResponse.json({ success: false, error: 'Firebase account not found' }, { status: 401 });
+    }
+    const record = firebaseRecord.user;
+    if (record.disabled || !record.email || !record.emailVerified) {
+      return NextResponse.json({ success: false, error: 'A verified email is required' }, { status: 403 });
     }
 
     // Sync user with MongoDB
     let result;
     try {
       result = await syncFirebaseUserToMongo({
-        uid,
-        email,
-        displayName,
-        photoURL,
-        emailVerified,
-        providerData,
+        uid: record.uid,
+        email: record.email,
+        displayName: record.displayName,
+        photoURL: record.photoURL,
+        emailVerified: record.emailVerified,
+        providerData: record.providerData,
       });
     } catch (syncError: any) {
+      if (syncError?.code === 'ACCOUNT_LINK_REQUIRED') {
+        return NextResponse.json(
+          { success: false, error: 'An account already exists for this email. Sign in with its original method before linking Firebase.' },
+          { status: 409 },
+        );
+      }
       console.error('MongoDB sync error:', syncError);
       return NextResponse.json(
         { success: false, error: 'Account synchronization failed' },

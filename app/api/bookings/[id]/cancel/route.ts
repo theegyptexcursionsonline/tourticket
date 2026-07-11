@@ -4,8 +4,9 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
-import { verifyToken } from '@/lib/jwt';
 import { EmailService } from '@/lib/email/emailService';
+import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateValue: Date | string | undefined): string {
@@ -47,18 +48,13 @@ export async function POST(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decodedPayload = await verifyToken(token);
-
-    if (!decodedPayload || !decodedPayload.sub) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decodedPayload.sub as string;
+    const authentication = await authenticateCustomerBearer(request);
+    if (!authentication.success) return NextResponse.json({ error: authentication.error }, { status: authentication.status });
+    const userId = (authentication.user._id as any).toString();
     const { id: bookingId } = await params;
 
     // Find the booking
-    const booking = await Booking.findById(bookingId).populate([
+    const booking = await Booking.findOne({ _id: bookingId, user: userId, ...DEFAULT_TENANT_FILTER }).populate([
       { path: 'tour', model: Tour },
       { path: 'user', model: User }
     ]);

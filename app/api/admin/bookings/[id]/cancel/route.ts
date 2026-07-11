@@ -6,6 +6,7 @@ import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateValue: Date | string | undefined): string {
@@ -46,7 +47,7 @@ export async function POST(
     const { id: bookingId } = await params;
 
     // Find the booking
-    const booking = await Booking.findById(bookingId).populate([
+    const booking = await Booking.findOne({ _id: bookingId, ...DEFAULT_TENANT_FILTER }).populate([
       { path: 'tour', model: Tour },
       { path: 'user', model: User }
     ]);

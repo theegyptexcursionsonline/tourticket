@@ -3,15 +3,18 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import toast, { Toaster } from 'react-hot-toast';
 import { useTranslations } from 'next-intl';
+import { safeRelativeRedirect } from '@/lib/security/safeRedirect';
 
 export default function LoginClient() {
   const t = useTranslations('loginPage');
   const { user, login, loginWithGoogle, isLoading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = safeRelativeRedirect(searchParams.get('redirect'));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,9 +25,9 @@ export default function LoginClient() {
   // Redirect if user is already authenticated
   useEffect(() => {
     if (isAuthenticated && user && !authLoading) {
-      router.push('/user/dashboard');
+      router.push(redirectTarget);
     }
-  }, [isAuthenticated, user, authLoading, router]);
+  }, [isAuthenticated, user, authLoading, router, redirectTarget]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +44,7 @@ export default function LoginClient() {
 
       // Add a small delay to ensure auth state is updated before redirect
       setTimeout(() => {
-        router.push('/user/dashboard');
+        router.push(redirectTarget);
       }, 100);
     } catch (error: any) {
       toast.error(error.message || t('toasts.loginFailed'));
@@ -59,7 +62,7 @@ export default function LoginClient() {
 
       // Add a small delay to ensure auth state is updated before redirect
       setTimeout(() => {
-        router.push('/user/dashboard');
+        router.push(redirectTarget);
       }, 100);
     } catch (error: any) {
       // Only show error if it's not a user-cancelled action

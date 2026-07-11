@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // --- PATCH: Update a specific review (e.g., approve it) ---
 export async function PATCH(
@@ -20,8 +21,8 @@ export async function PATCH(
     const body = await request.json();
     const { verified } = body; // Expecting { verified: true }
 
-    const updatedReview = await Review.findByIdAndUpdate(
-      id,
+    const updatedReview = await Review.findOneAndUpdate(
+      { _id: id, ...DEFAULT_TENANT_FILTER },
       { verified },
       { new: true, runValidators: true }
     );
@@ -49,7 +50,7 @@ export async function DELETE(
   await dbConnect();
 
   try {
-    const deletedReview = await Review.findByIdAndDelete(id);
+    const deletedReview = await Review.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
 
     if (!deletedReview) {
       return NextResponse.json({ message: 'Review not found' }, { status: 404 });

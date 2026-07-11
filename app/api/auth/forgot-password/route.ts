@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // --- Generate a short-lived password reset token (e.g., expires in 15 minutes) ---
     const resetToken = await signToken(
-      { sub: user._id, email: user.email },
+      { sub: String(user._id), email: user.email, scope: 'password-reset' },
       { expiresIn: '15m' }
     );
 

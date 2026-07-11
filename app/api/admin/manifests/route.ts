@@ -5,6 +5,7 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
 
     const bookings = await Booking.find({
       tour: tourId,
+      ...DEFAULT_TENANT_FILTER,
       date: {
         $gte: startDate,
         $lte: endDate,
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
     .sort({ time: 1 }); // Sort by the booking time for an organized list
 
     // Also fetch the tour details to display on the manifest header
-    const tour = await Tour.findById(tourId).select('title');
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER }).select('title');
 
     if (!tour) {
         return NextResponse.json({ message: 'Tour not found' }, { status: 404 });

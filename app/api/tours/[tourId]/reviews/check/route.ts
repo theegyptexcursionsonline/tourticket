@@ -41,7 +41,7 @@ export async function GET(
 
     if (firebaseResult.success && firebaseResult.uid) {
       // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid });
+      const user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
 
       if (!user) {
         return NextResponse.json({ hasReview: false });
@@ -51,11 +51,13 @@ export async function GET(
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
-      if (!payload || !payload.sub) {
+      if (!payload || payload.scope !== 'customer' || !payload.sub) {
         return NextResponse.json({ hasReview: false });
       }
 
-      userId = payload.sub as string;
+      const activeUser = await User.findOne({ _id: payload.sub, isActive: true }).select('_id').lean();
+      if (!activeUser) return NextResponse.json({ hasReview: false });
+      userId = String(activeUser._id);
     }
 
     const existingReview = await Review.findOne({

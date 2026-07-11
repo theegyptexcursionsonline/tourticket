@@ -47,7 +47,7 @@ export async function POST(
 
     if (firebaseResult.success && firebaseResult.uid) {
       // Find user by Firebase UID
-      user = await User.findOne({ firebaseUid: firebaseResult.uid });
+      user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
 
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -57,7 +57,7 @@ export async function POST(
     } else {
       // Fallback to JWT (for backwards compatibility)
       const payload = await verifyToken(token);
-      if (!payload || !payload.sub) {
+      if (!payload || payload.scope !== 'customer' || !payload.sub) {
         return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
       }
 
@@ -69,7 +69,7 @@ export async function POST(
       }
 
       // Get user info
-      user = await User.findById(userId);
+      user = await User.findOne({ _id: userId, isActive: true });
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }

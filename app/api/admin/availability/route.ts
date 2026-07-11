@@ -6,6 +6,7 @@ import Availability from '@/lib/models/Availability';
 import Tour from '@/lib/models/Tour';
 import StopSale from '@/lib/models/StopSale';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,12 +45,14 @@ export async function GET(request: NextRequest) {
     const month = parseInt(searchParams.get('month') || String(new Date().getMonth() + 1));
     const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()));
 
+    if (!tourId || !await Tour.exists({ _id: tourId, ...DEFAULT_TENANT_FILTER })) {
+      return NextResponse.json({ success: false, error: 'A valid default-tenant tour is required' }, { status: 400 });
+    }
+
     // Build query
     const query: Record<string, unknown> = {};
 
-    if (tourId) {
-      query.tour = tourId;
-    }
+    query.tour = tourId;
 
     // Date range for the month
     const startDate = new Date(year, month - 1, 1);
@@ -75,7 +78,7 @@ export async function GET(request: NextRequest) {
     const toKey = (d: Date) => new Date(d).toISOString().split('T')[0];
 
     if (tourId) {
-      const tourDoc = await Tour.findById(tourId).select('title bookingOptions');
+      const tourDoc = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER }).select('title bookingOptions');
       if (tourDoc) {
         // Ensure bookingOptions[].id exists (needed for option-level stop-sale)
         let changed = false;
@@ -225,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify tour exists
-    const tour = await Tour.findById(tourId);
+    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });
     if (!tour) {
       return NextResponse.json(
         { success: false, error: 'Tour not found' },
@@ -326,6 +329,9 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     const { tourId, dates, action, slots, stopSale, stopSaleReason, optionIds } = body;
+    if (!await Tour.exists({ _id: tourId, ...DEFAULT_TENANT_FILTER })) {
+      return NextResponse.json({ success: false, error: 'Tour not found' }, { status: 404 });
+    }
     const normalizedOptionIds = Array.isArray(optionIds)
       ? Array.from(new Set(optionIds.map((id: unknown) => String(id)).filter(Boolean))).sort()
       : [];
@@ -573,9 +579,16 @@ export async function DELETE(request: NextRequest) {
 
     if (id) {
       // Delete by availability document ID
+      const candidate: any = await Availability.findById(id).select('tour').lean();
+      if (!candidate || !await Tour.exists({ _id: candidate.tour, ...DEFAULT_TENANT_FILTER })) {
+        return NextResponse.json({ success: false, error: 'Availability not found' }, { status: 404 });
+      }
       result = await Availability.findByIdAndDelete(id);
     } else {
       // Delete by tour + date
+      if (!await Tour.exists({ _id: tourId, ...DEFAULT_TENANT_FILTER })) {
+        return NextResponse.json({ success: false, error: 'Availability not found' }, { status: 404 });
+      }
       const availabilityDate = new Date(date!);
       availabilityDate.setHours(0, 0, 0, 0);
       result = await Availability.findOneAndDelete({ tour: tourId, date: availabilityDate });

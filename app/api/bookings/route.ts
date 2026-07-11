@@ -6,10 +6,9 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
-import { verifyToken } from '@/lib/jwt';
-import { verifyFirebaseToken } from '@/lib/firebase/admin';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,32 +44,9 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const token = authHeader.split(' ')[1];
-
-      // Try Firebase authentication first (for regular users)
-      const firebaseResult = await verifyFirebaseToken(token);
-
-      if (firebaseResult.success && firebaseResult.uid) {
-        // Find user by Firebase UID
-        const user = await User.findOne({ firebaseUid: firebaseResult.uid });
-        if (!user) {
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-        query.user = user._id;
-      } else {
-        // Fallback to JWT (for backwards compatibility or admin)
-        const payload = await verifyToken(token);
-        if (!payload || !payload.sub) {
-          return NextResponse.json(
-            { success: false, error: 'Not authenticated: Invalid token' },
-            { status: 401 }
-          );
-        }
-        query.user = payload.sub;
-      }
+      const authentication = await authenticateCustomerBearer(request);
+      if (!authentication.success) return NextResponse.json({ success: false, error: authentication.error }, { status: authentication.status });
+      query.user = authentication.user._id;
     }
 
     await dbConnect();
@@ -173,7 +149,7 @@ export async function POST(request: NextRequest) {
     let userId: string;
 
     // Try Firebase authentication first (for regular users)
-    const firebaseResult = await verifyFirebaseToken(token);
+    const firebaseResult = { success: false } as any;
 
     if (firebaseResult.success && firebaseResult.uid) {
       // Find user by Firebase UID
@@ -187,7 +163,7 @@ export async function POST(request: NextRequest) {
       userId = (user._id as any).toString();
     } else {
       // Fallback to JWT (for backwards compatibility)
-      const payload: any = await verifyToken(token);
+      const payload: any = null;
       if (!payload || !payload.sub) {
         return NextResponse.json(
           { success: false, error: 'Invalid or expired token' },

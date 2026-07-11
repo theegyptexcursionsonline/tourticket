@@ -17,6 +17,7 @@ import {
   destinationTranslationFields,
   categoryTranslationFields,
 } from '@/lib/i18n/translationFields';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
@@ -66,9 +67,9 @@ export async function POST(request: NextRequest) {
         // Fetch the document
         let doc: Record<string, unknown> | null = null;
         if (modelType === 'tour') {
-          doc = await Tour.findById(id).lean() as Record<string, unknown> | null;
+          doc = await Tour.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).lean() as Record<string, unknown> | null;
         } else if (modelType === 'destination') {
-          doc = await Destination.findById(id).lean() as Record<string, unknown> | null;
+          doc = await Destination.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).lean() as Record<string, unknown> | null;
         } else if (modelType === 'category') {
           doc = await Category.findById(id).lean() as Record<string, unknown> | null;
         }
@@ -150,9 +151,9 @@ export async function POST(request: NextRequest) {
           send('saving', { message: 'Saving translations to database...' });
 
           if (modelType === 'tour') {
-            await Tour.findByIdAndUpdate(id, { $set: { translations: allTranslations } });
+            await Tour.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, { $set: { translations: allTranslations } });
           } else if (modelType === 'destination') {
-            await Destination.findByIdAndUpdate(id, { $set: { translations: allTranslations } });
+            await Destination.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, { $set: { translations: allTranslations } });
           } else if (modelType === 'category') {
             await Category.findByIdAndUpdate(id, { $set: { translations: allTranslations } });
           }
