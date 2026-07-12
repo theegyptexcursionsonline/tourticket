@@ -5,7 +5,7 @@ const { withSentryConfig } = require('@sentry/nextjs');
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"} https://www.googletagmanager.com https://maps.googleapis.com https://js.stripe.com https://static.cloudflareinsights.com https://s.adroll.com https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://widget.intercom.io https://js.intercomcdn.com`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"} https://www.googletagmanager.com https://maps.googleapis.com https://js.stripe.com https://static.cloudflareinsights.com https://s.adroll.com https://d.adroll.com https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://widget.intercom.io https://js.intercomcdn.com`,
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com https://js.intercomcdn.com",
