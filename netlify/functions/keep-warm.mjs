@@ -8,7 +8,7 @@ const TARGETS = [
   'https://dashboard2.egypt-excursionsonline.com/api/hero-settings',
 ];
 
-export default async () => {
+const keepWarm = async () => {
   const results = await Promise.allSettled(
     TARGETS.map(async (url) => {
       const started = Date.now();
@@ -23,6 +23,8 @@ export default async () => {
   }
   return new Response('ok');
 };
+
+export default keepWarm;
 
 export const config = {
   schedule: '*/5 * * * *',

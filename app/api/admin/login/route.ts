@@ -12,6 +12,7 @@ import { nextAdminLoginFailure } from '@/lib/security/adminLoginLockout';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
 import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
 import { canAccessMainAdminPortal } from '@/lib/auth/adminPortalScope';
+import { recordLoginAudit } from '@/lib/auth/loginAudit';
 
 const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.8HtM5QX69q7OVWdfPQV3vF5wPfhJQmC';
 
@@ -143,17 +144,22 @@ export async function POST(request: NextRequest) {
       subjectLimit: 8,
       windowMs: 15 * 60 * 1_000,
     });
-    if (!rate.allowed) return lockedResponse(new Date(Date.now() + rate.retryAfterSeconds * 1_000));
+    if (!rate.allowed) {
+      await recordLoginAudit(request.headers, identifier, 'rate_limited');
+      return lockedResponse(new Date(Date.now() + rate.retryAfterSeconds * 1_000));
+    }
 
     const user = await User.findOne({ email: identifier })
       .select('+password +adminLoginAttempts +adminLockUntil');
     if (!user) {
       // Keep missing-account and wrong-password response timing comparable.
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      await recordLoginAudit(request.headers, identifier, 'unknown_account');
       return invalidResponse();
     }
 
     if (user.adminLockUntil && user.adminLockUntil.getTime() > Date.now()) {
+      await recordLoginAudit(request.headers, identifier, 'locked');
       return lockedResponse(user.adminLockUntil);
     }
 
@@ -164,24 +170,29 @@ export async function POST(request: NextRequest) {
 
     if (!user.isActive) {
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      await recordLoginAudit(request.headers, identifier, 'inactive');
       return invalidResponse();
     }
 
     if (!user.password) {
+      await recordLoginAudit(request.headers, identifier, 'wrong_password');
       return invalidResponse();
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       const lockUntil = await recordFailedAttempt(user);
+      await recordLoginAudit(request.headers, identifier, lockUntil ? 'locked' : 'wrong_password');
       return lockUntil ? lockedResponse(lockUntil) : invalidResponse();
     }
 
     if (!user.role || user.role === 'customer') {
+      await recordLoginAudit(request.headers, identifier, 'not_admin');
       return invalidResponse();
     }
 
     if (!canAccessMainAdminPortal(user.adminPortalScopes)) {
+      await recordLoginAudit(request.headers, identifier, 'portal_rejected');
       return NextResponse.json(
         { success: false, error: 'This account is not assigned to this admin portal.' },
         { status: 403 },
@@ -201,6 +212,7 @@ export async function POST(request: NextRequest) {
     }
 
     await user.save({ validateBeforeSave: false });
+    await recordLoginAudit(request.headers, identifier, 'success');
 
     const token = await signToken(
       {
