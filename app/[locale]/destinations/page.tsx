@@ -14,7 +14,7 @@ import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections'
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Enable ISR with 60 second revalidation for instant page loads
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 const destinationsPageMeta = {
   en: {

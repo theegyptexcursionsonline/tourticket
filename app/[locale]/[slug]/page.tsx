@@ -42,5 +42,5 @@ export default async function RootDetailPage({ params }: PageProps) {
   return element;
 }
 
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 export const dynamicParams = true;

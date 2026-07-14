@@ -10,7 +10,7 @@ import Job from "@/lib/models/Job";
 import { Job as JobType } from "@/types";
 
 // Enable ISR with 60 second revalidation for instant page loads
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 // Generate metadata for SEO
 export const metadata: Metadata = {

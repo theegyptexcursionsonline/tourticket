@@ -47,7 +47,7 @@ type CategoryPageSummary = {
 // ISR - Static generation with 60-second revalidation
 // This makes the homepage 10x faster by serving cached static pages
 // while still updating content every 60 seconds in the background
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 async function getHomePageData(locale: string) {
   try {

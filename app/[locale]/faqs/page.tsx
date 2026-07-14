@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import FAQsClientPage from './FAQsClientPage';
 import { getSeoAlternates } from '@/lib/seo';
 
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 export const metadata: Metadata = {
   title: 'Frequently Asked Questions | Egypt Excursions Online',

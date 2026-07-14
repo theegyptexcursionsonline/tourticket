@@ -13,7 +13,7 @@ import EgyptHeroClient from './EgyptHeroClient';
 import EgyptToursClient from './EgyptToursClient';
 
 // Enable ISR with 60 second revalidation for instant page loads
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 /* ---------- Page Data ---------- */
 const FEATURES = [

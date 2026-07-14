@@ -3,7 +3,7 @@ import PrivacyClientPage from './PrivacyClientPage';
 import WebSiteSchema from '@/components/schema/WebSiteSchema';
 import { getSeoAlternates } from '@/lib/seo';
 
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | Egypt Excursions Online',

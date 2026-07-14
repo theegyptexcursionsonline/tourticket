@@ -18,7 +18,7 @@ const LOCALIZED_BLOG_FIELDS = ['title', 'excerpt', 'content', 'metaTitle', 'meta
 type Params = { locale: string; slug: string };
 
 // Enable ISR with 60 second revalidation for instant page loads
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 export const dynamicParams = true;
 
 // Skip static generation at build time to avoid MongoDB connection issues on Netlify

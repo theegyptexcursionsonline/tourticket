@@ -52,7 +52,7 @@ async function getCategoryPage(categoryName: string, locale: string): Promise<Ca
 }
 
 // Enable ISR with 60 second revalidation for instant page loads
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 export const dynamicParams = true;
 
 // Skip static generation at build time to avoid MongoDB connection issues on Netlify

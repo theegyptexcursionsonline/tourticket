@@ -12,7 +12,7 @@ interface PageProps {
 
 const SEGMENT = 'destinations';
 
-export const revalidate = 60;
+export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
