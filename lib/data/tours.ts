@@ -39,7 +39,7 @@ export const tours = [
     meetingPoint: 'LOVERS Cafe, Prins Hendrikkade 25, 1012 TM Amsterdam',
     languages: ['English', 'Dutch', 'German', 'French'],
     ageRestriction: 'Child ticket for 4-13 year olds. Free access for children 0-3 years.',
-    cancellationPolicy: 'Free cancellation up to 8 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'LOVERS Canal Cruises',
     location: {
       lat: 52.3740,
@@ -94,7 +94,7 @@ export const tours = [
     meetingPoint: 'Central Station, Pier 5, Amsterdam',
     languages: ['English', 'Dutch', 'German', 'French', 'Spanish', 'Italian'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Amsterdam Canal Tours',
     location: {
       lat: 52.3785,
@@ -141,7 +141,7 @@ export const tours = [
     meetingPoint: 'Anne Frank House area, Amsterdam',
     languages: ['English', 'Dutch', 'German', 'French'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Amsterdam Evening Tours',
     location: {
       lat: 52.3740,
@@ -189,7 +189,7 @@ export const tours = [
     meetingPoint: 'Central Station, main entrance, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Egypt Excursions Online',
     location: {
       lat: 52.3785,
@@ -236,7 +236,7 @@ export const tours = [
     meetingPoint: 'Central Station, main entrance, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Egypt Excursions Online',
     location: {
       lat: 52.3785,
@@ -283,7 +283,7 @@ export const tours = [
     meetingPoint: 'Central Station, main entrance, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Egypt Excursions Online',
     location: {
       lat: 52.3785,
@@ -330,7 +330,7 @@ export const tours = [
     meetingPoint: 'Central Station, main entrance, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Egypt Excursions Online',
     location: {
       lat: 52.3785,
@@ -376,7 +376,7 @@ export const tours = [
     meetingPoint: 'Central Station, main entrance, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Egypt Excursions Online',
     location: {
       lat: 52.3785,
@@ -421,7 +421,7 @@ export const tours = [
     meetingPoint: 'Leidseplein, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Must be 18+ for wine tasting',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Amsterdam Food Tours',
     location: {
       lat: 52.3640,
@@ -465,7 +465,7 @@ export const tours = [
     meetingPoint: 'Centraal Station, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Suitable for all ages',
-    cancellationPolicy: 'Free cancellation up to 48 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Luxury Canal Cruises',
     location: {
       lat: 52.3785,
@@ -509,7 +509,7 @@ export const tours = [
     meetingPoint: 'Museumplein, Amsterdam',
     languages: ['English', 'Dutch'],
     ageRestriction: 'Perfect for families with children',
-    cancellationPolicy: 'Free cancellation up to 24 hours in advance',
+    cancellationPolicy: 'Self-service cancellation closes 24 hours before departure. 100% refund at 7+ days, 50% at 3–7 days, and no refund under 3 days.',
     operatedBy: 'Family Canal Tours',
     location: {
       lat: 52.3598,

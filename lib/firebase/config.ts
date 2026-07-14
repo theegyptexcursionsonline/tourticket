@@ -14,14 +14,21 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
+export const isFirebaseClientConfigured = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.appId
+);
+
 // Initialize Firebase (client-side only)
-let app!: FirebaseApp;
-let auth!: Auth;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
 let analytics: Analytics | null = null;
-let googleProvider!: GoogleAuthProvider;
+let googleProvider: GoogleAuthProvider | undefined;
 
 // Only initialize if not already initialized
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && isFirebaseClientConfigured) {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
   } else {

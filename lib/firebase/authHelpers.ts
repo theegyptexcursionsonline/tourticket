@@ -4,6 +4,10 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import type { IUser } from '@/lib/models/user';
 import { NextRequest } from 'next/server';
+import {
+  guestProfileClaimFilter,
+  isClaimableGuestProfile,
+} from '@/lib/auth/guestProfileClaim';
 
 interface FirebaseProviderInfo {
   providerId?: string;
@@ -98,6 +102,11 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
 }) {
   await dbConnect();
 
+  const email = firebaseUser.email?.trim().toLowerCase();
+  if (!email || firebaseUser.emailVerified !== true) {
+    throw Object.assign(new Error('A verified email is required'), { code: 'ACCOUNT_LINK_REQUIRED' });
+  }
+
   // Determine auth provider from Firebase
   let authProvider: 'firebase' | 'google' = 'firebase';
   if (firebaseUser.providerData && firebaseUser.providerData.length > 0) {
@@ -117,15 +126,16 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
   }
 
   // Check if user already exists by Firebase UID
-  let user = await User.findOne({ firebaseUid: firebaseUser.uid });
+  let user: IUser | null = await User.findOne({ firebaseUid: firebaseUser.uid })
+    .select('+firebaseUid +password') as IUser | null;
   let isNewUser = false;
 
   if (user) {
-    if (!user.isActive || user.role !== 'customer') {
+    if (!user.isActive || user.role !== 'customer' || user.isGuestProfile) {
       throw Object.assign(new Error('Firebase sync is restricted to active customer accounts'), { code: 'ACCOUNT_LINK_REQUIRED' });
     }
     // Update existing user (same Firebase account)
-    user.email = firebaseUser.email || user.email;
+    user.email = email;
     user.emailVerified = firebaseUser.emailVerified;
     user.photoURL = firebaseUser.photoURL || user.photoURL;
     user.authProvider = authProvider;
@@ -133,18 +143,61 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
     await user.save();
   } else {
     // Check if user exists by email (migration case or different auth method)
-    user = await User.findOne({ email: firebaseUser.email });
+    user = await User.findOne({ email }).select('+firebaseUid +password') as IUser | null;
 
     if (user) {
-      // Email ownership alone must never link a new Firebase UID to an
-      // existing local account. Linking requires a separately authenticated
-      // account-recovery flow.
-      throw Object.assign(new Error('Existing account requires explicit linking'), { code: 'ACCOUNT_LINK_REQUIRED' });
+      if (!isClaimableGuestProfile(user)) {
+        // Email ownership alone must never link a normal local account. Only a
+        // checkout-created, explicitly marked passwordless guest profile can
+        // be claimed after Firebase has verified the email address.
+        throw Object.assign(new Error('Existing account requires explicit linking'), { code: 'ACCOUNT_LINK_REQUIRED' });
+      }
+
+      try {
+        const claimedUser = await User.findOneAndUpdate(
+          guestProfileClaimFilter(email, user._id),
+          {
+            $set: {
+              firebaseUid: firebaseUser.uid,
+              authProvider,
+              emailVerified: firebaseUser.emailVerified,
+              isGuestProfile: false,
+              lastLoginAt: new Date(),
+              ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
+            },
+          },
+          { new: true, runValidators: true },
+        );
+
+        if (claimedUser) {
+          user = claimedUser;
+          isNewUser = true;
+        } else {
+          // A same-UID retry may arrive after the first atomic claim. A
+          // different-UID race must fail closed.
+          const replayedClaim = await User.findOne({
+            firebaseUid: firebaseUser.uid,
+            email,
+            role: 'customer',
+            isActive: true,
+            isGuestProfile: false,
+          });
+          if (!replayedClaim) {
+            throw Object.assign(new Error('Guest profile claim lost a concurrency race'), { code: 'ACCOUNT_LINK_REQUIRED' });
+          }
+          user = replayedClaim;
+        }
+      } catch (error: unknown) {
+        if ((error as { code?: number | string }).code === 11000) {
+          throw Object.assign(new Error('Guest profile is already linked'), { code: 'ACCOUNT_LINK_REQUIRED' });
+        }
+        throw error;
+      }
     } else {
       // Create new user
       user = await User.create({
         firebaseUid: firebaseUser.uid,
-        email: firebaseUser.email,
+        email,
         firstName,
         lastName,
         authProvider,
@@ -152,6 +205,7 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
         emailVerified: firebaseUser.emailVerified,
         role: 'customer', // Default role for new users
         permissions: [],
+        isGuestProfile: false,
         isActive: true,
         lastLoginAt: new Date(),
       });

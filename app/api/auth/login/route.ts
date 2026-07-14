@@ -5,23 +5,39 @@ import { signToken } from '@/lib/jwt';
 import bcrypt from 'bcryptjs';
 import { getDefaultPermissions } from '@/lib/constants/adminPermissions';
 import { nextAdminLoginFailure } from '@/lib/security/adminLoginLockout';
+import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
+import { normalizeEmail, PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
 
 const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.8HtM5QX69q7OVWdfPQV3vF5wPfhJQmC';
 
 export async function POST(request: NextRequest) {
-  await dbConnect();
-
   try {
-    const { email, password } = await request.json();
+    const { email, password } = await readBoundedJson<{ email?: unknown; password?: unknown }>(request, 4_096);
 
     // --- Basic Validation ---
-    if (!email || !password) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || typeof password !== 'string' || password.length < 1 || password.length > 1_024) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    }
+
+    await dbConnect();
+    const rate = await enforcePublicActionLimits({
+      request,
+      action: 'customer-login',
+      subject: normalizedEmail,
+      networkLimit: 30,
+      subjectLimit: 10,
+      windowMs: 15 * 60 * 1_000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } },
+      );
     }
 
     // --- Find User in Local DB ---
     // Explicitly select the password field as it's excluded by default in the schema
-    const normalizedEmail = String(email).trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail })
       .select('+password +adminLoginAttempts +adminLockUntil');
 
@@ -31,7 +47,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.isActive) {
-      return NextResponse.json({ error: 'This account is inactive' }, { status: 403 });
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
     if (user.adminLockUntil && user.adminLockUntil.getTime() > Date.now()) {
       const retryAfter = Math.max(1, Math.ceil((user.adminLockUntil.getTime() - Date.now()) / 1000));
@@ -103,6 +120,9 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error: unknown) {
+    if (error instanceof PublicInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Login Error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred during login.' },

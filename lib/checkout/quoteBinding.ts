@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { normalizeCheckoutAttemptId } from './checkoutAttempt';
 interface QuoteCartItem {
   _id?: unknown;
   id?: unknown;
@@ -30,8 +31,14 @@ export function buildQuoteBinding(input: {
   currency: string;
   amountMinor: number;
   discountCode?: string | null;
+  checkoutAttemptId: string;
 }) {
+  const checkoutAttemptId = normalizeCheckoutAttemptId(input.checkoutAttemptId);
+  if (!checkoutAttemptId) {
+    throw new Error('A valid checkout attempt identifier is required.');
+  }
   const canonical = JSON.stringify({
+    checkoutAttemptId,
     cart: normalizedCart(input.cart),
     customerEmail: input.customerEmail.trim().toLowerCase(),
     currency: input.currency.toUpperCase(),

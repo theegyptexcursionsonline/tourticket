@@ -10,6 +10,7 @@ import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
+import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -114,6 +115,13 @@ export async function PUT(
         delete body.tenantId;
         delete body.$set;
         delete body.$unset;
+        delete body.archivedAt;
+        delete body.archivedBy;
+        if (body.isPublished === true) {
+            // Publishing is the explicit restore action for an archived tour.
+            body.archivedAt = null;
+            body.archivedBy = null;
+        }
 
         console.log('Updating tour with ID:', id);
         console.log('Request body:', body);
@@ -222,6 +230,9 @@ export async function PUT(
             return NextResponse.json({ success: false, error: "Tour not found" }, { status: 404 });
         }
 
+        const pricingSummary = await refreshTourPricingSummary(id);
+        if (pricingSummary) updatedTour.pricingSummary = pricingSummary;
+
         console.log('Tour updated successfully');
         console.log('Updated tour attractions:', updatedTour.attractions);
         console.log('Updated tour interests:', updatedTour.interests);
@@ -282,7 +293,8 @@ export async function PUT(
     }
 }
 
-// DELETE a tour by ID or Slug
+// Archive a tour by ID or slug. Tour documents are referenced by immutable
+// booking receipts, so permanent deletion would corrupt the financial trail.
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -295,26 +307,38 @@ export async function DELETE(
         await dbConnect();
         const { id } = await params;
 
-        let deletedTour;
+        let archivedTour;
         
         if (mongoose.Types.ObjectId.isValid(id)) {
-            deletedTour = await Tour.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
+            archivedTour = await Tour.findOneAndUpdate(
+                { _id: id, ...DEFAULT_TENANT_FILTER },
+                { $set: { isPublished: false, archivedAt: new Date(), archivedBy: auth.id } },
+                { new: true },
+            );
         } else {
-            deletedTour = await Tour.findOneAndDelete({ slug: id, ...DEFAULT_TENANT_FILTER });
+            archivedTour = await Tour.findOneAndUpdate(
+                { slug: id, ...DEFAULT_TENANT_FILTER },
+                { $set: { isPublished: false, archivedAt: new Date(), archivedBy: auth.id } },
+                { new: true },
+            );
         }
 
-        if (!deletedTour) {
+        if (!archivedTour) {
             return NextResponse.json({ success: false, error: "Tour not found" }, { status: 404 });
         }
 
         // Remove from Algolia
         try {
-            await deleteTourFromAlgolia(String(deletedTour._id));
+            await deleteTourFromAlgolia(String(archivedTour._id));
         } catch (algoliaErr) {
             console.warn('Failed to remove deleted tour from Algolia:', algoliaErr);
         }
 
-        return NextResponse.json({ success: true, data: {} });
+        return NextResponse.json({
+            success: true,
+            message: 'Tour archived. Existing bookings and audit records were preserved.',
+            data: { id: archivedTour._id, archivedAt: archivedTour.archivedAt },
+        });
         
     } catch (error: unknown) {
         console.error('Tour deletion error:', error);

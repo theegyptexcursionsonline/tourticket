@@ -33,6 +33,7 @@ import { ITour } from '@/lib/models/Tour';
 import toast from 'react-hot-toast';
 import { toDateOnlyString } from '@/utils/date';
 import type { CartItem, Review as ReviewData, Tour as WishlistTour } from '@/types';
+import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -987,8 +988,8 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
         <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Free Cancellation</h3>
-        <p className="text-sm text-slate-600">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
+        <h3 className="font-semibold text-slate-900">Cancellation & refunds</h3>
+        <p className="text-sm text-slate-600">{CANCELLATION_POLICY_SUMMARY}</p>
       </div>
       <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
         <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
@@ -1538,7 +1539,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     <div className="grid grid-cols-2 gap-4 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <CheckCircle size={16} className="text-green-600" />
-                        <span>Free cancellation</span>
+                        <span>Tiered refunds</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Smartphone size={16} className="text-blue-600" />

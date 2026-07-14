@@ -40,6 +40,14 @@ jest.mock('next/server', () => {
 
 // Mock database connection
 jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
+jest.mock('@/lib/security/distributedAbuseLimit', () => ({
+  enforcePublicActionLimits: jest.fn().mockResolvedValue({
+    allowed: true,
+    count: 1,
+    limit: 10,
+    retryAfterSeconds: 60,
+  }),
+}));
 
 jest.mock('mongoose', () => ({
   __esModule: true,

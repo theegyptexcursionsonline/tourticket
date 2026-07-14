@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLocale } from 'next-intl';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
 interface AuthorProfile {
@@ -95,10 +96,23 @@ interface Props {
  * - Ensure next.config.js includes allowed image domains for featuredImage / avatars.
  */
 
-function formatDate(date?: string | Date) {
+const DATE_LOCALES: Record<string, string> = {
+  en: 'en-US',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  ar: 'ar-EG',
+};
+
+function formatDate(date: string | Date | undefined, locale: string) {
   if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(DATE_LOCALES[locale] || 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 function ReadTimeText(blog: BlogPost) {
@@ -112,6 +126,26 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
   const [open, setOpen] = useState(false);
   const [likes, setLikes] = useState(blog?.likes ?? 0);
   const [liked, setLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/blog/${encodeURIComponent(blog.slug)}/like`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((result) => {
+        if (!result) return;
+        setLiked(Boolean(result.liked));
+        if (Number.isFinite(result.likes)) setLikes(result.likes);
+      })
+      .catch((error) => {
+        if ((error as Error).name !== 'AbortError') console.warn('Unable to load blog like status.');
+      });
+    return () => controller.abort();
+  }, [blog.slug]);
 
   const handleShare = (type: 'facebook' | 'twitter' | 'copy') => {
     const url = window.location.href;
@@ -126,25 +160,33 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
   };
 
   const handleLike = async () => {
-    if (liked) return;
+    if (liked || isLiking) return;
+    setIsLiking(true);
     try {
-      await fetch(`/api/blog/${encodeURIComponent(blog.slug)}/like`, { method: 'POST' });
-      setLikes((s: number) => s + 1);
+      const response = await fetch(`/api/blog/${encodeURIComponent(blog.slug)}/like`, { method: 'POST' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Unable to save this like right now.');
+      if (Number.isFinite(result.likes)) setLikes(result.likes);
       setLiked(true);
-      toast.success('Thanks for liking!');
-    } catch {
-      toast.error('Unable to like right now');
+      toast.success(result.message || 'Thanks for liking!');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to like right now');
+    } finally {
+      setIsLiking(false);
     }
   };
 
   return (
     <div className="flex items-center gap-3">
       <button
+        type="button"
         onClick={handleLike}
         aria-pressed={liked}
+        aria-label={liked ? `Liked. ${likes} likes` : `Like this post. ${likes} likes`}
+        disabled={liked || isLiking}
         className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
           liked ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-700 hover:bg-red-50'
-        }`}
+        } disabled:cursor-default disabled:opacity-80`}
       >
         <Heart className="h-4 w-4" />
         <span>{likes}</span>
@@ -328,6 +370,7 @@ function ReadingProgress() {
 
 /* ---------- Main component ---------- */
 export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] }: Props) {
+  const locale = useLocale();
   const authorSlug = getAuthorRouteSlug({
     slug: blog.authorSlug,
     name: blog.author,
@@ -374,7 +417,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
                 <span>{blog.author}</span>
               )}
             </div>
-            <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{formatDate(blog.publishedAt)}</span></div>
+            <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{formatDate(blog.publishedAt, locale)}</span></div>
             <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> <span>{ReadTimeText(blog)}</span></div>
             <div className="flex items-center gap-2"><Eye className="h-4 w-4" /> <span>{blog.views ?? 0} views</span></div>
           </div>

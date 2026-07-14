@@ -74,10 +74,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const pathname = usePathname();
 
   const loadFirebaseAuth = async () => {
-    const [{ auth, googleProvider }, firebaseAuth] = await Promise.all([
+    const [{ auth, googleProvider, isFirebaseClientConfigured }, firebaseAuth] = await Promise.all([
       import('@/lib/firebase/config'),
       import('firebase/auth'),
     ]);
+
+    if (!isFirebaseClientConfigured || !auth || !googleProvider) {
+      const configurationError = new Error('Authentication is temporarily unavailable.');
+      Object.assign(configurationError, { code: 'auth/configuration-not-found' });
+      throw configurationError;
+    }
 
     return {
       auth,
@@ -215,7 +221,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
     }).catch((error) => {
-      console.error('Failed to initialize auth listener:', error);
+      if (getFirebaseErrorCode(error) !== 'auth/configuration-not-found') {
+        console.error('Failed to initialize auth listener:', error);
+      }
       setIsLoading(false);
     });
 
@@ -263,26 +271,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
+      // Firebase owns password verification, while this same-origin preflight
+      // applies the platform's durable Mongo abuse limits before invoking the
+      // client SDK. Firebase's provider-side protections remain active too.
+      const loginCheck = await fetch('/api/auth/firebase/login-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!loginCheck.ok) {
+        const result = await loginCheck.json().catch(() => ({}));
+        throw new Error(result.error || 'Authentication is temporarily unavailable.');
+      }
       const { auth, signInWithEmailAndPassword } = await loadFirebaseAuth();
       await signInWithEmailAndPassword(auth, email, password);
       // User state will be updated by onAuthStateChanged listener
     } catch (error: unknown) {
-      console.error('Login error:', error);
-      let errorMessage = 'Failed to log in. Please check your credentials.';
-
       const errorCode = getFirebaseErrorCode(error);
-      if (errorCode === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email.';
-      } else if (errorCode === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password.';
+      console.error('Login failed:', errorCode || (error instanceof Error ? error.name : 'unknown_error'));
+      let errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to log in. Please check your credentials.';
+
+      if (
+        errorCode === 'auth/user-not-found'
+        || errorCode === 'auth/wrong-password'
+        || errorCode === 'auth/invalid-credential'
+        || errorCode === 'auth/user-disabled'
+      ) {
+        errorMessage = 'Invalid email or password.';
       } else if (errorCode === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
-      } else if (errorCode === 'auth/user-disabled') {
-        errorMessage = 'This account has been disabled.';
       } else if (errorCode === 'auth/too-many-requests') {
         errorMessage = 'Too many failed login attempts. Please try again later.';
-      } else if (errorCode === 'auth/invalid-credential') {
-        errorMessage = 'Invalid credentials. Please check your email and password.';
+      } else if (errorCode === 'auth/configuration-not-found') {
+        errorMessage = 'Authentication is temporarily unavailable. Please try again later.';
       }
 
       throw new Error(errorMessage);
@@ -325,6 +348,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         errorMessage = 'Password should be at least 6 characters.';
       } else if (errorCode === 'auth/operation-not-allowed') {
         errorMessage = 'Email/password accounts are not enabled.';
+      } else if (errorCode === 'auth/configuration-not-found') {
+        errorMessage = 'Authentication is temporarily unavailable. Please try again later.';
       }
 
       throw new Error(errorMessage);
@@ -353,6 +378,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         errorMessage = 'Sign-in popup was blocked. Please allow popups and try again.';
       } else if (errorCode === 'auth/account-exists-with-different-credential') {
         errorMessage = 'An account already exists with this email using a different sign-in method.';
+      } else if (errorCode === 'auth/configuration-not-found') {
+        errorMessage = 'Authentication is temporarily unavailable. Please try again later.';
       }
 
       throw new Error(errorMessage);

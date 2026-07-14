@@ -235,6 +235,7 @@ export default function ContactClientPage() {
           name: formData.name,
           email: formData.email,
           message: formData.message,
+          website: formData.website,
           recaptchaToken,
           submissionTime: timeSinceLoad,
         }),
@@ -726,7 +727,7 @@ export default function ContactClientPage() {
                     {
                       icon: "📝",
                       question: "Can I modify my booking?",
-                      answer: "Yes! Contact us at least 24 hours before your tour for modifications. Some tours offer free cancellation.",
+                      answer: "Contact us at least 24 hours before departure for modifications. Cancellations follow the published 7-day/3-day tiered refund policy.",
                       color: "from-purple-500 to-pink-500"
                     },
                     {

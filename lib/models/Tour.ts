@@ -42,6 +42,7 @@ export interface IBookingOption {
   type: string;
   label: string;
   price: number;
+  guestPrices?: { adult: number; child: number; infant: number };
   originalPrice?: number;
   description?: string;
   duration?: string;
@@ -111,6 +112,7 @@ export interface ITour extends Document {
   price?: number;
   originalPrice?: number;
   discountPrice: number;
+  revenueGuestPrices?: { adult: number; child: number; infant: number };
   duration: string;
   difficulty?: string;
   maxGroupSize?: number;
@@ -157,6 +159,8 @@ export interface ITour extends Document {
   // Status
   isFeatured?: boolean;
   isPublished?: boolean;
+  archivedAt?: Date;
+  archivedBy?: string;
 
   // Relationships
   reviews?: mongoose.Schema.Types.ObjectId[];
@@ -182,6 +186,15 @@ export interface ITour extends Document {
   // Localized overrides by locale code (e.g. en, ar, de)
   translations?: Record<string, ITourTranslation>;
   pricingSummary?: { fromPrice: number; currency: string; version: number; validThrough?: Date };
+  pricingSearchProjection?: {
+    status: 'pending' | 'syncing' | 'verified' | 'failed';
+    summaryVersion: number;
+    attempts: number;
+    lastAttemptAt?: Date;
+    nextAttemptAt?: Date;
+    syncedAt?: Date;
+    lastErrorCode?: string;
+  };
 }
 
 const ItineraryItemSchema = new Schema<IItineraryItem>({
@@ -295,6 +308,12 @@ const FAQSchema = new Schema<IFAQ>({
   },
 }, { _id: false });
 
+const RevenueGuestPricesSchema = new Schema({
+  adult: { type: Number, required: true, min: 0, max: 999999 },
+  child: { type: Number, required: true, min: 0, max: 999999 },
+  infant: { type: Number, required: true, min: 0, max: 999999 },
+}, { _id: false });
+
 const BookingOptionSchema = new Schema<IBookingOption>({
   pricingKey: {
     type: String,
@@ -320,6 +339,7 @@ const BookingOptionSchema = new Schema<IBookingOption>({
     min: [0, 'Price cannot be negative'],
     max: [999999, 'Price cannot exceed 999999']
   },
+  guestPrices: { type: RevenueGuestPricesSchema },
   originalPrice: { 
     type: Number, 
     min: [0, 'Original price cannot be negative'],
@@ -543,6 +563,7 @@ const TourSchema: Schema<ITour> = new Schema({
     max: [999999, 'Discount price cannot exceed 999999'],
     index: true
   },
+  revenueGuestPrices: { type: RevenueGuestPricesSchema },
   duration: { 
     type: String, 
     required: [true, 'Duration is required'],
@@ -762,6 +783,8 @@ const TourSchema: Schema<ITour> = new Schema({
     default: true,
     index: true
   },
+  archivedAt: { type: Date, index: true },
+  archivedBy: { type: String, trim: true, maxlength: 255 },
 
   // Meta
   rating: { 
@@ -797,6 +820,15 @@ const TourSchema: Schema<ITour> = new Schema({
     currency: { type: String, default: 'USD' },
     version: { type: Number, default: 0 },
     validThrough: { type: Date },
+  },
+  pricingSearchProjection: {
+    status: { type: String, enum: ['pending', 'syncing', 'verified', 'failed'], default: 'pending' },
+    summaryVersion: { type: Number, default: 0, min: 0 },
+    attempts: { type: Number, default: 0, min: 0 },
+    lastAttemptAt: { type: Date },
+    nextAttemptAt: { type: Date },
+    syncedAt: { type: Date },
+    lastErrorCode: { type: String, maxlength: 80 },
   },
   attractions: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -1013,6 +1045,7 @@ TourSchema.index({ discountPrice: 1, isPublished: 1 });
 TourSchema.index({ isFeatured: 1, isPublished: 1 });
 TourSchema.index({ createdAt: -1 });
 TourSchema.index({ difficulty: 1, isPublished: 1 });
+TourSchema.index({ 'pricingSearchProjection.status': 1, 'pricingSearchProjection.nextAttemptAt': 1 });
 
 // Compound indexes for common query patterns
 TourSchema.index({ 

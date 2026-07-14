@@ -1,46 +1,83 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
+import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
+import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
+
+type DiscountVerificationBody = { code?: unknown };
+
+function normalizeDiscountCode(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const code = value.trim().toUpperCase();
+  return code.length >= 1 && code.length <= 64 && /^[A-Z0-9_-]+$/.test(code)
+    ? code
+    : null;
+}
 
 export async function POST(request: Request) {
-  await dbConnect();
-
   try {
-    const { code } = await request.json();
-
+    const body = await readBoundedJson<DiscountVerificationBody>(request, 1_024);
+    const code = normalizeDiscountCode(body.code);
     if (!code) {
-      return NextResponse.json({ success: false, error: 'Coupon code is required' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Enter a valid coupon code.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      );
     }
 
-    // Find the discount code (case-insensitive)
-    const discount = await Discount.findOne({ code: code.toUpperCase() });
-
-    // Check if the discount exists
-    if (!discount) {
-      return NextResponse.json({ success: false, error: 'Invalid coupon code' }, { status: 404 });
+    await dbConnect();
+    const rate = await enforcePublicActionLimits({
+      request,
+      action: 'discount-verify',
+      subject: code,
+      networkLimit: 30,
+      subjectLimit: 10,
+      windowMs: 15 * 60 * 1_000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many coupon attempts. Please try again later.' },
+        {
+          status: 429,
+          headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfterSeconds) },
+        },
+      );
     }
 
-    // Check if the discount is currently active
-    if (!discount.isActive) {
-      return NextResponse.json({ success: false, error: 'This coupon is no longer active' }, { status: 400 });
+    const discount = await Discount.findOne({ code })
+      .select('discountType value isActive expiresAt usageLimit timesUsed')
+      .lean();
+    const unavailable = !discount
+      || !discount.isActive
+      || Boolean(discount.expiresAt && new Date(discount.expiresAt) < new Date())
+      || Boolean(discount.usageLimit && discount.timesUsed >= discount.usageLimit);
+    if (unavailable) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or unavailable coupon code.' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } },
+      );
     }
 
-    // Check if the discount has expired
-    if (discount.expiresAt && new Date(discount.expiresAt) < new Date()) {
-      return NextResponse.json({ success: false, error: 'This coupon has expired' }, { status: 400 });
-    }
-
-    // Check for usage limits
-    if (discount.usageLimit && discount.timesUsed >= discount.usageLimit) {
-      return NextResponse.json({ success: false, error: 'This coupon has reached its usage limit' }, { status: 400 });
-    }
-
-    // If all checks pass, return the discount data
-    return NextResponse.json({ success: true, data: discount });
-
+    // Only the fields required to preview a discount are public. Usage counts,
+    // limits, timestamps, and the stored document identity stay server-side.
+    return NextResponse.json(
+      {
+        success: true,
+        data: { discountType: discount.discountType, value: discount.value },
+      },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   } catch (error) {
-    console.error('Error verifying discount:', error);
-    // Return a generic server error to the client
-    return NextResponse.json({ success: false, error: 'An internal server error occurred' }, { status: 500 });
+    if (error instanceof PublicInputError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+    console.error('Coupon verification failed:', error instanceof Error ? error.message : 'unknown_error');
+    return NextResponse.json(
+      { success: false, error: 'Coupon verification is temporarily unavailable.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 }

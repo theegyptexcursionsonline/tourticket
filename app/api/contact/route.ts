@@ -1,135 +1,123 @@
-// app/api/contact/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/dbConnect';
 import { sendContactFormEmail } from '@/lib/mailgun';
+import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
+import {
+  normalizeBoundedText,
+  normalizeEmail,
+  PublicInputError,
+  readBoundedJson,
+} from '@/lib/security/publicInput';
 
-// In-memory rate limiting (consider Redis for production)
-const submissionTracker = new Map<string, number[]>();
-const MAX_SUBMISSIONS_PER_HOUR = 3;
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
+export const dynamic = 'force-dynamic';
 
-// Verify reCAPTCHA token
+const ONE_HOUR = 60 * 60 * 1_000;
+
+interface ContactBody {
+  name?: unknown;
+  email?: unknown;
+  message?: unknown;
+  website?: unknown;
+  recaptchaToken?: unknown;
+  submissionTime?: unknown;
+}
+
 async function verifyRecaptcha(token: string): Promise<boolean> {
-  if (!token || !process.env.RECAPTCHA_SECRET_KEY) {
-    return false;
-  }
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!token || !secret) return false;
 
   try {
     const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token }).toString(),
+      signal: AbortSignal.timeout(5_000),
+      cache: 'no-store',
     });
-
-    const data = await response.json();
-
-    // Check if score is above threshold (0.5 is recommended)
-    return data.success && data.score >= 0.5;
+    if (!response.ok) return false;
+    const data = await response.json() as { success?: boolean; score?: number; action?: string };
+    return data.success === true
+      && Number(data.score || 0) >= 0.5
+      && (!data.action || data.action === 'contact_form');
   } catch (error) {
-    console.error('reCAPTCHA verification error:', error);
+    console.error('Contact security verification unavailable:', error instanceof Error ? error.name : 'unknown_error');
     return false;
   }
 }
 
-// Get client IP address
-function getClientIP(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-
-  if (realIP) {
-    return realIP;
-  }
-
-  return 'unknown';
+function noStoreJson(body: Record<string, unknown>, status: number) {
+  return NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-// Check rate limit
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const submissions = submissionTracker.get(ip) || [];
-
-  // Remove old submissions outside the time window
-  const recentSubmissions = submissions.filter(
-    timestamp => now - timestamp < RATE_LIMIT_WINDOW
-  );
-
-  // Update tracker
-  submissionTracker.set(ip, recentSubmissions);
-
-  // Check if limit exceeded
-  if (recentSubmissions.length >= MAX_SUBMISSIONS_PER_HOUR) {
-    return false;
-  }
-
-  // Add current submission
-  recentSubmissions.push(now);
-  submissionTracker.set(ip, recentSubmissions);
-
-  return true;
-}
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { name, email, message, recaptchaToken, submissionTime } = await request.json();
-
-    // --- Basic Validation ---
+    const body = await readBoundedJson<ContactBody>(request, 16_384);
+    const name = normalizeBoundedText(body.name, { minimum: 2, maximum: 100 });
+    const email = normalizeEmail(body.email);
+    const message = normalizeBoundedText(body.message, {
+      minimum: 10,
+      maximum: 4_000,
+      collapseWhitespace: false,
+    });
     if (!name || !email || !message) {
-      return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+      throw new PublicInputError('Please provide a valid name, email, and message.');
     }
 
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    // Honeypot submissions receive the same accepted shape but never send.
+    // This avoids teaching automated clients how the trap is evaluated.
+    if (typeof body.website === 'string' && body.website.trim()) {
+      return noStoreJson({ success: true, message: 'Your message was received.' }, 202);
     }
 
-    // --- Rate Limiting ---
-    const clientIP = getClientIP(request);
-    if (!checkRateLimit(clientIP)) {
-      console.log(`Rate limit exceeded for IP: ${clientIP}`);
+    const submissionTime = Number(body.submissionTime);
+    if (!Number.isFinite(submissionTime) || submissionTime < 3_000 || submissionTime > 86_400_000) {
+      throw new PublicInputError('Please wait a moment and try again.');
+    }
+
+    await dbConnect();
+    const rate = await enforcePublicActionLimits({
+      request,
+      action: 'contact-form',
+      subject: email,
+      networkLimit: 5,
+      subjectLimit: 3,
+      windowMs: ONE_HOUR,
+    });
+    if (!rate.allowed) {
       return NextResponse.json(
-        { error: 'Too many submissions. Please try again later.' },
-        { status: 429 }
+        { success: false, error: 'Too many contact requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Cache-Control': 'no-store',
+            'Retry-After': String(rate.retryAfterSeconds),
+          },
+        },
       );
     }
 
-    // --- Timing Check ---
-    if (submissionTime && submissionTime < 3000) {
-      console.log('Suspicious submission time:', submissionTime);
-      return NextResponse.json(
-        { error: 'Please wait a moment before submitting.' },
-        { status: 400 }
-      );
-    }
-
-    // --- reCAPTCHA Verification ---
     if (process.env.RECAPTCHA_SECRET_KEY) {
-      if (!recaptchaToken) {
-        return NextResponse.json(
-          { error: 'Security verification is required.' },
-          { status: 400 }
-        );
-      }
-      const isValid = await verifyRecaptcha(recaptchaToken);
-      if (!isValid) {
-        console.log('reCAPTCHA verification failed');
-        return NextResponse.json(
-          { error: 'Security verification failed. Please try again.' },
-          { status: 400 }
+      const recaptchaToken = typeof body.recaptchaToken === 'string'
+        ? body.recaptchaToken.trim().slice(0, 4_096)
+        : '';
+      if (!recaptchaToken || !(await verifyRecaptcha(recaptchaToken))) {
+        return noStoreJson(
+          { success: false, error: 'Security verification failed. Please try again.' },
+          400,
         );
       }
     }
 
-    // --- Send Email via Mailgun ---
     await sendContactFormEmail({ name, fromEmail: email, message });
-
-    return NextResponse.json({ success: true, message: 'Message sent successfully!' });
-
-  } catch (error: unknown) {
-    console.error('Contact form error:', error);
-    return NextResponse.json({ error: 'Failed to send message. Please try again later.' }, { status: 500 });
+    return noStoreJson({ success: true, message: 'Your message was sent successfully.' }, 200);
+  } catch (error) {
+    if (error instanceof PublicInputError) {
+      return noStoreJson({ success: false, error: error.message }, error.status);
+    }
+    console.error('Contact form failed:', error instanceof Error ? error.message : 'unknown_error');
+    return noStoreJson(
+      { success: false, error: 'Your message could not be sent. Please try again later.' },
+      503,
+    );
   }
 }

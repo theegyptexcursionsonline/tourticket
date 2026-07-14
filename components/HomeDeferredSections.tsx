@@ -109,10 +109,9 @@ export default function HomeDeferredSections({
 }
 
 function useIsMobileViewport() {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.matchMedia('(max-width: 767px)').matches;
-  });
+  // Hydrate from the same mobile-safe value emitted by SSR, then reconcile to
+  // the actual viewport in the effect below.
+  const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767px)');

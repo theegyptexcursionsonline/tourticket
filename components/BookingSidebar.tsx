@@ -19,6 +19,7 @@ import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
+import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 
 // Enhanced Types with database compatibility
 interface Tour {
@@ -800,7 +801,7 @@ const TourOptionCard: React.FC<{
       <div className="flex items-center gap-2.5 mt-2 pt-2 border-t border-gray-200">
         <div className="flex items-center gap-1 text-[10px] text-gray-600">
           <Shield size={10} className="text-green-500" />
-          <span>Free cancellation</span>
+          <span>Tiered refunds</span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-gray-600">
           <CheckCircle size={10} className="text-blue-500" />
@@ -1384,7 +1385,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       whatsIncluded: tour.whatsIncluded || [],
       bookingOptions: tour.bookingOptions || [],
       tags: tour.tags || [],
-      cancellationPolicy: tour.cancellationPolicy || 'Free cancellation up to 24 hours in advance',
+      cancellationPolicy: CANCELLATION_POLICY_SUMMARY,
       operatedBy: tour.operatedBy || 'Tour Operator',
       meetingPoint: tour.meetingPoint || 'Central meeting point',
       languages: tour.languages || ['English'],
@@ -1435,7 +1436,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       if (tour.bookingOptions && tour.bookingOptions.length > 0) {
         // Transform pre-fetched bookingOptions to TourOption format
         tourOptions = tour.bookingOptions.map((option, index) => {
-          const optionPrice = option.price || tourDisplayData?.discountPrice || 50;
+          const optionPrice = option.price ?? tourDisplayData?.discountPrice ?? 50;
           const optionId = option.id || option._id || `option-${index}`;
           const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(optionId);
           const stopSaleReason = selectedStopSale?.reasons?.[optionId] || selectedStopSale?.reasons?.all;
@@ -1755,6 +1756,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     try {
       const selectedOption = availability?.tourOptions.find((option) => option.timeSlots.some((slot) => slot.id === timeSlot.id));
       const tourId = tour._id || tour.id;
+      if (selectedOption && selectedOption.id !== 'standard-default' && !selectedOption.pricingKey) {
+        throw new Error('This booking option is awaiting a pricing-key migration. Please choose another option or contact support.');
+      }
       if (tourId && bookingData.selectedDate) {
         const query = new URLSearchParams({
           date: toDateOnlyString(bookingData.selectedDate),
@@ -1892,13 +1896,17 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       // Prepare selected booking option details
       const selectedBookingOptionDetails = selectedOption ? {
         id: selectedOption.id,
-        pricingKey: selectedOption.pricingKey || 'standard',
+        pricingKey: selectedOption.id === 'standard-default' ? 'standard' : selectedOption.pricingKey,
         title: selectedOption.title,
         price: selectedTimeSlot.price,
         originalPrice: selectedOption.originalPrice,
         duration: selectedOption.duration,
         badge: selectedOption.badge,
       } : undefined;
+
+      if (!selectedBookingOptionDetails?.pricingKey) {
+        throw new Error('The selected booking option is not ready for checkout. Please choose another option.');
+      }
 
       // Prepare the cart item
       const newCartItem = {
@@ -2402,7 +2410,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
               </div>
               <div className="flex items-center gap-2 bg-red-50 p-3 sm:p-4 rounded-full">
                 <Clock size={20} className="text-red-600" />
-                <span className="text-sm font-medium text-red-800">Free Cancellation</span>
+                <span className="text-sm font-medium text-red-800">Tiered cancellation policy</span>
               </div>
             </div>
           </motion.div>

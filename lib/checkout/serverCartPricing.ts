@@ -87,6 +87,7 @@ export interface SecureCartItem extends Record<string, unknown> {
   priceVersion: number;
   priceExecutionId: string | null;
   priceOverrideId: string | null;
+  priceSource: 'catalogue' | 'override';
   selectedAddOns: Record<string, number>;
   selectedAddOnDetails: Record<string, SecureAddOnDetail>;
 }
@@ -144,9 +145,12 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
         throw new Error('Invalid booking option');
       }
       const dbOption = tour.bookingOptions[optionIndex];
+      if (!dbOption.pricingKey) {
+        throw new Error('Booking option pricing key is not configured');
+      }
       option = {
-        id: optionId,
-        pricingKey: dbOption.pricingKey || requestedPricingKey,
+        id: `option-${optionIndex}`,
+        pricingKey: dbOption.pricingKey,
         title: dbOption.label || `${tour.title} - ${dbOption.type}`,
         price: Number(dbOption.price),
         originalPrice: Number(dbOption.originalPrice || tour.originalPrice || dbOption.price),
@@ -229,6 +233,7 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
       priceVersion: quote?.version || 0,
       priceExecutionId: quote?.executionId || null,
       priceOverrideId: quote?.overrideId || null,
+      priceSource: quote?.source === 'override' ? 'override' : 'catalogue',
       selectedAddOns,
       selectedAddOnDetails,
     };

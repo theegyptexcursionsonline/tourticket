@@ -20,6 +20,7 @@ export type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' |
 export const BOOKING_STATUSES: BookingStatus[] = ['Confirmed', 'Pending', 'Cancelled', 'Refunded', 'Partial_Refund'];
 
 export interface IBooking extends Document {
+  tenantId: string;
   bookingReference: string;
   tour: mongoose.Schema.Types.ObjectId;
   user: mongoose.Schema.Types.ObjectId;
@@ -30,9 +31,24 @@ export interface IBooking extends Document {
   totalPrice: number;
   currency: string; // Currency code (USD, EUR, etc.)
   status: BookingStatus;
+  source?: 'online' | 'manual';
+  paymentStatus?: 'paid' | 'pending';
+  amountPaid?: number;
+  paymentConfirmedAt?: Date;
+  paymentConfirmedBy?: string;
+  inventoryReservationState?: 'pending_conversion' | 'converted' | 'booking_authoritative';
+  inventoryReservationFailureCode?: string;
+  inventoryReservationFinalizedAt?: Date;
   paymentId?: string;
+  paymentItemIndex?: number;
+  confirmationSentAt?: Date;
   paymentMethod?: string;
   specialRequests?: string;
+  customerPhone?: string;
+  customerCountry?: string;
+  pickupLocation?: string;
+  pickupAddress?: string;
+  internalNotes?: string;
   emergencyContact?: string;
   hotelPickupDetails?: string;
   hotelPickupLocation?: {
@@ -60,6 +76,7 @@ export interface IBooking extends Document {
     version: number;
     executionId?: string;
     overrideId?: string;
+    source?: 'catalogue' | 'override' | 'manual';
     capturedAt: Date;
   };
   selectedAddOnDetails?: {
@@ -77,6 +94,27 @@ export interface IBooking extends Document {
   refundAmount?: number;
   refundDate?: Date;
   refundReason?: string;
+  refundState?: 'not_required' | 'manual_required' | 'pending' | 'succeeded' | 'failed';
+  refundRequestKey?: string;
+  refundProviderIdempotencyKey?: string;
+  refundProviderId?: string;
+  refundPaymentIntentId?: string;
+  refundChargeId?: string;
+  refundRequestedAmount?: number;
+  refundProviderStatus?: string;
+  refundFailureCode?: string;
+  refundKind?: 'customer_cancel' | 'admin_cancel' | 'admin_full' | 'admin_partial';
+  refundSourceStatus?: BookingStatus;
+  refundActor?: string;
+  refundPolicyVersion?: string;
+  refundRequestedAt?: Date;
+  refundCompletedAt?: Date;
+  refundNotificationSentAt?: Date;
+  refundNotificationState?: 'sending' | 'sent' | 'failed';
+  refundNotificationClaimToken?: string;
+  refundNotificationClaimedAt?: Date;
+  refundNotificationAttempts?: number;
+  refundNotificationFailureCode?: string;
   // Discount tracking
   discountCode?: string;
   discountAmount?: number;
@@ -118,6 +156,13 @@ const EditHistoryEntrySchema = new Schema({
 }, { _id: false });
 
 const BookingSchema: Schema<IBooking> = new Schema({
+  tenantId: {
+    type: String,
+    required: true,
+    default: 'default',
+    index: true,
+  },
+
   bookingReference: {
     type: String,
     required: true,
@@ -189,10 +234,47 @@ const BookingSchema: Schema<IBooking> = new Schema({
     enum: BOOKING_STATUSES,
     default: 'Confirmed',
   },
+
+  source: {
+    type: String,
+    enum: ['online', 'manual'],
+    default: 'online',
+    index: true,
+  },
+
+  paymentStatus: {
+    type: String,
+    enum: ['paid', 'pending'],
+    default: 'pending',
+  },
+
+  amountPaid: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+
+  paymentConfirmedAt: { type: Date },
+  paymentConfirmedBy: { type: String, trim: true, maxlength: 255 },
+  inventoryReservationState: {
+    type: String,
+    enum: ['pending_conversion', 'converted', 'booking_authoritative'],
+  },
+  inventoryReservationFailureCode: { type: String, maxlength: 200 },
+  inventoryReservationFinalizedAt: { type: Date },
   
   paymentId: {
     type: String,
-    index: { unique: true, sparse: true }, // Unique when present, allows null/undefined
+    index: true,
+  },
+
+  paymentItemIndex: {
+    type: Number,
+    min: 0,
+  },
+
+  confirmationSentAt: {
+    type: Date,
   },
   
   paymentMethod: {
@@ -204,6 +286,38 @@ const BookingSchema: Schema<IBooking> = new Schema({
   specialRequests: {
     type: String,
     maxlength: 1000,
+  },
+
+  customerPhone: {
+    type: String,
+    trim: true,
+    maxlength: 50,
+  },
+
+  customerCountry: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+  },
+
+  pickupLocation: {
+    type: String,
+    trim: true,
+    maxlength: 200,
+  },
+
+  pickupAddress: {
+    type: String,
+    trim: true,
+    maxlength: 300,
+  },
+
+  // Never expose operator-only notes through customer booking queries.
+  internalNotes: {
+    type: String,
+    trim: true,
+    maxlength: 2_000,
+    select: false,
   },
   
   emergencyContact: {
@@ -267,6 +381,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
       version: { type: Number, required: true },
       executionId: String,
       overrideId: String,
+      source: { type: String, enum: ['catalogue', 'override', 'manual'] },
       capturedAt: { type: Date, required: true },
     },
     required: false,
@@ -302,6 +417,36 @@ const BookingSchema: Schema<IBooking> = new Schema({
     type: String,
     maxlength: 500,
   },
+  refundState: {
+    type: String,
+    enum: ['not_required', 'manual_required', 'pending', 'succeeded', 'failed'],
+  },
+  refundRequestKey: { type: String, maxlength: 100 },
+  refundProviderIdempotencyKey: { type: String, maxlength: 255 },
+  refundProviderId: { type: String, maxlength: 255 },
+  refundPaymentIntentId: { type: String, maxlength: 255 },
+  refundChargeId: { type: String, maxlength: 255 },
+  refundRequestedAmount: { type: Number, min: 0 },
+  refundProviderStatus: { type: String, maxlength: 100 },
+  refundFailureCode: { type: String, maxlength: 200 },
+  refundKind: {
+    type: String,
+    enum: ['customer_cancel', 'admin_cancel', 'admin_full', 'admin_partial'],
+  },
+  refundSourceStatus: { type: String, enum: BOOKING_STATUSES },
+  refundActor: { type: String, maxlength: 255 },
+  refundPolicyVersion: { type: String, maxlength: 100 },
+  refundRequestedAt: { type: Date },
+  refundCompletedAt: { type: Date },
+  refundNotificationSentAt: { type: Date },
+  refundNotificationState: {
+    type: String,
+    enum: ['sending', 'sent', 'failed'],
+  },
+  refundNotificationClaimToken: { type: String, maxlength: 100, select: false },
+  refundNotificationClaimedAt: { type: Date },
+  refundNotificationAttempts: { type: Number, min: 0, default: 0 },
+  refundNotificationFailureCode: { type: String, maxlength: 200 },
 
   // Discount tracking
   discountCode: {
@@ -332,7 +477,27 @@ BookingSchema.virtual('guestBreakdown').get(function() {
 BookingSchema.index({ user: 1, createdAt: -1 });
 BookingSchema.index({ tour: 1, date: 1 });
 BookingSchema.index({ status: 1 });
-// Note: bookingReference and paymentId unique indexes are defined inline in schema
+BookingSchema.index({ tenantId: 1, refundState: 1, updatedAt: 1 }, { name: 'tenant_refund_reconciliation' });
+BookingSchema.index(
+  { tenantId: 1, refundNotificationState: 1, refundNotificationClaimedAt: 1 },
+  { name: 'tenant_refund_notification_monitoring' },
+);
+BookingSchema.index(
+  { tenantId: 1, inventoryReservationState: 1, updatedAt: 1 },
+  { name: 'tenant_inventory_reservation_monitoring' },
+);
+BookingSchema.index(
+  { tenantId: 1, paymentId: 1, paymentItemIndex: 1 },
+  {
+    unique: true,
+    name: 'tenant_payment_item_unique',
+    partialFilterExpression: {
+      paymentId: { $type: 'string' },
+      paymentItemIndex: { $type: 'number' },
+    },
+  },
+);
+// bookingReference remains globally unique; payment item idempotency is tenant-scoped.
 
 const Booking: Model<IBooking> = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
 

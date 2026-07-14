@@ -6,6 +6,7 @@ import Image from "next/image";
 // Import reusable components
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 
 // =================================================================
 // --- DARK HERO SECTION COMPONENT ---
@@ -134,17 +135,17 @@ export default function TermsAndConditionsPage() {
             <div className="mb-10">
               <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-2 border-b-2 border-slate-200">5. Refunds & Cancellations</h2>
               <p className="leading-relaxed mb-6">
-                We issue refunds for bookings within <strong>1 day (24 hours)</strong> of the original purchase unless otherwise stated in the specific product&apos;s cancellation policy or required by applicable law.
+                {CANCELLATION_POLICY_SUMMARY} Refunds are returned to the original payment method only after the payment provider confirms them. Non-card payments require operator review.
               </p>
 
               <h3 className="text-xl font-bold text-slate-900 mb-3 mt-8">5.1 Cancellation Scale (unless otherwise stated)</h3>
               <ul className="space-y-2 ml-6 mb-4">
-                <li className="leading-relaxed"><strong>7 days before the trip:</strong> Full refund (except Flights, Boats, and Private Tours).</li>
-                <li className="leading-relaxed"><strong>4 days before the trip:</strong> 50% refund (except Flights, Boats, and Private Tours).</li>
-                <li className="leading-relaxed"><strong>1 day before or on the day of the trip:</strong> No refund.</li>
+                <li className="leading-relaxed"><strong>7 or more days before departure:</strong> 100% refund.</li>
+                <li className="leading-relaxed"><strong>3 to 7 days before departure:</strong> 50% refund.</li>
+                <li className="leading-relaxed"><strong>Less than 3 days before departure:</strong> No refund. Self-service cancellation also closes less than 24 hours before departure.</li>
               </ul>
               <p className="leading-relaxed mb-3">
-                If the Company cancels your trip for any reason, a <strong>full refund</strong> will be provided.
+                Operator-directed exceptions, legal rights, and force-majeure remedies are handled by an administrator through the verified refund workflow.
               </p>
               <p className="leading-relaxed mb-6">
                 Cancellations due to sickness may require a doctor&apos;s certificate; refunds in such cases are at management&apos;s discretion.

@@ -67,7 +67,7 @@
   "tourCard": {
     "featured": "Destacado",
     "max": "Max",
-    "freeCancellation": "Cancelacion gratuita",
+    "freeCancellation": "Reembolsos de cancelacion escalonados",
     "mobileTicket": "Ticket movil",
     "more": "mas",
     "addedToCart": "Anadido al carrito!",
@@ -106,6 +106,10 @@
     "repliesWithinHour": "Replies within 1 hour",
     "newsletterThanksTitle": "Thank you!",
     "newsletterThanksDesc": "You've successfully subscribed to our newsletter.",
+    "newsletterPendingTitle": "Confirma tu correo electronico",
+    "newsletterPendingDesc": "Revisa tu bandeja de entrada y confirma tu correo para completar la suscripcion.",
+    "newsletterConsentLabel": "Acepto recibir correos de marketing y puedo darme de baja en cualquier momento.",
+    "newsletterConsentRequired": "Acepta recibir el boletin antes de continuar.",
     "socialDesc": "Join our community for live updates, reels, and travel inspiration.",
     "followSocialAria": "Síguenos en redes sociales",
     "getTheApp": "Tu próxima aventura, a un toque",
@@ -171,7 +175,7 @@
     "partner": "Socio oficial de los mejores museos y atracciones",
     "bestPrice": "Mejor precio garantizado y proceso de reserva sencillo",
     "mobileTicket": "Sin necesidad de imprimir! Muestra tus entradas en tu smartphone",
-    "freeCancellation": "Cancelacion gratuita hasta 8 horas antes",
+    "freeCancellation": "100 % con 7+ dias; 50 % entre 3 y 7 dias",
     "cta": "Mas sobre nosotros"
   },
   "destinations": {
@@ -233,7 +237,7 @@
     "items": [
       {
         "question": "Can I reschedule or cancel my tickets?",
-        "answer": "Yes, in most cases you can reschedule or cancel your tickets up to 24 hours in advance. Please check the specific conditions for your chosen tour or attraction on its product page. Some special events may have different policies."
+        "answer": "La cancelacion de autoservicio cierra 24 horas antes de la salida. Reembolso: 100 % con 7+ dias, 50 % entre 3 y 7 dias y 0 % con menos de 3 dias."
       },
       {
         "question": "How long are open tickets valid?",

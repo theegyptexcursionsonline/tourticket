@@ -25,7 +25,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 
@@ -309,7 +309,7 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
       `While we recommend booking in advance for popular tours, many experiences can be booked last minute subject to availability. However, skip-the-line tours and special experiences often sell out, so early booking is advisable.`,
     faqCancelQ: 'What is your cancellation policy?',
     faqCancelA:
-      `Most tours offer free cancellation up to 24 hours before the start time for a full refund. Some special events may have different policies. Please check the specific tour details for exact cancellation terms.`,
+      `Self-service cancellation closes 24 hours before departure. Refunds are 100% at 7+ days, 50% at 3–7 days, and 0% under 3 days.`,
     faqMealsQ: 'Are meals included in the tours?',
     faqMealsA:
       `It varies by tour. Some tours include meals or snacks, while others don't. Each tour description clearly states what's included. Food tours naturally include multiple tastings as part of the experience.`,
@@ -1263,7 +1263,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
           if (introText && introText.length >= 20) {
             return (
               <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
                   {introText}
                 </ReactMarkdown>
               </div>
@@ -1279,7 +1279,7 @@ const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
 
         return (
         <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
             {text}
           </ReactMarkdown>
         </div>
@@ -1724,6 +1724,7 @@ const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: 
 const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: number, onAddToCartClick: (tour: Tour) => void }) => {
   const copy = useDestinationPageCopy();
   const { formatPrice } = useSettings();
+  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1748,7 +1749,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
         </div>
         <div className="mt-2 text-sm flex items-center gap-2">
           {tour.originalPrice && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(tour.originalPrice)}</span>}
-          <span className="text-red-600 font-bold text-lg sm:text-xl">{formatPrice(tour.discountPrice)}</span>
+          <span className="text-red-600 font-bold text-lg sm:text-xl">{formatPrice(displayedPrice)}</span>
         </div>
       </div>
       <div className="flex sm:flex-col items-center gap-2 ml-auto sm:ml-0">
@@ -1779,6 +1780,7 @@ const InterestCard = ({ category, tourCount }: { category: Category, tourCount: 
 const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClick: (tour: Tour) => void }) => {
   const copy = useDestinationPageCopy();
   const { formatPrice } = useSettings();
+  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1811,7 +1813,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
         </div>
         <div className="flex items-end justify-end mt-3 sm:mt-4">
           {tour.originalPrice && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(tour.originalPrice)}</span>}
-          <span className="text-lg sm:text-xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
+          <span className="text-lg sm:text-xl font-extrabold text-red-600">{formatPrice(displayedPrice)}</span>
         </div>
       </div>
     </Link>

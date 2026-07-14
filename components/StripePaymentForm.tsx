@@ -7,6 +7,7 @@ import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2, AlertCircle } fro
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import { getErrorMessage, isRecord } from './componentTypes';
+import { getOrCreateCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 
 interface CheckoutCartItem {
   _id?: string;
@@ -169,10 +170,10 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   onError,
 }) => {
   const [clientSecret, setClientSecret] = useState<string>('');
-  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [checkoutAttemptId, setCheckoutAttemptId] = useState('');
   
   // Use settings for consistent price formatting with currency conversion
   const { formatPrice, selectedCurrency } = useSettings();
@@ -253,8 +254,28 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   }, []);
 
   useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      try {
+        setCheckoutAttemptId(getOrCreateCheckoutAttemptId());
+      } catch (error) {
+        console.error('Unable to initialize checkout attempt:', error);
+        setIsLoading(false);
+        onError('Secure checkout is unavailable in this browser. Please try another browser.');
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [onError]);
+
+  useEffect(() => {
     // If payment already completed, don't create new intents
     if (paymentCompleted) {
+      return;
+    }
+    if (!checkoutAttemptId) {
       return;
     }
 
@@ -309,8 +330,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
               pricing,
               cart,
               discountCode,
-              // Send existing payment intent ID if we have one (for update instead of create)
-              existingPaymentIntentId: paymentIntentId || undefined,
+              checkoutAttemptId,
             }),
           });
 
@@ -318,7 +338,6 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
           if (data.success && data.clientSecret) {
             setClientSecret(data.clientSecret);
-            setPaymentIntentId(data.paymentIntentId);
             paymentIntentCreatedRef.current = true;
             lastCartHashRef.current = currentCartHash;
           } else {
@@ -337,7 +356,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     }, 1500); // Increased debounce to 1.5 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [customer.email, customer.firstName, customer.lastName, customerPayload, cart, pricing, discountCode, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret, paymentIntentId]);
+  }, [customer.email, customer.firstName, customer.lastName, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret]);
 
   if (isLoading) {
     return (

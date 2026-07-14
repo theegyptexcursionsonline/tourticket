@@ -3,8 +3,6 @@
 import React, { useState } from "react";
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "@/i18n/routing";
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
 import { useTranslations } from 'next-intl';
 
 export default function ForgotPasswordClient() {
@@ -33,41 +31,20 @@ export default function ForgotPasswordClient() {
     setIsSubmitting(true);
 
     try {
-      // Send password reset email using Firebase
-      await sendPasswordResetEmail(auth, email, {
-        url: window.location.origin + '/login',
-        handleCodeInApp: false,
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || t('errors.unexpected'));
 
       setIsSuccess(true);
-      setSuccessMessage(t('success.emailSent'));
+      setSuccessMessage(result.message || t('success.emailSent'));
       setEmail('');
 
     } catch (error: unknown) {
-      console.error('Password reset error:', error);
-      const errorCode = typeof error === 'object' && error !== null && 'code' in error
-        ? String(error.code)
-        : '';
-
-      // Provide user-friendly error messages
-      let errorMessage = t('errors.unexpected');
-
-      if (errorCode === 'auth/user-not-found') {
-        // For security, we don't want to reveal if a user exists
-        errorMessage = t('success.emailSent');
-        setIsSuccess(true);
-        setSuccessMessage(errorMessage);
-        setEmail('');
-        return;
-      } else if (errorCode === 'auth/invalid-email') {
-        errorMessage = t('errors.invalidEmailWithPeriod');
-      } else if (errorCode === 'auth/too-many-requests') {
-        errorMessage = t('errors.tooManyRequests');
-      } else if (errorCode === 'auth/user-disabled') {
-        errorMessage = t('errors.userDisabled');
-      }
-
-      setError(errorMessage);
+      setError(error instanceof Error ? error.message : t('errors.unexpected'));
     } finally {
       setIsSubmitting(false);
     }

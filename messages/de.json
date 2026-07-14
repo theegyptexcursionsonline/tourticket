@@ -67,7 +67,7 @@
   "tourCard": {
     "featured": "Empfohlen",
     "max": "Max",
-    "freeCancellation": "Kostenlose Stornierung",
+    "freeCancellation": "Gestaffelte Stornierungserstattung",
     "mobileTicket": "Mobile Ticket",
     "more": "mehr",
     "addedToCart": "Zum Warenkorb hinzugefugt!",
@@ -106,6 +106,10 @@
     "repliesWithinHour": "Antwort innerhalb von 1 Stunde",
     "newsletterThanksTitle": "Vielen Dank!",
     "newsletterThanksDesc": "Sie haben unseren Newsletter erfolgreich abonniert.",
+    "newsletterPendingTitle": "Bestatigen Sie Ihre E-Mail-Adresse",
+    "newsletterPendingDesc": "Prufen Sie Ihren Posteingang und bestatigen Sie Ihre E-Mail-Adresse, um die Anmeldung abzuschliessen.",
+    "newsletterConsentLabel": "Ich stimme Marketing-E-Mails zu und kann mich jederzeit abmelden.",
+    "newsletterConsentRequired": "Bitte stimmen Sie dem Erhalt von Newsletter-E-Mails zu.",
     "socialDesc": "Werden Sie Teil unserer Community fur Updates, Reels und Reiseinspiration.",
     "followSocialAria": "Folgen Sie uns in sozialen Medien",
     "getTheApp": "Dein nächstes Abenteuer, nur einen Tipp entfernt",
@@ -171,7 +175,7 @@
     "partner": "Offizieller Partner der besten Museen und Attraktionen",
     "bestPrice": "Bester Preis garantiert und einfacher Buchungsprozess",
     "mobileTicket": "Kein Drucker noetig! Zeigen Sie Ihre Tickets auf Ihrem Smartphone",
-    "freeCancellation": "Kostenlose Stornierung bis zu 8 Stunden im Voraus",
+    "freeCancellation": "100 % ab 7 Tagen; 50 % bei 3-7 Tagen",
     "cta": "Mehr uber uns"
   },
   "destinations": {
@@ -233,7 +237,7 @@
     "items": [
       {
         "question": "Kann ich meine Tickets umbuchen oder stornieren?",
-        "answer": "Ja, in den meisten Fallen konnen Sie Ihre Tickets bis zu 24 Stunden im Voraus umbuchen oder stornieren. Bitte prufen Sie die Bedingungen auf der jeweiligen Produktseite."
+        "answer": "Die Selbstbedienungsstornierung endet 24 Stunden vor Abfahrt. Erstattung: 100 % ab 7 Tagen, 50 % bei 3-7 Tagen und 0 % unter 3 Tagen."
       },
       {
         "question": "Wie lange sind offene Tickets gultig?",

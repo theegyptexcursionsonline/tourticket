@@ -40,6 +40,7 @@ export interface IBlog extends Document {
   // Analytics
   views: number;
   likes: number;
+  legacyLikesBaseline?: number;
   
   // Related Content
   relatedDestinations?: mongoose.Schema.Types.ObjectId[];
@@ -244,6 +245,13 @@ const BlogSchema: Schema<IBlog> = new Schema({
     type: Number,
     default: 0,
     min: [0, 'Likes cannot be negative'],
+  },
+  // Existing counters are preserved as a one-time baseline. New likes are
+  // durable BlogLike records and this materialized counter is reconciled with
+  // $max so retries and concurrent requests cannot inflate it.
+  legacyLikesBaseline: {
+    type: Number,
+    min: [0, 'Legacy likes baseline cannot be negative'],
   },
   
   // Related Content

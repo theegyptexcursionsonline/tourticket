@@ -49,7 +49,8 @@ export default function Footer() {
   const { destinations } = useNavData();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'idle' | 'pending' | 'confirmed'>('idle');
   const [showAppModal, setShowAppModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const t = useTranslations('footer');
@@ -119,6 +120,10 @@ export default function Footer() {
       toast.error(t('invalidEmail'));
       return;
     }
+    if (!newsletterConsent) {
+      toast.error(t('newsletterConsentRequired'));
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch('/api/subscribe', {
@@ -126,17 +131,19 @@ export default function Footer() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, source: 'footer', consent: true }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(data.message || t('subscribeSuccess'));
+        const nextStatus = data.status === 'confirmed' ? 'confirmed' : 'pending';
+        toast.success(nextStatus === 'confirmed' ? t('subscribeSuccess') : t('newsletterPendingDesc'));
         setEmail('');
-        setIsSubscribed(true);
+        setNewsletterConsent(false);
+        setSubscriptionStatus(nextStatus);
       } else {
-        toast.error(data.message || t('subscribeFailed'));
+        toast.error(data.error || t('subscribeFailed'));
       }
     } catch (error) {
       console.error("Subscription error:", error);
@@ -464,32 +471,56 @@ export default function Footer() {
 
             {/* Newsletter */}
             <div className="bg-white rounded-2xl border border-slate-100 p-5">
-              {!isSubscribed ? (
+              {subscriptionStatus === 'idle' ? (
                 <>
                   <h4 className="font-semibold text-base mb-2 text-slate-900">{t('newsletter')}</h4>
                   <p className="text-xs text-slate-500 mb-3">{t('newsletterDesc')}</p>
-                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                    <input 
-                      type="email" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={t('emailPlaceholder')} 
-                      className="w-full sm:flex-1 h-11 rounded-xl border border-slate-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white shadow-sm" 
-                      disabled={isLoading}
-                    />
-                    <button 
-                      type="submit" 
-                      className="h-11 w-full sm:w-auto px-4 sm:px-6 rounded-xl text-white bg-gradient-to-r from-red-600 to-slate-900 hover:from-red-700 hover:to-slate-950 transition-colors text-sm font-semibold flex items-center justify-center disabled:bg-slate-500"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? <Loader2 className="animate-spin" /> : t('subscribe')}
-                    </button>
+                  <form onSubmit={handleSubscribe} className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder={t('emailPlaceholder')}
+                        aria-label={t('emailPlaceholder')}
+                        className="w-full sm:flex-1 h-11 rounded-xl border border-slate-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 bg-white shadow-sm"
+                        disabled={isLoading}
+                        autoComplete="email"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        className="h-11 w-full sm:w-auto px-4 sm:px-6 rounded-xl text-white bg-gradient-to-r from-red-600 to-slate-900 hover:from-red-700 hover:to-slate-950 transition-colors text-sm font-semibold flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isLoading || !newsletterConsent}
+                      >
+                        {isLoading ? <Loader2 className="animate-spin" aria-hidden="true" /> : t('subscribe')}
+                      </button>
+                    </div>
+                    <label className="flex items-start gap-2 text-[11px] leading-4 text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={newsletterConsent}
+                        onChange={(event) => setNewsletterConsent(event.target.checked)}
+                        disabled={isLoading}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-red-600 focus:ring-red-600"
+                      />
+                      <span>
+                        {t('newsletterConsentLabel')}{' '}
+                        <Link href="/privacy" className="font-semibold text-slate-800 underline underline-offset-2 hover:text-red-600">
+                          {t('privacyPolicy')}
+                        </Link>
+                      </span>
+                    </label>
                   </form>
                 </>
               ) : (
                 <div className="text-center py-4">
-                  <h4 className="font-bold text-sm mb-2 text-green-600">{t('newsletterThanksTitle')}</h4>
-                  <p className="text-sm text-slate-600">{t('newsletterThanksDesc')}</p>
+                  <h4 className="font-bold text-sm mb-2 text-green-600">
+                    {subscriptionStatus === 'confirmed' ? t('newsletterThanksTitle') : t('newsletterPendingTitle')}
+                  </h4>
+                  <p className="text-sm text-slate-600">
+                    {subscriptionStatus === 'confirmed' ? t('newsletterThanksDesc') : t('newsletterPendingDesc')}
+                  </p>
                 </div>
               )}
             </div>

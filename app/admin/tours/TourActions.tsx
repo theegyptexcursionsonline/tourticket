@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Edit, Trash2, MoreVertical, X, Check } from "lucide-react";
+import { Edit, Archive, MoreVertical, X, Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
@@ -76,9 +76,9 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
     })();
 
     toast.promise(promise, {
-      loading: "Deleting tour...",
-      success: "Tour deleted.",
-      error: (err) => `Delete failed: ${err?.message ?? "Unknown error"}`,
+      loading: "Archiving tour...",
+      success: "Tour archived. Existing bookings were preserved.",
+      error: (err) => `Archive failed: ${err?.message ?? "Unknown error"}`,
     });
 
     try {
@@ -135,8 +135,8 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
               className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none"
               role="menuitem"
             >
-              <Trash2 className="w-4 h-4 text-rose-500" />
-              <span>Delete</span>
+              <Archive className="w-4 h-4 text-rose-500" />
+              <span>Archive</span>
             </button>
           </div>
         </div>
@@ -150,12 +150,12 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
           <div className="relative max-w-sm w-full bg-white rounded-lg shadow-xl border border-slate-100 p-4">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-1">
-                <Trash2 className="w-6 h-6 text-rose-500" />
+                <Archive className="w-6 h-6 text-rose-500" />
               </div>
 
               <div className="flex-1">
-                <h3 className="text-sm font-semibold text-slate-900">Delete tour</h3>
-                <p className="mt-1 text-xs text-slate-500">This action is permanent. Are you sure you want to delete this tour?</p>
+                <h3 className="text-sm font-semibold text-slate-900">Archive tour</h3>
+                <p className="mt-1 text-xs text-slate-500">The tour will be unpublished and removed from search. Existing bookings and receipts remain intact.</p>
 
                 <div className="mt-4 flex items-center justify-end gap-2">
                   <button
@@ -176,12 +176,12 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
                     {isDeleting ? (
                       <>
                         <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4" fill="none" /></svg>
-                        Deleting...
+                        Archiving...
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        Delete
+                        Archive
                       </>
                     )}
                   </button>

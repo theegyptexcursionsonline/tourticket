@@ -6,7 +6,8 @@ import StopSale from '@/lib/models/StopSale';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { authenticateRevenueRequest, revenueError } from '@/lib/revenue/machineResponse';
-import { isTourScheduled } from '@/lib/revenue/departureSchedule';
+import { EEO_TIME_ZONE, isTourScheduled, localDepartureToUtc } from '@/lib/revenue/departureSchedule';
+import { stoppedPricingKeysForOptionIds } from '@/lib/revenue/departureSellability';
 import type { Types } from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ type DepartureTour = {
     type?: string; availableDays?: number[]; startDate?: Date; endDate?: Date;
     specificDates?: Date[]; blockedDates?: Date[]; slots?: DepartureSlot[];
   };
+  bookingOptions?: Array<{ _id?: unknown; id?: string; pricingKey?: string }>;
   updatedAt?: Date;
 };
 type ExplicitAvailability = { tour: Types.ObjectId; date: Date; slots: DepartureSlot[]; stopSale: boolean; updatedAt: Date };
@@ -29,8 +31,9 @@ type DepartureBooking = {
 };
 type DepartureStopSale = { tourId: Types.ObjectId; optionIds: string[]; startDate: Date; endDate: Date };
 type Departure = {
-  tourId: string; date: string; time: string; capacity: number; booked: number;
-  available: number; blocked: boolean; updatedAt?: Date;
+  tourId: string; date: string; time: string; startsAtUtc: string; timeZone: string;
+  capacity: number; booked: number; available: number; blocked: boolean;
+  stoppedOptionIds: string[]; stoppedOptionKeys: string[]; updatedAt?: Date;
 };
 
 export async function GET(request: NextRequest) {
@@ -45,7 +48,7 @@ export async function GET(request: NextRequest) {
   if ((rangeEnd.getTime() - rangeStart.getTime()) / 86400000 > 120) return revenueError(400, 'RANGE_TOO_LARGE', 'Departure reads are limited to 120 days.');
 
   const tours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
-    .select('_id availability updatedAt')
+    .select('_id availability bookingOptions updatedAt')
     .lean<DepartureTour[]>();
   const tourIds = tours.map((tour) => tour._id);
   const [explicitRows, bookings, stopSales] = await Promise.all([
@@ -63,9 +66,20 @@ export async function GET(request: NextRequest) {
     bookingUpdated.set(bookingKey, booking.updatedAt);
   }
   const fullyStopped = new Set<string>();
+  const stoppedOptions = new Map<string, Set<string>>();
   for (const stopSale of stopSales) {
-    if (Array.isArray(stopSale.optionIds) && stopSale.optionIds.length) continue;
-    for (let date = new Date(Math.max(rangeStart.getTime(), new Date(stopSale.startDate).getTime())); date <= rangeEnd && date <= new Date(stopSale.endDate); date = new Date(date.getTime() + 86400000)) fullyStopped.add(key(stopSale.tourId, date));
+    const startDay = new Date(`${new Date(Math.max(rangeStart.getTime(), new Date(stopSale.startDate).getTime())).toISOString().slice(0, 10)}T00:00:00.000Z`);
+    const endDay = new Date(`${new Date(Math.min(rangeEnd.getTime(), new Date(stopSale.endDate).getTime())).toISOString().slice(0, 10)}T00:00:00.000Z`);
+    for (let date = startDay; date <= endDay; date = new Date(date.getTime() + 86400000)) {
+      const dateKey = key(stopSale.tourId, date);
+      if (!Array.isArray(stopSale.optionIds) || stopSale.optionIds.length === 0) {
+        fullyStopped.add(dateKey);
+        continue;
+      }
+      const existing = stoppedOptions.get(dateKey) || new Set<string>();
+      stopSale.optionIds.forEach((optionId) => existing.add(String(optionId)));
+      stoppedOptions.set(dateKey, existing);
+    }
   }
 
   const departures: Departure[] = [];
@@ -78,10 +92,14 @@ export async function GET(request: NextRequest) {
         const bookingKey = key(tour._id, date, slot.time);
         const sold = Math.max(Number(slot.booked || 0), booked.get(bookingKey) || 0);
         const capacity = Number(slot.capacity || 0) + Number(slot.extraCapacity || 0);
-        const blocked = Boolean(fullyStopped.has(key(tour._id, date)) || explicitRow?.stopSale || slot.blocked);
-        departures.push({ tourId: String(tour._id), date: date.toISOString().slice(0, 10), time: slot.time, capacity, booked: sold, available: blocked ? 0 : Math.max(0, capacity - sold), blocked, updatedAt: bookingUpdated.get(bookingKey) || explicitRow?.updatedAt || tour.updatedAt });
+        const dateKey = key(tour._id, date);
+        const blocked = Boolean(fullyStopped.has(dateKey) || explicitRow?.stopSale || slot.blocked);
+        const stoppedOptionIds = Array.from(stoppedOptions.get(dateKey) || []).sort();
+        const stoppedOptionKeys = stoppedPricingKeysForOptionIds(tour.bookingOptions, stoppedOptionIds).sort();
+        const departureDate = date.toISOString().slice(0, 10);
+        departures.push({ tourId: String(tour._id), date: departureDate, time: slot.time, startsAtUtc: localDepartureToUtc(departureDate, slot.time), timeZone: EEO_TIME_ZONE, capacity, booked: sold, available: blocked ? 0 : Math.max(0, capacity - sold), blocked, stoppedOptionIds, stoppedOptionKeys, updatedAt: bookingUpdated.get(bookingKey) || explicitRow?.updatedAt || tour.updatedAt });
       }
     }
   }
-  return NextResponse.json({ tenantId: 'default', departures }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ tenantId: 'default', timeZone: EEO_TIME_ZONE, departures }, { headers: { 'Cache-Control': 'no-store' } });
 }

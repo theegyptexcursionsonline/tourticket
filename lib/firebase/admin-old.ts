@@ -1,10 +1,12 @@
 // Firebase Admin SDK for server-side operations
-import * as admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import * as path from 'path';
 import * as fs from 'fs';
 
 // Initialize Firebase Admin SDK
-if (!admin.apps.length) {
+if (!getApps().length) {
   let initialized = false;
 
   // Strategy 1: Try to load from service account file (best for deployment)
@@ -13,8 +15,8 @@ if (!admin.apps.length) {
   if (fs.existsSync(serviceAccountPath)) {
     try {
       const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      initializeApp({
+        credential: cert(serviceAccount),
       });
       console.log('✅ Firebase Admin initialized from service account file');
       initialized = true;
@@ -31,8 +33,8 @@ if (!admin.apps.length) {
 
     if (projectId && clientEmail && privateKey) {
       try {
-        admin.initializeApp({
-          credential: admin.credential.cert({
+        initializeApp({
+          credential: cert({
             projectId,
             clientEmail,
             privateKey: privateKey.replace(/\\n/g, '\n'),
@@ -55,8 +57,8 @@ if (!admin.apps.length) {
         const serviceAccountJSON = JSON.parse(
           Buffer.from(serviceAccountBase64, 'base64').toString('utf8')
         );
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountJSON),
+        initializeApp({
+          credential: cert(serviceAccountJSON),
         });
         console.log('✅ Firebase Admin initialized from base64 env variable');
         initialized = true;
@@ -73,8 +75,8 @@ if (!admin.apps.length) {
     if (serviceAccountEnv) {
       try {
         const serviceAccountJSON = JSON.parse(serviceAccountEnv);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountJSON),
+        initializeApp({
+          credential: cert(serviceAccountJSON),
         });
         console.log('⚠️ Firebase Admin initialized with full JSON from env');
         initialized = true;
@@ -92,8 +94,8 @@ if (!admin.apps.length) {
   }
 }
 
-export const adminAuth = admin.auth();
-export const adminDb = admin.firestore();
+export const adminAuth = getAuth();
+export const adminDb = getFirestore();
 
 /**
  * Verify Firebase ID token from client
@@ -176,4 +178,5 @@ export async function deleteFirebaseUser(uid: string) {
   }
 }
 
-export default admin;
+const firebaseAdminCompatibility = { get apps() { return getApps(); }, initializeApp, credential: { cert }, auth: getAuth, firestore: getFirestore };
+export default firebaseAdminCompatibility;

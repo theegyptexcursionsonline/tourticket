@@ -11,6 +11,24 @@ import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference } from '@/lib/utils/bookingReference';
 import type { SecureAddOnDetail } from '@/lib/checkout/serverCartPricing';
+import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import Discount from '@/lib/models/Discount';
+import { recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
+import { reconcileStripeBookingRefund } from '@/lib/bookings/refunds';
+import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
+import {
+  acquireCheckoutInventoryLease,
+  convertInventoryHold,
+  ensureInventoryHoldsForPayment,
+  InventoryHoldError,
+  releaseCheckoutInventoryLease,
+} from '@/lib/checkout/inventoryHolds';
+import {
+  markPaymentInventoryConverted,
+  refundUnavailablePaidInventory,
+  releasePaymentInventory,
+} from '@/lib/checkout/inventoryPaymentRecovery';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -29,6 +47,25 @@ function getStripe(): Stripe {
 }
 
 const getWebhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET || '';
+
+type RecoveryCartItem = {
+  i?: number;
+  t?: string;
+  a?: number;
+  c?: number;
+  n?: number;
+  d?: string;
+  tm?: string;
+  bp?: number;
+  bo?: string;
+  bot?: string;
+  ok?: string;
+  gp?: { adult?: number; child?: number; infant?: number };
+  pv?: number;
+  pe?: string;
+  po?: string;
+  ao?: Array<{ id?: string; q?: number; p?: number; pg?: boolean; t?: string }>;
+};
 
 // Format date consistently for display
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -58,20 +95,145 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
   await dbConnect();
 
+  const persistedQuote = await CheckoutPaymentQuote.findOne({
+    paymentIntentId: paymentId,
+    tenantId: 'default',
+  }).lean<{
+    quoteBinding: string;
+    checkoutAttemptId?: string;
+    customer: { email: string; firstName: string; lastName: string };
+    cartSummary: unknown[];
+    pricing: { subtotal: number; serviceFee: number; tax: number; discount: number; total: number; currency: string };
+    discountCode?: string;
+    inventoryState?: string;
+  } | null>();
+  const recordDiscountUsage = async () => {
+    if (!persistedQuote?.discountCode) return;
+    const usageClaimed = await CheckoutPaymentQuote.findOneAndUpdate(
+      {
+        paymentIntentId: paymentId,
+        tenantId: 'default',
+        discountUsageRecordedAt: { $exists: false },
+      },
+      { $set: { discountUsageRecordedAt: new Date() } },
+    );
+    if (!usageClaimed) return;
+    try {
+      await Discount.findOneAndUpdate(
+        { code: persistedQuote.discountCode },
+        { $inc: { timesUsed: 1 } },
+      );
+    } catch (discountError) {
+      await CheckoutPaymentQuote.updateOne(
+        { paymentIntentId: paymentId, tenantId: 'default' },
+        { $unset: { discountUsageRecordedAt: 1 } },
+      ).catch(() => undefined);
+      throw discountError;
+    }
+  };
+  const expectedTotal = persistedQuote?.pricing.total ?? Number(metadata.pricing_total);
+  if (
+    !Number.isFinite(expectedTotal)
+    || Math.round(expectedTotal * 100) !== paymentIntent.amount
+    || paymentIntent.currency.toLowerCase() !== 'usd'
+    || (persistedQuote && metadata.quote_binding !== persistedQuote.quoteBinding)
+    || (persistedQuote?.checkoutAttemptId
+      && metadata.checkout_attempt_id !== persistedQuote.checkoutAttemptId)
+  ) {
+    console.error(`[Webhook] Payment quote validation failed for ${paymentId}`);
+    await refundUnavailablePaidInventory({
+      stripe: getStripe(),
+      paymentIntentId: paymentId,
+      reason: 'paid_quote_validation_failed',
+    });
+    return { created: false, reason: 'invalid_quote_refunded' };
+  }
+
+  if (persistedQuote?.inventoryState === 'refunded') {
+    return { created: false, reason: 'inventory_already_refunded' };
+  }
+  if (persistedQuote?.inventoryState === 'refund_failed') {
+    console.error(`[Webhook] Inventory refund for ${paymentId} requires manual support review`);
+    return { created: false, reason: 'inventory_refund_requires_support' };
+  }
+
+  // Parse the authoritative recovery cart before touching users or bookings so
+  // every item can be capacity-checked as one paid fulfilment attempt.
+  let cartData: RecoveryCartItem[];
+  if (Array.isArray(persistedQuote?.cartSummary) && persistedQuote.cartSummary.length > 0) {
+    cartData = persistedQuote.cartSummary as RecoveryCartItem[];
+  } else {
+    try {
+      const cartJson = metadata.cart_data + (metadata.cart_data_2 || '');
+      cartData = JSON.parse(cartJson) as RecoveryCartItem[];
+      if (!Array.isArray(cartData) || cartData.length === 0 || cartData.length > 10) throw new Error('Cart is invalid');
+    } catch (error) {
+      console.error(`[Webhook] Failed to parse paid cart ${paymentId}:`, error);
+      await refundUnavailablePaidInventory({
+        stripe: getStripe(),
+        paymentIntentId: paymentId,
+        reason: 'invalid_paid_cart',
+      });
+      return { created: false, reason: 'invalid_cart_refunded' };
+    }
+  }
+
+  const reservationKey = persistedQuote?.quoteBinding || metadata.quote_binding;
+  try {
+    await ensureInventoryHoldsForPayment({
+      paymentIntentId: paymentId,
+      reservationKey,
+      cart: cartData.map((item) => ({
+        _id: item.t,
+        selectedDate: item.d,
+        selectedTime: item.tm,
+        quantity: item.a,
+        childQuantity: item.c,
+        infantQuantity: item.n,
+        selectedBookingOption: { pricingKey: item.ok },
+      })),
+    });
+  } catch (inventoryError) {
+    if (!(inventoryError instanceof InventoryHoldError)) throw inventoryError;
+    await refundUnavailablePaidInventory({
+      stripe: getStripe(),
+      paymentIntentId: paymentId,
+      reason: inventoryError.code,
+    });
+    return { created: false, reason: 'inventory_unavailable_refunded' };
+  }
+
   // Check if booking already exists for this payment (created by checkout endpoint)
-  const existingBooking = await Booking.findOne({ paymentId });
+  const existingBookings = await Booking.find({ paymentId, ...DEFAULT_TENANT_FILTER }).sort({ paymentItemIndex: 1, createdAt: 1 });
+  const rawExpectedBookingCount = Number(metadata.tour_count || persistedQuote?.cartSummary.length || 1);
+  const expectedBookingCount = Number.isInteger(rawExpectedBookingCount) && rawExpectedBookingCount > 0
+    ? rawExpectedBookingCount
+    : 1;
+  const existingBooking = existingBookings[0];
   
-  if (existingBooking) {
+  // The compact single-booking confirmation path below is intentionally only
+  // for one item. Multi-item payments flow through the common recovery loop so
+  // the customer/admin messages and receipts contain every paid tour.
+  if (existingBooking && existingBookings.length >= expectedBookingCount && expectedBookingCount === 1) {
     console.log(`[Webhook] Booking exists for payment ${paymentId}, status: ${existingBooking.status}`);
     
     // If booking is still "Pending", update to "Confirmed" and send customer email
-    if (existingBooking.status === 'Pending') {
+    if (existingBookings.some((booking) => booking.status === 'Pending') || !existingBooking.confirmationSentAt) {
       console.log(`[Webhook] Updating booking ${existingBooking.bookingReference} from Pending to Confirmed`);
+      await Booking.updateMany(
+        { _id: { $in: existingBookings.map((booking) => booking._id) }, ...DEFAULT_TENANT_FILTER },
+        [{ $set: {
+          status: 'Confirmed',
+          paymentStatus: 'paid',
+          amountPaid: '$totalPrice',
+          paymentConfirmedAt: new Date(),
+          paymentConfirmedBy: `stripe:${paymentId}`,
+        } }],
+      );
       existingBooking.status = 'Confirmed';
-      await existingBooking.save();
       
       // Need to send customer confirmation email - get tour info
-      const tour = await Tour.findById(existingBooking.tour);
+      const tour = await Tour.findOne({ _id: existingBooking.tour, ...DEFAULT_TENANT_FILTER });
       const user = await User.findById(existingBooking.user);
       
       if (tour && user) {
@@ -188,12 +350,18 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             // Promo code info
             discountCode: existingBooking.discountCode || undefined,
           });
+          await Booking.updateMany(
+            { _id: { $in: existingBookings.map((booking) => booking._id) }, ...DEFAULT_TENANT_FILTER },
+            { $set: { confirmationSentAt: new Date() } },
+          );
           
           console.log(`[Webhook] Sent customer confirmation for updated booking ${existingBooking.bookingReference}`);
         } catch (emailError) {
           console.error(`[Webhook] Failed to send customer email for updated booking:`, emailError);
         }
       }
+      await recordDiscountUsage();
+      await markPaymentInventoryConverted(paymentId);
       
       return { 
         created: false, 
@@ -205,6 +373,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     
     // Booking exists and is already Confirmed
     console.log(`[Webhook] Booking ${existingBooking.bookingReference} already confirmed, skipping`);
+    await recordDiscountUsage();
+    await markPaymentInventoryConverted(paymentId);
     return { created: false, reason: 'already_confirmed', bookingId: existingBooking.bookingReference };
   }
 
@@ -212,14 +382,19 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   console.log(`[Webhook] Creating booking for payment ${paymentId} (fallback - checkout didn't create it)`);
 
   // Extract customer info from metadata
-  const customerEmail = metadata.customer_email;
-  const customerFirstName = metadata.customer_first_name;
-  const customerLastName = metadata.customer_last_name;
+  const customerEmail = persistedQuote?.customer.email || metadata.customer_email;
+  const customerFirstName = persistedQuote?.customer.firstName || metadata.customer_first_name;
+  const customerLastName = persistedQuote?.customer.lastName || metadata.customer_last_name;
   const customerPhone = metadata.customer_phone || '';
 
   if (!customerEmail || !customerFirstName || !customerLastName) {
     console.error(`[Webhook] Missing customer data for payment ${paymentId}`);
-    return { created: false, reason: 'missing_customer_data' };
+    await refundUnavailablePaidInventory({
+      stripe: getStripe(),
+      paymentIntentId: paymentId,
+      reason: 'missing_paid_customer_data',
+    });
+    return { created: false, reason: 'missing_customer_data_refunded' };
   }
 
   // Extract hotel pickup info from metadata
@@ -236,16 +411,6 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   // Extract special requests
   const specialRequests = metadata.special_requests || '';
 
-  // Parse cart data from metadata
-  let cartData;
-  try {
-    const cartJson = metadata.cart_data + (metadata.cart_data_2 || '');
-    cartData = JSON.parse(cartJson);
-  } catch (e) {
-    console.error(`[Webhook] Failed to parse cart data for payment ${paymentId}:`, e);
-    return { created: false, reason: 'invalid_cart_data' };
-  }
-
   // Find or create user
   let user = await User.findOne({ email: customerEmail });
   if (!user) {
@@ -254,7 +419,10 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         firstName: customerFirstName,
         lastName: customerLastName,
         email: customerEmail,
-        password: 'guest-' + Math.random().toString(36).substring(2, 15),
+        phone: customerPhone ? customerPhone.slice(0, 50) : undefined,
+        role: 'customer',
+        permissions: [],
+        isGuestProfile: true,
       });
       console.log('[Webhook] Created guest user');
     } catch (userError: unknown) {
@@ -273,17 +441,24 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
   // Create bookings for each cart item
   const createdBookings = [];
-  const pricingTotal = parseFloat(metadata.pricing_total) || (paymentIntent.amount / 100);
+  const pricingTotal = persistedQuote?.pricing.total ?? (parseFloat(metadata.pricing_total) || (paymentIntent.amount / 100));
 
   for (let cartIndex = 0; cartIndex < cartData.length; cartIndex++) {
     const item = cartData[cartIndex];
     try {
       const tourId = item.t;
-      const tour = await Tour.findById(tourId);
+      // A paid quote remains fulfilment-authoritative even if an operator
+      // unpublishes the tour while Stripe is completing the payment.
+      const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });
       
       if (!tour) {
         console.error(`[Webhook] Tour not found: ${tourId}`);
-        continue;
+        await refundUnavailablePaidInventory({
+          stripe: getStripe(),
+          paymentIntentId: paymentId,
+          reason: 'paid_tour_deleted',
+        });
+        return { created: false, reason: 'missing_tour_refunded' };
       }
 
       const bookingDate = parseLocalDate(item.d) || new Date();
@@ -291,29 +466,12 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const bookingTime = item.tm || '10:00';
       const totalGuests = (item.a || 1) + (item.c || 0) + (item.n || 0);
 
-      // Calculate price for this item
-      const basePrice = item.bp || 0;
-      const adultPrice = basePrice * (item.a || 1);
-      const childPrice = Number(item.gp?.child ?? basePrice / 2) * (item.c || 0);
-      let itemSubtotal = adultPrice + childPrice;
-
-      // Add-ons from metadata (ao: [{id,q,p,pg,t}])
-      const addOns = Array.isArray(item.ao) ? item.ao : [];
-      if (addOns.length > 0) {
-        const totalGuestsForAddOns = (item.a || 0) + (item.c || 0);
-        for (const ao of addOns) {
-          const qty = Number(ao?.q || 0);
-          if (!Number.isFinite(qty) || qty <= 0) continue;
-          const price = Number(ao?.p || 0);
-          const perGuest = !!ao?.pg;
-          const multiplier = perGuest ? totalGuestsForAddOns : 1;
-          itemSubtotal += price * multiplier * qty;
-        }
-      }
-      const itemSubtotalRounded = Math.round(itemSubtotal * 100) / 100;
-      const serviceFee = itemSubtotalRounded * 0.03;
-      const tax = itemSubtotalRounded * 0.05;
-      const itemTotalBeforeDiscount = itemSubtotalRounded + serviceFee + tax;
+      // Reuse the same explicit adult/child/infant and add-on calculation as
+      // synchronous checkout so webhook recovery cannot drift financially.
+      const itemSubtotalRounded = recoveryCartItemSubtotal(item);
+      const serviceFee = roundMoney(itemSubtotalRounded * 0.03);
+      const tax = roundMoney(itemSubtotalRounded * 0.05);
+      const itemTotalBeforeDiscount = roundMoney(itemSubtotalRounded + serviceFee + tax);
 
       const itemIndex = Number.isFinite(Number(item?.i)) ? Number(item.i) : cartIndex;
       const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex);
@@ -337,11 +495,13 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       }
 
       // Extract discount info from metadata
-      const discountCode = metadata.discount_code && metadata.discount_code !== 'none' 
-        ? metadata.discount_code.toUpperCase() 
-        : undefined;
-      const totalDiscount = parseFloat(metadata.pricing_discount) || 0;
-      const pricingSubtotal = parseFloat(metadata.pricing_subtotal) || itemSubtotalRounded;
+      const discountCode = persistedQuote?.discountCode || (
+        metadata.discount_code && metadata.discount_code !== 'none'
+          ? metadata.discount_code.toUpperCase()
+          : undefined
+      );
+      const totalDiscount = persistedQuote?.pricing.discount ?? (parseFloat(metadata.pricing_discount) || 0);
+      const pricingSubtotal = persistedQuote?.pricing.subtotal ?? (parseFloat(metadata.pricing_subtotal) || itemSubtotalRounded);
       
       // For discount: if single item, apply full discount; if multiple items, prorate based on item's share
       const itemDiscountShare = cartData.length === 1 
@@ -349,9 +509,10 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         : Math.round((itemSubtotalRounded / pricingSubtotal) * totalDiscount * 100) / 100;
       
       // Final total for this item (with discount applied)
-      const itemTotalWithDiscount = Math.max(0, itemTotalBeforeDiscount - itemDiscountShare);
+      const itemTotalWithDiscount = roundMoney(Math.max(0, itemTotalBeforeDiscount - itemDiscountShare));
 
       const booking = await Booking.create({
+        tenantId: 'default',
         bookingReference,
         tour: tour._id,
         user: user._id,
@@ -362,8 +523,15 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         totalPrice: itemTotalWithDiscount,
         currency: (metadata.pricing_currency || paymentIntent.currency || 'USD').toUpperCase(), // Store currency
         status: 'Confirmed',
+        source: 'online',
+        paymentStatus: 'paid',
+        amountPaid: itemTotalWithDiscount,
+        paymentConfirmedAt: new Date(),
+        paymentConfirmedBy: `stripe:${paymentId}`,
         paymentId: paymentId,
+        paymentItemIndex: itemIndex,
         paymentMethod: 'card',
+        customerPhone: customerPhone ? customerPhone.slice(0, 50) : undefined,
         adultGuests: item.a || 1,
         childGuests: item.c || 0,
         infantGuests: item.n || 0,
@@ -380,6 +548,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           version: Number(item.pv || 0),
           executionId: item.pe || undefined,
           overrideId: item.po || undefined,
+          source: item.po ? 'override' : 'catalogue',
           capturedAt: new Date(),
         } : undefined,
         // Store discount info if a promo code was applied
@@ -389,6 +558,12 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         hotelPickupDetails: hotelPickupDetails || undefined,
         hotelPickupLocation: hotelPickupLocation || undefined,
         specialRequests: specialRequests || undefined,
+      });
+
+      await convertInventoryHold({
+        paymentIntentId: paymentId,
+        itemIndex,
+        bookingId: booking._id,
       });
 
       createdBookings.push({
@@ -408,9 +583,14 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex);
         console.log(`[Webhook] Booking ${bookingReference} already exists for payment ${paymentId} - skipping duplicate create`);
 
-        const existingBooking = await Booking.findOne({ bookingReference });
+        const existingBooking = await Booking.findOne({ bookingReference, ...DEFAULT_TENANT_FILTER });
         if (existingBooking) {
-          const existingTour = await Tour.findById(existingBooking.tour);
+          await convertInventoryHold({
+            paymentIntentId: paymentId,
+            itemIndex,
+            bookingId: existingBooking._id,
+          });
+          const existingTour = await Tour.findOne({ _id: existingBooking.tour, ...DEFAULT_TENANT_FILTER });
           if (existingTour) {
             createdBookings.push({
               booking: existingBooking,
@@ -418,7 +598,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             });
           }
         } else {
-          const fallbackExisting = await Booking.findOne({ paymentId }).lean();
+          const fallbackExisting = await Booking.findOne({ paymentId, paymentItemIndex: itemIndex, ...DEFAULT_TENANT_FILTER }).lean();
           if (fallbackExisting) {
             return {
               created: false,
@@ -428,14 +608,37 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           }
         }
       } else {
-      console.error(`[Webhook] Error creating booking:`, bookingError);
+        console.error(`[Webhook] Error creating booking:`, bookingError);
       }
     }
   }
 
-  if (createdBookings.length === 0) {
-    console.error(`[Webhook] No bookings created for payment ${paymentId}`);
-    return { created: false, reason: 'no_bookings_created' };
+  if (createdBookings.length !== cartData.length) {
+    console.error(`[Webhook] Only ${createdBookings.length}/${cartData.length} bookings are durable for payment ${paymentId}`);
+    throw new Error('Paid booking recovery is incomplete');
+  }
+
+  await Booking.updateMany(
+    { paymentId, status: 'Pending', ...DEFAULT_TENANT_FILTER },
+    [{ $set: {
+      status: 'Confirmed',
+      paymentStatus: 'paid',
+      amountPaid: '$totalPrice',
+      paymentConfirmedAt: new Date(),
+      paymentConfirmedBy: `stripe:${paymentId}`,
+    } }],
+  );
+
+  await recordDiscountUsage();
+  await markPaymentInventoryConverted(paymentId);
+
+  if (createdBookings.every(({ booking }) => Boolean(booking.confirmationSentAt))) {
+    return {
+      created: false,
+      reason: 'already_confirmed',
+      count: createdBookings.length,
+      bookingIds: createdBookings.map(({ booking }) => booking.bookingReference),
+    };
   }
 
   // Send confirmation email
@@ -456,10 +659,10 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     const formatMoney = (value: number) => `$${value.toFixed(2)}`;
 
     // Extract pricing from metadata
-    const pricingSubtotal = parseFloat(metadata.pricing_subtotal) || pricingTotal;
-    const pricingServiceFee = parseFloat(metadata.pricing_service_fee) || 0;
-    const pricingTax = parseFloat(metadata.pricing_tax) || 0;
-    const pricingDiscount = parseFloat(metadata.pricing_discount) || 0;
+    const pricingSubtotal = persistedQuote?.pricing.subtotal ?? (parseFloat(metadata.pricing_subtotal) || pricingTotal);
+    const pricingServiceFee = persistedQuote?.pricing.serviceFee ?? (parseFloat(metadata.pricing_service_fee) || 0);
+    const pricingTax = persistedQuote?.pricing.tax ?? (parseFloat(metadata.pricing_tax) || 0);
+    const pricingDiscount = persistedQuote?.pricing.discount ?? (parseFloat(metadata.pricing_discount) || 0);
 
     // Calculate time until tour
     const tourDate = mainBooking.booking.date;
@@ -633,6 +836,11 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       discountAmount: emailDiscountAmount > 0 ? formatMoney(emailDiscountAmount) : undefined,
     });
 
+    await Booking.updateMany(
+      { _id: { $in: createdBookings.map(({ booking }) => booking._id) }, ...DEFAULT_TENANT_FILTER },
+      { $set: { confirmationSentAt: new Date() } },
+    );
+
     console.log(`[Webhook] Sent admin alert for booking ${bookingId}`);
   } catch (emailError) {
     console.error(`[Webhook] Failed to send emails:`, emailError);
@@ -689,7 +897,10 @@ export async function POST(request: Request) {
 
         // CRITICAL: Create booking if it doesn't exist yet
         // This ensures bookings are created even if the frontend callback fails
+        let paymentLeaseToken: string | undefined;
+        const paymentLeaseKey = `payment:${paymentIntent.id}`;
         try {
+          paymentLeaseToken = await acquireCheckoutInventoryLease(paymentLeaseKey, 120_000);
           const result = await processSuccessfulPayment(paymentIntent);
           console.log(`[Webhook] Process result for ${paymentIntent.id}:`, result);
         } catch (processError: unknown) {
@@ -697,13 +908,25 @@ export async function POST(request: Request) {
           // Return 500 so Stripe retries transient failures instead of losing a
           // paid booking after acknowledging the event.
           return NextResponse.json({ error: 'Payment processing failed' }, { status: 500 });
+        } finally {
+          if (paymentLeaseToken) {
+            await releaseCheckoutInventoryLease(paymentLeaseKey, paymentLeaseToken);
+          }
         }
         break;
 
       case 'payment_intent.payment_failed':
         const failedPayment = event.data.object as Stripe.PaymentIntent;
         console.log(`[Webhook] Payment failed: ${failedPayment.id}`);
-        // Log failed payment for monitoring
+        await dbConnect();
+        await releasePaymentInventory(failedPayment.id, 'payment_failed');
+        break;
+
+      case 'payment_intent.canceled':
+        const canceledPayment = event.data.object as Stripe.PaymentIntent;
+        console.log(`[Webhook] Payment canceled: ${canceledPayment.id}`);
+        await dbConnect();
+        await releasePaymentInventory(canceledPayment.id, 'payment_canceled');
         break;
 
       case 'charge.succeeded':
@@ -711,11 +934,74 @@ export async function POST(request: Request) {
         console.log(`[Webhook] Charge succeeded: ${charge.id}`);
         break;
 
-      case 'charge.refunded':
-        const refund = event.data.object as Stripe.Charge;
-        console.log(`[Webhook] Charge refunded: ${refund.id}`);
-        // TODO: Update booking status to refunded
+      case 'refund.created':
+      case 'refund.updated':
+      case 'refund.failed': {
+        const providerRefund = event.data.object as Stripe.Refund;
+        await dbConnect();
+        const reconciliation = await reconcileStripeBookingRefund(providerRefund);
+        if (reconciliation.handled && reconciliation.finalized && reconciliation.bookingId) {
+          await sendBookingRefundNotification(String(reconciliation.bookingId)).catch((error) => {
+            console.error('Refund finalized but customer notification failed.', error);
+          });
+        }
+        console.log(`[Webhook] Refund ${providerRefund.id} reconciliation:`, reconciliation);
         break;
+      }
+
+      case 'charge.refunded': {
+        const refundedCharge = event.data.object as Stripe.Charge;
+        console.log(`[Webhook] Charge refunded: ${refundedCharge.id}`);
+        {
+          const refundedPaymentId = typeof refundedCharge.payment_intent === 'string'
+            ? refundedCharge.payment_intent
+            : refundedCharge.payment_intent?.id;
+          if (refundedPaymentId) {
+            await dbConnect();
+            let handledBookingRefund = false;
+            for (const providerRefund of refundedCharge.refunds?.data || []) {
+              const reconciliation = await reconcileStripeBookingRefund(providerRefund);
+              handledBookingRefund ||= reconciliation.handled;
+              if (reconciliation.handled && reconciliation.finalized && reconciliation.bookingId) {
+                await sendBookingRefundNotification(String(reconciliation.bookingId)).catch((error) => {
+                  console.error('Charge refund finalized but customer notification failed.', error);
+                });
+              }
+            }
+            if (!handledBookingRefund) {
+              // A dashboard-created legacy refund has no booking metadata. It
+              // can only be allocated automatically when exactly one booking
+              // is bound to the PaymentIntent; never smear one partial refund
+              // across a multi-item checkout.
+              const paymentBookings = await Booking.find({ tenantId: 'default', paymentId: refundedPaymentId }).select('_id totalPrice').lean();
+              if (paymentBookings.length === 1) {
+                const refundedAmount = Number(refundedCharge.amount_refunded || 0) / 100;
+                const fullyRefunded = refundedAmount >= Number(paymentBookings[0].totalPrice || 0);
+                await Booking.updateOne(
+                  { _id: paymentBookings[0]._id, tenantId: 'default', refundState: { $ne: 'succeeded' } },
+                  {
+                    $set: {
+                      status: fullyRefunded ? 'Refunded' : 'Partial_Refund',
+                      refundState: 'succeeded',
+                      refundProviderStatus: 'succeeded',
+                      refundChargeId: refundedCharge.id,
+                      refundAmount: refundedAmount,
+                      refundDate: new Date(),
+                      refundCompletedAt: new Date(),
+                      refundReason: 'Stripe dashboard refund (legacy allocation)',
+                    },
+                  },
+                );
+                await sendBookingRefundNotification(String(paymentBookings[0]._id)).catch(() => undefined);
+              } else if (paymentBookings.length > 1) {
+                console.error(`[Webhook] Unallocated multi-booking refund requires review for ${refundedPaymentId}`);
+              }
+            }
+            await releasePaymentInventory(refundedPaymentId, 'charge_refunded');
+          }
+        }
+        break;
+      }
 
       default:
         console.log(`[Webhook] Unhandled event type: ${event.type}`);

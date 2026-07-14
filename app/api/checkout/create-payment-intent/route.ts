@@ -3,12 +3,39 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
-import { PriceChangedError, secureCartPricing, type SecureCartItem } from '@/lib/checkout/serverCartPricing';
+import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
 import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
+import {
+  buildCheckoutPaymentIdempotencyKey,
+  normalizeCheckoutAttemptId,
+} from '@/lib/checkout/checkoutAttempt';
 import { assertCartAvailability, UnavailableTourError } from '@/lib/checkout/assertAvailability';
+import { checkoutCartSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
+import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
+import {
+  bindInventoryHoldsToPayment,
+  createInventoryHolds,
+  InventoryHoldError,
+  releaseInventoryHolds,
+} from '@/lib/checkout/inventoryHolds';
+import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
+import {
+  normalizeBoundedText,
+  normalizeEmail,
+  PublicInputError,
+  readBoundedJson,
+} from '@/lib/security/publicInput';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
+
+type PaymentIntentRequestBody = {
+  customer?: { email?: unknown; firstName?: unknown; lastName?: unknown };
+  pricing?: unknown;
+  cart?: unknown;
+  discountCode?: unknown;
+  checkoutAttemptId?: unknown;
+};
 
 function getStripe(): Stripe {
   if (!stripeInstance) {
@@ -25,41 +52,73 @@ function getStripe(): Stripe {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await readBoundedJson<PaymentIntentRequestBody>(request, 128 * 1024);
     const { customer, pricing, cart: requestedCart, discountCode } = body;
+    const checkoutAttemptId = normalizeCheckoutAttemptId(body.checkoutAttemptId);
 
     // Validate required fields
-    if (!customer || !pricing || !requestedCart || requestedCart.length === 0) {
+    if (!customer || !pricing || !Array.isArray(requestedCart) || requestedCart.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required payment information' },
         { status: 400 }
       );
     }
+    if (!checkoutAttemptId) {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_CHECKOUT_ATTEMPT', message: 'Please restart checkout and try again.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+    if (requestedCart.length > 10) {
+      return NextResponse.json(
+        { success: false, message: 'A checkout may contain at most 10 tours.' },
+        { status: 400 }
+      );
+    }
 
     // Validate customer data
-    if (!customer.email || !customer.firstName || !customer.lastName) {
+    const normalizedCustomerEmail = normalizeEmail(customer.email);
+    const customerFirstName = normalizeBoundedText(customer.firstName, { minimum: 1, maximum: 100 });
+    const customerLastName = normalizeBoundedText(customer.lastName, { minimum: 1, maximum: 100 });
+    if (!normalizedCustomerEmail || !customerFirstName || !customerLastName) {
       return NextResponse.json(
         { success: false, message: 'Please provide complete customer information (name and email)' },
         { status: 400 }
       );
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customer.email)) {
+    const normalizedDiscountCode = typeof discountCode === 'string' && discountCode.trim()
+      ? discountCode.trim().toUpperCase()
+      : undefined;
+    if (normalizedDiscountCode && (normalizedDiscountCode.length > 64 || !/^[A-Z0-9_-]+$/.test(normalizedDiscountCode))) {
       return NextResponse.json(
-        { success: false, message: 'Please provide a valid email address' },
-        { status: 400 }
+        { success: false, message: 'Enter a valid coupon code.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
       );
     }
 
     // Always compute the amount server-side from the cart.
     // This guarantees Stripe amount matches booking summary, even if client pricing is stale.
     await dbConnect();
+    const rate = await enforcePublicActionLimits({
+      request,
+      action: 'checkout-payment-intent',
+      subject: normalizedCustomerEmail,
+      networkLimit: 20,
+      subjectLimit: 6,
+      windowMs: 15 * 60 * 1_000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Too many payment attempts. Please try again later.' },
+        {
+          status: 429,
+          headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfterSeconds) },
+        },
+      );
+    }
     const cart = await secureCartPricing(requestedCart);
     await assertCartAvailability(cart);
 
-    const round2 = (n: number) => Math.round(n * 100) / 100;
     const toNumberQty = (value: unknown, fallback = 0): number => {
       if (typeof value === 'number' && Number.isFinite(value)) return value;
       if (typeof value === 'string') {
@@ -74,44 +133,22 @@ export async function POST(request: Request) {
       return fallback;
     };
 
-    const calculateAddOnsTotal = (cartItem: SecureCartItem): number => {
-      const totalGuests = (cartItem?.quantity || 0) + (cartItem?.childQuantity || 0);
-      let addOnsTotal = 0;
+    const subtotal = checkoutCartSubtotal(cart);
 
-      for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
-        const qty = toNumberQty(rawQty, 0);
-        const detail = cartItem.selectedAddOnDetails[addOnId];
-        if (!detail || qty <= 0) continue;
-        const multiplier = detail.perGuest ? totalGuests : 1;
-        addOnsTotal += detail.price * multiplier * qty;
-      }
-
-      return addOnsTotal;
-    };
-
-    const subtotal = round2(cart.reduce((sum, item) => {
-      const basePrice = item?.selectedBookingOption?.price || item?.discountPrice || item?.price || 0;
-      const adults = toNumberQty(item?.quantity ?? 1, 1);
-      const children = toNumberQty(item?.childQuantity ?? 0, 0);
-      const adultPrice = Number(basePrice) * adults;
-      const childPrice = Number(item?.guestPrices?.child ?? Number(basePrice) / 2) * children;
-      return sum + adultPrice + childPrice + calculateAddOnsTotal(item);
-    }, 0));
-
-    const serviceFee = round2(subtotal * 0.03);
-    const tax = round2(subtotal * 0.05);
+    const serviceFee = roundMoney(subtotal * 0.03);
+    const tax = roundMoney(subtotal * 0.05);
 
     let discount = 0;
-    if (discountCode) {
-      const d = await Discount.findOne({ code: String(discountCode).toUpperCase() }).lean();
+    if (normalizedDiscountCode) {
+      const d = await Discount.findOne({ code: normalizedDiscountCode }).lean();
       if (d && d.isActive && (!d.expiresAt || new Date(d.expiresAt) >= new Date()) && (!d.usageLimit || d.timesUsed < d.usageLimit)) {
         discount = d.discountType === 'percentage'
-          ? round2((subtotal * d.value) / 100)
-          : round2(d.value);
+          ? roundMoney((subtotal * d.value) / 100)
+          : roundMoney(d.value);
       }
     }
 
-    const total = round2(Math.max(0, subtotal + serviceFee + tax - discount));
+    const total = roundMoney(Math.max(0, subtotal + serviceFee + tax - discount));
     if (!total || total <= 0) {
       return NextResponse.json(
         { success: false, message: 'Invalid payment amount' },
@@ -129,7 +166,7 @@ export async function POST(request: Request) {
       n: item.infantQuantity || 0, // infants
       d: item.selectedDate, // date
       tm: item.selectedTime, // time
-      bp: item.selectedBookingOption?.price || item.discountPrice || item.price, // base price
+      bp: item.selectedBookingOption?.price ?? item.discountPrice ?? item.price, // base price
       bo: item.selectedBookingOption?.id, // booking option ID
       bot: item.selectedBookingOption?.title, // booking option title
       ok: item.selectedBookingOption?.pricingKey,
@@ -166,22 +203,29 @@ export async function POST(request: Request) {
     const amountMinor = Math.round(total * 100);
     const quoteBinding = buildQuoteBinding({
       cart,
-      customerEmail: customer.email,
+      customerEmail: normalizedCustomerEmail,
       currency: 'USD',
       amountMinor,
-      discountCode,
+      discountCode: normalizedDiscountCode,
+      checkoutAttemptId,
     });
     
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Reserve the exact departure before Stripe exposes a payable client
+    // secret. The reservation key is the same deterministic quote binding used
+    // for Stripe idempotency, so retries cannot reserve capacity twice.
+    await createInventoryHolds({ reservationKey: quoteBinding, cart });
+    let paymentIntent: Stripe.PaymentIntent | undefined;
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
       amount: amountMinor, // Stripe expects amount in cents
       currency: 'usd', // Always charge in USD - prices are stored in USD
       description: `Booking for ${cart.length} tour${cart.length > 1 ? 's' : ''}`,
       metadata: {
         // Customer info
-        customer_email: customer.email,
-        customer_name: `${customer.firstName} ${customer.lastName}`,
-        customer_first_name: customer.firstName,
-        customer_last_name: customer.lastName,
+        customer_email: normalizedCustomerEmail,
+        customer_name: `${customerFirstName} ${customerLastName}`,
+        customer_first_name: customerFirstName,
+        customer_last_name: customerLastName,
         // Do not copy phone numbers, hotel geolocation, emergency contacts, or
         // special requests into Stripe metadata. Those fields remain in the
         // first-party checkout request and booking record only.
@@ -202,16 +246,72 @@ export async function POST(request: Request) {
         pricing_total: String(total),
         pricing_currency: 'USD', // Always USD - prices are stored and charged in USD
         // Discount
-        discount_code: discountCode || 'none',
+        discount_code: normalizedDiscountCode || 'none',
         // Flag to indicate this has booking data for webhook processing
         has_booking_data: 'true',
         quote_binding: quoteBinding,
+        checkout_attempt_id: checkoutAttemptId,
       },
       // receipt_email removed - we send our own booking confirmation email
       automatic_payment_methods: {
         enabled: true,
       },
-    });
+      }, {
+        // Identical authoritative quotes converge on one PaymentIntent even when
+        // a mobile client retries after losing the response.
+        idempotencyKey: buildCheckoutPaymentIdempotencyKey(quoteBinding),
+      });
+      await bindInventoryHoldsToPayment(quoteBinding, paymentIntent.id);
+    } catch (paymentError) {
+      // If Stripe never created the intent, there is nothing the customer can
+      // complete and capacity can be released immediately. Once an intent
+      // exists, keep the short hold: a concurrent idempotent retry may already
+      // be binding that same intent.
+      if (!paymentIntent) {
+        await releaseInventoryHolds({ reservationKey: quoteBinding, reason: 'payment_intent_creation_failed' });
+      }
+      throw paymentError;
+    }
+
+    // Stripe metadata is deliberately only a compact compatibility fallback.
+    // Persist the complete authoritative quote so a delayed webhook can recover
+    // every cart item without trusting client prices or truncated metadata.
+    try {
+      const savedQuote = await CheckoutPaymentQuote.findOneAndUpdate(
+        { paymentIntentId: paymentIntent.id, tenantId: 'default' },
+        {
+          $setOnInsert: {
+            quoteBinding,
+            checkoutAttemptId,
+            customer: {
+              email: normalizedCustomerEmail,
+              firstName: customerFirstName,
+              lastName: customerLastName,
+            },
+            cart,
+            cartSummary,
+            pricing: { subtotal, serviceFee, tax, discount, total, currency: 'USD' },
+            discountCode: normalizedDiscountCode,
+            inventoryState: 'held',
+            inventoryUpdatedAt: new Date(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+        { upsert: true, new: true },
+      ).lean();
+      if (
+        !savedQuote
+        || savedQuote.quoteBinding !== quoteBinding
+        || savedQuote.checkoutAttemptId !== checkoutAttemptId
+      ) {
+        throw new Error('Payment quote idempotency conflict');
+      }
+    } catch (snapshotError) {
+      // Do not cancel here: a concurrent retry may already be using the same
+      // idempotent PaymentIntent. The client receives no secret until the
+      // durable snapshot is confirmed.
+      throw snapshotError;
+    }
 
     return NextResponse.json({
       success: true,
@@ -230,11 +330,21 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     console.error('Create PaymentIntent error:', error);
 
+    if (error instanceof PublicInputError) {
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: error.status, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
     if (error instanceof PriceChangedError) {
       return NextResponse.json({ success: false, code: (error as { code?: string | number }).code, message: (error as Error).message, quote: error.quote }, { status: 409 });
     }
     if (error instanceof UnavailableTourError) {
-      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: (error as Error).message }, { status: 409 });
+      return NextResponse.json({ success: false, code: error.code, message: error.message }, { status: 409 });
+    }
+    if (error instanceof InventoryHoldError) {
+      return NextResponse.json({ success: false, code: error.code, message: error.message }, { status: error.status });
     }
 
     // Provide more specific error messages

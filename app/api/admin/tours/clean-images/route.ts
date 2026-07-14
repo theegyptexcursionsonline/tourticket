@@ -209,7 +209,10 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to check how many items have placeholder images
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     await dbConnect();
     

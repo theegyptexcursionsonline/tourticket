@@ -101,7 +101,7 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
       'All tours include professional English-speaking guides',
       'Pickup and drop-off from your hotel in Cairo or Giza',
       'Small group sizes for a more personalized experience',
-      'Flexible cancellation policy - cancel up to 24 hours before for a full refund',
+      'Clear cancellation policy: 100% at 7+ days, 50% at 3–7 days, no refund under 3 days',
     ],
     discover: 'DISCOVER',
     tourCount: (count: number) => `${count}+ Tours`,
@@ -870,6 +870,7 @@ const TourCard = ({
   copy: CategoryPageCopy;
 }) => {
   const { formatPrice } = useSettings();
+  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col group">
@@ -909,7 +910,7 @@ const TourCard = ({
             {tour.originalPrice && (
               <span className="text-slate-500 line-through text-sm mr-2">{formatPrice(tour.originalPrice)}</span>
             )}
-            <span className="text-xl font-bold text-red-600">{formatPrice(tour.discountPrice)}</span>
+            <span className="text-xl font-bold text-red-600">{formatPrice(displayedPrice)}</span>
           </div>
           <Link href={`/${tour.slug}`} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
             {copy.viewDetails}
@@ -991,7 +992,7 @@ export default function CategoryPageClient({
                 durationSet.add(tour.duration);
             }
 
-            const price = tour.discountPrice || tour.originalPrice || tour.price;
+            const price = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? tour.price;
             if (price && Number.isFinite(price)) {
                 prices.push(price);
             }
@@ -1078,7 +1079,7 @@ export default function CategoryPageClient({
         // Price range filter
         if (priceRange) {
             filtered = filtered.filter(tour => {
-                const price = tour.discountPrice || tour.originalPrice || 0;
+                const price = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
                 if (priceRange === '0-50') return price < 50;
                 if (priceRange === '50-100') return price >= 50 && price < 100;
                 if (priceRange === '100-200') return price >= 100 && price < 200;
@@ -1090,10 +1091,10 @@ export default function CategoryPageClient({
         // Sort
         switch (sortBy) {
             case 'price_low':
-                filtered.sort((a, b) => (a.discountPrice || a.originalPrice || 0) - (b.discountPrice || b.originalPrice || 0));
+                filtered.sort((a, b) => (a.pricingSummary?.fromPrice ?? a.discountPrice ?? a.originalPrice ?? 0) - (b.pricingSummary?.fromPrice ?? b.discountPrice ?? b.originalPrice ?? 0));
                 break;
             case 'price_high':
-                filtered.sort((a, b) => (b.discountPrice || b.originalPrice || 0) - (a.discountPrice || a.originalPrice || 0));
+                filtered.sort((a, b) => (b.pricingSummary?.fromPrice ?? b.discountPrice ?? b.originalPrice ?? 0) - (a.pricingSummary?.fromPrice ?? a.discountPrice ?? a.originalPrice ?? 0));
                 break;
             case 'rating':
                 filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));

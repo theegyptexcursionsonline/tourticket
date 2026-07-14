@@ -1,5 +1,6 @@
 // Firebase Admin SDK for server-side operations
-import * as admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { createHash } from 'crypto';
 
 let initializationPromise: Promise<void> | null = null;
@@ -31,7 +32,7 @@ function generateSignedCloudinaryUrl(publicId: string, cloudName: string, apiSec
  */
 async function ensureInitialized() {
   // If already initialized, return immediately
-  if (admin.apps.length > 0) {
+  if (getApps().length > 0) {
     return;
   }
 
@@ -50,8 +51,8 @@ async function ensureInitialized() {
     if (serviceAccountKey && !initialized) {
       try {
         const serviceAccountJSON = JSON.parse(serviceAccountKey);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountJSON),
+        initializeApp({
+          credential: cert(serviceAccountJSON),
         });
         console.log('✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT_KEY');
         initialized = true;
@@ -68,8 +69,8 @@ async function ensureInitialized() {
         const serviceAccountJSON = JSON.parse(
           Buffer.from(serviceAccountBase64, 'base64').toString('utf8')
         );
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountJSON),
+        initializeApp({
+          credential: cert(serviceAccountJSON),
         });
         console.log('✅ Firebase Admin initialized from base64 env variable');
         initialized = true;
@@ -99,8 +100,8 @@ async function ensureInitialized() {
 
           const serviceAccountJSON = await response.json();
 
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccountJSON),
+          initializeApp({
+            credential: cert(serviceAccountJSON),
           });
           console.log('✅ Firebase Admin initialized from Cloudinary (private resource)');
           initialized = true;
@@ -118,8 +119,8 @@ async function ensureInitialized() {
 
       if (projectId && clientEmail && privateKey) {
         try {
-          admin.initializeApp({
-            credential: admin.credential.cert({
+          initializeApp({
+            credential: cert({
               projectId,
               clientEmail,
               privateKey: privateKey.replace(/\\n/g, '\n'),
@@ -142,8 +143,8 @@ async function ensureInitialized() {
 
         if (fs.existsSync(serviceAccountPath)) {
           const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+          initializeApp({
+            credential: cert(serviceAccount),
           });
           console.log('✅ Firebase Admin initialized from service account file');
           initialized = true;
@@ -172,7 +173,15 @@ async function ensureInitialized() {
 // Helper to get adminAuth with lazy initialization
 async function getAdminAuth() {
   await ensureInitialized();
-  return admin.auth();
+  return getAuth();
+}
+
+export async function generateFirebasePasswordResetLink(email: string, continueUrl: string) {
+  const auth = await getAdminAuth();
+  return auth.generatePasswordResetLink(email, {
+    url: continueUrl,
+    handleCodeInApp: false,
+  });
 }
 
 /**
@@ -261,7 +270,8 @@ export async function deleteFirebaseUser(uid: string) {
 }
 
 // Export admin instance (apps will be empty until first function call)
-export default admin;
+const firebaseAdminCompatibility = { get apps() { return getApps(); }, initializeApp, credential: { cert }, auth: getAuth };
+export default firebaseAdminCompatibility;
 
 // Note: adminAuth and adminDb are not exported to avoid top-level await
 // Use verifyFirebaseToken(), getFirebaseUser(), etc. functions instead

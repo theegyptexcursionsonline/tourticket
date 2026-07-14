@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         quantity: booking.adultGuests || booking.guests || 1,
         childQuantity: booking.childGuests || 0,
         infantQuantity: booking.infantGuests || 0,
+        guestPrices: booking.priceSnapshot?.guestPrices,
         totalPrice: booking.totalPrice,
         selectedBookingOption: booking.selectedBookingOption,
         selectedAddOns: booking.selectedAddOns,

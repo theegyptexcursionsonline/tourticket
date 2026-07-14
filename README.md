@@ -29,7 +29,7 @@ Full-stack Next.js tour booking website for Egypt Excursions Online: browse and 
 
 ### Prerequisites
 
-- Node.js 20
+- Node.js 22
 - pnpm
 - MongoDB (Atlas or local)
 - Accounts for Stripe, Cloudinary, Mailgun, Algolia, Firebase, OpenAI
@@ -47,12 +47,14 @@ Copy `.env.local` and provide values for the keys used in code, including:
 - `MONGODB_URI`
 - `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`
 - `STRIPE_SECRET_KEY`, `STRIPE_RESTRICTED_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- Checkout inventory: `CHECKOUT_INVENTORY_HOLD_MINUTES` (optional, defaults to 20 and is bounded to 5–60), plus `CRON_SECRET`
 - `NEXT_PUBLIC_ALGOLIA_APP_ID`, `NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY`, `NEXT_PUBLIC_ALGOLIA_INDEX_NAME`, `ALGOLIA_ADMIN_API_KEY`
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 - `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`
 - `OPENAI_API_KEY`
-- Firebase: `NEXT_PUBLIC_FIREBASE_*` (client) and `FIREBASE_SERVICE_ACCOUNT_URL` (server)
+- Firebase: `NEXT_PUBLIC_FIREBASE_*` (client) and `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` (server secrets)
 - Optional Foxes integration: `NEXT_PUBLIC_FOXES_*`
+- Controlled RevenuePilot integration: `REVENUEPILOT_HMAC_KEYS`, `REVENUEPILOT_HMAC_SCOPES`, `REVENUEPILOT_ALLOWED_TOUR_IDS=<comma-separated exact Tour ObjectIds>`, `REVENUEPILOT_MAX_WRITE_PERCENT=5`, and `REVENUEPILOT_PRICING_API_ENABLED=false` until launch approval
 
 ### Run
 
@@ -71,6 +73,12 @@ pnpm typecheck
 pnpm test:unit
 pnpm test:api
 pnpm test:e2e
+pnpm audit --prod
+pnpm revenue:verify-migration # disposable localhost database only
+pnpm revenue:verify-e2e       # disposable localhost database only
+pnpm bookings:verify-payment-index # read-only multi-item payment-index gate
+pnpm checkout:verify-inventory     # disposable localhost concurrency/expiry gate
+pnpm bookings:verify-refunds       # disposable localhost, mocked Stripe state-machine gate
 ```
 
 ### Algolia sync
@@ -80,6 +88,30 @@ pnpm algolia:sync        # sync published tours
 pnpm algolia:sync-all    # sync all tours
 pnpm algolia:clear-sync  # clear index and resync
 ```
+
+### Controlled pricing authority
+
+TourTicket is authoritative for catalogue and date/time guest prices. RevenuePilot machine routes use rotatable HMAC credentials with nonce replay protection. New writes require an idempotency key, expected price version, exact catalogue source version, explicit adult/child/infant prices, and a verifiable policy snapshot/hash. Public quote and checkout resolve the same versioned override and return `409 PRICE_CHANGED` for stale quotes.
+
+The write path fails closed unless the target tour is listed exactly in `REVENUEPILOT_ALLOWED_TOUR_IDS`; an empty list, malformed ID, or wildcard disables execution. Start a canary with one ID only. Every apply and rollback idempotency key is bound to the exact signed request body. Apply also rechecks publication, tenant, schedule, exact time, stop sales (including option-level stop sales), blocked slots, and remaining capacity immediately before the compare-and-swap update. Rollback remains callable when the global apply flag is off so an already-applied canary write can be reversed, but it is still HMAC-authenticated, allowlisted, version-fenced, and concurrency-leased.
+
+Keep `REVENUEPILOT_PRICING_API_ENABLED=false` and do not configure production allowlisted tours until the immutable-option-key backfill, catalogue/checkout parity report, shadow qualification, restricted canary, rollback drill, and signed acceptance are complete. The current cross-repository launch checklist is in `foxes-revenue-pilot/docs/LAUNCH_READINESS.md`.
+
+Stripe checkout stores a seven-day server-side quote snapshot so delayed webhooks recover the full authoritative cart without relying on size-limited Stripe metadata. Before exposing a payable client secret, TourTicket leases the exact tenant/tour/date/time departure and creates an expiring option/guest hold. Storefront, webhook, bank-transfer, and manual-admin bookings share that serialized capacity guard. A successful booking converts its hold to ordinary `Pending`/`Confirmed` booking capacity; failed/canceled payments release it. If an expired hold belongs to a succeeded charge without every durable booking, the reconciliation job issues one idempotent full refund and cancels any partial booking rows rather than retaining unfulfilled revenue.
+
+Before deploying multi-tour checkout, back up MongoDB and run `pnpm bookings:verify-payment-index`. The apply form of that script is intentionally locked behind `--apply` plus `CONFIRM_BOOKING_PAYMENT_INDEX_MIGRATION=YES`; a remote database additionally requires `ALLOW_REMOTE_BOOKING_INDEX_MIGRATION=YES`. Run it only in an approved maintenance window. It backfills the default tenant/payment item number, creates the tenant-scoped compound booking idempotency index, removes the legacy single-payment unique index, verifies the payment-quote plus checkout hold/lease unique, lookup, and TTL indexes, and installs/backfills the durable pricing-search projection retry queue.
+
+Cancellation and refunds use the server-owned provisional policy `eeo-cancellation-v1-provisional`: self-service cancellation closes 24 hours before the Africa/Cairo departure instant; refunds are 100% at 7+ days, 50% at 3–7 days, and zero below 3 days. Stripe-backed refunds claim a booking with compare-and-swap, persist one provider idempotency key, verify the exact PaymentIntent and charge, and change booking status only after provider success. Provider-pending bookings remain locked and unchanged; cash/bank cancellations are marked `manual_required` without claiming that money was returned. This policy still requires final operator/legal approval before launch, but public copy and Terms are intentionally kept identical to executable behavior.
+
+Bookings are immutable financial records: single/bulk hard deletion is disabled, user removal deactivates access without cascading into bookings, and tour removal archives/unpublishes the catalogue record instead of orphaning receipts. Admin reschedules preserve the paid price/option, validate real date/time input, enforce optimistic version checks, and lease the destination departure against active checkout holds before saving. Fare or option changes require cancellation and a new authoritative quote.
+
+Schedule an authenticated `GET /api/cron/pricing-summaries` request with `Authorization: Bearer $CRON_SECRET` at least every five minutes. It removes expired override prices from materialized listing/search summaries and automatically drains pending, failed, or abandoned Algolia projections with bounded backoff. A projection is verified only after Algolia publishes the task and its pricing fields pass read-back comparison. Price-write responses and the machine catalogue report EEO direct propagation as `failed` until that verification completes; unsupported OTAs remain `not_connected`.
+
+Schedule authenticated `GET /api/cron/inventory-holds` at least every five minutes with the same bearer secret. It releases expired unpaid holds, converts holds when every booking is already durable, and automatically refunds succeeded-but-unfulfilled payments. Alert whenever the response is non-2xx, `success` is false, or an outcome is `retry_required`. This reconciliation schedule and Stripe's signed `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, and `charge.refunded` webhook deliveries are launch requirements.
+
+Schedule authenticated `GET /api/cron/refund-reconciliation` at least every five minutes. It resumes uncertain idempotent provider requests and reads pending Stripe refunds back when webhook delivery is delayed. Stripe `refund.created`, `refund.updated`, `refund.failed`, and `charge.refunded` events must point to the signed webhook route. Alert on `retry_required` or `invalid_claim_requires_review`; neither state is permission to mark a booking refunded manually.
+
+Firebase GA additionally requires the direct server-secret migration in [`docs/FIREBASE_CREDENTIALS.md`](docs/FIREBASE_CREDENTIALS.md). The legacy Cloudinary service-account retrieval fallback is not certified for launch; do not use its upload script for new environments. No credential was accessed or rotated during this readiness pass.
 
 ## Project structure
 

@@ -7,6 +7,7 @@ import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
+import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 
 async function fetchToursWithPopulate() {
   // Scope the EEO admin tours API to the default tenant — other tenants
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const tour = await Tour.create(body);
+    await refreshTourPricingSummary(String(tour._id));
     
     let populated: unknown = tour;
     try {

@@ -36,15 +36,20 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  country?: string;
   password?: string; // Password is required for creation, but shouldn't be sent to client
   firebaseUid?: string; // Firebase user ID for Firebase Auth users
   authProvider?: 'firebase' | 'jwt' | 'google'; // Authentication provider
+  isGuestProfile: boolean; // Passwordless booking profile, safe to claim only through strict auth flows
   photoURL?: string; // Profile photo URL (from Google or Firebase)
   emailVerified?: boolean; // Email verification status (from Firebase)
   createdAt: Date;
   role: AdminRole;
   permissions: AdminPermission[];
   isActive: boolean;
+  deactivatedAt?: Date;
+  deactivatedBy?: string;
   lastLoginAt?: Date;
   adminLoginAttempts: number;
   adminLockUntil?: Date;
@@ -76,6 +81,16 @@ const UserSchema: Schema<IUser> = new Schema({
       'Please provide a valid email address.',
     ],
   },
+  phone: {
+    type: String,
+    trim: true,
+    maxlength: 50,
+  },
+  country: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+  },
   password: {
     type: String,
     required: false, // Optional - Firebase users won't have passwords
@@ -92,6 +107,11 @@ const UserSchema: Schema<IUser> = new Schema({
     type: String,
     enum: ['firebase', 'jwt', 'google'],
     default: 'jwt', // Default to JWT for backward compatibility with admin users
+  },
+  isGuestProfile: {
+    type: Boolean,
+    default: false,
+    index: true,
   },
   photoURL: {
     type: String,
@@ -114,6 +134,8 @@ const UserSchema: Schema<IUser> = new Schema({
     type: Boolean,
     default: true,
   },
+  deactivatedAt: { type: Date },
+  deactivatedBy: { type: String, trim: true, maxlength: 255 },
   lastLoginAt: {
     type: Date,
   },

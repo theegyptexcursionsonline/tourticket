@@ -14,9 +14,11 @@ interface Tour {
   originalPrice?: number;
   price?: number;
   bookingOptions?: {
+    pricingKey?: string;
     type: string;
     label: string;
     price: number;
+    guestPrices?: { adult: number; child: number; infant: number };
     duration?: string;
     originalPrice?: number;
     badge?: string;
@@ -65,8 +67,10 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
   };
 
   const getBookingOptionKey = (option: NonNullable<Tour['bookingOptions']>[number], index: number) => {
-    // bookingOptions are stored without an id in DB (schema uses _id:false), so we generate a stable key per tour payload
-    return `${option.type || 'option'}-${index}`;
+    // Revenue/checkout writes require the persisted immutable key. The legacy
+    // fallback remains visible only so admins can identify options that still
+    // need the pricing-key migration; the API fails closed for those rows.
+    return option.pricingKey || `unmigrated-option-${index}`;
   };
 
   // Form data
@@ -77,6 +81,8 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     bookingOptionId: '',
     bookingOptionTitle: '',
     bookingOptionPrice: 0,
+    guestPrices: { adult: 0, child: 0, infant: 0 },
+    quoteVersion: 0,
 
     // Customer info
     customerFirstName: '',
@@ -101,7 +107,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     tax: 0,
 
     // Payment
-    paymentMethod: 'external' as 'external' | 'cash' | 'bank',
+    paymentMethod: 'card' as 'card' | 'cash' | 'bank',
     paymentId: '',
     paymentStatus: 'paid' as 'paid' | 'pending',
 
@@ -111,6 +117,11 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     hotelPickupLocation: null as HotelPickupLocation | null,
     internalNotes: '',
   });
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
+  const effectiveQuoteError = formData.bookingOptionId.startsWith('unmigrated-option-')
+    ? 'This option needs the pricing-key migration before it can be booked.'
+    : quoteError;
 
   // Fetch tours
   useEffect(() => {
@@ -140,10 +151,10 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
   // Calculate pricing whenever relevant fields change
   useEffect(() => {
     if (!formData.customPrice) {
-      const price = formData.bookingOptionPrice || formData.basePrice || 0;
-      const adultTotal = price * formData.adultGuests;
-      const childTotal = (price / 2) * formData.childGuests;
-      const subtotal = adultTotal + childTotal;
+      const adultTotal = formData.guestPrices.adult * formData.adultGuests;
+      const childTotal = formData.guestPrices.child * formData.childGuests;
+      const infantTotal = formData.guestPrices.infant * formData.infantGuests;
+      const subtotal = adultTotal + childTotal + infantTotal;
       const serviceFee = subtotal * 0.03;
       const tax = subtotal * 0.05;
       const total = subtotal + serviceFee + tax;
@@ -155,7 +166,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
         totalPrice: parseFloat(total.toFixed(2)),
       })));
     }
-  }, [formData.bookingOptionPrice, formData.basePrice, formData.adultGuests, formData.childGuests, formData.customPrice]);
+  }, [formData.guestPrices, formData.adultGuests, formData.childGuests, formData.infantGuests, formData.customPrice]);
 
   // Filter tours based on search
   const filteredTours = tours.filter(tour =>
@@ -166,7 +177,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
   const handleTourSelect = (tour: Tour) => {
     const defaultPrice = getTourBasePrice(tour);
     const firstOption = tour.bookingOptions?.[0];
-    const firstOptionKey = firstOption ? getBookingOptionKey(firstOption, 0) : '';
+    const firstOptionKey = firstOption ? getBookingOptionKey(firstOption, 0) : 'standard';
 
     setFormData(prev => ({
       ...prev,
@@ -176,6 +187,8 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       bookingOptionId: firstOptionKey,
       bookingOptionTitle: firstOption?.label || '',
       bookingOptionPrice: firstOption?.price || defaultPrice,
+      guestPrices: firstOption?.guestPrices || { adult: firstOption?.price || defaultPrice, child: (firstOption?.price || defaultPrice) / 2, infant: 0 },
+      quoteVersion: 0,
     }));
   };
 
@@ -191,9 +204,51 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
         bookingOptionId: optionId,
         bookingOptionTitle: option.label,
         bookingOptionPrice: option.price,
+        guestPrices: option.guestPrices || { adult: option.price, child: option.price / 2, infant: 0 },
+        quoteVersion: 0,
       }));
     }
   };
+
+  useEffect(() => {
+    if (!formData.tourId || !formData.bookingDate || !formData.bookingTime || !formData.bookingOptionId) {
+      return;
+    }
+    if (formData.bookingOptionId.startsWith('unmigrated-option-')) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const query = new URLSearchParams({
+      date: formData.bookingDate,
+      time: formData.bookingTime,
+      optionKey: formData.bookingOptionId,
+    });
+    Promise.resolve()
+      .then(() => {
+        if (controller.signal.aborted) return undefined;
+        setIsLoadingQuote(true);
+        setQuoteError('');
+        return fetch(`/api/tours/${formData.tourId}/quote?${query}`, { cache: 'no-store', signal: controller.signal });
+      })
+      .then(async (response) => {
+        if (!response) return;
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error?.message || 'Unable to resolve the live price.');
+        setFormData((current) => ({
+          ...current,
+          bookingOptionPrice: payload.quote.prices.adult,
+          guestPrices: payload.quote.prices,
+          quoteVersion: payload.quote.version,
+        }));
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setQuoteError(error instanceof Error ? error.message : 'Unable to resolve the live price.');
+      })
+      .finally(() => setIsLoadingQuote(false));
+    return () => controller.abort();
+  }, [formData.tourId, formData.bookingDate, formData.bookingTime, formData.bookingOptionId]);
 
   // Handle form submission
   const handleSubmit = async () => {
@@ -213,9 +268,24 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       setStep(3);
       return;
     }
-    if (formData.adultGuests + formData.childGuests === 0) {
+    if (isLoadingQuote || effectiveQuoteError) {
+      toast.error(effectiveQuoteError || 'Wait for the live price to finish loading.');
+      setStep(3);
+      return;
+    }
+    if (formData.adultGuests + formData.childGuests + formData.infantGuests === 0) {
       toast.error('Please add at least one guest');
       setStep(3);
+      return;
+    }
+    if (formData.paymentMethod === 'card' && formData.paymentStatus === 'paid' && !/^pi_[A-Za-z0-9_]+$/.test(formData.paymentId.trim())) {
+      toast.error('Enter the successful Stripe PaymentIntent ID for a paid card booking.');
+      setStep(4);
+      return;
+    }
+    if (formData.paymentMethod === 'card' && formData.paymentStatus !== 'paid') {
+      toast.error('Pending card bookings must be completed through Stripe checkout.');
+      setStep(4);
       return;
     }
 
@@ -243,6 +313,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
             infantGuests: formData.infantGuests,
             bookingOption: formData.bookingOptionId ? {
               id: formData.bookingOptionId,
+              pricingKey: formData.bookingOptionId,
               title: formData.bookingOptionTitle,
               price: formData.bookingOptionPrice,
             } : undefined,
@@ -252,6 +323,8 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
             serviceFee: formData.serviceFee,
             tax: formData.tax,
             totalPrice: formData.totalPrice,
+            customPrice: formData.customPrice,
+            quoteVersion: formData.quoteVersion,
           },
           payment: {
             method: formData.paymentMethod,
@@ -293,6 +366,8 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       bookingOptionId: '',
       bookingOptionTitle: '',
       bookingOptionPrice: 0,
+      guestPrices: { adult: 0, child: 0, infant: 0 },
+      quoteVersion: 0,
       customerFirstName: '',
       customerLastName: '',
       customerEmail: '',
@@ -309,7 +384,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       totalPrice: 0,
       serviceFee: 0,
       tax: 0,
-      paymentMethod: 'external',
+      paymentMethod: 'card',
       paymentId: '',
       paymentStatus: 'paid',
       specialRequests: '',
@@ -317,6 +392,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
       hotelPickupLocation: null,
       internalNotes: '',
     });
+    setQuoteError('');
     setTourSearch('');
   };
 
@@ -724,14 +800,18 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { value: 'external', label: 'External (Stripe)', icon: CreditCard },
+                      { value: 'card', label: 'Card (Stripe)', icon: CreditCard },
                       { value: 'cash', label: 'Cash', icon: DollarSign },
                       { value: 'bank', label: 'Bank Transfer', icon: FileText },
                     ].map((method) => (
                       <button
                         key={method.value}
                         type="button"
-                        onClick={() => setFormData({ ...formData, paymentMethod: method.value as 'external' | 'cash' | 'bank' })}
+                        onClick={() => setFormData({
+                          ...formData,
+                          paymentMethod: method.value as 'card' | 'cash' | 'bank',
+                          ...(method.value === 'card' ? { paymentStatus: 'paid' as const } : {}),
+                        })}
                         className={`p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
                           formData.paymentMethod === method.value
                             ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -746,10 +826,10 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                 </div>
 
                 {/* External Payment ID */}
-                {formData.paymentMethod === 'external' && (
+                {formData.paymentMethod === 'card' && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Stripe Payment ID (optional)
+                      Stripe PaymentIntent ID (required)
                     </label>
                     <input
                       type="text"
@@ -785,11 +865,12 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, paymentStatus: 'pending' })}
+                      disabled={formData.paymentMethod === 'card'}
                       className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 transition-all ${
                         formData.paymentStatus === 'pending'
                           ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
                           : 'border-slate-200 hover:border-yellow-300'
-                      }`}
+                      } disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       <Clock size={18} />
                       <span className="font-medium">Pending</span>
@@ -812,6 +893,17 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                     </label>
                   </div>
 
+                  {isLoadingQuote && (
+                    <div className="mb-3 flex items-center gap-2 text-sm text-blue-700" role="status">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Confirming the live price…
+                    </div>
+                  )}
+                  {effectiveQuoteError && (
+                    <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                      {effectiveQuoteError}
+                    </div>
+                  )}
+
                   {formData.customPrice ? (
                     <div>
                       <label className="block text-sm text-slate-600 mb-1">Total Price ($)</label>
@@ -826,13 +918,19 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
                   ) : (
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between text-slate-600">
-                        <span>{formData.adultGuests} Adults × ${formData.bookingOptionPrice || formData.basePrice}</span>
-                        <span>${safeToFixed((formData.bookingOptionPrice || formData.basePrice) * formData.adultGuests)}</span>
+                        <span>{formData.adultGuests} Adults × ${safeToFixed(formData.guestPrices.adult)}</span>
+                        <span>${safeToFixed(formData.guestPrices.adult * formData.adultGuests)}</span>
                       </div>
                       {formData.childGuests > 0 && (
                         <div className="flex justify-between text-slate-600">
-                          <span>{formData.childGuests} Children × ${safeToFixed((formData.bookingOptionPrice || formData.basePrice) / 2)}</span>
-                          <span>${safeToFixed(((formData.bookingOptionPrice || formData.basePrice) / 2) * formData.childGuests)}</span>
+                          <span>{formData.childGuests} Children × ${safeToFixed(formData.guestPrices.child)}</span>
+                          <span>${safeToFixed(formData.guestPrices.child * formData.childGuests)}</span>
+                        </div>
+                      )}
+                      {formData.infantGuests > 0 && (
+                        <div className="flex justify-between text-slate-600">
+                          <span>{formData.infantGuests} Infants × ${safeToFixed(formData.guestPrices.infant)}</span>
+                          <span>${safeToFixed(formData.guestPrices.infant * formData.infantGuests)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-slate-600">
@@ -893,7 +991,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoadingQuote || Boolean(effectiveQuoteError)}
                   className="px-6 py-2 bg-green-600 text-white font-medium rounded-full hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSubmitting ? (

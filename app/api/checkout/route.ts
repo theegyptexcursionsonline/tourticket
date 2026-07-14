@@ -1,5 +1,6 @@
 // app/api/checkout/route.ts (With booking reference generation)
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'node:crypto';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
@@ -15,7 +16,28 @@ import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
 import { signToken } from '@/lib/jwt';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
+import { normalizeCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 import { assertCartAvailability, UnavailableTourError } from '@/lib/checkout/assertAvailability';
+import {
+  checkoutCartSubtotal,
+  checkoutItemSubtotal,
+  roundMoney,
+} from '@/lib/checkout/cartTotals';
+import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
+import {
+  acquireCheckoutInventoryLease,
+  convertInventoryHold,
+  convertInventoryReservationHold,
+  createInventoryHolds,
+  ensureInventoryHoldsForPayment,
+  InventoryHoldError,
+  releaseCheckoutInventoryLease,
+  releaseInventoryHolds,
+} from '@/lib/checkout/inventoryHolds';
+import {
+  markPaymentInventoryConverted,
+  refundUnavailablePaidInventory,
+} from '@/lib/checkout/inventoryPaymentRecovery';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -72,48 +94,38 @@ const computeTimeUntilTour = (dateValue?: string | Date, timeValue?: string) => 
   return { days, hours, minutes };
 };
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
-
-const toNumberQty = (value: unknown, fallback = 0): number => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    const inner = record.quantity ?? record.qty ?? record.count;
-    return toNumberQty(inner, fallback);
-  }
-  return fallback;
-};
-
-const calculateAddOnsTotal = (cartItem: SecureCartItem): number => {
-  const totalGuests = (cartItem?.quantity || 0) + (cartItem?.childQuantity || 0);
-  let addOnsTotal = 0;
-
-  for (const [addOnId, rawQty] of Object.entries(cartItem.selectedAddOns)) {
-    const qty = toNumberQty(rawQty, 0);
-    const detail = cartItem.selectedAddOnDetails[addOnId];
-    if (!detail || qty <= 0) continue;
-    const multiplier = detail.perGuest ? totalGuests : 1;
-    addOnsTotal += detail.price * multiplier * qty;
-  }
-
-  return addOnsTotal;
-};
+const round2 = roundMoney;
 
 const calculateCartSubtotal = (cart: SecureCartItem[]): number => {
-  return round2((cart || []).reduce((sum, item) => {
-    const basePrice = item?.selectedBookingOption?.price || item?.discountPrice || item?.price || 0;
-    const adultPrice = Number(basePrice) * (item?.quantity || 1);
-    const childPrice = Number(item?.guestPrices?.child ?? Number(basePrice) / 2) * (item?.childQuantity || 0);
-    const itemSubtotal = adultPrice + childPrice + calculateAddOnsTotal(item);
-    return sum + itemSubtotal;
-  }, 0));
+  return checkoutCartSubtotal(cart || []);
 };
 
+async function recordCardDiscountUsageOnce(paymentIntentId: string, discountCode: string) {
+  const usageClaimed = Boolean(await CheckoutPaymentQuote.findOneAndUpdate(
+    {
+      paymentIntentId,
+      tenantId: 'default',
+      discountUsageRecordedAt: { $exists: false },
+    },
+    { $set: { discountUsageRecordedAt: new Date() } },
+  ));
+  if (!usageClaimed) return;
+  try {
+    await Discount.findOneAndUpdate({ code: discountCode }, { $inc: { timesUsed: 1 } });
+  } catch (discountError) {
+    await CheckoutPaymentQuote.updateOne(
+      { paymentIntentId, tenantId: 'default' },
+      { $unset: { discountUsageRecordedAt: 1 } },
+    ).catch(() => undefined);
+    throw discountError;
+  }
+}
+
 export async function POST(request: NextRequest) {
+  let bankReservationKey: string | undefined;
+  const bankCreatedBookingIds: unknown[] = [];
+  let paymentFulfillmentLeaseKey: string | undefined;
+  let paymentFulfillmentLeaseToken: string | undefined;
   try {
     await dbConnect();
     
@@ -127,10 +139,26 @@ export async function POST(request: NextRequest) {
       discountCode = null
     } = body;
 
+    // Public checkout is card-only. Bank/cash reservations are created by an
+    // authenticated administrator; accepting them here would let an anonymous
+    // caller consume departure capacity without completing a payment.
+    if (paymentMethod !== 'card') {
+      return NextResponse.json(
+        { success: false, code: 'UNSUPPORTED_PAYMENT_METHOD', message: 'Public checkout currently supports card payments only.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
     // Validation
-    if (!customer || !requestedCart || requestedCart.length === 0) {
+    if (!customer || !Array.isArray(requestedCart) || requestedCart.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Missing required booking information' },
+        { status: 400 }
+      );
+    }
+    if (requestedCart.length > 10) {
+      return NextResponse.json(
+        { success: false, message: 'A checkout may contain at most 10 tours.' },
         { status: 400 }
       );
     }
@@ -143,24 +171,83 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedCustomerEmail = String(customer.email).trim().toLowerCase();
-    if (isGuest && await User.exists({ email: normalizedCustomerEmail })) {
+    // A previous passwordless guest profile may be reused for another guest
+    // checkout. Never attach a guest checkout to an arbitrary local/Firebase
+    // account merely because the email matches.
+    const existingEmailUser = isGuest
+      ? await User.findOne({ email: normalizedCustomerEmail })
+        .select('_id role isActive isGuestProfile +password +firebaseUid')
+      : null;
+    const reusableGuestProfile = Boolean(
+      existingEmailUser
+      && existingEmailUser.role === 'customer'
+      && existingEmailUser.isActive
+      && (existingEmailUser as unknown as { isGuestProfile?: boolean }).isGuestProfile === true
+      && !(existingEmailUser as unknown as { password?: string }).password
+      && !(existingEmailUser as unknown as { firebaseUid?: string }).firebaseUid,
+    );
+    if (existingEmailUser && !reusableGuestProfile) {
       return NextResponse.json(
         { success: false, code: 'ACCOUNT_AUTH_REQUIRED', message: 'An account already exists for this email. Sign in before checking out.' },
         { status: 409 },
       );
     }
 
-    const cart = await secureCartPricing(requestedCart);
-    await assertCartAvailability(cart);
+    const normalizedDiscountCode = discountCode ? String(discountCode).trim().toUpperCase() : undefined;
+    const storedQuote = paymentDetails?.paymentIntentId && paymentMethod !== 'bank'
+      ? await CheckoutPaymentQuote.findOne({
+          paymentIntentId: String(paymentDetails.paymentIntentId),
+          tenantId: 'default',
+          expiresAt: { $gt: new Date() },
+        }).lean<{
+          quoteBinding: string;
+          checkoutAttemptId?: string;
+          customer: { email: string };
+          cart: SecureCartItem[];
+          pricing: { subtotal: number; serviceFee: number; tax: number; discount: number; total: number; currency: string };
+          discountCode?: string;
+          inventoryState?: string;
+        } | null>()
+      : null;
+    if (storedQuote && String(storedQuote.customer.email).trim().toLowerCase() !== normalizedCustomerEmail) {
+      return NextResponse.json(
+        { success: false, code: 'QUOTE_OWNER_MISMATCH', message: 'Payment does not belong to this customer.' },
+        { status: 403 },
+      );
+    }
+    if (storedQuote && (storedQuote.discountCode || undefined) !== normalizedDiscountCode) {
+      return NextResponse.json(
+        { success: false, code: 'QUOTE_CHANGED', message: 'The discount selection changed. Please restart checkout.' },
+        { status: 409 },
+      );
+    }
+    if (storedQuote?.inventoryState === 'refunded' || storedQuote?.inventoryState === 'refund_failed') {
+      return NextResponse.json(
+        {
+          success: false,
+          code: storedQuote.inventoryState === 'refunded' ? 'INVENTORY_REFUNDED' : 'INVENTORY_REFUND_REQUIRES_SUPPORT',
+          message: storedQuote.inventoryState === 'refunded'
+            ? 'This payment was refunded because the selected departure was no longer available.'
+            : 'This payment needs support review before a booking can be created.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Once Stripe has charged a persisted quote, use that immutable server-side
+    // snapshot. Re-resolving a newer price here could reject a successfully paid
+    // customer while the webhook creates the original booking independently.
+    const cart = storedQuote?.cart || await secureCartPricing(requestedCart);
+    if (!storedQuote) await assertCartAvailability(cart);
 
     // Always compute pricing on the server to avoid stale/incorrect totals in emails/PDFs
     // IMPORTANT: Always use USD since all prices are stored and charged in USD
     // Client may send display currency (EUR, GBP, etc.) but we ignore it for actual charges
     const currencyCode = 'USD';
     const currencySymbol = '$';
-    const computedSubtotal = calculateCartSubtotal(cart || []);
-    let computedDiscount = 0;
-    if (discountCode) {
+    const computedSubtotal = storedQuote?.pricing.subtotal ?? calculateCartSubtotal(cart || []);
+    let computedDiscount = storedQuote?.pricing.discount ?? 0;
+    if (!storedQuote && discountCode) {
       const discount = await Discount.findOne({ code: String(discountCode).toUpperCase() });
       if (discount && discount.isActive && (!discount.expiresAt || new Date(discount.expiresAt) >= new Date()) && (!discount.usageLimit || discount.timesUsed < discount.usageLimit)) {
         computedDiscount = discount.discountType === 'percentage'
@@ -168,9 +255,9 @@ export async function POST(request: NextRequest) {
           : round2(discount.value);
       }
     }
-    const computedServiceFee = round2(computedSubtotal * 0.03);
-    const computedTax = round2(computedSubtotal * 0.05);
-    const computedTotal = round2(Math.max(0, computedSubtotal + computedServiceFee + computedTax - computedDiscount));
+    const computedServiceFee = storedQuote?.pricing.serviceFee ?? round2(computedSubtotal * 0.03);
+    const computedTax = storedQuote?.pricing.tax ?? round2(computedSubtotal * 0.05);
+    const computedTotal = storedQuote?.pricing.total ?? round2(Math.max(0, computedSubtotal + computedServiceFee + computedTax - computedDiscount));
 
     const computedPricing = {
       subtotal: computedSubtotal,
@@ -182,64 +269,137 @@ export async function POST(request: NextRequest) {
       symbol: currencySymbol,
     };
 
+    const isBankTransfer = paymentMethod === 'bank';
+    const isCardPayment = !isBankTransfer;
+    if (paymentMethod === 'pay_later') {
+      return NextResponse.json(
+        { success: false, message: 'Pay Later is currently unavailable. Please select another payment method.' },
+        { status: 400 },
+      );
+    }
+
+    // Verify money before creating a guest account or sending any email. This
+    // prevents an unpaid/fabricated PaymentIntent from becoming an account or
+    // notification spam primitive.
+    let verifiedPaymentIntent: Stripe.PaymentIntent | null = null;
+    if (isCardPayment) {
+      if (!paymentDetails?.paymentIntentId) {
+        return NextResponse.json(
+          { success: false, code: 'PAYMENT_REQUIRED', message: 'A verified PaymentIntent is required for card checkout.' },
+          { status: 400 },
+        );
+      }
+      try {
+        verifiedPaymentIntent = await getStripe().paymentIntents.retrieve(String(paymentDetails.paymentIntentId));
+      } catch (stripeError) {
+        console.error('Stripe PaymentIntent retrieval failed.', stripeError);
+        return NextResponse.json(
+          { success: false, code: 'PAYMENT_INVALID', message: 'The payment could not be verified. Please restart checkout.' },
+          { status: 400 },
+        );
+      }
+      if (verifiedPaymentIntent.status !== 'succeeded') {
+        return NextResponse.json(
+          { success: false, code: 'PAYMENT_INCOMPLETE', message: 'Payment has not been completed.' },
+          { status: 402 },
+        );
+      }
+      const expectedAmount = Math.round(computedPricing.total * 100);
+      const metadataCheckoutAttemptId = normalizeCheckoutAttemptId(
+        verifiedPaymentIntent.metadata?.checkout_attempt_id,
+      );
+      if (!storedQuote && !metadataCheckoutAttemptId) {
+        return NextResponse.json(
+          { success: false, code: 'PAYMENT_QUOTE_MISMATCH', message: 'Payment does not match this checkout quote. Please restart checkout.' },
+          { status: 409 },
+        );
+      }
+      const expectedBinding = storedQuote?.quoteBinding || buildQuoteBinding({
+        cart,
+        customerEmail: normalizedCustomerEmail,
+        currency: 'USD',
+        amountMinor: expectedAmount,
+        discountCode,
+        checkoutAttemptId: metadataCheckoutAttemptId!,
+      });
+      if (
+        verifiedPaymentIntent.amount !== expectedAmount
+        || verifiedPaymentIntent.currency.toLowerCase() !== 'usd'
+        || verifiedPaymentIntent.metadata?.quote_binding !== expectedBinding
+        || (storedQuote?.checkoutAttemptId
+          && metadataCheckoutAttemptId !== storedQuote.checkoutAttemptId)
+      ) {
+        return NextResponse.json(
+          { success: false, code: 'PAYMENT_QUOTE_MISMATCH', message: 'Payment does not match this checkout quote. Please restart checkout.' },
+          { status: 409 },
+        );
+      }
+      paymentFulfillmentLeaseKey = `payment:${verifiedPaymentIntent.id}`;
+      paymentFulfillmentLeaseToken = await acquireCheckoutInventoryLease(paymentFulfillmentLeaseKey, 120_000);
+      try {
+        await ensureInventoryHoldsForPayment({
+          paymentIntentId: verifiedPaymentIntent.id,
+          reservationKey: expectedBinding,
+          cart,
+        });
+      } catch (inventoryError) {
+        if (!(inventoryError instanceof InventoryHoldError)) throw inventoryError;
+        await refundUnavailablePaidInventory({
+          stripe: getStripe(),
+          paymentIntentId: verifiedPaymentIntent.id,
+          reason: inventoryError.code,
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'INVENTORY_REFUNDED',
+            message: 'The departure became unavailable before fulfilment. Your payment has been refunded automatically.',
+          },
+          { status: 409 },
+        );
+      }
+    } else {
+      // Bank-transfer bookings become durable Pending capacity immediately.
+      // A short internal hold closes the race between validation and Booking.create.
+      bankReservationKey = randomBytes(32).toString('hex');
+      await createInventoryHolds({ reservationKey: bankReservationKey, cart });
+    }
+
     let user = null;
 
     // Handle user creation
     if (isGuest) {
-      {
+      if (reusableGuestProfile && existingEmailUser) {
+        user = existingEmailUser;
+      } else {
         try {
           user = await User.create({
             firstName: customer.firstName,
             lastName: customer.lastName,
             email: normalizedCustomerEmail,
-            password: 'guest-' + Math.random().toString(36).substring(2, 15),
+            phone: customer.phone ? String(customer.phone).slice(0, 50) : undefined,
+            country: customer.country ? String(customer.country).slice(0, 100) : undefined,
+            role: 'customer',
+            permissions: [],
+            isGuestProfile: true,
           });
-          
-          // Send Welcome Email for New Guest Users with real tours
-          try {
-            // Fetch recommended tours from database
-            const Tour = (await import('@/lib/models/Tour')).default;
-            const recommendedTours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
-              .select('title slug images discountPrice')
-              .limit(3)
-              .lean();
-
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-
-            const tourRecommendations = recommendedTours.map((tour) => ({
-              title: tour.title,
-              image: tour.images?.[0] || `${baseUrl}/pyramid.png`,
-              price: tour.discountPrice ? `From $${tour.discountPrice}` : 'From $99',
-              link: `${baseUrl}/tour/${tour.slug}`
-            }));
-
-            // Fallback if no tours found
-            if (tourRecommendations.length === 0) {
-              tourRecommendations.push({
-                title: "Browse All Tours",
-                image: `${baseUrl}/pyramid.png`,
-                price: "Explore",
-                link: `${baseUrl}/tours`
-              });
-            }
-
-            await EmailService.sendWelcomeEmail({
-              customerName: `${customer.firstName} ${customer.lastName}`,
-              customerEmail: customer.email,
-              dashboardLink: `${baseUrl}/user/dashboard`,
-              recommendedTours: tourRecommendations,
-              baseUrl
-            });
-          } catch (emailError) {
-            console.error('Failed to send welcome email:', emailError);
-            // Don't fail user creation if welcome email fails
-          }
         } catch (userError: unknown) {
           if ((userError as { code?: string | number }).code === 11000) {
-            return NextResponse.json(
-              { success: false, code: 'ACCOUNT_AUTH_REQUIRED', message: 'An account already exists for this email. Sign in before checking out.' },
-              { status: 409 },
-            );
+            const concurrentGuest = await User.findOne({
+              email: normalizedCustomerEmail,
+              role: 'customer',
+              isActive: true,
+              isGuestProfile: true,
+              firebaseUid: { $exists: false },
+              password: { $exists: false },
+            });
+            if (concurrentGuest) user = concurrentGuest;
+            else {
+              return NextResponse.json(
+                { success: false, code: 'ACCOUNT_AUTH_REQUIRED', message: 'An account already exists for this email. Sign in before checking out.' },
+                { status: 409 },
+              );
+            }
           } else {
             throw userError;
           }
@@ -271,15 +431,6 @@ export async function POST(request: NextRequest) {
 
     // Process payment based on payment method
     let paymentResult;
-    const isBankTransfer = paymentMethod === 'bank';
-    const isCardPayment = !isBankTransfer;
-
-    if (paymentMethod === 'pay_later') {
-      return NextResponse.json(
-        { success: false, message: 'Pay Later is currently unavailable. Please select another payment method.' },
-        { status: 400 }
-      );
-    }
 
     if (isBankTransfer) {
       // For bank transfer, no Stripe processing needed
@@ -290,63 +441,13 @@ export async function POST(request: NextRequest) {
         currency: 'USD',
       };
     } else {
-      // Process payment with Stripe for card payments
-      try {
-        const stripe = getStripe();
-        // If paymentIntentId is provided, verify the payment
-        if (paymentDetails?.paymentIntentId) {
-          const paymentIntent = await stripe.paymentIntents.retrieve(paymentDetails.paymentIntentId);
-
-          if (paymentIntent.status !== 'succeeded') {
-            throw new Error('Payment has not been completed. Please complete the payment and try again.');
-          }
-
-          // Verify the amount matches
-          const expectedAmount = Math.round(computedPricing.total * 100);
-          if (paymentIntent.amount !== expectedAmount) {
-            throw new Error('Payment amount mismatch. Please contact support.');
-          }
-
-          const expectedBinding = buildQuoteBinding({
-            cart,
-            customerEmail: normalizedCustomerEmail,
-            currency: 'USD',
-            amountMinor: expectedAmount,
-            discountCode,
-          });
-          if (
-            paymentIntent.currency.toLowerCase() !== 'usd' ||
-            paymentIntent.metadata?.quote_binding !== expectedBinding
-          ) {
-            throw new Error('Payment does not belong to this checkout quote. Please restart checkout.');
-          }
-
-          paymentResult = {
-            paymentId: paymentIntent.id,
-            status: paymentIntent.status,
-            amount: paymentIntent.amount / 100,
-            currency: paymentIntent.currency.toUpperCase(),
-          };
-        } else {
-          throw new Error('A verified PaymentIntent is required for card checkout.');
-        }
-      } catch (stripeError: unknown) {
-        console.error('Stripe payment error:', stripeError);
-        throw new Error((stripeError as Error).message || 'Payment processing failed. Please try again.');
-      }
-    }
-
-    // Increment discount usage counter if a discount was applied
-    if (discountCode) {
-      try {
-        await Discount.findOneAndUpdate(
-          { code: discountCode.toUpperCase() },
-          { $inc: { timesUsed: 1 } }
-        );
-      } catch (discountError) {
-        console.error('Error updating discount usage:', discountError);
-        // Don't fail the booking if discount update fails
-      }
+      if (!verifiedPaymentIntent) throw new Error('Verified PaymentIntent state was lost.');
+      paymentResult = {
+        paymentId: verifiedPaymentIntent.id,
+        status: verifiedPaymentIntent.status,
+        amount: verifiedPaymentIntent.amount / 100,
+        currency: verifiedPaymentIntent.currency.toUpperCase(),
+      };
     }
 
     if (isBankTransfer) {
@@ -384,9 +485,16 @@ export async function POST(request: NextRequest) {
 
     // Check if booking already exists for this payment (idempotency)
     if (isCardPayment && paymentResult.paymentId) {
-      const existingBooking = await Booking.findOne({ paymentId: paymentResult.paymentId, user: user._id, ...DEFAULT_TENANT_FILTER }).lean();
-      if (existingBooking) {
+      const existingBookings = await Booking.find({ paymentId: paymentResult.paymentId, user: user._id, ...DEFAULT_TENANT_FILTER })
+        .sort({ paymentItemIndex: 1, createdAt: 1 })
+        .lean();
+      if (existingBookings.length >= cart.length) {
+        const existingBooking = existingBookings[0];
         console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId}`);
+        if (normalizedDiscountCode) {
+          await recordCardDiscountUsageOnce(paymentResult.paymentId, normalizedDiscountCode);
+        }
+        await markPaymentInventoryConverted(paymentResult.paymentId);
         const receiptToken = await signToken({
           sub: `receipt:${paymentResult.paymentId}`,
           scope: 'receipt',
@@ -396,7 +504,7 @@ export async function POST(request: NextRequest) {
           success: true,
           message: 'Booking confirmed!',
           bookingId: existingBooking.bookingReference,
-          bookings: [existingBooking._id],
+          bookings: existingBookings.map((booking) => booking._id),
           paymentId: paymentResult.paymentId,
           receiptToken,
           customer: {
@@ -430,12 +538,7 @@ export async function POST(request: NextRequest) {
 
         // Compute per-item subtotal (no fees/tax) to match server discount basis.
         // NOTE: overall discount is computed from computedPricing.subtotal (no fees/tax), so we prorate using the same basis.
-        const basePrice = cartItem.selectedBookingOption?.price || cartItem.discountPrice || cartItem.price || 0;
-        const adultPrice = basePrice * (cartItem.quantity || 1);
-        const childPrice = Number(cartItem.guestPrices?.child ?? basePrice / 2) * (cartItem.childQuantity || 0);
-        const addOnsTotal = calculateAddOnsTotal(cartItem);
-
-        const itemSubtotal = round2(adultPrice + childPrice + addOnsTotal);
+        const itemSubtotal = checkoutItemSubtotal(cartItem);
         const itemServiceFee = round2(itemSubtotal * 0.03);
         const itemTax = round2(itemSubtotal * 0.05);
         const itemTotalBeforeDiscount = round2(itemSubtotal + itemServiceFee + itemTax);
@@ -472,8 +575,16 @@ export async function POST(request: NextRequest) {
           // Bank transfers: "Pending" until manual confirmation
           // Webhook will update card payments to "Confirmed" when payment succeeds
           status: 'Pending',
+          source: 'online',
+          paymentStatus: isCardPayment ? 'paid' : 'pending',
+          amountPaid: isCardPayment ? itemTotalPrice : 0,
+          paymentConfirmedAt: isCardPayment ? new Date() : undefined,
+          paymentConfirmedBy: isCardPayment ? `stripe:${paymentResult.paymentId}` : undefined,
           paymentId: paymentResult.paymentId,
+          paymentItemIndex: i,
           paymentMethod,
+          customerPhone: customer.phone ? String(customer.phone).slice(0, 50) : undefined,
+          customerCountry: customer.country ? String(customer.country).slice(0, 100) : undefined,
           specialRequests: customer.specialRequests,
           emergencyContact: customer.emergencyContact,
           hotelPickupDetails: customer.hotelPickupDetails,
@@ -488,6 +599,7 @@ export async function POST(request: NextRequest) {
             version: cartItem.priceVersion,
             executionId: cartItem.priceExecutionId || undefined,
             overrideId: cartItem.priceOverrideId || undefined,
+            source: cartItem.priceSource,
             capturedAt: new Date(),
           },
           selectedAddOnDetails: cartItem.selectedAddOnDetails || {},
@@ -503,8 +615,12 @@ export async function POST(request: NextRequest) {
               (createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.paymentId)
           ) {
             console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId} (created concurrently)`);
-            const existingBooking = await Booking.findOne({ bookingReference }) ||
-              await Booking.findOne({ paymentId: paymentResult.paymentId });
+            const existingBooking = await Booking.findOne({ bookingReference, ...DEFAULT_TENANT_FILTER }) ||
+              await Booking.findOne({
+                paymentId: paymentResult.paymentId,
+                paymentItemIndex: i,
+                ...DEFAULT_TENANT_FILTER,
+              });
             if (existingBooking) {
               booking = existingBooking;
             } else {
@@ -516,6 +632,20 @@ export async function POST(request: NextRequest) {
         }
 
         createdBookings.push(booking);
+        if (isCardPayment) {
+          await convertInventoryHold({
+            paymentIntentId: paymentResult.paymentId,
+            itemIndex: i,
+            bookingId: booking._id,
+          });
+        } else if (bankReservationKey) {
+          bankCreatedBookingIds.push(booking._id);
+          await convertInventoryReservationHold({
+            reservationKey: bankReservationKey,
+            itemIndex: i,
+            bookingId: booking._id,
+          });
+        }
         
         // Add a small delay between bookings
         if (i < cart.length - 1) {
@@ -525,6 +655,33 @@ export async function POST(request: NextRequest) {
       } catch (bookingError: unknown) {
         console.error('Error creating booking:', bookingError);
         throw new Error(`Failed to create booking for ${cartItem.title}: ${(bookingError as Error).message}`);
+      }
+    }
+
+    if (isCardPayment) await markPaymentInventoryConverted(paymentResult.paymentId);
+    // At this point each bank hold has become a durable Pending booking, so a
+    // later non-critical email failure must not cancel the reservation.
+    bankReservationKey = undefined;
+    bankCreatedBookingIds.length = 0;
+
+    // Count a card-backed discount at most once even when checkout and Stripe
+    // webhook delivery race or the browser retries the completion request.
+    if (normalizedDiscountCode) {
+      if (isCardPayment && paymentResult.paymentId) {
+        try {
+          await recordCardDiscountUsageOnce(paymentResult.paymentId, normalizedDiscountCode);
+        } catch (discountError) {
+          console.error('Error updating discount usage:', discountError);
+        }
+      } else {
+        try {
+          await Discount.findOneAndUpdate(
+            { code: normalizedDiscountCode },
+            { $inc: { timesUsed: 1 } },
+          );
+        } catch (discountError) {
+          console.error('Error updating discount usage:', discountError);
+        }
       }
     }
 
@@ -541,11 +698,7 @@ export async function POST(request: NextRequest) {
     const formatMoney = (value?: number) => formatCurrencyValue(value, currencySymbol);
     const orderedItemsSummary = cart.map((item) => {
       const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-      const adultPrice = basePrice * (item.quantity || 1);
-      const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-      let total = adultPrice + childPrice;
-
-      total += calculateAddOnsTotal(item);
+      const total = checkoutItemSubtotal(item);
 
       return {
         title: item.title,
@@ -622,7 +775,8 @@ export async function POST(request: NextRequest) {
       participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
     }
     if (infantCount > 0) {
-      participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} (Free)`);
+      const infantPrice = Number(mainCartItem?.guestPrices?.infant ?? 0);
+      participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} ($${infantPrice.toFixed(2)})`);
     }
 
     // SEND ADMIN ALERT IMMEDIATELY (before customer email)
@@ -646,25 +800,7 @@ export async function POST(request: NextRequest) {
 
         // Calculate item price
         const getItemTotal = (item: SecureCartItem) => {
-          const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-          const adultPrice = basePrice * (item.quantity || 1);
-          const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-          const tourTotal = adultPrice + childPrice;
-
-          let addOnsTotal = 0;
-          if (item.selectedAddOns && item.selectedAddOnDetails) {
-            Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
-              const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-              const numericQuantity = Number(quantity);
-              if (addOnDetail && numericQuantity > 0) {
-                const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
-                const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
-                addOnsTotal += addOnDetail.price * addOnQuantity;
-              }
-            });
-          }
-
-          return tourTotal + addOnsTotal;
+          return checkoutItemSubtotal(item);
         };
 
         return {
@@ -789,11 +925,24 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Checkout error:', error);
 
+    if (bankReservationKey) {
+      await releaseInventoryHolds({ reservationKey: bankReservationKey, reason: 'bank_booking_failed' }).catch(() => undefined);
+      if (bankCreatedBookingIds.length > 0) {
+        await Booking.updateMany(
+          { _id: { $in: bankCreatedBookingIds }, tenantId: 'default', status: 'Pending' },
+          { $set: { status: 'Cancelled', refundReason: 'Bank booking creation did not complete' } },
+        ).catch(() => undefined);
+      }
+    }
+
     if (error instanceof PriceChangedError) {
       return NextResponse.json({ success: false, code: (error as { code?: string | number }).code, message: (error as Error).message, quote: error.quote }, { status: 409 });
     }
     if (error instanceof UnavailableTourError) {
-      return NextResponse.json({ success: false, code: 'DEPARTURE_UNAVAILABLE', message: (error as Error).message }, { status: 409 });
+      return NextResponse.json({ success: false, code: error.code, message: error.message }, { status: 409 });
+    }
+    if (error instanceof InventoryHoldError) {
+      return NextResponse.json({ success: false, code: error.code, message: error.message }, { status: error.status });
     }
     
     if ((error as Error).message.includes('Payment processing failed')) {
@@ -818,6 +967,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    if (paymentFulfillmentLeaseKey && paymentFulfillmentLeaseToken) {
+      await releaseCheckoutInventoryLease(paymentFulfillmentLeaseKey, paymentFulfillmentLeaseToken);
+    }
   }
 }
 

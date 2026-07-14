@@ -190,7 +190,7 @@ const DayTripCard = ({
             </span>
           )}
           <span className="font-extrabold text-lg sm:text-xl md:text-2xl text-slate-900">
-            {formatPrice(trip.discountPrice || trip.originalPrice || 0)}
+            {formatPrice(trip.pricingSummary?.fromPrice ?? trip.discountPrice ?? trip.originalPrice ?? 0)}
           </span>
         </div>
       </div>
@@ -238,25 +238,17 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
         const url = '/api/admin/tours';
-        console.info('[DayTrips] fetching', url);
         const response = await fetch(url, { headers, signal: controller.signal });
 
         const bodyText = await response.text();
 
-        // Always log raw body for debugging
-        console.debug('[DayTrips] raw response body:', bodyText);
-
         if (!response.ok) {
-          let parsedBody: unknown = bodyText;
-          try { parsedBody = JSON.parse(bodyText); } catch { /* keep text */ }
           console.error('API call failed', {
             url,
             status: response.status,
             statusText: response.statusText,
-            body: parsedBody,
           });
-          const shortBody = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody).slice(0, 300);
-          setFetchError(`Server returned ${response.status} ${response.statusText}: ${shortBody}`);
+          setFetchError(`Unable to load tours (${response.status} ${response.statusText}).`);
           setTours([]);
           return;
         }
@@ -337,9 +329,7 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
       const response = await fetch('/api/admin/tours');
       const text = await response.text();
       if (!response.ok) {
-        let parsed = text;
-        try { parsed = JSON.parse(text); } catch {}
-        setFetchError(`Server returned ${response.status} ${response.statusText}: ${typeof parsed === 'string' ? parsed : JSON.stringify(parsed).slice(0, 300)}`);
+        setFetchError(`Unable to load tours (${response.status} ${response.statusText}).`);
         setTours([]);
       } else {
         const data = text ? JSON.parse(text) : null;

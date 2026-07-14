@@ -12,7 +12,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale, useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import type { SearchResponse } from 'algoliasearch';
@@ -1399,7 +1399,7 @@ const HeroSearchBar = ({
           if (introText && introText.length >= 20) {
             return (
               <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
                   {introText}
                 </ReactMarkdown>
               </div>
@@ -1415,7 +1415,7 @@ const HeroSearchBar = ({
 
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
               {text}
             </ReactMarkdown>
           </div>

@@ -77,7 +77,7 @@ async function getHomePageData(locale: string) {
       // Featured tours (exclude German tenant tours)
       Tour.find({ isPublished: true, isFeatured: true, ...DEFAULT_TENANT_FILTER })
         .populate('destination', 'name')
-        .select('title slug image discountPrice originalPrice duration rating reviewCount bookings translations')
+        .select('title slug image discountPrice originalPrice pricingSummary duration rating reviewCount bookings translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(8)
         .lean(),
@@ -117,7 +117,7 @@ async function getHomePageData(locale: string) {
 
       // Day trips (all published tours, limited to 12, exclude German tenant tours)
       Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
-        .select('title slug image discountPrice originalPrice duration rating reviewCount bookings tags translations')
+        .select('title slug image discountPrice originalPrice pricingSummary duration rating reviewCount bookings tags translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
         .lean(),
@@ -421,7 +421,7 @@ export default async function HomePageServer() {
       <ReviewsStructuredData />
       <FAQSchema
         items={[
-          { question: 'Can I reschedule or cancel my tickets?', answer: 'Yes, in most cases you can reschedule or cancel your tickets up to 24 hours in advance. Please check the specific conditions for your chosen tour or attraction on its product page.' },
+          { question: 'Can I reschedule or cancel my tickets?', answer: 'Self-service cancellation closes 24 hours before departure. Refunds are 100% at 7+ days, 50% at 3–7 days, and 0% under 3 days.' },
           { question: 'How long are open tickets valid?', answer: 'Open tickets, which do not require a specific date and time slot, are typically valid for one year from the date of purchase.' },
           { question: 'What languages do the tour guides speak?', answer: 'Our live guided tours are most commonly offered in English and the local language. Many tours also offer audio guides in multiple languages, including Spanish, French, German, Italian, and more.' },
           { question: 'Is my booking confirmed instantly?', answer: 'Yes, most of our bookings are confirmed instantly after a successful payment. You will receive a booking confirmation email with your tickets and all necessary information right away.' },
@@ -435,7 +435,7 @@ export default async function HomePageServer() {
           title: tour.title,
           slug: tour.slug,
           image: tour.image,
-          discountPrice: tour.discountPrice,
+          discountPrice: tour.pricingSummary?.fromPrice ?? tour.discountPrice,
           originalPrice: tour.originalPrice,
           rating: tour.rating,
           reviewCount: tour.reviewCount,

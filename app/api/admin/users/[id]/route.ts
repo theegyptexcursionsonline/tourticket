@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import Booking from '@/lib/models/Booking';
-import Review from '@/lib/models/Review';
 import mongoose from 'mongoose';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 
@@ -28,6 +27,14 @@ export async function DELETE(
       }, { status: 400 });
     }
 
+    if (userId === auth.userId) {
+      return NextResponse.json({
+        success: false,
+        code: 'SELF_DEACTIVATION_BLOCKED',
+        error: 'You cannot deactivate your own active admin session.'
+      }, { status: 409 });
+    }
+
     // Check if user exists
     const user = await User.findById(userId);
     if (!user) {
@@ -36,27 +43,53 @@ export async function DELETE(
         error: 'User not found'
       }, { status: 404 });
     }
+    if (!user.isActive) {
+      return NextResponse.json({
+        success: true,
+        replayed: true,
+        message: 'User is already inactive; booking and review records remain preserved.'
+      });
+    }
+    if (user.role === 'super_admin' && await User.countDocuments({ role: 'super_admin', isActive: true }) <= 1) {
+      return NextResponse.json({
+        success: false,
+        code: 'LAST_SUPER_ADMIN',
+        error: 'The last active super administrator cannot be deactivated.'
+      }, { status: 409 });
+    }
 
-    // Delete all related data
-    // 1. Delete user's bookings
-    await Booking.deleteMany({ user: userId });
-
-    // 2. Delete user's reviews
-    await Review.deleteMany({ user: userId });
-
-    // 3. Finally delete the user
-    await User.findByIdAndDelete(userId);
+    const bookingCount = await Booking.countDocuments({ user: userId });
+    const deactivatedAt = new Date();
+    await User.updateOne(
+      { _id: userId, isActive: true },
+      {
+        $set: {
+          isActive: false,
+          deactivatedAt,
+          deactivatedBy: auth.userId,
+          cart: [],
+          wishlist: [],
+        },
+        $unset: {
+          password: 1,
+          invitationToken: 1,
+          invitationExpires: 1,
+          adminLockUntil: 1,
+        },
+      },
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'User and all associated data deleted successfully'
+      message: 'User deactivated. Financial bookings and review history were preserved.',
+      data: { id: userId, isActive: false, deactivatedAt, preservedBookingCount: bookingCount },
     });
 
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error deactivating user:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to delete user'
+      error: 'Failed to deactivate user'
     }, { status: 500 });
   }
 }

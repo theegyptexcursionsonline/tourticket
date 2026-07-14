@@ -10,27 +10,34 @@ import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
+import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
+import { roundMoney } from '@/lib/checkout/cartTotals';
+import Stripe from 'stripe';
+import { randomBytes } from 'node:crypto';
+import {
+  createInventoryHolds,
+  InventoryHoldError,
+  releaseInventoryHolds,
+} from '@/lib/checkout/inventoryHolds';
+import { finalizeManualBookingInventory } from '@/lib/checkout/manualBookingInventory';
+import {
+  normalizeBoundedText,
+  normalizeEmail,
+  PublicInputError,
+  readBoundedJson,
+} from '@/lib/security/publicInput';
+import { generateUniqueBookingReference } from '@/lib/utils/bookingReference';
 
-// Helper function to generate unique booking reference
-async function generateUniqueBookingReference(): Promise<string> {
-  const maxAttempts = 10;
-  
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const prefix = 'EEO';
-    const timestamp = Date.now().toString().slice(-8);
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const reference = `${prefix}-${timestamp}-${random}`;
-    
-    const existing = await Booking.findOne({ bookingReference: reference }).lean();
-    
-    if (!existing) {
-      return reference;
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 50));
+let stripeInstance: Stripe | null = null;
+
+function getStripe() {
+  if (!stripeInstance) {
+    if (!process.env.STRIPE_SECRET_KEY) throw new Error('Stripe is not configured.');
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-08-27.basil' });
   }
-  
-  return `EEO-${Date.now()}-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
+  return stripeInstance;
 }
 
 // Format date for display
@@ -281,8 +288,11 @@ export async function POST(request: NextRequest) {
 
   await dbConnect();
 
+  let inventoryReservationKey: string | undefined;
+  let manualCreatedBookingId: mongoose.Types.ObjectId | undefined;
+  let manualCreatedBookingReference: string | undefined;
   try {
-    const body = await request.json();
+    const body = await readBoundedJson<Record<string, unknown>>(request, 32_768);
     const {
       tourId,
       customer,
@@ -292,18 +302,90 @@ export async function POST(request: NextRequest) {
       specialRequests,
       hotelPickupDetails,
       hotelPickupLocation,
+      pickupLocation,
+      pickupAddress,
+      internalNotes,
+      sendEmail,
     } = body;
 
+    if (sendEmail !== undefined && typeof sendEmail !== 'boolean') {
+      return NextResponse.json({ error: 'sendEmail must be true or false.' }, { status: 400 });
+    }
+    const sendCustomerEmail = sendEmail !== false;
+
+    const rawCustomer = customer as Record<string, unknown> | undefined;
+    const rawBooking = booking as Record<string, unknown> | undefined;
+    const rawPricing = pricing as Record<string, unknown> | undefined;
+    const rawPayment = payment as Record<string, unknown> | undefined;
+    const normalizedCustomer = {
+      firstName: normalizeBoundedText(rawCustomer?.firstName, { minimum: 1, maximum: 80 }),
+      lastName: normalizeBoundedText(rawCustomer?.lastName, { minimum: 1, maximum: 80 }),
+      email: normalizeEmail(rawCustomer?.email),
+      phone: normalizeBoundedText(rawCustomer?.phone, { minimum: 1, maximum: 50 }),
+      country: normalizeBoundedText(rawCustomer?.country, { minimum: 1, maximum: 100 }),
+    };
+    const normalizedSpecialRequests = specialRequests === undefined
+      ? undefined
+      : normalizeBoundedText(specialRequests, { minimum: 1, maximum: 1_000, collapseWhitespace: false });
+    const normalizedHotelPickupDetails = hotelPickupDetails === undefined
+      ? undefined
+      : normalizeBoundedText(hotelPickupDetails, { minimum: 1, maximum: 300, collapseWhitespace: false });
+    const normalizedPickupLocation = pickupLocation === undefined
+      ? undefined
+      : normalizeBoundedText(pickupLocation, { minimum: 1, maximum: 200 });
+    const normalizedPickupAddress = pickupAddress === undefined
+      ? undefined
+      : normalizeBoundedText(pickupAddress, { minimum: 1, maximum: 300, collapseWhitespace: false });
+    const normalizedInternalNotes = internalNotes === undefined
+      ? undefined
+      : normalizeBoundedText(internalNotes, { minimum: 1, maximum: 2_000, collapseWhitespace: false });
+    if ((specialRequests !== undefined && !normalizedSpecialRequests)
+      || (hotelPickupDetails !== undefined && !normalizedHotelPickupDetails)
+      || (pickupLocation !== undefined && !normalizedPickupLocation)
+      || (pickupAddress !== undefined && !normalizedPickupAddress)
+      || (internalNotes !== undefined && !normalizedInternalNotes)) {
+      return NextResponse.json({ error: 'One or more booking detail fields are invalid or too long.' }, { status: 400 });
+    }
+    let normalizedHotelPickupLocation: {
+      address: string;
+      lat: number;
+      lng: number;
+      placeId?: string;
+      name?: string;
+    } | undefined;
+    if (hotelPickupLocation !== undefined && hotelPickupLocation !== null) {
+      if (typeof hotelPickupLocation !== 'object' || Array.isArray(hotelPickupLocation)) {
+        return NextResponse.json({ error: 'Hotel pickup location is invalid.' }, { status: 400 });
+      }
+      const rawLocation = hotelPickupLocation as Record<string, unknown>;
+      const lat = Number(rawLocation.lat);
+      const lng = Number(rawLocation.lng);
+      const address = normalizeBoundedText(rawLocation.address, { minimum: 1, maximum: 300, collapseWhitespace: false });
+      const name = rawLocation.name === undefined
+        ? undefined
+        : normalizeBoundedText(rawLocation.name, { minimum: 1, maximum: 200 });
+      const placeId = rawLocation.placeId === undefined
+        ? undefined
+        : normalizeBoundedText(rawLocation.placeId, { minimum: 1, maximum: 200 });
+      if (!address || !Number.isFinite(lat) || lat < -90 || lat > 90
+        || !Number.isFinite(lng) || lng < -180 || lng > 180
+        || (rawLocation.name !== undefined && !name)
+        || (rawLocation.placeId !== undefined && !placeId)) {
+        return NextResponse.json({ error: 'Hotel pickup location is invalid.' }, { status: 400 });
+      }
+      normalizedHotelPickupLocation = { address, lat, lng, name: name || undefined, placeId: placeId || undefined };
+    }
+
     // Validate required fields
-    if (!tourId) {
+    if (typeof tourId !== 'string' || !mongoose.Types.ObjectId.isValid(tourId)) {
       return NextResponse.json({ error: 'Tour ID is required' }, { status: 400 });
     }
 
-    if (!customer?.email || !customer?.firstName || !customer?.lastName) {
+    if (!normalizedCustomer.email || !normalizedCustomer.firstName || !normalizedCustomer.lastName) {
       return NextResponse.json({ error: 'Customer details are required' }, { status: 400 });
     }
 
-    if (!booking?.date) {
+    if (!rawBooking?.date) {
       return NextResponse.json({ error: 'Booking date is required' }, { status: 400 });
     }
 
@@ -313,51 +395,173 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
     }
 
-    // Find or create user
-    let user = await User.findOne({ email: customer.email });
-    
-    if (!user) {
-      try {
-        user = await User.create({
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-          password: 'manual-booking-' + Math.random().toString(36).substring(2, 15),
-        });
-        console.log('[Manual Booking] Created new user');
-      } catch (userError: unknown) {
-        const err = userError as { code?: number };
-        if (err?.code === 11000) {
-          user = await User.findOne({ email: customer.email });
-        } else {
-          throw userError;
-        }
-      }
+    const bookingDateString = ensureDateOnlyString(rawBooking.date as string | Date | undefined);
+    const bookingDate = parseLocalDate(rawBooking.date as string | Date | undefined);
+    const bookingTime = String(rawBooking.time || '');
+    if (!bookingDate || !bookingDateString || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(bookingTime)) {
+      return NextResponse.json({ error: 'A valid departure date and time are required.' }, { status: 400 });
     }
 
-    if (!user) {
-      return NextResponse.json({ error: 'Failed to create or find user' }, { status: 500 });
+    const adultGuests = Number(rawBooking.adultGuests ?? 1);
+    const childGuests = Number(rawBooking.childGuests ?? 0);
+    const infantGuests = Number(rawBooking.infantGuests ?? 0);
+    const counts = [adultGuests, childGuests, infantGuests];
+    const totalGuests = counts.reduce((sum, count) => sum + count, 0);
+    if (counts.some((count) => !Number.isInteger(count) || count < 0) || totalGuests < 1 || totalGuests > 50) {
+      return NextResponse.json({ error: 'Guest counts must be whole numbers with 1 to 50 guests in total.' }, { status: 400 });
     }
 
-    // Calculate totals
-    const bookingDate = parseLocalDate(booking.date) || new Date();
-    const bookingDateString = ensureDateOnlyString(booking.date);
-    const bookingTime = booking.time || '10:00';
-    const totalGuests = (booking.adultGuests || 1) + (booking.childGuests || 0) + (booking.infantGuests || 0);
+    const rawBookingOption = rawBooking.bookingOption as Record<string, unknown> | undefined;
+    const requestedOptionKey = String(rawBookingOption?.pricingKey || rawBookingOption?.id || STANDARD_OPTION_KEY);
+    const optionIndex = requestedOptionKey === STANDARD_OPTION_KEY
+      ? -1
+      : (tour.bookingOptions || []).findIndex((option) => option.pricingKey === requestedOptionKey);
+    if (requestedOptionKey !== STANDARD_OPTION_KEY && optionIndex < 0) {
+      return NextResponse.json({ error: 'The selected booking option is no longer available.' }, { status: 409 });
+    }
+
+    let quote;
+    let sellability;
+    try {
+      quote = await resolveEffectivePrice({
+        tourId: String(tour._id), optionKey: requestedOptionKey, date: bookingDateString, time: bookingTime,
+      });
+      sellability = await assertRevenuePriceTargetSellable({
+        tourId: String(tour._id), optionKey: requestedOptionKey, date: bookingDateString, time: bookingTime,
+      });
+    } catch (error: unknown) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'The selected departure is unavailable.' },
+        { status: 409 },
+      );
+    }
+    const requestedQuoteVersion = Number(rawPricing?.quoteVersion);
+    if (!Number.isInteger(requestedQuoteVersion) || requestedQuoteVersion !== quote.version) {
+      return NextResponse.json({
+        error: 'The selected price changed. Review the refreshed quote before creating the booking.',
+        code: 'PRICE_CHANGED',
+        quote,
+      }, { status: 409 });
+    }
+    if (totalGuests > sellability.available) {
+      return NextResponse.json({ error: 'The selected departure no longer has enough capacity.' }, { status: 409 });
+    }
+
+    const customPrice = rawPricing?.customPrice === true;
+    if (customPrice) {
+      const pricingAuth = await requireAdminAuth(request, { permissions: ['manageBookings', 'managePricing'] });
+      if (pricingAuth instanceof NextResponse) return pricingAuth;
+    }
+
+    const quotedSubtotal = roundMoney(
+      quote.prices.adult * adultGuests
+      + quote.prices.child * childGuests
+      + quote.prices.infant * infantGuests,
+    );
+    const quotedServiceFee = roundMoney(quotedSubtotal * 0.03);
+    const quotedTax = roundMoney(quotedSubtotal * 0.05);
+    const quotedTotal = roundMoney(quotedSubtotal + quotedServiceFee + quotedTax);
+    const requestedCustomTotal = Number(rawPricing?.totalPrice);
+    const maximumManualTotal = Number(process.env.MAX_MANUAL_BOOKING_TOTAL_USD || 100_000);
+    if (customPrice && (!Number.isFinite(requestedCustomTotal) || requestedCustomTotal < 0 || requestedCustomTotal > maximumManualTotal)) {
+      return NextResponse.json({ error: `Custom total must be between $0 and $${maximumManualTotal.toLocaleString()}.` }, { status: 422 });
+    }
+    const priceBreakdown = customPrice
+      ? { subtotal: roundMoney(requestedCustomTotal), serviceFee: 0, tax: 0, total: roundMoney(requestedCustomTotal) }
+      : { subtotal: quotedSubtotal, serviceFee: quotedServiceFee, tax: quotedTax, total: quotedTotal };
+
+    const selectedCatalogueOption = optionIndex >= 0 ? tour.bookingOptions?.[optionIndex] : undefined;
+    const selectedBookingOption = {
+      id: optionIndex >= 0 ? `option-${optionIndex}` : 'standard-default',
+      pricingKey: requestedOptionKey,
+      title: selectedCatalogueOption?.label || `${tour.title} - Standard Experience`,
+      price: quote.prices.adult,
+      originalPrice: selectedCatalogueOption?.originalPrice || tour.originalPrice || quote.prices.adult,
+      duration: selectedCatalogueOption?.duration || tour.duration,
+      badge: selectedCatalogueOption?.badge,
+    };
 
     // Determine status based on payment
-    const bookingStatus = payment?.status === 'paid' ? 'Confirmed' : 'Pending';
+    if (!['paid', 'pending'].includes(String(rawPayment?.status || ''))) {
+      return NextResponse.json({ error: 'Payment status must be paid or pending.' }, { status: 400 });
+    }
+    const bookingStatus = rawPayment?.status === 'paid' ? 'Confirmed' : 'Pending';
 
     // Determine payment method
     let paymentMethod = 'card';
-    if (payment?.method === 'cash') paymentMethod = 'cash';
-    else if (payment?.method === 'bank') paymentMethod = 'bank';
-    else if (payment?.method === 'pay_later') {
+    if (rawPayment?.method === 'cash') paymentMethod = 'cash';
+    else if (rawPayment?.method === 'bank') paymentMethod = 'bank';
+    else if (rawPayment?.method === 'pay_later') {
       return NextResponse.json(
         { error: 'Pay Later is currently unavailable. Please select another payment method.' },
         { status: 400 }
       );
+    } else if (rawPayment?.method !== 'card') {
+      return NextResponse.json({ error: 'Payment method must be cash, bank, or card.' }, { status: 400 });
     }
+
+    const paymentId = String(rawPayment?.externalPaymentId || '').trim();
+    if (paymentMethod === 'card' && bookingStatus !== 'Confirmed') {
+      return NextResponse.json(
+        { error: 'Pending card bookings must be created through Stripe checkout so the webhook can confirm them.' },
+        { status: 400 },
+      );
+    }
+    if (paymentMethod === 'card' && bookingStatus === 'Confirmed') {
+      if (!/^pi_[A-Za-z0-9_]+$/.test(paymentId)) {
+        return NextResponse.json({ error: 'A valid successful Stripe PaymentIntent is required for a paid card booking.' }, { status: 400 });
+      }
+      const intent = await getStripe().paymentIntents.retrieve(paymentId);
+      if (intent.status !== 'succeeded'
+        || intent.currency.toUpperCase() !== quote.currency.toUpperCase()
+        || intent.amount !== Math.round(priceBreakdown.total * 100)) {
+        return NextResponse.json({ error: 'Stripe payment status, currency, or amount does not match this booking.' }, { status: 409 });
+      }
+      if (await Booking.exists({ paymentId, ...DEFAULT_TENANT_FILTER })) {
+        return NextResponse.json({ error: 'This Stripe payment is already linked to a booking.' }, { status: 409 });
+      }
+    }
+
+    // Serialize every manual booking against storefront checkouts for the same
+    // departure. The hold becomes durable capacity as soon as the Booking row
+    // is created, and is released automatically on any pre-create failure.
+    inventoryReservationKey = randomBytes(32).toString('hex');
+    await createInventoryHolds({
+      reservationKey: inventoryReservationKey,
+      cart: [{
+        _id: String(tour._id),
+        selectedDate: bookingDateString,
+        selectedTime: bookingTime,
+        quantity: adultGuests,
+        childQuantity: childGuests,
+        infantQuantity: infantGuests,
+        selectedBookingOption: { pricingKey: requestedOptionKey },
+      }],
+    });
+
+    // Validate the full booking before creating a customer record so rejected
+    // requests do not leave orphan guest users behind.
+    const normalizedEmail = normalizedCustomer.email;
+    let user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      try {
+        user = await User.create({
+          firstName: normalizedCustomer.firstName,
+          lastName: normalizedCustomer.lastName,
+          email: normalizedEmail,
+          phone: normalizedCustomer.phone,
+          country: normalizedCustomer.country,
+          role: 'customer',
+          permissions: [],
+          isGuestProfile: true,
+        });
+      } catch (userError: unknown) {
+        const err = userError as { code?: number };
+        if (err?.code === 11000) user = await User.findOne({ email: normalizedEmail });
+        else throw userError;
+      }
+    }
+    if (!user) return NextResponse.json({ error: 'Failed to create or find user' }, { status: 500 });
 
     // Generate booking reference
     const bookingReference = await generateUniqueBookingReference();
@@ -372,29 +576,58 @@ export async function POST(request: NextRequest) {
       dateString: bookingDateString,
       time: bookingTime,
       guests: totalGuests,
-      totalPrice: pricing?.totalPrice || 0,
-      currency: pricing?.currency || 'USD', // Include currency for manual bookings
+      totalPrice: priceBreakdown.total,
+      currency: quote.currency,
       status: bookingStatus,
-      paymentId: payment?.externalPaymentId || `MANUAL-${Date.now()}`,
+      source: 'manual',
+      paymentStatus: bookingStatus === 'Confirmed' ? 'paid' : 'pending',
+      amountPaid: bookingStatus === 'Confirmed' ? priceBreakdown.total : 0,
+      paymentConfirmedAt: bookingStatus === 'Confirmed' ? new Date() : undefined,
+      paymentConfirmedBy: bookingStatus === 'Confirmed' ? `admin:${auth.id}` : undefined,
+      inventoryReservationState: 'pending_conversion',
+      paymentId: paymentId || `MANUAL-${randomBytes(12).toString('hex')}`,
+      paymentItemIndex: 0,
       paymentMethod,
-      specialRequests: specialRequests || undefined,
-      hotelPickupDetails: hotelPickupDetails || undefined,
-      hotelPickupLocation: hotelPickupLocation || undefined,
-      adultGuests: booking.adultGuests || 1,
-      childGuests: booking.childGuests || 0,
-      infantGuests: booking.infantGuests || 0,
-      selectedBookingOption: booking.bookingOption || undefined,
+      customerPhone: normalizedCustomer.phone,
+      customerCountry: normalizedCustomer.country,
+      specialRequests: normalizedSpecialRequests,
+      hotelPickupDetails: normalizedHotelPickupDetails,
+      hotelPickupLocation: normalizedHotelPickupLocation,
+      pickupLocation: normalizedPickupLocation,
+      pickupAddress: normalizedPickupAddress,
+      internalNotes: normalizedInternalNotes,
+      adultGuests,
+      childGuests,
+      infantGuests,
+      selectedBookingOption,
+      priceSnapshot: {
+        guestPrices: quote.prices,
+        version: quote.version,
+        executionId: quote.executionId || undefined,
+        overrideId: quote.overrideId || undefined,
+        capturedAt: new Date(),
+        source: customPrice ? 'manual' : quote.source,
+      },
       // Add edit history entry for manual creation
       editHistory: [{
         editedAt: new Date(),
-        editedBy: 'admin',
-        editedByName: 'Admin (Manual)',
+        editedBy: auth.id,
+        editedByName: auth.email || auth.name || 'Admin (Manual)',
         field: 'created',
         previousValue: 'N/A',
-        newValue: 'Manual booking created',
+        newValue: customPrice ? 'Manual booking created with authorized custom total' : 'Manual booking created from authoritative quote',
         changeType: 'detail_update',
       }],
     });
+    manualCreatedBookingId = new mongoose.Types.ObjectId(String(newBooking._id));
+    manualCreatedBookingReference = bookingReference;
+    const inventoryFinalizationState = await finalizeManualBookingInventory({
+      reservationKey: inventoryReservationKey,
+      bookingId: manualCreatedBookingId,
+    });
+    inventoryReservationKey = undefined;
+    manualCreatedBookingId = undefined;
+    manualCreatedBookingReference = undefined;
 
     console.log(`[Manual Booking] Created booking ${bookingReference}`);
 
@@ -402,8 +635,8 @@ export async function POST(request: NextRequest) {
     const formatMoney = (value: number) => `$${value.toFixed(2)}`;
 
     // Build hotel pickup map URLs
-    const hotelPickupMapImage = hotelPickupLocation ? buildStaticMapImageUrl(hotelPickupLocation) : undefined;
-    const hotelPickupMapLink = hotelPickupLocation ? buildGoogleMapsLink(hotelPickupLocation) : undefined;
+    const hotelPickupMapImage = normalizedHotelPickupLocation ? buildStaticMapImageUrl(normalizedHotelPickupLocation) : undefined;
+    const hotelPickupMapLink = normalizedHotelPickupLocation ? buildGoogleMapsLink(normalizedHotelPickupLocation) : undefined;
 
     // Calculate time until tour
     let timeUntilTour: { days: number; hours: number; minutes: number } | undefined;
@@ -441,44 +674,44 @@ export async function POST(request: NextRequest) {
     const orderedItems = [{
       title: tour.title,
       image: tour.image,
-      adults: booking.adultGuests || 1,
-      children: booking.childGuests || 0,
-      infants: booking.infantGuests || 0,
-      bookingOption: booking.bookingOption?.title,
-      totalPrice: formatMoney(pricing?.totalPrice || 0),
-      quantity: booking.adultGuests || 1,
-      childQuantity: booking.childGuests || 0,
-      infantQuantity: booking.infantGuests || 0,
-      price: booking.bookingOption?.price || 0,
-      selectedBookingOption: booking.bookingOption || undefined,
+      adults: adultGuests,
+      children: childGuests,
+      infants: infantGuests,
+      bookingOption: selectedBookingOption.title,
+      totalPrice: formatMoney(priceBreakdown.total),
+      quantity: adultGuests,
+      childQuantity: childGuests,
+      infantQuantity: infantGuests,
+      price: quote.prices.adult,
+      selectedBookingOption,
     }];
 
     // Build pricing details
-    const totalPrice = pricing?.totalPrice || 0;
+    const totalPrice = priceBreakdown.total;
     const pricingDetails = {
-      subtotal: formatMoney(totalPrice * 0.92), // Approximate subtotal
-      serviceFee: formatMoney(totalPrice * 0.03),
-      tax: formatMoney(totalPrice * 0.05),
+      subtotal: formatMoney(priceBreakdown.subtotal),
+      serviceFee: formatMoney(priceBreakdown.serviceFee),
+      tax: formatMoney(priceBreakdown.tax),
       total: formatMoney(totalPrice),
       currencySymbol: '$',
     };
 
     // Send confirmation email to customer
-    try {
+    if (sendCustomerEmail) try {
       await EmailService.sendBookingConfirmation({
-        customerName: `${customer.firstName} ${customer.lastName}`,
-        customerEmail: customer.email,
-        customerPhone: customer.phone,
+        customerName: `${normalizedCustomer.firstName} ${normalizedCustomer.lastName}`,
+        customerEmail: normalizedCustomer.email,
+        customerPhone: normalizedCustomer.phone || undefined,
         tourTitle: tour.title,
-        bookingDate: formatBookingDate(booking.date),
+        bookingDate: formatBookingDate(bookingDate),
         bookingTime: bookingTime,
         participants: `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`,
         totalPrice: formatMoney(totalPrice),
         bookingId: bookingReference,
-        bookingOption: booking.bookingOption?.title,
-        specialRequests: specialRequests,
-        hotelPickupDetails: hotelPickupDetails,
-        hotelPickupLocation: hotelPickupLocation || undefined,
+        bookingOption: selectedBookingOption.title,
+        specialRequests: normalizedSpecialRequests || undefined,
+        hotelPickupDetails: normalizedHotelPickupDetails || undefined,
+        hotelPickupLocation: normalizedHotelPickupLocation,
         hotelPickupMapImage: hotelPickupMapImage || undefined,
         hotelPickupMapLink: hotelPickupMapLink || undefined,
         meetingPoint: tour.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
@@ -499,29 +732,29 @@ export async function POST(request: NextRequest) {
     // Build tours array for admin alert
     const tourDetails = [{
       title: tour.title,
-      date: formatBookingDate(booking.date),
+      date: formatBookingDate(bookingDate),
       time: bookingTime,
-      adults: booking.adultGuests || 1,
-      children: booking.childGuests || 0,
-      infants: booking.infantGuests || 0,
-      bookingOption: booking.bookingOption?.title,
-      price: formatMoney(pricing?.totalPrice || 0),
+      adults: adultGuests,
+      children: childGuests,
+      infants: infantGuests,
+      bookingOption: selectedBookingOption.title,
+      price: formatMoney(totalPrice),
     }];
 
     // Send admin alert
     try {
       await EmailService.sendAdminBookingAlert({
-        customerName: `${customer.firstName} ${customer.lastName}`,
-        customerEmail: customer.email,
-        customerPhone: customer.phone,
+        customerName: `${normalizedCustomer.firstName} ${normalizedCustomer.lastName}`,
+        customerEmail: normalizedCustomer.email,
+        customerPhone: normalizedCustomer.phone || undefined,
         tourTitle: tour.title,
         bookingId: bookingReference,
-        bookingDate: formatBookingDate(booking.date),
+        bookingDate: formatBookingDate(bookingDate),
         totalPrice: formatMoney(totalPrice),
         paymentMethod: `${paymentMethod} (Manual Entry)`,
-        specialRequests: specialRequests,
-        hotelPickupDetails: hotelPickupDetails,
-        hotelPickupLocation: hotelPickupLocation || undefined,
+        specialRequests: normalizedSpecialRequests || undefined,
+        hotelPickupDetails: normalizedHotelPickupDetails || undefined,
+        hotelPickupLocation: normalizedHotelPickupLocation,
         hotelPickupMapImage: hotelPickupMapImage || undefined,
         hotelPickupMapLink: hotelPickupMapLink || undefined,
         tours: tourDetails,
@@ -539,10 +772,45 @@ export async function POST(request: NextRequest) {
       message: 'Booking created successfully',
       bookingId: newBooking._id,
       bookingReference: bookingReference,
+      inventoryReservationState: inventoryFinalizationState,
     });
 
   } catch (error: unknown) {
     console.error('[Manual Booking] Error:', error);
+    if (inventoryReservationKey) {
+      await releaseInventoryHolds({ reservationKey: inventoryReservationKey, reason: 'manual_booking_failed' }).catch(() => undefined);
+      if (manualCreatedBookingId) {
+        await Booking.updateOne(
+          { _id: manualCreatedBookingId, tenantId: 'default' },
+          {
+            $set: {
+              inventoryReservationState: 'booking_authoritative',
+              inventoryReservationFailureCode: 'MANUAL_BOOKING_POST_CREATE_RECOVERY',
+              inventoryReservationFinalizedAt: new Date(),
+            },
+          },
+        ).catch(() => undefined);
+        return NextResponse.json({
+          success: true,
+          message: 'Booking created; inventory is protected by the durable booking record.',
+          bookingId: String(manualCreatedBookingId),
+          bookingReference: manualCreatedBookingReference,
+          inventoryReservationState: 'booking_authoritative',
+        }, { status: 201 });
+      }
+    }
+    if (error instanceof InventoryHoldError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    if (error instanceof PublicInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    if ((error as { code?: number })?.code === 11000) {
+      return NextResponse.json(
+        { error: 'This payment or booking request has already been recorded.', code: 'DUPLICATE_BOOKING' },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create booking' },
       { status: 500 }

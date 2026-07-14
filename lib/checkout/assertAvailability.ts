@@ -1,8 +1,4 @@
-import Booking from '@/lib/models/Booking';
-import StopSale from '@/lib/models/StopSale';
-import Tour from '@/lib/models/Tour';
-import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { ensureDateOnlyString, parseLocalDate } from '@/utils/date';
+import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
 
 interface AvailabilityCartItem {
   _id?: unknown;
@@ -12,56 +8,57 @@ interface AvailabilityCartItem {
   quantity?: number;
   childQuantity?: number;
   infantQuantity?: number;
-  selectedBookingOption?: { id?: string };
-}
-
-interface AvailabilityTour {
-  _id: unknown;
-  availability?: { slots?: Array<{ time: string; capacity: number }> };
+  selectedBookingOption?: { pricingKey?: string };
 }
 
 export class UnavailableTourError extends Error {
   status = 409;
-  constructor(message = 'One or more selected departures are no longer available') {
+  code: string;
+  constructor(message = 'One or more selected departures are no longer available', code = 'DEPARTURE_UNAVAILABLE') {
     super(message);
     this.name = 'UnavailableTourError';
+    this.code = code;
   }
 }
 
+/**
+ * Use the same target/schedule/stop-sale/capacity resolver as controlled
+ * pricing writes. Checkout must never accept a missing or approximate slot.
+ */
 export async function assertCartAvailability(cart: AvailabilityCartItem[]) {
   for (const item of cart) {
     const tourId = String(item?._id || item?.id || '');
-    const tour = await Tour.findOne({ _id: tourId, isPublished: true, ...DEFAULT_TENANT_FILTER })
-      .select('_id availability bookingOptions')
-      .lean() as unknown as AvailabilityTour | null;
-    if (!tour) throw new UnavailableTourError('A selected tour is unavailable');
-
-    const day = parseLocalDate(item.selectedDate);
-    const dateString = ensureDateOnlyString(item.selectedDate);
-    if (!day || !dateString || day.getTime() < new Date().setHours(0, 0, 0, 0)) {
-      throw new UnavailableTourError('A selected departure date is invalid');
+    const date = String(item.selectedDate || '');
+    const time = String(item.selectedTime || '');
+    const optionKey = String(item.selectedBookingOption?.pricingKey || '');
+    if (!/^[a-f0-9]{24}$/i.test(tourId)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(date)
+      || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)
+      || !optionKey) {
+      throw new UnavailableTourError('Select a valid departure date, time, and booking option.', 'INVALID_DEPARTURE');
     }
-    const end = new Date(day);
-    end.setHours(23, 59, 59, 999);
-    const optionId = String(item?.selectedBookingOption?.id || '');
-    const stopSale = await StopSale.exists({
-      tourId: tour._id,
-      startDate: { $lte: end },
-      endDate: { $gte: day },
-      $or: [{ optionIds: { $size: 0 } }, ...(optionId ? [{ optionIds: optionId }] : [])],
-    });
-    if (stopSale) throw new UnavailableTourError();
 
-    const requested = Number(item.quantity || 0) + Number(item.childQuantity || 0) + Number(item.infantQuantity || 0);
-    const slot = tour.availability?.slots?.find((candidate) => candidate.time === item.selectedTime);
-    if (slot && Number.isFinite(Number(slot.capacity))) {
-      const sold = await Booking.aggregate([
-        { $match: { tour: tour._id, dateString, status: { $nin: ['Cancelled', 'cancelled', 'Refunded', 'refunded'] }, ...DEFAULT_TENANT_FILTER } },
-        { $group: { _id: null, guests: { $sum: '$guests' } } },
-      ]);
-      if (Number(sold[0]?.guests || 0) + requested > Number(slot.capacity || 0)) {
-        throw new UnavailableTourError();
+    const requested = Number(item.quantity || 0)
+      + Number(item.childQuantity || 0)
+      + Number(item.infantQuantity || 0);
+    if (!Number.isInteger(requested) || requested < 1 || requested > 50) {
+      throw new UnavailableTourError('Select between 1 and 50 guests.', 'INVALID_GUEST_COUNT');
+    }
+
+    try {
+      const evidence = await assertRevenuePriceTargetSellable({ tourId, optionKey, date, time });
+      if (requested > evidence.available) {
+        throw new UnavailableTourError('The selected departure no longer has enough capacity.', 'DEPARTURE_CAPACITY_CHANGED');
       }
+    } catch (error: unknown) {
+      if (error instanceof UnavailableTourError) throw error;
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code || 'DEPARTURE_UNAVAILABLE')
+        : 'DEPARTURE_UNAVAILABLE';
+      throw new UnavailableTourError(
+        error instanceof Error ? error.message : 'The selected departure is unavailable.',
+        code,
+      );
     }
   }
 }

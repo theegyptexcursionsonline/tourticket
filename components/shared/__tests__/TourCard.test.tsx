@@ -111,15 +111,14 @@ describe('TourCard', () => {
     expect(screen.getByText('$50.00')).toBeInTheDocument()
   })
 
-  it('should show add to cart button', async () => {
+  it('should require booking options before adding to cart', async () => {
     const user = userEvent.setup()
     render(<TourCard tour={mockTour as Tour} />)
 
-    const addButton = screen.getByLabelText(/add to cart/i) || screen.getByRole('button')
+    const addButton = screen.getByLabelText(/choose booking options/i)
     expect(addButton).toBeInTheDocument()
 
     await user.click(addButton)
-    // Should trigger add to cart
   })
 
   it('should display discount price when discount exists', () => {

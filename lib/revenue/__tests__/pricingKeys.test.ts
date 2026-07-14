@@ -1,11 +1,18 @@
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 
 describe('immutable pricing keys', () => {
-  it('preserves existing keys and deterministically fills missing keys', () => {
-    const options = [{ label: 'Premium Boat', type: 'Per Person' }, { label: 'Private', type: 'Group', pricingKey: 'private_locked' }];
-    const first = ensureBookingOptionPricingKeys('507f1f77bcf86cd799439011', options)!;
-    const reordered = ensureBookingOptionPricingKeys('507f1f77bcf86cd799439011', [first[1], first[0]])!;
-    expect(first[1].pricingKey).toBe('private_locked');
-    expect(reordered.map((option) => option.pricingKey)).toContain(first[0].pricingKey);
+  it('preserves keys when options are reordered', () => {
+    const assigned = ensureBookingOptionPricingKeys('tour-1', [
+      { id: 'adult-package', type: 'group', label: 'Standard' },
+      { id: 'private-package', type: 'private', label: 'Private' },
+    ])!;
+    const reordered = ensureBookingOptionPricingKeys('tour-1', [assigned[1], assigned[0]])!;
+    expect(reordered.map((option) => option.pricingKey)).toEqual([assigned[1].pricingKey, assigned[0].pricingKey]);
+  });
+
+  it('uses a stable source id instead of array position', () => {
+    const first = ensureBookingOptionPricingKeys('tour-1', [{ id: 'source-option', type: 'group', label: 'Standard' }])![0];
+    const second = ensureBookingOptionPricingKeys('tour-1', [{ id: 'source-option', type: 'group', label: 'Renamed' }])![0];
+    expect(first.pricingKey?.split('-').at(-1)).toBe(second.pricingKey?.split('-').at(-1));
   });
 });

@@ -3,7 +3,9 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # The upgraded AI SDK toolchain requires Node 22 or newer. Keep the build
+  # and function runtimes aligned; AWS_LAMBDA_JS_RUNTIME is also nodejs22.x.
+  NODE_VERSION = "22"
   # --shamefully-hoist flattens node_modules so Next.js and jest binaries
   # resolve correctly on Netlify. Without this the pnpm symlink layout
   # breaks Next's module resolution during `next build` and exits with
@@ -20,16 +22,16 @@
   package = "netlify-plugin-inline-functions-env"
   [plugins.inputs]
     include = [
+      "ABUSE_LIMIT_HASH_SECRET",
       "ADMIN_NOTIFICATION_EMAIL",
       "ADMIN_PASSWORD",
       "ADMIN_USERNAME",
-      "ALGOLIA_ADMIN_API_KEY",
       "ALGOLIA_WRITE_API_KEY",
-      "BASE_URL",
       "CLOUDINARY_API_KEY",
       "CLOUDINARY_API_SECRET",
       "CLOUDINARY_CLOUD_NAME",
-      "CLOUDINARY_URL",
+      "CHECKOUT_INVENTORY_HOLD_MINUTES",
+      "CRON_SECRET",
       "FIREBASE_CLIENT_EMAIL",
       "FIREBASE_PRIVATE_KEY",
       "FIREBASE_PROJECT_ID",
@@ -39,9 +41,15 @@
       "MAILGUN_FROM_EMAIL",
       "MONGODB_URI",
       "NEXT_PUBLIC_BASE_URL",
+      "NEWSLETTER_PROVIDER_MODE",
+      "RECAPTCHA_SECRET_KEY",
+      "REVENUEPILOT_ALLOWED_TOUR_IDS",
+      "REVENUEPILOT_HMAC_KEYS",
+      "REVENUEPILOT_HMAC_SCOPES",
+      "REVENUEPILOT_MAX_WRITE_PERCENT",
+      "REVENUEPILOT_PRICING_API_ENABLED",
       "STRIPE_SECRET_KEY",
-      "STRIPE_WEBHOOK_SECRET",
-      "STRIPE_RESTRICTED_KEY"
+      "STRIPE_WEBHOOK_SECRET"
     ]
 
 [functions."*"]

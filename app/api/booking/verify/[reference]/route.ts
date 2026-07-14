@@ -5,19 +5,46 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import type { PopulatedBookingTour } from '@/lib/types/populatedBooking';
+import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
+
+const VERIFICATION_WINDOW_MS = 15 * 60 * 1_000;
+
+function verificationResponse(body: Record<string, unknown>, status: number, headers?: Record<string, string>) {
+  return NextResponse.json(body, {
+    status,
+    headers: { 'Cache-Control': 'private, no-store', ...headers },
+  });
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ reference: string }> }
 ) {
   try {
-    await dbConnect();
-    const { reference } = await params;
+    const { reference: rawReference } = await params;
+    const reference = rawReference.trim().toUpperCase();
 
-    if (!reference) {
-      return NextResponse.json(
+    if (!/^[A-Z0-9-]{12,80}$/.test(reference)) {
+      return verificationResponse(
         { success: false, message: 'Booking reference is required' },
-        { status: 400 }
+        400,
+      );
+    }
+
+    await dbConnect();
+    const rate = await enforcePublicActionLimits({
+      request,
+      action: 'booking-verify',
+      subject: reference,
+      networkLimit: 40,
+      subjectLimit: 10,
+      windowMs: VERIFICATION_WINDOW_MS,
+    });
+    if (!rate.allowed) {
+      return verificationResponse(
+        { success: false, message: 'Too many verification requests. Please try again later.' },
+        429,
+        { 'Retry-After': String(rate.retryAfterSeconds) },
       );
     }
 
@@ -34,9 +61,9 @@ export async function GET(
       .lean();
 
     if (!booking) {
-      return NextResponse.json(
+      return verificationResponse(
         { success: false, message: 'Booking not found' },
-        { status: 404 }
+        404,
       );
     }
 
@@ -58,22 +85,22 @@ export async function GET(
         : undefined,
     };
 
-    return NextResponse.json(
+    return verificationResponse(
       {
         success: true,
         booking: transformedBooking,
       },
-      { status: 200 }
+      200,
     );
   } catch (error) {
     console.error('Error verifying booking:', error);
-    return NextResponse.json(
+    return verificationResponse(
       {
         success: false,
         message: 'Failed to verify booking',
         error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
-      { status: 500 }
+      500,
     );
   }
 }

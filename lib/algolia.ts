@@ -12,6 +12,7 @@ interface AlgoliaTourSource {
   location?: string;
   price?: number;
   discountPrice?: number;
+  pricingSummary?: { fromPrice?: number; currency?: string; version?: number; validThrough?: Date | string };
   rating?: number;
   reviewCount?: number;
   duration?: string | number;
@@ -128,6 +129,9 @@ export const ALGOLIA_INDEX_NAME = ALGOLIA_INDEX_TOURS;
 
 // Helper function to format tour data for Algolia
 export const formatTourForAlgolia = (tour: AlgoliaTourSource) => {
+  const fromPrice = Number.isFinite(Number(tour.pricingSummary?.fromPrice))
+    ? Number(tour.pricingSummary?.fromPrice)
+    : Number(tour.discountPrice || tour.price || 0);
   return {
     objectID: tour._id.toString(),
     title: tour.title || '',
@@ -135,7 +139,11 @@ export const formatTourForAlgolia = (tour: AlgoliaTourSource) => {
     description: tour.description || '',
     location: tour.location || '',
     price: tour.price || 0,
-    discountPrice: tour.discountPrice || tour.price || 0,
+    discountPrice: fromPrice,
+    fromPrice,
+    pricingCurrency: tour.pricingSummary?.currency || 'USD',
+    pricingVersion: Number(tour.pricingSummary?.version || 0),
+    pricingValidThrough: tour.pricingSummary?.validThrough || null,
     rating: tour.rating || 0,
     reviewCount: tour.reviewCount || 0,
     duration: tour.duration || 0,
@@ -178,6 +186,45 @@ export const syncTourToAlgolia = async (tour: AlgoliaTourSource) => {
     console.error('Error syncing tour to Algolia:', error);
     throw error;
   }
+};
+
+/**
+ * Stronger pricing-path sync: wait until Algolia publishes the indexing task,
+ * then read the record back and compare every materialized pricing field.
+ * Callers may only mark channel propagation verified after this resolves.
+ */
+export const syncTourToAlgoliaVerified = async (tour: AlgoliaTourSource) => {
+  const client = getAlgoliaClient();
+  if (!client) throw new Error('Algolia write client is not configured');
+
+  const formattedTour = formatTourForAlgolia(tour);
+  const saved = await client.saveObject({
+    indexName: ALGOLIA_INDEX_NAME,
+    body: formattedTour,
+  });
+  await client.waitForTask({
+    indexName: ALGOLIA_INDEX_NAME,
+    taskID: saved.taskID,
+    maxRetries: 20,
+    timeout: (retryCount) => Math.min(1_000, 100 * (2 ** retryCount)),
+  });
+  const indexed = await client.getObject<{
+    objectID?: string;
+    fromPrice?: number;
+    pricingVersion?: number;
+    pricingCurrency?: string;
+  }>({
+    indexName: ALGOLIA_INDEX_NAME,
+    objectID: formattedTour.objectID,
+    attributesToRetrieve: ['objectID', 'fromPrice', 'pricingVersion', 'pricingCurrency'],
+  });
+  if (String(indexed.objectID) !== formattedTour.objectID
+    || Number(indexed.fromPrice) !== formattedTour.fromPrice
+    || Number(indexed.pricingVersion) !== formattedTour.pricingVersion
+    || String(indexed.pricingCurrency) !== formattedTour.pricingCurrency) {
+    throw new Error('Algolia pricing read-back did not match the materialized tour summary');
+  }
+  return indexed;
 };
 
 // Sync multiple tours to Algolia
@@ -268,6 +315,7 @@ export const configureAlgoliaIndex = async () => {
           'filterOnly(destination._id)',
           'filterOnly(price)',
           'filterOnly(discountPrice)',
+          'filterOnly(fromPrice)',
           'filterOnly(rating)',
           'filterOnly(duration)',
           'filterOnly(isPublished)',
@@ -297,6 +345,10 @@ export const configureAlgoliaIndex = async () => {
           'location',
           'price',
           'discountPrice',
+          'fromPrice',
+          'pricingCurrency',
+          'pricingVersion',
+          'pricingValidThrough',
           'rating',
           'reviewCount',
           'duration',

@@ -12,6 +12,7 @@ import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImag
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
+import { InventoryHoldError, withBookingInventoryCapacity } from '@/lib/checkout/inventoryHolds';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -38,6 +39,17 @@ function formatBookingDate(dateString: string | Date | undefined): string {
     month: 'long',
     day: 'numeric',
   });
+}
+
+function normalizeAdminBookingDate(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+  if (!match) return null;
+  const normalized = `${match[1]}-${match[2]}-${match[3]}`;
+  const parsed = new Date(`${normalized}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === normalized
+    ? normalized
+    : null;
 }
 
 // Helper to get admin info from token (cookie or Authorization header)
@@ -93,6 +105,7 @@ export async function GET(
     const { id } = await params;
 
     const booking = await Booking.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
+      .select('+internalNotes')
       .populate({
         path: 'tour',
         model: Tour,
@@ -106,7 +119,7 @@ export async function GET(
       .populate({
         path: 'user',
         model: User,
-        select: 'firstName lastName email name',
+        select: 'firstName lastName email name phone country',
       })
       .lean();
 
@@ -172,8 +185,6 @@ export async function PATCH(
       dateString, 
       time, 
       selectedBookingOption,
-      refundAmount,
-      refundReason 
     } = body;
 
     // Get admin info for edit history
@@ -184,6 +195,18 @@ export async function PATCH(
       return NextResponse.json(
         { success: false, message: `Invalid status value. Must be one of: ${BOOKING_STATUSES.join(', ')}` },
         { status: 400 }
+      );
+    }
+    if (status && ['Cancelled', 'Refunded', 'Partial_Refund'].includes(status)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FINANCIAL_TRANSITION_REQUIRES_WORKFLOW',
+          message: status === 'Cancelled'
+            ? 'Use the cancellation endpoint so policy and payment-provider state are enforced.'
+            : 'Use the refund endpoint so Stripe confirmation is recorded before status changes.',
+        },
+        { status: 409 },
       );
     }
 
@@ -211,6 +234,51 @@ export async function PATCH(
         { status: 404 }
       );
     }
+    if (currentBooking.refundState === 'pending') {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'REFUND_IN_PROGRESS',
+          message: 'This booking is locked while Stripe confirms the refund. Retry after reconciliation completes.',
+        },
+        { status: 409 },
+      );
+    }
+    if (['Cancelled', 'Refunded', 'Partial_Refund'].includes(currentBooking.status)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'FINANCIAL_RECORD_IMMUTABLE',
+          message: 'A cancelled or refunded booking cannot be reopened or rescheduled. Create a new booking instead.',
+        },
+        { status: 409 },
+      );
+    }
+    if (status && status !== currentBooking.status) {
+      if (currentBooking.status === 'Confirmed' && status === 'Pending') {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'CONFIRMED_PAYMENT_IMMUTABLE',
+            message: 'A confirmed booking cannot be reverted to pending. Use cancellation/refund workflows when money must be reversed.',
+          },
+          { status: 409 },
+        );
+      }
+      if (currentBooking.status === 'Pending' && status === 'Confirmed') {
+        const method = String(currentBooking.paymentMethod || '').toLowerCase();
+        if (!['cash', 'bank'].includes(method)) {
+          return NextResponse.json(
+            {
+              success: false,
+              code: 'PAYMENT_PROVIDER_CONFIRMATION_REQUIRED',
+              message: 'Card bookings are confirmed only by the verified Stripe webhook.',
+            },
+            { status: 409 },
+          );
+        }
+      }
+    }
 
     // Track changes for edit history and notifications
     const changes: IBookingEditHistoryEntry[] = [];
@@ -221,6 +289,7 @@ export async function PATCH(
     const oldDate = currentBooking.dateString || currentBooking.date?.toISOString().split('T')[0];
     const oldTime = currentBooking.time;
     const oldBookingOption = currentBooking.selectedBookingOption?.title;
+    const updates: Record<string, unknown> = {};
 
     // Update status if provided
     if (status && status !== oldStatus) {
@@ -238,64 +307,54 @@ export async function PATCH(
         oldValue: oldStatus,
         newValue: status,
       });
-      currentBooking.status = status;
-
-      // Handle refund tracking
-      if (status === 'Refunded' || status === 'Partial_Refund') {
-        if (refundAmount !== undefined) {
-          currentBooking.refundAmount = refundAmount;
-        }
-        if (refundReason) {
-          currentBooking.refundReason = refundReason;
-        }
-        currentBooking.refundDate = new Date();
+      updates.status = status;
+      if (oldStatus === 'Pending' && status === 'Confirmed') {
+        updates.paymentStatus = 'paid';
+        updates.amountPaid = currentBooking.totalPrice;
+        updates.paymentConfirmedAt = new Date();
+        updates.paymentConfirmedBy = `admin:${adminInfo?.id || auth.id}`;
       }
     }
 
     // Update date if provided
-    if (dateString && dateString !== oldDate) {
-      const newDateObj = new Date(dateString + 'T12:00:00Z');
+    const requestedDate = dateString !== undefined
+      ? normalizeAdminBookingDate(dateString)
+      : date !== undefined
+        ? normalizeAdminBookingDate(date)
+        : oldDate;
+    if ((dateString !== undefined || date !== undefined) && !requestedDate) {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_BOOKING_DATE', message: 'Booking date must be a real date in YYYY-MM-DD format.' },
+        { status: 422 },
+      );
+    }
+    if (requestedDate && requestedDate !== oldDate) {
+      const newDateObj = new Date(`${requestedDate}T12:00:00.000Z`);
       changes.push({
         editedAt: new Date(),
         editedBy: adminInfo?.id || 'system',
         editedByName: adminInfo?.name || 'System',
         field: 'date',
         previousValue: formatBookingDate(oldDate),
-        newValue: formatBookingDate(dateString),
+        newValue: formatBookingDate(requestedDate),
         changeType: 'detail_update',
       });
       changesForNotification.push({
         field: 'Tour Date',
         oldValue: formatBookingDate(oldDate),
-        newValue: formatBookingDate(dateString),
+        newValue: formatBookingDate(requestedDate),
       });
-      currentBooking.date = newDateObj;
-      currentBooking.dateString = dateString;
-    } else if (date && !dateString) {
-      // Fallback if only date is provided
-      const newDateStr = new Date(date).toISOString().split('T')[0];
-      if (newDateStr !== oldDate) {
-        const newDateObj = new Date(newDateStr + 'T12:00:00Z');
-        changes.push({
-          editedAt: new Date(),
-          editedBy: adminInfo?.id || 'system',
-          editedByName: adminInfo?.name || 'System',
-          field: 'date',
-          previousValue: formatBookingDate(oldDate),
-          newValue: formatBookingDate(newDateStr),
-          changeType: 'detail_update',
-        });
-        changesForNotification.push({
-          field: 'Tour Date',
-          oldValue: formatBookingDate(oldDate),
-          newValue: formatBookingDate(newDateStr),
-        });
-        currentBooking.date = newDateObj;
-        currentBooking.dateString = newDateStr;
-      }
+      updates.date = newDateObj;
+      updates.dateString = requestedDate;
     }
 
     // Update time if provided
+    if (time !== undefined && (typeof time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time))) {
+      return NextResponse.json(
+        { success: false, code: 'INVALID_BOOKING_TIME', message: 'Booking time must use 24-hour HH:mm format.' },
+        { status: 422 },
+      );
+    }
     if (time && time !== oldTime) {
       changes.push({
         editedAt: new Date(),
@@ -311,38 +370,99 @@ export async function PATCH(
         oldValue: oldTime,
         newValue: time,
       });
-      currentBooking.time = time;
+      updates.time = time;
     }
 
-    // Update booking option if provided
+    // A paid option change can alter both the guest-price snapshot and the
+    // amount owed. It must be handled as a cancel/rebook until an explicit
+    // adjustment-payment workflow exists.
     if (selectedBookingOption && selectedBookingOption.title !== oldBookingOption) {
-      changes.push({
-        editedAt: new Date(),
-        editedBy: adminInfo?.id || 'system',
-        editedByName: adminInfo?.name || 'System',
-        field: 'bookingOption',
-        previousValue: oldBookingOption || 'None',
-        newValue: selectedBookingOption.title,
-        changeType: 'detail_update',
-      });
-      changesForNotification.push({
-        field: 'Tour Option',
-        oldValue: oldBookingOption || 'None',
-        newValue: selectedBookingOption.title,
-      });
-      currentBooking.selectedBookingOption = selectedBookingOption;
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'BOOKING_OPTION_CHANGE_REQUIRES_REBOOKING',
+          message: 'Booking option changes require cancellation and a new authoritative quote.',
+        },
+        { status: 409 },
+      );
     }
 
-    // Add changes to edit history
-    if (changes.length > 0) {
-      if (!currentBooking.editHistory) {
-        currentBooking.editHistory = [];
+    if (changes.length === 0) {
+      return NextResponse.json(
+        { success: false, code: 'NO_BOOKING_CHANGES', message: 'No booking changes were supplied.' },
+        { status: 422 },
+      );
+    }
+
+    const expectedVersion = Number((currentBooking as unknown as { __v?: number }).__v || 0);
+    const persist = async () => Booking.findOneAndUpdate(
+      {
+        _id: id,
+        ...DEFAULT_TENANT_FILTER,
+        __v: expectedVersion,
+        status: oldStatus,
+        refundState: { $ne: 'pending' },
+      },
+      {
+        $set: updates,
+        $push: { editHistory: { $each: changes } },
+        $inc: { __v: 1 },
+      },
+      { new: true, runValidators: true },
+    );
+
+    const departureChanged = (requestedDate && requestedDate !== oldDate) || (time && time !== oldTime);
+    let persisted;
+    if (departureChanged) {
+      const populatedTour = currentBooking.tour as unknown as { _id?: unknown; bookingOptions?: Array<unknown> };
+      const tourId = String(populatedTour?._id || currentBooking.tour || '');
+      const pricingKey = String(currentBooking.selectedBookingOption?.pricingKey
+        || ((populatedTour?.bookingOptions || []).length === 0 ? 'standard' : ''));
+      if (!/^[a-f0-9]{24}$/i.test(tourId) || !pricingKey) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'BOOKING_MAPPING_REQUIRED',
+            message: 'This legacy booking is missing an immutable option mapping and cannot be rescheduled automatically.',
+          },
+          { status: 409 },
+        );
       }
-      currentBooking.editHistory.push(...changes);
+      const guests = Number(currentBooking.adultGuests || 0)
+        + Number(currentBooking.childGuests || 0)
+        + Number(currentBooking.infantGuests || 0)
+        || Number(currentBooking.guests || 0);
+      persisted = await withBookingInventoryCapacity({
+        bookingId: id,
+        current: {
+          _id: tourId,
+          selectedDate: oldDate,
+          selectedTime: oldTime,
+          quantity: guests,
+          selectedBookingOption: { pricingKey },
+        },
+        next: {
+          _id: tourId,
+          selectedDate: requestedDate || oldDate,
+          selectedTime: time || oldTime,
+          quantity: guests,
+          selectedBookingOption: { pricingKey },
+        },
+        work: persist,
+      });
+    } else {
+      persisted = await persist();
     }
-
-    // Save the updated booking
-    await currentBooking.save();
+    if (!persisted) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'BOOKING_VERSION_CONFLICT',
+          message: 'The booking changed while this update was being saved. Refresh and try again.',
+        },
+        { status: 409 },
+      );
+    }
 
     // Reload with lean for response
     const updatedBooking = await Booking.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
@@ -503,6 +623,12 @@ export async function PATCH(
     return NextResponse.json(transformedBooking);
 
   } catch (error: unknown) {
+    if (error instanceof InventoryHoldError) {
+      return NextResponse.json(
+        { success: false, code: error.code, message: error.message },
+        { status: error.status },
+      );
+    }
     console.error('Failed to update booking:', error);
     return NextResponse.json(
       {
@@ -515,44 +641,22 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete a booking
+// DELETE - Financial bookings are immutable audit records. Operators must use
+// the cancellation/refund workflows so inventory, provider evidence and
+// customer notifications remain consistent.
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
 ) {
   // Verify admin authentication (cookie + Authorization header fallback)
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
-  await dbConnect();
-
-  try {
-    const { id } = await params;
-
-    const deletedBooking = await Booking.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
-
-    if (!deletedBooking) {
-      return NextResponse.json(
-        { success: false, message: 'Booking not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Booking deleted successfully',
-      data: { id: deletedBooking._id },
-    });
-
-  } catch (error: unknown) {
-    console.error('Failed to delete booking:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to delete booking',
-        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
-      },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    {
+      success: false,
+      code: 'BOOKING_DELETION_DISABLED',
+      message: 'Bookings cannot be permanently deleted. Use the cancellation or refund workflow to preserve the financial audit trail.',
+    },
+    { status: 409 },
+  );
 }

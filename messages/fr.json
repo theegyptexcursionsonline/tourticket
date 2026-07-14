@@ -67,7 +67,7 @@
   "tourCard": {
     "featured": "En vedette",
     "max": "Max",
-    "freeCancellation": "Annulation gratuite",
+    "freeCancellation": "Remboursements d'annulation par paliers",
     "mobileTicket": "Billet mobile",
     "more": "plus",
     "addedToCart": "Ajoute au panier!",
@@ -106,6 +106,10 @@
     "repliesWithinHour": "Replies within 1 hour",
     "newsletterThanksTitle": "Thank you!",
     "newsletterThanksDesc": "You've successfully subscribed to our newsletter.",
+    "newsletterPendingTitle": "Confirmez votre adresse e-mail",
+    "newsletterPendingDesc": "Consultez votre boite de reception et confirmez votre adresse pour terminer l'inscription.",
+    "newsletterConsentLabel": "J'accepte de recevoir des e-mails marketing et peux me desabonner a tout moment.",
+    "newsletterConsentRequired": "Veuillez accepter de recevoir la newsletter avant de continuer.",
     "socialDesc": "Join our community for live updates, reels, and travel inspiration.",
     "followSocialAria": "Suivez-nous sur les réseaux sociaux",
     "getTheApp": "Votre prochaine aventure, à portée de main",
@@ -171,7 +175,7 @@
     "partner": "Partenaire officiel des meilleurs musees et attractions",
     "bestPrice": "Meilleur prix garanti et processus de reservation simple",
     "mobileTicket": "Pas besoin d'imprimer! Montrez vos billets sur votre smartphone",
-    "freeCancellation": "Annulation gratuite jusqu'a 8 heures a l'avance",
+    "freeCancellation": "100 % a 7+ jours ; 50 % entre 3 et 7 jours",
     "cta": "En savoir plus"
   },
   "destinations": {
@@ -233,7 +237,7 @@
     "items": [
       {
         "question": "Can I reschedule or cancel my tickets?",
-        "answer": "Yes, in most cases you can reschedule or cancel your tickets up to 24 hours in advance. Please check the specific conditions for your chosen tour or attraction on its product page. Some special events may have different policies."
+        "answer": "L'annulation en libre-service ferme 24 heures avant le depart. Remboursement : 100 % a 7+ jours, 50 % entre 3 et 7 jours, 0 % a moins de 3 jours."
       },
       {
         "question": "How long are open tickets valid?",

@@ -1,17 +1,16 @@
-import { createHash } from 'node:crypto';
-import mongoose from 'mongoose';
+import { createHash, randomUUID } from 'node:crypto';
 import RevenuePriceExecution, { type IRevenuePriceExecution } from '@/lib/models/RevenuePriceExecution';
 import RevenuePriceOverride, { type GuestPrices } from '@/lib/models/RevenuePriceOverride';
-import Tour from '@/lib/models/Tour';
+import { assertRevenuePilotTourAllowed, RevenuePricingWriteError } from '@/lib/revenue/priceWriteGate';
+import { classifyExistingPriceExecution } from '@/lib/revenue/priceWriteIdempotency';
 import { normalizePriceDate, resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
+import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
+import type { PriceWrite } from '@/lib/revenue/priceWriteValidation';
 import type { HydratedDocument } from 'mongoose';
+import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
+export { validatePriceWrite } from '@/lib/revenue/priceWriteValidation';
 
-export type PriceWrite = {
-  executionId: string; recommendationId: string; tenantId: string;
-  target: { tourId: string; optionKey: string; date: string; time: string };
-  prices: GuestPrices; currency: string; expectedVersion: number;
-  policyHash: string; sourceVersion: string; actor: string; mode: 'manual' | 'assist' | 'autopilot';
-};
+const APPLY_LEASE_MS = 30_000;
 
 export function hashRevenuePayload(bodyText: string) {
   return createHash('sha256').update(bodyText).digest('hex');
@@ -22,23 +21,6 @@ const mongoErrorCode = (error: unknown) => {
   return (error as { code?: unknown }).code;
 };
 
-export function validatePriceWrite(value: unknown): PriceWrite {
-  const candidate = value && typeof value === 'object' ? value as Partial<PriceWrite> : {};
-  const prices = candidate.prices;
-  const required = [candidate.executionId, candidate.recommendationId, candidate.tenantId, candidate.target?.tourId, candidate.target?.optionKey, candidate.target?.date, candidate.target?.time, candidate.currency, candidate.policyHash, candidate.sourceVersion, candidate.actor, candidate.mode];
-  if (required.some((item) => typeof item !== 'string' || !item.trim())) throw new Error('Missing required execution fields');
-  if (!candidate.target || !mongoose.Types.ObjectId.isValid(candidate.target.tourId)) throw new Error('Invalid tour');
-  if (!candidate.mode || !['manual', 'assist', 'autopilot'].includes(candidate.mode)) throw new Error('Invalid execution mode');
-  if (!Number.isInteger(candidate.expectedVersion) || (candidate.expectedVersion ?? -1) < 0) throw new Error('Invalid expectedVersion');
-  if (candidate.currency !== 'USD') throw new Error('Only USD is enabled for the EEO canary');
-  for (const guest of ['adult', 'child', 'infant'] as const) {
-    const price = prices?.[guest];
-    if (!Number.isFinite(price) || price === undefined || price < 0) throw new Error(`Invalid ${guest} price`);
-  }
-  normalizePriceDate(candidate.target.date);
-  return candidate as PriceWrite;
-}
-
 function movement(previous: GuestPrices, next: GuestPrices) {
   return Math.max(...(['adult', 'child', 'infant'] as const).map((guest) => {
     if (previous[guest] === 0) return next[guest] === 0 ? 0 : Infinity;
@@ -46,42 +28,216 @@ function movement(previous: GuestPrices, next: GuestPrices) {
   }));
 }
 
-export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string, bodyText: string) {
-  const existing = await RevenuePriceExecution.findOne({ $or: [{ idempotencyKey }, { executionId: input.executionId }] }).lean();
-  if (existing?.idempotencyKey === idempotencyKey && existing.state !== 'blocked') return { receipt: existing, state: 'replayed' as const };
-  let recoverableIntent: HydratedDocument<IRevenuePriceExecution> | null = null;
-  if (existing?.idempotencyKey === idempotencyKey && existing.state === 'blocked') {
-    const effective = await resolveEffectivePrice(input.target);
-    if (effective.executionId === input.executionId && effective.version === input.expectedVersion + 1) {
-      const receipt = await RevenuePriceExecution.findByIdAndUpdate(existing._id, { $set: { state: 'applied', appliedVersion: effective.version, effectivePrices: effective.prices }, $push: { events: { type: 'apply_recovered', at: new Date().toISOString() } } }, { new: true }).lean();
-      return { receipt, effective, state: 'replayed' as const };
-    }
-    if (effective.version === input.expectedVersion) recoverableIntent = await RevenuePriceExecution.findById(existing._id);
-    else return { current: effective, state: 'conflict' as const };
-  } else if (existing) return { current: await resolveEffectivePrice(input.target), state: 'conflict' as const };
-  const current = await resolveEffectivePrice(input.target);
-  if (current.version !== input.expectedVersion) return { current, state: 'conflict' as const };
-  const maxMovement = Number(process.env.REVENUEPILOT_MAX_WRITE_PERCENT || 5);
-  if (movement(current.prices, input.prices) > maxMovement) return { current, state: 'blocked' as const, reason: `Maximum movement is ${maxMovement}%.` };
-  const nextVersion = current.version + 1;
-  const date = normalizePriceDate(input.target.date);
-  let intent = recoverableIntent;
+async function safeEffectivePrice(input: PriceWrite) {
+  try {
+    return await resolveEffectivePrice(input.target);
+  } catch {
+    return null;
+  }
+}
+
+async function replayExistingExecution(existing: IRevenuePriceExecution, input: PriceWrite) {
+  const receipt = existing;
+  if (['applied', 'verified', 'replayed'].includes(existing.state)) {
+    return { receipt, effective: await safeEffectivePrice(input), state: 'replayed' as const, outcome: existing.state, replayed: true };
+  }
+  if (existing.state === 'conflict') {
+    return { receipt, current: await safeEffectivePrice(input), state: 'conflict' as const, replayed: true };
+  }
+  if (existing.state === 'blocked') {
+    return { receipt, current: await safeEffectivePrice(input), state: 'blocked' as const, reason: existing.blockReason || 'The original request was blocked.', replayed: true };
+  }
+  if (existing.state === 'rollback_applied') {
+    return { receipt, effective: await safeEffectivePrice(input), state: 'rollback_applied' as const, replayed: true };
+  }
+  if (existing.state === 'rollback_failed') {
+    return { receipt, effective: await safeEffectivePrice(input), state: 'rollback_failed' as const, replayed: true };
+  }
+  return { receipt, state: existing.state === 'rollback_pending' ? 'rollback_pending' as const : 'pending' as const, replayed: true };
+}
+
+async function markBlocked(
+  intent: HydratedDocument<IRevenuePriceExecution>,
+  reason: string,
+  eventType: string,
+  effectivePrices?: GuestPrices,
+) {
+  intent.state = 'blocked';
+  intent.blockReason = reason;
+  if (effectivePrices) intent.effectivePrices = effectivePrices;
+  intent.applyClaimToken = undefined;
+  intent.applyClaimExpiresAt = undefined;
+  intent.events.push({ type: eventType, reason, at: new Date().toISOString() });
+  return intent.save();
+}
+
+async function markConflict(
+  intent: HydratedDocument<IRevenuePriceExecution>,
+  effectivePrices?: GuestPrices,
+) {
+  intent.state = 'conflict';
+  if (effectivePrices) intent.effectivePrices = effectivePrices;
+  intent.applyClaimToken = undefined;
+  intent.applyClaimExpiresAt = undefined;
+  intent.events.push({ type: 'version_conflict', at: new Date().toISOString() });
+  return intent.save();
+}
+
+async function acquireExistingPending(
+  existing: IRevenuePriceExecution,
+  input: PriceWrite,
+) {
+  const effective = await resolveEffectivePrice(input.target);
+  if (effective.executionId === input.executionId && effective.version === input.expectedVersion + 1) {
+    const receipt = await RevenuePriceExecution.findOneAndUpdate(
+      { _id: existing._id, state: 'pending' },
+      {
+        $set: { state: 'applied', appliedVersion: effective.version, effectivePrices: effective.prices },
+        $unset: { applyClaimToken: 1, applyClaimExpiresAt: 1 },
+        $push: { events: { type: 'apply_recovered', at: new Date().toISOString() } },
+      },
+      { new: true },
+    ).lean();
+    return { result: { receipt: receipt || existing, effective, state: 'replayed' as const, outcome: 'applied' as const, replayed: true } };
+  }
+  if (effective.version !== input.expectedVersion) {
+    const receipt = await RevenuePriceExecution.findOneAndUpdate(
+      { _id: existing._id, state: 'pending' },
+      {
+        $set: { state: 'conflict', effectivePrices: effective.prices },
+        $unset: { applyClaimToken: 1, applyClaimExpiresAt: 1 },
+        $push: { events: { type: 'version_conflict_recovered', at: new Date().toISOString() } },
+      },
+      { new: true },
+    ).lean();
+    return { result: { receipt: receipt || existing, current: effective, state: 'conflict' as const, replayed: true } };
+  }
+
+  const claimToken = randomUUID();
+  const now = new Date();
+  const intent = await RevenuePriceExecution.findOneAndUpdate(
+    {
+      _id: existing._id,
+      state: 'pending',
+      $or: [
+        { applyClaimExpiresAt: { $lte: now } },
+        { applyClaimExpiresAt: { $exists: false } },
+        { applyClaimExpiresAt: null },
+      ],
+    },
+    {
+      $set: { applyClaimToken: claimToken, applyClaimExpiresAt: new Date(now.getTime() + APPLY_LEASE_MS) },
+      $push: { events: { type: 'apply_resumed', at: now.toISOString() } },
+    },
+    { new: true },
+  );
   if (!intent) {
+    const latest = await RevenuePriceExecution.findById(existing._id).lean<IRevenuePriceExecution | null>();
+    return { result: latest ? await replayExistingExecution(latest, input) : { state: 'pending' as const, replayed: true } };
+  }
+  return { intent, effective, claimToken };
+}
+
+async function resultForConcurrentExecution(
+  concurrent: IRevenuePriceExecution,
+  input: PriceWrite,
+  idempotencyKey: string,
+  requestHash: string,
+) {
+  const disposition = classifyExistingPriceExecution(concurrent, idempotencyKey, requestHash);
+  if (disposition === 'idempotency_payload_mismatch') {
+    throw new RevenuePricingWriteError(409, 'IDEMPOTENCY_PAYLOAD_MISMATCH', 'This Idempotency-Key is already bound to a different request body.');
+  }
+  if (disposition === 'execution_id_conflict') {
+    return { current: await safeEffectivePrice(input), state: 'conflict' as const, reason: 'The execution ID is already bound to another idempotency key.' };
+  }
+  return replayExistingExecution(concurrent, input);
+}
+
+export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string, bodyText: string) {
+  const requestHash = hashRevenuePayload(bodyText);
+  const existing = await RevenuePriceExecution.findOne({ $or: [{ idempotencyKey }, { executionId: input.executionId }] }).lean<IRevenuePriceExecution | null>();
+  let intent: HydratedDocument<IRevenuePriceExecution> | null = null;
+  let current;
+  let claimToken = randomUUID();
+
+  if (existing) {
+    const disposition = classifyExistingPriceExecution(existing, idempotencyKey, requestHash);
+    if (disposition === 'idempotency_payload_mismatch') {
+      throw new RevenuePricingWriteError(409, 'IDEMPOTENCY_PAYLOAD_MISMATCH', 'This Idempotency-Key is already bound to a different request body.');
+    }
+    if (disposition === 'execution_id_conflict') {
+      return { current: await safeEffectivePrice(input), state: 'conflict' as const, reason: 'The execution ID is already bound to another idempotency key.' };
+    }
+    if (disposition !== 'pending') return replayExistingExecution(existing, input);
+    assertRevenuePilotTourAllowed(input.target.tourId);
+    const acquired = await acquireExistingPending(existing, input);
+    if ('result' in acquired) return acquired.result;
+    intent = acquired.intent;
+    current = acquired.effective;
+    claimToken = acquired.claimToken;
+  } else {
+    assertRevenuePilotTourAllowed(input.target.tourId);
+    current = await resolveEffectivePrice(input.target);
     try {
       intent = await RevenuePriceExecution.create({
-        executionId: input.executionId, idempotencyKey, tenantId: input.tenantId, recommendationId: input.recommendationId,
-        actor: input.actor, mode: input.mode, target: { ...input.target, date }, currency: input.currency,
-        expectedVersion: input.expectedVersion, previousPrices: current.prices, requestedPrices: input.prices,
-        policyHash: input.policyHash, sourceVersion: input.sourceVersion, requestHash: hashRevenuePayload(bodyText), state: 'blocked',
+        executionId: input.executionId,
+        idempotencyKey,
+        tenantId: input.tenantId,
+        recommendationId: input.recommendationId,
+        actor: input.actor,
+        mode: input.mode,
+        target: { ...input.target, date: normalizePriceDate(input.target.date) },
+        currency: input.currency,
+        expectedVersion: input.expectedVersion,
+        previousPrices: current.prices,
+        requestedPrices: input.prices,
+        policyHash: input.policyHash,
+        policySnapshot: input.policySnapshot,
+        sourceVersion: input.sourceVersion,
+        requestHash,
+        state: 'pending',
+        applyClaimToken: claimToken,
+        applyClaimExpiresAt: new Date(Date.now() + APPLY_LEASE_MS),
         events: [{ type: 'apply_started', at: new Date().toISOString() }],
       });
     } catch (error: unknown) {
       if (mongoErrorCode(error) !== 11000) throw error;
-      const concurrent = await RevenuePriceExecution.findOne({ $or: [{ idempotencyKey }, { executionId: input.executionId }] }).lean();
-      if (concurrent?.idempotencyKey === idempotencyKey) return { receipt: concurrent, state: 'replayed' as const };
-      return { current: await resolveEffectivePrice(input.target), state: 'conflict' as const };
+      const concurrent = await RevenuePriceExecution.findOne({ $or: [{ idempotencyKey }, { executionId: input.executionId }] }).lean<IRevenuePriceExecution | null>();
+      if (!concurrent) throw error;
+      return resultForConcurrentExecution(concurrent, input, idempotencyKey, requestHash);
     }
   }
+
+  if (!intent || !current) throw new Error('Price execution intent could not be acquired.');
+  if (current.version !== input.expectedVersion) {
+    const receipt = await markConflict(intent, current.prices);
+    return { receipt: receipt.toObject(), current, state: 'conflict' as const };
+  }
+  if (current.sourceVersion !== input.sourceVersion) {
+    const reason = 'Catalogue mapping source version is stale.';
+    const receipt = await markBlocked(intent, reason, 'source_version_blocked', current.prices);
+    return { receipt: receipt.toObject(), current, state: 'blocked' as const, reason };
+  }
+  const configuredMovement = Number(process.env.REVENUEPILOT_MAX_WRITE_PERCENT || 5);
+  const maxMovement = Math.min(Number.isFinite(configuredMovement) ? configuredMovement : 5, input.policySnapshot.maxChangePercent);
+  if (movement(current.prices, input.prices) > maxMovement) {
+    const reason = `Maximum movement is ${maxMovement}%.`;
+    const receipt = await markBlocked(intent, reason, 'movement_blocked', current.prices);
+    return { receipt: receipt.toObject(), current, state: 'blocked' as const, reason };
+  }
+
+  let sellability;
+  try {
+    sellability = await assertRevenuePriceTargetSellable(input.target);
+  } catch (error: unknown) {
+    if (!(error instanceof RevenuePricingWriteError)) throw error;
+    const receipt = await markBlocked(intent, error.message, error.code, current.prices);
+    return { receipt: receipt.toObject(), current, state: 'blocked' as const, reason: error.message, code: error.code };
+  }
+
+  const nextVersion = current.version + 1;
+  const date = normalizePriceDate(input.target.date);
   let override;
   try {
     override = await RevenuePriceOverride.findOneAndUpdate(
@@ -90,26 +246,41 @@ export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string,
       { new: true, upsert: input.expectedVersion === 0, runValidators: true },
     );
   } catch (error: unknown) {
-    if (mongoErrorCode(error) === 11000) {
-      intent.state = 'conflict'; intent.events.push({ type: 'version_conflict', at: new Date().toISOString() }); await intent.save();
-      return { current: await resolveEffectivePrice(input.target), state: 'conflict' as const };
-    }
-    throw error;
+    if (mongoErrorCode(error) !== 11000) throw error;
   }
   if (!override) {
-    intent.state = 'conflict'; intent.events.push({ type: 'version_conflict', at: new Date().toISOString() }); await intent.save();
-    return { current: await resolveEffectivePrice(input.target), state: 'conflict' as const };
+    const effective = await resolveEffectivePrice(input.target);
+    if (effective.executionId === input.executionId && effective.version === nextVersion) {
+      const recovered = await RevenuePriceExecution.findOneAndUpdate(
+        { _id: intent._id, state: 'pending', applyClaimToken: claimToken },
+        {
+          $set: { state: 'applied', appliedVersion: nextVersion, effectivePrices: effective.prices },
+          $unset: { applyClaimToken: 1, applyClaimExpiresAt: 1 },
+          $push: { events: { $each: [{ type: 'sellable_departure_verified', ...sellability, at: new Date().toISOString() }, { type: 'apply_recovered', at: new Date().toISOString() }] } },
+        },
+        { new: true },
+      ).lean();
+      return { receipt: recovered || intent.toObject(), effective, state: 'replayed' as const, outcome: 'applied' as const, replayed: true };
+    }
+    const receipt = await markConflict(intent, effective.prices);
+    return { receipt: receipt.toObject(), current: effective, state: 'conflict' as const };
   }
-  intent.appliedVersion = nextVersion; intent.effectivePrices = input.prices; intent.state = 'applied';
-  intent.events.push({ type: 'price_applied', at: new Date().toISOString() });
-  const receipt = await intent.save();
-  const summary = await RevenuePriceOverride.aggregate([
-    { $match: { tenantId: input.tenantId, tourId: new mongoose.Types.ObjectId(input.target.tourId), active: true } },
-    { $group: { _id: null, fromPrice: { $min: '$prices.adult' }, version: { $max: '$version' } } },
-  ]);
-  const tour = await Tour.findById(input.target.tourId).select('discountPrice bookingOptions').lean<{ discountPrice?: number; bookingOptions?: Array<{ price?: number }> } | null>();
-  const catalogueFromPrice = Math.min(Number(tour?.discountPrice ?? Infinity), ...(tour?.bookingOptions || []).map((option) => Number(option.price)).filter(Number.isFinite));
-  const fromPrice = Math.min(summary[0]?.fromPrice ?? Infinity, catalogueFromPrice);
-  if (Number.isFinite(fromPrice)) await Tour.updateOne({ _id: input.target.tourId }, { $set: { pricingSummary: { fromPrice, currency: input.currency, version: summary[0]?.version ?? nextVersion, validThrough: date } } });
-  return { receipt: receipt.toObject(), effective: await resolveEffectivePrice(input.target), state: 'applied' as const };
+
+  const receipt = await RevenuePriceExecution.findOneAndUpdate(
+    { _id: intent._id, state: 'pending', applyClaimToken: claimToken },
+    {
+      $set: { state: 'applied', appliedVersion: nextVersion, effectivePrices: input.prices },
+      $unset: { applyClaimToken: 1, applyClaimExpiresAt: 1 },
+      $push: { events: { $each: [{ type: 'sellable_departure_verified', ...sellability, at: new Date().toISOString() }, { type: 'price_applied', at: new Date().toISOString() }] } },
+    },
+    { new: true },
+  ).lean<IRevenuePriceExecution | null>();
+  if (!receipt) {
+    const latest = await RevenuePriceExecution.findById(intent._id).lean<IRevenuePriceExecution | null>();
+    if (latest) return replayExistingExecution(latest, input);
+    throw new Error('Applied price receipt could not be finalized.');
+  }
+
+  await refreshTourPricingSummary(input.target.tourId, input.currency);
+  return { receipt, effective: await resolveEffectivePrice(input.target), state: 'applied' as const };
 }

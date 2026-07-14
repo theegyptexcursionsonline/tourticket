@@ -28,6 +28,7 @@ import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import ElfsightWidget from '@/components/ElfsightWidget';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
+import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 
 // Hooks and Types
 import { useSettings } from '@/hooks/useSettings';
@@ -849,8 +850,8 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="bg-gradient-to-br from-white to-slate-50 p-6 rounded-2xl text-center border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
         <Calendar className="w-10 h-10 text-red-600 mx-auto mb-3" />
-        <h3 className="font-semibold text-slate-900 mb-2">Free Cancellation</h3>
-        <p className="text-sm text-slate-600 leading-relaxed">{tour.cancellationPolicy || 'Up to 24 hours in advance'}</p>
+        <h3 className="font-semibold text-slate-900 mb-2">Cancellation & refunds</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">{CANCELLATION_POLICY_SUMMARY}</p>
       </div>
       <div className="bg-gradient-to-br from-white to-slate-50 p-6 rounded-2xl text-center border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
         <Users className="w-10 h-10 text-red-600 mx-auto mb-3" />
@@ -1377,7 +1378,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     <div className="grid grid-cols-2 gap-4 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <CheckCircle size={16} className="text-green-600" />
-                        <span>Free cancellation</span>
+                        <span>Tiered refunds</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Smartphone size={16} className="text-blue-600" />

@@ -9,7 +9,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { IDestination } from '@/lib/models/Destination';
 import { useLocale } from 'next-intl';
 
@@ -386,7 +386,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
       if (part.type === 'text') {
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[11px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
               {text}
             </ReactMarkdown>
           </div>

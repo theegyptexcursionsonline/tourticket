@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import Booking from '@/lib/models/Booking';
 
 // Creates a stable booking reference for a specific paid cart item.
@@ -22,11 +22,11 @@ export async function generateUniqueBookingReference(): Promise<string> {
   const maxAttempts = 10;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const reference = `EEO-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const reference = `EEO-${Date.now().toString().slice(-8)}-${randomBytes(10).toString('hex').toUpperCase()}`;
     const existing = await Booking.findOne({ bookingReference: reference }).lean();
     if (!existing) return reference;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 
-  return `EEO-${Date.now()}-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
+  return `EEO-${Date.now()}-${randomBytes(16).toString('hex').toUpperCase()}`;
 }

@@ -53,10 +53,10 @@ const AdminHeader = () => {
 
     return (
         <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
-            <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="max-w-7xl mx-auto px-3 py-3 sm:px-6 sm:py-4">
                 <div className="flex items-center justify-between">
                     {/* Enhanced Breadcrumbs */}
-                    <div className="flex items-center space-x-1">
+                    <div className="hidden min-w-0 items-center space-x-1 sm:flex">
                         <nav className="flex items-center space-x-1 text-sm">
                             {/* Home/Admin Root */}
                             <Link 
@@ -106,9 +106,9 @@ const AdminHeader = () => {
                     </div>
 
                     {/* Enhanced User Menu and Logout */}
-                    <div className="flex items-center gap-4">
+                    <div className="ml-auto flex items-center gap-1 sm:gap-4">
                         {/* DYNAMIC CURRENCY SWITCHER */}
-                        <div className="relative">
+                        <div className="relative hidden sm:block">
                            <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                            <select
                                 value={selectedCurrency.code}
@@ -147,7 +147,7 @@ const AdminHeader = () => {
                         {/* Logout Button */}
                         <button
                             onClick={handleLogout}
-                            className="group flex items-center gap-3 px-4 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50/80 rounded-xl transition-all duration-200 font-medium border border-transparent hover:border-red-200/60"
+                            className="group flex items-center gap-3 rounded-xl border border-transparent px-2 py-2.5 font-medium text-red-600 transition-all duration-200 hover:border-red-200/60 hover:bg-red-50/80 hover:text-red-700 sm:px-4"
                             aria-label="Log out"
                         >
                             <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />

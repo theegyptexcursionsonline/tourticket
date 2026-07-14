@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import dbConnect from '@/lib/dbConnect';
 import { verifyToken } from '@/lib/jwt';
+import User from '@/lib/models/user';
 import {
   AdminPermission,
   AdminRole,
@@ -32,6 +35,13 @@ function forbiddenResponse() {
   );
 }
 
+function serviceUnavailableResponse() {
+  return NextResponse.json(
+    { success: false, error: 'Admin authorization is temporarily unavailable' },
+    { status: 503 },
+  );
+}
+
 export async function requireAdminAuth(
   request: NextRequest,
   options: RequireAdminOptions = {},
@@ -54,7 +64,13 @@ export async function requireAdminAuth(
   // but state-changing requests must also prove they came from this origin.
   if (!bearerToken && cookieToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
     const origin = request.headers.get('origin');
-    if (!origin || new URL(origin).host !== request.nextUrl.host) {
+    let sameOrigin = false;
+    try {
+      sameOrigin = Boolean(origin && new URL(origin).host === request.nextUrl.host);
+    } catch {
+      sameOrigin = false;
+    }
+    if (!sameOrigin) {
       return forbiddenResponse();
     }
   }
@@ -64,16 +80,67 @@ export async function requireAdminAuth(
     return unauthorizedResponse();
   }
 
-  const role = (payload.role as AdminRole) || 'customer';
-  const permissionsFromToken = Array.isArray(payload.permissions)
-    ? (payload.permissions as AdminPermission[])
-    : getDefaultPermissions(role);
+  const userId = String(payload.sub || '');
+  if (userId === 'env-admin') {
+    if (process.env.NODE_ENV === 'production') {
+      return unauthorizedResponse();
+    }
+
+    const authContext: AdminAuthContext = {
+      userId,
+      email: typeof payload.email === 'string' ? payload.email : undefined,
+      role: 'super_admin',
+      permissions: getDefaultPermissions('super_admin'),
+    };
+
+    const { permissions = [], requireAll = true } = options;
+    const hasPermissions = requireAll
+      ? permissions.every((permission) => authContext.permissions.includes(permission))
+      : permissions.some((permission) => authContext.permissions.includes(permission));
+
+    return permissions.length === 0 || hasPermissions ? authContext : forbiddenResponse();
+  }
+
+  if (!mongoose.isValidObjectId(userId)) {
+    return unauthorizedResponse();
+  }
+
+  // JWTs prove that a login happened, but current database state remains the
+  // authority. This makes deactivation, demotion and permission revocation
+  // effective immediately instead of leaving an eight-hour authorization gap.
+  let currentUser;
+  try {
+    await dbConnect();
+    currentUser = await User.findOne({
+      _id: userId,
+      isActive: true,
+      role: { $ne: 'customer' },
+    })
+      .select('email role permissions')
+      .lean();
+  } catch (error) {
+    console.error(
+      'Admin authorization lookup failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+    return serviceUnavailableResponse();
+  }
+
+  if (!currentUser) {
+    return unauthorizedResponse();
+  }
+
+  const role = currentUser.role as AdminRole;
+  const permissionsFromDatabase =
+    Array.isArray(currentUser.permissions) && currentUser.permissions.length > 0
+      ? (currentUser.permissions as AdminPermission[])
+      : getDefaultPermissions(role);
 
   const authContext: AdminAuthContext = {
-    userId: String(payload.sub),
-    email: typeof payload.email === 'string' ? payload.email : undefined,
+    userId,
+    email: currentUser.email,
     role,
-    permissions: permissionsFromToken,
+    permissions: permissionsFromDatabase,
   };
 
   const { permissions = [], requireAll = true } = options;

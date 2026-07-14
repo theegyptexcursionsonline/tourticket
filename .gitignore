@@ -68,6 +68,8 @@ Thumbs.db
 
 # Markdown files
 *.md
+!docs/PUBLIC_INTEGRITY.md
+!docs/FIREBASE_CREDENTIALS.md
 
 # Local Netlify folder
 .netlify

@@ -194,7 +194,7 @@ export default async function ToursIndexPage({
   return (
     <>
       <ToursListSchema
-        tours={tours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount, duration: tour.duration }))}
+        tours={tours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.pricingSummary?.fromPrice ?? tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount, duration: tour.duration }))}
         listName={schemaListName}
         listDescription={schemaListDescription}
       />

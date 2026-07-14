@@ -266,7 +266,6 @@ const BookingDetailPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedDate, setEditedDate] = useState<string>('');
   const [editedTime, setEditedTime] = useState<string>('');
-  const [editedBookingOption, setEditedBookingOption] = useState<BookingOption | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
   // Refund modal state
@@ -348,13 +347,24 @@ const BookingDetailPage = () => {
       setShowRefundModal(true);
       return;
     }
+    if (newStatus === 'Confirmed' && booking.status === 'Pending') {
+      const method = String(booking.paymentMethod || '').toLowerCase();
+      if (!['cash', 'bank'].includes(method)) {
+        toast.error('Card bookings are confirmed only after Stripe verifies payment.');
+        return;
+      }
+      if (!window.confirm(`Confirm that the ${method} payment was received in full?`)) return;
+    }
     
     setUpdating(true);
     try {
-      const response = await fetch(`/api/admin/bookings/${id}`, {
-        method: 'PATCH',
+      const cancellation = newStatus === 'Cancelled';
+      const response = await fetch(cancellation ? `/api/admin/bookings/${id}/cancel` : `/api/admin/bookings/${id}`, {
+        method: cancellation ? 'POST' : 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(cancellation
+          ? { reason: 'Booking cancelled by administrator' }
+          : { status: newStatus }),
       });
 
       if (!response.ok) {
@@ -362,9 +372,15 @@ const BookingDetailPage = () => {
         throw new Error(errorData?.error || errorData?.message || 'Failed to update booking status');
       }
 
-      const updatedBooking = await response.json();
-      setBooking(updatedBooking);
-      toast.success(`Status updated to ${newStatus}`);
+      const result = await response.json();
+      await fetchBooking();
+      if (response.status === 202 || result.refundStatus === 'pending') {
+        toast('Refund is processing. Status will update after Stripe confirms it.', { icon: '⏳' });
+      } else if (result.refundStatus === 'manual_required') {
+        toast.success('Booking cancelled; offline refund requires manual review.');
+      } else {
+        toast.success(`Status updated to ${newStatus}`);
+      }
     } catch (err) {
       console.error('Error updating booking:', err);
       toast.error((err as Error).message || 'Failed to update booking status');
@@ -378,13 +394,13 @@ const BookingDetailPage = () => {
     
     setUpdating(true);
     try {
-      const response = await fetch(`/api/admin/bookings/${id}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/admin/bookings/${id}/refund`, {
+        method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          status: refundType,
-          refundAmount: parseFloat(refundAmount) || 0,
-          refundReason: refundReason
+          type: refundType === 'Refunded' ? 'full' : 'partial',
+          amount: parseFloat(refundAmount) || 0,
+          reason: refundReason
         }),
       });
 
@@ -393,12 +409,16 @@ const BookingDetailPage = () => {
         throw new Error(errorData?.error || errorData?.message || 'Failed to process refund');
       }
 
-      const updatedBooking = await response.json();
-      setBooking(updatedBooking);
+      const result = await response.json();
+      await fetchBooking();
       setShowRefundModal(false);
       setRefundAmount('');
       setRefundReason('');
-      toast.success(`${refundType === 'Refunded' ? 'Full' : 'Partial'} refund processed successfully`);
+      if (response.status === 202 || result.refundStatus === 'pending') {
+        toast('Refund is processing. The booking will update after Stripe confirms it.', { icon: '⏳' });
+      } else {
+        toast.success(`${refundType === 'Refunded' ? 'Full' : 'Partial'} refund confirmed by Stripe`);
+      }
     } catch (err) {
       console.error('Error processing refund:', err);
       toast.error((err as Error).message || 'Failed to process refund');
@@ -411,7 +431,6 @@ const BookingDetailPage = () => {
     if (!booking) return;
     setEditedDate(booking.dateString || booking.date.split('T')[0]);
     setEditedTime(booking.time);
-    setEditedBookingOption(booking.selectedBookingOption || null);
     setIsEditing(true);
   };
 
@@ -419,7 +438,6 @@ const BookingDetailPage = () => {
     setIsEditing(false);
     setEditedDate('');
     setEditedTime('');
-    setEditedBookingOption(null);
   };
 
   const saveEdits = async () => {
@@ -430,7 +448,6 @@ const BookingDetailPage = () => {
       const updates: {
         dateString?: string;
         time?: string;
-        selectedBookingOption?: BookingOption;
       } = {};
       
       // Check what changed
@@ -441,10 +458,6 @@ const BookingDetailPage = () => {
       
       if (editedTime && editedTime !== booking.time) {
         updates.time = editedTime;
-      }
-      
-      if (editedBookingOption && editedBookingOption.title !== booking.selectedBookingOption?.title) {
-        updates.selectedBookingOption = editedBookingOption;
       }
       
       if (Object.keys(updates).length === 0) {
@@ -766,11 +779,16 @@ const BookingDetailPage = () => {
               <select
                 value={booking.status}
                 onChange={(e) => updateBookingStatus(e.target.value)}
-                disabled={updating}
+                disabled={updating || ['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
                 className="w-full appearance-none bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
-                <option value="Confirmed">Confirmed</option>
-                <option value="Pending">Pending</option>
+                <option
+                  value="Confirmed"
+                  disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
+                >
+                  Confirmed
+                </option>
+                <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
                 <option value="Cancelled">Cancelled</option>
                 <option value="Refunded">Refunded</option>
                 <option value="Partial_Refund">Partial Refund</option>
@@ -820,13 +838,19 @@ const BookingDetailPage = () => {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={startEditing}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Edit size={16} />
-                Edit Details
-              </button>
+              <>
+                <button
+                  onClick={startEditing}
+                  disabled={['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <Edit size={16} />
+                  Reschedule
+                </button>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Date and time changes are capacity checked. To change the fare or option, cancel and create a new booking.
+                </p>
+              </>
             )}
           </div>
           
@@ -978,38 +1002,8 @@ const BookingDetailPage = () => {
                 value={formatGuestBreakdown(booking)}
               />
               
-              {/* Booking Option - Editable */}
-              {isEditing && booking.tour?.bookingOptions && booking.tour.bookingOptions.length > 0 ? (
-                <div className="flex items-start text-slate-700">
-                  <Package className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <span className="font-semibold text-slate-600">Booking Option:</span>
-                    <select
-                      value={editedBookingOption?.title || booking.selectedBookingOption?.title || ''}
-                      onChange={(e) => {
-                        const selected = booking.tour?.bookingOptions?.find(o => o.title === e.target.value);
-                        if (selected) {
-                          setEditedBookingOption({
-                            id: selected.id || selected._id || '',
-                            title: selected.title,
-                            price: selected.price,
-                            originalPrice: selected.originalPrice,
-                            duration: selected.duration,
-                            badge: selected.badge,
-                          });
-                        }
-                      }}
-                      className="mt-1 block w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
-                    >
-                      {booking.tour.bookingOptions.map((option) => (
-                        <option key={option.id || option._id || option.title} value={option.title}>
-                          {option.title} - ${safeToFixed(option.price)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ) : booking.selectedBookingOption ? (
+              {/* The paid option is immutable; option changes require a fresh quote. */}
+              {booking.selectedBookingOption ? (
                 <DetailItem
                   icon={Package}
                   label="Booking Option"

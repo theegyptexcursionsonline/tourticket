@@ -80,10 +80,17 @@ interface Availability {
     availableDays?: number[];
 }
 
+interface GuestPriceInput {
+    adult?: number | string;
+    child: number | string;
+    infant: number | string;
+}
+
 interface BookingOption {
     type: string;
     label: string;
     price: number | string;
+    guestPrices?: GuestPriceInput;
     description?: string;
     originalPrice?: number | string;
     duration?: string;
@@ -128,6 +135,7 @@ interface TourFormData {
     duration: string;
     discountPrice: string | number;
     originalPrice: string | number;
+    revenueGuestPrices?: GuestPriceInput;
     destination: string;
     category: string[];
     image: string;
@@ -153,6 +161,24 @@ interface TourFormData {
     keywords?: string | string[];
     translations: Record<string, Record<string, unknown>>;
 }
+
+const hasPartialGuestPrices = (prices?: GuestPriceInput) => {
+    if (!prices) return false;
+    const childPresent = String(prices.child ?? '').trim() !== '';
+    const infantPresent = String(prices.infant ?? '').trim() !== '';
+    return childPresent !== infantPresent;
+};
+
+const normalizeGuestPrices = (adult: number | string, prices?: GuestPriceInput) => {
+    if (!prices || hasPartialGuestPrices(prices)) return undefined;
+    if (String(prices.child ?? '').trim() === '' || String(prices.infant ?? '').trim() === '') return undefined;
+    const normalized = {
+        adult: Number(adult),
+        child: Number(prices.child),
+        infant: Number(prices.infant),
+    };
+    return Object.values(normalized).every((value) => Number.isFinite(value) && value >= 0) ? normalized : undefined;
+};
 
 interface Tour extends Omit<Partial<TourFormData>, 'destination' | 'category' | 'attractions' | 'interests'> {
     _id?: string;
@@ -374,6 +400,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         duration: '',
         discountPrice: '',
         originalPrice: '',
+        revenueGuestPrices: { child: '', infant: '' },
         destination: '',
         category: [],
         image: '',
@@ -422,6 +449,13 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 duration: tourToEdit.duration || '',
                 discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
                 originalPrice: tourToEdit.originalPrice || '',
+                revenueGuestPrices: tourToEdit.revenueGuestPrices
+                    ? {
+                        adult: tourToEdit.discountPrice || tourToEdit.price || '',
+                        child: tourToEdit.revenueGuestPrices.child ?? '',
+                        infant: tourToEdit.revenueGuestPrices.infant ?? '',
+                    }
+                    : { child: '', infant: '' },
                 destination: getReferenceId(tourToEdit.destination),
                 category: Array.isArray(tourToEdit.category)
                     ? tourToEdit.category.map(getReferenceId).filter(Boolean)
@@ -441,6 +475,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                         type: option.type || 'Per Person',
                         label: option.label || '',
                         price: option.price || 0,
+                        guestPrices: option.guestPrices
+                            ? { adult: option.price || 0, child: option.guestPrices.child ?? '', infant: option.guestPrices.infant ?? '' }
+                            : { child: '', infant: '' },
                         description: option.description || '',
                         originalPrice: option.originalPrice || undefined,
                         duration: option.duration || '',
@@ -456,6 +493,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                         type: 'Per Person', 
                         label: '', 
                         price: 0, 
+                        guestPrices: { child: '', infant: '' },
                         description: '',
                         originalPrice: undefined,
                         duration: '',
@@ -579,6 +617,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             duration: '',
             discountPrice: '',
             originalPrice: '',
+            revenueGuestPrices: { child: '', infant: '' },
             destination: '',
             category: [],
             image: '',
@@ -591,7 +630,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             whatsNotIncluded: [''],
             itinerary: [{ day: 1, title: '', description: '' }],
             faqs: [{ question: '', answer: '' }],
-            bookingOptions: [{ type: 'Per Person', label: '', price: 0 }],
+            bookingOptions: [{ type: 'Per Person', label: '', price: 0, guestPrices: { child: '', infant: '' } }],
            addOns: [],
         isPublished: false,
         difficulty: '',
@@ -732,7 +771,7 @@ const addItineraryItem = () => {
         setExpandedOptionIndex(expandedOptionIndex === index ? null : index);
     };
 
-    const handleBookingOptionChange = (index: number, field: string, value: string | number | boolean | string[]) => {
+    const handleBookingOptionChange = (index: number, field: string, value: string | number | boolean | string[] | GuestPriceInput) => {
         const updatedOptions = [...formData.bookingOptions];
         updatedOptions[index] = { ...updatedOptions[index], [field]: value };
         setFormData((p) => ({ ...p, bookingOptions: updatedOptions }));
@@ -741,7 +780,7 @@ const addItineraryItem = () => {
     const addBookingOption = () => {
         setFormData((p) => ({ 
             ...p, 
-            bookingOptions: [...p.bookingOptions, { type: 'Per Person', label: '', price: 0 }] 
+            bookingOptions: [...p.bookingOptions, { type: 'Per Person', label: '', price: 0, guestPrices: { child: '', infant: '' } }]
         }));
         setExpandedOptionIndex(formData.bookingOptions.length);
     };
@@ -764,6 +803,10 @@ const addItineraryItem = () => {
             toast.error('Option name is required');
             return;
         }
+        if (hasPartialGuestPrices(option.guestPrices)) {
+            toast.error('Enter both child and infant prices, or leave both blank');
+            return;
+        }
 
         try {
             const response = await fetch(`/api/tours/${tourToEdit._id}/booking-options`, {
@@ -775,6 +818,7 @@ const addItineraryItem = () => {
                         ...option,
                         price: parseFloat(String(option.price)) || 0,
                         originalPrice: option.originalPrice ? parseFloat(String(option.originalPrice)) : undefined,
+                        guestPrices: normalizeGuestPrices(option.price, option.guestPrices),
                     }
                 }),
             });
@@ -883,6 +927,11 @@ const addItineraryItem = () => {
             setIsSubmitting(false);
             return;
         }
+        if (hasPartialGuestPrices(formData.revenueGuestPrices) || formData.bookingOptions.some((option) => hasPartialGuestPrices(option.guestPrices))) {
+            toast.error('Each price set must include both child and infant prices, or leave both blank.');
+            setIsSubmitting(false);
+            return;
+        }
 
         try {
             const { translations, ...cleanedData } = formData;
@@ -896,6 +945,7 @@ const addItineraryItem = () => {
                 duration: cleanedData.duration.trim(),
                 price: parseFloat(String(cleanedData.discountPrice)) || 0,
                 discountPrice: parseFloat(String(cleanedData.discountPrice)) || 0,
+                revenueGuestPrices: normalizeGuestPrices(cleanedData.discountPrice, cleanedData.revenueGuestPrices),
                 longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
                 originalPrice: cleanedData.originalPrice ? parseFloat(String(cleanedData.originalPrice)) : undefined,
                 destination: cleanedData.destination,
@@ -912,7 +962,15 @@ const addItineraryItem = () => {
                 whatsNotIncluded: Array.isArray(cleanedData.whatsNotIncluded) ? cleanedData.whatsNotIncluded.filter((item: string) => item.trim() !== '') : [],
                 itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: ItineraryItem) => item.title?.trim() && item.description?.trim()) : [],
                 faq: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: FAQ) => faq.question?.trim() && faq.answer?.trim()) : [],
-                bookingOptions: Array.isArray(cleanedData.bookingOptions) ? cleanedData.bookingOptions.filter((option: BookingOption) => option.label?.trim()) : [],
+                bookingOptions: Array.isArray(cleanedData.bookingOptions)
+                    ? cleanedData.bookingOptions
+                        .filter((option: BookingOption) => option.label?.trim())
+                        .map((option: BookingOption) => ({
+                            ...option,
+                            price: Number(option.price),
+                            guestPrices: normalizeGuestPrices(option.price, option.guestPrices),
+                        }))
+                    : [],
                 addOns: Array.isArray(cleanedData.addOns) ? cleanedData.addOns.filter((addon: AddOn) => addon.name?.trim()) : [],
                 tags: typeof cleanedData.tags === 'string'
                     ? cleanedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
@@ -1369,6 +1427,51 @@ const addItineraryItem = () => {
                                                     className={inputBase} 
                                                     placeholder="e.g., Staff Favourite, -25%, New" 
                                                 />
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
+                                            <div className="mb-4">
+                                                <p className="text-sm font-semibold text-slate-800">Guest prices for RevenuePilot</p>
+                                                <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                    Adult follows the discount price above. Enter both child and infant prices to make this tour eligible for verified dynamic-pricing mappings. Leave both blank to keep catalogue-ratio display fallback only.
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="block text-sm font-medium text-slate-700">Adult ({selectedCurrency.symbol})</label>
+                                                    <input type="number" value={formData.discountPrice} disabled className={`${inputBase} bg-slate-100`} aria-label="Adult price follows discount price" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="block text-sm font-medium text-slate-700">Child ({selectedCurrency.symbol})</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={formData.revenueGuestPrices?.child ?? ''}
+                                                        onChange={(event) => setFormData((current) => ({
+                                                            ...current,
+                                                            revenueGuestPrices: { child: event.target.value, infant: current.revenueGuestPrices?.infant ?? '' },
+                                                        }))}
+                                                        className={inputBase}
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="block text-sm font-medium text-slate-700">Infant ({selectedCurrency.symbol})</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={formData.revenueGuestPrices?.infant ?? ''}
+                                                        onChange={(event) => setFormData((current) => ({
+                                                            ...current,
+                                                            revenueGuestPrices: { child: current.revenueGuestPrices?.child ?? '', infant: event.target.value },
+                                                        }))}
+                                                        className={inputBase}
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1922,7 +2025,43 @@ const addItineraryItem = () => {
                                                                         />
                                                                     </div>
                                                                 </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Child price ({selectedCurrency.symbol})</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        min="0"
+                                                                        value={option.guestPrices?.child ?? ''}
+                                                                        onChange={(event) => handleBookingOptionChange(index, 'guestPrices', {
+                                                                            child: event.target.value,
+                                                                            infant: option.guestPrices?.infant ?? '',
+                                                                        })}
+                                                                        className={inputBase}
+                                                                        placeholder="Required for RevenuePilot"
+                                                                    />
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Infant price ({selectedCurrency.symbol})</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        min="0"
+                                                                        value={option.guestPrices?.infant ?? ''}
+                                                                        onChange={(event) => handleBookingOptionChange(index, 'guestPrices', {
+                                                                            child: option.guestPrices?.child ?? '',
+                                                                            infant: event.target.value,
+                                                                        })}
+                                                                        className={inputBase}
+                                                                        placeholder="Required for RevenuePilot"
+                                                                    />
+                                                                </div>
                                                             </div>
+
+                                                            <p className="text-xs text-slate-500">
+                                                                Adult follows the option price. Enter both guest prices to certify this option for dynamic pricing.
+                                                            </p>
 
                                                             <div className="space-y-2">
                                                                 <label className="block text-sm font-medium text-slate-700">Description</label>

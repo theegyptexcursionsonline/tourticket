@@ -11,25 +11,21 @@ import supertest from 'supertest';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 let request: ReturnType<typeof supertest>;
-let serverAvailable = false;
 
 beforeAll(async () => {
   request = supertest(BASE_URL);
   try {
     const res = await request.get('/').timeout(5000);
-    serverAvailable = res.status < 500;
+    if (res.status >= 500) throw new Error(`Server returned HTTP ${res.status}`);
   } catch {
-    console.warn('⚠️  Server not available at ' + BASE_URL + ' — skipping supertest suite');
-    serverAvailable = false;
+    throw new Error(`Required API test server is not available at ${BASE_URL}`);
   }
 });
-
-const describeIfServer = () => (serverAvailable ? describe : describe.skip);
 
 describe('Supertest API Integration', () => {
   // ── Public Endpoints ─────────────────────────────────────────
 
-  describeIfServer()('GET /', () => {
+  describe('GET /', () => {
     it('returns 200 with HTML', async () => {
       const res = await request.get('/');
       expect(res.status).toBe(200);
@@ -37,7 +33,7 @@ describe('Supertest API Integration', () => {
     });
   });
 
-  describeIfServer()('GET /api/destinations', () => {
+  describe('GET /api/destinations', () => {
     it('returns 200 with JSON', async () => {
       const res = await request
         .get('/api/destinations')
@@ -50,7 +46,7 @@ describe('Supertest API Integration', () => {
     });
   });
 
-  describeIfServer()('GET /api/tours/public', () => {
+  describe('GET /api/tours/public', () => {
     it('returns 200 with JSON', async () => {
       const res = await request
         .get('/api/tours/public')
@@ -63,7 +59,7 @@ describe('Supertest API Integration', () => {
 
   // ── Admin Endpoints (should require auth) ────────────────────
 
-  describeIfServer()('GET /api/admin/bookings (no auth)', () => {
+  describe('GET /api/admin/bookings (no auth)', () => {
     it('returns 401 without auth token', async () => {
       const res = await request.get('/api/admin/bookings');
       expect(res.status).toBe(401);
@@ -71,7 +67,7 @@ describe('Supertest API Integration', () => {
     });
   });
 
-  describeIfServer()('PATCH /api/admin/bookings/:id (no auth)', () => {
+  describe('PATCH /api/admin/bookings/:id (no auth)', () => {
     it('returns 401 without auth token', async () => {
       const res = await request
         .patch('/api/admin/bookings/000000000000000000000000')
@@ -82,7 +78,7 @@ describe('Supertest API Integration', () => {
     });
   });
 
-  describeIfServer()('POST /api/admin/login', () => {
+  describe('POST /api/admin/login', () => {
     it('returns 400 with empty body', async () => {
       const res = await request
         .post('/api/admin/login')
@@ -104,7 +100,7 @@ describe('Supertest API Integration', () => {
 
   // ── Security Headers ─────────────────────────────────────────
 
-  describeIfServer()('Security Headers', () => {
+  describe('Security Headers', () => {
     it('sets X-Frame-Options: DENY', async () => {
       const res = await request.get('/');
       expect(res.headers['x-frame-options']).toBe('DENY');
@@ -123,7 +119,7 @@ describe('Supertest API Integration', () => {
 
   // ── 404 Handling ──────────────────────────────────────────────
 
-  describeIfServer()('404 Handling', () => {
+  describe('404 Handling', () => {
     it('returns 404 for non-existent API route', async () => {
       const res = await request.get('/api/nonexistent-route-12345');
       expect(res.status).toBe(404);

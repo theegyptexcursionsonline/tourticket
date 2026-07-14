@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CartItem } from '@/types';
 import toast from 'react-hot-toast';
 import { parseLocalDate } from '@/utils/date';
+import { completeCheckoutAttempt } from '@/lib/checkout/checkoutAttempt';
 
 interface PricingSummary {
   subtotal: number;
@@ -1377,6 +1378,7 @@ export default function CheckoutPage() {
         setLastOrderId(result.bookingId || `ORD-${Date.now()}`);
         setReceiptToken(result.receiptToken);
 
+        completeCheckoutAttempt();
         clearCart();
         setIsConfirmed(true);
 

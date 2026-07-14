@@ -244,10 +244,10 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
   const SeeAllArrow = rtl ? ArrowLeft : ArrowRight;
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
-  const [isMobileViewport, setIsMobileViewport] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.matchMedia('(max-width: 767px)').matches;
-  });
+  // Keep the first client render identical to SSR. The media query updates
+  // immediately after hydration; reading window in the state initializer made
+  // desktop clients render a different card count from the server.
+  const [isMobileViewport, setIsMobileViewport] = useState(true);
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767px)');

@@ -9,6 +9,8 @@ import {
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
 import { nextAdminLoginFailure } from '@/lib/security/adminLoginLockout';
+import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
+import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
 
 const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.8HtM5QX69q7OVWdfPQV3vF5wPfhJQmC';
 
@@ -60,16 +62,28 @@ function buildAdminUserPayload(user: AdminPayloadSource, permissions: AdminPermi
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, username, password } = await request.json();
+    const { email, username, password } = await readBoundedJson<{
+      email?: unknown;
+      username?: unknown;
+      password?: unknown;
+    }>(request, 4_096);
 
-    if (!password || (!email && !username)) {
+    const rawIdentifier = typeof email === 'string' ? email : username;
+    if (
+      typeof password !== 'string'
+      || password.length < 1
+      || password.length > 1_024
+      || typeof rawIdentifier !== 'string'
+      || rawIdentifier.trim().length < 1
+      || rawIdentifier.trim().length > 254
+    ) {
       return NextResponse.json(
         { success: false, error: 'Email/username and password are required' },
         { status: 400 },
       );
     }
 
-    const identifier = String(email || username).toLowerCase().trim();
+    const identifier = rawIdentifier.toLowerCase().trim();
 
     const envUsername = process.env.ADMIN_USERNAME?.toLowerCase();
     const envPassword = process.env.ADMIN_PASSWORD;
@@ -120,6 +134,15 @@ export async function POST(request: NextRequest) {
     }
 
     await dbConnect();
+    const rate = await enforcePublicActionLimits({
+      request,
+      action: 'admin-login',
+      subject: identifier,
+      networkLimit: 20,
+      subjectLimit: 8,
+      windowMs: 15 * 60 * 1_000,
+    });
+    if (!rate.allowed) return lockedResponse(new Date(Date.now() + rate.retryAfterSeconds * 1_000));
 
     const user = await User.findOne({ email: identifier })
       .select('+password +adminLoginAttempts +adminLockUntil');
@@ -139,10 +162,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.isActive) {
-      return NextResponse.json(
-        { success: false, error: 'This admin account has been deactivated.' },
-        { status: 403 },
-      );
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      return invalidResponse();
     }
 
     if (!user.password) {
@@ -156,10 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.role || user.role === 'customer') {
-      return NextResponse.json(
-        { success: false, error: 'This account does not have admin access.' },
-        { status: 403 },
-      );
+      return invalidResponse();
     }
 
     const permissions =
@@ -204,6 +222,12 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    if (error instanceof PublicInputError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status },
+      );
+    }
     console.error('Admin login failed:', error instanceof Error ? error.message : 'Unknown error');
 
     return NextResponse.json(

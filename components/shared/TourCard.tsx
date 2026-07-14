@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Link } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
@@ -12,9 +12,7 @@ import {
 import { Category, Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { useCart } from '@/hooks/useCart';
 import toast from 'react-hot-toast';
-import { toDateOnlyString } from '@/utils/date';
 
 interface TourCardProps {
   tour: Tour;
@@ -33,10 +31,9 @@ const TourCard: React.FC<TourCardProps> = ({
   onAddToCartClick
 }) => {
   const { formatPrice, t } = useSettings();
+  const router = useRouter();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
-  const { addToCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
 
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
 
@@ -64,7 +61,7 @@ const TourCard: React.FC<TourCardProps> = ({
     }
   };
 
-  const handleQuickAdd = async (e: React.MouseEvent) => {
+  const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -74,32 +71,11 @@ const TourCard: React.FC<TourCardProps> = ({
       return;
     }
 
-    // Otherwise, use the default quick add to cart behavior
-    if (isAdding) return;
-    setIsAdding(true);
-
-    try {
-      const quickAddCartItem = {
-        ...tour,
-        uniqueId: `${tour._id}-quick-add-${Date.now()}`,
-        quantity: 1,
-        childQuantity: 0,
-        infantQuantity: 0,
-        selectedDate: toDateOnlyString(new Date()),
-        selectedTime: 'Anytime',
-        selectedAddOns: {},
-        guestPrices: { adult: tour.discountPrice, child: Math.round(tour.discountPrice * 50) / 100, infant: 0 },
-        priceVersion: 0,
-        totalPrice: tour.discountPrice,
-      };
-
-      addToCart(quickAddCartItem);
-      toast.success(t('tourCard.addedToCart'));
-    } catch {
-      toast.error(t('tourCard.failedToAdd'));
-    } finally {
-      setIsAdding(false);
-    }
+    // Date, departure time and immutable pricing option are required for a
+    // sellable quote. Route to the tour instead of manufacturing an invalid
+    // "Anytime" cart item that checkout must later reject.
+    toast('Choose a date, time and option to continue.');
+    router.push(`/${tour.slug}`);
   };
 
   const cardVariants = {
@@ -192,17 +168,12 @@ const TourCard: React.FC<TourCardProps> = ({
               {showQuickAdd && (
                 <motion.button
                   onClick={handleQuickAdd}
-                  disabled={isAdding}
                   className="p-2 bg-white/90 backdrop-blur-sm rounded-full text-slate-600 hover:bg-green-600 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  aria-label="Quick add to cart"
+                  aria-label="Choose booking options"
                 >
-                  {isAdding ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <ShoppingCart size={16} />
-                  )}
+                  <ShoppingCart size={16} />
                 </motion.button>
               )}
             </div>

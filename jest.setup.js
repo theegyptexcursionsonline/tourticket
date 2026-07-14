@@ -61,6 +61,33 @@ jest.mock('firebase/auth', () => ({
   GoogleAuthProvider: jest.fn(),
   signInWithPopup: jest.fn(),
 }))
+jest.mock('firebase-admin/app', () => ({
+  cert: jest.fn((value) => value),
+  getApps: jest.fn(() => []),
+  initializeApp: jest.fn(() => ({})),
+}))
+jest.mock('firebase-admin/auth', () => ({
+  getAuth: jest.fn(() => ({
+    verifyIdToken: jest.fn().mockRejectedValue(new Error('Unauthenticated test request')),
+    getUser: jest.fn(),
+    updateUser: jest.fn(),
+    deleteUser: jest.fn(),
+  })),
+}))
+jest.mock('firebase-admin/firestore', () => ({ getFirestore: jest.fn(() => ({})) }))
+
+// AI SDK v7 is ESM-only. Component tests exercise our rendering contract, not
+// the provider transport implementation, so keep the transport deterministic.
+jest.mock('@ai-sdk/react', () => ({
+  useChat: () => ({
+    messages: [],
+    sendMessage: jest.fn(),
+    status: 'ready',
+    stop: jest.fn(),
+    setMessages: jest.fn(),
+  }),
+}))
+jest.mock('ai', () => ({ DefaultChatTransport: jest.fn(() => ({})) }))
 
 // Mock next-intl
 jest.mock('next-intl', () => {

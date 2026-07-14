@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import { safeRelativeRedirect } from '@/lib/security/safeRedirect';
 
 const REDIRECT_DELAY = 3000; // 3 seconds
 
@@ -13,7 +14,7 @@ function RedirectingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const destination = searchParams.get('to') || '/checkout';
+  const destination = safeRelativeRedirect(searchParams.get('to'), '/checkout');
   const tourName = searchParams.get('tour') || t('defaultTourName');
   const imageSrc = searchParams.get('image') || '/newimage.png!bw700';
 

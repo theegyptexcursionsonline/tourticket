@@ -7,7 +7,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import type { SearchResponse } from 'algoliasearch';
 import Image from 'next/image';
@@ -309,7 +309,8 @@ export default function AIAgentModal() {
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[13px]">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
+              rehypePlugins={safeMarkdownRehypePlugins}
+              urlTransform={safeMarkdownUrlTransform}
             >
               {text}
             </ReactMarkdown>

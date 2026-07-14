@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, Users, RefreshCw, Eye, Download, AlertTriangle, Loader2, Trash2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from 'lucide-react';
+import { Search, Calendar, Users, RefreshCw, Eye, Download, AlertTriangle, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
@@ -99,6 +99,14 @@ const formatBookedDate = (dateString: string | undefined): string => {
   return formatDisplayDate(dateString, { month: 'short', day: 'numeric' });
 };
 
+// Quote every cell and neutralize spreadsheet formula prefixes so exported
+// customer/tour values cannot execute when the CSV is opened in Excel/Sheets.
+const toCsvCell = (value: unknown): string => {
+  const normalized = String(value ?? '').replace(/\r?\n|\r/g, ' ');
+  const safeValue = /^\s*[=+\-@]/.test(normalized) ? `'${normalized}` : normalized;
+  return `"${safeValue.replace(/"/g, '""')}"`;
+};
+
 const BookingsPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalBookings, setTotalBookings] = useState(0);
@@ -121,13 +129,6 @@ const BookingsPage = () => {
   // Tour options for filter dropdown
   const [tourOptions, setTourOptions] = useState<TourOption[]>([]);
   const [tourOptionsLoading, setTourOptionsLoading] = useState(false);
-
-  // Bulk selection
-  const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  // Tracks which single booking row is mid-delete (per-row action).
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const router = useRouter();
   const { token } = useAdminAuth();
@@ -213,15 +214,9 @@ const BookingsPage = () => {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setPage(1);
-      setSelectedBookings(new Set());
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, [filtersKey]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => setSelectedBookings(new Set()), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [page]);
 
   const handleRowClick = (id: string) => router.push(`/admin/bookings/${id}`);
 
@@ -243,6 +238,51 @@ const BookingsPage = () => {
   const getTourTitle = (booking: Booking): string => booking.tour?.title || 'Deleted Tour';
   const getDestinationName = (booking: Booking): string | null => booking.tour?.destination?.name || null;
 
+  const handleExport = () => {
+    if (bookings.length === 0) return;
+
+    const headers = [
+      'Booking reference',
+      'Tour',
+      'Customer',
+      'Customer email',
+      'Activity date',
+      'Activity time',
+      'Guests',
+      'Status',
+      'Total',
+      'Currency',
+      'Payment method',
+      'Source',
+      'Booked at',
+    ];
+    const rows = bookings.map((booking) => [
+      booking.bookingReference || booking._id,
+      getTourTitle(booking),
+      formatUserName(booking.user),
+      booking.user?.email || '',
+      booking.dateString || booking.date,
+      booking.time,
+      formatGuestBreakdown(booking),
+      booking.status,
+      safeToFixed(booking.totalPrice),
+      booking.currency || 'USD',
+      booking.paymentMethod || '',
+      booking.source || 'online',
+      booking.createdAt,
+    ]);
+    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(toCsvCell).join(',')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bookings-page-${page}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${bookings.length} booking${bookings.length === 1 ? '' : 's'} from this page`);
+  };
+
   const StatusDropdown = ({ booking, onStatusChange }: {
     booking: Booking;
     onStatusChange: (bookingId: string, newStatus: string) => void;
@@ -250,6 +290,14 @@ const BookingsPage = () => {
     const [isUpdating, setIsUpdating] = useState(false);
 
     const handleChange = async (newStatus: string) => {
+      if (newStatus === 'Confirmed' && booking.status === 'Pending') {
+        const method = String(booking.paymentMethod || '').toLowerCase();
+        if (!['cash', 'bank'].includes(method)) {
+          toast.error('Card bookings are confirmed only after Stripe verifies payment.');
+          return;
+        }
+        if (!window.confirm(`Confirm that the ${method} payment was received in full?`)) return;
+      }
       setIsUpdating(true);
       await onStatusChange(booking._id, newStatus);
       setIsUpdating(false);
@@ -271,14 +319,19 @@ const BookingsPage = () => {
         <select
           value={booking.status}
           onChange={(e) => handleChange(e.target.value)}
-          disabled={isUpdating}
+          disabled={isUpdating || ['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
           className={`appearance-none text-xs font-semibold px-3 py-2 pr-8 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${getDropdownStyle(booking.status)}`}
         >
-          <option value="Confirmed">Confirmed</option>
-          <option value="Pending">Pending</option>
-          <option value="Cancelled">Cancelled</option>
-          <option value="Refunded">Refunded</option>
-          <option value="Partial_Refund">Partial Refund</option>
+          {['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
+            <option value={booking.status}>{booking.status === 'Partial_Refund' ? 'Partial Refund' : booking.status}</option>
+          )}
+          <option
+            value="Confirmed"
+            disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
+          >
+            Confirmed
+          </option>
+          <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
         </select>
         <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
           {isUpdating ? (
@@ -300,78 +353,18 @@ const BookingsPage = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
-      if (!response.ok) throw new Error('Failed to update booking status');
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || data?.error || 'Failed to update booking status');
+      }
 
       setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
       const statusLabel = newStatus === 'Partial_Refund' ? 'Partial Refund' : newStatus;
       toast.success(`Booking status updated to ${statusLabel}`);
-    } catch {
-      toast.error('Failed to update booking status');
-    }
-  };
-
-  const handleSelectAll = () => {
-    setSelectedBookings(
-      selectedBookings.size === bookings.length ? new Set() : new Set(bookings.map(b => b._id))
-    );
-  };
-
-  const handleSelectBooking = (bookingId: string) => {
-    const newSelected = new Set(selectedBookings);
-    if (newSelected.has(bookingId)) newSelected.delete(bookingId);
-    else newSelected.add(bookingId);
-    setSelectedBookings(newSelected);
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedBookings.size === 0) return;
-    setIsDeleting(true);
-    try {
-      const response = await fetch('/api/admin/bookings/bulk-delete', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ bookingIds: Array.from(selectedBookings) }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete bookings');
-      }
-      const data = await response.json();
-      setBookings(prev => prev.filter(b => !selectedBookings.has(b._id)));
-      setSelectedBookings(new Set());
-      setShowDeleteModal(false);
-      toast.success(`Successfully deleted ${data.deletedCount} booking(s)`);
     } catch (error) {
-      toast.error((error as Error).message || 'Failed to delete bookings');
-    } finally {
-      setIsDeleting(false);
+      toast.error((error as Error).message || 'Failed to update booking status');
     }
   };
-
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (!window.confirm('Delete this booking permanently? This cannot be undone.')) return;
-    setDeletingId(bookingId);
-    try {
-      const response = await fetch(`/api/admin/bookings/${bookingId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data?.success === false) {
-        throw new Error(data?.message || 'Failed to delete booking');
-      }
-      setBookings(prev => prev.filter(b => b._id !== bookingId));
-      setTotalBookings(prev => Math.max(0, prev - 1));
-      toast.success('Booking deleted');
-    } catch (error) {
-      toast.error((error as Error).message || 'Failed to delete booking');
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const isAllSelected = bookings.length > 0 && selectedBookings.size === bookings.length;
-  const isSomeSelected = selectedBookings.size > 0 && selectedBookings.size < bookings.length;
   const showingFrom = totalBookings === 0 ? 0 : (page - 1) * perPage + 1;
   const showingTo = Math.min(totalBookings, (page - 1) * perPage + bookings.length);
 
@@ -408,50 +401,37 @@ const BookingsPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-0 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Bookings Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Bookings Management</h1>
           <p className="text-slate-600 mt-1">
             Showing <span className="font-semibold text-slate-700">{showingFrom}-{showingTo}</span> of{' '}
             <span className="font-semibold text-slate-700">{totalBookings}</span> bookings
-            {selectedBookings.size > 0 && (
-              <span className="ml-2 text-blue-600 font-medium">({selectedBookings.size} selected)</span>
-            )}
           </p>
         </div>
-        <div className="flex items-center gap-3 mt-4 sm:mt-0">
+        <div className="grid w-full grid-cols-2 gap-2 mt-4 sm:mt-0 sm:ml-4 sm:flex sm:w-auto sm:items-center sm:gap-3">
           <button
             onClick={() => router.push('/admin/bookings/create')}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+            className="col-span-2 flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors sm:col-span-1 sm:min-h-0"
           >
             <Plus size={16} />
             Add Booking
           </button>
-          {selectedBookings.size > 0 && (
-            <>
-              <button
-                onClick={() => setSelectedBookings(new Set())}
-                className="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-full hover:bg-slate-50 transition-colors"
-              >
-                <X size={16} /> Clear Selection
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-              >
-                <Trash2 size={16} /> Delete Selected ({selectedBookings.size})
-              </button>
-            </>
-          )}
           <button
             onClick={() => fetchBookings(searchTerm.trim())}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+            className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors sm:min-h-0"
           >
             <RefreshCw size={16} /> Refresh
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-full hover:bg-slate-50 transition-colors">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={bookings.length === 0}
+            title={bookings.length === 0 ? 'No bookings to export' : 'Export the bookings shown on this page as CSV'}
+            className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 border border-slate-300 rounded-full hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0"
+          >
             <Download size={16} /> Export
           </button>
         </div>
@@ -508,32 +488,36 @@ const BookingsPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5">Purchase date</label>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[480px]:items-center">
               <input type="date" value={purchaseFrom} onChange={(e) => setPurchaseFrom(e.target.value)}
-                className="flex-1 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              <span className="text-slate-400 text-sm shrink-0">to</span>
+                aria-label="Purchase date from"
+                className="min-w-0 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <span className="sr-only text-slate-400 text-sm shrink-0 min-[480px]:not-sr-only">to</span>
               <input type="date" value={purchaseTo} onChange={(e) => setPurchaseTo(e.target.value)}
-                className="flex-1 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                aria-label="Purchase date to"
+                className="min-w-0 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5">Activity date</label>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[480px]:items-center">
               <input type="date" value={activityFrom} onChange={(e) => setActivityFrom(e.target.value)}
-                className="flex-1 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              <span className="text-slate-400 text-sm shrink-0">to</span>
+                aria-label="Activity date from"
+                className="min-w-0 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <span className="sr-only text-slate-400 text-sm shrink-0 min-[480px]:not-sr-only">to</span>
               <input type="date" value={activityTo} onChange={(e) => setActivityTo(e.target.value)}
-                className="flex-1 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                aria-label="Activity date to"
+                className="min-w-0 h-10 px-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
           </div>
         </div>
 
         {/* Row 4: Sort, Per page, Clear */}
         <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-2">
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
             <span className="text-xs font-medium text-slate-500">Sort</span>
             <select value={sort} onChange={(e) => setSort(e.target.value)}
-              className="h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer">
+              className="h-9 min-w-0 flex-1 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer sm:flex-none">
               <option value="createdAt_desc">Purchase date (newest)</option>
               <option value="createdAt_asc">Purchase date (oldest)</option>
               <option value="activityDate_desc">Activity date (newest)</option>
@@ -542,7 +526,7 @@ const BookingsPage = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-slate-500">Per page</span>
-            <select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); setSelectedBookings(new Set()); }}
+            <select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
               className="h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer">
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -580,12 +564,6 @@ const BookingsPage = () => {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input type="checkbox" checked={isAllSelected}
-                      ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer" />
-                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tour & Customer</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tour Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Guests</th>
@@ -602,13 +580,7 @@ const BookingsPage = () => {
                   const isDeleted = !booking.tour;
 
                   return (
-                    <tr key={booking._id} className={`hover:bg-slate-50 transition-colors ${selectedBookings.has(booking._id) ? 'bg-blue-50' : ''}`}>
-                      <td className="px-4 py-4">
-                        <input type="checkbox" checked={selectedBookings.has(booking._id)}
-                          onChange={() => handleSelectBooking(booking._id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer" />
-                      </td>
+                    <tr key={booking._id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <div>
                           <div className={`text-sm font-medium truncate max-w-xs flex items-center gap-2 ${isDeleted ? 'text-orange-600' : 'text-slate-900'}`}>
@@ -658,12 +630,6 @@ const BookingsPage = () => {
                             className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors">
                             <Eye size={12} /> View
                           </button>
-                          <button onClick={() => handleDeleteBooking(booking._id)}
-                            disabled={deletingId === booking._id}
-                            title="Delete booking"
-                            className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-full hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                            {deletingId === booking._id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -710,35 +676,6 @@ const BookingsPage = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => !isDeleting && setShowDeleteModal(false)} />
-            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
-                <Trash2 className="w-6 h-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-center text-slate-900 mb-2">
-                Delete {selectedBookings.size} Booking{selectedBookings.size !== 1 ? 's' : ''}?
-              </h3>
-              <p className="text-sm text-slate-600 text-center mb-6">
-                This action cannot be undone. The selected booking{selectedBookings.size !== 1 ? 's' : ''} will be permanently removed.
-              </p>
-              <div className="flex gap-3">
-                <button onClick={() => setShowDeleteModal(false)} disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50">
-                  Cancel
-                </button>
-                <button onClick={handleBulkDelete} disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isDeleting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</>) : (<><Trash2 className="w-4 h-4" /> Delete</>)}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

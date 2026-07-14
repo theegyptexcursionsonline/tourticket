@@ -11,7 +11,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
@@ -1268,7 +1268,8 @@ export default function AISearchWidget() {
               <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw]}
+                  rehypePlugins={safeMarkdownRehypePlugins}
+                  urlTransform={safeMarkdownUrlTransform}
                   components={markdownComponents}
                 >
                   {introText}
@@ -1289,7 +1290,8 @@ export default function AISearchWidget() {
           <div key={idx} className="prose prose-sm max-w-none leading-relaxed">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
+              rehypePlugins={safeMarkdownRehypePlugins}
+              urlTransform={safeMarkdownUrlTransform}
               components={markdownComponents}
             >
               {text}

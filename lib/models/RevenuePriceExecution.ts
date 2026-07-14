@@ -17,12 +17,23 @@ export interface IRevenuePriceExecution extends Document {
   requestedPrices?: ExecutionPrices;
   effectivePrices?: ExecutionPrices;
   policyHash: string;
+  policySnapshot?: unknown;
   sourceVersion: string;
   requestHash: string;
-  state: 'applied' | 'replayed' | 'conflict' | 'blocked' | 'verified' | 'rollback_applied' | 'rollback_failed';
+  state: 'pending' | 'applied' | 'replayed' | 'conflict' | 'blocked' | 'verified' | 'rollback_pending' | 'rollback_applied' | 'rollback_failed';
+  blockReason?: string;
+  applyClaimToken?: string;
+  applyClaimExpiresAt?: Date;
   readbackAttempts: unknown[];
   events: unknown[];
   rollbackExecutionId?: string;
+  rollbackIdempotencyKey?: string;
+  rollbackRequestHash?: string;
+  rollbackClaimToken?: string;
+  rollbackClaimExpiresAt?: Date;
+  rollbackFailureReason?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const PricesSchema = new Schema({ adult: Number, child: Number, infant: Number }, { _id: false });
@@ -47,12 +58,23 @@ const RevenuePriceExecutionSchema = new Schema<IRevenuePriceExecution>({
   requestedPrices: PricesSchema,
   effectivePrices: PricesSchema,
   policyHash: { type: String, required: true },
+  // New writes require this in application validation. Keep the persisted field
+  // optional so pre-rollout receipts remain readable and can receive readback events.
+  policySnapshot: { type: Schema.Types.Mixed },
   sourceVersion: { type: String, required: true },
   requestHash: { type: String, required: true },
-  state: { type: String, enum: ['applied', 'replayed', 'conflict', 'blocked', 'verified', 'rollback_applied', 'rollback_failed'], required: true },
+  state: { type: String, enum: ['pending', 'applied', 'replayed', 'conflict', 'blocked', 'verified', 'rollback_pending', 'rollback_applied', 'rollback_failed'], required: true },
+  blockReason: { type: String },
+  applyClaimToken: { type: String },
+  applyClaimExpiresAt: { type: Date },
   readbackAttempts: { type: [Schema.Types.Mixed], default: [] },
   events: { type: [Schema.Types.Mixed], default: [] },
   rollbackExecutionId: { type: String },
+  rollbackIdempotencyKey: { type: String },
+  rollbackRequestHash: { type: String },
+  rollbackClaimToken: { type: String },
+  rollbackClaimExpiresAt: { type: Date },
+  rollbackFailureReason: { type: String },
 }, { timestamps: true, minimize: false });
 
 const RevenuePriceExecution: Model<IRevenuePriceExecution> =

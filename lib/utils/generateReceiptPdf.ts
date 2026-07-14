@@ -46,9 +46,10 @@ const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): 
 
 const calculateItemTotal = (item: ReceiptOrderedItem) => {
   const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-  const adultPrice = basePrice * (item.quantity || 1);
+  const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
   const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-  const tourTotal = adultPrice + childPrice;
+  const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
+  const tourTotal = adultPrice + childPrice + infantPrice;
 
   let addOnsTotal = 0;
   if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -56,9 +57,9 @@ const calculateItemTotal = (item: ReceiptOrderedItem) => {
       const addOnDetail = item.selectedAddOnDetails?.[addOnId];
       const qtyNum = Number(qty) || 0;
       if (addOnDetail && qtyNum > 0) {
-        const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+        const totalGuests = (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
         const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
-        addOnsTotal += addOnDetail.price * addOnQuantity;
+        addOnsTotal += addOnDetail.price * addOnQuantity * qtyNum;
       }
     });
   }
@@ -96,7 +97,7 @@ export interface ReceiptOrderedItem {
   quantity?: number;
   childQuantity?: number;
   infantQuantity?: number;
-  guestPrices?: { child?: number };
+  guestPrices?: { adult?: number; child?: number; infant?: number };
   price?: number;
   discountPrice?: number;
   totalPrice?: number;
@@ -401,6 +402,7 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
     const participantText = [
       (item.quantity ?? 0) > 0 ? `${item.quantity} Adult${(item.quantity ?? 0) > 1 ? 's' : ''}` : '',
       (item.childQuantity ?? 0) > 0 ? `${item.childQuantity} Child${(item.childQuantity ?? 0) > 1 ? 'ren' : ''}` : '',
+      (item.infantQuantity ?? 0) > 0 ? `${item.infantQuantity} Infant${(item.infantQuantity ?? 0) > 1 ? 's' : ''}` : '',
     ].filter(Boolean).join(', ');
 
     page.drawText(participantText, { x: margin + 12, y: y - 26, font: font, size: 9, color: colors.gray });

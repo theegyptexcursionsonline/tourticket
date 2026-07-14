@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
-import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, Trash2, Loader2, Search, X, RefreshCw } from 'lucide-react';
+import { Users, Mail, Calendar, BookOpen, TrendingUp, Activity, UserX, Loader2, Search, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import type { LucideIcon } from 'lucide-react';
@@ -17,6 +17,8 @@ interface User {
   bookingCount: number;
   authProvider?: string;
   phone?: string;
+  isActive?: boolean;
+  deactivatedAt?: string;
 }
 
 interface UserStats {
@@ -142,19 +144,13 @@ const UsersPage = () => {
     });
   }, [users, searchQuery]);
 
-  const handleDeleteUser = async (userId: string, userEmail: string) => {
+  const handleDeactivateUser = async (userId: string, userEmail: string) => {
     const userName = users.find(u => u._id === userId);
     const displayName = userName ? getUserDisplayName(userName) : userEmail;
 
-    const confirmMessage = `Are you sure you want to delete this user?\n\nName: ${displayName}\nEmail: ${userEmail}\n\nThis action cannot be undone and will also delete all associated bookings and data.`;
+    const confirmMessage = `Deactivate this user?\n\nName: ${displayName}\nEmail: ${userEmail}\n\nThey will lose access immediately. Bookings, receipts, and review history will be preserved.`;
 
     if (!confirm(confirmMessage)) {
-      return;
-    }
-
-    const doubleConfirm = confirm('\u26a0\ufe0f FINAL WARNING: This will permanently delete the user and all their data. Are you absolutely sure?');
-
-    if (!doubleConfirm) {
       return;
     }
 
@@ -176,20 +172,22 @@ const UsersPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete user');
+        throw new Error(data.error || 'Failed to deactivate user');
       }
 
       if (data.success) {
-        toast.success(`User "${displayName}" deleted successfully`);
-        const updatedUsers = users.filter(user => user._id !== userId);
+        toast.success(`User "${displayName}" deactivated; booking records were preserved`);
+        const updatedUsers = users.map(user => user._id === userId
+          ? { ...user, isActive: false, deactivatedAt: data.data?.deactivatedAt }
+          : user);
         setUsers(updatedUsers);
         setStats(computeStats(updatedUsers));
       } else {
-        throw new Error(data.error || 'Failed to delete user');
+        throw new Error(data.error || 'Failed to deactivate user');
       }
     } catch (err) {
-      console.error('Delete user error:', err);
-      toast.error((err as Error).message || 'Failed to delete user');
+      console.error('Deactivate user error:', err);
+      toast.error((err as Error).message || 'Failed to deactivate user');
     } finally {
       setDeletingUserId(null);
     }
@@ -398,6 +396,11 @@ const UsersPage = () => {
                               <span className={`inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded border ${authBadge.className}`}>
                                 {authBadge.label}
                               </span>
+                              {user.isActive === false && (
+                                <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-600">
+                                  Inactive
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -434,20 +437,20 @@ const UsersPage = () => {
 
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
-                          onClick={() => handleDeleteUser(user._id, user.email)}
-                          disabled={deletingUserId === user._id}
+                          onClick={() => handleDeactivateUser(user._id, user.email)}
+                          disabled={deletingUserId === user._id || user.isActive === false}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-300 hover:border-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Delete User"
+                          title={user.isActive === false ? 'User is inactive' : 'Deactivate user'}
                         >
                           {deletingUserId === user._id ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Deleting...</span>
+                              <span>Deactivating...</span>
                             </>
                           ) : (
                             <>
-                              <Trash2 className="h-4 w-4" />
-                              <span>Delete</span>
+                              <UserX className="h-4 w-4" />
+                              <span>{user.isActive === false ? 'Inactive' : 'Deactivate'}</span>
                             </>
                           )}
                         </button>

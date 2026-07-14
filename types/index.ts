@@ -142,9 +142,11 @@ export interface FAQ {
 }
 
 export interface BookingOption {
+  pricingKey?: string;
   type: string;
   label: string;
   price: number;
+  guestPrices?: { adult: number; child: number; infant: number };
   originalPrice?: number;
   description?: string;
   duration?: string;

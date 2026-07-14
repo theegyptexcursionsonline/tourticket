@@ -56,7 +56,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
@@ -721,7 +721,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
       if (p.type === 'text') {
         return (
           <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
               {text}
             </ReactMarkdown>
           </div>

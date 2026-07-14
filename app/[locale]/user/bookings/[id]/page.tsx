@@ -25,6 +25,7 @@ import {
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
+import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 
 interface BookingUser {
   _id: string;
@@ -243,11 +244,17 @@ const UserBookingDetailPage = () => {
 
       const result = await response.json();
       
-      toast.success(
-        result.refundAmount > 0 
-          ? `Booking cancelled. You'll receive a refund of $${safeToFixed(result.refundAmount)}`
-          : 'Booking cancelled successfully'
-      );
+      if (response.status === 202 || result.refundStatus === 'pending') {
+        toast('Your refund is processing. The booking remains active until Stripe confirms it.', { icon: '⏳' });
+      } else if (result.refundStatus === 'manual_required') {
+        toast.success('Booking cancelled. Any offline refund now requires operator review.');
+      } else {
+        toast.success(
+          result.refundAmount > 0
+            ? `Booking cancelled. Stripe confirmed a $${safeToFixed(result.refundAmount)} refund.`
+            : 'Booking cancelled successfully',
+        );
+      }
       
       setShowCancelModal(false);
       fetchBooking();
@@ -788,7 +795,7 @@ const UserBookingDetailPage = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Free cancellation up to 24 hours before the tour starts</span>
+                  <span>{CANCELLATION_POLICY_SUMMARY}</span>
                 </li>
               </ul>
             </div>
@@ -827,6 +834,7 @@ const UserBookingDetailPage = () => {
                 placeholder="Let us know why you're cancelling..."
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                 rows={3}
+                maxLength={500}
               />
             </div>
 

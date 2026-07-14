@@ -283,10 +283,10 @@ export default function ToursClientPage({ tours }: ToursClientPageProps) {
     // Sort
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => (a.discountPrice || 0) - (b.discountPrice || 0));
+        filtered.sort((a, b) => (a.pricingSummary?.fromPrice ?? a.discountPrice ?? 0) - (b.pricingSummary?.fromPrice ?? b.discountPrice ?? 0));
         break;
       case 'price-high':
-        filtered.sort((a, b) => (b.discountPrice || 0) - (a.discountPrice || 0));
+        filtered.sort((a, b) => (b.pricingSummary?.fromPrice ?? b.discountPrice ?? 0) - (a.pricingSummary?.fromPrice ?? a.discountPrice ?? 0));
         break;
       case 'rating':
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));

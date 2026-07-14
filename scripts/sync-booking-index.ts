@@ -1,128 +1,284 @@
 /**
- * Script to ensure the unique index on paymentId exists in the Booking collection
- * Run with: npx tsx scripts/sync-booking-index.ts
- * 
- * This is critical to prevent duplicate bookings for the same payment.
+ * Verify or migrate booking payment idempotency for multi-item checkouts.
+ *
+ * Read-only verification (default):
+ *   pnpm tsx scripts/sync-booking-index.ts
+ *
+ * Apply only during an approved maintenance window after a backup:
+ *   CONFIRM_BOOKING_PAYMENT_INDEX_MIGRATION=YES \
+ *     pnpm tsx scripts/sync-booking-index.ts --apply
  */
-
 import mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI;
+const apply = process.argv.includes('--apply');
 
-if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI is not defined');
-  process.exit(1);
+if (!uri) throw new Error('MONGODB_URI is not defined');
+if (apply && process.env.CONFIRM_BOOKING_PAYMENT_INDEX_MIGRATION !== 'YES') {
+  throw new Error('Refusing to mutate indexes without CONFIRM_BOOKING_PAYMENT_INDEX_MIGRATION=YES');
+}
+const databaseHost = new URL(uri).hostname;
+if (
+  apply
+  && !['127.0.0.1', 'localhost'].includes(databaseHost)
+  && process.env.ALLOW_REMOTE_BOOKING_INDEX_MIGRATION !== 'YES'
+) {
+  throw new Error('Remote index mutation also requires ALLOW_REMOTE_BOOKING_INDEX_MIGRATION=YES');
 }
 
-async function syncIndexes() {
-  console.log('🔧 Syncing Booking indexes to MongoDB...\n');
-  
-  try {
-    await mongoose.connect(MONGODB_URI!);
-    console.log('✅ Connected to MongoDB\n');
+async function main() {
+  await mongoose.connect(uri as string);
+  const db = mongoose.connection.db!;
+  const collectionExists = Boolean(await db.listCollections({ name: 'bookings' }).next());
+  if (!collectionExists && apply) await db.createCollection('bookings');
+  const collection = db.collection('bookings');
+  const indexes = collectionExists || apply ? await collection.indexes() : [];
+  const quoteCollectionExists = Boolean(await db.listCollections({ name: 'checkoutpaymentquotes' }).next());
+  if (!quoteCollectionExists && apply) await db.createCollection('checkoutpaymentquotes');
+  const quoteCollection = db.collection('checkoutpaymentquotes');
+  const quoteIndexes = quoteCollectionExists || apply ? await quoteCollection.indexes() : [];
+  const holdCollectionExists = Boolean(await db.listCollections({ name: 'checkoutinventoryholds' }).next());
+  if (!holdCollectionExists && apply) await db.createCollection('checkoutinventoryholds');
+  const holdCollection = db.collection('checkoutinventoryholds');
+  const holdIndexes = holdCollectionExists || apply ? await holdCollection.indexes() : [];
+  const leaseCollectionExists = Boolean(await db.listCollections({ name: 'checkoutinventoryleases' }).next());
+  if (!leaseCollectionExists && apply) await db.createCollection('checkoutinventoryleases');
+  const leaseCollection = db.collection('checkoutinventoryleases');
+  const leaseIndexes = leaseCollectionExists || apply ? await leaseCollection.indexes() : [];
+  const tourCollectionExists = Boolean(await db.listCollections({ name: 'tours' }).next());
+  if (!tourCollectionExists && apply) await db.createCollection('tours');
+  const tourCollection = db.collection('tours');
+  const tourIndexes = tourCollectionExists || apply ? await tourCollection.indexes() : [];
+  const legacyPaymentIndexes = indexes.filter((index) => (
+    index.unique === true
+    && Object.keys(index.key).length === 1
+    && index.key.paymentId === 1
+  ));
+  const targetIndex = indexes.find((index) => index.name === 'tenant_payment_item_unique');
+  const refundReconciliationIndex = indexes.find((index) => index.name === 'tenant_refund_reconciliation');
+  const refundNotificationIndex = indexes.find((index) => index.name === 'tenant_refund_notification_monitoring');
+  const inventoryReservationIndex = indexes.find((index) => index.name === 'tenant_inventory_reservation_monitoring');
+  const quotePaymentIndex = quoteIndexes.find((index) => (
+    index.unique === true
+    && Object.keys(index.key).length === 1
+    && index.key.paymentIntentId === 1
+  ));
+  const quoteExpiryIndex = quoteIndexes.find((index) => (
+    Object.keys(index.key).length === 1
+    && index.key.expiresAt === 1
+    && Number(index.expireAfterSeconds) === 0
+  ));
+  const holdReservationIndex = holdIndexes.find((index) => index.name === 'tenant_reservation_item_unique' && index.unique === true);
+  const holdPaymentIndex = holdIndexes.find((index) => index.name === 'tenant_payment_hold_item_unique' && index.unique === true);
+  const holdScopeIndex = holdIndexes.find((index) => index.name === 'inventory_hold_scope_active');
+  const holdCleanupIndex = holdIndexes.find((index) => index.name === 'inventory_hold_cleanup' && Number(index.expireAfterSeconds) === 0);
+  const leaseScopeIndex = leaseIndexes.find((index) => index.name === 'inventory_scope_unique' && index.unique === true);
+  const leaseCleanupIndex = leaseIndexes.find((index) => index.name === 'inventory_lease_cleanup' && Number(index.expireAfterSeconds) === 0);
+  const pricingProjectionRetryIndex = tourIndexes.find((index) => index.name === 'pricing_search_projection_retry');
+  const missingTenant = await collection.countDocuments({
+    $or: [
+      { tenantId: { $exists: false } },
+      { tenantId: null },
+      { tenantId: '' },
+    ],
+  });
+  const missingItemIndex = await collection.countDocuments({
+    paymentId: { $type: 'string' },
+    paymentItemIndex: { $not: { $type: 'number' } },
+  });
+  const missingPricingProjection = tourCollectionExists || apply
+    ? await tourCollection.countDocuments({
+      pricingSummary: { $exists: true },
+      'pricingSearchProjection.status': { $exists: false },
+    })
+    : 0;
 
-    const db = mongoose.connection.db!;
-    const bookingsCollection = db.collection('bookings');
-    
-    // Check existing indexes
-    console.log('📋 Current indexes on bookings collection:');
-    const existingIndexes = await bookingsCollection.indexes();
-    existingIndexes.forEach((index: any) => {
-      console.log(`   - ${index.name}: ${JSON.stringify(index.key)} ${index.unique ? '(unique)' : ''} ${index.sparse ? '(sparse)' : ''}`);
-    });
-    
-    // Check if paymentId unique index exists
-    const hasPaymentIdIndex = existingIndexes.some(
-      (idx: any) => idx.key?.paymentId === 1 && idx.unique === true
-    );
-    
-    if (hasPaymentIdIndex) {
-      console.log('\n✅ paymentId unique index already exists!');
-    } else {
-      console.log('\n⚠️ paymentId unique index NOT FOUND. Creating...');
-      
-      // First, check for duplicate paymentIds that would block index creation
-      const duplicates = await bookingsCollection.aggregate([
-        { $match: { paymentId: { $ne: null, $exists: true } } },
-        { $group: { _id: '$paymentId', count: { $sum: 1 }, docs: { $push: '$_id' } } },
-        { $match: { count: { $gt: 1 } } }
-      ]).toArray();
-      
-      if (duplicates.length > 0) {
-        console.log('\n🚨 DUPLICATE PAYMENTS FOUND! These need to be resolved:');
-        for (const dup of duplicates) {
-          console.log(`   PaymentId: ${dup._id}`);
-          console.log(`   Count: ${dup.count}`);
-          console.log(`   Booking IDs: ${dup.docs.join(', ')}`);
-          console.log('');
-        }
-        
-        console.log('To fix: Keep one booking per payment and delete the duplicates.');
-        console.log('After fixing, run this script again to create the index.\n');
-        
-        // Option to auto-fix by keeping only the oldest booking
-        const readline = await import('readline');
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout
-        });
-        
-        const answer = await new Promise<string>((resolve) => {
-          rl.question('Auto-fix by keeping oldest booking per payment? (y/n): ', resolve);
-        });
-        rl.close();
-        
-        if (answer.toLowerCase() === 'y') {
-          for (const dup of duplicates) {
-            // Keep first (oldest), remove others
-            const toRemove = dup.docs.slice(1);
-            console.log(`   Removing ${toRemove.length} duplicate(s) for payment ${dup._id}...`);
-            await bookingsCollection.deleteMany({ _id: { $in: toRemove } });
-          }
-          console.log('\n✅ Duplicates removed.');
-        } else {
-          console.log('\n⏭️ Skipping auto-fix. Please resolve manually.');
-          await mongoose.disconnect();
-          process.exit(1);
-        }
-      }
-      
-      // Create the unique sparse index
-      try {
-        await bookingsCollection.createIndex(
-          { paymentId: 1 },
-          { unique: true, sparse: true, name: 'paymentId_unique_sparse' }
-        );
-        console.log('✅ Created paymentId unique sparse index!');
-      } catch (indexError: any) {
-        console.error('❌ Failed to create index:', indexError.message);
-        await mongoose.disconnect();
-        process.exit(1);
-      }
+  console.log(JSON.stringify({
+    mode: apply ? 'apply' : 'verify',
+    missingTenant,
+    missingItemIndex,
+    targetIndexPresent: Boolean(targetIndex),
+    refundReconciliationIndexPresent: Boolean(refundReconciliationIndex),
+    refundNotificationIndexPresent: Boolean(refundNotificationIndex),
+    inventoryReservationIndexPresent: Boolean(inventoryReservationIndex),
+    quotePaymentIndexPresent: Boolean(quotePaymentIndex),
+    quoteExpiryIndexPresent: Boolean(quoteExpiryIndex),
+    inventoryHoldIndexesPresent: Boolean(holdReservationIndex && holdPaymentIndex && holdScopeIndex && holdCleanupIndex),
+    inventoryLeaseIndexesPresent: Boolean(leaseScopeIndex && leaseCleanupIndex),
+    pricingProjectionRetryIndexPresent: Boolean(pricingProjectionRetryIndex),
+    missingPricingProjection,
+    legacyUniquePaymentIndexes: legacyPaymentIndexes.map((index) => index.name),
+  }, null, 2));
+
+  if (!apply) {
+    if (
+      missingTenant
+      || missingItemIndex
+      || !targetIndex
+      || !refundReconciliationIndex
+      || !refundNotificationIndex
+      || !inventoryReservationIndex
+      || legacyPaymentIndexes.length
+      || !quotePaymentIndex
+      || !quoteExpiryIndex
+      || !holdReservationIndex
+      || !holdPaymentIndex
+      || !holdScopeIndex
+      || !holdCleanupIndex
+      || !leaseScopeIndex
+      || !leaseCleanupIndex
+      || !pricingProjectionRetryIndex
+      || missingPricingProjection
+    ) {
+      process.exitCode = 2;
     }
-    
-    // Verify final state
-    console.log('\n📋 Final indexes on bookings collection:');
-    const finalIndexes = await bookingsCollection.indexes();
-    finalIndexes.forEach((index: any) => {
-      console.log(`   - ${index.name}: ${JSON.stringify(index.key)} ${index.unique ? '(unique)' : ''} ${index.sparse ? '(sparse)' : ''}`);
-    });
-    
-    console.log('\n🎉 Index sync complete!');
-    console.log('\nThe unique index on paymentId will now prevent duplicate bookings.');
-    
-    await mongoose.disconnect();
-    process.exit(0);
-    
-  } catch (err) {
-    console.error('❌ Error:', err);
-    await mongoose.disconnect();
-    process.exit(1);
+    return;
   }
+
+  await collection.updateMany(
+    {
+      $or: [
+        { tenantId: { $exists: false } },
+        { tenantId: null },
+        { tenantId: '' },
+      ],
+    },
+    { $set: { tenantId: 'default' } },
+  );
+  await tourCollection.updateMany(
+    {
+      pricingSummary: { $exists: true },
+      'pricingSearchProjection.status': { $exists: false },
+    },
+    [{
+      $set: {
+        pricingSearchProjection: {
+          status: 'pending',
+          summaryVersion: { $ifNull: ['$pricingSummary.version', 0] },
+          attempts: 0,
+          nextAttemptAt: '$$NOW',
+        },
+      },
+    }],
+  );
+  await collection.updateMany(
+    {
+      paymentId: { $type: 'string' },
+      paymentItemIndex: { $not: { $type: 'number' } },
+    },
+    { $set: { paymentItemIndex: 0 } },
+  );
+
+  // Create the replacement before removing the old unique index. This keeps
+  // idempotency protected throughout the migration.
+  if (!targetIndex) {
+    await collection.createIndex(
+      { tenantId: 1, paymentId: 1, paymentItemIndex: 1 },
+      {
+        unique: true,
+        name: 'tenant_payment_item_unique',
+        partialFilterExpression: {
+          paymentId: { $type: 'string' },
+          paymentItemIndex: { $type: 'number' },
+        },
+      },
+    );
+  }
+  if (!refundReconciliationIndex) {
+    await collection.createIndex(
+      { tenantId: 1, refundState: 1, updatedAt: 1 },
+      { name: 'tenant_refund_reconciliation' },
+    );
+  }
+  if (!refundNotificationIndex) {
+    await collection.createIndex(
+      { tenantId: 1, refundNotificationState: 1, refundNotificationClaimedAt: 1 },
+      { name: 'tenant_refund_notification_monitoring' },
+    );
+  }
+  if (!inventoryReservationIndex) {
+    await collection.createIndex(
+      { tenantId: 1, inventoryReservationState: 1, updatedAt: 1 },
+      { name: 'tenant_inventory_reservation_monitoring' },
+    );
+  }
+
+  for (const index of legacyPaymentIndexes) {
+    if (index.name) await collection.dropIndex(index.name);
+  }
+
+  if (!quotePaymentIndex) {
+    await quoteCollection.createIndex(
+      { paymentIntentId: 1 },
+      { unique: true, name: 'payment_intent_unique' },
+    );
+  }
+  if (!quoteExpiryIndex) {
+    await quoteCollection.createIndex(
+      { expiresAt: 1 },
+      { expireAfterSeconds: 0, name: 'checkout_quote_expiry' },
+    );
+  }
+
+  if (!holdReservationIndex) {
+    await holdCollection.createIndex(
+      { tenantId: 1, reservationKey: 1, itemIndex: 1 },
+      { unique: true, name: 'tenant_reservation_item_unique' },
+    );
+  }
+  if (!holdScopeIndex) {
+    await holdCollection.createIndex(
+      { tenantId: 1, tourId: 1, date: 1, time: 1, state: 1, expiresAt: 1 },
+      { name: 'inventory_hold_scope_active' },
+    );
+  }
+  if (!holdPaymentIndex) {
+    await holdCollection.createIndex(
+      { tenantId: 1, paymentIntentId: 1, itemIndex: 1 },
+      {
+        unique: true,
+        name: 'tenant_payment_hold_item_unique',
+        partialFilterExpression: { paymentIntentId: { $type: 'string' } },
+      },
+    );
+  }
+  if (!holdCleanupIndex) {
+    await holdCollection.createIndex(
+      { cleanupAt: 1 },
+      { expireAfterSeconds: 0, name: 'inventory_hold_cleanup' },
+    );
+  }
+  if (!leaseScopeIndex) {
+    await leaseCollection.createIndex(
+      { scopeKey: 1 },
+      { unique: true, name: 'inventory_scope_unique' },
+    );
+  }
+  if (!leaseCleanupIndex) {
+    await leaseCollection.createIndex(
+      { cleanupAt: 1 },
+      { expireAfterSeconds: 0, name: 'inventory_lease_cleanup' },
+    );
+  }
+  if (!pricingProjectionRetryIndex) {
+    await tourCollection.createIndex(
+      { 'pricingSearchProjection.status': 1, 'pricingSearchProjection.nextAttemptAt': 1 },
+      { name: 'pricing_search_projection_retry' },
+    );
+  }
+
+  console.log('Booking, checkout inventory, and pricing projection index migration completed.');
 }
 
-syncIndexes();
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await mongoose.disconnect();
+  });

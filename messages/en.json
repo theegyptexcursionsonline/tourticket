@@ -67,7 +67,7 @@
   "tourCard": {
     "featured": "Featured",
     "max": "Max",
-    "freeCancellation": "Free cancellation",
+    "freeCancellation": "Tiered cancellation refunds",
     "mobileTicket": "Mobile ticket",
     "more": "more",
     "addedToCart": "Added to cart!",
@@ -106,6 +106,10 @@
     "repliesWithinHour": "Replies within 1 hour",
     "newsletterThanksTitle": "Thank you!",
     "newsletterThanksDesc": "You've successfully subscribed to our newsletter.",
+    "newsletterPendingTitle": "Confirm your email",
+    "newsletterPendingDesc": "Check your inbox and confirm your email to finish subscribing.",
+    "newsletterConsentLabel": "I agree to receive marketing emails and can unsubscribe at any time.",
+    "newsletterConsentRequired": "Please agree to receive newsletter emails before continuing.",
     "socialDesc": "Join our community for live updates, reels, and travel inspiration.",
     "followSocialAria": "Follow us on social media",
     "getTheApp": "Your Next Adventure, One Tap Away",
@@ -171,7 +175,7 @@
     "partner": "Official partner of top museums & attractions",
     "bestPrice": "Best price guaranteed & simple booking process",
     "mobileTicket": "No printer needed! Show your tickets on your smartphone",
-    "freeCancellation": "Cancel for free up to 8 hours in advance",
+    "freeCancellation": "100% refund at 7+ days; 50% at 3–7 days",
     "cta": "More about us"
   },
   "destinations": {
@@ -233,7 +237,7 @@
     "items": [
       {
         "question": "Can I reschedule or cancel my tickets?",
-        "answer": "Yes, in most cases you can reschedule or cancel your tickets up to 24 hours in advance. Please check the specific conditions for your chosen tour or attraction on its product page. Some special events may have different policies."
+        "answer": "Self-service cancellation closes 24 hours before departure. Refunds are 100% at 7+ days, 50% at 3–7 days, and 0% under 3 days."
       },
       {
         "question": "How long are open tickets valid?",

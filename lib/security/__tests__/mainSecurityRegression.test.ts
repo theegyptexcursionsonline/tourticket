@@ -31,4 +31,35 @@ describe('main storefront security regressions', () => {
     expect(checkout).not.toContain("payment_status: 'paid'");
     expect(checkout).toContain("status: 405");
   });
+
+  it('revalidates admin authorization against the current database account', () => {
+    const adminAuth = source('lib/auth/adminAuth.ts');
+    expect(adminAuth).toContain("isActive: true");
+    expect(adminAuth).toContain("role: { $ne: 'customer' }");
+    expect(adminAuth).toContain('permissionsFromDatabase');
+    expect(adminAuth).not.toContain('permissionsFromToken');
+  });
+
+  it('protects both placeholder-image maintenance methods', () => {
+    const route = source('app/api/admin/tours/clean-images/route.ts');
+    const postSection = route.slice(route.indexOf('export async function POST'), route.indexOf('// GET endpoint'));
+    const getSection = route.slice(route.indexOf('export async function GET'));
+    expect(postSection).toContain('verifyAdmin(request)');
+    expect(getSection).toContain('verifyAdmin(request)');
+  });
+
+  it('sanitizes the delayed redirect destination', () => {
+    const page = source('app/[locale]/redirecting/page.tsx');
+    expect(page).toContain("safeRelativeRedirect(searchParams.get('to'), '/checkout')");
+    expect(page).not.toContain("searchParams.get('to') || '/checkout'");
+  });
+
+  it('disables Sentry error-generation examples in production', () => {
+    const layout = source('app/sentry-example-page/layout.tsx');
+    const api = source('app/api/sentry-example-api/route.ts');
+    expect(layout).toContain("process.env.NODE_ENV === 'production'");
+    expect(layout).toContain('notFound()');
+    expect(api).toContain("process.env.NODE_ENV === 'production'");
+    expect(api).toContain("status: 404");
+  });
 });

@@ -143,9 +143,9 @@ export default function AboutUsPage() {
               {/* Card 4 */}
               <div className="text-center p-6 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
                 <CalendarCheck size={48} className="text-red-600 mx-auto mb-4" />
-                <h3 className="font-semibold text-lg text-slate-900 mb-2">Free Cancellation</h3>
+                <h3 className="font-semibold text-lg text-slate-900 mb-2">Clear cancellation policy</h3>
                 <p className="text-sm text-slate-600">
-                  Enjoy flexibility with free cancellation on most tours up to 8 hours in advance.
+                  Self-service cancellation closes 24 hours before departure. Refunds are 100% at 7+ days, 50% at 3–7 days, and 0% under 3 days.
                 </p>
               </div>
             </div>

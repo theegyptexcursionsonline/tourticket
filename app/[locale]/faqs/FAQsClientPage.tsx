@@ -89,11 +89,11 @@ const faqsData = [
     faqs: [
       {
         question: "Are tickets refundable?",
-        answer: "Refund policies vary by tour. Most of our tickets are fully refundable if canceled within the free cancellation window. The specific refund details are listed on each product page and in your booking confirmation."
+        answer: "Self-service cancellation closes 24 hours before departure. Refunds are 100% at 7+ days, 50% at 3–7 days, and 0% under 3 days."
       },
       {
         question: "Can I cancel or reschedule my tickets?",
-        answer: "Yes, you can cancel most tickets for free up to 8 hours before the scheduled activity time. To reschedule, you'll need to cancel your original booking and make a new one. Please check the specific policy for your chosen activity."
+        answer: "You can request self-service cancellation until 24 hours before departure. The server applies the 7-day/3-day refund tiers before Stripe confirms any refund."
       },
       {
         question: "Is my payment secure?",

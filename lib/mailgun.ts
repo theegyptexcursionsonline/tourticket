@@ -94,13 +94,14 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
     const inlineCount = Array.isArray(messageData.inline) ? messageData.inline.length : messageData.inline ? 1 : 0;
     const attachmentCount = Array.isArray(messageData.attachment) ? messageData.attachment.length : messageData.attachment ? 1 : 0;
-    console.log(`📧 Sending email with inline: ${inlineCount}, attachments: ${attachmentCount}`);
+    console.log(`Sending email type=${options.type} inline=${inlineCount} attachments=${attachmentCount}`);
     const result = await mg.messages.create(DOMAIN, messageData);
-    console.log(`📮 Mailgun response ID: ${result.id}`);
-
-    console.log(`✅ Email sent successfully: ${options.type} to ${options.to}`);
+    console.log(`Email accepted type=${options.type} providerId=${result.id || 'unavailable'}`);
   } catch (error) {
-    console.error(`❌ Failed to send email: ${options.type}`, error);
+    const safeCode = typeof error === 'object' && error !== null && 'status' in error
+      ? String((error as { status?: unknown }).status || 'unknown')
+      : 'unknown';
+    console.error(`Email failed type=${options.type} status=${safeCode}`);
     throw error;
   }
 }

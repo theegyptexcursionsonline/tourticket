@@ -23,7 +23,7 @@ import {
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 type PaymentStatus = 'paid' | 'pending';
-type PaymentMethodUi = 'cash' | 'card' | 'bank' | 'other';
+type PaymentMethodUi = 'cash' | 'card' | 'bank';
 
 interface TourOptionLite {
   id: string;
@@ -32,13 +32,22 @@ interface TourOptionLite {
 
 interface TourOptionApiOption {
   id: string;
+  pricingKey?: string | null;
   title: string;
   type?: string;
   price: number;
+  guestPrices?: { adult: number; child: number; infant: number };
   originalPrice?: number;
   duration?: string;
   badge?: string;
   timeSlots?: Array<{ id: string; time: string; available?: number; price?: number }>;
+}
+
+interface LivePriceQuote {
+  currency: string;
+  prices: { adult: number; child: number; infant: number };
+  version: number;
+  source: 'catalogue' | 'override';
 }
 
 const COUNTRIES = [
@@ -71,7 +80,7 @@ export default withAuth(function CreateManualBookingPage() {
 
   // Tour booking options
   const [bookingOptions, setBookingOptions] = useState<TourOptionApiOption[]>([]);
-  const [bookingOptionType, setBookingOptionType] = useState('');
+  const [bookingOptionKey, setBookingOptionKey] = useState('');
   const [isLoadingBookingOptions, setIsLoadingBookingOptions] = useState(false);
 
   // Date/time
@@ -97,16 +106,33 @@ export default withAuth(function CreateManualBookingPage() {
   // Payment
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodUi>('cash');
+  const [externalPaymentId, setExternalPaymentId] = useState('');
 
   // Internal
   const [internalNotes, setInternalNotes] = useState('');
   const [sendEmail, setSendEmail] = useState(true);
 
-  // Pricing
-  const selectedBookingOption = useMemo(() => bookingOptions.find((o) => (o.type || '') === bookingOptionType) || null, [bookingOptions, bookingOptionType]);
-  const basePrice = Number(selectedBookingOption?.price || 0);
-  const subtotal = useMemo(() => basePrice * Math.max(0, adults) + (basePrice / 2) * Math.max(0, children), [basePrice, adults, children]);
+  // Pricing is resolved by the authoritative quote API. Client catalogue
+  // prices are presentation-only and never become executable booking totals.
+  const selectedBookingOption = useMemo(
+    () => bookingOptions.find((option) => (option.pricingKey || option.id) === bookingOptionKey) || null,
+    [bookingOptions, bookingOptionKey],
+  );
+  const [liveQuote, setLiveQuote] = useState<LivePriceQuote | null>(null);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
   const totalGuests = useMemo(() => Math.max(0, adults) + Math.max(0, children) + Math.max(0, infants), [adults, children, infants]);
+  const subtotal = useMemo(() => {
+    if (!liveQuote) return 0;
+    return Number((
+      liveQuote.prices.adult * Math.max(0, adults)
+      + liveQuote.prices.child * Math.max(0, children)
+      + liveQuote.prices.infant * Math.max(0, infants)
+    ).toFixed(2));
+  }, [liveQuote, adults, children, infants]);
+  const serviceFee = Number((subtotal * 0.03).toFixed(2));
+  const tax = Number((subtotal * 0.05).toFixed(2));
+  const total = Number((subtotal + serviceFee + tax).toFixed(2));
 
   // Fetch tours
   useEffect(() => {
@@ -134,7 +160,9 @@ export default withAuth(function CreateManualBookingPage() {
       if (!tourId) return;
       setIsLoadingBookingOptions(true);
       setBookingOptions([]);
-      setBookingOptionType('');
+      setBookingOptionKey('');
+      setLiveQuote(null);
+      setQuoteError('');
       setTime('');
       try {
         const res = await fetch(`/api/tours/${encodeURIComponent(tourId)}/options`);
@@ -142,8 +170,8 @@ export default withAuth(function CreateManualBookingPage() {
         const options = Array.isArray(data) ? (data as TourOptionApiOption[]) : [];
         setBookingOptions(options);
         const first = options[0];
-        if (first?.type) {
-          setBookingOptionType(first.type);
+        if (first) {
+          setBookingOptionKey(first.pricingKey || `unmigrated-${first.id}`);
           const firstTime = first?.timeSlots?.[0]?.time;
           if (firstTime) setTime(firstTime);
         }
@@ -163,17 +191,60 @@ export default withAuth(function CreateManualBookingPage() {
     if (firstTime && !time) setTime(firstTime);
   }, [selectedBookingOption, time]);
 
+  useEffect(() => {
+    if (!tourId || !bookingOptionKey || !date || !time) {
+      setLiveQuote(null);
+      setQuoteError('');
+      return;
+    }
+    if (bookingOptionKey.startsWith('unmigrated-')) {
+      setLiveQuote(null);
+      setQuoteError('This option needs the pricing-key migration before it can be booked.');
+      return;
+    }
+
+    const controller = new AbortController();
+    const query = new URLSearchParams({ date, time, optionKey: bookingOptionKey });
+    setIsLoadingQuote(true);
+    setLiveQuote(null);
+    setQuoteError('');
+    fetch(`/api/tours/${encodeURIComponent(tourId)}/quote?${query}`, {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error?.message || 'Unable to resolve the live price.');
+        setLiveQuote(payload.quote as LivePriceQuote);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setQuoteError(error instanceof Error ? error.message : 'Unable to resolve the live price.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingQuote(false);
+      });
+
+    return () => controller.abort();
+  }, [tourId, bookingOptionKey, date, time]);
+
   const canSubmit = useMemo(() => {
     if (!token) return false;
     if (!tourId) return false;
-    if (!bookingOptionType) return false;
+    if (!bookingOptionKey || bookingOptionKey.startsWith('unmigrated-')) return false;
     if (!date || !time) return false;
-    if (totalGuests < 1) return false;
+    if (totalGuests < 1 || totalGuests > 50) return false;
     if (!customerName.trim()) return false;
     if (!isValidEmail(customerEmail)) return false;
     if (!customerPhone.trim()) return false;
+    if (!liveQuote || isLoadingQuote || quoteError) return false;
+    if (paymentMethod === 'card' && paymentStatus === 'paid' && !/^pi_[A-Za-z0-9_]+$/.test(externalPaymentId.trim())) return false;
     return true;
-  }, [token, tourId, bookingOptionType, date, time, totalGuests, customerName, customerEmail, customerPhone]);
+  }, [
+    token, tourId, bookingOptionKey, date, time, totalGuests, customerName,
+    customerEmail, customerPhone, liveQuote, isLoadingQuote, quoteError,
+    paymentMethod, paymentStatus, externalPaymentId,
+  ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -194,6 +265,8 @@ export default withAuth(function CreateManualBookingPage() {
             firstName,
             lastName: lastName || firstName,
             email: customerEmail.trim(),
+            phone: customerPhone.trim(),
+            country: customerCountry,
           },
           booking: {
             date,
@@ -203,6 +276,8 @@ export default withAuth(function CreateManualBookingPage() {
             infantGuests: infants,
             bookingOption: selectedBookingOption ? {
               title: selectedBookingOption.title,
+              id: selectedBookingOption.id,
+              pricingKey: bookingOptionKey,
               price: selectedBookingOption.price,
               originalPrice: selectedBookingOption.originalPrice,
               duration: selectedBookingOption.duration,
@@ -210,15 +285,21 @@ export default withAuth(function CreateManualBookingPage() {
             } : undefined,
           },
           pricing: {
-            totalPrice: subtotal,
-            currency: 'USD',
+            totalPrice: total,
+            quoteVersion: liveQuote?.version,
+            currency: liveQuote?.currency || 'USD',
           },
           payment: {
             status: paymentStatus,
-            method: paymentMethod === 'other' ? 'card' : paymentMethod,
+            method: paymentMethod,
+            externalPaymentId: externalPaymentId.trim() || undefined,
           },
           specialRequests: specialRequests || undefined,
-          hotelPickupDetails: pickupAddress || pickupLocation || undefined,
+          hotelPickupDetails: pickupAddress || undefined,
+          pickupLocation: pickupLocation || undefined,
+          pickupAddress: pickupAddress || undefined,
+          internalNotes: internalNotes || undefined,
+          sendEmail,
         }),
       });
       const data = await res.json();
@@ -236,9 +317,11 @@ export default withAuth(function CreateManualBookingPage() {
     }
   }, [
     canSubmit, token, tourId, customerName, customerEmail, date, time,
-    adults, children, infants, selectedBookingOption, subtotal,
+    adults, children, infants, selectedBookingOption, bookingOptionKey, total,
+    liveQuote,
     paymentStatus, paymentMethod, specialRequests, pickupAddress,
-    pickupLocation, router,
+    pickupLocation, customerPhone, customerCountry, internalNotes, sendEmail,
+    externalPaymentId, router,
   ]);
 
   const timeSlotsForSelected = useMemo(() => {
@@ -295,17 +378,19 @@ export default withAuth(function CreateManualBookingPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tour Option *</label>
                 <select
-                  value={bookingOptionType}
-                  onChange={(e) => { setBookingOptionType(e.target.value); setTime(''); }}
+                  value={bookingOptionKey}
+                  onChange={(e) => { setBookingOptionKey(e.target.value); setTime(''); }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
                   disabled={!tourId || isLoadingBookingOptions}
                 >
                   <option value="">{isLoadingBookingOptions ? 'Loading options…' : 'Select option…'}</option>
                   {bookingOptions.map((o) => (
-                    <option key={o.id} value={o.type || ''}>{o.title} — ${Number(o.price || 0).toFixed(2)}</option>
+                    <option key={o.id} value={o.pricingKey || `unmigrated-${o.id}`}>
+                      {o.title} — ${Number(o.price || 0).toFixed(2)}{!o.pricingKey ? ' (migration required)' : ''}
+                    </option>
                   ))}
                 </select>
-                <p className="text-xs text-slate-500 mt-1">Children are 50% of adult price.</p>
+                <p className="text-xs text-slate-500 mt-1">Adult, child and infant prices come from the live server quote.</p>
               </div>
 
               <div>
@@ -316,6 +401,7 @@ export default withAuth(function CreateManualBookingPage() {
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    min={new Date().toISOString().slice(0, 10)}
                     className="w-full ps-10 pe-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -328,7 +414,7 @@ export default withAuth(function CreateManualBookingPage() {
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                    disabled={!bookingOptionType}
+                    disabled={!bookingOptionKey}
                   >
                     <option value="">Select time…</option>
                     {timeSlotsForSelected.map((t) => (
@@ -343,9 +429,24 @@ export default withAuth(function CreateManualBookingPage() {
                       value={time}
                       onChange={(e) => setTime(e.target.value)}
                       className="w-full ps-10 pe-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                      disabled={!bookingOptionType}
+                      disabled={!bookingOptionKey}
                     />
                   </div>
+                )}
+              </div>
+              <div className="md:col-span-2" aria-live="polite">
+                {isLoadingQuote && (
+                  <p className="flex items-center gap-2 text-sm text-slate-600">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Resolving authoritative price…
+                  </p>
+                )}
+                {!isLoadingQuote && quoteError && (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{quoteError}</p>
+                )}
+                {!isLoadingQuote && liveQuote && (
+                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    Live {liveQuote.source} quote loaded · version {liveQuote.version}
+                  </p>
                 )}
               </div>
             </div>
@@ -491,22 +592,38 @@ export default withAuth(function CreateManualBookingPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="paid">Paid</option>
-                  <option value="pending">Pending</option>
+                  <option value="pending" disabled={paymentMethod === 'card'}>Pending</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method *</label>
                 <select
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethodUi)}
+                  onChange={(e) => {
+                    const method = e.target.value as PaymentMethodUi;
+                    setPaymentMethod(method);
+                    if (method === 'card') setPaymentStatus('paid');
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>
                   <option value="bank">Bank Transfer</option>
-                  <option value="other">Other</option>
                 </select>
               </div>
+              {paymentMethod === 'card' && paymentStatus === 'paid' && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Successful Stripe PaymentIntent ID *</label>
+                  <input
+                    value={externalPaymentId}
+                    onChange={(e) => setExternalPaymentId(e.target.value)}
+                    placeholder="pi_..."
+                    autoComplete="off"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">The server verifies status, currency and exact amount with Stripe before confirming.</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 flex items-center gap-3">
@@ -557,22 +674,34 @@ export default withAuth(function CreateManualBookingPage() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-600">Adults</span>
-                <span className="font-medium text-slate-800">{adults}</span>
+                <span className="font-medium text-slate-800">{adults} × ${(liveQuote?.prices.adult || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Children</span>
-                <span className="font-medium text-slate-800">{children}</span>
+                <span className="font-medium text-slate-800">{children} × ${(liveQuote?.prices.child || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Infants</span>
-                <span className="font-medium text-slate-800">{infants}</span>
+                <span className="font-medium text-slate-800">{infants} × ${(liveQuote?.prices.infant || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-100 pt-3">
+                <span className="text-slate-600">Subtotal</span>
+                <span className="font-medium text-slate-800">${subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Service fee</span>
+                <span className="font-medium text-slate-800">${serviceFee.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Tax</span>
+                <span className="font-medium text-slate-800">${tax.toFixed(2)}</span>
               </div>
               <div className="pt-3 border-t border-slate-200 flex justify-between items-baseline">
                 <span className="text-slate-600">Total</span>
-                <span className="text-2xl font-extrabold text-emerald-700">${subtotal.toFixed(2)}</span>
+                <span className="text-2xl font-extrabold text-emerald-700">${total.toFixed(2)}</span>
               </div>
               <p className="text-xs text-slate-500">
-                Final total is calculated on the server when you submit.
+                The server recalculates and verifies this total when you submit.
               </p>
             </div>
           </div>
