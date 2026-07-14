@@ -171,6 +171,11 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   const logout = useCallback(() => {
     void fetch('/api/auth/logout', { method: 'POST' });
     clearSession();
+    // Drop cached dashboard metrics so they don't outlive the session on a
+    // shared machine.
+    try {
+      localStorage.removeItem('admin-dashboard-cache:main');
+    } catch { /* storage unavailable */ }
     toast.success('You have been logged out.');
   }, [clearSession]);
 
