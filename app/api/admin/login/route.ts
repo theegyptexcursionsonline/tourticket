@@ -11,6 +11,7 @@ import {
 import { nextAdminLoginFailure } from '@/lib/security/adminLoginLockout';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
 import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
+import { canAccessMainAdminPortal } from '@/lib/auth/adminPortalScope';
 
 const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.8HtM5QX69q7OVWdfPQV3vF5wPfhJQmC';
 
@@ -178,6 +179,13 @@ export async function POST(request: NextRequest) {
 
     if (!user.role || user.role === 'customer') {
       return invalidResponse();
+    }
+
+    if (!canAccessMainAdminPortal(user.adminPortalScopes)) {
+      return NextResponse.json(
+        { success: false, error: 'This account is not assigned to this admin portal.' },
+        { status: 403 },
+      );
     }
 
     const permissions =

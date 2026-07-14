@@ -8,6 +8,7 @@ import {
   AdminRole,
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
+import { canAccessMainAdminPortal } from '@/lib/auth/adminPortalScope';
 
 export interface AdminAuthContext {
   userId: string;
@@ -116,7 +117,7 @@ export async function requireAdminAuth(
       isActive: true,
       role: { $ne: 'customer' },
     })
-      .select('email role permissions')
+      .select('email role permissions adminPortalScopes')
       .lean();
   } catch (error) {
     console.error(
@@ -128,6 +129,10 @@ export async function requireAdminAuth(
 
   if (!currentUser) {
     return unauthorizedResponse();
+  }
+
+  if (!canAccessMainAdminPortal(currentUser.adminPortalScopes)) {
+    return forbiddenResponse();
   }
 
   const role = currentUser.role as AdminRole;

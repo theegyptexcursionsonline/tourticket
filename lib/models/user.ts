@@ -7,6 +7,7 @@ import {
   DEFAULT_ADMIN_ROLE,
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
+import type { AdminPortalScope } from '@/lib/auth/adminPortalScope';
 
 // Cart item interface for storing in user document
 export interface ICartItem {
@@ -56,6 +57,7 @@ export interface IUser extends Document {
   invitationToken?: string;
   invitationExpires?: Date;
   requirePasswordChange?: boolean;
+  adminPortalScopes?: AdminPortalScope[];
   wishlist?: mongoose.Types.ObjectId[]; // Array of Tour IDs
   cart?: ICartItem[]; // Array of cart items
 }
@@ -159,6 +161,11 @@ const UserSchema: Schema<IUser> = new Schema({
   requirePasswordChange: {
     type: Boolean,
     default: false,
+  },
+  adminPortalScopes: {
+    type: [String],
+    enum: ['main', 'multiTenant'],
+    default: undefined,
   },
   createdAt: {
     type: Date,
