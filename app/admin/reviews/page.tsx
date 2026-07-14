@@ -115,7 +115,22 @@ const ReviewsPage = () => {
   }, [token]);
 
   const fetchReviews = useCallback(async () => {
-    setIsLoading(true);
+    // Stale-while-revalidate keyed by tab + page: sidebar revisits paint the
+    // last-known list instantly while fresh data loads behind it. sessionStorage
+    // only — review payloads include customer names.
+    const cacheKey = `admin-reviews-cache:${activeFilter}:${page}`;
+    let hasCached = false;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setReviews(parsed.reviews || []);
+        setStats(parsed.stats || EMPTY_STATS);
+        setPagination(parsed.pagination || EMPTY_PAGINATION);
+        hasCached = true;
+      }
+    } catch { /* ignore corrupt cache */ }
+    setIsLoading(!hasCached);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -133,6 +148,13 @@ const ReviewsPage = () => {
       setReviews(data.data || []);
       setStats(data.stats || EMPTY_STATS);
       setPagination(data.pagination || EMPTY_PAGINATION);
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          reviews: data.data || [],
+          stats: data.stats || EMPTY_STATS,
+          pagination: data.pagination || EMPTY_PAGINATION,
+        }));
+      } catch { /* ignore storage quota */ }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -150,6 +172,17 @@ const ReviewsPage = () => {
     };
   }, [fetchReviews]);
 
+  // After a mutation the cached pages are stale (a deleted review would
+  // flash back in) — drop them before refetching.
+  const clearReviewsCache = () => {
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('admin-reviews-cache:')) sessionStorage.removeItem(key);
+      }
+    } catch { /* storage unavailable */ }
+  };
+
   // --- Approve a Review ---
   const handleApprove = async (id: string) => {
     const loadingToast = toast.loading('Approving review...');
@@ -165,6 +198,7 @@ const ReviewsPage = () => {
       }
       await response.json();
 
+      clearReviewsCache();
       if (activeFilter === 'pending' && reviews.length === 1 && page > 1) {
         setPage((currentPage) => currentPage - 1);
       } else {
@@ -190,6 +224,7 @@ const ReviewsPage = () => {
         throw new Error(errorData.message || 'Failed to delete review');
       }
 
+      clearReviewsCache();
       if (reviews.length === 1 && page > 1) {
         setPage((currentPage) => currentPage - 1);
       } else {

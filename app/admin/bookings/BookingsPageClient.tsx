@@ -172,12 +172,29 @@ const BookingsPage = () => {
 
   const fetchBookings = useCallback(async (effectiveSearch: string) => {
     if (!token) return;
-    setLoading(true);
+    const requestUrl = buildBookingsUrl(effectiveSearch);
+    // Stale-while-revalidate keyed by the exact filter view: revisiting the
+    // page (sidebar navigation) paints the last-known rows instantly while
+    // the fresh list loads behind it. sessionStorage: per tab, contains
+    // customer names so it must not outlive the browser session.
+    const cacheKey = `admin-bookings-cache:${requestUrl}`;
+    let hasCached = false;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setBookings(parsed.bookings || []);
+        setTotalBookings(parsed.total || 0);
+        setTotalPages(parsed.totalPages || 1);
+        hasCached = true;
+      }
+    } catch { /* ignore corrupt cache */ }
+    setLoading(!hasCached);
     setError(null);
     try {
       // Cache-buster + no-store: the admin list must never serve a stale
       // (edge-cached) page, otherwise a just-deleted booking reappears.
-      const url = `${buildBookingsUrl(effectiveSearch)}&_t=${Date.now()}`;
+      const url = `${requestUrl}&_t=${Date.now()}`;
       const response = await fetch(url, { headers: getAuthHeaders(), cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch bookings');
       const data: BookingsResponse = await response.json();
@@ -186,6 +203,13 @@ const BookingsPage = () => {
       setBookings(data.data || []);
       setTotalBookings(data.meta?.total || 0);
       setTotalPages(data.meta?.totalPages || 1);
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          bookings: data.data || [],
+          total: data.meta?.total || 0,
+          totalPages: data.meta?.totalPages || 1,
+        }));
+      } catch { /* ignore storage quota */ }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -359,6 +383,14 @@ const BookingsPage = () => {
       }
 
       setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
+      // Cached list views are stale after a mutation — drop them so the old
+      // status can't flash back on the next visit.
+      try {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('admin-bookings-cache:')) sessionStorage.removeItem(key);
+        }
+      } catch { /* storage unavailable */ }
       const statusLabel = newStatus === 'Partial_Refund' ? 'Partial Refund' : newStatus;
       toast.success(`Booking status updated to ${statusLabel}`);
     } catch (error) {
