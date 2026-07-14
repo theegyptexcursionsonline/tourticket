@@ -77,6 +77,17 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     setUser(null);
     try {
       sessionStorage.removeItem(SESSION_PROFILE_KEY);
+      // Cached admin lists/metrics must not outlive the session.
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith('admin-bookings-cache:') || key.startsWith('admin-reviews-cache:'))) {
+          sessionStorage.removeItem(key);
+        }
+      }
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('admin-dashboard-cache:')) localStorage.removeItem(key);
+      }
     } catch { /* storage unavailable */ }
   }, []);
 
@@ -207,11 +218,6 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   const logout = useCallback(() => {
     void fetch('/api/auth/logout', { method: 'POST' });
     clearSession();
-    // Drop cached dashboard metrics so they don't outlive the session on a
-    // shared machine.
-    try {
-      localStorage.removeItem('admin-dashboard-cache:main');
-    } catch { /* storage unavailable */ }
     toast.success('You have been logged out.');
   }, [clearSession]);
 
