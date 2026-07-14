@@ -14,9 +14,13 @@ async function getTours(): Promise<PopulatedTour[]> {
     // managed from their own admin and must not leak into this list — that's
     // what was producing duplicate "Geführte private Luxor-Touren" /
     // "El Gouna Pferdereittour" rows here.
+    // List projection: this page serializes every tour into the RSC payload,
+    // so full documents (translations, itinerary, faq, ...) multiply the HTML
+    // size ~10x. ToursListClient only renders these display fields.
     const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER })
-      .populate('destination')
-      .populate('category') // Added missing category population
+      .select('title name slug image images destination category price discountPrice duration createdAt updatedAt published isPublished draft isFeatured tenantId')
+      .populate({ path: 'destination', select: 'name title slug', strictPopulate: false })
+      .populate({ path: 'category', select: 'name title slug', strictPopulate: false })
       .sort({ createdAt: -1 })
       .lean(); // Using .lean() for better performance since we're serializing anyway
 
