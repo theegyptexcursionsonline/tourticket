@@ -40,6 +40,22 @@ interface AdminLoginResponse {
 
 const AdminAuthContext = createContext<AdminAuthContextValue | undefined>(undefined);
 const COOKIE_SESSION_SENTINEL = 'cookie-session';
+// Display profile only (name/role/permissions) — never a credential. The
+// session credential stays in the httpOnly cookie; this just lets reloads
+// render the admin shell instantly while the cookie is re-validated in the
+// background. sessionStorage: per tab, gone when the browser closes.
+const SESSION_PROFILE_KEY = 'admin-session-profile';
+
+function readSessionProfile(): AdminUser | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_PROFILE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AdminUser;
+    return parsed && parsed.id && parsed.role ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -51,11 +67,17 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     // itself is only in the httpOnly cookie and is never exposed to JS.
     setToken(COOKIE_SESSION_SENTINEL);
     setUser(newUser);
+    try {
+      sessionStorage.setItem(SESSION_PROFILE_KEY, JSON.stringify(newUser));
+    } catch { /* storage unavailable */ }
   }, []);
 
   const clearSession = useCallback(() => {
     setToken(null);
     setUser(null);
+    try {
+      sessionStorage.removeItem(SESSION_PROFILE_KEY);
+    } catch { /* storage unavailable */ }
   }, []);
 
   const refreshUserWithToken = useCallback(
@@ -89,11 +111,25 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   );
 
   useEffect(() => {
-    // Remove credentials persisted by older releases, then restore the session
-    // exclusively from the httpOnly cookie.
-    localStorage.removeItem('admin-auth-token');
-    localStorage.removeItem('admin-user');
-    void Promise.resolve().then(() => refreshUserWithToken()).finally(() => setIsLoading(false));
+    const timeoutId = window.setTimeout(() => {
+      // Remove credentials persisted by older releases, then restore the
+      // session exclusively from the httpOnly cookie.
+      localStorage.removeItem('admin-auth-token');
+      localStorage.removeItem('admin-user');
+
+      // Optimistic hydration: paint the shell from the per-tab profile right
+      // away; the cookie is still re-validated below and an invalid session
+      // clears state and lands on the login screen.
+      const cachedProfile = readSessionProfile();
+      if (cachedProfile) {
+        setToken(COOKIE_SESSION_SENTINEL);
+        setUser(cachedProfile);
+        setIsLoading(false);
+      }
+
+      void refreshUserWithToken().finally(() => setIsLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [refreshUserWithToken]);
 
   const login = useCallback(
