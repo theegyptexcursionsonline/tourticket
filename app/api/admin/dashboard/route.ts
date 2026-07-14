@@ -44,7 +44,11 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
       ]),
       Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER, _id: { $lt: cutoffId } }),
-      User.countDocuments({ _id: { $lt: cutoffId } }),
+      Booking.distinct('user', {
+        ...DEFAULT_TENANT_FILTER,
+        _id: { $lt: cutoffId },
+        user: { $ne: null },
+      }).then((ids) => ids.filter(Boolean).length),
     ]).catch(() => [0, [] as Array<{ _id: null; totalRevenue: number }>, 0, 0] as const);
 
     // Fetch all stats in parallel with error handling for each
@@ -59,10 +63,14 @@ export async function GET(request: NextRequest) {
       Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER }),
       // Bookings/revenue are scoped to this (default/EEO) site, like tours —
       // never count the white-label brands' bookings here. Revenue is collected
-      // money only (cancelled/refunded excluded). Users register on this
-      // flagship site, so Total Users stays the full registered count.
+      // money only (cancelled/refunded excluded). The shared user collection has
+      // no reliable tenant marker, so count only users linked to main-site
+      // bookings rather than leaking white-label registrations into this KPI.
       Booking.countDocuments(DEFAULT_TENANT_FILTER),
-      User.countDocuments(),
+      Booking.distinct('user', {
+        ...DEFAULT_TENANT_FILTER,
+        user: { $ne: null },
+      }).then((ids) => ids.filter(Boolean).length),
       Booking.aggregate([
         { $match: { ...DEFAULT_TENANT_FILTER, status: { $nin: ['cancelled', 'Cancelled', 'refunded', 'Refunded', 'partial_refunded'] } } },
         { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },

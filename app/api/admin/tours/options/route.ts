@@ -3,11 +3,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
-import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
-  const auth = await verifyAdmin(request);
+  // This endpoint is read-only and is required by booking filters/forms as
+  // well as tour management. Do not force booking operators to gain tour
+  // mutation privileges just to resolve a tour title.
+  const auth = await requireAdminAuth(request, {
+    permissions: ['manageTours', 'manageBookings'],
+    requireAll: false,
+  });
   if (auth instanceof NextResponse) return auth;
 
   await dbConnect();

@@ -111,4 +111,15 @@ describe('public integrity route regressions', () => {
     expect(config).toContain('https://*.intercom.io');
     expect(config).toContain("script-src-attr 'none'");
   });
+
+  it('keeps main-admin metrics tenant-scoped and lets booking operators read tour labels', () => {
+    const dashboard = source('app/api/admin/dashboard/route.ts');
+    const tourOptions = source('app/api/admin/tours/options/route.ts');
+
+    expect(dashboard).toContain("Booking.distinct('user'");
+    expect(dashboard).not.toContain('User.countDocuments()');
+    expect(tourOptions).toContain("permissions: ['manageTours', 'manageBookings']");
+    expect(tourOptions).toContain('requireAll: false');
+    expect(tourOptions).toContain('DEFAULT_TENANT_FILTER');
+  });
 });
