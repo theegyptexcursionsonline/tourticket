@@ -5,8 +5,22 @@ import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
 import Tour from '@/lib/models/Tour';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
-// GET all reviews for the admin panel
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 30;
+const MAX_LIMIT = 100;
+const REVIEW_STATUSES = ['all', 'pending', 'approved'] as const;
+
+type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+
+function parsePositiveInteger(value: string | null, fallback: number, maximum?: number) {
+  const parsed = Number.parseInt(value || '', 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return maximum ? Math.min(parsed, maximum) : parsed;
+}
+
+// GET main-EEO reviews for the admin panel
 export async function GET(request: NextRequest) {
   // Verify admin authentication
   const auth = await verifyAdmin(request);
@@ -14,20 +28,90 @@ export async function GET(request: NextRequest) {
 
   await dbConnect();
   try {
-    const reviews = await Review.find({})
-      .populate({
-        path: 'user',
-        model: User,
-        select: 'name email', // Select fields from the User model
-      })
-      .populate({
-        path: 'tour',
-        model: Tour,
-        select: 'title', // Select fields from the Tour model
-      })
-      .sort({ createdAt: -1 }); // Sort by newest first
+    const { searchParams } = new URL(request.url);
+    const page = parsePositiveInteger(searchParams.get('page'), DEFAULT_PAGE);
+    const limit = parsePositiveInteger(searchParams.get('limit'), DEFAULT_LIMIT, MAX_LIMIT);
+    const requestedStatus = searchParams.get('status') || 'all';
 
-    return NextResponse.json(reviews);
+    if (!REVIEW_STATUSES.includes(requestedStatus as ReviewStatus)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid review status filter' },
+        { status: 400 },
+      );
+    }
+
+    const status = requestedStatus as ReviewStatus;
+    const statusFilter = status === 'approved'
+      ? { verified: true }
+      : status === 'pending'
+        ? { verified: { $ne: true } }
+        : {};
+    const tenantFilter = { ...DEFAULT_TENANT_FILTER };
+    const listFilter = { ...tenantFilter, ...statusFilter };
+    const skip = (page - 1) * limit;
+
+    const [reviews, filteredTotal, aggregateRows] = await Promise.all([
+      Review.find(listFilter)
+        .populate({
+          path: 'user',
+          model: User,
+          select: 'name email',
+        })
+        .populate({
+          path: 'tour',
+          model: Tour,
+          select: 'title',
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Review.countDocuments(listFilter),
+      Review.aggregate([
+        { $match: tenantFilter },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            pending: {
+              $sum: { $cond: [{ $eq: ['$verified', true] }, 0, 1] },
+            },
+            approved: {
+              $sum: { $cond: [{ $eq: ['$verified', true] }, 1, 0] },
+            },
+            avgRating: { $avg: '$rating' },
+          },
+        },
+      ]),
+    ]);
+
+    const aggregate = aggregateRows[0] || {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      avgRating: 0,
+    };
+    const totalPages = Math.max(1, Math.ceil(filteredTotal / limit));
+
+    return NextResponse.json({
+      success: true,
+      data: reviews,
+      stats: {
+        total: aggregate.total || 0,
+        pending: aggregate.pending || 0,
+        approved: aggregate.approved || 0,
+        avgRating: Math.round((aggregate.avgRating || 0) * 10) / 10,
+      },
+      pagination: {
+        page,
+        limit,
+        total: filteredTotal,
+        totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
+      },
+      status,
+    });
   } catch (error) {
     return NextResponse.json({ message: 'Failed to fetch reviews', error: (error as Error).message }, { status: 500 });
   }

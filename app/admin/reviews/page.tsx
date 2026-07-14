@@ -1,7 +1,7 @@
 // app/admin/reviews/page.tsx
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Star, MessageSquare, Map, Trash2, CheckCircle, ShieldCheck, Clock } from 'lucide-react';
@@ -24,21 +24,39 @@ interface Review {
 }
 
 interface ReviewStats {
-  totalReviews: number;
-  pendingReviews: number;
-  approvedReviews: number;
-  averageRating: number;
+  total: number;
+  pending: number;
+  approved: number;
+  avgRating: number;
 }
 
-const calculateStats = (reviewsData: Review[]): ReviewStats => {
-  const totalReviews = reviewsData.length;
-  const pendingReviews = reviewsData.filter((review) => !review.verified).length;
-  const approvedReviews = reviewsData.filter((review) => review.verified).length;
-  const averageRating = totalReviews > 0
-    ? Math.round((reviewsData.reduce((sum, review) => sum + review.rating, 0) / totalReviews) * 10) / 10
-    : 0;
+interface ReviewPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
 
-  return { totalReviews, pendingReviews, approvedReviews, averageRating };
+interface ReviewsResponse {
+  success: boolean;
+  data: Review[];
+  stats: ReviewStats;
+  pagination: ReviewPagination;
+  status: 'all' | 'pending' | 'approved';
+  message?: string;
+}
+
+const REVIEWS_PER_PAGE = 30;
+const EMPTY_STATS: ReviewStats = { total: 0, pending: 0, approved: 0, avgRating: 0 };
+const EMPTY_PAGINATION: ReviewPagination = {
+  page: 1,
+  limit: REVIEWS_PER_PAGE,
+  total: 0,
+  totalPages: 1,
+  hasPreviousPage: false,
+  hasNextPage: false,
 };
 
 const StatCard = ({ icon: Icon, title, value, subtitle, color = "slate" }: {
@@ -83,6 +101,9 @@ const ReviewsPage = () => {
   const { token } = useAdminAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [page, setPage] = useState(1);
+  const [stats, setStats] = useState<ReviewStats>(EMPTY_STATS);
+  const [pagination, setPagination] = useState<ReviewPagination>(EMPTY_PAGINATION);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,40 +114,41 @@ const ReviewsPage = () => {
     return headers;
   }, [token]);
 
-  // --- Fetch all reviews ---
-  useEffect(() => {
-    const fetchReviews = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/admin/reviews', {
-          headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Failed to fetch reviews');
-        }
-        const data = await response.json();
-        setReviews(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setIsLoading(false);
+  const fetchReviews = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        status: activeFilter,
+        page: String(page),
+        limit: String(REVIEWS_PER_PAGE),
+      });
+      const response = await fetch(`/api/admin/reviews?${params.toString()}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json() as ReviewsResponse;
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to fetch reviews');
       }
-    };
-    fetchReviews();
-  }, [getAuthHeaders]);
-
-  const stats = useMemo(() => calculateStats(reviews), [reviews]);
-  const filteredReviews = useMemo(() => {
-    switch (activeFilter) {
-      case 'pending':
-        return reviews.filter((review) => !review.verified);
-      case 'approved':
-        return reviews.filter((review) => review.verified);
-      default:
-        return reviews;
+      setReviews(data.data || []);
+      setStats(data.stats || EMPTY_STATS);
+      setPagination(data.pagination || EMPTY_PAGINATION);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
     }
-  }, [reviews, activeFilter]);
+  }, [activeFilter, getAuthHeaders, page]);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) fetchReviews();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchReviews]);
 
   // --- Approve a Review ---
   const handleApprove = async (id: string) => {
@@ -141,10 +163,13 @@ const ReviewsPage = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to approve review');
       }
-      const updatedReview = await response.json();
+      await response.json();
 
-      // Update the review in the local state
-      setReviews(reviews.map(r => r._id === id ? updatedReview : r));
+      if (activeFilter === 'pending' && reviews.length === 1 && page > 1) {
+        setPage((currentPage) => currentPage - 1);
+      } else {
+        await fetchReviews();
+      }
       toast.success('Review approved successfully!', { id: loadingToast });
     } catch (err) {
       toast.error(`Error: ${(err as Error).message}`, { id: loadingToast });
@@ -165,8 +190,11 @@ const ReviewsPage = () => {
         throw new Error(errorData.message || 'Failed to delete review');
       }
 
-      // Remove the review from the local state
-      setReviews(reviews.filter(r => r._id !== id));
+      if (reviews.length === 1 && page > 1) {
+        setPage((currentPage) => currentPage - 1);
+      } else {
+        await fetchReviews();
+      }
       toast.success('Review deleted successfully!', { id: loadingToast });
     } catch (err) {
       toast.error(`Error: ${(err as Error).message}`, { id: loadingToast });
@@ -236,27 +264,27 @@ const ReviewsPage = () => {
         <StatCard
           icon={MessageSquare}
           title="Total Reviews"
-          value={stats.totalReviews}
+          value={stats.total}
           subtitle="All customer reviews"
         />
         <StatCard
           icon={Clock}
           title="Pending Review"
-          value={stats.pendingReviews}
+          value={stats.pending}
           subtitle="Awaiting approval"
           color="yellow"
         />
         <StatCard
           icon={CheckCircle}
           title="Approved"
-          value={stats.approvedReviews}
+          value={stats.approved}
           subtitle="Live on website"
           color="red"
         />
         <StatCard
           icon={Star}
           title="Average Rating"
-          value={stats.averageRating}
+          value={stats.avgRating}
           subtitle="Overall satisfaction"
           color="yellow"
         />
@@ -266,13 +294,16 @@ const ReviewsPage = () => {
       <div className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
         <div className="flex border-b border-slate-200">
           {[
-            { key: 'all', label: 'All Reviews', count: stats.totalReviews },
-            { key: 'pending', label: 'Pending', count: stats.pendingReviews },
-            { key: 'approved', label: 'Approved', count: stats.approvedReviews }
+            { key: 'all', label: 'All Reviews', count: stats.total },
+            { key: 'pending', label: 'Pending', count: stats.pending },
+            { key: 'approved', label: 'Approved', count: stats.approved }
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveFilter(tab.key as typeof activeFilter)}
+              onClick={() => {
+                setActiveFilter(tab.key as typeof activeFilter);
+                setPage(1);
+              }}
               className={`px-6 py-4 font-semibold transition-colors flex items-center space-x-2 ${
                 activeFilter === tab.key
                   ? 'text-red-600 border-b-2 border-red-600 bg-red-50'
@@ -291,9 +322,9 @@ const ReviewsPage = () => {
       </div>
 
       {/* Reviews List */}
-      {filteredReviews.length > 0 ? (
+      {reviews.length > 0 ? (
         <div className="space-y-6">
-          {filteredReviews.map(review => (
+          {reviews.map(review => (
             <div key={review._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
@@ -387,6 +418,43 @@ const ReviewsPage = () => {
              activeFilter === 'approved' ? 'No reviews have been approved yet.' :
              'No customer reviews have been submitted yet.'}
           </p>
+        </div>
+      )}
+
+      {pagination.totalPages > 1 && (
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl bg-white p-5 shadow-lg">
+          <p className="text-sm text-slate-500">
+            Showing{' '}
+            <span className="font-semibold text-slate-700">
+              {(pagination.page - 1) * pagination.limit + 1}
+            </span>{' '}
+            to{' '}
+            <span className="font-semibold text-slate-700">
+              {Math.min(pagination.page * pagination.limit, pagination.total)}
+            </span>{' '}
+            of <span className="font-semibold text-slate-700">{pagination.total}</span> reviews
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+              disabled={!pagination.hasPreviousPage}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-600">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((currentPage) => Math.min(pagination.totalPages, currentPage + 1))}
+              disabled={!pagination.hasNextPage}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

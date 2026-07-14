@@ -128,7 +128,7 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     const fetchTours = async () => {
       setLoadingTours(true);
       try {
-        const response = await fetch('/api/admin/tours?limit=500');
+        const response = await fetch('/api/admin/tours/options');
         if (response.ok) {
           const result = await response.json();
           // Handle different API response formats

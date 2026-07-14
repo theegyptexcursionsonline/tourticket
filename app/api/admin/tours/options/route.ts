@@ -1,5 +1,6 @@
 // app/api/admin/tours/options/route.ts
-// Lightweight endpoint returning only tour id + title for filter dropdowns
+// Lightweight endpoint returning fields needed by admin tour selectors and
+// the manual-booking quote flow.
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER })
-      .select('title bookingOptions')
+      .select('title slug price originalPrice discountPrice bookingOptions')
       .sort({ title: 1 })
       .lean();
 
@@ -28,6 +29,10 @@ export async function GET(request: NextRequest) {
       _id: String(t._id),
       id: String(t._id),
       title: t.title,
+      slug: t.slug,
+      price: t.price,
+      originalPrice: t.originalPrice,
+      discountPrice: t.discountPrice,
       bookingOptions: t.bookingOptions || [],
     }));
 

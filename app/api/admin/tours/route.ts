@@ -9,28 +9,59 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 
+const ADMIN_TOUR_LIST_PROJECTION = [
+  'title',
+  'slug',
+  'price',
+  'originalPrice',
+  'discountPrice',
+  'isPublished',
+  'isFeatured',
+  'image',
+  'thumbnail',
+  'category',
+  'destination',
+  'duration',
+  'rating',
+  'reviews',
+  'tenantId',
+  'createdAt',
+  'updatedAt',
+].join(' ');
+
+function addReviewCounts(tours: unknown[]) {
+  return tours.map((tour) => {
+    if (!tour || typeof tour !== 'object') return tour;
+    const { reviews, ...listFields } = tour as Record<string, unknown>;
+    return {
+      ...listFields,
+      reviewCount: Array.isArray(reviews) ? reviews.length : 0,
+    };
+  });
+}
+
 async function fetchToursWithPopulate() {
   // Scope the EEO admin tours API to the default tenant — other tenants
   // (e.g. German aegypten-ausfluege) have their own admin and must not
   // appear in this response.
   const tenantFilter = { ...DEFAULT_TENANT_FILTER };
   try {
-    return await Tour.find(tenantFilter)
-      .populate('category')
-      .populate('destination')
-      .populate('reviews')
-      .populate('attractions')
-      .populate('interests')
+    const tours = await Tour.find(tenantFilter)
+      .select(ADMIN_TOUR_LIST_PROJECTION)
+      .populate({ path: 'category', select: 'name title slug' })
+      .populate({ path: 'destination', select: 'name title slug' })
+      .sort({ createdAt: -1 })
       .lean();
+    return addReviewCounts(tours);
   } catch (err) {
     console.warn('Populate failed, retrying with strictPopulate:false', err);
-    return await Tour.find(tenantFilter)
-      .populate({ path: 'category', strictPopulate: false })
-      .populate({ path: 'destination', strictPopulate: false })
-      .populate({ path: 'reviews', strictPopulate: false })
-      .populate({ path: 'attractions', strictPopulate: false })
-      .populate({ path: 'interests', strictPopulate: false })
+    const tours = await Tour.find(tenantFilter)
+      .select(ADMIN_TOUR_LIST_PROJECTION)
+      .populate({ path: 'category', select: 'name title slug', strictPopulate: false })
+      .populate({ path: 'destination', select: 'name title slug', strictPopulate: false })
+      .sort({ createdAt: -1 })
       .lean();
+    return addReviewCounts(tours);
   }
 }
 
