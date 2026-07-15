@@ -16,4 +16,11 @@ describe('main EEO admin control contracts', () => {
     expect(source).toContain("fetch('/api/admin/tours/options'");
     expect(source).not.toContain("fetch('/api/admin/tours',");
   });
+
+  it('renders admin success and error feedback', () => {
+    const source = read('app/admin/AdminClientLayout.tsx');
+    expect(source).toContain("import { Toaster } from 'react-hot-toast'");
+    expect(source).toContain('<Toaster');
+    expect(source).toContain('position="top-right"');
+  });
 });
