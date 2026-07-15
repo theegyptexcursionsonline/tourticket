@@ -111,6 +111,7 @@ interface TimeSlot {
   priceVersion?: number;
   priceExecutionId?: string | null;
   priceOverrideId?: string | null;
+  priceSource?: 'catalogue' | 'override';
   originalPrice?: number;
 }
 
@@ -1775,6 +1776,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           priceVersion: payload.quote.version,
           priceExecutionId: payload.quote.executionId,
           priceOverrideId: payload.quote.overrideId,
+          priceSource: payload.quote.source === 'override' ? 'override' : 'catalogue',
         };
       }
     } catch (error: unknown) {
@@ -1912,7 +1914,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       const newCartItem = {
         ...tourDisplayData,
         id: tourDisplayData.id,
-        uniqueId: `${tourDisplayData.id}-${normalizedDate}-${selectedTimeSlot.id}-${JSON.stringify(bookingData.selectedAddOns)}`,
+        uniqueId: `${tourDisplayData.id}-${selectedBookingOptionDetails.pricingKey}-${normalizedDate}-${selectedTimeSlot.id}-${JSON.stringify(bookingData.selectedAddOns)}`,
         quantity: bookingData.adults,
         childQuantity: bookingData.children,
         infantQuantity: bookingData.infants,
@@ -1925,6 +1927,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         priceVersion: selectedTimeSlot.priceVersion,
         priceExecutionId: selectedTimeSlot.priceExecutionId,
         priceOverrideId: selectedTimeSlot.priceOverrideId,
+        priceSource: selectedTimeSlot.priceSource,
         price: selectedTimeSlot.price,
         originalPrice: selectedOption?.originalPrice || tourDisplayData.originalPrice,
         discountPrice: selectedTimeSlot.price,

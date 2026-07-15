@@ -19,6 +19,7 @@ export interface IRevenuePriceExecution extends Document {
   policyHash: string;
   policySnapshot?: unknown;
   sourceVersion: string;
+  confidence?: number;
   requestHash: string;
   state: 'pending' | 'applied' | 'replayed' | 'conflict' | 'blocked' | 'verified' | 'rollback_pending' | 'rollback_applied' | 'rollback_failed';
   blockReason?: string;
@@ -62,6 +63,8 @@ const RevenuePriceExecutionSchema = new Schema<IRevenuePriceExecution>({
   // optional so pre-rollout receipts remain readable and can receive readback events.
   policySnapshot: { type: Schema.Types.Mixed },
   sourceVersion: { type: String, required: true },
+  // Optional only for legacy read compatibility. New writes require and validate it.
+  confidence: { type: Number, min: 85, max: 100 },
   requestHash: { type: String, required: true },
   state: { type: String, enum: ['pending', 'applied', 'replayed', 'conflict', 'blocked', 'verified', 'rollback_pending', 'rollback_applied', 'rollback_failed'], required: true },
   blockReason: { type: String },

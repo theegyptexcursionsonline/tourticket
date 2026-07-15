@@ -2,23 +2,9 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import RevenueMachineNonce from '@/lib/models/RevenueMachineNonce';
+import { configuredRevenuePilotMachineKeys, revenuePilotMachineScopes } from '@/lib/auth/revenuePilotMachineConfig';
 
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
-
-function keys(): Map<string, string> {
-  const raw = process.env.REVENUEPILOT_HMAC_KEYS || '';
-  const entries: Array<[string, string]> = raw.split(',').map((entry) => entry.trim()).filter(Boolean).map((entry) => {
-    const separator = entry.indexOf(':');
-    return [entry.slice(0, separator), entry.slice(separator + 1)] as [string, string];
-  }).filter(([keyId, secret]) => keyId.length > 0 && secret.length >= 32);
-  return new Map(entries);
-}
-
-function scopes(keyId: string) {
-  const raw = process.env.REVENUEPILOT_HMAC_SCOPES || '';
-  const entry = raw.split(',').map((value) => value.trim()).find((value) => value.startsWith(`${keyId}=`));
-  return new Set((entry?.slice(keyId.length + 1) || '').split('|').map((value) => value.trim()).filter(Boolean));
-}
 
 export function revenueBodyHash(bodyText = '') {
   return createHash('sha256').update(bodyText).digest('hex');
@@ -33,13 +19,13 @@ export function validateRevenuePilotSignature(request: NextRequest, bodyText = '
   const timestamp = request.headers.get('x-rp-timestamp')?.trim() || '';
   const nonce = request.headers.get('x-rp-nonce')?.trim() || '';
   const presented = request.headers.get('x-rp-signature')?.trim() || '';
-  const secret = keys().get(keyId);
+  const secret = configuredRevenuePilotMachineKeys().get(keyId);
   const timestampMs = Number(timestamp);
 
   if (!secret || !nonce || nonce.length > 120 || !Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > MAX_CLOCK_SKEW_MS) {
     return { ok: false, status: 401, code: 'MACHINE_UNAUTHORIZED' };
   }
-  if (!scopes(keyId).has(requiredScope)) {
+  if (!revenuePilotMachineScopes(keyId).has(requiredScope)) {
     return { ok: false, status: 403, code: 'MACHINE_SCOPE_FORBIDDEN' };
   }
   const expected = createHmac('sha256', secret).update(revenueCanonicalRequest(request, timestamp, nonce, bodyText)).digest('hex');

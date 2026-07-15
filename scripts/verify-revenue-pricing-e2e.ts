@@ -75,7 +75,7 @@ async function run() {
     executionId: 'exec_local_e2e', recommendationId: 'rec_local_e2e', tenantId: 'default',
     target: { tourId: String(tour._id), optionKey: 'standard', date: departureDate, time: '10:00' },
     prices: { adult: 104, child: 52, infant: 0 }, currency: 'USD', expectedVersion: 0,
-    policyHash: hashRevenuePolicy(policySnapshot), policySnapshot, sourceVersion, actor: 'owner@example.test', mode: 'assist',
+    policyHash: hashRevenuePolicy(policySnapshot), policySnapshot, sourceVersion, confidence: 90, actor: 'owner@example.test', mode: 'assist',
   };
   const body = JSON.stringify(payload);
   const [{ POST: apply }, { GET: readExecution }, { POST: rollback }, { GET: quote }] = await Promise.all([

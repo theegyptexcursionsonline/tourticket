@@ -40,6 +40,16 @@ describe('RevenuePilot machine signature contract', () => {
     expect(validateRevenuePilotSignature(scoped.request, scoped.body, 'write')).toMatchObject({ ok: false, status: 403 });
   });
 
+  it('rejects an otherwise valid signature outside the five-minute clock window', () => {
+    const { request, body } = signedRequest('read');
+    const timestamp = String(Date.now() - (5 * 60 * 1000) - 1);
+    const nonce = request.headers.get('x-rp-nonce')!;
+    const canonical = [timestamp, nonce, 'POST', '/api/v1/revenue/catalog?x=1', revenueBodyHash(body)].join('\n');
+    request.headers.set('x-rp-timestamp', timestamp);
+    request.headers.set('x-rp-signature', createHmac('sha256', secret).update(canonical).digest('hex'));
+    expect(validateRevenuePilotSignature(request, body)).toMatchObject({ ok: false, status: 401 });
+  });
+
   it('rejects a reused nonce', async () => {
     jest.mocked(RevenueMachineNonce.create).mockRejectedValueOnce(Object.assign(new Error('duplicate'), { code: 11000 }));
     expect(await claimRevenueNonce('primary', 'reused')).toBe(false);

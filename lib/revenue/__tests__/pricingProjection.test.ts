@@ -5,7 +5,7 @@ jest.mock('@/lib/algolia', () => ({
 
 jest.mock('@/lib/models/RevenuePriceOverride', () => ({
   __esModule: true,
-  default: {},
+  default: { find: jest.fn() },
 }));
 
 jest.mock('@/lib/models/Tour', () => ({
@@ -16,7 +16,9 @@ jest.mock('@/lib/models/Tour', () => ({
 import Tour from '@/lib/models/Tour';
 import { syncTourToAlgoliaVerified } from '@/lib/algolia';
 import {
+  pricingProjectionStatus,
   pricingProjectionRetryDelayMs,
+  reconcileTourPricingProjection,
   refreshExpiredPricingSummaries,
   syncTourPricingSearchIndex,
 } from '@/lib/revenue/pricingSummary';
@@ -43,12 +45,17 @@ describe('durable pricing search projection', () => {
     process.env.NEXT_PUBLIC_ALGOLIA_APP_ID = 'test-app';
     process.env.ALGOLIA_WRITE_API_KEY = 'test-write-key';
     delete process.env.REVENUEPILOT_SKIP_SEARCH_SYNC;
-    mockUpdateOne.mockResolvedValue({ acknowledged: true });
+    mockUpdateOne.mockResolvedValue({ acknowledged: true, matchedCount: 1, modifiedCount: 1 });
     mockFindOne.mockReturnValue(leanResult({
       _id: 'tour-1',
       isPublished: true,
       pricingSummary: { version: 4 },
-      pricingSearchProjection: { summaryVersion: 4, attempts: 1 },
+      pricingSearchProjection: {
+        summaryVersion: 4,
+        authoritativeVersion: 4,
+        projectionToken: 'projection-4',
+        attempts: 1,
+      },
     }));
   });
 
@@ -67,7 +74,11 @@ describe('durable pricing search projection', () => {
     await expect(syncTourPricingSearchIndex('tour-1')).resolves.toBe(false);
 
     expect(mockUpdateOne).toHaveBeenCalledWith(
-      expect.objectContaining({ _id: 'tour-1', 'pricingSearchProjection.summaryVersion': 4 }),
+      expect.objectContaining({
+        _id: 'tour-1',
+        'pricingSearchProjection.summaryVersion': 4,
+        'pricingSearchProjection.projectionToken': 'projection-4',
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({
           'pricingSearchProjection.status': 'failed',
@@ -84,7 +95,11 @@ describe('durable pricing search projection', () => {
     await expect(syncTourPricingSearchIndex('tour-1')).resolves.toBe(true);
 
     expect(mockUpdateOne).toHaveBeenCalledWith(
-      expect.objectContaining({ _id: 'tour-1', 'pricingSearchProjection.summaryVersion': 4 }),
+      expect.objectContaining({
+        _id: 'tour-1',
+        'pricingSearchProjection.summaryVersion': 4,
+        'pricingSearchProjection.projectionToken': 'projection-4',
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({
           'pricingSearchProjection.status': 'verified',
@@ -116,5 +131,54 @@ describe('durable pricing search projection', () => {
     expect(pricingProjectionRetryDelayMs(1)).toBe(60_000);
     expect(pricingProjectionRetryDelayMs(2)).toBe(120_000);
     expect(pricingProjectionRetryDelayMs(99)).toBe(3_600_000);
+  });
+
+  it('does not let an older delivery verify a replaced projection generation', async () => {
+    mockSyncTourToAlgolia.mockResolvedValueOnce(undefined);
+    mockUpdateOne
+      .mockResolvedValueOnce({ acknowledged: true, matchedCount: 1, modifiedCount: 1 })
+      .mockResolvedValueOnce({ acknowledged: true, matchedCount: 0, modifiedCount: 0 });
+
+    await expect(syncTourPricingSearchIndex('tour-1')).resolves.toBe(false);
+  });
+
+  it('requires the projection and authoritative override versions to match', () => {
+    const current = {
+      pricingSummary: { version: 4 },
+      pricingSearchProjection: {
+        status: 'verified' as const,
+        summaryVersion: 4,
+        authoritativeVersion: 4,
+        projectionToken: 'projection-4',
+        attempts: 1,
+      },
+    };
+    expect(pricingProjectionStatus(current, 4)).toMatchObject({ state: 'verified', verified: true, versionMatches: true });
+    expect(pricingProjectionStatus(current, 3)).toMatchObject({ state: 'pending', verified: false, versionMatches: false });
+    expect(pricingProjectionStatus({ ...current, pricingSummary: { version: 5 } }, 4)).toMatchObject({ state: 'pending', verified: false, versionMatches: false });
+  });
+
+  it('durably queues a failed summary rebuild for cron repair', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockFindOne.mockReturnValueOnce({
+      select: jest.fn().mockReturnValue({ lean: jest.fn().mockRejectedValue(new Error('database interruption')) }),
+    });
+
+    await expect(reconcileTourPricingProjection('tour-1', 'USD', 7)).resolves.toMatchObject({
+      summaryRefreshed: false,
+      searchSynced: false,
+    });
+    expect(mockUpdateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: 'tour-1' }),
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          'pricingSearchProjection.status': 'failed',
+          'pricingSearchProjection.authoritativeVersion': 7,
+          'pricingSearchProjection.lastErrorCode': 'PRICING_SUMMARY_REFRESH_FAILED',
+          'pricingSearchProjection.nextAttemptAt': expect.any(Date),
+        }),
+      }),
+    );
+    errorSpy.mockRestore();
   });
 });

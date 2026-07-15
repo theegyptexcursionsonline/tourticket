@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
+import { normalizeStoredCartPricingFields, type PriceSource } from '@/lib/cart/authoritativeCart';
 
 interface CartAddOnInput {
   id: string;
@@ -26,9 +27,24 @@ interface CartItemInput {
   selectedTime?: string;
   quantity?: number;
   childQuantity?: number;
+  infantQuantity?: number;
   adultPrice?: number;
   price?: number;
   childPrice?: number;
+  selectedBookingOption?: {
+    id?: string;
+    pricingKey?: string;
+    title?: string;
+    price?: number;
+    originalPrice?: number;
+    duration?: string;
+    badge?: string;
+  };
+  guestPrices?: { adult?: number; child?: number; infant?: number };
+  priceVersion?: number;
+  priceExecutionId?: string | null;
+  priceOverrideId?: string | null;
+  priceSource?: PriceSource;
   selectedAddOns?: CartAddOnInput[];
   uniqueId: string;
   addedAt?: string | Date;
@@ -45,6 +61,39 @@ const toNumberQty = (value: unknown, fallback = 1): number => {
     return toNumberQty(record.quantity ?? record.qty ?? record.count, fallback);
   }
   return fallback;
+};
+
+const toStoredCartItem = (item: CartItemInput, addedAt: string | Date = new Date()) => {
+  const pricingFields = normalizeStoredCartPricingFields(item);
+  return {
+    tourId: item.id || item.tourId,
+    tourSlug: item.slug || item.tourSlug,
+    tourTitle: item.title || item.tourTitle,
+    tourImage: item.image || item.tourImage,
+    selectedDate: item.selectedDate,
+    selectedTime: item.selectedTime,
+    quantity: item.quantity ?? 1,
+    childQuantity: item.childQuantity ?? 0,
+    infantQuantity: pricingFields.infantQuantity,
+    adultPrice: pricingFields.guestPrices?.adult ?? item.adultPrice ?? item.price ?? 0,
+    childPrice: pricingFields.guestPrices?.child ?? item.childPrice ?? 0,
+    selectedBookingOption: pricingFields.selectedBookingOption,
+    guestPrices: pricingFields.guestPrices,
+    priceVersion: pricingFields.priceVersion,
+    priceExecutionId: pricingFields.priceExecutionId,
+    priceOverrideId: pricingFields.priceOverrideId,
+    priceSource: pricingFields.priceSource,
+    selectedAddOns: (item.selectedAddOns || []).map((addon: CartAddOnInput) => ({
+      id: addon.id,
+      name: addon.name || addon.title,
+      price: addon.price ?? 0,
+      quantity: toNumberQty(addon.quantity, 1),
+      category: addon.category || 'add-on',
+      perGuest: addon.perGuest ?? false,
+    })),
+    uniqueId: item.uniqueId,
+    addedAt,
+  };
 };
 
 /**
@@ -115,28 +164,7 @@ export async function PUT(request: NextRequest) {
     // Transform cart items to match schema
     const cartItems = cart.map((rawItem) => {
       const item = rawItem as CartItemInput;
-      return ({
-      tourId: item.id || item.tourId,
-      tourSlug: item.slug || item.tourSlug,
-      tourTitle: item.title || item.tourTitle,
-      tourImage: item.image || item.tourImage,
-      selectedDate: item.selectedDate,
-      selectedTime: item.selectedTime,
-      quantity: item.quantity || 1,
-      childQuantity: item.childQuantity || 0,
-      adultPrice: item.adultPrice || item.price || 0,
-      childPrice: item.childPrice || 0,
-      selectedAddOns: (item.selectedAddOns || []).map((addon: CartAddOnInput) => ({
-        id: addon.id,
-        name: addon.name || addon.title,
-        price: addon.price || 0,
-        quantity: toNumberQty(addon.quantity, 1),
-        category: addon.category || 'add-on',
-        perGuest: addon.perGuest ?? false,
-      })),
-      uniqueId: item.uniqueId,
-      addedAt: item.addedAt || new Date(),
-      });
+      return toStoredCartItem(item, item.addedAt || new Date());
     });
 
     const user = await User.findByIdAndUpdate(
@@ -191,28 +219,7 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
-    const cartItem = {
-      tourId: item.id || item.tourId,
-      tourSlug: item.slug || item.tourSlug,
-      tourTitle: item.title || item.tourTitle,
-      tourImage: item.image || item.tourImage,
-      selectedDate: item.selectedDate,
-      selectedTime: item.selectedTime,
-      quantity: item.quantity || 1,
-      childQuantity: item.childQuantity || 0,
-      adultPrice: item.adultPrice || item.price || 0,
-      childPrice: item.childPrice || 0,
-      selectedAddOns: (item.selectedAddOns || []).map((addon: CartAddOnInput) => ({
-        id: addon.id,
-        name: addon.name || addon.title,
-        price: addon.price || 0,
-        quantity: toNumberQty(addon.quantity, 1),
-        category: addon.category || 'add-on',
-        perGuest: addon.perGuest ?? false,
-      })),
-      uniqueId: item.uniqueId,
-      addedAt: new Date(),
-    };
+    const cartItem = toStoredCartItem(item);
 
     // Check if item with same uniqueId exists
     const user = await User.findById(authResult.user!._id);
@@ -229,13 +236,19 @@ export async function POST(request: NextRequest) {
 
     let updatedUser;
     if (existingIndex !== undefined && existingIndex >= 0) {
-      // Update existing item
+      const existing = user.cart![existingIndex];
+      const mergedCartItem = {
+        ...cartItem,
+        quantity: existing.quantity + (item.quantity ?? 1),
+        childQuantity: (existing.childQuantity ?? 0) + (item.childQuantity ?? 0),
+        infantQuantity: (existing.infantQuantity ?? 0) + (item.infantQuantity ?? 0),
+        addedAt: existing.addedAt,
+      };
       updatedUser = await User.findByIdAndUpdate(
         authResult.user!._id,
         {
           $set: {
-            [`cart.${existingIndex}.quantity`]:
-              user.cart![existingIndex].quantity + (item.quantity || 1),
+            [`cart.${existingIndex}`]: mergedCartItem,
           },
         },
         { new: true }

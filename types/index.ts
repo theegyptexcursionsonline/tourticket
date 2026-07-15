@@ -399,6 +399,7 @@ export interface CartItem extends Tour {
   priceVersion?: number;
   priceExecutionId?: string | null;
   priceOverrideId?: string | null;
+  priceSource?: 'catalogue' | 'override';
   totalPrice: number;
 }
 

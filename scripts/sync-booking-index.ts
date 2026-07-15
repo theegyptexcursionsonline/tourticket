@@ -93,7 +93,11 @@ async function main() {
   const missingPricingProjection = tourCollectionExists || apply
     ? await tourCollection.countDocuments({
       pricingSummary: { $exists: true },
-      'pricingSearchProjection.status': { $exists: false },
+      $or: [
+        { 'pricingSearchProjection.status': { $exists: false } },
+        { 'pricingSearchProjection.authoritativeVersion': { $exists: false } },
+        { 'pricingSearchProjection.projectionToken': { $exists: false } },
+      ],
     })
     : 0;
 
@@ -152,13 +156,25 @@ async function main() {
   await tourCollection.updateMany(
     {
       pricingSummary: { $exists: true },
-      'pricingSearchProjection.status': { $exists: false },
+      $or: [
+        { 'pricingSearchProjection.status': { $exists: false } },
+        { 'pricingSearchProjection.authoritativeVersion': { $exists: false } },
+        { 'pricingSearchProjection.projectionToken': { $exists: false } },
+      ],
     },
     [{
       $set: {
         pricingSearchProjection: {
           status: 'pending',
           summaryVersion: { $ifNull: ['$pricingSummary.version', 0] },
+          authoritativeVersion: { $ifNull: ['$pricingSummary.version', 0] },
+          projectionToken: {
+            $concat: [
+              { $toString: '$_id' },
+              ':pricing:',
+              { $toString: { $ifNull: ['$pricingSummary.version', 0] } },
+            ],
+          },
           attempts: 0,
           nextAttemptAt: '$$NOW',
         },

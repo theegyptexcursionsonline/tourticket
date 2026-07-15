@@ -1,9 +1,15 @@
 // contexts/CartContext.tsx
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { CartItem } from '@/types';
 import { useAuth } from './AuthContext';
+import {
+    normalizeStoredCartPricingFields,
+    replaceCartPriceQuote,
+    type AuthoritativePriceQuote,
+    type StoredCartPricingFields,
+} from '@/lib/cart/authoritativeCart';
 
 interface CartContextType {
     cart: CartItem[];
@@ -15,6 +21,7 @@ interface CartContextType {
     closeCart: () => void;
     totalItems: number;
     isLoading: boolean;
+    acceptAuthoritativePriceQuote: (quote: AuthoritativePriceQuote) => Promise<boolean>;
 }
 
 interface RawAddOn {
@@ -27,8 +34,9 @@ interface RawAddOn {
     perGuest?: boolean;
 }
 
-type RawCartItem = Omit<Partial<CartItem>, 'selectedAddOns'> & {
+type RawCartItem = Omit<Partial<CartItem>, 'selectedAddOns' | 'selectedBookingOption'> & {
     selectedAddOns?: Record<string, unknown> | RawAddOn[];
+    selectedBookingOption?: StoredCartPricingFields['selectedBookingOption'];
     tourId?: string | { toString(): string };
     tourSlug?: string;
     tourTitle?: string;
@@ -53,8 +61,9 @@ const toNumberQty = (value: unknown, fallback = 1): number => {
     return fallback;
 };
 
-const syncCartToServer = async (token: string, items: CartItem[]) => {
-    const serverCart = items.map(item => ({
+const serializeCartItemForServer = (item: CartItem) => {
+    const pricingFields = normalizeStoredCartPricingFields(item);
+    return {
         id: item._id || item.id,
         tourId: item._id || item.id,
         tourSlug: item.slug,
@@ -64,8 +73,15 @@ const syncCartToServer = async (token: string, items: CartItem[]) => {
         selectedTime: item.selectedTime,
         quantity: item.quantity,
         childQuantity: item.childQuantity,
-        adultPrice: item.guestPrices?.adult || item.discountPrice || 0,
-        childPrice: item.guestPrices?.child || 0,
+        infantQuantity: pricingFields.infantQuantity,
+        adultPrice: pricingFields.guestPrices?.adult ?? item.selectedBookingOption?.price ?? item.discountPrice ?? item.price ?? 0,
+        childPrice: pricingFields.guestPrices?.child ?? 0,
+        selectedBookingOption: pricingFields.selectedBookingOption,
+        guestPrices: pricingFields.guestPrices,
+        priceVersion: pricingFields.priceVersion,
+        priceExecutionId: pricingFields.priceExecutionId,
+        priceOverrideId: pricingFields.priceOverrideId,
+        priceSource: pricingFields.priceSource,
         selectedAddOns: item.selectedAddOnDetails
             ? Object.values(item.selectedAddOnDetails).map(addon => ({
                 id: addon.id,
@@ -77,9 +93,13 @@ const syncCartToServer = async (token: string, items: CartItem[]) => {
             }))
             : [],
         uniqueId: item.uniqueId,
-    }));
+    };
+};
 
-    await fetch('/api/user/cart', {
+const syncCartToServer = async (token: string, items: CartItem[]) => {
+    const serverCart = items.map(serializeCartItemForServer);
+
+    const response = await fetch('/api/user/cart', {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -87,6 +107,9 @@ const syncCartToServer = async (token: string, items: CartItem[]) => {
         },
         body: JSON.stringify({ cart: serverCart }),
     });
+    if (!response.ok) {
+        throw new Error('The cart could not be saved to your account.');
+    }
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
@@ -94,8 +117,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [hasSyncedFromServer, setHasSyncedFromServer] = useState(false);
+    const cartRef = useRef<CartItem[]>([]);
 
     const { token, isAuthenticated } = useAuth();
+
+    useEffect(() => {
+        cartRef.current = cart;
+    }, [cart]);
 
     const normalizeCartItem = useCallback((item: RawCartItem): CartItem => {
         // Normalize selectedAddOns into the client format:
@@ -201,6 +229,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                         // Transform server cart to CartItem format (then normalize add-ons)
                         const serverCart = (data.cart as RawCartItem[]).map((item) => {
                             const tourId = item.tourId ? String(item.tourId) : '';
+                            const pricingFields = normalizeStoredCartPricingFields(item);
                             return normalizeCartItem({
                                 ...item,
                                 id: tourId,
@@ -209,8 +238,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                                 title: item.tourTitle,
                                 image: item.tourImage,
                                 images: item.tourImage ? [item.tourImage] : [],
-                                discountPrice: item.adultPrice || 0,
-                                guestPrices: { adult: item.adultPrice || 0, child: item.childPrice || 0, infant: 0 },
+                                discountPrice: item.adultPrice ?? 0,
+                                ...pricingFields,
+                                guestPrices: pricingFields.guestPrices || {
+                                    adult: item.adultPrice ?? 0,
+                                    child: item.childPrice ?? 0,
+                                    infant: 0,
+                                },
                             });
                         });
 
@@ -270,7 +304,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             if (existingItem) {
                 return prevCart.map(cartItem =>
                     cartItem.uniqueId === uniqueId
-                        ? { ...cartItem, quantity: cartItem.quantity + normalizedItem.quantity }
+                        ? {
+                            ...cartItem,
+                            ...normalizedItem,
+                            uniqueId,
+                            quantity: cartItem.quantity + normalizedItem.quantity,
+                            childQuantity: (cartItem.childQuantity || 0) + (normalizedItem.childQuantity || 0),
+                            infantQuantity: (cartItem.infantQuantity || 0) + (normalizedItem.infantQuantity || 0),
+                        }
                         : cartItem
                 );
             }
@@ -284,36 +325,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         // Sync to server if authenticated
         if (isAuthenticated && token) {
             try {
-                await fetch('/api/user/cart', {
+                const response = await fetch('/api/user/cart', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`,
                     },
-                    body: JSON.stringify({
-                        id: normalizedItem._id || normalizedItem.id,
-                        tourId: normalizedItem._id || normalizedItem.id,
-                        tourSlug: normalizedItem.slug,
-                        tourTitle: normalizedItem.title,
-                        tourImage: normalizedItem.images?.[0] || normalizedItem.image,
-                        selectedDate: normalizedItem.selectedDate,
-                        selectedTime: normalizedItem.selectedTime,
-                        quantity: normalizedItem.quantity,
-                        childQuantity: normalizedItem.childQuantity,
-                        adultPrice: normalizedItem.guestPrices?.adult || normalizedItem.discountPrice || 0,
-                        childPrice: normalizedItem.guestPrices?.child || 0,
-                        selectedAddOns: normalizedItem.selectedAddOnDetails ?
-                            Object.values(normalizedItem.selectedAddOnDetails).map(addon => ({
-                                id: addon.id,
-                                name: addon.title,
-                                price: addon.price,
-                                quantity: toNumberQty(normalizedItem.selectedAddOns?.[addon.id], 1),
-                                category: addon.category || 'add-on',
-                                perGuest: addon.perGuest ?? false,
-                            })) : [],
-                        uniqueId,
-                    }),
+                    body: JSON.stringify(serializeCartItemForServer({ ...normalizedItem, uniqueId })),
                 });
+                if (!response.ok) throw new Error('The cart item could not be saved to your account.');
             } catch (error) {
                 console.error('Failed to add to cart on server:', error);
             }
@@ -357,7 +377,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [isAuthenticated, token]);
 
-    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0), 0);
+    const acceptAuthoritativePriceQuote = useCallback(async (quote: AuthoritativePriceQuote) => {
+        const replacement = replaceCartPriceQuote(cartRef.current, quote);
+        if (replacement.replacements === 0) return false;
+
+        try {
+            if (isAuthenticated) {
+                if (!token) return false;
+                await syncCartToServer(token, replacement.cart);
+            } else {
+                localStorage.setItem('cart', JSON.stringify(replacement.cart));
+            }
+            cartRef.current = replacement.cart;
+            setCart(replacement.cart);
+            return true;
+        } catch (error) {
+            console.error('Failed to accept authoritative cart price:', error);
+            return false;
+        }
+    }, [isAuthenticated, token]);
+
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0), 0);
 
     return (
         <CartContext.Provider value={{
@@ -370,6 +410,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             openCart,
             closeCart,
             isLoading,
+            acceptAuthoritativePriceQuote,
         }}>
             {children}
         </CartContext.Provider>

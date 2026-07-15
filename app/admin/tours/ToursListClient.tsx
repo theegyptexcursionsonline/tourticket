@@ -26,6 +26,8 @@ import type { LucideIcon } from 'lucide-react';
 import { TourActions } from './TourActions';
 import Link from 'next/link';
 
+type CategoryRef = { name?: string; title?: string } | null;
+
 type TourType = {
   _id: string;
   title?: string;
@@ -33,15 +35,24 @@ type TourType = {
   image?: string;
   images?: string[];
   destination?: { name?: string } | null;
-  category?: { name?: string } | null;
+  // Tour.category is an array of Category refs in the schema; older docs may
+  // still hold a single ref, so accept both shapes.
+  category?: CategoryRef | CategoryRef[];
   price?: number;
   discountPrice?: number;
   duration?: string | number;
   createdAt?: string;
-  published?: boolean;
-  draft?: boolean;
+  isPublished?: boolean;
   isFeatured?: boolean;
 };
+
+function getCategoryNames(t: TourType): string {
+  const cats = Array.isArray(t.category) ? t.category : t.category ? [t.category] : [];
+  return cats
+    .map((c) => c?.name || c?.title)
+    .filter(Boolean)
+    .join(', ');
+}
 
 function Badge({ children, className = '', icon: Icon }: { 
   children: React.ReactNode; 
@@ -119,9 +130,9 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
 
     // Apply tab filter first
     if (activeTab === 'published') {
-      list = list.filter((t) => t.published === true && !t.draft);
+      list = list.filter((t) => t.isPublished === true);
     } else if (activeTab === 'draft') {
-      list = list.filter((t) => t.draft === true || t.published === false);
+      list = list.filter((t) => t.isPublished !== true);
     } else if (activeTab === 'featured') {
       list = list.filter((t) => t.isFeatured === true);
     }
@@ -132,7 +143,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
       list = list.filter((t) => {
         const title = (t.title || t.name || '').toLowerCase();
         const dest = (t.destination?.name || '').toLowerCase();
-        const category = (t.category?.name || '').toLowerCase();
+        const category = getCategoryNames(t).toLowerCase();
         return title.includes(q) || dest.includes(q) || category.includes(q);
       });
     }
@@ -167,8 +178,8 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
   const tabCounts = useMemo(() => {
     return {
       all: tours.length,
-      published: tours.filter((t) => t.published === true && !t.draft).length,
-      draft: tours.filter((t) => t.draft === true || t.published === false).length,
+      published: tours.filter((t) => t.isPublished === true).length,
+      draft: tours.filter((t) => t.isPublished !== true).length,
       featured: tours.filter((t) => t.isFeatured === true).length,
     };
   }, [tours]);
@@ -394,7 +405,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                       <span className="text-sm font-medium text-slate-700">{t.destination?.name || 'N/A'}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-slate-700">{t.category?.name || 'N/A'}</span>
+                      <span className="text-sm font-medium text-slate-700">{getCategoryNames(t) || 'N/A'}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</span>
@@ -481,7 +492,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Filter className="h-4 w-4 text-slate-400" />
-                        <span className="truncate">{t.category?.name || 'N/A'}</span>
+                        <span className="truncate">{getCategoryNames(t) || 'N/A'}</span>
                       </div>
                     </div>
                   </div>

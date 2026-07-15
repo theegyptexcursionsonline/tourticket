@@ -4,7 +4,7 @@ import { authenticateRevenueRequest, revenueError } from '@/lib/revenue/machineR
 import { applyPriceWrite, validatePriceWrite } from '@/lib/revenue/priceWrite';
 import { requireRevenueIdempotencyKey, RevenuePricingWriteError } from '@/lib/revenue/priceWriteGate';
 import { revalidatePricingPaths } from '@/lib/revenue/revalidatePricing';
-import { syncTourPricingSearchIndex } from '@/lib/revenue/pricingSummary';
+import { reconcileTourPricingProjection } from '@/lib/revenue/pricingSummary';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,17 +27,26 @@ export async function POST(request: NextRequest) {
     if (result.state === 'pending' || result.state === 'rollback_pending') return NextResponse.json(result, { status: 202, headers: { 'Cache-Control': 'no-store' } });
     if (result.state === 'rollback_failed') return NextResponse.json(result, { status: 409, headers: { 'Cache-Control': 'no-store' } });
     let channelPropagation: Record<string, string> | undefined;
-    if (result.state === 'applied') {
+    let pricingProjection: { summaryRefreshed: boolean; searchSynced: boolean; authoritativeVersion: number } | undefined;
+    if (['applied', 'replayed', 'rollback_applied'].includes(result.state)) {
       revalidatePricingPaths();
-      const searchSynced = await syncTourPricingSearchIndex(input.target.tourId);
+      const effective = 'effective' in result ? result.effective : null;
+      const receipt = 'receipt' in result ? result.receipt : null;
+      const authoritativeVersion = Math.max(0, Number(effective?.version ?? receipt?.appliedVersion ?? 0));
+      const reconciled = await reconcileTourPricingProjection(input.target.tourId, input.currency, authoritativeVersion);
+      pricingProjection = {
+        summaryRefreshed: reconciled.summaryRefreshed,
+        searchSynced: reconciled.searchSynced,
+        authoritativeVersion,
+      };
       channelPropagation = {
-        eeo_direct: searchSynced ? 'verified' : 'failed',
+        eeo_direct: reconciled.searchSynced ? 'verified' : 'failed',
         getyourguide: 'not_connected',
         viator: 'not_connected',
       };
     }
     return NextResponse.json(
-      channelPropagation ? { ...result, channelPropagation } : result,
+      channelPropagation ? { ...result, channelPropagation, pricingProjection } : result,
       { status: result.state === 'replayed' || result.state === 'rollback_applied' ? 200 : 201, headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (error: unknown) {

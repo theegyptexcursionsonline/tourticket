@@ -189,6 +189,8 @@ export interface ITour extends Document {
   pricingSearchProjection?: {
     status: 'pending' | 'syncing' | 'verified' | 'failed';
     summaryVersion: number;
+    authoritativeVersion: number;
+    projectionToken: string;
     attempts: number;
     lastAttemptAt?: Date;
     nextAttemptAt?: Date;
@@ -824,6 +826,8 @@ const TourSchema: Schema<ITour> = new Schema({
   pricingSearchProjection: {
     status: { type: String, enum: ['pending', 'syncing', 'verified', 'failed'], default: 'pending' },
     summaryVersion: { type: Number, default: 0, min: 0 },
+    authoritativeVersion: { type: Number, default: 0, min: 0 },
+    projectionToken: { type: String, maxlength: 80 },
     attempts: { type: Number, default: 0, min: 0 },
     lastAttemptAt: { type: Date },
     nextAttemptAt: { type: Date },

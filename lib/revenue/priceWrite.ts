@@ -7,7 +7,6 @@ import { normalizePriceDate, resolveEffectivePrice } from '@/lib/revenue/pricing
 import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
 import type { PriceWrite } from '@/lib/revenue/priceWriteValidation';
 import type { HydratedDocument } from 'mongoose';
-import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 export { validatePriceWrite } from '@/lib/revenue/priceWriteValidation';
 
 const APPLY_LEASE_MS = 30_000;
@@ -195,6 +194,7 @@ export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string,
         policyHash: input.policyHash,
         policySnapshot: input.policySnapshot,
         sourceVersion: input.sourceVersion,
+        confidence: input.confidence,
         requestHash,
         state: 'pending',
         applyClaimToken: claimToken,
@@ -281,6 +281,5 @@ export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string,
     throw new Error('Applied price receipt could not be finalized.');
   }
 
-  await refreshTourPricingSummary(input.target.tourId, input.currency);
   return { receipt, effective: await resolveEffectivePrice(input.target), state: 'applied' as const };
 }

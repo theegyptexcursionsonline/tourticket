@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Types } from 'mongoose';
 import RevenuePriceOverride from '@/lib/models/RevenuePriceOverride';
 import Tour from '@/lib/models/Tour';
@@ -11,8 +12,15 @@ type SummaryTour = {
 
 type ProjectionTour = SummaryTour & {
   isPublished?: boolean;
-  pricingSummary?: { version?: number };
-  pricingSearchProjection?: { summaryVersion?: number; attempts?: number };
+  pricingSummary?: { version?: number; currency?: string };
+  pricingSearchProjection?: {
+    status?: 'pending' | 'syncing' | 'verified' | 'failed';
+    summaryVersion?: number;
+    authoritativeVersion?: number;
+    projectionToken?: string;
+    attempts?: number;
+    lastErrorCode?: string;
+  };
 };
 
 const PROJECTION_RETRY_BASE_MS = 60_000;
@@ -40,7 +48,7 @@ export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'bo
  * prices plus active future exact overrides. Historical overrides must not
  * keep a stale low price on public cards.
  */
-export async function refreshTourPricingSummary(tourId: string, currency = 'USD') {
+export async function refreshTourPricingSummary(tourId: string, currency = 'USD', authoritativeVersion?: number) {
   const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
     .select('_id discountPrice bookingOptions')
     .lean<SummaryTour | null>();
@@ -62,13 +70,19 @@ export async function refreshTourPricingSummary(tourId: string, currency = 'USD'
     ...overrides.map((override) => override.prices?.adult),
   ]);
   if (candidates.length === 0) {
+    const projectionToken = randomUUID();
     await Tour.updateOne(
       { _id: tour._id },
       {
         $unset: { pricingSummary: 1 },
         $set: {
           pricingSearchProjection: {
-            status: 'pending', summaryVersion: 0, attempts: 0, nextAttemptAt: new Date(),
+            status: 'pending',
+            summaryVersion: 0,
+            authoritativeVersion: Math.max(0, Number(authoritativeVersion || 0)),
+            projectionToken,
+            attempts: 0,
+            nextAttemptAt: new Date(),
           },
         },
       },
@@ -84,13 +98,19 @@ export async function refreshTourPricingSummary(tourId: string, currency = 'USD'
     version: versions.length ? Math.max(...versions) : 0,
     validThrough: dates.length ? new Date(Math.max(...dates.map((date) => date.getTime()))) : undefined,
   };
+  const projectionToken = randomUUID();
   await Tour.updateOne(
     { _id: tour._id },
     {
       $set: {
         pricingSummary: summary,
         pricingSearchProjection: {
-          status: 'pending', summaryVersion: summary.version, attempts: 0, nextAttemptAt: new Date(),
+          status: 'pending',
+          summaryVersion: summary.version,
+          authoritativeVersion: Math.max(0, Number(authoritativeVersion ?? summary.version)),
+          projectionToken,
+          attempts: 0,
+          nextAttemptAt: new Date(),
         },
       },
     },
@@ -113,9 +133,15 @@ export async function syncTourPricingSearchIndex(tourId: string) {
     ?? tour.pricingSummary?.version
     ?? 0,
   );
+  const projectionToken = tour.pricingSearchProjection?.projectionToken;
+  if (!projectionToken) return false;
   const attempts = Math.max(0, Number(tour.pricingSearchProjection?.attempts || 0)) + 1;
-  await Tour.updateOne(
-    { _id: tour._id, 'pricingSearchProjection.summaryVersion': summaryVersion },
+  const claimed = await Tour.updateOne(
+    {
+      _id: tour._id,
+      'pricingSearchProjection.summaryVersion': summaryVersion,
+      'pricingSearchProjection.projectionToken': projectionToken,
+    },
     {
       $set: {
         'pricingSearchProjection.status': 'syncing',
@@ -128,11 +154,16 @@ export async function syncTourPricingSearchIndex(tourId: string) {
       },
     },
   );
+  if (Number(claimed.matchedCount || 0) !== 1) return false;
 
   const markFailed = async (lastErrorCode: string) => {
     const nextAttemptAt = new Date(now.getTime() + pricingProjectionRetryDelayMs(attempts));
     await Tour.updateOne(
-      { _id: tour._id, 'pricingSearchProjection.summaryVersion': summaryVersion },
+      {
+        _id: tour._id,
+        'pricingSearchProjection.summaryVersion': summaryVersion,
+        'pricingSearchProjection.projectionToken': projectionToken,
+      },
       {
         $set: {
           'pricingSearchProjection.status': 'failed',
@@ -153,8 +184,12 @@ export async function syncTourPricingSearchIndex(tourId: string) {
     const { deleteTourFromAlgolia, syncTourToAlgoliaVerified } = await import('@/lib/algolia');
     if (tour.isPublished === false) await deleteTourFromAlgolia(String(tour._id));
     else await syncTourToAlgoliaVerified(tour);
-    await Tour.updateOne(
-      { _id: tour._id, 'pricingSearchProjection.summaryVersion': summaryVersion },
+    const verified = await Tour.updateOne(
+      {
+        _id: tour._id,
+        'pricingSearchProjection.summaryVersion': summaryVersion,
+        'pricingSearchProjection.projectionToken': projectionToken,
+      },
       {
         $set: {
           'pricingSearchProjection.status': 'verified',
@@ -166,10 +201,72 @@ export async function syncTourPricingSearchIndex(tourId: string) {
         },
       },
     );
-    return true;
+    return Number(verified.matchedCount || 0) === 1;
   } catch (error) {
     console.error('Pricing search projection refresh failed.', error);
     return markFailed('ALGOLIA_SYNC_FAILED');
+  }
+}
+
+export function pricingProjectionStatus(
+  tour: Pick<ProjectionTour, 'pricingSummary' | 'pricingSearchProjection'> | null | undefined,
+  authoritativeVersion?: number,
+) {
+  const projection = tour?.pricingSearchProjection;
+  const summaryVersion = Number(tour?.pricingSummary?.version ?? -1);
+  const projectionVersion = Number(projection?.summaryVersion ?? -1);
+  const authorityMatches = authoritativeVersion === undefined
+    || Number(projection?.authoritativeVersion ?? -1) === authoritativeVersion;
+  const versionMatches = summaryVersion >= 0
+    && projectionVersion === summaryVersion
+    && authorityMatches;
+  const verified = projection?.status === 'verified' && versionMatches;
+  return {
+    state: verified ? 'verified' as const : projection?.status === 'failed' ? 'failed' as const : 'pending' as const,
+    verified,
+    versionMatches,
+    summaryVersion: summaryVersion >= 0 ? summaryVersion : null,
+    projectionVersion: projectionVersion >= 0 ? projectionVersion : null,
+    authoritativeVersion: Number.isFinite(Number(projection?.authoritativeVersion))
+      ? Number(projection?.authoritativeVersion)
+      : null,
+  };
+}
+
+/**
+ * Idempotently repair both materialized listing state and the external search
+ * projection after an authoritative apply/rollback. A summary failure is
+ * persisted as retryable work; an Algolia failure is persisted by the search
+ * sync itself. Replaying the original write therefore repairs the projection
+ * without repeating the price mutation.
+ */
+export async function reconcileTourPricingProjection(
+  tourId: string,
+  currency = 'USD',
+  authoritativeVersion = 0,
+) {
+  try {
+    const summary = await refreshTourPricingSummary(tourId, currency, authoritativeVersion);
+    const searchSynced = await syncTourPricingSearchIndex(tourId);
+    return { summaryRefreshed: true, searchSynced, summary };
+  } catch (error) {
+    const now = new Date();
+    await Tour.updateOne(
+      { _id: tourId, ...DEFAULT_TENANT_FILTER },
+      {
+        $set: {
+          'pricingSearchProjection.status': 'failed',
+          'pricingSearchProjection.authoritativeVersion': Math.max(0, Number(authoritativeVersion || 0)),
+          'pricingSearchProjection.projectionToken': randomUUID(),
+          'pricingSearchProjection.lastAttemptAt': now,
+          'pricingSearchProjection.lastErrorCode': 'PRICING_SUMMARY_REFRESH_FAILED',
+          'pricingSearchProjection.nextAttemptAt': new Date(now.getTime() + PROJECTION_RETRY_BASE_MS),
+        },
+        $inc: { 'pricingSearchProjection.attempts': 1 },
+      },
+    );
+    console.error('Pricing summary projection refresh failed.', error);
+    return { summaryRefreshed: false, searchSynced: false, summary: null };
   }
 }
 
@@ -203,11 +300,24 @@ export async function refreshExpiredPricingSummaries(limit = 200) {
         'pricingSearchProjection.lastAttemptAt': { $lte: staleSyncCutoff },
       },
     ],
-  }).select('_id').limit(boundedLimit).lean<Array<{ _id: Types.ObjectId }>>();
+  }).select('_id pricingSummary.currency pricingSearchProjection.authoritativeVersion pricingSearchProjection.lastErrorCode')
+    .limit(boundedLimit)
+    .lean<Array<{
+      _id: Types.ObjectId;
+      pricingSummary?: { currency?: string };
+      pricingSearchProjection?: { authoritativeVersion?: number; lastErrorCode?: string };
+    }>>();
   const results: Array<{ tourId: string; searchSynced: boolean }> = [];
   for (const tour of projectionTours) {
     const tourId = String(tour._id);
-    results.push({ tourId, searchSynced: await syncTourPricingSearchIndex(tourId) });
+    const searchSynced = tour.pricingSearchProjection?.lastErrorCode === 'PRICING_SUMMARY_REFRESH_FAILED'
+      ? (await reconcileTourPricingProjection(
+        tourId,
+        tour.pricingSummary?.currency || 'USD',
+        Number(tour.pricingSearchProjection?.authoritativeVersion || 0),
+      )).searchSynced
+      : await syncTourPricingSearchIndex(tourId);
+    results.push({ tourId, searchSynced });
   }
   return { refreshed: tours.length, projectionAttempts: results.length, results };
 }

@@ -183,16 +183,17 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   // Use the same calculation logic as in BookingSidebar and CartSidebar
   const getItemTotal = (item: CartItem) => {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-    const adultPrice = basePrice * (item.quantity || 1);
+    const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-    const tourTotal = adultPrice + childPrice;
+    const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
+    const tourTotal = adultPrice + childPrice + infantPrice;
 
     let addOnsTotal = 0;
     if (item.selectedAddOns && item.selectedAddOnDetails) {
       Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
         const addOnDetail = item.selectedAddOnDetails?.[addOnId];
         if (addOnDetail && quantity > 0) {
-          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
           const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
           addOnsTotal += addOnDetail.price * addOnQuantity;
         }
@@ -246,7 +247,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
                 const addOnDetail = item.selectedAddOnDetails?.[addOnId];
                 if (!addOnDetail || quantity === 0) return null;
 
-                const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+                const totalGuests = (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
                 const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
                 const addOnTotal = addOnDetail.price * addOnQuantity;
 
@@ -413,6 +414,8 @@ const CheckoutFormStep = ({
   paymentIntentId: string;
   setPaymentIntentId: (id: string) => void;
 }) => {
+  const { acceptAuthoritativePriceQuote } = useCart();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -649,6 +652,7 @@ const CheckoutFormStep = ({
                     onError={(error) => {
                       toast.error(error);
                     }}
+                    onPriceChanged={acceptAuthoritativePriceQuote}
                   />
                 </div>
               )}
@@ -1024,15 +1028,16 @@ const handleDownloadReceipt = async () => {
                 {orderedItems.map((item, index) => {
                   const getItemTotal = (item: CartItem) => {
                     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-                    const adultPrice = basePrice * (item.quantity || 1);
+                    const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
                     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-                    const tourTotal = adultPrice + childPrice;
+                    const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
+                    const tourTotal = adultPrice + childPrice + infantPrice;
                     let addOnsTotal = 0;
                     if (item.selectedAddOns && item.selectedAddOnDetails) {
                       Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
                         const addOnDetail = item.selectedAddOnDetails?.[addOnId];
                         if (addOnDetail && quantity > 0) {
-                          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+                          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
                           const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
                           addOnsTotal += addOnDetail.price * addOnQuantity;
                         }
@@ -1218,16 +1223,17 @@ export default function CheckoutPage() {
   // Use the same calculation logic as in other components
   const getItemTotal = (item: CartItem) => {
     const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-    const adultPrice = basePrice * (item.quantity || 1);
+    const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-    const tourTotal = adultPrice + childPrice;
+    const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
+    const tourTotal = adultPrice + childPrice + infantPrice;
 
     let addOnsTotal = 0;
     if (item.selectedAddOns && item.selectedAddOnDetails) {
       Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
         const addOnDetail = item.selectedAddOnDetails?.[addOnId];
         if (addOnDetail && quantity > 0) {
-          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
+          const totalGuests = (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
           const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
           addOnsTotal += addOnDetail.price * addOnQuantity;
         }

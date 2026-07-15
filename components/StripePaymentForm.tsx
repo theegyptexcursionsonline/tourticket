@@ -8,6 +8,10 @@ import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import { getErrorMessage, isRecord } from './componentTypes';
 import { getOrCreateCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
+import {
+  isAuthoritativePriceQuote,
+  type AuthoritativePriceQuote,
+} from '@/lib/cart/authoritativeCart';
 
 interface CheckoutCartItem {
   _id?: string;
@@ -17,7 +21,12 @@ interface CheckoutCartItem {
   quantity?: unknown;
   childQuantity?: unknown;
   infantQuantity?: unknown;
-  selectedBookingOption?: { id?: string };
+  selectedBookingOption?: { id?: string; pricingKey?: string };
+  guestPrices?: { adult?: number; child?: number; infant?: number };
+  priceVersion?: number;
+  priceExecutionId?: string | null;
+  priceOverrideId?: string | null;
+  priceSource?: 'catalogue' | 'override';
   selectedAddOns?: Record<string, unknown> | Array<{ id?: string; quantity?: unknown }>;
 }
 
@@ -157,6 +166,7 @@ interface StripePaymentFormProps {
   discountCode?: string;
   onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
+  onPriceChanged: (quote: AuthoritativePriceQuote) => Promise<boolean> | boolean;
 }
 
 const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
@@ -168,12 +178,16 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   discountCode,
   onSuccess,
   onError,
+  onPriceChanged,
 }) => {
   const [clientSecret, setClientSecret] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [checkoutAttemptId, setCheckoutAttemptId] = useState('');
+  const [pendingPriceChange, setPendingPriceChange] = useState<AuthoritativePriceQuote | null>(null);
+  const [isAcceptingPriceChange, setIsAcceptingPriceChange] = useState(false);
+  const [priceChangeError, setPriceChangeError] = useState('');
   
   // Use settings for consistent price formatting with currency conversion
   const { formatPrice, selectedCurrency } = useSettings();
@@ -239,9 +253,13 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       const adults = normalizeQty(item.quantity || 0);
       const children = normalizeQty(item.childQuantity || 0);
       const infants = normalizeQty(item.infantQuantity || 0);
-      const bookingOption = item.selectedBookingOption?.id || '';
+      const bookingOption = item.selectedBookingOption?.pricingKey || item.selectedBookingOption?.id || '';
+      const guestPrices = item.guestPrices
+        ? `${item.guestPrices.adult ?? ''}:${item.guestPrices.child ?? ''}:${item.guestPrices.infant ?? ''}`
+        : '';
+      const priceIdentity = `${item.priceVersion ?? ''}:${item.priceExecutionId ?? ''}:${item.priceOverrideId ?? ''}:${item.priceSource ?? ''}`;
       const addOnsSig = stableAddOns(item);
-      return `${id}|${date}|${time}|a${adults}|c${children}|n${infants}|bo${bookingOption}|ao${addOnsSig}`;
+      return `${id}|${date}|${time}|a${adults}|c${children}|n${infants}|bo${bookingOption}|gp${guestPrices}|pi${priceIdentity}|ao${addOnsSig}`;
     }).join('||');
 
     return `${cartSig}::${(pricingData?.currency || currency || 'USD').toUpperCase()}::${pricingData?.total || 0}::${discount || ''}`;
@@ -276,6 +294,10 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       return;
     }
     if (!checkoutAttemptId) {
+      return;
+    }
+    if (pendingPriceChange) {
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
@@ -336,7 +358,13 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
           const data = await response.json();
 
-          if (data.success && data.clientSecret) {
+          if (response.status === 409 && data.code === 'PRICE_CHANGED' && isAuthoritativePriceQuote(data.quote)) {
+            setClientSecret('');
+            setPendingPriceChange(data.quote);
+            setPriceChangeError('');
+            paymentIntentCreatedRef.current = false;
+            lastCartHashRef.current = '';
+          } else if (data.success && data.clientSecret) {
             setClientSecret(data.clientSecret);
             paymentIntentCreatedRef.current = true;
             lastCartHashRef.current = currentCartHash;
@@ -356,7 +384,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     }, 1500); // Increased debounce to 1.5 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [customer.email, customer.firstName, customer.lastName, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret]);
+  }, [customer.email, customer.firstName, customer.lastName, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret, pendingPriceChange]);
 
   if (isLoading) {
     return (
@@ -390,6 +418,102 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
               : 'Please enter a valid email address to continue with payment.'}
           </p>
           <p className="text-sm text-slate-400">We use your details to send booking confirmations and receipts.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pendingPriceChange) {
+    const formatQuotePrice = (price: number) => new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: pendingPriceChange.currency,
+      minimumFractionDigits: 2,
+    }).format(price);
+
+    const acceptUpdatedPrice = async () => {
+      if (isAcceptingPriceChange) return;
+      setIsAcceptingPriceChange(true);
+      setPriceChangeError('');
+      try {
+        const accepted = await onPriceChanged(pendingPriceChange);
+        if (!accepted) {
+          setPriceChangeError('We could not save the updated quote. Your original cart is unchanged. Please try again.');
+          return;
+        }
+        paymentIntentCreatedRef.current = false;
+        lastCartHashRef.current = '';
+        setClientSecret('');
+        setPaymentCompleted(false);
+        setPendingPriceChange(null);
+        setIsLoading(true);
+        toast.success('Updated price accepted. Rebuilding secure payment…');
+      } catch (error) {
+        console.error('Unable to accept updated quote:', error);
+        setPriceChangeError('We could not save the updated quote. Your original cart is unchanged. Please try again.');
+      } finally {
+        setIsAcceptingPriceChange(false);
+      }
+    };
+
+    return (
+      <div
+        role="alert"
+        aria-live="assertive"
+        className="overflow-hidden rounded-2xl border border-amber-300 bg-white shadow-lg"
+      >
+        <div className="flex items-start gap-3 bg-amber-50 px-5 py-4 sm:px-6">
+          <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-700">
+            <AlertCircle size={22} aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-lg font-extrabold text-slate-900">Your price was updated</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              The current price changed before payment. You have not been charged. Review and accept the new server-verified quote to continue.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-5 px-5 py-5 sm:px-6">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              {pendingPriceChange.tourTitle || 'Selected experience'}
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              {pendingPriceChange.date} at {pendingPriceChange.time} · {pendingPriceChange.currency}
+            </p>
+            <dl className="mt-4 grid grid-cols-3 gap-2">
+              {(['adult', 'child', 'infant'] as const).map((guestType) => (
+                <div key={guestType} className="rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200">
+                  <dt className="text-[11px] font-semibold capitalize text-slate-500">{guestType}</dt>
+                  <dd className="mt-1 text-sm font-extrabold text-slate-900">
+                    {formatQuotePrice(pendingPriceChange.prices[guestType])}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          {priceChangeError && (
+            <p role="status" className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {priceChangeError}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={acceptUpdatedPrice}
+            disabled={isAcceptingPriceChange}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isAcceptingPriceChange ? (
+              <><Loader2 className="animate-spin" size={18} /> Saving updated quote…</>
+            ) : (
+              <><ShieldCheck size={18} /> Accept updated price &amp; continue</>
+            )}
+          </button>
+          <p className="text-center text-xs text-slate-500">
+            Payment will only be prepared after you confirm this quote.
+          </p>
         </div>
       </div>
     );

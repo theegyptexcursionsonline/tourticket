@@ -19,8 +19,27 @@ export interface ICartItem {
   selectedTime?: string;
   quantity: number;
   childQuantity?: number;
+  infantQuantity?: number;
   adultPrice: number;
   childPrice?: number;
+  selectedBookingOption?: {
+    id?: string;
+    pricingKey?: string;
+    title?: string;
+    price?: number;
+    originalPrice?: number;
+    duration?: string;
+    badge?: string;
+  };
+  guestPrices?: {
+    adult: number;
+    child: number;
+    infant: number;
+  };
+  priceVersion?: number;
+  priceExecutionId?: string | null;
+  priceOverrideId?: string | null;
+  priceSource?: 'catalogue' | 'override';
   selectedAddOns?: Array<{
     id: string;
     name: string;
@@ -184,8 +203,27 @@ const UserSchema: Schema<IUser> = new Schema({
     selectedTime: { type: String },
     quantity: { type: Number, required: true, default: 1 },
     childQuantity: { type: Number, default: 0 },
+    infantQuantity: { type: Number, default: 0, min: 0, max: 50 },
     adultPrice: { type: Number, required: true },
     childPrice: { type: Number },
+    selectedBookingOption: {
+      id: String,
+      pricingKey: String,
+      title: String,
+      price: { type: Number, min: 0 },
+      originalPrice: { type: Number, min: 0 },
+      duration: String,
+      badge: String,
+    },
+    guestPrices: {
+      adult: { type: Number, min: 0 },
+      child: { type: Number, min: 0 },
+      infant: { type: Number, min: 0 },
+    },
+    priceVersion: { type: Number, min: 0 },
+    priceExecutionId: { type: String },
+    priceOverrideId: { type: String },
+    priceSource: { type: String, enum: ['catalogue', 'override'] },
     selectedAddOns: [{
       id: String,
       name: String,

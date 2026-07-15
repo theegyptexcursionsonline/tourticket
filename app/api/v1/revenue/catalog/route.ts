@@ -6,6 +6,7 @@ import { authenticateRevenueRequest } from '@/lib/revenue/machineResponse';
 import { STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
 import { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
 import { pricingCatalogueVersion } from '@/lib/revenue/pricingVersion';
+import { pricingProjectionStatus } from '@/lib/revenue/pricingSummary';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,9 +25,7 @@ export async function GET(request: NextRequest) {
       pricingSummary: tour.pricingSummary || null,
       pricingSearchProjection: tour.pricingSearchProjection || null,
       channelPropagation: {
-        eeo_direct: tour.pricingSearchProjection?.status === 'verified'
-          ? 'verified'
-          : tour.pricingSearchProjection?.status === 'failed' ? 'failed' : 'pending',
+        eeo_direct: pricingProjectionStatus(tour).state,
         getyourguide: 'not_connected',
         viator: 'not_connected',
       },
