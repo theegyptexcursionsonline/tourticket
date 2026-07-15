@@ -242,10 +242,16 @@ export function SettingsProvider({
   const [selectedCurrency, setSelectedCurrency] = usePersistentState<Currency>('selectedCurrency', currencies[1]); // Default to USD
   const [selectedLanguage, setSelectedLanguage] = usePersistentState<Language>('selectedLanguage', localeLanguage);
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch exchange rates on mount and every hour
   useEffect(() => {
+    // USD is the admin/storefront base currency, so no conversion data is
+    // needed until a visitor actually chooses a different currency.
+    if (selectedCurrency.code === 'USD') {
+      return;
+    }
+
     const loadExchangeRates = async () => {
       setIsLoading(true);
       const rates = await fetchExchangeRates();
@@ -259,7 +265,7 @@ export function SettingsProvider({
     const interval = setInterval(loadExchangeRates, 60 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedCurrency.code]);
 
   // Keep SettingsContext language in sync with route locale (next-intl source of truth).
   useEffect(() => {

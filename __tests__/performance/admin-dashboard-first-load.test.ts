@@ -11,4 +11,14 @@ describe('admin dashboard first-load contract', () => {
     expect(source).toContain("fetchWithTimeout('/api/admin/dashboard'");
     expect(source).not.toContain("fetchWithTimeout('/api/admin/reports'");
   });
+
+  it('does not initialize storefront Firebase authentication in the admin shell', () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'app/admin/AdminClientLayout.tsx'),
+      'utf8',
+    );
+
+    expect(source).not.toContain("@/contexts/AuthContext");
+    expect(source).not.toContain('<AuthProvider>');
+  });
 });

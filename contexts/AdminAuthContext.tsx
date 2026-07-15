@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import * as Sentry from '@sentry/nextjs';
 import toast from 'react-hot-toast';
 
 // Abort a login request that hangs (stalled network path) instead of
@@ -166,13 +165,21 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
           });
         } catch (fetchError) {
           const timedOut = fetchError instanceof DOMException && fetchError.name === 'AbortError';
-          Sentry.captureMessage(timedOut ? 'admin-login-timeout' : 'admin-login-network-error', {
-            level: 'warning',
-            extra: {
-              durationMs: Date.now() - startedAt,
-              online: typeof navigator !== 'undefined' ? navigator.onLine : null,
-            },
-          });
+          // Sentry is large and this path only runs on a login network error.
+          // Keep it out of the normal admin startup bundle and load it on demand.
+          void import('@sentry/nextjs')
+            .then(({ captureMessage }) => {
+              captureMessage(timedOut ? 'admin-login-timeout' : 'admin-login-network-error', {
+                level: 'warning',
+                extra: {
+                  durationMs: Date.now() - startedAt,
+                  online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+                },
+              });
+            })
+            .catch(() => {
+              // The original login error remains the user-facing failure.
+            });
           throw new Error(
             timedOut
               ? 'Connection timed out. Please check your internet connection and try again.'

@@ -2,7 +2,6 @@
 
 import Sidebar from '@/components/admin/Sidebar';
 import Header from '@/components/admin/Header';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import withAuth from '@/components/admin/withAuth'; // 1. Import withAuth HOC
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
@@ -32,14 +31,12 @@ export default function AdminClientLayout({
     children: React.ReactNode
 }) {
     return (
-        <AuthProvider>
-            <SettingsProvider>
-                <AdminAuthProvider>
-                    <AuthenticatedAdminLayout>
-                        {children}
-                    </AuthenticatedAdminLayout>
-                </AdminAuthProvider>
-            </SettingsProvider>
-        </AuthProvider>
+        <SettingsProvider>
+            <AdminAuthProvider>
+                <AuthenticatedAdminLayout>
+                    {children}
+                </AuthenticatedAdminLayout>
+            </AdminAuthProvider>
+        </SettingsProvider>
     );
 }
