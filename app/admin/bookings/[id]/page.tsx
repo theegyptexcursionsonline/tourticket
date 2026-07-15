@@ -491,6 +491,37 @@ const BookingDetailPage = () => {
     }
   };
 
+  // Manual resend of the booking's notification emails (customer + operator).
+  const resendNotifications = async () => {
+    if (!window.confirm('Resend the notification emails for this booking to the customer and the operator?')) return;
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/bookings/${id}/resend-notification`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok && response.status !== 502) {
+        throw new Error(result?.error || 'Failed to resend notifications');
+      }
+      if (result?.notificationSent) {
+        toast.success('Customer email sent');
+      } else {
+        toast.error('The CUSTOMER email failed to send — check the address and Mailgun.', { duration: 8000 });
+      }
+      if (result?.operatorNotificationSent) {
+        toast.success('Operator email sent');
+      } else {
+        toast.error('The operator notification email failed to send.', { duration: 8000 });
+      }
+    } catch (err) {
+      console.error('Error resending notifications:', err);
+      toast.error((err as Error).message || 'Failed to resend notifications');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const startEditing = () => {
     if (!booking) return;
     setEditedDate(booking.dateString || booking.date.split('T')[0]);
@@ -893,7 +924,22 @@ const BookingDetailPage = () => {
                   Cancellation and refunds use the audited payment workflow; status is updated only after the provider result is recorded.
                 </p>
               </div>
-              
+
+              <div className="border-t border-slate-200 pt-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Notifications</p>
+                <button
+                  type="button"
+                  onClick={resendNotifications}
+                  disabled={updating}
+                  className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Resend emails (customer + operator)
+                </button>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Re-sends the notification for this booking&apos;s current outcome — use when an email failed or the customer says they never received it.
+                </p>
+              </div>
+
               {/* Refund info if applicable */}
               {(booking.status === 'Refunded' || booking.status === 'Partial_Refund') && booking.refundAmount && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">

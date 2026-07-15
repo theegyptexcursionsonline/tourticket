@@ -196,3 +196,93 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
   }
   return { customer: 'sent', operator };
 }
+
+const FINAL_REFUND_STATES = ['succeeded', 'not_required', 'manual_required'];
+
+/**
+ * Admin-initiated resend of a booking's notification emails.
+ *
+ * Financial bookings (a completed cancellation/refund outcome exists): the
+ * one-shot claim is deliberately released first, then the standard
+ * refund-notification path re-runs — customer AND operator. This is the only
+ * sanctioned way to bypass the anti-duplicate claim, and it exists precisely
+ * for the human case: the admin saw a failure toast (or the customer says
+ * they never got the email) and explicitly asks for a resend.
+ *
+ * Non-financial bookings: sends the current-status update to the customer and
+ * the operator notification directly (no claim system applies there).
+ */
+export async function resendBookingNotifications(
+  bookingId: string,
+  actor: string,
+): Promise<RefundNotificationOutcome | null> {
+  const financial = await Booking.findOne({
+    _id: bookingId,
+    tenantId: 'default',
+    refundState: { $in: FINAL_REFUND_STATES },
+  }).select('_id').lean();
+  if (financial) {
+    await Booking.updateOne(
+      { _id: bookingId, tenantId: 'default' },
+      {
+        $unset: {
+          refundNotificationState: 1,
+          refundNotificationSentAt: 1,
+          refundNotificationClaimToken: 1,
+          refundNotificationClaimedAt: 1,
+          refundNotificationFailureCode: 1,
+        },
+      },
+    );
+    return sendBookingRefundNotification(bookingId);
+  }
+
+  const booking = await Booking.findOne({ _id: bookingId, tenantId: 'default' })
+    .populate([{ path: 'tour', model: Tour }, { path: 'user', model: User }]);
+  if (!booking) return null;
+  const user = booking.user as unknown as PopulatedBookingUser;
+  const tour = booking.tour as unknown as PopulatedBookingTour;
+  if (!user?.email || !tour?.title) return { customer: 'failed', operator: 'skipped' };
+
+  const customerName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Valued customer';
+  const outcome: RefundNotificationOutcome = { customer: 'failed', operator: 'failed' };
+  try {
+    await EmailService.sendBookingStatusUpdate({
+      customerName,
+      customerEmail: user.email,
+      tourTitle: tour.title,
+      bookingDate: formatDate(booking.date),
+      bookingTime: booking.time,
+      bookingId: booking.bookingReference || String(booking._id),
+      newStatus: booking.status,
+      statusMessage: `Your booking is currently ${booking.status}.`,
+      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+    });
+    outcome.customer = 'sent';
+  } catch (error) {
+    console.error('Manual customer notification resend failed.', error);
+  }
+  try {
+    await EmailService.sendOperatorBookingUpdate({
+      bookingId: booking.bookingReference || String(booking._id),
+      tourTitle: tour.title,
+      customerName,
+      customerEmail: user.email,
+      customerPhone: user.phone,
+      bookingDate: formatDate(booking.date),
+      bookingTime: booking.time,
+      changesSummary: `Manual notification resend by ${actor}. Current status: ${booking.status}.`,
+      changedBy: actor,
+      changedAt: new Date().toISOString(),
+      newStatus: booking.status,
+      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+      adultGuests: booking.adultGuests,
+      childGuests: booking.childGuests,
+      infantGuests: booking.infantGuests,
+    });
+    outcome.operator = 'sent';
+  } catch (error) {
+    console.error('Manual operator notification resend failed.', error);
+  }
+  return outcome;
+}
