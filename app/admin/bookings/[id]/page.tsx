@@ -384,6 +384,13 @@ const BookingDetailPage = () => {
       } else {
         toast.success(`Status updated to ${newStatus}`);
       }
+      // "Nothing silent": surface notification email failures to the admin.
+      if (result?.notifications?.customer === 'failed') {
+        toast.error('The CUSTOMER email failed to send — notify them manually.', { duration: 8000 });
+      }
+      if (result?.notifications?.operator === 'failed') {
+        toast.error('The operator notification email failed to send.', { duration: 8000 });
+      }
     } catch (err) {
       console.error('Error updating booking:', err);
       toast.error((err as Error).message || 'Failed to update booking status');
@@ -466,6 +473,10 @@ const BookingDetailPage = () => {
         toast('Refund is processing. The booking will update after Stripe confirms it.', { icon: '⏳' });
       } else {
         toast.success(`${refundType === 'Refunded' ? 'Full' : 'Partial'} refund confirmed by Stripe`);
+      }
+      // "Nothing silent": surface a failed customer notification.
+      if (result?.notificationSent === false) {
+        toast.error('Refund processed, but the CUSTOMER email failed to send — notify them manually.', { duration: 8000 });
       }
     } catch (err) {
       console.error('Error processing refund:', err);

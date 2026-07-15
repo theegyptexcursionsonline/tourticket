@@ -474,9 +474,15 @@ export async function PATCH(
     const updatedUser = updatedBooking.user as unknown as PopulatedBookingUser;
     const updatedTour = updatedBooking.tour as unknown as PopulatedBookingTour;
     
+    // "Nothing silent": track email outcomes so the admin UI can show when a
+    // notification failed instead of the failure disappearing into the logs.
+    const notifications: { customer: 'sent' | 'failed' | 'skipped'; operator: 'sent' | 'failed' | 'skipped' } = {
+      customer: 'skipped',
+      operator: 'skipped',
+    };
     if (changesForNotification.length > 0 && updatedUser && updatedTour) {
-      const customerName = updatedUser.name || 
-        `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() || 
+      const customerName = updatedUser.name ||
+        `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() ||
         'Valued Customer';
       const customerEmail = updatedUser.email;
       const tourTitle = updatedTour.title || 'Tour';
@@ -538,7 +544,9 @@ export async function PATCH(
           });
           console.log('✅ Update email sent to customer');
         }
+        notifications.customer = 'sent';
       } catch (emailError) {
+        notifications.customer = 'failed';
         console.error('❌ Failed to send customer email notification:', emailError);
       }
 
@@ -575,7 +583,9 @@ export async function PATCH(
           infantGuests: updatedBooking.infantGuests,
         });
         console.log(`✅ Update notification sent to operator`);
+        notifications.operator = 'sent';
       } catch (emailError) {
+        notifications.operator = 'failed';
         console.error('❌ Failed to send operator notification:', emailError);
       }
     }
@@ -598,6 +608,7 @@ export async function PATCH(
         id: finalUser._id,
         name: finalUser.name || `${finalUser.firstName || ''} ${finalUser.lastName || ''}`.trim(),
       } : null,
+      notifications,
     };
 
     return NextResponse.json(transformedBooking);

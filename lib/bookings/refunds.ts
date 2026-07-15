@@ -112,6 +112,34 @@ function isStripeBooking(booking: RefundBooking) {
     && !['bank', 'cash', 'pay_later'].includes(String(booking.paymentMethod || '').toLowerCase());
 }
 
+export type PriorRefundResolution = 'replay' | 'conflict' | 'proceed';
+
+// Decides what a new refund request may do given the booking's prior refund
+// outcome. A completed cancellation that refunded NOTHING (the 0% policy
+// window — refundState 'not_required') must not permanently block a
+// deliberate admin refund: the customer's money is still captured, so an
+// admin_full/admin_partial afterwards is legitimate (this is exactly the
+// "cancel first, then refund" flow the admin uses). Real completed refunds
+// ('succeeded') and manual-review outcomes ('manual_required', non-Stripe
+// money) remain terminal.
+export function resolvePriorRefund(
+  refundState: string | undefined,
+  refundKind: string | undefined,
+  refundAmount: number,
+  requestedKind: BookingRefundKind,
+): PriorRefundResolution {
+  if (!['succeeded', 'not_required', 'manual_required'].includes(String(refundState))) return 'proceed';
+  if (refundKind === requestedKind) return 'replay';
+  if (
+    refundState === 'not_required'
+    && roundMoney(refundAmount) === 0
+    && (requestedKind === 'admin_full' || requestedKind === 'admin_partial')
+  ) {
+    return 'proceed';
+  }
+  return 'conflict';
+}
+
 export interface RequestBookingRefundInput {
   bookingId: string;
   ownerId?: string;
@@ -172,7 +200,8 @@ async function finalizeWithoutStripe(input: {
       tenantId: 'default',
       __v: input.booking.__v,
       status: input.booking.status,
-      $or: [{ refundState: { $exists: false } }, { refundState: 'failed' }],
+      // 'not_required' is claimable again — see resolvePriorRefund.
+      $or: [{ refundState: { $exists: false } }, { refundState: 'failed' }, { refundState: 'not_required' }],
     },
     {
       $set: {
@@ -241,8 +270,14 @@ export async function requestBookingRefund(
   let booking = await loadBooking(input);
   if (!booking) throw new BookingRefundError(404, 'BOOKING_NOT_FOUND', 'Booking not found.');
 
-  if (['succeeded', 'not_required', 'manual_required'].includes(String(booking.refundState))) {
-    if (booking.refundKind === input.kind) return outcome(booking, true);
+  const priorResolution = resolvePriorRefund(
+    booking.refundState,
+    booking.refundKind,
+    Number(booking.refundAmount || 0),
+    input.kind,
+  );
+  if (priorResolution === 'replay') return outcome(booking, true);
+  if (priorResolution === 'conflict') {
     throw new BookingRefundError(409, 'REFUND_STATE_CONFLICT', 'A different cancellation or refund has already completed.');
   }
   ensureEligibleStatus(booking, input.kind);
@@ -306,7 +341,10 @@ export async function requestBookingRefund(
         tenantId: 'default',
         __v: booking.__v,
         status: booking.status,
-        $or: [{ refundState: { $exists: false } }, { refundState: 'failed' }],
+        // 'not_required' is claimable again: it means a prior operation
+        // completed WITHOUT refunding money (0% policy cancellation), which
+        // resolvePriorRefund allows an admin refund to supersede.
+        $or: [{ refundState: { $exists: false } }, { refundState: 'failed' }, { refundState: 'not_required' }],
       },
       {
         $set: {

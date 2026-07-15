@@ -389,6 +389,14 @@ const BookingsPage = () => {
         const data = await response.json().catch(() => null);
         throw new Error(data?.message || data?.error || 'Failed to update booking status');
       }
+      const result = await response.json().catch(() => null);
+      // "Nothing silent": tell the admin when a notification email failed.
+      if (result?.notifications?.customer === 'failed') {
+        toast.error('Status saved, but the CUSTOMER email failed to send — notify them manually.', { duration: 8000 });
+      }
+      if (result?.notifications?.operator === 'failed') {
+        toast.error('Status saved, but the operator notification email failed to send.', { duration: 8000 });
+      }
 
       setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
       // Cached list views are stale after a mutation — drop them so the old

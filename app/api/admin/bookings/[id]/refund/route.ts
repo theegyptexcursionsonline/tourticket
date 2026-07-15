@@ -31,14 +31,18 @@ export async function POST(
       requestKey: request.headers.get('idempotency-key') || undefined,
     }, getServerStripe);
 
+    // "Nothing silent": report whether the customer notification went out.
+    let notificationSent: boolean | undefined;
     if (result.newlyFinalized) {
-      await sendBookingRefundNotification(id).catch((error) => {
+      notificationSent = await sendBookingRefundNotification(id).catch((error) => {
         console.error('Admin refund completed but notification failed.', error);
+        return false;
       });
     }
     const pending = result.state === 'pending';
     return NextResponse.json({
       success: !pending,
+      notificationSent,
       code: pending ? 'REFUND_PENDING' : undefined,
       message: pending
         ? 'Stripe accepted the refund for processing. Booking status will change after provider confirmation.'
