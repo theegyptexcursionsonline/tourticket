@@ -47,6 +47,7 @@ interface DashboardStats {
   totalUsers: number;
   recentBookingsCount: number;
   recentActivities: { id: string; text: string }[];
+  monthlyRevenue?: MonthlyRevenue[];
   trends?: {
     bookings: TrendValue;
     revenue: TrendValue;
@@ -285,11 +286,10 @@ const AdminDashboard = () => {
         }
       };
 
-      // Parallel fetching with timeout
-      const [dashboardRes, reportRes] = await Promise.all([
-        fetchWithTimeout('/api/admin/dashboard', { headers }),
-        fetchWithTimeout('/api/admin/reports', { headers })
-      ]);
+      // One authenticated request now carries the critical stats and the small
+      // six-month chart series. Previously a much heavier reports request held
+      // the entire page on its full-screen skeleton.
+      const dashboardRes = await fetchWithTimeout('/api/admin/dashboard', { headers });
 
       if (!dashboardRes.ok) {
         if (dashboardRes.status === 401) {
@@ -297,15 +297,7 @@ const AdminDashboard = () => {
         }
         throw new Error(`Dashboard API error: ${dashboardRes.status}`);
       }
-      if (!reportRes.ok && retryCount < 2) {
-        // Retry reports API once (it's less critical)
-        console.warn('Reports API failed, will retry...');
-      }
-
-      const [dashboardData, reportData] = await Promise.all([
-        dashboardRes.json(),
-        reportRes.json()
-      ]);
+      const dashboardData = await dashboardRes.json();
 
       // Handle dashboard data with fallback
       if (dashboardData.success) {
@@ -318,11 +310,11 @@ const AdminDashboard = () => {
         throw new Error(dashboardData.error || 'Failed to fetch dashboard data');
       }
 
-      // Handle report data with fallback
-      const reportToUse = (reportData && reportData.monthlyRevenue) ? reportData : { monthlyRevenue: [] };
-      if (!(reportData && reportData.monthlyRevenue)) {
-        console.warn('Report data unavailable, using fallback');
-      }
+      const reportToUse = {
+        monthlyRevenue: Array.isArray(dashboardData.data?.monthlyRevenue)
+          ? dashboardData.data.monthlyRevenue
+          : [],
+      };
       setReportData(reportToUse);
 
       // Persist for an instant next load (stale-while-revalidate).

@@ -8,6 +8,7 @@ import User from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
+import { getMonthlyRevenueSeries } from '@/lib/admin/monthlyRevenue';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -58,7 +59,8 @@ export async function GET(request: NextRequest) {
       totalUsers,
       revenueResult,
       recentBookingsCount,
-      recentBookings
+      recentBookings,
+      monthlyRevenue,
     ] = await Promise.allSettled([
       Tour.countDocuments({ isPublished: true, ...DEFAULT_TENANT_FILTER }),
       // Bookings/revenue are scoped to this (default/EEO) site, like tours —
@@ -88,7 +90,8 @@ export async function GET(request: NextRequest) {
         .limit(5)
         .populate({ path: 'tour', model: Tour, select: 'title' })
         .populate({ path: 'user', model: User, select: 'firstName lastName email' })
-        .lean()
+        .lean(),
+      getMonthlyRevenueSeries(),
     ]);
 
     // Extract values with fallbacks
@@ -145,6 +148,7 @@ export async function GET(request: NextRequest) {
       ...stats,
       trends,
       recentActivities,
+      monthlyRevenue: monthlyRevenue.status === 'fulfilled' ? monthlyRevenue.value : [],
     };
 
     return NextResponse.json({ success: true, data: responseData });

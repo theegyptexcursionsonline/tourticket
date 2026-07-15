@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
-import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { getMonthlyRevenueSeries } from '@/lib/admin/monthlyRevenue';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -15,39 +15,10 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // --- 1. Monthly Revenue for the Last 6 Months ---
-    const monthlyRevenueData = [];
-    const today = new Date();
-    
-    for (let i = 5; i >= 0; i--) {
-      const targetDate = subMonths(today, i);
-      const monthStart = startOfMonth(targetDate);
-      const monthEnd = endOfMonth(targetDate);
-
-      const result = await Booking.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: monthStart, $lte: monthEnd },
-            status: { $in: ['Confirmed', 'Pending'] },
-            ...DEFAULT_TENANT_FILTER,
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: '$totalPrice' },
-          },
-        },
-      ]);
-
-      monthlyRevenueData.push({
-        name: format(targetDate, 'MMM yyyy'), // e.g., "Jan 2024", "Feb 2024"
-        revenue: result.length > 0 ? result[0].total : 0,
-      });
-    }
-
-    // --- 2. Top 5 Best-Selling Tours ---
-    const topToursData = await Booking.aggregate([
+    // Run all independent report queries together. Monthly revenue itself is a
+    // single grouped aggregation (rather than six serial database round-trips).
+    const monthlyRevenuePromise = getMonthlyRevenueSeries();
+    const topToursPromise = Booking.aggregate([
       {
         $match: {
           status: { $in: ['Confirmed', 'Pending'] },
@@ -89,7 +60,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // --- 3. Key Performance Indicators (KPIs) ---
-    const totalRevenueResult = await Booking.aggregate([
+    const totalRevenuePromise = Booking.aggregate([
       {
         $match: {
           status: { $in: ['Confirmed', 'Pending'] },
@@ -99,8 +70,19 @@ export async function GET(request: NextRequest) {
       { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ]);
 
+    const totalBookingsPromise = Booking.countDocuments({
+      status: { $in: ['Confirmed', 'Pending'] },
+      ...DEFAULT_TENANT_FILTER,
+    });
+
+    const [monthlyRevenueData, topToursData, totalRevenueResult, totalBookings] = await Promise.all([
+      monthlyRevenuePromise,
+      topToursPromise,
+      totalRevenuePromise,
+      totalBookingsPromise,
+    ]);
+
     const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
-    const totalBookings = await Booking.countDocuments({ status: { $in: ['Confirmed', 'Pending'] }, ...DEFAULT_TENANT_FILTER });
     const averageBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
 
     const kpis = {
