@@ -43,9 +43,12 @@ export function proxy(request: NextRequest) {
   if (isDashboardSubdomain && !isDashboardPassthrough) {
     const url = request.nextUrl.clone();
     url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
-    const response = NextResponse.rewrite(url);
-    response.headers.set('Cache-Control', 'no-store, must-revalidate');
-    return response;
+    // Admin pages contain only a public client shell; all private data still
+    // comes from cookie-authenticated, no-store API routes. Do not force the
+    // HTML rewrite through a no-store response, otherwise Netlify cannot serve
+    // the prerendered shell from the edge and every first visit pays a cold
+    // server-render before authentication can even begin.
+    return NextResponse.rewrite(url);
   }
 
   // Redirect main domain /admin to dashboard subdomain

@@ -31,4 +31,18 @@ describe('admin dashboard first-load contract', () => {
     expect(source).toContain('window.location.assign(href)');
     expect(source).toContain('prefetch={false}');
   });
+
+  it('keeps the public admin document static and edge-cacheable', () => {
+    const layoutSource = fs.readFileSync(
+      path.join(process.cwd(), 'app/admin/layout.tsx'),
+      'utf8',
+    );
+    const proxySource = fs.readFileSync(
+      path.join(process.cwd(), 'proxy.ts'),
+      'utf8',
+    );
+
+    expect(layoutSource).not.toContain("dynamic = 'force-dynamic'");
+    expect(proxySource).not.toContain("response.headers.set('Cache-Control', 'no-store, must-revalidate')");
+  });
 });
