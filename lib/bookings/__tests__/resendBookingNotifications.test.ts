@@ -12,6 +12,7 @@ jest.mock('@/lib/email/emailService', () => ({
   EmailService: {
     sendCancellationConfirmation: jest.fn(),
     sendBookingStatusUpdate: jest.fn(),
+    sendBookingConfirmation: jest.fn(),
     sendOperatorBookingUpdate: jest.fn(),
   },
 }));
@@ -24,6 +25,7 @@ const findOne = Booking.findOne as unknown as jest.Mock;
 const findOneAndUpdate = Booking.findOneAndUpdate as unknown as jest.Mock;
 const updateOne = Booking.updateOne as unknown as jest.Mock;
 const sendStatusUpdate = EmailService.sendBookingStatusUpdate as jest.Mock;
+const sendConfirmation = EmailService.sendBookingConfirmation as jest.Mock;
 const sendCancellation = EmailService.sendCancellationConfirmation as jest.Mock;
 const sendOperator = EmailService.sendOperatorBookingUpdate as jest.Mock;
 
@@ -51,6 +53,7 @@ describe('resendBookingNotifications', () => {
     jest.clearAllMocks();
     updateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
     sendStatusUpdate.mockResolvedValue(undefined);
+    sendConfirmation.mockResolvedValue(undefined);
     sendCancellation.mockResolvedValue(undefined);
     sendOperator.mockResolvedValue(undefined);
   });
@@ -71,7 +74,7 @@ describe('resendBookingNotifications', () => {
     expect(sendOperator).toHaveBeenCalledTimes(1);
   });
 
-  it('sends current-status customer + operator emails directly for non-financial bookings', async () => {
+  it('re-sends the REAL booking confirmation (voucher email) for live bookings', async () => {
     findOne
       .mockReturnValueOnce({ select: () => ({ lean: async () => null }) })
       .mockReturnValueOnce({
@@ -90,7 +93,16 @@ describe('resendBookingNotifications', () => {
 
     expect(outcome).toEqual({ customer: 'sent', operator: 'sent' });
     expect(findOneAndUpdate).not.toHaveBeenCalled(); // no claim involved
-    expect(sendStatusUpdate).toHaveBeenCalledWith(expect.objectContaining({ newStatus: 'Confirmed' }));
+    expect(sendConfirmation).toHaveBeenCalledWith(expect.objectContaining({ bookingId: 'EEO-TEST' }));
+    expect(sendStatusUpdate).not.toHaveBeenCalled();
+    // Sent marker recorded, failure flags cleared.
+    expect(updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: BOOKING_ID }),
+      expect.objectContaining({
+        $set: expect.objectContaining({ confirmationSentAt: expect.any(Date) }),
+        $unset: expect.objectContaining({ confirmationEmailFailedAt: 1 }),
+      }),
+    );
     expect(sendOperator).toHaveBeenCalledWith(expect.objectContaining({ changedBy: 'admin@test' }));
   });
 
@@ -108,7 +120,7 @@ describe('resendBookingNotifications', () => {
           tour: { title: 'Safe Tour' },
         }),
       });
-    sendStatusUpdate.mockRejectedValueOnce(new Error('mailgun down'));
+    sendConfirmation.mockRejectedValueOnce(new Error('mailgun down'));
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await expect(resendBookingNotifications(BOOKING_ID, 'admin@test'))

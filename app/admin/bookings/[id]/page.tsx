@@ -185,6 +185,10 @@ interface BookingDetails {
   refundAmount?: number;
   refundDate?: string;
   refundReason?: string;
+  // Confirmation email tracking ("nothing silent")
+  confirmationSentAt?: string;
+  confirmationEmailFailedAt?: string;
+  confirmationEmailFailureCode?: string;
   // Discount tracking
   discountCode?: string;
   discountAmount?: number;
@@ -862,6 +866,18 @@ const BookingDetailPage = () => {
               </div>
               <p className="text-xs text-slate-600 text-center">
                 Verification code for tour operator
+              </p>
+            </div>
+          )}
+
+          {/* Confirmation email failure — "nothing silent" */}
+          {booking.confirmationEmailFailedAt && (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">Confirmation email FAILED to send</p>
+              <p className="mt-1 text-xs leading-5 text-red-700">
+                Failed {new Date(booking.confirmationEmailFailedAt).toLocaleString()}
+                {booking.confirmationEmailFailureCode ? ` — ${booking.confirmationEmailFailureCode}` : ''}.
+                The customer has NOT received their booking confirmation. Use “Resend emails” below to send it now.
               </p>
             </div>
           )}

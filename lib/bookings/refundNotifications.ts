@@ -247,17 +247,48 @@ export async function resendBookingNotifications(
   const customerName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Valued customer';
   const outcome: RefundNotificationOutcome = { customer: 'failed', operator: 'failed' };
   try {
-    await EmailService.sendBookingStatusUpdate({
-      customerName,
-      customerEmail: user.email,
-      tourTitle: tour.title,
-      bookingDate: formatDate(booking.date),
-      bookingTime: booking.time,
-      bookingId: booking.bookingReference || String(booking._id),
-      newStatus: booking.status,
-      statusMessage: `Your booking is currently ${booking.status}.`,
-      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
-    });
+    // A live (Pending/Confirmed) booking's relevant email is the REAL
+    // confirmation with the QR voucher — the one checkout/webhook may have
+    // failed to deliver. Other statuses get a current-status update.
+    if (booking.status === 'Pending' || booking.status === 'Confirmed') {
+      const adults = Number(booking.adultGuests || 0);
+      const children = Number(booking.childGuests || 0);
+      const infants = Number(booking.infantGuests || 0);
+      const totalGuests = adults + children + infants || Number(booking.guests || 1);
+      await EmailService.sendBookingConfirmation({
+        customerName,
+        customerEmail: user.email,
+        customerPhone: user.phone,
+        tourTitle: tour.title,
+        bookingDate: formatDate(booking.date),
+        bookingTime: booking.time,
+        participants: `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`,
+        totalPrice: `$${Number(booking.totalPrice || 0).toFixed(2)}`,
+        bookingId: booking.bookingReference || String(booking._id),
+        bookingOption: booking.selectedBookingOption?.title,
+        specialRequests: booking.specialRequests,
+        hotelPickupDetails: booking.hotelPickupDetails,
+        meetingPoint: tour.meetingPoint || 'Meeting point will be confirmed 24 hours before tour',
+        tourImage: tour.image,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+      });
+      await Booking.updateOne(
+        { _id: booking._id, tenantId: 'default' },
+        { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
+      ).catch(() => undefined);
+    } else {
+      await EmailService.sendBookingStatusUpdate({
+        customerName,
+        customerEmail: user.email,
+        tourTitle: tour.title,
+        bookingDate: formatDate(booking.date),
+        bookingTime: booking.time,
+        bookingId: booking.bookingReference || String(booking._id),
+        newStatus: booking.status,
+        statusMessage: `Your booking is currently ${booking.status}.`,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+      });
+    }
     outcome.customer = 'sent';
   } catch (error) {
     console.error('Manual customer notification resend failed.', error);

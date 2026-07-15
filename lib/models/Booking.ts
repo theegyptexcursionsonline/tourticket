@@ -42,6 +42,8 @@ export interface IBooking extends Document {
   paymentId?: string;
   paymentItemIndex?: number;
   confirmationSentAt?: Date;
+  confirmationEmailFailedAt?: Date;
+  confirmationEmailFailureCode?: string;
   paymentMethod?: string;
   specialRequests?: string;
   customerPhone?: string;
@@ -276,7 +278,19 @@ const BookingSchema: Schema<IBooking> = new Schema({
   confirmationSentAt: {
     type: Date,
   },
-  
+
+  // "Nothing silent": when the booking-confirmation email fails, the failure
+  // is recorded here so the admin UI can surface it (cleared on a later
+  // successful send/resend).
+  confirmationEmailFailedAt: {
+    type: Date,
+  },
+  confirmationEmailFailureCode: {
+    type: String,
+    maxlength: 200,
+  },
+
+
   paymentMethod: {
     type: String,
     enum: ['card', 'paypal', 'bank', 'cash', 'pay_later'],

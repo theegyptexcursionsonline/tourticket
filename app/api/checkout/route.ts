@@ -891,8 +891,18 @@ export async function POST(request: NextRequest) {
           discountCode: discountCode ? String(discountCode).toUpperCase() : undefined,
         });
         console.log(`[Checkout] Customer confirmation sent for bank transfer booking ${bookingId}`);
+        await Booking.updateMany(
+          { _id: { $in: createdBookings.map((booking) => booking._id) } },
+          { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
+        ).catch(() => undefined);
       } catch (emailError) {
         console.error('Failed to send customer confirmation email:', emailError);
+        // Record the failure so the admin UI can surface it ("nothing silent").
+        const failureCode = (emailError instanceof Error ? emailError.message : 'unknown_error').slice(0, 200);
+        await Booking.updateMany(
+          { _id: { $in: createdBookings.map((booking) => booking._id) } },
+          { $set: { confirmationEmailFailedAt: new Date(), confirmationEmailFailureCode: failureCode } },
+        ).catch(() => undefined);
       }
     } else {
       console.log(`[Checkout] Card payment - customer confirmation will be sent by webhook after payment succeeds`);

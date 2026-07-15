@@ -725,9 +725,18 @@ export async function POST(request: NextRequest) {
         dateBadge,
       });
       console.log('[Manual Booking] Sent confirmation email');
+      await Booking.updateOne(
+        { _id: newBooking._id },
+        { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
+      ).catch(() => undefined);
     } catch (emailError) {
       console.error('[Manual Booking] Failed to send confirmation email:', emailError);
-      // Don't fail the booking if email fails
+      // Don't fail the booking if email fails — record it for the admin UI.
+      const failureCode = (emailError instanceof Error ? emailError.message : 'unknown_error').slice(0, 200);
+      await Booking.updateOne(
+        { _id: newBooking._id },
+        { $set: { confirmationEmailFailedAt: new Date(), confirmationEmailFailureCode: failureCode } },
+      ).catch(() => undefined);
     }
 
     // Build tours array for admin alert
