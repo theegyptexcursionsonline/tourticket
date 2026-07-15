@@ -21,4 +21,14 @@ describe('admin dashboard first-load contract', () => {
     expect(source).not.toContain("@/contexts/AuthContext");
     expect(source).not.toContain('<AuthProvider>');
   });
+
+  it('does not waste first-load bandwidth prefetching full-page sidebar navigations', () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'components/admin/Sidebar.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('window.location.assign(href)');
+    expect(source).toContain('prefetch={false}');
+  });
 });

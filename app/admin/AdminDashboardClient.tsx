@@ -187,6 +187,7 @@ const QuickActionCard = React.memo(({
   return (
     <Component
       href={disabled ? '#' : href}
+      prefetch={false}
       className={`relative bg-white rounded-3xl p-6 shadow-sm border border-slate-100 transition-all duration-300 group ${
         disabled
           ? 'cursor-not-allowed'
@@ -397,6 +398,7 @@ const AdminDashboard = () => {
         </div>
         <Link
           href="/admin/tours/new"
+          prefetch={false}
           className="mt-4 sm:mt-0 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 font-semibold"
         >
           <Plus className="h-5 w-5" />

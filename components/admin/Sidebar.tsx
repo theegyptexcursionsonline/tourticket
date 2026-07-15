@@ -272,6 +272,7 @@ const AdminSidebar = () => {
                 <li key={href}>
                   <Link
                     href={href}
+                    prefetch={false}
                     onClick={(event) => handleNavClick(event, href)}
                     aria-busy={pending}
                     className={`relative group flex items-center rounded-2xl transition-all duration-200 overflow-hidden ${
