@@ -364,6 +364,18 @@ export async function requestBookingRefund(
           refundProviderId: 1,
           refundFailureCode: 1,
           refundCompletedAt: 1,
+          // A prior $0 cancellation may have already consumed the one-shot
+          // notification claim with its own email. This claim starts a NEW
+          // financial outcome, which must be able to send its own
+          // notification once it completes — release the old claim with the
+          // refund claim itself. Replays of an already-notified refund never
+          // reach this update (resolvePriorRefund returns 'replay' first),
+          // so a correctly-sent refund email can never be duplicated.
+          refundNotificationState: 1,
+          refundNotificationSentAt: 1,
+          refundNotificationClaimToken: 1,
+          refundNotificationClaimedAt: 1,
+          refundNotificationFailureCode: 1,
         },
         $inc: { __v: 1 },
       },
