@@ -65,9 +65,19 @@ export async function requireAdminAuth(
   // but state-changing requests must also prove they came from this origin.
   if (!bearerToken && cookieToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
     const origin = request.headers.get('origin');
+    // Behind Netlify's proxy, request.nextUrl.host is the internal function
+    // host — comparing Origin against it rejected EVERY legitimate admin
+    // write in production ("You do not have permission…" on status changes,
+    // cancel and refund). The public host arrives in x-forwarded-host, which
+    // the edge sets and a cross-site attacker's browser cannot spoof, so the
+    // CSRF property is preserved.
+    const publicHost =
+      request.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ||
+      request.headers.get('host') ||
+      request.nextUrl.host;
     let sameOrigin = false;
     try {
-      sameOrigin = Boolean(origin && new URL(origin).host === request.nextUrl.host);
+      sameOrigin = Boolean(origin && new URL(origin).host === publicHost);
     } catch {
       sameOrigin = false;
     }
