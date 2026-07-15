@@ -385,10 +385,12 @@ const BookingDetailPage = () => {
         toast.success(`Status updated to ${newStatus}`);
       }
       // "Nothing silent": surface notification email failures to the admin.
-      if (result?.notifications?.customer === 'failed') {
+      // PATCH responses report notifications.{customer,operator}; the cancel
+      // workflow reports notificationSent/operatorNotificationSent.
+      if (result?.notifications?.customer === 'failed' || result?.notificationSent === false) {
         toast.error('The CUSTOMER email failed to send — notify them manually.', { duration: 8000 });
       }
-      if (result?.notifications?.operator === 'failed') {
+      if (result?.notifications?.operator === 'failed' || result?.operatorNotificationSent === false) {
         toast.error('The operator notification email failed to send.', { duration: 8000 });
       }
     } catch (err) {
@@ -474,9 +476,12 @@ const BookingDetailPage = () => {
       } else {
         toast.success(`${refundType === 'Refunded' ? 'Full' : 'Partial'} refund confirmed by Stripe`);
       }
-      // "Nothing silent": surface a failed customer notification.
+      // "Nothing silent": surface failed customer/operator notifications.
       if (result?.notificationSent === false) {
         toast.error('Refund processed, but the CUSTOMER email failed to send — notify them manually.', { duration: 8000 });
+      }
+      if (result?.operatorNotificationSent === false) {
+        toast.error('Refund processed, but the operator notification email failed to send.', { duration: 8000 });
       }
     } catch (err) {
       console.error('Error processing refund:', err);

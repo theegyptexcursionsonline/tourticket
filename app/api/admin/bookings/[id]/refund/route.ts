@@ -31,18 +31,22 @@ export async function POST(
       requestKey: request.headers.get('idempotency-key') || undefined,
     }, getServerStripe);
 
-    // "Nothing silent": report whether the customer notification went out.
+    // "Nothing silent": report whether the customer AND operator notifications went out.
     let notificationSent: boolean | undefined;
+    let operatorNotificationSent: boolean | undefined;
     if (result.newlyFinalized) {
-      notificationSent = await sendBookingRefundNotification(id).catch((error) => {
+      const outcome = await sendBookingRefundNotification(id).catch((error) => {
         console.error('Admin refund completed but notification failed.', error);
-        return false;
+        return null;
       });
+      notificationSent = outcome ? outcome.customer !== 'failed' : false;
+      operatorNotificationSent = outcome ? outcome.operator !== 'failed' : false;
     }
     const pending = result.state === 'pending';
     return NextResponse.json({
       success: !pending,
       notificationSent,
+      operatorNotificationSent,
       code: pending ? 'REFUND_PENDING' : undefined,
       message: pending
         ? 'Stripe accepted the refund for processing. Booking status will change after provider confirmation.'

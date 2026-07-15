@@ -79,8 +79,9 @@ async function main() {
   if (released.modifiedCount !== 1) throw new Error('Stale claim could not be released (booking changed concurrently) — aborting.');
   console.log('Stale claim released.');
 
-  const sent = await sendBookingRefundNotification(bookingId);
-  console.log('sendBookingRefundNotification returned:', sent);
+  const outcome = await sendBookingRefundNotification(bookingId);
+  console.log('sendBookingRefundNotification returned:', JSON.stringify(outcome));
+  const sent = outcome.customer === 'sent';
 
   const after = await Booking.findOne({ _id: bookingId, tenantId: 'default' })
     .select('refundNotificationState refundNotificationSentAt refundNotificationFailureCode')

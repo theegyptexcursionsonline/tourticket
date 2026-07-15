@@ -325,7 +325,18 @@ export class EmailService {
       return;
     }
 
-    const template = await this.generateEmailTemplate('operator-booking-update', data);
+    // Render the change time in Cairo local time instead of a raw UTC ISO
+    // string — operators read this to know when the change actually happened.
+    const changedAtDate = new Date(data.changedAt);
+    const changedAt = Number.isNaN(changedAtDate.getTime())
+      ? data.changedAt
+      : `${changedAtDate.toLocaleString('en-US', {
+          timeZone: 'Africa/Cairo',
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
+        })} (Cairo time)`;
+
+    const template = await this.generateEmailTemplate('operator-booking-update', { ...data, changedAt });
     await sendEmail({
       to: operatorEmail,
       subject: template.subject,

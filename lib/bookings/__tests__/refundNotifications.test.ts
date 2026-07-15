@@ -11,6 +11,7 @@ jest.mock('@/lib/email/emailService', () => ({
   EmailService: {
     sendCancellationConfirmation: jest.fn(),
     sendBookingStatusUpdate: jest.fn(),
+    sendOperatorBookingUpdate: jest.fn(),
   },
 }));
 
@@ -21,6 +22,7 @@ import { sendBookingRefundNotification } from '@/lib/bookings/refundNotification
 const findOneAndUpdate = Booking.findOneAndUpdate as unknown as jest.Mock;
 const updateOne = Booking.updateOne as unknown as jest.Mock;
 const sendCancellation = EmailService.sendCancellationConfirmation as jest.Mock;
+const sendOperator = EmailService.sendOperatorBookingUpdate as jest.Mock;
 
 function claimResult(value: unknown) {
   return { populate: jest.fn().mockResolvedValue(value) };
@@ -48,6 +50,7 @@ describe('refund notification durable claim', () => {
     jest.clearAllMocks();
     updateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
     sendCancellation.mockResolvedValue(undefined);
+    sendOperator.mockResolvedValue(undefined);
   });
 
   it('allows only one provider send across concurrent callers', async () => {
@@ -55,13 +58,17 @@ describe('refund notification durable claim', () => {
       .mockReturnValueOnce(claimResult(finalizedCancellation()))
       .mockReturnValueOnce(claimResult(null));
 
-    const [first, second] = await Promise.all([
+    const outcomes = await Promise.all([
       sendBookingRefundNotification('507f1f77bcf86cd799439011'),
       sendBookingRefundNotification('507f1f77bcf86cd799439011'),
     ]);
 
-    expect([first, second].sort()).toEqual([false, true]);
+    expect(outcomes).toEqual(expect.arrayContaining([
+      { customer: 'sent', operator: 'sent' },
+      { customer: 'already_handled', operator: 'skipped' },
+    ]));
     expect(sendCancellation).toHaveBeenCalledTimes(1);
+    expect(sendOperator).toHaveBeenCalledTimes(1);
     expect(updateOne).toHaveBeenCalledWith(
       expect.objectContaining({ refundNotificationState: 'sending' }),
       expect.objectContaining({ $set: expect.objectContaining({ refundNotificationState: 'sent' }) }),
@@ -73,7 +80,8 @@ describe('refund notification durable claim', () => {
     sendCancellation.mockRejectedValueOnce(Object.assign(new Error('transport timeout'), { status: 504 }));
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    await expect(sendBookingRefundNotification('507f1f77bcf86cd799439011')).resolves.toBe(false);
+    await expect(sendBookingRefundNotification('507f1f77bcf86cd799439011'))
+      .resolves.toEqual({ customer: 'failed', operator: 'sent' });
 
     const update = updateOne.mock.calls[0]?.[1];
     expect(update.$set).toEqual(expect.objectContaining({
@@ -82,6 +90,17 @@ describe('refund notification durable claim', () => {
     }));
     expect(update.$set).not.toHaveProperty('status');
     expect(update.$set).not.toHaveProperty('refundState');
+    consoleError.mockRestore();
+  });
+
+  it('still notifies the operator when the customer email fails, and reports an operator failure without blocking the customer email', async () => {
+    findOneAndUpdate.mockReturnValueOnce(claimResult(finalizedCancellation()));
+    sendOperator.mockRejectedValueOnce(new Error('operator mailbox down'));
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(sendBookingRefundNotification('507f1f77bcf86cd799439011'))
+      .resolves.toEqual({ customer: 'sent', operator: 'failed' });
+    expect(sendCancellation).toHaveBeenCalledTimes(1);
     consoleError.mockRestore();
   });
 });

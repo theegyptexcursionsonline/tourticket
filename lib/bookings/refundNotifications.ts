@@ -20,6 +20,29 @@ function safeFailureCode(error: unknown) {
   return `${name}${status ? `:${status}` : ''}`.slice(0, 200);
 }
 
+export type RefundNotificationOutcome = {
+  /** 'already_handled' = another caller owns the one-shot claim (e.g. the
+   * Stripe webhook raced this request and sent the email itself). */
+  customer: 'sent' | 'failed' | 'already_handled';
+  operator: 'sent' | 'failed' | 'skipped';
+};
+
+function describeRefundOutcome(booking: {
+  refundState?: string;
+  refundKind?: string;
+  refundAmount?: number;
+}) {
+  const amount = `$${Number(booking.refundAmount || 0).toFixed(2)}`;
+  if (booking.refundState === 'manual_required') {
+    return 'Booking cancelled — the payment was not collected through Stripe, so any refund requires manual processing.';
+  }
+  if (booking.refundKind === 'admin_partial') return `Partial refund of ${amount} confirmed by Stripe.`;
+  if (booking.refundKind === 'admin_full') return `Full refund of ${amount} confirmed by Stripe.`;
+  return Number(booking.refundAmount || 0) > 0
+    ? `Booking cancelled — ${amount} refund confirmed by Stripe.`
+    : 'Booking cancelled — no refund due under the cancellation policy.';
+}
+
 /**
  * Send only after durable refund state proves what happened.
  *
@@ -29,8 +52,12 @@ function safeFailureCode(error: unknown) {
  * can occur after provider acceptance, and retrying it could duplicate a
  * financial email. Failed/stale claims remain visible for operator review via
  * refundNotificationState and the monitoring index.
+ *
+ * "Nothing silent": the operator/supplier is notified inside the same claim,
+ * before the customer email, so internal teams learn about every
+ * cancellation/refund even when the customer transport fails.
  */
-export async function sendBookingRefundNotification(bookingId: string) {
+export async function sendBookingRefundNotification(bookingId: string): Promise<RefundNotificationOutcome> {
   const claimToken = randomUUID();
   const booking = await Booking.findOneAndUpdate(
     {
@@ -50,7 +77,7 @@ export async function sendBookingRefundNotification(bookingId: string) {
     },
     { new: true },
   ).populate([{ path: 'tour', model: Tour }, { path: 'user', model: User }]);
-  if (!booking) return false;
+  if (!booking) return { customer: 'already_handled', operator: 'skipped' };
 
   const markFailed = async (code: string) => {
     await Booking.updateOne(
@@ -75,14 +102,39 @@ export async function sendBookingRefundNotification(bookingId: string) {
   const tour = booking.tour as unknown as PopulatedBookingTour;
   if (!user?.email || !tour?.title) {
     await markFailed('missing_recipient_or_tour');
-    return false;
+    return { customer: 'failed', operator: 'skipped' };
+  }
+
+  const customerName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Valued customer';
+  let operator: RefundNotificationOutcome['operator'] = 'failed';
+  try {
+    await EmailService.sendOperatorBookingUpdate({
+      bookingId: booking.bookingReference || String(booking._id),
+      tourTitle: tour.title,
+      customerName,
+      customerEmail: user.email,
+      customerPhone: user.phone,
+      bookingDate: formatDate(booking.date),
+      bookingTime: booking.time,
+      changesSummary: describeRefundOutcome(booking),
+      changedBy: booking.refundActor || 'System',
+      changedAt: new Date().toISOString(),
+      newStatus: booking.status,
+      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
+      adultGuests: booking.adultGuests,
+      childGuests: booking.childGuests,
+      infantGuests: booking.infantGuests,
+    });
+    operator = 'sent';
+  } catch (error) {
+    console.error('Refund completed but its operator notification was not confirmed.', error);
   }
 
   try {
     const cancellation = booking.refundKind === 'customer_cancel' || booking.refundKind === 'admin_cancel';
     if (cancellation) {
       await EmailService.sendCancellationConfirmation({
-        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Valued customer',
+        customerName,
         customerEmail: user.email,
         tourTitle: tour.title,
         bookingDate: formatDate(booking.date),
@@ -98,7 +150,7 @@ export async function sendBookingRefundNotification(bookingId: string) {
       });
     } else {
       await EmailService.sendBookingStatusUpdate({
-        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Valued customer',
+        customerName,
         customerEmail: user.email,
         tourTitle: tour.title,
         bookingDate: formatDate(booking.date),
@@ -115,7 +167,7 @@ export async function sendBookingRefundNotification(bookingId: string) {
   } catch (error) {
     await markFailed(safeFailureCode(error));
     console.error('Refund completed but its customer notification was not confirmed.', error);
-    return false;
+    return { customer: 'failed', operator };
   }
 
   try {
@@ -142,5 +194,5 @@ export async function sendBookingRefundNotification(bookingId: string) {
     // surface this uncertain receipt state for manual reconciliation.
     console.error('Refund notification was accepted but its receipt could not be persisted.', error);
   }
-  return true;
+  return { customer: 'sent', operator };
 }
