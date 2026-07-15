@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
       const mapped: Record<string, string> = {
         pending: 'Pending',
         confirmed: 'Confirmed',
+        completed: 'Completed',
         cancelled: 'Cancelled',
         refunded: 'Refunded',
         partial_refund: 'Partial_Refund',

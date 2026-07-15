@@ -331,6 +331,7 @@ const BookingsPage = () => {
       switch (status) {
         case 'Confirmed': return 'bg-green-100 text-green-800';
         case 'Pending': return 'bg-yellow-100 text-yellow-800';
+        case 'Completed': return 'bg-indigo-100 text-indigo-800';
         case 'Cancelled': return 'bg-red-100 text-red-800';
         case 'Refunded': return 'bg-blue-100 text-blue-800';
         case 'Partial_Refund': return 'bg-purple-100 text-purple-800';
@@ -343,19 +344,24 @@ const BookingsPage = () => {
         <select
           value={booking.status}
           onChange={(e) => handleChange(e.target.value)}
-          disabled={isUpdating || ['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
+          disabled={isUpdating || ['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
           className={`appearance-none text-xs font-semibold px-3 py-2 pr-8 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${getDropdownStyle(booking.status)}`}
         >
-          {['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
+          {['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
             <option value={booking.status}>{booking.status === 'Partial_Refund' ? 'Partial Refund' : booking.status}</option>
           )}
-          <option
-            value="Confirmed"
-            disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
-          >
-            Confirmed
-          </option>
-          <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
+          {!['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
+            <>
+              <option
+                value="Confirmed"
+                disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
+              >
+                Confirmed
+              </option>
+              <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
+              <option value="Completed" disabled={booking.status !== 'Confirmed'}>Completed</option>
+            </>
+          )}
         </select>
         <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
           {isUpdating ? (
@@ -495,6 +501,7 @@ const BookingsPage = () => {
               <option value="all">All</option>
               <option value="Pending">Pending</option>
               <option value="Confirmed">Confirmed</option>
+              <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
               <option value="Refunded">Refunded</option>
               <option value="Partial_Refund">Partial Refund</option>
@@ -662,6 +669,14 @@ const BookingsPage = () => {
                             className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors">
                             <Eye size={12} /> View
                           </button>
+                          {!['Refunded', 'Partial_Refund'].includes(booking.status) && (
+                            <button
+                              onClick={() => router.push(`/admin/bookings/${booking._id}#financial-actions`)}
+                              className="px-3 py-1 text-xs font-medium text-slate-700 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+                            >
+                              Cancel / refund
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

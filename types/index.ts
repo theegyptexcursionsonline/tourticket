@@ -415,7 +415,7 @@ export interface Booking {
   children: number;
   infants: number;
   totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
   paymentId?: string;
   paymentMethod?: string;
   specialRequests?: string;

@@ -13,6 +13,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 import { InventoryHoldError, withBookingInventoryCapacity } from '@/lib/checkout/inventoryHolds';
+import { validateAdminLifecycleTransition } from '@/lib/bookings/statusTransitions';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -85,6 +86,7 @@ async function getAdminInfo(request?: NextRequest): Promise<{ id: string; name: 
 const STATUS_MESSAGES: Record<string, string> = {
   'Confirmed': '✓ Your booking has been confirmed! Get ready for an amazing experience.',
   'Pending': '⏳ Your booking is currently pending. We\'ll update you soon.',
+  'Completed': '✓ Your experience has been completed. Thank you for booking with us.',
   'Cancelled': '❌ Your booking has been cancelled.',
   'Refunded': '💰 Your booking has been refunded. The full amount will be credited to your account.',
   'Partial_Refund': '💰 A partial refund has been processed for your booking.',
@@ -197,18 +199,6 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    if (status && ['Cancelled', 'Refunded', 'Partial_Refund'].includes(status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: 'FINANCIAL_TRANSITION_REQUIRES_WORKFLOW',
-          message: status === 'Cancelled'
-            ? 'Use the cancellation endpoint so policy and payment-provider state are enforced.'
-            : 'Use the refund endpoint so Stripe confirmation is recorded before status changes.',
-        },
-        { status: 409 },
-      );
-    }
 
     // Get the current booking with populated fields before updating
     const currentBooking = await Booking.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
@@ -244,39 +234,29 @@ export async function PATCH(
         { status: 409 },
       );
     }
-    if (['Cancelled', 'Refunded', 'Partial_Refund'].includes(currentBooking.status)) {
+    if (['Cancelled', 'Refunded', 'Partial_Refund', 'Completed'].includes(currentBooking.status)
+      && (status !== currentBooking.status || date !== undefined || dateString !== undefined || time !== undefined || selectedBookingOption !== undefined)) {
       return NextResponse.json(
         {
           success: false,
-          code: 'FINANCIAL_RECORD_IMMUTABLE',
-          message: 'A cancelled or refunded booking cannot be reopened or rescheduled. Create a new booking instead.',
+          code: currentBooking.status === 'Completed' ? 'COMPLETED_BOOKING_IMMUTABLE' : 'FINANCIAL_RECORD_IMMUTABLE',
+          message: currentBooking.status === 'Completed'
+            ? 'A completed booking cannot be reopened or rescheduled. Use the protected refund workflow if money must be returned.'
+            : 'A cancelled or refunded booking cannot be reopened or rescheduled. Create a new booking instead.',
         },
         { status: 409 },
       );
     }
     if (status && status !== currentBooking.status) {
-      if (currentBooking.status === 'Confirmed' && status === 'Pending') {
-        return NextResponse.json(
-          {
-            success: false,
-            code: 'CONFIRMED_PAYMENT_IMMUTABLE',
-            message: 'A confirmed booking cannot be reverted to pending. Use cancellation/refund workflows when money must be reversed.',
-          },
-          { status: 409 },
-        );
-      }
-      if (currentBooking.status === 'Pending' && status === 'Confirmed') {
-        const method = String(currentBooking.paymentMethod || '').toLowerCase();
-        if (!['cash', 'bank'].includes(method)) {
-          return NextResponse.json(
-            {
-              success: false,
-              code: 'PAYMENT_PROVIDER_CONFIRMATION_REQUIRED',
-              message: 'Card bookings are confirmed only by the verified Stripe webhook.',
-            },
-            { status: 409 },
-          );
-        }
+      const transitionError = validateAdminLifecycleTransition({
+        currentStatus: currentBooking.status,
+        nextStatus: status,
+        paymentMethod: currentBooking.paymentMethod,
+        dateString: currentBooking.dateString || currentBooking.date?.toISOString().slice(0, 10),
+        time: currentBooking.time,
+      });
+      if (transitionError) {
+        return NextResponse.json({ success: false, ...transitionError }, { status: 409 });
       }
     }
 

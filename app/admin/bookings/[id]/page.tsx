@@ -61,7 +61,7 @@ const DetailItem = ({
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 // Valid booking statuses
-type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
+type BookingStatus = 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
 
 // Edit history entry interface
 interface EditHistoryEntry {
@@ -355,6 +355,7 @@ const BookingDetailPage = () => {
       }
       if (!window.confirm(`Confirm that the ${method} payment was received in full?`)) return;
     }
+    if (newStatus === 'Cancelled' && !window.confirm('Cancel this booking using the protected cancellation workflow?')) return;
     
     setUpdating(true);
     try {
@@ -496,6 +497,8 @@ const BookingDetailPage = () => {
         return `${baseClasses} bg-green-100 text-green-800`;
       case 'Pending':
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
+      case 'Completed':
+        return `${baseClasses} bg-indigo-100 text-indigo-800`;
       case 'Cancelled':
         return `${baseClasses} bg-red-100 text-red-800`;
       case 'Refunded':
@@ -766,7 +769,7 @@ const BookingDetailPage = () => {
           )}
 
           {/* Status Management */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div id="financial-actions" className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 scroll-mt-24">
             <h3 className="font-semibold text-slate-900 mb-3">Status Management</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -779,9 +782,12 @@ const BookingDetailPage = () => {
               <select
                 value={booking.status}
                 onChange={(e) => updateBookingStatus(e.target.value)}
-                disabled={updating || ['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
+                disabled={updating || ['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
                 className="w-full appearance-none bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
+                {['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
+                  <option value={booking.status}>{getStatusLabel(booking.status)}</option>
+                )}
                 <option
                   value="Confirmed"
                   disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
@@ -789,10 +795,33 @@ const BookingDetailPage = () => {
                   Confirmed
                 </option>
                 <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
-                <option value="Cancelled">Cancelled</option>
-                <option value="Refunded">Refunded</option>
-                <option value="Partial_Refund">Partial Refund</option>
+                <option value="Completed" disabled={booking.status !== 'Confirmed'}>Completed</option>
               </select>
+
+              <div className="border-t border-slate-200 pt-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Protected financial actions</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => updateBookingStatus('Cancelled')}
+                    disabled={updating || !['Pending', 'Confirmed'].includes(booking.status)}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Cancel booking
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateBookingStatus('Refunded')}
+                    disabled={updating || !['Pending', 'Confirmed', 'Completed', 'Cancelled'].includes(booking.status)}
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Process refund
+                  </button>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Cancellation and refunds use the audited payment workflow; status is updated only after the provider result is recorded.
+                </p>
+              </div>
               
               {/* Refund info if applicable */}
               {(booking.status === 'Refunded' || booking.status === 'Partial_Refund') && booking.refundAmount && (
@@ -841,7 +870,7 @@ const BookingDetailPage = () => {
               <>
                 <button
                   onClick={startEditing}
-                  disabled={['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
+                  disabled={['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   <Edit size={16} />

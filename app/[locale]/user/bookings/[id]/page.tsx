@@ -61,7 +61,7 @@ interface BookingDetails {
   time: string;
   guests: number;
   totalPrice: number;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
   adultGuests?: number;
   childGuests?: number;
   infantGuests?: number;
@@ -273,8 +273,13 @@ const UserBookingDetailPage = () => {
         return `${baseClasses} bg-green-100 text-green-800`;
       case 'Pending':
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
+      case 'Completed':
+        return `${baseClasses} bg-indigo-100 text-indigo-800`;
       case 'Cancelled':
         return `${baseClasses} bg-red-100 text-red-800`;
+      case 'Refunded':
+      case 'Partial_Refund':
+        return `${baseClasses} bg-blue-100 text-blue-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }
@@ -291,7 +296,7 @@ const UserBookingDetailPage = () => {
 
   const canCancelBooking = () => {
     if (!booking) return false;
-    if (booking.status === 'Cancelled') return false;
+    if (['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)) return false;
 
     // Use dateString for timezone-safe date parsing
     const dateSource = booking.dateString || booking.date;
@@ -534,8 +539,9 @@ const UserBookingDetailPage = () => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
               <span className={`${getStatusBadge(booking.status)} w-full justify-center`}>
                 {booking.status === 'Confirmed' && <CheckCircle size={16} />}
+                {booking.status === 'Completed' && <CheckCircle size={16} />}
                 {booking.status === 'Cancelled' && <XCircle size={16} />}
-                {booking.status}
+                {booking.status === 'Partial_Refund' ? 'Partial Refund' : booking.status}
               </span>
               
               {canCancelBooking() && (

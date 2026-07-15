@@ -17,9 +17,11 @@ describe('booking financial-record mutation safety', () => {
   it('routes cancellation and refund statuses through provider-aware workflows', () => {
     const itemRoute = projectFile('app/api/admin/bookings/[id]/route.ts');
     const adminPage = projectFile('app/admin/bookings/BookingsPageClient.tsx');
+    const transitions = projectFile('lib/bookings/statusTransitions.ts');
 
-    expect(itemRoute).toContain('FINANCIAL_TRANSITION_REQUIRES_WORKFLOW');
-    expect(itemRoute).toContain("['Cancelled', 'Refunded', 'Partial_Refund'].includes(status)");
+    expect(itemRoute).toContain('validateAdminLifecycleTransition');
+    expect(transitions).toContain('FINANCIAL_TRANSITION_REQUIRES_WORKFLOW');
+    expect(transitions).toContain("['Cancelled', 'Refunded', 'Partial_Refund']");
     expect(adminPage).not.toContain('Delete booking');
     expect(adminPage).not.toContain('/api/admin/bookings/bulk-delete');
   });
@@ -27,9 +29,11 @@ describe('booking financial-record mutation safety', () => {
   it('never confirms card payments through the generic admin status editor', () => {
     const itemRoute = projectFile('app/api/admin/bookings/[id]/route.ts');
     const listPage = projectFile('app/admin/bookings/BookingsPageClient.tsx');
+    const transitions = projectFile('lib/bookings/statusTransitions.ts');
 
-    expect(itemRoute).toContain('PAYMENT_PROVIDER_CONFIRMATION_REQUIRED');
-    expect(itemRoute).toContain("if (!['cash', 'bank'].includes(method))");
+    expect(itemRoute).toContain('validateAdminLifecycleTransition');
+    expect(transitions).toContain('PAYMENT_PROVIDER_CONFIRMATION_REQUIRED');
+    expect(transitions).toContain("if (!['cash', 'bank'].includes(method))");
     expect(itemRoute).toContain("updates.paymentConfirmedBy = `admin:${adminInfo?.id || auth.id}`");
     expect(listPage).toContain('Card bookings are confirmed only after Stripe verifies payment.');
   });

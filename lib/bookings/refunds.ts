@@ -79,7 +79,7 @@ function cancellationKind(kind: BookingRefundKind) {
 function ensureEligibleStatus(booking: RefundBooking, kind: BookingRefundKind) {
   const allowed = cancellationKind(kind)
     ? ['Confirmed', 'Pending']
-    : ['Confirmed', 'Pending', 'Cancelled'];
+    : ['Confirmed', 'Pending', 'Completed', 'Cancelled'];
   if (!allowed.includes(booking.status)) {
     throw new BookingRefundError(409, 'REFUND_STATE_CONFLICT', `Booking status ${booking.status} cannot enter this refund flow.`);
   }

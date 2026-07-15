@@ -14,10 +14,10 @@ export interface IBookingEditHistoryEntry {
 }
 
 // Booking status type - includes new refund statuses
-export type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
+export type BookingStatus = 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
 
 // Array of valid statuses for validation
-export const BOOKING_STATUSES: BookingStatus[] = ['Confirmed', 'Pending', 'Cancelled', 'Refunded', 'Partial_Refund'];
+export const BOOKING_STATUSES: BookingStatus[] = ['Confirmed', 'Pending', 'Completed', 'Cancelled', 'Refunded', 'Partial_Refund'];
 
 export interface IBooking extends Document {
   tenantId: string;
