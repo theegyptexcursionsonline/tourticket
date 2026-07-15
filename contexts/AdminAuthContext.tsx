@@ -93,7 +93,11 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const refreshUserWithToken = useCallback(
     async (activeToken?: string) => {
-      const authToken = activeToken || token;
+      // Authentication is cookie-only. Older callers may still pass a real
+      // bearer token during migration, but the local sentinel must never make
+      // this callback depend on `token`: doing so recreated the callback after
+      // the first successful refresh and triggered a second /auth/me request.
+      const authToken = activeToken === COOKIE_SESSION_SENTINEL ? undefined : activeToken;
 
       try {
         const response = await fetch('/api/admin/auth/me', {
@@ -118,7 +122,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
         console.error('Failed to refresh admin session', error);
       }
     },
-    [token, clearSession, persistSession],
+    [clearSession, persistSession],
   );
 
   useEffect(() => {
