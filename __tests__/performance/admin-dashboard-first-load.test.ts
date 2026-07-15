@@ -22,13 +22,14 @@ describe('admin dashboard first-load contract', () => {
     expect(source).not.toContain('<AuthProvider>');
   });
 
-  it('does not waste first-load bandwidth prefetching full-page sidebar navigations', () => {
+  it('uses client-side sidebar navigation without prefetching every admin page', () => {
     const source = fs.readFileSync(
       path.join(process.cwd(), 'components/admin/Sidebar.tsx'),
       'utf8',
     );
 
-    expect(source).toContain('window.location.assign(href)');
+    expect(source).toContain('router.push(href)');
+    expect(source).not.toContain('window.location.assign(href)');
     expect(source).toContain('prefetch={false}');
   });
 

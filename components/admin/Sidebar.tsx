@@ -170,8 +170,8 @@ const AdminSidebar = () => {
     // Client-side navigation instead of window.location.assign(): a hard
     // reload re-downloaded the whole app, re-ran auth and re-fetched every
     // section on every nav click (the "unnecessary loader"). router.push
-    // keeps it an instant SPA transition, and the <Link> prefetches the
-    // target route's payload while it sits in the sidebar.
+    // keeps it an instant SPA transition. The Link remains prefetch={false}
+    // so the initial dashboard does not download every admin section.
     event.preventDefault();
     setPendingHref(href);
     if (isMobile) {

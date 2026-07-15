@@ -73,11 +73,11 @@ const ManifestsPage = () => {
     return headers;
   }, [token]);
 
-  // Fetch all tours for the dropdown selector
+  // Fetch only the lightweight fields required by the dropdown selector.
   useEffect(() => {
     const fetchTours = async () => {
       try {
-        const response = await fetch('/api/admin/tours', {
+        const response = await fetch('/api/admin/tours/options', {
           headers: getAuthHeaders(),
         });
         if (!response.ok) {

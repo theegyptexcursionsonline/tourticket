@@ -1,4 +1,28 @@
-import { validateAdminLifecycleTransition } from '@/lib/bookings/statusTransitions';
+import {
+  ADMIN_BOOKING_STATUS_OPTIONS,
+  isFinancialBookingStatus,
+  validateAdminLifecycleTransition,
+} from '@/lib/bookings/statusTransitions';
+
+describe('admin booking status options', () => {
+  it('keeps every lifecycle and protected financial action visible to admins', () => {
+    expect(ADMIN_BOOKING_STATUS_OPTIONS.map((option) => option.value)).toEqual([
+      'Pending',
+      'Confirmed',
+      'Completed',
+      'Cancelled',
+      'Refunded',
+      'Partial_Refund',
+    ]);
+  });
+
+  it('routes only cancellation and refund states through protected workflows', () => {
+    expect(isFinancialBookingStatus('Cancelled')).toBe(true);
+    expect(isFinancialBookingStatus('Refunded')).toBe(true);
+    expect(isFinancialBookingStatus('Partial_Refund')).toBe(true);
+    expect(isFinancialBookingStatus('Completed')).toBe(false);
+  });
+});
 
 describe('validateAdminLifecycleTransition', () => {
   it('allows the normal lifecycle from pending to confirmed to completed', () => {

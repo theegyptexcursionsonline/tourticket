@@ -5,7 +5,24 @@ export type BookingTransitionError = {
   message: string;
 };
 
-const FINANCIAL_STATUSES: BookingStatus[] = ['Cancelled', 'Refunded', 'Partial_Refund'];
+export const ADMIN_BOOKING_STATUS_OPTIONS: ReadonlyArray<{
+  value: BookingStatus;
+  label: string;
+  kind: 'lifecycle' | 'financial';
+}> = [
+  { value: 'Pending', label: 'Pending', kind: 'lifecycle' },
+  { value: 'Confirmed', label: 'Confirmed', kind: 'lifecycle' },
+  { value: 'Completed', label: 'Completed', kind: 'lifecycle' },
+  { value: 'Cancelled', label: 'Cancelled', kind: 'financial' },
+  { value: 'Refunded', label: 'Full refund', kind: 'financial' },
+  { value: 'Partial_Refund', label: 'Partial refund', kind: 'financial' },
+];
+
+export const FINANCIAL_BOOKING_STATUSES: BookingStatus[] = ['Cancelled', 'Refunded', 'Partial_Refund'];
+
+export function isFinancialBookingStatus(status: string): status is BookingStatus {
+  return FINANCIAL_BOOKING_STATUSES.includes(status as BookingStatus);
+}
 
 export function validateAdminLifecycleTransition(input: {
   currentStatus: BookingStatus;
@@ -18,7 +35,7 @@ export function validateAdminLifecycleTransition(input: {
   const { currentStatus, nextStatus } = input;
   if (currentStatus === nextStatus) return null;
 
-  if (FINANCIAL_STATUSES.includes(nextStatus)) {
+  if (FINANCIAL_BOOKING_STATUSES.includes(nextStatus)) {
     return {
       code: 'FINANCIAL_TRANSITION_REQUIRES_WORKFLOW',
       message: nextStatus === 'Cancelled'
@@ -27,7 +44,7 @@ export function validateAdminLifecycleTransition(input: {
     };
   }
 
-  if (FINANCIAL_STATUSES.includes(currentStatus)) {
+  if (FINANCIAL_BOOKING_STATUSES.includes(currentStatus)) {
     return {
       code: 'FINANCIAL_RECORD_IMMUTABLE',
       message: 'A cancelled or refunded booking cannot be reopened or rescheduled. Create a new booking instead.',

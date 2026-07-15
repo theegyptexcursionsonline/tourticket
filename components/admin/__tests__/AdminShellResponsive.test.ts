@@ -23,10 +23,12 @@ describe('admin shell responsive layout', () => {
 
   it('keeps booking controls usable at phone widths and wires CSV export', () => {
     const bookings = source('app/admin/bookings/BookingsPageClient.tsx');
+    const csv = source('lib/admin/csv.ts');
 
     expect(bookings).toContain('grid w-full grid-cols-2');
     expect(bookings).toContain('min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]');
     expect(bookings).toContain('onClick={handleExport}');
-    expect(bookings).toContain('/^\\s*[=+\\-@]/');
+    expect(bookings).toContain('toSafeCsvCell');
+    expect(csv).toContain('/^\\s*[=+\\-@]/');
   });
 });

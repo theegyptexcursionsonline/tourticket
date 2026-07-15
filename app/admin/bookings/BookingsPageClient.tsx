@@ -7,6 +7,11 @@ import { useRouter } from 'next/navigation';
 import { Search, Calendar, Users, RefreshCw, Eye, Download, AlertTriangle, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import {
+  ADMIN_BOOKING_STATUS_OPTIONS,
+  isFinancialBookingStatus,
+} from '@/lib/bookings/statusTransitions';
+import { toSafeCsvCell } from '@/lib/admin/csv';
 
 interface BookingUser {
   _id: string;
@@ -99,19 +104,12 @@ const formatBookedDate = (dateString: string | undefined): string => {
   return formatDisplayDate(dateString, { month: 'short', day: 'numeric' });
 };
 
-// Quote every cell and neutralize spreadsheet formula prefixes so exported
-// customer/tour values cannot execute when the CSV is opened in Excel/Sheets.
-const toCsvCell = (value: unknown): string => {
-  const normalized = String(value ?? '').replace(/\r?\n|\r/g, ' ');
-  const safeValue = /^\s*[=+\-@]/.test(normalized) ? `'${normalized}` : normalized;
-  return `"${safeValue.replace(/"/g, '""')}"`;
-};
-
 const BookingsPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalBookings, setTotalBookings] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -295,7 +293,7 @@ const BookingsPage = () => {
       booking.source || 'online',
       booking.createdAt,
     ]);
-    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(toCsvCell).join(',')).join('\r\n')}`;
+    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(toSafeCsvCell).join(',')).join('\r\n')}`;
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
@@ -309,11 +307,15 @@ const BookingsPage = () => {
 
   const StatusDropdown = ({ booking, onStatusChange }: {
     booking: Booking;
-    onStatusChange: (bookingId: string, newStatus: string) => void;
+    onStatusChange: (bookingId: string, newStatus: string) => Promise<void>;
   }) => {
     const [isUpdating, setIsUpdating] = useState(false);
 
     const handleChange = async (newStatus: string) => {
+      if (isFinancialBookingStatus(newStatus)) {
+        router.push(`/admin/bookings/${booking._id}#financial-actions`);
+        return;
+      }
       if (newStatus === 'Confirmed' && booking.status === 'Pending') {
         const method = String(booking.paymentMethod || '').toLowerCase();
         if (!['cash', 'bank'].includes(method)) {
@@ -342,26 +344,26 @@ const BookingsPage = () => {
     return (
       <div className="relative">
         <select
+          aria-label={`Change status for booking ${booking.bookingReference || booking._id}`}
           value={booking.status}
           onChange={(e) => handleChange(e.target.value)}
           disabled={isUpdating || ['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
           className={`appearance-none text-xs font-semibold px-3 py-2 pr-8 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${getDropdownStyle(booking.status)}`}
         >
-          {['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
-            <option value={booking.status}>{booking.status === 'Partial_Refund' ? 'Partial Refund' : booking.status}</option>
-          )}
-          {!['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
-            <>
-              <option
-                value="Confirmed"
-                disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
-              >
-                Confirmed
-              </option>
-              <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
-              <option value="Completed" disabled={booking.status !== 'Confirmed'}>Completed</option>
-            </>
-          )}
+          {ADMIN_BOOKING_STATUS_OPTIONS.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={
+                (option.value === 'Confirmed' && booking.status === 'Pending'
+                  && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase()))
+                || (option.value === 'Pending' && booking.status === 'Confirmed')
+                || (option.value === 'Completed' && booking.status !== 'Confirmed')
+              }
+            >
+              {option.label}
+            </option>
+          ))}
         </select>
         <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
           {isUpdating ? (
@@ -401,6 +403,16 @@ const BookingsPage = () => {
       toast.success(`Booking status updated to ${statusLabel}`);
     } catch (error) {
       toast.error((error as Error).message || 'Failed to update booking status');
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchBookings(searchTerm.trim());
+      toast.success('Bookings refreshed');
+    } finally {
+      setRefreshing(false);
     }
   };
   const showingFrom = totalBookings === 0 ? 0 : (page - 1) * perPage + 1;
@@ -458,10 +470,12 @@ const BookingsPage = () => {
             Add Booking
           </button>
           <button
-            onClick={() => fetchBookings(searchTerm.trim())}
+            onClick={handleRefresh}
+            disabled={refreshing}
             className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors sm:min-h-0"
           >
-            <RefreshCw size={16} /> Refresh
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
           <button
             type="button"

@@ -59,6 +59,8 @@ const DetailItem = ({
   </div>
 );
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { ADMIN_BOOKING_STATUS_OPTIONS } from '@/lib/bookings/statusTransitions';
+import { toSafeCsvCell } from '@/lib/admin/csv';
 
 // Valid booking statuses
 type BookingStatus = 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'Refunded' | 'Partial_Refund';
@@ -390,6 +392,51 @@ const BookingDetailPage = () => {
     }
   };
 
+  const handleExport = () => {
+    if (!booking) return;
+
+    const customerName = booking.user?.name
+      || `${booking.user?.firstName || ''} ${booking.user?.lastName || ''}`.trim();
+    const headers = [
+      'Reference', 'Tour', 'Customer', 'Email', 'Phone', 'Activity Date',
+      'Time', 'Adults', 'Children', 'Infants', 'Guests', 'Total', 'Currency',
+      'Status', 'Payment Method', 'Payment Status', 'Source', 'Pickup',
+      'Special Requests', 'Booked At',
+    ];
+    const row = [
+      booking.bookingReference || booking._id,
+      booking.tour?.title || '',
+      customerName,
+      booking.user?.email || '',
+      booking.user?.phone || booking.customerPhone || '',
+      booking.dateString || booking.date,
+      booking.time,
+      booking.adultGuests ?? '',
+      booking.childGuests ?? '',
+      booking.infantGuests ?? '',
+      booking.guests,
+      booking.totalPrice,
+      booking.currency || 'USD',
+      getStatusLabel(booking.status),
+      booking.paymentMethod || '',
+      booking.paymentStatus || '',
+      booking.source || 'online',
+      booking.pickupAddress || booking.pickupLocation || '',
+      booking.specialRequests || '',
+      booking.createdAt,
+    ];
+    const csv = `\uFEFF${[headers, row].map((values) => values.map(toSafeCsvCell).join(',')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `booking-${String(booking.bookingReference || booking._id).replace(/[^a-zA-Z0-9_-]/g, '-')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success('Booking exported');
+  };
+
   const handleRefundSubmit = async () => {
     if (!booking) return;
     
@@ -691,7 +738,11 @@ const BookingDetailPage = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+          <button
+            type="button"
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+          >
             <Download size={16} />
             Export
           </button>
@@ -780,22 +831,26 @@ const BookingDetailPage = () => {
               </div>
               
               <select
+                aria-label="Change booking status"
                 value={booking.status}
                 onChange={(e) => updateBookingStatus(e.target.value)}
                 disabled={updating || ['Completed', 'Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status)}
                 className="w-full appearance-none bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
-                {['Cancelled', 'Refunded', 'Partial_Refund'].includes(booking.status) && (
-                  <option value={booking.status}>{getStatusLabel(booking.status)}</option>
-                )}
-                <option
-                  value="Confirmed"
-                  disabled={booking.status === 'Pending' && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase())}
-                >
-                  Confirmed
-                </option>
-                <option value="Pending" disabled={booking.status === 'Confirmed'}>Pending</option>
-                <option value="Completed" disabled={booking.status !== 'Confirmed'}>Completed</option>
+                {ADMIN_BOOKING_STATUS_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={
+                      (option.value === 'Confirmed' && booking.status === 'Pending'
+                        && !['cash', 'bank'].includes(String(booking.paymentMethod || '').toLowerCase()))
+                      || (option.value === 'Pending' && booking.status === 'Confirmed')
+                      || (option.value === 'Completed' && booking.status !== 'Confirmed')
+                    }
+                  >
+                    {option.label}
+                  </option>
+                ))}
               </select>
 
               <div className="border-t border-slate-200 pt-3">
