@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
 import dbConnect from '@/lib/dbConnect';
-import Booking from '@/lib/models/Booking';
-import Tour from '@/lib/models/Tour';
+import Booking, { type IBooking } from '@/lib/models/Booking';
+import Tour, { type ITour } from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
@@ -17,6 +17,7 @@ import Discount from '@/lib/models/Discount';
 import { recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
 import { reconcileStripeBookingRefund } from '@/lib/bookings/refunds';
 import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
+import { deliverCheckoutNotifications } from '@/lib/bookings/checkoutNotificationDelivery';
 import {
   acquireCheckoutInventoryLease,
   convertInventoryHold,
@@ -445,7 +446,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   }
 
   // Create bookings for each cart item
-  const createdBookings = [];
+  const createdBookings: Array<{ booking: IBooking; tour: ITour }> = [];
   const pricingTotal = persistedQuote?.pricing.total ?? (parseFloat(metadata.pricing_total) || (paymentIntent.amount / 100));
 
   for (let cartIndex = 0; cartIndex < cartData.length; cartIndex++) {
@@ -720,8 +721,13 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       selectedBookingOption: item.booking.selectedBookingOption || undefined,
     }));
 
-    // Send booking confirmation to customer
-    await EmailService.sendBookingConfirmation({
+    const bookingFilter = {
+      _id: { $in: createdBookings.map(({ booking }) => booking._id) },
+      ...DEFAULT_TENANT_FILTER,
+    };
+
+    const sendCustomerConfirmation = async () => {
+      await EmailService.sendBookingConfirmation({
       customerName: `${customerFirstName} ${customerLastName}`,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
@@ -772,9 +778,13 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       discountCode: metadata.discount_code && metadata.discount_code !== 'none' 
         ? metadata.discount_code.toUpperCase() 
         : undefined,
-    });
-
-    console.log('[Webhook] Sent booking confirmation');
+      });
+      await Booking.updateMany(
+        bookingFilter,
+        { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
+      );
+      console.log('[Webhook] Sent booking confirmation');
+    };
 
     // Extract discount info for admin email
     const emailDiscountCode = metadata.discount_code && metadata.discount_code !== 'none' 
@@ -782,36 +792,35 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       : undefined;
     const emailDiscountAmount = pricingDiscount;
 
-    // Build tours array for admin email (with all details)
-    const tourDetails = await Promise.all(createdBookings.map(async (item) => {
-      // Gather add-on titles
-      const addOns: string[] = [];
-      if (item.booking.selectedAddOnDetails) {
-        const details = item.booking.selectedAddOnDetails;
-        // Handle both Map and plain object
-        const entries = (details instanceof Map ? Array.from(details.entries()) : Object.entries(details || {})) as unknown as Array<[string, { title?: string }]>;
-        for (const [_id, detail] of entries) {
-          if (detail?.title) {
-            addOns.push(detail.title);
+    const sendOperatorAlert = async () => {
+      // Build tours array only for the operator path. A failure here must not
+      // change the already-delivered customer voucher state.
+      const tourDetails = await Promise.all(createdBookings.map(async (item) => {
+        const addOns: string[] = [];
+        if (item.booking.selectedAddOnDetails) {
+          const details = item.booking.selectedAddOnDetails;
+          const entries = (details instanceof Map ? Array.from(details.entries()) : Object.entries(details || {})) as unknown as Array<[string, { title?: string }]>;
+          for (const [_id, detail] of entries) {
+            if (detail?.title) {
+              addOns.push(detail.title);
+            }
           }
         }
-      }
 
-      return {
-        title: item.tour?.title || 'Tour',
-        date: formatBookingDate(item.booking.date),
-        time: item.booking.time,
-        adults: item.booking.adultGuests || 1,
-        children: item.booking.childGuests || 0,
-        infants: item.booking.infantGuests || 0,
-        bookingOption: item.booking.selectedBookingOption?.title,
-        addOns: addOns.length > 0 ? addOns : undefined,
-        price: formatMoney(item.booking.totalPrice || 0),
-      };
-    }));
+        return {
+          title: item.tour?.title || 'Tour',
+          date: formatBookingDate(item.booking.date),
+          time: item.booking.time,
+          adults: item.booking.adultGuests || 1,
+          children: item.booking.childGuests || 0,
+          infants: item.booking.infantGuests || 0,
+          bookingOption: item.booking.selectedBookingOption?.title,
+          addOns: addOns.length > 0 ? addOns : undefined,
+          price: formatMoney(item.booking.totalPrice || 0),
+        };
+      }));
 
-    // Send admin alert
-    await EmailService.sendAdminBookingAlert({
+      await EmailService.sendAdminBookingAlert({
       customerName: `${customerFirstName} ${customerLastName}`,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
@@ -839,26 +848,30 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       // Include discount/promo code info if applied
       discountCode: emailDiscountCode,
       discountAmount: emailDiscountAmount > 0 ? formatMoney(emailDiscountAmount) : undefined,
-    });
+      });
+      await Booking.updateMany(
+        bookingFilter,
+        { $set: { operatorNotificationSentAt: new Date() }, $unset: { operatorNotificationFailedAt: 1, operatorNotificationFailureCode: 1 } },
+      );
+      console.log(`[Webhook] Sent admin alert for booking ${bookingId}`);
+    };
 
-    await Booking.updateMany(
-      { _id: { $in: createdBookings.map(({ booking }) => booking._id) }, ...DEFAULT_TENANT_FILTER },
-      { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
-    );
-
-    console.log(`[Webhook] Sent admin alert for booking ${bookingId}`);
-  } catch (emailError) {
-    console.error(`[Webhook] Failed to send emails:`, emailError);
-    // Don't fail the whole process if email fails — but record the failure on
-    // the bookings so the admin UI can surface it ("nothing silent"). A later
-    // successful webhook retry or manual resend clears it.
-    const failureCode = (emailError instanceof Error ? emailError.message : 'unknown_error').slice(0, 200);
-    await Booking.updateMany(
-      { _id: { $in: createdBookings.map(({ booking }) => booking._id) }, ...DEFAULT_TENANT_FILTER },
-      { $set: { confirmationEmailFailedAt: new Date(), confirmationEmailFailureCode: failureCode } },
-    ).catch((persistError) => {
-      console.error('[Webhook] Could not record confirmation-email failure:', persistError);
+    await deliverCheckoutNotifications({
+      sendCustomer: sendCustomerConfirmation,
+      sendOperator: sendOperatorAlert,
+      onFailure: async (channel, error) => {
+        const failureCode = (error instanceof Error ? error.message : 'unknown_error').slice(0, 200);
+        console.error(`[Webhook] Failed to send ${channel} notification:`, error);
+        const update = channel === 'customer'
+          ? { $set: { confirmationEmailFailedAt: new Date(), confirmationEmailFailureCode: failureCode } }
+          : { $set: { operatorNotificationFailedAt: new Date(), operatorNotificationFailureCode: failureCode } };
+        await Booking.updateMany(bookingFilter, update).catch((persistError) => {
+          console.error(`[Webhook] Could not record ${channel}-notification failure:`, persistError);
+        });
+      },
     });
+  } catch (notificationPreparationError) {
+    console.error('[Webhook] Failed to prepare booking notifications:', notificationPreparationError);
   }
 
   return { 

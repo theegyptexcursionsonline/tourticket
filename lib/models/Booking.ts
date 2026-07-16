@@ -44,6 +44,9 @@ export interface IBooking extends Document {
   confirmationSentAt?: Date;
   confirmationEmailFailedAt?: Date;
   confirmationEmailFailureCode?: string;
+  operatorNotificationSentAt?: Date;
+  operatorNotificationFailedAt?: Date;
+  operatorNotificationFailureCode?: string;
   paymentMethod?: string;
   specialRequests?: string;
   customerPhone?: string;
@@ -286,6 +289,20 @@ const BookingSchema: Schema<IBooking> = new Schema({
     type: Date,
   },
   confirmationEmailFailureCode: {
+    type: String,
+    maxlength: 200,
+  },
+
+  // Operator/admin delivery is independent from the customer voucher. Keeping
+  // separate state prevents an operator-mail outage from marking the customer
+  // confirmation as failed and makes the failure visible to administrators.
+  operatorNotificationSentAt: {
+    type: Date,
+  },
+  operatorNotificationFailedAt: {
+    type: Date,
+  },
+  operatorNotificationFailureCode: {
     type: String,
     maxlength: 200,
   },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { resendBookingNotifications } from '@/lib/bookings/refundNotifications';
+import Booking from '@/lib/models/Booking';
 
 // Admin-initiated resend of a booking's notification emails (customer +
 // operator). For bookings with a completed refund/cancellation outcome this
@@ -27,6 +28,18 @@ export async function POST(
 
     const customerSent = outcome.customer !== 'failed';
     const operatorSent = outcome.operator !== 'failed';
+    await Booking.updateOne(
+      { _id: id, tenantId: 'default' },
+      operatorSent
+        ? { $set: { operatorNotificationSentAt: new Date() }, $unset: { operatorNotificationFailedAt: 1, operatorNotificationFailureCode: 1 } }
+        : { $set: { operatorNotificationFailedAt: new Date(), operatorNotificationFailureCode: 'manual_resend_failed' } },
+    );
+    if (!customerSent) {
+      await Booking.updateOne(
+        { _id: id, tenantId: 'default' },
+        { $set: { confirmationEmailFailedAt: new Date(), confirmationEmailFailureCode: 'manual_resend_failed' } },
+      );
+    }
     return NextResponse.json({
       success: customerSent && operatorSent,
       notificationSent: customerSent,
