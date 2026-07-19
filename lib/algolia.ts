@@ -27,6 +27,7 @@ interface AlgoliaTourSource {
   highlights?: string[];
   included?: string[];
   excluded?: string[];
+  tenantId?: string | null;
 }
 
 interface AlgoliaDestinationSource {
@@ -158,6 +159,7 @@ export const formatTourForAlgolia = (tour: AlgoliaTourSource) => {
     highlights: tour.highlights || [],
     included: tour.included || [],
     excluded: tour.excluded || [],
+    tenantId: tour.tenantId || 'default',
     _tags: [
       ...(tour.tags || []),
       taxonomyName(tour.category),

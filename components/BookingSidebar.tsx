@@ -20,6 +20,7 @@ import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
+import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
 
 // Enhanced Types with database compatibility
 interface Tour {
@@ -1432,11 +1433,17 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         throw new Error('This date is stop-saled and cannot be booked.');
       }
 
-      // Use pre-fetched bookingOptions from tour prop (SSR) if available
+      // Pricing keys can change while this ISR page is still cached. Always
+      // reconcile with the live options endpoint before showing bookable
+      // choices so a stale page can never submit an obsolete pricing key.
+      const bookingOptions = await loadCurrentBookingOptions<BookingOption>(
+        tourId,
+        tour.bookingOptions || []
+      );
+
       let tourOptions: TourOption[];
-      if (tour.bookingOptions && tour.bookingOptions.length > 0) {
-        // Transform pre-fetched bookingOptions to TourOption format
-        tourOptions = tour.bookingOptions.map((option, index) => {
+      if (bookingOptions.length > 0) {
+        tourOptions = bookingOptions.map((option, index) => {
           const optionPrice = option.price ?? tourDisplayData?.discountPrice ?? 50;
           const optionId = option.id || option._id || `option-${index}`;
           const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(optionId);

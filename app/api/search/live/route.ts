@@ -2,6 +2,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour, { type ITour } from '@/lib/models/Tour';
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose, { type FilterQuery } from 'mongoose';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 // Helper function for flexible live search
 function createLiveSearchConditions(searchQuery: string) {
@@ -35,11 +36,9 @@ export async function GET(req: NextRequest) {
         const searchQuery = searchParams.get('q');
 
         // Only show tours from the default tenant (exclude German/other tenant tours)
-        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
-
         if (!searchQuery) {
             // Return tours based on filters when no search query
-            const query: FilterQuery<ITour> = { isPublished: true, ...defaultTenantFilter };
+            const query: FilterQuery<ITour> = { isPublished: true, ...DEFAULT_TENANT_FILTER };
 
             const categories = searchParams.get('categories');
             if (categories) {
@@ -102,8 +101,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: true, data: [] });
         }
 
-        const tours = await Tour.find({ ...searchConditions, isPublished: true, ...defaultTenantFilter })
-            .select('title slug image rating reviews destination location tags')
+        // Keep both OR clauses. Spreading the tenant filter over the search
+        // conditions used to overwrite the keyword clause, returning unrelated
+        // records and allowing stale cross-tenant Algolia results to dominate.
+        const tours = await Tour.find({
+            isPublished: true,
+            $and: [searchConditions, DEFAULT_TENANT_FILTER],
+        })
+            .select('title slug image rating reviews reviewCount destination location tags duration price discountPrice tenantId')
             .populate('destination', 'name')
             .sort({ rating: -1, bookings: -1 }) // Prioritize high-rated popular tours
             .limit(10)

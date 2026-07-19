@@ -26,21 +26,11 @@ import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitch
 import { Destination, Category, Tour } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
-import { liteClient as algoliasearch } from 'algoliasearch/lite';
-import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
-import 'instantsearch.css/themes/satellite.css';
+import { useLocale } from 'next-intl';
 import type { SearchHit } from './componentTypes';
+import { tourSearchHref } from '@/lib/search/tourSearchHref';
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
-
-// =================================================================
-// --- ALGOLIA CONFIGURATION ---
-// =================================================================
-const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
-const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
-const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technology';
-
-const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
 // =================================================================
 // --- HELPER HOOKS & DATA ---
@@ -188,20 +178,10 @@ const SearchSuggestion: FC<{
 SearchSuggestion.displayName = 'SearchSuggestion';
 
 // =================================================================
-// --- ALGOLIA SEARCH COMPONENTS ---
+// --- SEARCH RESULT COMPONENTS ---
 // =================================================================
-function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
-  const { refine } = useSearchBox();
-
-  useEffect(() => {
-    refine(searchQuery);
-  }, [searchQuery, refine]);
-
-  return null;
-}
-
-function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
-  const { hits } = useHits();
+function TourHits({ hits, onHitClick, limit = 5 }: { hits: SearchHit[]; onHitClick?: () => void; limit?: number }) {
+  const locale = useLocale();
   const limitedHits = hits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -218,15 +198,15 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
           </span>
         </div>
       </div>
-      {(limitedHits as unknown as SearchHit[]).map((hit) => (
+      {limitedHits.map((hit) => (
         <a
-          key={hit.objectID}
-          href={`/tours/${hit.slug || hit.objectID}`}
+          key={hit.objectID || hit._id}
+          href={tourSearchHref(String(hit.slug || hit.objectID || hit._id || ''), locale)}
           onClick={onHitClick}
           className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+            <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex-shrink-0 overflow-hidden border border-slate-200 bg-slate-50 shadow-sm group-hover:shadow-md transition-shadow duration-200">
               {(hit.image || hit.images?.[0] || hit.primaryImage) ? (
                 <Image
                   src={hit.image || hit.images?.[0] || hit.primaryImage || ''}
@@ -234,7 +214,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                   fill
                   unoptimized
                   sizes="64px"
-                  className="w-full h-full object-cover"
+                  className="object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
@@ -261,7 +241,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                     <span className="text-gray-300">•</span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {hit.duration} days
+                      {hit.duration}
                     </span>
                   </>
                 )}
@@ -283,11 +263,11 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 }
 
 const TourResultSkeleton = () => (
-  <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-    <div className="w-full h-32 bg-slate-200" />
-    <div className="p-4">
-      <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
-      <div className="h-3 bg-slate-200 rounded w-1/2" />
+  <div className="flex animate-pulse items-center gap-3 px-5 py-3.5">
+    <div className="h-16 w-16 flex-none rounded-xl bg-slate-200" />
+    <div className="min-w-0 flex-1">
+      <div className="mb-2 h-4 w-2/3 rounded bg-slate-200" />
+      <div className="h-3 w-2/5 rounded bg-slate-100" />
     </div>
   </div>
 );
@@ -295,6 +275,8 @@ const TourResultSkeleton = () => (
 // Mobile Inline Search Component
 const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.memo(({ isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useOnClickOutside(containerRef, onClose);
@@ -309,6 +291,38 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const response = await fetch(`/api/search/live?q=${encodeURIComponent(query)}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const payload = await response.json();
+        setSearchResults(response.ok && payload.success && Array.isArray(payload.data) ? payload.data : []);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('Header search failed', error);
+          setSearchResults([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsSearching(false);
+      }
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [searchQuery]);
+
   if (!isOpen) return null;
 
   return (
@@ -318,10 +332,12 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
-        className="fixed top-16 left-0 right-0 z-50 bg-white shadow-2xl border-b border-gray-200"
-        ref={containerRef}
+        className="pointer-events-none fixed top-16 left-0 right-0 z-50 px-3 md:top-20"
       >
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div
+          ref={containerRef}
+          className="pointer-events-auto max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/15 md:p-4"
+        >
           <div className="relative">
             <motion.div
               whileHover={{ y: -2, scale: 1.01 }}
@@ -329,20 +345,27 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
               transition={{ duration: 0.2 }}
               className="relative"
             >
-              <div className="relative bg-white border-2 border-blue-300 rounded-full shadow-xl hover:shadow-2xl hover:border-blue-400 transition-all duration-300">
+              <div className="relative rounded-xl border border-slate-300 bg-white shadow-sm transition-colors duration-200 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
                 <div className="relative">
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSearchQuery(value);
+                      if (value.trim().length < 2) {
+                        setSearchResults([]);
+                        setIsSearching(false);
+                      }
+                    }}
                     placeholder="Search tours in Egypt..."
-                    className="w-full pl-14 pr-16 py-4 text-base text-gray-900 placeholder-gray-400 font-medium bg-transparent outline-none rounded-full"
+                    className="w-full rounded-xl bg-transparent py-3.5 pl-12 pr-14 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400"
                     autoFocus
                   />
 
                   {/* Left Icon */}
                   <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
                       <Search className="w-4 h-4 text-white" />
                     </div>
                   </div>
@@ -361,21 +384,26 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
 
             {/* Results Dropdown */}
             <AnimatePresence>
-              {searchQuery && (
+              {searchQuery.trim().length >= 2 && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute top-full mt-3 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] overflow-y-auto"
+                  className="absolute left-0 right-0 top-full mt-2 max-h-[min(62vh,32rem)] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15"
                 >
-                  <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
-                    <CustomSearchBox searchQuery={searchQuery} />
-                    <Index indexName={INDEX_TOURS}>
-                      <Configure hitsPerPage={10} />
-                      <TourHits onHitClick={onClose} limit={10} />
-                    </Index>
-                  </InstantSearch>
+                  {isSearching ? (
+                    <div className="space-y-3 p-4" aria-label="Searching tours">
+                      {[0, 1, 2].map((item) => <TourResultSkeleton key={item} />)}
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <TourHits hits={searchResults} onHitClick={onClose} limit={10} />
+                  ) : (
+                    <div className="px-6 py-8 text-center">
+                      <p className="font-semibold text-slate-800">No matching tours found</p>
+                      <p className="mt-1 text-sm text-slate-500">Try a destination such as Cairo, Luxor, or Sharm El Sheikh.</p>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

@@ -19,10 +19,17 @@ describe('main storefront security regressions', () => {
   });
 
   it('keeps public catalogue APIs published and default-tenant scoped', () => {
+    const sharedFilter = source('lib/tenant/defaultTenantFilter.ts');
+    expect(sharedFilter).toContain("tenantId: 'default'");
+    expect(sharedFilter).toContain("tenantId: { $exists: false }");
+
     for (const file of ['app/api/tours/list/route.ts', 'app/api/search/live/route.ts']) {
       const route = source(file);
       expect(route).toContain('isPublished: true');
-      expect(route).toContain("tenantId: 'default'");
+      expect(
+        route.includes("tenantId: 'default'") ||
+        (route.includes("from '@/lib/tenant/defaultTenantFilter'") && route.includes('DEFAULT_TENANT_FILTER'))
+      ).toBe(true);
     }
   });
 
