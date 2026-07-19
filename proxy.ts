@@ -8,6 +8,16 @@ const intlMiddleware = createMiddleware(routing);
 export function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
+
+  // Netlify executes this proxy before Next.js config rewrites. Preserve old
+  // shared/search links while sending visitors to the canonical root URL.
+  const legacyTourMatch = pathname.match(/^\/tours\/([^/]+)\/?$/);
+  if (legacyTourMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${legacyTourMatch[1]}`;
+    return NextResponse.redirect(url, 308);
+  }
+
   const normalizedHostname = hostname.split(':')[0];
   const isLocalhost =
     normalizedHostname === 'localhost' ||
