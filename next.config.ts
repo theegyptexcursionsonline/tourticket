@@ -122,6 +122,11 @@ const nextConfig = {
   // Redirects for SEO and user experience
   async redirects() {
     return [
+      {
+        source: '/tours/:slug',
+        destination: '/:slug',
+        permanent: true,
+      },
       // NOTE: '/tour/:slug' is now a real route (see app/[locale]/tour/[slug]);
       // it is handled by the URL-type resolver, which renders tours set to the
       // "/tour" URL type and 301-redirects everything else to its canonical URL.
