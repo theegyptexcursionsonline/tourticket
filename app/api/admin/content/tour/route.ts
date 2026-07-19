@@ -16,6 +16,7 @@ import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
 import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
+import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 type ItineraryItem = { time?: string; title: string; description: string };
 type FAQItem = { question: string; answer: string };
@@ -160,6 +161,8 @@ export async function POST(req: NextRequest) {
       tenantId: body.tenantId,
       translations: body.translations ?? {},
     });
+
+    revalidateStorefrontContent();
 
     return NextResponse.json(
       {

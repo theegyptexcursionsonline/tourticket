@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import SpecialOffer from '@/lib/models/SpecialOffer';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export const dynamic = 'force-dynamic';
 
@@ -196,6 +197,7 @@ export async function POST(request: NextRequest) {
     });
 
     await offer.save();
+    revalidateStorefrontContent();
 
     // Populate the response with tour details
     await offer.populate('applicableTours', 'title slug bookingOptions');
@@ -310,6 +312,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    revalidateStorefrontContent();
+
     return NextResponse.json({
       success: true,
       data: offer,
@@ -351,6 +355,8 @@ export async function DELETE(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    revalidateStorefrontContent();
 
     return NextResponse.json({
       success: true,

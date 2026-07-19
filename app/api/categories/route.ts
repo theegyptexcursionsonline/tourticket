@@ -8,6 +8,7 @@ import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function GET(request: NextRequest) {
   try {
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
 
     const category = new Category(body);
     await category.save();
+    revalidateStorefrontContent();
 
     return NextResponse.json({
       success: true,

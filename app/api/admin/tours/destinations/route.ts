@@ -10,6 +10,7 @@ import {
   normalizeDestinationSlug,
 } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
     });
    
     const destination = await Destination.create(body);
+    revalidateStorefrontContent();
     return NextResponse.json({ success: true, data: destination }, { status: 201 });
    
   } catch (error) {

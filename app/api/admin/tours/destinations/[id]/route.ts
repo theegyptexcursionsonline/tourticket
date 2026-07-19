@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function PUT(
   request: NextRequest,
@@ -69,6 +70,8 @@ export async function PUT(
         error: 'Destination not found' 
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
     
     return NextResponse.json({ 
       success: true, 
@@ -149,6 +152,8 @@ export async function DELETE(
         error: 'Destination not found'
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
 
     return NextResponse.json({
       success: true,

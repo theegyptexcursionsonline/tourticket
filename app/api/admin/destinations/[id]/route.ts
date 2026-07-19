@@ -8,6 +8,7 @@ import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateDestination } from '@/lib/i18n/autoTranslate';
 import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function PUT(
   request: NextRequest,
@@ -169,6 +170,8 @@ export async function PUT(
       }, { status: 404 });
     }
 
+    revalidateStorefrontContent();
+
     // Fire-and-forget: auto-translate in background
     autoTranslateDestination(id).catch(err =>
       console.error('Auto-translate destination failed:', err)
@@ -256,6 +259,8 @@ export async function DELETE(
         error: 'Destination not found'
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
 
     return NextResponse.json({
       success: true,

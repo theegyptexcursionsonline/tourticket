@@ -4,6 +4,7 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(request: NextRequest) {
@@ -169,6 +170,7 @@ export async function POST(request: NextRequest) {
 
     const page = new AttractionPage(body);
     await page.save();
+    revalidateStorefrontContent();
 
     // Populate the category for response
     await page.populate({

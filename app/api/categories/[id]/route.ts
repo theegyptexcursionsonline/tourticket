@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import mongoose from 'mongoose';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function GET(
   request: NextRequest,
@@ -94,6 +95,8 @@ export async function PUT(
       }, { status: 404 });
     }
 
+    revalidateStorefrontContent();
+
     return NextResponse.json({
       success: true,
       data: category
@@ -146,6 +149,8 @@ export async function DELETE(
         error: 'Category not found'
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
 
     return NextResponse.json({
       success: true,

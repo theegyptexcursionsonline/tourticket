@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 // --- PATCH: Update a specific review (e.g., approve it) ---
 export async function PATCH(
@@ -31,6 +32,8 @@ export async function PATCH(
       return NextResponse.json({ message: 'Review not found' }, { status: 404 });
     }
 
+    revalidateStorefrontContent();
+
     return NextResponse.json(updatedReview);
   } catch (error) {
     return NextResponse.json({ message: 'Failed to update review', error: (error as Error).message }, { status: 500 });
@@ -55,6 +58,8 @@ export async function DELETE(
     if (!deletedReview) {
       return NextResponse.json({ message: 'Review not found' }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
 
     return NextResponse.json({ message: 'Review deleted successfully' });
   } catch (error) {

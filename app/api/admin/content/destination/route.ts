@@ -6,6 +6,7 @@ import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
 import { storedTenantId, tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
+import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 type IncomingPayload = {
   name?: string;
@@ -113,6 +114,8 @@ export async function POST(req: NextRequest) {
       tenantId: storedTenantId(body.tenantId),
       translations: body.translations ?? {},
     });
+
+    revalidateStorefrontContent();
 
     return NextResponse.json(
       {

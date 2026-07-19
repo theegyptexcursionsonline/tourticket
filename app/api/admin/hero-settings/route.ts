@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -133,6 +134,8 @@ export async function PUT(request: NextRequest) {
       body,
       { new: true, upsert: true, runValidators: true }
     );
+
+    revalidateStorefrontContent();
 
     return NextResponse.json({ success: true, data: settings });
   } catch (error) {

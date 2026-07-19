@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/lib/models/Category";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 type IncomingPayload = {
   name?: string;
@@ -118,6 +119,8 @@ export async function POST(req: NextRequest) {
       translations: body.translations ?? {},
     });
 
+    revalidateStorefrontContent();
+
     return NextResponse.json(
       { id: String(doc._id), slug: doc.slug, liveUrl: liveUrlFor(doc.slug) },
       { status: 201 },
@@ -170,6 +173,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     await existing.save();
+    revalidateStorefrontContent();
     return NextResponse.json({
       id: String(existing._id),
       slug: existing.slug,

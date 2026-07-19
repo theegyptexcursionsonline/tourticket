@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
 export async function GET(request: NextRequest) {
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     const data = await request.json();
     const created = await Blog.create(data);
+    revalidateStorefrontContent();
     return NextResponse.json({ success: true, data: created, message: 'Blog post created' }, { status: 201 });
   } catch (error: unknown) {
     console.error('Error creating blog post:', error);

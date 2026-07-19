@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function PUT(
   request: NextRequest,
@@ -40,6 +41,8 @@ export async function PUT(
         error: 'Blog post not found' 
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
     
     return NextResponse.json({ 
       success: true, 
@@ -100,6 +103,8 @@ export async function DELETE(
         error: 'Blog post not found' 
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
     
     return NextResponse.json({ 
       success: true, 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function POST(request: NextRequest) {
   // Verify admin authentication
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     // Add new image
     heroSettings.backgroundImages.push(imageData);
     await heroSettings.save();
+    revalidateStorefrontContent();
 
     return NextResponse.json({
       success: true,

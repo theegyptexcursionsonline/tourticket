@@ -11,6 +11,7 @@ import {
   normalizeDestinationSlug,
 } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
     }
     
     const destination = await Destination.create(body);
+    revalidateStorefrontContent();
 
     // Fire-and-forget: auto-translate in background
     autoTranslateDestination(destination._id.toString()).catch(err =>

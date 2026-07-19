@@ -11,6 +11,7 @@ import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
+import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -232,6 +233,7 @@ export async function PUT(
 
         const pricingSummary = await refreshTourPricingSummary(id);
         if (pricingSummary) updatedTour.pricingSummary = pricingSummary;
+        revalidateTourStorefront();
 
         console.log('Tour updated successfully');
         console.log('Updated tour attractions:', updatedTour.attractions);
@@ -326,6 +328,8 @@ export async function DELETE(
         if (!archivedTour) {
             return NextResponse.json({ success: false, error: "Tour not found" }, { status: 404 });
         }
+
+        revalidateTourStorefront();
 
         // Remove from Algolia
         try {

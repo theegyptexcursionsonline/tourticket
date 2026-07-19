@@ -9,6 +9,7 @@ import Blog from "@/lib/models/Blog";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
 import { storedTenantId, tenantSlugFilter } from "@/lib/tenant/tenantScope";
 import { filterSupportedTranslations } from "@/lib/i18n/supportedTranslations";
+import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 const BLOG_CATEGORIES = new Set([
   "travel-tips",
@@ -148,6 +149,8 @@ export async function POST(req: NextRequest) {
       translations,
     });
 
+    revalidateStorefrontContent();
+
     return NextResponse.json(
       {
         id: String(doc._id),
@@ -214,6 +217,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     await existing.save();
+    revalidateStorefrontContent();
     return NextResponse.json({
       id: String(existing._id),
       slug: existing.slug,

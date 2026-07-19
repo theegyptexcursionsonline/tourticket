@@ -4,6 +4,7 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 export async function GET(
   request: NextRequest,
@@ -136,6 +137,8 @@ export async function PUT(
       }, { status: 404 });
     }
 
+    revalidateStorefrontContent();
+
     console.log('✅ Page updated successfully');
     console.log('✅ Final saved images:', page.images);
 
@@ -191,6 +194,8 @@ export async function DELETE(
         error: 'Page not found'
       }, { status: 404 });
     }
+
+    revalidateStorefrontContent();
 
     console.log('Attraction page deleted successfully:', id);
 
