@@ -53,15 +53,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (kind === 'pages') {
-      const pageFilter: Record<string, unknown> = {};
-      const categoryFilter: Record<string, unknown> = {};
+      const pageConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
+      const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
+      const pageFilter: Record<string, unknown> = { $and: pageConditions };
+      const categoryFilter: Record<string, unknown> = { $and: categoryConditions };
       if (excludeId) pageFilter._id = { $ne: excludeId };
       if (ids) {
-        pageFilter._id = excludeId ? { $in: ids, $ne: excludeId } : { $in: ids };
-        categoryFilter._id = { $in: ids };
+        pageConditions.push({ _id: excludeId ? { $in: ids, $ne: excludeId } : { $in: ids } });
+        categoryConditions.push({ _id: { $in: ids } });
       } else if (search) {
-        pageFilter.$or = [{ title: search }, { slug: search }];
-        categoryFilter.$or = [{ name: search }, { slug: search }];
+        pageConditions.push({ $or: [{ title: search }, { slug: search }] });
+        categoryConditions.push({ $or: [{ name: search }, { slug: search }] });
       }
 
       const [pages, categories] = await Promise.all([

@@ -8,6 +8,7 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { contentPath } from '@/lib/content/contentUrl';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 const MAX_LIMIT = 50;
 
@@ -83,17 +84,20 @@ export async function GET(request: NextRequest) {
     const wantAttractionPages = kind === 'all' || kind === 'attraction' || kind === 'category-landing';
     const wantCategories = kind === 'all' || kind === 'category';
 
-    const attractionFilter: Record<string, unknown> = { ...cursorFilter(cursor) };
+    const attractionConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, cursorFilter(cursor)];
+    const attractionFilter: Record<string, unknown> = { $and: attractionConditions };
     if (kind === 'attraction') attractionFilter.pageType = 'attraction';
     if (kind === 'category-landing') attractionFilter.pageType = 'category';
     if (status === 'published') attractionFilter.isPublished = true;
     if (status === 'draft') attractionFilter.isPublished = { $ne: true };
-    if (search) attractionFilter.$and = [{ $or: [{ title: search }, { slug: search }] }];
+    // Push (never replace $and): the tenant scope and cursor must survive search.
+    if (search) attractionConditions.push({ $or: [{ title: search }, { slug: search }] });
 
-    const categoryFilter: Record<string, unknown> = { ...cursorFilter(cursor) };
+    const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, cursorFilter(cursor)];
+    const categoryFilter: Record<string, unknown> = { $and: categoryConditions };
     if (status === 'published') categoryFilter.isPublished = { $ne: false };
     if (status === 'draft') categoryFilter.isPublished = false;
-    if (search) categoryFilter.$and = [{ $or: [{ name: search }, { slug: search }] }];
+    if (search) categoryConditions.push({ $or: [{ name: search }, { slug: search }] });
 
     const fetchSize = limit + 1;
 
@@ -164,9 +168,9 @@ export async function GET(request: NextRequest) {
     const nextCursor = hasMore && last ? encodeCursor({ c: last.createdAt, id: last.id }) : null;
 
     const [attractionCount, landingCount, categoryCount] = await Promise.all([
-      AttractionPage.countDocuments({ pageType: 'attraction' }),
-      AttractionPage.countDocuments({ pageType: 'category' }),
-      Category.countDocuments({}),
+      AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'attraction' }] }),
+      AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'category' }] }),
+      Category.countDocuments(DEFAULT_TENANT_FILTER),
     ]);
 
     return NextResponse.json({

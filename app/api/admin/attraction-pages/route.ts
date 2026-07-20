@@ -6,6 +6,10 @@ import Category from '@/lib/models/Category';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import {
+  PageLinkValidationError,
+  validateAndNormalizePageLinks,
+} from '@/lib/attractionPages/validatePageLinks';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -18,7 +22,7 @@ export async function GET(request: NextRequest) {
     console.log('Database connected successfully');
     
     // First, get all pages without population
-    const pages = await AttractionPage.find({})
+    const pages = await AttractionPage.find(DEFAULT_TENANT_FILTER)
       .sort({ featured: -1, createdAt: -1 })
       .lean();
 
@@ -30,7 +34,9 @@ export async function GET(request: NextRequest) {
         let categoryId: unknown = page.categoryId;
         if (page.categoryId) {
           try {
-            const category = await Category.findById(page.categoryId).select('name slug').lean();
+            const category = await Category.findOne({
+              $and: [DEFAULT_TENANT_FILTER, { _id: page.categoryId }],
+            }).select('name slug').lean();
             categoryId = category;
           } catch (error) {
             console.error(`Error populating category for page ${page._id}:`, error);
@@ -127,6 +133,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     
     const body = await request.json();
+    delete body.tenantId;
     console.log('Creating attraction page with data:', body);
     
     // Validate required fields
@@ -141,7 +148,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if slug already exists
-    const existingPage = await AttractionPage.findOne({ slug: body.slug });
+    const existingPage = await AttractionPage.findOne({
+      $and: [DEFAULT_TENANT_FILTER, { slug: body.slug }],
+    });
     if (existingPage) {
       return NextResponse.json({
         success: false,
@@ -159,7 +168,9 @@ export async function POST(request: NextRequest) {
       }
       
       // Check if category exists
-      const category = await Category.findById(body.categoryId);
+      const category = await Category.findOne({
+        $and: [DEFAULT_TENANT_FILTER, { _id: body.categoryId }],
+      });
       if (!category) {
         return NextResponse.json({
           success: false,
@@ -168,7 +179,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const page = new AttractionPage(body);
+    const linkedContent = await validateAndNormalizePageLinks(body);
+    const page = new AttractionPage({ ...body, ...linkedContent });
     await page.save();
     revalidateStorefrontContent();
 
@@ -186,6 +198,9 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating attraction page:', error);
+    if (error instanceof PageLinkValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     
     // Handle validation errors
     if (error instanceof Error && (error as Error).name === 'ValidationError') {

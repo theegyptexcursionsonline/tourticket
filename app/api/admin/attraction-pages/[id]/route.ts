@@ -5,6 +5,11 @@ import Category from '@/lib/models/Category';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import {
+  PageLinkValidationError,
+  validateAndNormalizePageLinks,
+} from '@/lib/attractionPages/validatePageLinks';
 
 export async function GET(
   request: NextRequest,
@@ -26,10 +31,11 @@ export async function GET(
       }, { status: 400 });
     }
 
-    const page = await AttractionPage.findById(id)
+    const page = await AttractionPage.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: id }] })
       .populate({
         path: 'categoryId',
         model: Category,
+        match: DEFAULT_TENANT_FILTER,
         select: 'name slug'
       })
       .lean();
@@ -75,6 +81,7 @@ export async function PUT(
     }
 
     const body = await request.json();
+    delete body.tenantId;
     
     // ADD DEBUGGING
     console.log('🔍 Raw request body:', JSON.stringify(body, null, 2));
@@ -84,8 +91,10 @@ export async function PUT(
     // Check if slug is being changed and if it conflicts
     if (body.slug) {
       const existingPage = await AttractionPage.findOne({ 
-        slug: body.slug,
-        _id: { $ne: id }
+        $and: [
+          DEFAULT_TENANT_FILTER,
+          { slug: body.slug, _id: { $ne: id } },
+        ],
       });
       
       if (existingPage) {
@@ -98,7 +107,9 @@ export async function PUT(
 
     // Validate categoryId if pageType is category
     if (body.pageType === 'category' && body.categoryId) {
-      const category = await Category.findById(body.categoryId);
+      const category = await Category.findOne({
+        $and: [DEFAULT_TENANT_FILTER, { _id: body.categoryId }],
+      });
       if (!category) {
         return NextResponse.json({
           success: false,
@@ -108,8 +119,10 @@ export async function PUT(
     }
 
     // PROPERLY HANDLE ARRAYS - This is the fix
+    const linkedContent = await validateAndNormalizePageLinks(body, id);
     const updateData = {
       ...body,
+      ...linkedContent,
       // Ensure arrays are properly handled
       images: Array.isArray(body.images) ? body.images : (body.images ? [body.images] : []),
       highlights: Array.isArray(body.highlights) ? body.highlights : (body.highlights ? [body.highlights] : []),
@@ -119,14 +132,15 @@ export async function PUT(
 
     console.log('💾 Final update data:', JSON.stringify(updateData, null, 2));
 
-    const page = await AttractionPage.findByIdAndUpdate(
-      id,
+    const page = await AttractionPage.findOneAndUpdate(
+      { $and: [DEFAULT_TENANT_FILTER, { _id: id }] },
       updateData, // Use processed data instead of raw body
       { new: true, runValidators: true }
     )
     .populate({
       path: 'categoryId',
       model: Category,
+      match: DEFAULT_TENANT_FILTER,
       select: 'name slug'
     });
 
@@ -148,6 +162,9 @@ export async function PUT(
     });
   } catch (error) {
     console.error('❌ Error updating attraction page:', error);
+    if (error instanceof PageLinkValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     
     // Handle validation errors
     if (error instanceof Error && (error as Error).name === 'ValidationError') {
@@ -186,7 +203,9 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    const page = await AttractionPage.findByIdAndDelete(id);
+    const page = await AttractionPage.findOneAndDelete({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    });
 
     if (!page) {
       return NextResponse.json({
