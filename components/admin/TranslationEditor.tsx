@@ -59,6 +59,7 @@ export default function TranslationEditor({
   const [localeStatuses, setLocaleStatuses] = useState<Record<string, LocaleStatus>>({});
   const translationsRef = useRef<Record<string, Record<string, unknown>>>({});
   const failedLocalesRef = useRef<string[]>([]);
+  const fatalErrorRef = useRef('');
 
   // Keep a stable ref to onChange so the streaming callback always uses the latest version
   const onChangeRef = useRef(onChange);
@@ -146,6 +147,7 @@ export default function TranslationEditor({
       const decoder = new TextDecoder();
       let buffer = '';
       failedLocalesRef.current = [];
+      fatalErrorRef.current = '';
 
       while (true) {
         const { done, value: chunk } = await reader.read();
@@ -176,6 +178,9 @@ export default function TranslationEditor({
         }
       }
 
+      if (fatalErrorRef.current) {
+        throw new Error(fatalErrorRef.current);
+      }
       const failed = failedLocalesRef.current;
       if (failed.length > 0) {
         toast.error(`Translation failed for: ${failed.join(', ')}. Successful languages were saved — retry for the rest.`);
@@ -230,7 +235,7 @@ export default function TranslationEditor({
         if (locale) {
           setLocaleStatuses((prev) => ({ ...prev, [locale]: 'error' }));
         } else if (data.error) {
-          toast.error(String(data.error));
+          fatalErrorRef.current = String(data.error);
         }
         break;
       }

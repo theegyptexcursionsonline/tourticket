@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
-import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
-import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
 import {

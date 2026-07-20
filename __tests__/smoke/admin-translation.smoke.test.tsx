@@ -556,7 +556,7 @@ describe('Smoke: Full translation flow (mocked E2E)', () => {
     );
   });
 
-  it('gracefully handles OpenAI being unavailable', async () => {
+  it('fails loud when OpenAI is unavailable instead of reporting success', async () => {
     mockTourFindById.mockResolvedValue({
       _id: 'tour-xyz',
       title: 'Nile Cruise',
@@ -564,11 +564,13 @@ describe('Smoke: Full translation flow (mocked E2E)', () => {
     });
     mockCreate.mockRejectedValue(new Error('Service unavailable'));
 
-    // Should still return 200 (translations just won't be generated)
+    // Every locale failing must surface as an error — a silent 200 here is
+    // exactly how broken translations went unnoticed in production.
     const res = await POST(makeRequest({ modelType: 'tour', id: 'tour-xyz' }));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toContain('No tour translations were generated');
 
-    // DB should NOT be updated (no translations to save)
+    // DB is never touched when nothing translated
     expect(mockTourUpdate).not.toHaveBeenCalled();
   });
 });

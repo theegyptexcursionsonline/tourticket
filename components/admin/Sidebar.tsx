@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Map,
   Compass,
-  Tag,
   Menu,
   ChevronLeft,
   ChevronRight,

@@ -270,12 +270,12 @@ describe('autoTranslateTour', () => {
     });
   });
 
-  it('does nothing when tour is not found', async () => {
+  it('reports a missing tour instead of returning a false success', async () => {
     const Tour = jest.requireMock('@/lib/models/Tour');
     Tour.findById.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
 
     const { autoTranslateTour } = await import('../autoTranslate');
-    await autoTranslateTour('nonexistent');
+    await expect(autoTranslateTour('nonexistent')).rejects.toThrow('Tour not found');
 
     expect(Tour.findByIdAndUpdate).not.toHaveBeenCalled();
   });
