@@ -34,6 +34,8 @@ import {
 } from '@/lib/attractionPages/validatePageLinks';
 import { buildTranslationsSetOps } from '@/lib/i18n/autoTranslate';
 import { attractionPageTranslationFields } from '@/lib/i18n/translationFields';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const mockTourCount = jest.requireMock('@/lib/models/Tour').default.countDocuments as jest.Mock;
 const mockPageCount = jest.requireMock('@/lib/models/AttractionPage').default.countDocuments as jest.Mock;
@@ -87,5 +89,11 @@ describe('main EEO Pages management helpers', () => {
       'title', 'description', 'longDescription', 'gridTitle', 'gridSubtitle',
       'highlights', 'features', 'metaTitle', 'metaDescription',
     ]));
+  });
+
+  it('keeps legacy Attraction and Category editor breadcrumbs under Pages', () => {
+    const header = readFileSync(join(process.cwd(), 'components/admin/Header.tsx'), 'utf8');
+    expect(header).toContain("segment === 'attraction-pages' || segment === 'categories'");
+    expect(header).toContain("? '/admin/pages'");
   });
 });

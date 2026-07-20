@@ -834,7 +834,7 @@ const AddOnCard: React.FC<{
   const IconComponent = addOn.icon || Gift;
   const isSelected = quantity > 0;
   
-  const calculatedQuantity = addOn.perGuest ? guestCount : 1;
+  const calculatedQuantity = addOn.perGuest ? guestCount : quantity;
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -2390,7 +2390,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                           <div className="font-bold text-purple-600">{formatPrice(totalPrice)}</div>
                           {addOn.savings && (
                             <div className="text-xs text-green-600">
-                              Save {formatPrice(addOn.savings * (addOn.perGuest ? (bookingData.adults + bookingData.children) : 1))}
+                              Save {formatPrice(addOn.savings * (addOn.perGuest ? (bookingData.adults + bookingData.children) : quantity))}
                             </div>
                           )}
                         </div>
