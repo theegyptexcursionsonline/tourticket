@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
+import AttractionPage from '@/lib/models/AttractionPage';
 import {
   translateEntityFieldsForLocale,
   translateTourContentForLocale,
@@ -16,10 +17,11 @@ import {
   tourTranslationFields,
   destinationTranslationFields,
   categoryTranslationFields,
+  attractionPageTranslationFields,
 } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
-const VALID_MODEL_TYPES = ['tour', 'destination', 'category'] as const;
+const VALID_MODEL_TYPES = ['tour', 'destination', 'category', 'attraction-page'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
 
 export async function POST(request: NextRequest) {
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
     tour: tourTranslationFields,
     destination: destinationTranslationFields,
     category: categoryTranslationFields,
+    'attraction-page': attractionPageTranslationFields,
   };
 
   const fieldDefs = fieldDefsMap[modelType];
@@ -59,6 +62,22 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       const send = (event: string, data: unknown) => {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
+
+      // Persist one locale at a time so a partial run (timeout, one bad
+      // locale) never wipes other locales or manual translations. The old
+      // whole-map `$set: { translations }` did exactly that.
+      const saveLocale = async (locale: string, bucket: Record<string, unknown>) => {
+        const setOp = { $set: { [`translations.${locale}`]: bucket } };
+        if (modelType === 'tour') {
+          await Tour.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, setOp);
+        } else if (modelType === 'destination') {
+          await Destination.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, setOp);
+        } else if (modelType === 'category') {
+          await Category.findByIdAndUpdate(id, setOp);
+        } else if (modelType === 'attraction-page') {
+          await AttractionPage.findByIdAndUpdate(id, setOp);
+        }
       };
 
       try {
@@ -72,6 +91,8 @@ export async function POST(request: NextRequest) {
           doc = await Destination.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).lean() as Record<string, unknown> | null;
         } else if (modelType === 'category') {
           doc = await Category.findById(id).lean() as Record<string, unknown> | null;
+        } else if (modelType === 'attraction-page') {
+          doc = await AttractionPage.findById(id).lean() as Record<string, unknown> | null;
         }
 
         if (!doc) {
@@ -105,63 +126,66 @@ export async function POST(request: NextRequest) {
           totalLocales: translatableLocales.length,
         });
 
-        const allTranslations: Record<string, Record<string, unknown>> = {};
-
-        // Translate one locale at a time and stream each result
-        for (let i = 0; i < translatableLocales.length; i++) {
-          const locale = translatableLocales[i];
-          const localeName = localeNames[locale] || locale;
-
+        for (const locale of translatableLocales) {
           send('translating', {
             locale,
-            localeName,
-            index: i,
+            localeName: localeNames[locale] || locale,
             total: translatableLocales.length,
-          });
-
-          const translated = modelType === 'tour'
-            ? await translateTourContentForLocale(fields, structuredTourContent || {
-                itinerary: [],
-                faq: [],
-                bookingOptions: [],
-                addOns: [],
-              }, locale)
-            : await translateEntityFieldsForLocale(
-                fields,
-                fieldDefs,
-                modelType,
-                locale
-              );
-
-          if (Object.keys(translated).length > 0) {
-            allTranslations[locale] = translated;
-          }
-
-          send('locale_done', {
-            locale,
-            localeName,
-            index: i,
-            total: translatableLocales.length,
-            translations: translated,
           });
         }
 
-        // Save all translations to DB
-        if (Object.keys(allTranslations).length > 0) {
-          send('saving', { message: 'Saving translations to database...' });
+        // Translate every locale in parallel (a sequential loop regularly
+        // blew the 26s serverless budget) and stream each result as it lands.
+        const succeeded: string[] = [];
+        const failed: Array<{ locale: string; error: string }> = [];
 
-          if (modelType === 'tour') {
-            await Tour.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, { $set: { translations: allTranslations } });
-          } else if (modelType === 'destination') {
-            await Destination.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, { $set: { translations: allTranslations } });
-          } else if (modelType === 'category') {
-            await Category.findByIdAndUpdate(id, { $set: { translations: allTranslations } });
+        await Promise.all(translatableLocales.map(async (locale, i) => {
+          const localeName = localeNames[locale] || locale;
+          try {
+            const translated = modelType === 'tour'
+              ? await translateTourContentForLocale(fields, structuredTourContent || {
+                  itinerary: [],
+                  faq: [],
+                  bookingOptions: [],
+                  addOns: [],
+                }, locale)
+              : await translateEntityFieldsForLocale(
+                  fields,
+                  fieldDefs,
+                  modelType,
+                  locale
+                );
+
+            if (Object.keys(translated).length === 0) {
+              throw new Error('No translated content returned');
+            }
+
+            await saveLocale(locale, translated);
+            succeeded.push(locale);
+            send('locale_done', {
+              locale,
+              localeName,
+              index: i,
+              total: translatableLocales.length,
+              translations: translated,
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Translation failed';
+            failed.push({ locale, error: message });
+            send('locale_error', {
+              locale,
+              localeName,
+              index: i,
+              total: translatableLocales.length,
+              error: message,
+            });
           }
-        }
+        }));
 
         send('done', {
-          success: true,
-          translatedLocales: Object.keys(allTranslations),
+          success: failed.length === 0,
+          translatedLocales: succeeded,
+          failedLocales: failed,
         });
       } catch (error) {
         console.error('Streaming translate error:', error);

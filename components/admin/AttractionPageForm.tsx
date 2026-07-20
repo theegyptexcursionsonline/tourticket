@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -12,9 +13,21 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { AttractionPageFormData, Category } from '@/types';
 import Image from 'next/image';
+import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
+import TranslationEditor from '@/components/admin/TranslationEditor';
+import { attractionPageTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 
 interface AttractionPageFormProps {
   pageId?: string;
+}
+
+interface PickerOption {
+  id: string;
+  title: string;
+  slug?: string;
+  image?: string;
+  kind?: string;
+  isPublished?: boolean;
 }
 
 const defaultFormData: AttractionPageFormData = {
@@ -24,6 +37,7 @@ const defaultFormData: AttractionPageFormData = {
   longDescription: '',
   pageType: 'attraction',
   categoryId: '',
+  urlType: 'default',
   heroImage: '',
   images: [],
   highlights: [],
@@ -38,6 +52,9 @@ const defaultFormData: AttractionPageFormData = {
   isPublished: false,
   featured: false,
   linkedTours: [],
+  linkedPages: [],
+  linkedCategories: [],
+  translations: {},
 };
 
 // Helper Components
@@ -60,6 +77,144 @@ const SmallHint = ({ children, className = "" }: { children: React.ReactNode; cl
 );
 
 const inputBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
+
+// Searchable multi-select for the Listings tab (tours / other pages)
+function ListingPicker({
+  label,
+  hint,
+  placeholder,
+  optionsKind,
+  excludeId,
+  selected,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  placeholder: string;
+  optionsKind: 'tours' | 'pages';
+  excludeId?: string;
+  selected: PickerOption[];
+  onChange: (next: PickerOption[]) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<PickerOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    const timer = window.setTimeout(async () => {
+      if (!trimmed) {
+        setResults([]);
+        return;
+      }
+      setSearching(true);
+      try {
+        const params = new URLSearchParams({ kind: optionsKind, q: trimmed });
+        if (excludeId) params.set('excludeId', excludeId);
+        const res = await fetch(`/api/admin/pages/options?${params.toString()}`);
+        const json = await res.json();
+        if (json.success) setResults(json.data as PickerOption[]);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [query, optionsKind, excludeId]);
+
+  const selectedIds = new Set(selected.map((item) => item.id));
+
+  return (
+    <div className="space-y-3">
+      <FormLabel icon={MapPin}>{label}</FormLabel>
+      <div className="relative">
+        <input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+          className={inputBase}
+          placeholder={placeholder}
+        />
+        {open && query.trim() && (
+          <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+            {searching && (
+              <div className="px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Searching…
+              </div>
+            )}
+            {!searching && results.length === 0 && (
+              <div className="px-4 py-3 text-sm text-slate-500">No matches</div>
+            )}
+            {!searching && results.map((option) => {
+              const already = selectedIds.has(option.id);
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={already}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    if (already) return;
+                    onChange([...selected, option]);
+                    setQuery('');
+                    setResults([]);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-indigo-50 transition-colors ${already ? 'opacity-40 cursor-not-allowed' : ''}`}
+                >
+                  {option.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={option.image} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex-shrink-0" />
+                  )}
+                  <span className="flex-1 truncate font-medium text-slate-700">{option.title}</span>
+                  {option.kind && (
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">{option.kind.replace('-', ' ')}</span>
+                  )}
+                  {option.isPublished === false && (
+                    <span className="text-[10px] uppercase tracking-wide text-amber-500">draft</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {selected.length > 0 ? (
+        <div className="space-y-2">
+          {selected.map((item, index) => (
+            <div key={item.id} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+              <span className="text-xs font-bold text-slate-400 w-5">{index + 1}.</span>
+              {item.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.image} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0" />
+              )}
+              <span className="flex-1 truncate text-sm font-medium text-slate-700">{item.title}</span>
+              {item.kind && (
+                <span className="text-[10px] uppercase tracking-wide text-slate-400">{item.kind.replace('-', ' ')}</span>
+              )}
+              <button
+                type="button"
+                onClick={() => onChange(selected.filter((entry) => entry.id !== item.id))}
+                className="text-red-400 hover:text-red-600 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400 italic">Nothing selected yet</p>
+      )}
+      <SmallHint>{hint}</SmallHint>
+    </div>
+  );
+}
 const textareaBase = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
 export default function AttractionPageForm({ pageId }: AttractionPageFormProps) {
@@ -74,6 +229,9 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  // Labelled selections for the Listings pickers (ids live in formData)
+  const [selectedTours, setSelectedTours] = useState<PickerOption[]>([]);
+  const [selectedPages, setSelectedPages] = useState<PickerOption[]>([]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -101,6 +259,10 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
         console.log('📄 Fetched page data:', page);
         console.log('📸 Page images:', page.images);
         
+        const linkedTourIds: string[] = Array.isArray(page.linkedTourIds) ? page.linkedTourIds.map(String) : [];
+        const linkedPageIds: string[] = Array.isArray(page.linkedPageIds) ? page.linkedPageIds.map(String) : [];
+        const linkedCategoryIds: string[] = Array.isArray(page.linkedCategoryIds) ? page.linkedCategoryIds.map(String) : [];
+
         setFormData({
           title: page.title || '',
           slug: page.slug || '',
@@ -108,6 +270,7 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
           longDescription: page.longDescription || '',
           pageType: page.pageType || 'attraction',
           categoryId: typeof page.categoryId === 'object' ? page.categoryId._id : (page.categoryId || ''),
+          urlType: page.urlType || 'default',
           heroImage: page.heroImage || '',
           images: Array.isArray(page.images) ? page.images : [], // FIX: Ensure it's always an array
           highlights: Array.isArray(page.highlights) ? page.highlights : [],
@@ -121,8 +284,37 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
           keywords: Array.isArray(page.keywords) ? page.keywords : [],
           isPublished: page.isPublished || false,
           featured: page.featured || false,
+          linkedTours: linkedTourIds,
+          linkedPages: linkedPageIds,
+          linkedCategories: linkedCategoryIds,
+          translations: normalizeTranslations(page.translations),
         });
         setIsSlugManuallyEdited(Boolean(page.slug));
+
+        // Resolve labels for already-selected listings
+        if (linkedTourIds.length > 0) {
+          fetch(`/api/admin/pages/options?kind=tours&ids=${linkedTourIds.join(',')}`)
+            .then((res) => res.json())
+            .then((json) => {
+              if (json.success) {
+                const byId = new Map((json.data as PickerOption[]).map((option) => [option.id, option]));
+                setSelectedTours(linkedTourIds.map((tourId) => byId.get(tourId)).filter(Boolean) as PickerOption[]);
+              }
+            })
+            .catch(() => {});
+        }
+        const linkedRefIds = [...linkedPageIds, ...linkedCategoryIds];
+        if (linkedRefIds.length > 0) {
+          fetch(`/api/admin/pages/options?kind=pages&ids=${linkedRefIds.join(',')}`)
+            .then((res) => res.json())
+            .then((json) => {
+              if (json.success) {
+                const byId = new Map((json.data as PickerOption[]).map((option) => [option.id, option]));
+                setSelectedPages(linkedRefIds.map((refId) => byId.get(refId)).filter(Boolean) as PickerOption[]);
+              }
+            })
+            .catch(() => {});
+        }
         
         console.log('✅ Form data set with images:', Array.isArray(page.images) ? page.images : []);
       } else {
@@ -259,12 +451,17 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       }
       
       // FIX: Ensure arrays are properly formatted WITHOUT aggressive filtering
+      const { linkedTours, linkedPages, linkedCategories, ...restData } = cleanedData;
       const payload = {
-        ...cleanedData,
+        ...restData,
         highlights: Array.isArray(cleanedData.highlights) ? cleanedData.highlights.filter(item => item && item.trim() !== '') : [],
         features: Array.isArray(cleanedData.features) ? cleanedData.features.filter(item => item && item.trim() !== '') : [],
         images: Array.isArray(cleanedData.images) ? cleanedData.images.filter(item => item && item.trim() !== '') : [], // FIX: Check for truthy value first
         keywords: Array.isArray(cleanedData.keywords) ? cleanedData.keywords.filter(item => item && item.trim() !== '') : [],
+        // Curated listings persist under their model field names
+        linkedTourIds: Array.isArray(linkedTours) ? linkedTours : [],
+        linkedPageIds: Array.isArray(linkedPages) ? linkedPages : [],
+        linkedCategoryIds: Array.isArray(linkedCategories) ? linkedCategories : [],
       };
 
       // ADD DEBUGGING
@@ -285,7 +482,7 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
       if (data.success) {
         toast.success(`Page ${pageId ? 'updated' : 'created'} successfully!`);
         setIsPanelOpen(false);
-        router.push('/admin/attraction-pages');
+        router.push('/admin/pages');
       } else {
         setError(data.error || 'Failed to save page');
         toast.error(data.error || 'Failed to save page');
@@ -304,7 +501,9 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
     { id: 'basic', label: 'Basic Info', icon: Info },
     { id: 'media', label: 'Media', icon: Camera },
     { id: 'content', label: 'Content', icon: Sparkles },
+    { id: 'listings', label: 'Listings', icon: MapPin },
     { id: 'grid', label: 'Grid Settings', icon: Grid3x3 },
+    { id: 'translations', label: 'Translations', icon: Globe },
     { id: 'seo', label: 'SEO', icon: Globe },
     { id: 'settings', label: 'Settings', icon: Eye }
   ];
@@ -382,7 +581,7 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
-                  Attraction Pages
+                  Pages
                 </h1>
                 <div className="px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 rounded-full text-xs font-semibold text-indigo-700">
                   {pageId ? 'EDITING' : 'CREATING'}
@@ -481,7 +680,9 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
                             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                               <span className="text-xs font-medium text-slate-500">Preview:</span>
                               <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                /attraction/{formData.slug || 'your-slug'}
+                                {formData.pageType === 'category'
+                                  ? `/category/${formData.slug || 'your-slug'}`
+                                  : contentPath('page', formData.slug || 'your-slug', formData.urlType)}
                               </span>
                             </div>
                           </div>
@@ -499,11 +700,38 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
                                 required
                               >
                                 <option value="attraction">Attraction</option>
-                                <option value="category">Category</option>
+                                <option value="category">Category landing (linked to a category)</option>
                               </select>
                               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                             </div>
+                            <SmallHint>
+                              Need a full category (tour collection with its own URL type and filters)?{' '}
+                              <Link href="/admin/pages/create?type=category" className="text-indigo-600 hover:underline font-medium">
+                                Create a Category page instead
+                              </Link>
+                            </SmallHint>
                           </div>
+                          {formData.pageType === 'attraction' && (
+                            <div className="space-y-3">
+                              <FormLabel icon={Globe}>URL Type</FormLabel>
+                              <div className="relative">
+                                <select
+                                  name="urlType"
+                                  value={formData.urlType || 'default'}
+                                  onChange={handleChange}
+                                  className={`${inputBase} appearance-none cursor-pointer`}
+                                >
+                                  {URL_TYPES.map((type) => (
+                                    <option key={type} value={type}>
+                                      {URL_TYPE_LABELS[type as UrlType]}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                              </div>
+                              <SmallHint>Choose the public URL shape. Changing it 301-redirects the old URL.</SmallHint>
+                            </div>
+                          )}
                           {formData.pageType === 'category' && (
                             <div className="space-y-3">
                               <FormLabel icon={MapPin}>Category</FormLabel>
@@ -753,6 +981,61 @@ export default function AttractionPageForm({ pageId }: AttractionPageFormProps) 
                             </button>
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Listings Tab — embed tours and other pages */}
+                    {activeTab === 'listings' && (
+                      <div className="space-y-10">
+                        <ListingPicker
+                          label="Tour listings"
+                          hint="Hand-pick the tours shown on this page, in this order. Leave empty to let the page auto-match tours (linked attractions, keywords, then featured tours)."
+                          placeholder="Search tours by name…"
+                          optionsKind="tours"
+                          selected={selectedTours}
+                          onChange={(next) => {
+                            setSelectedTours(next);
+                            setFormData(prev => ({ ...prev, linkedTours: next.map((item) => item.id) }));
+                          }}
+                        />
+                        <div className="border-t border-slate-200" />
+                        <ListingPicker
+                          label="Other page listings"
+                          hint="Embed links to other pages (attraction pages, category landings, or categories). They appear as an “Explore more” card grid on this page."
+                          placeholder="Search pages and categories…"
+                          optionsKind="pages"
+                          excludeId={pageId}
+                          selected={selectedPages}
+                          onChange={(next) => {
+                            setSelectedPages(next);
+                            setFormData(prev => ({
+                              ...prev,
+                              linkedPages: next.filter((item) => item.kind !== 'category').map((item) => item.id),
+                              linkedCategories: next.filter((item) => item.kind === 'category').map((item) => item.id),
+                            }));
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Translations Tab */}
+                    {activeTab === 'translations' && (
+                      <div className="space-y-6">
+                        {pageId ? (
+                          <TranslationEditor
+                            fields={attractionPageTranslationFields}
+                            value={formData.translations || {}}
+                            onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                            modelType="attraction-page"
+                            entityId={pageId}
+                          />
+                        ) : (
+                          <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                            <Globe className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                            <p className="text-slate-600 font-medium">Save the page first, then add translations</p>
+                            <p className="text-sm text-slate-400 mt-1">Auto-translate needs a saved page to work from.</p>
+                          </div>
+                        )}
                       </div>
                     )}
 

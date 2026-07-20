@@ -4,13 +4,14 @@ import {
   autoTranslateTour,
   autoTranslateDestination,
   autoTranslateCategory,
+  autoTranslateAttractionPage,
 } from '@/lib/i18n/autoTranslate';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
-const VALID_MODEL_TYPES = ['tour', 'destination', 'category'] as const;
+const VALID_MODEL_TYPES = ['tour', 'destination', 'category', 'attraction-page'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
 async function defaultTenantTourExists(id: string) {
   if (typeof Tour.exists === 'function') return Tour.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
       tour: autoTranslateTour,
       destination: autoTranslateDestination,
       category: autoTranslateCategory,
+      'attraction-page': autoTranslateAttractionPage,
     };
 
     await dbConnect();

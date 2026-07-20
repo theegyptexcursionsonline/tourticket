@@ -6,6 +6,7 @@ import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
+import { resolveAttractionPageTours } from '@/lib/attractionPages/pageContent';
 
 interface CategorySummary {
   _id: unknown;
@@ -76,153 +77,11 @@ export async function GET(
       }
     }
 
-    let tours: TourView[] = [];
-    let totalTours = 0;
-
-    if (populatedPage.pageType === 'category' && populatedPage.categoryId) {
-      console.log('Fetching tours for category:', populatedPage.categoryId);
-      const categoryId = typeof populatedPage.categoryId === 'object' && '_id' in populatedPage.categoryId
-        ? populatedPage.categoryId._id
-        : populatedPage.categoryId;
-
-      // For category/interest pages, fetch tours linked via interests field OR category field
-      tours = await Tour.find({
-        $and: [
-          { isPublished: true },
-          {
-            $or: [
-              { interests: page._id },
-              { category: categoryId }
-            ]
-          }
-        ]
-      })
-      .populate({
-        path: 'destination',
-        model: Destination,
-        select: 'name slug country image description'
-      })
-      .populate({
-        path: 'category',
-        model: Category,
-        select: 'name slug'
-      })
-      .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-      .lean() as unknown as TourView[];
-
-      totalTours = await Tour.countDocuments({
-        $and: [
-          { isPublished: true },
-          {
-            $or: [
-              { interests: page._id },
-              { category: categoryId }
-            ]
-          }
-        ]
-      });
-    } else if (populatedPage.pageType === 'attraction') {
-      console.log('Fetching tours for attraction:', populatedPage.title);
-
-      // First, try to find tours directly linked to this attraction
-      tours = await Tour.find({
-        attractions: page._id,
-        isPublished: true
-      })
-        .populate({
-          path: 'destination',
-          model: Destination,
-          select: 'name slug country image description'
-        })
-        .populate({
-          path: 'category',
-          model: Category,
-          select: 'name slug'
-        })
-        .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-        .lean() as unknown as TourView[];
-
-      totalTours = await Tour.countDocuments({
-        attractions: page._id,
-        isPublished: true
-      });
-
-      // If no tours directly linked, fallback to keyword search
-      if (tours.length === 0) {
-        console.log('No directly linked tours, falling back to keyword search');
-        const searchQueries = [];
-
-        // Direct title match
-        if (populatedPage.title) {
-          searchQueries.push({ title: { $regex: new RegExp(populatedPage.title, 'i') } });
-          searchQueries.push({ description: { $regex: new RegExp(populatedPage.title, 'i') } });
-        }
-
-        // Keywords match
-        if (populatedPage.keywords && populatedPage.keywords.length > 0) {
-          searchQueries.push({ tags: { $in: populatedPage.keywords } });
-          populatedPage.keywords.forEach((keyword: string) => {
-            searchQueries.push({ title: { $regex: new RegExp(keyword, 'i') } });
-            searchQueries.push({ description: { $regex: new RegExp(keyword, 'i') } });
-          });
-        }
-
-        // Highlights match
-        if (populatedPage.highlights && populatedPage.highlights.length > 0) {
-          populatedPage.highlights.forEach((highlight: string) => {
-            searchQueries.push({ title: { $regex: new RegExp(highlight, 'i') } });
-            searchQueries.push({ description: { $regex: new RegExp(highlight, 'i') } });
-          });
-        }
-
-        if (searchQueries.length > 0) {
-          tours = await Tour.find({
-            $and: [
-              { isPublished: true },
-              { $or: searchQueries }
-            ]
-          })
-          .populate({
-            path: 'destination',
-            model: Destination,
-            select: 'name slug country image description'
-          })
-          .populate({
-            path: 'category',
-            model: Category,
-            select: 'name slug'
-          })
-          .sort({ isFeatured: -1, rating: -1, bookings: -1 })
-          .limit(50)
-          .lean() as unknown as TourView[];
-
-          totalTours = tours.length;
-        }
-      }
-
-      // If still no tours, show some featured tours
-      if (tours.length === 0) {
-        tours = await Tour.find({
-          isPublished: true,
-          isFeatured: true
-        })
-        .populate({
-          path: 'destination',
-          model: Destination,
-          select: 'name slug country image description'
-        })
-        .populate({
-          path: 'category',
-          model: Category,
-          select: 'name slug'
-        })
-        .sort({ rating: -1, bookings: -1 })
-        .limit(20)
-        .lean() as unknown as TourView[];
-
-        totalTours = tours.length;
-      }
-    }
+    // Shared resolution: admin-curated linkedTourIds first, then the
+    // category/attraction/keyword/featured ladder (lib/attractionPages/pageContent).
+    const resolved = await resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]);
+    let tours = resolved.tours as unknown as TourView[];
+    const totalTours = resolved.totalTours;
 
     console.log(`Found ${tours.length} tours for page`);
 

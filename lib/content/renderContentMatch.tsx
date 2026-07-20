@@ -14,6 +14,10 @@ import {
   renderCategoryDetail,
   getCategoryMetadata,
 } from '@/app/[locale]/categories/[slug]/CategoryDetailContent';
+import {
+  renderAttractionDetail,
+  getAttractionMetadata,
+} from '@/app/[locale]/attraction/[slug]/AttractionDetailContent';
 
 export async function renderContentMatch(
   match: ContentMatch,
@@ -26,6 +30,8 @@ export async function renderContentMatch(
       return renderDestinationDetail(match.slug, locale);
     case 'category':
       return renderCategoryDetail(match.slug, locale);
+    case 'page':
+      return renderAttractionDetail(match.slug, locale);
     default:
       return null;
   }
@@ -43,6 +49,8 @@ export async function getContentMatchMetadata(
       return getDestinationMetadata(match.slug, locale, canonicalPath);
     case 'category':
       return getCategoryMetadata(match.slug, locale);
+    case 'page':
+      return getAttractionMetadata(match.slug, locale, canonicalPath);
     default:
       return null;
   }

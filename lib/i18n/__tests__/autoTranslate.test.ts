@@ -27,6 +27,10 @@ jest.mock('@/lib/models/Category', () => ({
   findById: jest.fn(),
   findByIdAndUpdate: jest.fn(),
 }));
+jest.mock('@/lib/models/AttractionPage', () => ({
+  findById: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
+}));
 
 describe('translateEntityFields', () => {
   beforeEach(() => {
@@ -257,7 +261,12 @@ describe('autoTranslateTour', () => {
 
     expect(Tour.findById).toHaveBeenCalledWith('tour123');
     expect(Tour.findByIdAndUpdate).toHaveBeenCalledWith('tour123', {
-      $set: { translations: mockTranslations },
+      $set: {
+        'translations.ar': mockTranslations.ar,
+        'translations.es': mockTranslations.es,
+        'translations.fr': mockTranslations.fr,
+        'translations.de': mockTranslations.de,
+      },
     });
   });
 
@@ -296,8 +305,14 @@ describe('autoTranslateDestination', () => {
       de: { name: 'Kairo', country: 'Ägypten', description: 'Hauptstadt von Ägypten' },
     };
 
-    mockCreate.mockResolvedValue({
-      choices: [{ message: { content: JSON.stringify(mockTranslations) } }],
+    // destinations now translate one locale per call
+    mockCreate.mockImplementation((req: { messages: { content: string }[] }) => {
+      const prompt = req.messages.map((m) => m.content).join('\n');
+      const locale = (Object.keys(mockTranslations) as (keyof typeof mockTranslations)[])
+        .find((code) => prompt.includes(`(${code})`));
+      return Promise.resolve({
+        choices: [{ message: { content: JSON.stringify(locale ? mockTranslations[locale] : {}) } }],
+      });
     });
 
     const { autoTranslateDestination } = await import('../autoTranslate');
@@ -305,7 +320,12 @@ describe('autoTranslateDestination', () => {
 
     expect(Destination.findById).toHaveBeenCalledWith('dest123');
     expect(Destination.findByIdAndUpdate).toHaveBeenCalledWith('dest123', {
-      $set: { translations: mockTranslations },
+      $set: {
+        'translations.ar': mockTranslations.ar,
+        'translations.es': mockTranslations.es,
+        'translations.fr': mockTranslations.fr,
+        'translations.de': mockTranslations.de,
+      },
     });
   });
 });
@@ -333,8 +353,13 @@ describe('autoTranslateCategory', () => {
       de: { name: 'Abenteuertouren', description: 'Aufregende Abenteuererlebnisse' },
     };
 
-    mockCreate.mockResolvedValue({
-      choices: [{ message: { content: JSON.stringify(mockTranslations) } }],
+    mockCreate.mockImplementation((req: { messages: { content: string }[] }) => {
+      const prompt = req.messages.map((m) => m.content).join('\n');
+      const locale = (Object.keys(mockTranslations) as (keyof typeof mockTranslations)[])
+        .find((code) => prompt.includes(`(${code})`));
+      return Promise.resolve({
+        choices: [{ message: { content: JSON.stringify(locale ? mockTranslations[locale] : {}) } }],
+      });
     });
 
     const { autoTranslateCategory } = await import('../autoTranslate');
@@ -342,7 +367,12 @@ describe('autoTranslateCategory', () => {
 
     expect(Category.findById).toHaveBeenCalledWith('cat123');
     expect(Category.findByIdAndUpdate).toHaveBeenCalledWith('cat123', {
-      $set: { translations: mockTranslations },
+      $set: {
+        'translations.ar': mockTranslations.ar,
+        'translations.es': mockTranslations.es,
+        'translations.fr': mockTranslations.fr,
+        'translations.de': mockTranslations.de,
+      },
     });
   });
 });

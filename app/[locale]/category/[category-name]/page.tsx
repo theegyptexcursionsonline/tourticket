@@ -34,7 +34,15 @@ async function getCategoryPage(categoryName: string, locale: string): Promise<Ca
       return null;
     }
 
-    const serializedPage = JSON.parse(JSON.stringify(page));
+    let serializedPage = JSON.parse(JSON.stringify(page));
+
+    // Localize the page's own content (translations added with the unified
+    // Pages section), then the linked category's fields below.
+    serializedPage = localizeEntityFields(
+      serializedPage as Record<string, unknown>,
+      locale,
+      ['title', 'description', 'longDescription', 'gridTitle', 'gridSubtitle', 'highlights', 'features', 'metaTitle', 'metaDescription']
+    );
 
     if (serializedPage.categoryId && typeof serializedPage.categoryId === 'object') {
       serializedPage.categoryId = localizeEntityFields(

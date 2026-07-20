@@ -329,6 +329,7 @@ export interface AttractionPageFormData {
   longDescription: string;
   pageType: 'attraction' | 'category';
   categoryId: string;
+  urlType: string;
   heroImage: string;
   images: string[];
   highlights: string[];
@@ -343,6 +344,9 @@ export interface AttractionPageFormData {
   isPublished: boolean;
   featured: boolean;
   linkedTours?: string[];
+  linkedPages?: string[];
+  linkedCategories?: string[];
+  translations?: Record<string, Record<string, unknown>>;
 }
 
 export interface CategoryPageData extends AttractionPage {

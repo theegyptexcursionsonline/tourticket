@@ -73,6 +73,14 @@ jest.mock('@/lib/models/Category', () => ({
   },
 }));
 
+jest.mock('@/lib/models/AttractionPage', () => ({
+  __esModule: true,
+  default: {
+    findById: jest.fn(() => ({ lean: jest.fn().mockResolvedValue(null) })),
+    findByIdAndUpdate: jest.fn(),
+  },
+}));
+
 // ─── Imports (after mocks) ───
 
 const { NextResponse } = jest.requireMock('next/server');
@@ -526,24 +534,22 @@ describe('Smoke: Full translation flow (mocked E2E)', () => {
     expect(mockCreate).toHaveBeenCalledTimes(translatableLocales.length * 2);
     expect(mockCreate.mock.calls[0][0].model).toBe('gpt-4o-mini');
 
-    // 6. Verify DB was updated with translations
+    // 6. Verify DB was updated per locale (never a whole-map overwrite)
     expect(mockTourUpdate).toHaveBeenCalledWith(
       'tour-abc',
       expect.objectContaining({
         $set: expect.objectContaining({
-          translations: expect.objectContaining({
-            ar: expect.objectContaining({
-              title: 'جولة الأهرامات',
-              itinerary: expect.arrayContaining([
-                expect.objectContaining({ title: 'الاستلام' }),
-              ]),
-            }),
-            es: expect.objectContaining({
-              title: 'Tour Pirámides',
-              bookingOptions: expect.arrayContaining([
-                expect.objectContaining({ label: 'Tour compartido' }),
-              ]),
-            }),
+          'translations.ar': expect.objectContaining({
+            title: 'جولة الأهرامات',
+            itinerary: expect.arrayContaining([
+              expect.objectContaining({ title: 'الاستلام' }),
+            ]),
+          }),
+          'translations.es': expect.objectContaining({
+            title: 'Tour Pirámides',
+            bookingOptions: expect.arrayContaining([
+              expect.objectContaining({ label: 'Tour compartido' }),
+            ]),
           }),
         }),
       })
@@ -607,17 +613,15 @@ describe('Smoke: translateEntityFieldsForLocale (streaming)', () => {
     expect(userMessage.content).not.toContain('German');
   });
 
-  it('returns empty object on failure (graceful)', async () => {
+  it('throws on failure so the UI can surface the failed locale', async () => {
     mockCreate.mockRejectedValue(new Error('Rate limit'));
 
-    const result = await translateEntityFieldsForLocale(
+    await expect(translateEntityFieldsForLocale(
       { title: 'Test' },
       tourTranslationFields,
       'tour',
       'es'
-    );
-
-    expect(result).toEqual({});
+    )).rejects.toThrow('Rate limit');
   });
 
   it('skips empty fields', async () => {

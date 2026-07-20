@@ -22,7 +22,7 @@ interface TranslationEditorProps {
   value: Record<string, Record<string, unknown>>;
   onChange: (translations: Record<string, Record<string, unknown>>) => void;
   /** Pass modelType and entityId to enable the "Auto Translate" button */
-  modelType?: 'tour' | 'destination' | 'category';
+  modelType?: 'tour' | 'destination' | 'category' | 'attraction-page';
   entityId?: string;
 }
 
@@ -58,6 +58,7 @@ export default function TranslationEditor({
   const [isTranslating, setIsTranslating] = useState(false);
   const [localeStatuses, setLocaleStatuses] = useState<Record<string, LocaleStatus>>({});
   const translationsRef = useRef<Record<string, Record<string, unknown>>>({});
+  const failedLocalesRef = useRef<string[]>([]);
 
   // Keep a stable ref to onChange so the streaming callback always uses the latest version
   const onChangeRef = useRef(onChange);
@@ -144,6 +145,7 @@ export default function TranslationEditor({
 
       const decoder = new TextDecoder();
       let buffer = '';
+      failedLocalesRef.current = [];
 
       while (true) {
         const { done, value: chunk } = await reader.read();
@@ -151,36 +153,35 @@ export default function TranslationEditor({
 
         buffer += decoder.decode(chunk, { stream: true });
 
-        // Parse SSE events from buffer
-        const lines = buffer.split('\n');
-        buffer = '';
+        // SSE events are separated by a blank line. Keep the (possibly
+        // incomplete) trailing event in the buffer so events split across
+        // network chunks are never dropped.
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
 
-        let eventType = '';
-        let eventData = '';
-
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith('data: ')) {
-            eventData = line.slice(6).trim();
-          } else if (line === '' && eventType && eventData) {
-            // Process complete event
+        for (const rawEvent of events) {
+          let eventType = '';
+          let eventData = '';
+          for (const line of rawEvent.split('\n')) {
+            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+            else if (line.startsWith('data: ')) eventData = line.slice(6).trim();
+          }
+          if (eventType && eventData) {
             try {
-              const data = JSON.parse(eventData);
-              handleSSEEvent(eventType, data);
+              handleSSEEvent(eventType, JSON.parse(eventData));
             } catch {
-              // Incomplete JSON, skip
+              // Malformed event payload, skip
             }
-            eventType = '';
-            eventData = '';
-          } else if (line !== '') {
-            // Incomplete line, put back in buffer
-            buffer += line + '\n';
           }
         }
       }
 
-      toast.success('All translations generated!');
+      const failed = failedLocalesRef.current;
+      if (failed.length > 0) {
+        toast.error(`Translation failed for: ${failed.join(', ')}. Successful languages were saved — retry for the rest.`);
+      } else {
+        toast.success('All translations generated!');
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Auto-translate failed');
     } finally {
@@ -218,10 +219,18 @@ export default function TranslationEditor({
         setActiveLocale(locale as typeof activeLocale);
         break;
       }
+      case 'locale_error': {
+        const locale = data.locale as string;
+        setLocaleStatuses((prev) => ({ ...prev, [locale]: 'error' }));
+        failedLocalesRef.current = [...failedLocalesRef.current, (data.localeName as string) || locale];
+        break;
+      }
       case 'error': {
         const locale = data.locale as string;
         if (locale) {
           setLocaleStatuses((prev) => ({ ...prev, [locale]: 'error' }));
+        } else if (data.error) {
+          toast.error(String(data.error));
         }
         break;
       }

@@ -1,4 +1,5 @@
-// Central URL-type helper for content (tours, destinations, categories).
+// Central URL-type helper for content (tours, destinations, categories, and
+// attraction/landing pages).
 //
 // Admins can pick, per item, which URL shape it lives at via the `urlType`
 // field. This module is the single source of truth mapping (content type +
@@ -7,7 +8,7 @@
 
 import { defaultLocale } from '@/i18n/config';
 
-export type ContentType = 'tour' | 'destination' | 'category';
+export type ContentType = 'tour' | 'destination' | 'category' | 'page';
 
 // The URL shapes an admin can choose from. `default` keeps the item on its
 // historical path (tours at the root, destinations under /destinations, etc.)
@@ -39,6 +40,7 @@ export const DEFAULT_SEGMENT: Record<ContentType, string> = {
   tour: '', // tours already live at the root: /{slug}
   destination: 'destinations',
   category: 'categories',
+  page: 'attraction', // attraction/landing pages live under /attraction
 };
 
 // The set of segments that a request path can carry for a given content type.

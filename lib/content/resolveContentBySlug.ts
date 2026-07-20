@@ -7,6 +7,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
+import AttractionPage from '@/lib/models/AttractionPage';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import {
   ContentType,
@@ -25,7 +26,7 @@ export interface ContentMatch {
 }
 
 // Priority when a slug happens to exist in more than one collection.
-const TYPE_PRIORITY: ContentType[] = ['tour', 'destination', 'category'];
+const TYPE_PRIORITY: ContentType[] = ['tour', 'destination', 'category', 'page'];
 
 interface ContentDocument {
   slug: string;
@@ -36,10 +37,13 @@ interface ContentDocument {
 export async function resolveContentMatches(slug: string): Promise<ContentMatch[]> {
   await dbConnect();
 
-  const [tour, destination, category] = await Promise.all([
+  const [tour, destination, category, attractionPage] = await Promise.all([
     Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
     Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
     Category.findOne({ slug }).select('slug urlType isPublished').lean(),
+    // Only attraction-type pages participate in urlType routing; category-landing
+    // pages keep their fixed /category/{slug} path.
+    AttractionPage.findOne({ slug, pageType: 'attraction' }).select('slug urlType isPublished').lean(),
   ]);
 
   const matches: ContentMatch[] = [];
@@ -58,6 +62,7 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
   push('tour', tour as ContentDocument | null);
   push('destination', destination as ContentDocument | null);
   push('category', category as ContentDocument | null);
+  push('page', attractionPage as ContentDocument | null);
 
   return matches.sort(
     (a, b) => TYPE_PRIORITY.indexOf(a.type) - TYPE_PRIORITY.indexOf(b.type)

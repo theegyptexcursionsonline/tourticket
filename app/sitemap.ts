@@ -184,30 +184,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
 
-    // Published attraction pages
+    // Published attraction/landing pages. Attraction-type pages honor the
+    // admin-chosen urlType; category-landing pages live at /category/{slug}.
     const AttractionPage = mongoose.models.AttractionPage;
     if (AttractionPage) {
       const attractions = await AttractionPage.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1 }
+        { slug: 1, updatedAt: 1, pageType: 1, urlType: 1 }
       ).lean();
 
       for (const attraction of attractions) {
+        const path = attraction.pageType === 'category'
+          ? `/category/${attraction.slug}`
+          : contentPath('page', attraction.slug, attraction.urlType);
         entries.push({
-          url: `${BASE_URL}/attraction/${attraction.slug}`,
+          url: `${BASE_URL}${path}`,
           lastModified: attraction.updatedAt || new Date(),
           changeFrequency: 'monthly',
           priority: 0.7,
-          alternates: getAlternates(`/attraction/${attraction.slug}`),
+          alternates: getAlternates(path),
         });
         for (const locale of locales) {
           if (locale === defaultLocale) continue;
           entries.push({
-            url: `${BASE_URL}/${locale}/attraction/${attraction.slug}`,
+            url: `${BASE_URL}/${locale}${path}`,
             lastModified: attraction.updatedAt || new Date(),
             changeFrequency: 'monthly',
             priority: 0.65,
-            alternates: getAlternates(`/attraction/${attraction.slug}`),
+            alternates: getAlternates(path),
           });
         }
       }
