@@ -20,6 +20,7 @@ import {
   attractionPageTranslationFields,
 } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category', 'attraction-page'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
@@ -181,6 +182,10 @@ export async function POST(request: NextRequest) {
             });
           }
         }));
+
+        if (succeeded.length > 0) {
+          revalidateStorefrontContent();
+        }
 
         send('done', {
           success: failed.length === 0,
