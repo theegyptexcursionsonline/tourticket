@@ -10,6 +10,7 @@ import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import { contentPath } from '@/lib/content/contentUrl';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const ATTRACTION_PAGE_LOCALIZED_FIELDS = [
   'title',
@@ -53,7 +54,11 @@ export async function resolveAttractionPageTours(page: PageLike) {
 
   const curatedIds = (page.linkedTourIds || []).filter((id) => Types.ObjectId.isValid(String(id)));
   if (curatedIds.length > 0) {
-    const curated = await Tour.find({ _id: { $in: curatedIds }, isPublished: true })
+    const curated = await Tour.find({
+      _id: { $in: curatedIds },
+      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
+    })
       .populate(TOUR_CARD_POPULATE)
       .lean();
     const order = new Map(curatedIds.map((id, index) => [String(id), index]));
@@ -69,6 +74,7 @@ export async function resolveAttractionPageTours(page: PageLike) {
     const filter = {
       $and: [
         { isPublished: true },
+        DEFAULT_TENANT_FILTER,
         { $or: [{ interests: page._id }, { category: categoryId }] },
       ],
     };
@@ -80,13 +86,18 @@ export async function resolveAttractionPageTours(page: PageLike) {
   }
 
   // Attraction pages: tours that reference this page directly.
-  const direct = await Tour.find({ attractions: page._id, isPublished: true })
+  const directFilter = {
+    attractions: page._id,
+    isPublished: true,
+    ...DEFAULT_TENANT_FILTER,
+  };
+  const direct = await Tour.find(directFilter)
     .populate(TOUR_CARD_POPULATE)
     .sort(TOUR_SORT)
     .limit(60)
     .lean();
   if (direct.length > 0) {
-    const totalTours = await Tour.countDocuments({ attractions: page._id, isPublished: true });
+    const totalTours = await Tour.countDocuments(directFilter);
     return { tours: direct as LeanRecord[], totalTours };
   }
 
@@ -104,7 +115,9 @@ export async function resolveAttractionPageTours(page: PageLike) {
     }
   }
   if (searchQueries.length > 0) {
-    const matched = await Tour.find({ $and: [{ isPublished: true }, { $or: searchQueries }] })
+    const matched = await Tour.find({
+      $and: [{ isPublished: true }, DEFAULT_TENANT_FILTER, { $or: searchQueries }],
+    })
       .populate(TOUR_CARD_POPULATE)
       .sort(TOUR_SORT)
       .limit(50)
@@ -115,7 +128,11 @@ export async function resolveAttractionPageTours(page: PageLike) {
   }
 
   // Featured fallback so the page never renders empty.
-  const featured = await Tour.find({ isPublished: true, isFeatured: true })
+  const featured = await Tour.find({
+    isPublished: true,
+    isFeatured: true,
+    ...DEFAULT_TENANT_FILTER,
+  })
     .populate(TOUR_CARD_POPULATE)
     .sort({ rating: -1, bookings: -1 })
     .limit(20)
