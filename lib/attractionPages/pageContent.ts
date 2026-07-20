@@ -166,12 +166,16 @@ export async function resolveLinkedPageCards(page: {
 
   const [pages, categories] = await Promise.all([
     pageIds.length
-      ? AttractionPage.find({ _id: { $in: pageIds }, isPublished: true })
+      ? AttractionPage.find({
+          $and: [DEFAULT_TENANT_FILTER, { _id: { $in: pageIds }, isPublished: true }],
+        })
           .select('title slug description heroImage pageType urlType translations')
           .lean()
       : [],
     categoryIds.length
-      ? Category.find({ _id: { $in: categoryIds }, isPublished: { $ne: false } })
+      ? Category.find({
+          $and: [DEFAULT_TENANT_FILTER, { _id: { $in: categoryIds }, isPublished: { $ne: false } }],
+        })
           .select('name slug description heroImage urlType translations')
           .lean()
       : [],

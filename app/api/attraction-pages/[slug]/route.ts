@@ -6,7 +6,13 @@ import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
-import { resolveAttractionPageTours } from '@/lib/attractionPages/pageContent';
+import {
+  ATTRACTION_PAGE_LOCALIZED_FIELDS,
+  resolveAttractionPageTours,
+  resolveLinkedPageCards,
+} from '@/lib/attractionPages/pageContent';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 
 interface CategorySummary {
   _id: unknown;
@@ -54,7 +60,8 @@ export async function GET(
     // Find the attraction page by slug
     const page = await AttractionPage.findOne({ 
       slug, 
-      isPublished: true 
+      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
     }).lean();
 
     if (!page) {
@@ -69,7 +76,9 @@ export async function GET(
     const populatedPage = { ...page } as unknown as AttractionPageView;
     if (page.categoryId) {
       try {
-        const category = await Category.findById(page.categoryId).select('name slug').lean();
+        const category = await Category.findOne({
+          $and: [DEFAULT_TENANT_FILTER, { _id: page.categoryId }],
+        }).select('name slug').lean();
         populatedPage.categoryId = category;
       } catch (error) {
         console.error('Error populating category:', error);
@@ -79,7 +88,13 @@ export async function GET(
 
     // Shared resolution: admin-curated linkedTourIds first, then the
     // category/attraction/keyword/featured ladder (lib/attractionPages/pageContent).
-    const resolved = await resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]);
+    const [resolved, linkedPages] = await Promise.all([
+      resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
+      resolveLinkedPageCards(
+        page as unknown as Parameters<typeof resolveLinkedPageCards>[0],
+        request.nextUrl.searchParams.get('locale') || 'en',
+      ),
+    ]);
     let tours = resolved.tours as unknown as TourView[];
     const totalTours = resolved.totalTours;
 
@@ -141,9 +156,14 @@ export async function GET(
     }));
 
     const responseData = {
-      ...populatedPage,
+      ...localizeEntityFields(
+        JSON.parse(JSON.stringify(populatedPage)) as Record<string, unknown>,
+        request.nextUrl.searchParams.get('locale') || 'en',
+        ATTRACTION_PAGE_LOCALIZED_FIELDS,
+      ),
       tours,
       totalTours,
+      linkedPages,
       reviews: transformedReviews
     };
 

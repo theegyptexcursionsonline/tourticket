@@ -15,6 +15,7 @@ import {
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 type PageRecord = Record<string, unknown>;
 
@@ -26,8 +27,9 @@ async function getAttractionPageData(slug: string, locale: string) {
       slug,
       pageType: 'attraction',
       isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
     })
-      .populate({ path: 'categoryId', model: Category, select: 'name slug' })
+      .populate({ path: 'categoryId', model: Category, match: DEFAULT_TENANT_FILTER, select: 'name slug' })
       .lean();
 
     if (!page) return null;

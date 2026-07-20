@@ -18,7 +18,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 export async function getCategoryMetadata(slug: string, locale: string): Promise<Metadata | null> {
   await dbConnect();
 
-  const categoryMatches = await CategoryModel.find({ slug })
+  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER })
     .select('name description heroImage metaTitle metaDescription keywords translations')
     .lean();
 
@@ -61,7 +61,7 @@ export async function getCategoryMetadata(slug: string, locale: string): Promise
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const categoryMatches = await CategoryModel.find({ slug }).lean();
+  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER }).lean();
   if (categoryMatches.length === 0) {
     return { category: null, categoryTours: [] };
   }
@@ -96,6 +96,7 @@ async function getPageData(slug: string, locale: string) {
       category: { $in: categoryIds },
       isPublished: true,
       slug: { $in: candidateSlugs },
+      ...DEFAULT_TENANT_FILTER,
     }).populate('destination').populate('category').lean();
 
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
@@ -160,6 +161,7 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
     isPublished: true,
     slug: { $ne: currentSlug },
     _id: { $ne: currentCategoryId },
+    ...DEFAULT_TENANT_FILTER,
   })
     .select('name slug heroImage featured order description translations')
     .sort({ featured: -1, order: 1, name: 1 })
@@ -176,6 +178,7 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
       $match: {
         isPublished: true,
         category: { $in: categoryIds },
+        ...DEFAULT_TENANT_FILTER,
       },
     },
     { $unwind: '$category' },

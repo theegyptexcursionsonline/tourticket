@@ -40,10 +40,10 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
   const [tour, destination, category, attractionPage] = await Promise.all([
     Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
     Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
-    Category.findOne({ slug }).select('slug urlType isPublished').lean(),
+    Category.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
     // Only attraction-type pages participate in urlType routing; category-landing
     // pages keep their fixed /category/{slug} path.
-    AttractionPage.findOne({ slug, pageType: 'attraction' }).select('slug urlType isPublished').lean(),
+    AttractionPage.findOne({ slug, pageType: 'attraction', ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
   ]);
 
   const matches: ContentMatch[] = [];

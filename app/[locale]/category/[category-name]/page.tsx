@@ -13,6 +13,7 @@ import {
   resolveAttractionPageTours,
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 interface CategoryPageProps {
   params: Promise<{ locale: string; 'category-name': string }>;
@@ -26,11 +27,13 @@ async function getCategoryPage(categoryName: string, locale: string): Promise<Ca
     const page = await AttractionPageModel.findOne({ 
       slug: categoryName, 
       pageType: 'category',
-      isPublished: true 
+      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
     })
     .populate({
       path: 'categoryId',
       model: Category,
+      match: DEFAULT_TENANT_FILTER,
       select: 'name slug'
     })
     .lean();
