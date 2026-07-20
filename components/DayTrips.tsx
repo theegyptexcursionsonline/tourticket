@@ -184,7 +184,7 @@ const DayTripCard = ({
         </div>
         
         <div className="flex items-baseline justify-end mt-auto pt-2">
-          {trip.originalPrice && (
+          {trip.originalPrice && trip.originalPrice > (trip.pricingSummary?.fromPrice ?? trip.discountPrice ?? trip.originalPrice ?? 0) && (
             <span className="text-xs sm:text-sm text-slate-500 line-through mr-1 sm:mr-2">
               {formatPrice(trip.originalPrice)}
             </span>

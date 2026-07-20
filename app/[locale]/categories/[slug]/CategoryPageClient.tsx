@@ -907,7 +907,7 @@ const TourCard = ({
         </div>
         <div className="flex items-center justify-between mt-auto">
           <div>
-            {tour.originalPrice && (
+            {tour.originalPrice && tour.originalPrice > displayedPrice && (
               <span className="text-slate-500 line-through text-sm mr-2">{formatPrice(tour.originalPrice)}</span>
             )}
             <span className="text-xl font-bold text-red-600">{formatPrice(displayedPrice)}</span>
