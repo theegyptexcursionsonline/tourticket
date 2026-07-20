@@ -8,6 +8,11 @@ import dbConnect from '@/lib/dbConnect';
 import AttractionPageModel from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import {
+  ATTRACTION_PAGE_LOCALIZED_FIELDS,
+  resolveAttractionPageTours,
+  resolveLinkedPageCards,
+} from '@/lib/attractionPages/pageContent';
 
 interface CategoryPageProps {
   params: Promise<{ locale: string; 'category-name': string }>;
@@ -41,7 +46,7 @@ async function getCategoryPage(categoryName: string, locale: string): Promise<Ca
     serializedPage = localizeEntityFields(
       serializedPage as Record<string, unknown>,
       locale,
-      ['title', 'description', 'longDescription', 'gridTitle', 'gridSubtitle', 'highlights', 'features', 'metaTitle', 'metaDescription']
+      ATTRACTION_PAGE_LOCALIZED_FIELDS
     );
 
     if (serializedPage.categoryId && typeof serializedPage.categoryId === 'object') {
@@ -52,7 +57,17 @@ async function getCategoryPage(categoryName: string, locale: string): Promise<Ca
       );
     }
 
-    return serializedPage;
+    const [{ tours, totalTours }, linkedPages] = await Promise.all([
+      resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
+      resolveLinkedPageCards(page as unknown as Parameters<typeof resolveLinkedPageCards>[0], locale),
+    ]);
+
+    return {
+      ...serializedPage,
+      tours: JSON.parse(JSON.stringify(tours)),
+      totalTours,
+      linkedPages,
+    };
   } catch (error) {
     console.error('Error fetching category page:', error);
     return null;
@@ -107,7 +122,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   return (
     <>
       <Header />
-      <AttractionPageTemplate page={page} urlType="category" />
+      <AttractionPageTemplate
+        page={page}
+        urlType="category"
+        linkedPages={page.linkedPages || []}
+      />
       <Footer />
     </>
   );

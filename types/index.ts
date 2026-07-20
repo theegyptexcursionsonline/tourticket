@@ -354,6 +354,14 @@ export interface CategoryPageData extends AttractionPage {
   tours: Tour[];
   totalTours: number;
   reviews?: Review[];
+  linkedPages?: Array<{
+    id: string;
+    title: string;
+    description?: string;
+    image?: string;
+    href: string;
+    kind: 'page' | 'category';
+  }>;
 }
 
 // =================================================================
