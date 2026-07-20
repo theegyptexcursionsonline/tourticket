@@ -21,6 +21,7 @@ import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
+import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 
 // Enhanced Types with database compatibility
 interface Tour {
@@ -134,6 +135,7 @@ interface AddOnTour {
   icon?: React.ElementType;
   savings?: number;
   perGuest?: boolean;
+  pricingMethod?: 'per_unit' | 'per_person';
 }
 
 interface AvailabilityData {
@@ -1526,7 +1528,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
           icon: getAddOnIcon(addon.category || 'Experience'),
           savings: addon.savings || (addon.price ? Math.round(addon.price * 0.3) : 5),
-          perGuest: addon.perGuest ?? addon.category === 'Food',
+          perGuest: isPerPersonAddOn(addon),
         }));
       } else {
         // Fallback to default add-ons
@@ -1562,7 +1564,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const { subtotal, addOnsTotal, total, totalSavings } = useMemo(() => {
     let basePrice = 0;
     let originalBasePrice = 0;
-    const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
+    // Paying guests for per-person add-ons: infants are free.
+    const totalGuests = bookingData.adults + bookingData.children;
 
     if (bookingData.selectedTimeSlot) {
       basePrice = bookingData.selectedTimeSlot.price;

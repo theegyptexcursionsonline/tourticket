@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
+import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 
 type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
 
@@ -39,6 +40,7 @@ interface LeanAddOn {
   name: string;
   price: number;
   category?: string;
+  pricingMethod?: 'per_unit' | 'per_person';
 }
 
 interface LeanTour {
@@ -189,7 +191,7 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
           title: addon.name,
           price: Number(addon.price),
           category: addon.category || 'Experience',
-          perGuest: addon.category === 'Food',
+          perGuest: isPerPersonAddOn(addon),
         }))
       : FALLBACK_ADDONS;
 

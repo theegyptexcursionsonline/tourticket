@@ -57,9 +57,11 @@ const calculateItemTotal = (item: ReceiptOrderedItem) => {
       const addOnDetail = item.selectedAddOnDetails?.[addOnId];
       const qtyNum = Number(qty) || 0;
       if (addOnDetail && qtyNum > 0) {
-        const totalGuests = (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0);
-        const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
-        addOnsTotal += addOnDetail.price * addOnQuantity * qtyNum;
+        // Per-person add-ons charge per paying guest (infants free); per-unit
+        // add-ons charge per selected unit. Mirrors checkoutAddOnsTotal.
+        const payingGuests = (item.quantity || 0) + (item.childQuantity || 0);
+        const addOnQuantity = addOnDetail.perGuest ? payingGuests : qtyNum;
+        addOnsTotal += addOnDetail.price * addOnQuantity;
       }
     });
   }

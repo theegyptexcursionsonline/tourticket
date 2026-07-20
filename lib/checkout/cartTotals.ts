@@ -40,9 +40,14 @@ export function checkoutGuestCount(item: CheckoutPricedItem) {
     + finiteQuantity(item.infantQuantity);
 }
 
+/** Paying guests for per-person add-on pricing: adults + children. Infants are free. */
+export function checkoutAddOnGuestCount(item: CheckoutPricedItem) {
+  return finiteQuantity(item.quantity) + finiteQuantity(item.childQuantity);
+}
+
 export function checkoutAddOnsTotal(item: CheckoutPricedItem) {
   let total = 0;
-  const guestCount = checkoutGuestCount(item);
+  const guestCount = checkoutAddOnGuestCount(item);
   for (const [addOnId, rawQuantity] of Object.entries(item.selectedAddOns || {})) {
     const quantity = finiteQuantity(
       rawQuantity && typeof rawQuantity === 'object' && 'quantity' in rawQuantity
@@ -51,7 +56,11 @@ export function checkoutAddOnsTotal(item: CheckoutPricedItem) {
     );
     const detail = item.selectedAddOnDetails?.[addOnId];
     if (!detail || quantity === 0 || !Number.isFinite(Number(detail.price)) || detail.price < 0) continue;
-    total += detail.price * quantity * (detail.perGuest ? guestCount : 1);
+    // Per-person add-ons are a selection toggle: charge price × paying guests,
+    // never × the stored quantity as well (older carts stored the guest count
+    // there, which double-multiplied the charge).
+    const units = detail.perGuest ? guestCount : quantity;
+    total += detail.price * units;
   }
   return roundMoney(total);
 }

@@ -29,7 +29,11 @@ describe('secureCartPricing', () => {
       discountPrice: 80,
       originalPrice: 100,
       bookingOptions: [{ label: 'Premium', type: 'Per Person', price: 120, pricingKey: 'premium-key' }],
-      addOns: [{ name: 'Lunch', description: 'Lunch package', price: 25, category: 'Food' }],
+      addOns: [
+        { name: 'Lunch', description: 'Lunch package', price: 25, category: 'Food' },
+        { name: 'Photos', description: 'Photo package', price: 40, category: 'Food', pricingMethod: 'per_unit' },
+        { name: 'Guide', description: 'Private guide', price: 60, category: 'Experience', pricingMethod: 'per_person' },
+      ],
     });
   });
 
@@ -49,6 +53,19 @@ describe('secureCartPricing', () => {
     expect(item.price).toBe(120);
     expect(item.selectedBookingOption.price).toBe(120);
     expect(item.selectedAddOnDetails['addon-0'].price).toBe(25);
+  });
+
+  it('derives perGuest from the admin pricing method, falling back to the legacy Food rule', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedAddOns: { 'addon-0': 1, 'addon-1': 1, 'addon-2': 1 },
+    }]);
+    // addon-0: legacy Food add-on without pricingMethod → per person
+    expect(item.selectedAddOnDetails['addon-0'].perGuest).toBe(true);
+    // addon-1: explicit per_unit wins over the Food category
+    expect(item.selectedAddOnDetails['addon-1'].perGuest).toBe(false);
+    // addon-2: explicit per_person on a non-Food category
+    expect(item.selectedAddOnDetails['addon-2'].perGuest).toBe(true);
   });
 
   it('rejects add-ons that do not exist in the catalogue', async () => {

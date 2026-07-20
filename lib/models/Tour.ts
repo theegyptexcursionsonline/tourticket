@@ -62,6 +62,9 @@ export interface IAddOn {
   description: string;
   price: number;
   category?: string;
+  /** How the price applies: flat per booking (per_unit) or multiplied by paying guests (per_person).
+   *  Legacy add-ons without this field fall back to the old Food-category rule. */
+  pricingMethod?: 'per_unit' | 'per_person';
 }
 
 export interface ITourTranslation {
@@ -414,6 +417,10 @@ const AddOnSchema = new Schema<IAddOn>({
   category: {
     type: String,
     trim: true
+  },
+  pricingMethod: {
+    type: String,
+    enum: ['per_unit', 'per_person']
   }
 }, { _id: false });
 

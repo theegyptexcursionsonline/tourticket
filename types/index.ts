@@ -164,6 +164,7 @@ export interface AddOn {
   description: string;
   price: number;
   category?: string;
+  pricingMethod?: 'per_unit' | 'per_person';
 }
 
 // =================================================================
