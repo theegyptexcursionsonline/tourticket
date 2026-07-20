@@ -407,7 +407,8 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-              Things to do in {attraction.title}
+              {/* Don't double the phrase when the page title already says it */}
+              {/things to do/i.test(attraction.title) ? attraction.title : `Things to do in ${attraction.title}`}
             </h1>
             
             <QuickInfo attraction={attraction} />
