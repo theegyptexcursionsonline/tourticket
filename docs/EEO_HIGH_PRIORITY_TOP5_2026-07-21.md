@@ -45,4 +45,25 @@ Scope: EEO main, English multi-tenant network, German multi-tenant network
 
 ## Deployment and visual proof
 
-Production commit hashes, deployment status and Codex-browser screenshots will be recorded here after the Git-linked Netlify releases are live.
+- Main EEO: commit `1442937a691896ea96a774d0fd59d2834bea9e2f`, Netlify deploy `6a5fac3da4e1630008e4a049`, ready.
+- English network: commit `878ad13ef92d1f591d1e094a61a5681207fbe6b4`, Netlify deploy `6a5fac3dd2cc88000846ca7d`, ready.
+- German network: commit `17e7ea5bf17aa2a5990813a823f548a20fba4785`, Netlify deploy `6a5fac3bdb60fd0007f5693b`, ready.
+
+Live Codex-browser verification:
+
+- Selected tour option completed without the former pricing error and changed the two-adult total from `$160.00` to the selected option's `$240.00`.
+- Selecting the `$20.00` Tutankhamun add-on changed the live total to `$260.00`.
+- Main Pages search for `Luxor` returned three matching records with no alert; preview URLs use `egypt-excursionsonline.com`.
+- Network Pages search under `Ägypten Ausflüge` returned the isolated matching record with no alert; its preview uses `aegyptenausfluege.de` and opens successfully.
+- Main and network Tours lists expose `View public tour` links on their storefront domains.
+- A live attraction page displayed its selected tour links, confirming page-to-tour rendering.
+- English and German network storefront/search pages returned `200`; unauthenticated admin Pages requests remained blocked with `401`.
+
+Proof files are stored in `eeo/feedback-proof-2026-07-21/`:
+
+- `before-pricing-option-unavailable.png`
+- `before-pages-preview-links.png`
+- `after-booking-option-price-bound.png`
+- `after-live-addon-selected.png`
+- `after-pages-search-and-public-links.png`
+- `after-network-pages-tenant-search.png`
