@@ -35,6 +35,7 @@ import { toDateOnlyString } from '@/utils/date';
 import type { CartItem, Review as ReviewData, Tour as WishlistTour } from '@/types';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { formatExperienceDescription } from '@/lib/content/experienceDescription';
+import { imageMetadataFor } from '@/lib/content/imageMetadata';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -89,6 +90,8 @@ interface TourEnhancement {
   culturalInfo?: string[];
   seasonalVariations?: string;
   localCustoms?: string[];
+  notSuitableFor?: string[];
+  needToKnow?: string[];
 }
 
 const inferItineraryIcon = (item: ItineraryItem): string => {
@@ -205,7 +208,9 @@ const extractEnhancementData = (tour: ITour): TourEnhancement => {
       "Follow guide instructions at all times", 
       "Be respectful of other tour participants",
       "Ask questions - guides love sharing knowledge!"
-    ]
+    ],
+    notSuitableFor: tour.notSuitableFor || [],
+    needToKnow: tour.needToKnow || [],
   };
 };
 
@@ -651,6 +656,37 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       </div>
     )}
 
+    {(enhancement.notSuitableFor?.length || enhancement.needToKnow?.length) ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {enhancement.notSuitableFor && enhancement.notSuitableFor.length > 0 && (
+          <div className="bg-rose-50 p-6 rounded-xl border border-rose-200">
+            <h4 className="font-bold text-rose-900 mb-4">Not suitable for</h4>
+            <ul className="space-y-2">
+              {enhancement.notSuitableFor.map((item, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-rose-800">
+                  <X size={16} className="mt-0.5 flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {enhancement.needToKnow && enhancement.needToKnow.length > 0 && (
+          <div className="bg-amber-50 p-6 rounded-xl border border-amber-200">
+            <h4 className="font-bold text-amber-900 mb-4">Need to know</h4>
+            <ul className="space-y-2">
+              {enhancement.needToKnow.map((item, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-amber-900">
+                  <Info size={16} className="mt-0.5 flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    ) : null}
+
     {enhancement.groupSize && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
@@ -953,7 +989,7 @@ const ExperienceDescription = ({ html }: { html: string }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="mb-8 max-w-[68ch]">
+    <div className="mb-8 w-full">
       <div className="relative">
         <div
           className={`prose prose-slate text-[16px] leading-7 text-slate-600 transition-[max-height] duration-300 md:text-[17px] md:leading-8 [&_p]:mb-5 [&_p:last-child]:mb-0 ${isExpanded ? 'max-h-[80rem]' : 'max-h-72 overflow-hidden'}`}
@@ -1168,6 +1204,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   const enhancement = extractEnhancementData(tour);
 
   const tourImages = [tour.image, ...(tour.images || [])].filter(Boolean);
+  const selectedImageSeo = imageMetadataFor(
+    tourImages[selectedImageIndex],
+    tour.imageMetadata,
+    `${tour.title} image ${selectedImageIndex + 1}`
+  );
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Eye },
@@ -1276,7 +1317,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                 >
                   <Image
                     src={tourImages[selectedImageIndex]}
-                    alt={tour.title}
+                    alt={selectedImageSeo.alt}
+                    title={selectedImageSeo.title}
                     width={1200}
                     height={700}
                     className="w-full h-[420px] md:h-[500px] object-cover"
@@ -1309,7 +1351,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
                 {tourImages.length > 1 && (
                   <div className="flex flex-wrap gap-2 mb-6">
-                    {tourImages.map((image, index) => (
+                    {tourImages.map((image, index) => {
+                      const imageSeo = imageMetadataFor(image, tour.imageMetadata, `${tour.title} image ${index + 1}`);
+                      return (
                       <button
                         key={index}
                         onClick={() => setSelectedImageIndex(index)}
@@ -1322,13 +1366,15 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       >
                         <Image
                           src={image}
-                          alt={`${tour.title} image ${index + 1}`}
+                          alt={imageSeo.alt}
+                          title={imageSeo.title}
                           width={80}
                           height={64}
                           className="w-full h-full object-cover"
                         />
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

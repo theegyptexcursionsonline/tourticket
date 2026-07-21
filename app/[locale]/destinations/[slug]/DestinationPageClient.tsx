@@ -28,6 +28,8 @@ import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { imageMetadataFor } from '@/lib/content/imageMetadata';
+import { curateDestinationTours } from '@/lib/content/destinationTourCuration';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -1609,7 +1611,7 @@ const BackgroundSlideshow = ({
   fadeMs = 900,
   autoplay = true 
 }: { 
-  slides?: Array<{src: string, alt: string}>, 
+  slides?: Array<{src: string, alt: string, title?: string}>,
   delay?: number, 
   fadeMs?: number,
   autoplay?: boolean 
@@ -1657,7 +1659,7 @@ const BackgroundSlideshow = ({
               transform: visible ? 'scale(1)' : 'scale(1.02)',
             }}
           >
-            <Image src={s.src} alt={s.alt} fill sizes="100vw" className="object-cover" />
+            <Image src={s.src} alt={s.alt} title={s.title} fill sizes="100vw" className="object-cover" />
           </div>
         );
       })}
@@ -1667,9 +1669,13 @@ const BackgroundSlideshow = ({
 
 const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: Destination, tourCount: number, rtl: boolean }) => {
   const copy = useDestinationPageCopy();
-  const slides = destination.image
-    ? [{ src: destination.image, alt: destination.name }]
-    : [{ src: '/hero2.png', alt: destination.name }];
+  const heroImages = Array.from(new Set([destination.image, ...(destination.images || [])].filter(Boolean)));
+  const slides = heroImages.length > 0
+    ? heroImages.map((src, index) => {
+        const metadata = imageMetadataFor(src, destination.imageMetadata, `${destination.name} ${index + 1}`);
+        return { src, alt: metadata.alt, title: metadata.title };
+      })
+    : [{ src: '/hero2.png', alt: destination.name, title: destination.name }];
 
   const searchSuggestions = [
     copy.exploreDestination(destination.name),
@@ -1715,6 +1721,109 @@ const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: 
             <span className="font-semibold">{copy.travelersStat}</span>
           </div>
         </div>
+      </div>
+    </section>
+  );
+};
+
+const DestinationGallerySection = ({ destination }: { destination: Destination }) => {
+  const images = Array.from(new Set([destination.image, ...(destination.images || [])].filter(Boolean)));
+  if (images.length <= 1) return null;
+
+  return (
+    <section className="bg-white py-12 sm:py-16">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="mb-6 sm:mb-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">Destination gallery</p>
+          <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900">See {destination.name}</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {images.map((src, index) => {
+            const metadata = imageMetadataFor(src, destination.imageMetadata, `${destination.name} ${index + 1}`);
+            return (
+              <div
+                key={`${src}-${index}`}
+                className={`relative overflow-hidden rounded-2xl bg-slate-100 ${index === 0 ? 'col-span-2 row-span-2 min-h-72 sm:min-h-96' : 'min-h-36 sm:min-h-44'}`}
+              >
+                <Image
+                  src={src}
+                  alt={metadata.alt}
+                  title={metadata.title}
+                  fill
+                  className="object-cover transition-transform duration-500 hover:scale-105"
+                  sizes="(max-width: 1024px) 50vw, 25vw"
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const DestinationPracticalSection = ({ destination }: { destination: Destination }) => {
+  const detailCards = [
+    destination.climate && { title: 'Climate', value: destination.climate, icon: <Sun className="h-5 w-5" /> },
+    (destination.averageTemperature?.summer || destination.averageTemperature?.winter) && {
+      title: 'Average temperature',
+      value: [destination.averageTemperature?.summer && `Summer: ${destination.averageTemperature.summer}`, destination.averageTemperature?.winter && `Winter: ${destination.averageTemperature.winter}`].filter(Boolean).join(' · '),
+      icon: <Sun className="h-5 w-5" />,
+    },
+    destination.languagesSpoken?.length && { title: 'Languages', value: destination.languagesSpoken.join(', '), icon: <Languages className="h-5 w-5" /> },
+    destination.visaRequirements && { title: 'Visa requirements', value: destination.visaRequirements, icon: <Shield className="h-5 w-5" /> },
+    destination.emergencyNumber && { title: 'Emergency number', value: destination.emergencyNumber, icon: <Phone className="h-5 w-5" /> },
+    destination.coordinates && {
+      title: 'Location',
+      value: `${destination.coordinates.lat}, ${destination.coordinates.lng}`,
+      icon: <MapPin className="h-5 w-5" />,
+      href: `https://www.google.com/maps?q=${destination.coordinates.lat},${destination.coordinates.lng}`,
+    },
+  ].filter(Boolean) as Array<{ title: string; value: string; icon: React.ReactNode; href?: string }>;
+
+  const contentGroups = [
+    destination.thingsToDo?.length && { title: 'Things to do', items: destination.thingsToDo },
+    destination.localCustoms?.length && { title: 'Local customs', items: destination.localCustoms },
+    destination.weatherWarnings?.length && { title: 'Weather notes', items: destination.weatherWarnings },
+  ].filter(Boolean) as Array<{ title: string; items: string[] }>;
+
+  if (detailCards.length === 0 && contentGroups.length === 0) return null;
+
+  return (
+    <section className="bg-slate-50 py-12 sm:py-20">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">Plan with confidence</p>
+          <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900">Practical information</h2>
+        </div>
+        {detailCards.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {detailCards.map((detail) => {
+              const content = (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 h-full">
+                  <div className="flex items-center gap-3 text-red-600">
+                    {detail.icon}
+                    <h3 className="font-bold text-slate-900">{detail.title}</h3>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{detail.value}</p>
+                </div>
+              );
+              return detail.href ? <a key={detail.title} href={detail.href} target="_blank" rel="noreferrer" className="hover:-translate-y-0.5 transition-transform">{content}</a> : <div key={detail.title}>{content}</div>;
+            })}
+          </div>
+        )}
+        {contentGroups.length > 0 && (
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {contentGroups.map((group) => (
+              <article key={group.title} className="rounded-2xl border border-slate-200 bg-white p-5">
+                <h3 className="font-bold text-slate-900">{group.title}</h3>
+                <ul className="mt-3 space-y-2">
+                  {group.items.map((item, index) => <li key={`${group.title}-${index}`} className="flex gap-2 text-sm leading-relaxed text-slate-600"><CheckCircle2 className="mt-0.5 h-4 w-4 flex-none text-green-600" />{item}</li>)}
+                </ul>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -1852,7 +1961,7 @@ const StatsSection = ({ destinationTours }: { destinationTours: Tour[] }) => {
 // --- Travel Tips Component ---
 const TravelTipsSection = ({ destination }: { destination: Destination }) => {
   const copy = useDestinationPageCopy();
-  const tips = [
+  const defaultTips = [
     {
       icon: <Sun className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: copy.travelTipBestTime,
@@ -1866,14 +1975,21 @@ const TravelTipsSection = ({ destination }: { destination: Destination }) => {
     {
       icon: <Languages className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: copy.travelTipLanguages,
-      content: copy.travelTipDefaultLanguages
+      content: destination.languagesSpoken?.join(', ') || copy.travelTipDefaultLanguages
     },
     {
       icon: <Phone className="w-5 h-5 sm:w-6 sm:h-6" />,
       title: copy.travelTipEmergency,
-      content: copy.travelTipDefaultEmergency
+      content: destination.emergencyNumber || copy.travelTipDefaultEmergency
     }
   ];
+  const tips = destination.travelTips && destination.travelTips.length > 0
+    ? destination.travelTips.map((tip) => ({
+        icon: <Compass className="w-5 h-5 sm:w-6 sm:h-6" />,
+        title: tip.title,
+        content: tip.content,
+      }))
+    : defaultTips;
 
   return (
     <section className="bg-gradient-to-br from-blue-50 to-indigo-50 py-12 sm:py-20">
@@ -1987,9 +2103,10 @@ const FaqItem = ({ item }: { item: { question: string; answer: string } }) => {
   );
 };
 
-const FAQSection = ({ destinationName }: { destinationName: string }) => {
+const FAQSection = ({ destination }: { destination: Destination }) => {
   const copy = useDestinationPageCopy();
-  const faqData = [
+  const destinationName = destination.name;
+  const fallbackFaqData = [
     {
       question: copy.faqBestTimeQ(destinationName),
       answer: copy.faqBestTimeA(destinationName)
@@ -2031,6 +2148,7 @@ const FAQSection = ({ destinationName }: { destinationName: string }) => {
       answer: copy.faqMeetingA
     }
   ];
+  const faqData = destination.faqs && destination.faqs.length > 0 ? destination.faqs : fallbackFaqData;
 
   return (
     <section className="bg-white py-12 sm:py-20 font-sans">
@@ -2251,8 +2369,11 @@ export default function DestinationPageClient({
     setTimeout(() => setSelectedTour(null), 300);
   };
 
-  const top10Tours = destinationTours.slice(0, 10);
-  const featuredTours = destinationTours.filter(tour => tour.isFeatured).slice(0, 5);
+  const { bestDeals: featuredTours, topTours: top10Tours } = curateDestinationTours(
+    destinationTours,
+    destination.bestDealTourIds,
+    destination.topTourIds,
+  );
   const destinationCategories = allCategories.map(category => ({
     ...category,
     tourCount: destinationTours.filter(tour => 
@@ -2293,6 +2414,8 @@ export default function DestinationPageClient({
             </div>
           </div>
         </section>
+
+        <DestinationGallerySection destination={destination} />
         
         {featuredTours.length > 0 && (
           <section className="py-12 sm:py-20 bg-white overflow-hidden">
@@ -2378,11 +2501,13 @@ export default function DestinationPageClient({
           </section>
         )}
 
+        <DestinationPracticalSection destination={destination} />
+
         <TravelTipsSection destination={destination} />
 
         <ReviewsSection reviews={reviews} destinationName={destination.name} />
 
-        <FAQSection destinationName={destination.name} />
+        <FAQSection destination={destination} />
 
         <RelatedDestinationsSection destinations={relatedDestinations} />
 

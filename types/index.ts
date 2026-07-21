@@ -4,6 +4,22 @@
 // CORE ENTITIES
 // =================================================================
 
+export interface ImageMetadata {
+  url: string;
+  alt: string;
+  title?: string;
+}
+
+export interface ContentFaq {
+  question: string;
+  answer: string;
+}
+
+export interface ContentTravelTip {
+  title: string;
+  content: string;
+}
+
 export interface User {
   _id: string;
   id: string;
@@ -29,6 +45,8 @@ export interface Destination {
   slug: string;
   country?: string;
   image: string;
+  images?: string[];
+  imageMetadata?: ImageMetadata[];
   description: string;
   longDescription?: string;
   featured?: boolean;
@@ -39,9 +57,20 @@ export interface Destination {
   };
   highlights?: string[];
   thingsToDo?: string[];
+  localCustoms?: string[];
   bestTimeToVisit?: string;
   currency?: string;
   timezone?: string;
+  visaRequirements?: string;
+  languagesSpoken?: string[];
+  emergencyNumber?: string;
+  averageTemperature?: { summer?: string; winter?: string };
+  climate?: string;
+  weatherWarnings?: string[];
+  faqs?: ContentFaq[];
+  travelTips?: ContentTravelTip[];
+  bestDealTourIds?: string[];
+  topTourIds?: string[];
   isPublished?: boolean;
   metaTitle?: string;
   metaDescription?: string;
@@ -81,8 +110,12 @@ export interface Category {
   longDescription?: string;
   heroImage?: string;
   images?: string[];
+  imageMetadata?: ImageMetadata[];
   highlights?: string[];
   features?: string[];
+  faqs?: ContentFaq[];
+  travelTips?: ContentTravelTip[];
+  popularDestinationIds?: Array<string | Destination>;
   metaTitle?: string;
   metaDescription?: string;
   keywords?: string[];
@@ -178,6 +211,7 @@ export interface Tour {
   slug: string;
   image: string;
   images?: string[];
+  imageMetadata?: ImageMetadata[];
   discountPrice: number;
   originalPrice?: number;
   price?: number;
@@ -227,6 +261,8 @@ export interface Tour {
   culturalInfo?: string[];
   seasonalVariations?: string;
   localCustoms?: string[];
+  notSuitableFor?: string[];
+  needToKnow?: string[];
   metaTitle?: string;
   metaDescription?: string;
   keywords?: string[];
@@ -307,8 +343,11 @@ export interface AttractionPage {
   categoryId?: string | Category;
   heroImage: string;
   images?: string[];
+  imageMetadata?: ImageMetadata[];
   highlights?: string[];
   features?: string[];
+  faqs?: ContentFaq[];
+  travelTips?: ContentTravelTip[];
   gridTitle: string;
   gridSubtitle?: string;
   showStats?: boolean;
@@ -332,8 +371,11 @@ export interface AttractionPageFormData {
   urlType: string;
   heroImage: string;
   images: string[];
+  imageMetadata?: ImageMetadata[];
   highlights: string[];
   features: string[];
+  faqs?: ContentFaq[];
+  travelTips?: ContentTravelTip[];
   gridTitle: string;
   gridSubtitle: string;
   showStats: boolean;

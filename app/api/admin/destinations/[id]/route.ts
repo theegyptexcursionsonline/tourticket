@@ -70,6 +70,7 @@ export async function PUT(
     // Media
     if (data.image !== undefined) updateData.image = data.image;
     if (data.images !== undefined) updateData.images = data.images;
+    if (data.imageMetadata !== undefined) updateData.imageMetadata = data.imageMetadata;
     
     // Location data
     if (data.coordinates !== undefined) {
@@ -118,6 +119,19 @@ export async function PUT(
     // Climate & weather
     if (data.averageTemperature !== undefined) updateData.averageTemperature = data.averageTemperature;
     if (data.climate !== undefined) updateData.climate = data.climate;
+    if (data.faqs !== undefined) updateData.faqs = Array.isArray(data.faqs) ? data.faqs : [];
+    if (data.travelTips !== undefined) updateData.travelTips = Array.isArray(data.travelTips) ? data.travelTips : [];
+    if (data.bestDealTourIds !== undefined) {
+      updateData.bestDealTourIds = Array.isArray(data.bestDealTourIds)
+        ? data.bestDealTourIds.filter((tourId: unknown) => typeof tourId === 'string' && mongoose.Types.ObjectId.isValid(tourId))
+        : [];
+    }
+    if (data.topTourIds !== undefined) {
+      const bestDealIds = new Set((updateData.bestDealTourIds || existingDestination.bestDealTourIds || []).map(String));
+      updateData.topTourIds = Array.isArray(data.topTourIds)
+        ? data.topTourIds.filter((tourId: unknown) => typeof tourId === 'string' && mongoose.Types.ObjectId.isValid(tourId) && !bestDealIds.has(tourId))
+        : [];
+    }
     
     // Status & meta - THIS IS THE KEY PART FOR FEATURED
     if (data.featured !== undefined) updateData.featured = data.featured;

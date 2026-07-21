@@ -1,6 +1,8 @@
 // lib/models/Destination.ts
 import mongoose, { Document, Schema, models } from 'mongoose';
 import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
+import type { ImageMetadata } from '@/lib/content/imageMetadata';
+import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 
 export interface IDestination extends Document {
   // Basic Info
@@ -15,6 +17,7 @@ export interface IDestination extends Document {
   // Media
   image?: string;
   images?: string[];
+  imageMetadata?: ImageMetadata[];
   
   // Descriptions
   description: string;
@@ -48,6 +51,10 @@ export interface IDestination extends Document {
   };
   climate?: string;
   weatherWarnings?: string[];
+  faqs?: Array<{ question: string; answer: string }>;
+  travelTips?: Array<{ title: string; content: string }>;
+  bestDealTourIds?: mongoose.Types.ObjectId[];
+  topTourIds?: mongoose.Types.ObjectId[];
   
   // Status & Meta
   featured?: boolean;
@@ -106,6 +113,16 @@ const AverageTemperatureSchema = new Schema({
     type: String,
     trim: true,
   }
+}, { _id: false });
+
+const FaqSchema = new Schema({
+  question: { type: String, required: true, trim: true, maxlength: 300 },
+  answer: { type: String, required: true, trim: true, maxlength: 2000 },
+}, { _id: false });
+
+const TravelTipSchema = new Schema({
+  title: { type: String, required: true, trim: true, maxlength: 200 },
+  content: { type: String, required: true, trim: true, maxlength: 1000 },
 }, { _id: false });
 
 const DestinationTranslationSchema = new Schema(
@@ -184,6 +201,10 @@ country: {
     type: String,
     trim: true,
   }],
+  imageMetadata: {
+    type: [ImageMetadataSchema],
+    default: [],
+  },
   
   description: {
     type: String,
@@ -308,6 +329,22 @@ currency: {
       message: 'Each weather warning must be non-empty and not exceed 300 characters'
     }
   },
+  faqs: {
+    type: [FaqSchema],
+    default: [],
+  },
+  travelTips: {
+    type: [TravelTipSchema],
+    default: [],
+  },
+  bestDealTourIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tour',
+  }],
+  topTourIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tour',
+  }],
   
   // Status & Meta
   featured: {

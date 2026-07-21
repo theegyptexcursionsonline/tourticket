@@ -5,6 +5,7 @@ import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import TourModel from '@/lib/models/Tour';
 import CategoryModel from '@/lib/models/Category';
+import DestinationModel from '@/lib/models/Destination';
 import { Tour as TourType, Category as CategoryType } from '@/types';
 import CategoryPageClient from './CategoryPageClient';
 import CollectionSchema from '@/components/schema/CollectionSchema';
@@ -61,7 +62,14 @@ export async function getCategoryMetadata(slug: string, locale: string): Promise
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER }).lean();
+  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER })
+    .populate({
+      path: 'popularDestinationIds',
+      model: DestinationModel,
+      match: { isPublished: true, ...DEFAULT_TENANT_FILTER },
+      select: 'name slug image description country',
+    })
+    .lean();
   if (categoryMatches.length === 0) {
     return { category: null, categoryTours: [] };
   }

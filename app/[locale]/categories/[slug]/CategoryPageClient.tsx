@@ -13,6 +13,7 @@ import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { imageMetadataFor } from '@/lib/content/imageMetadata';
 
 type CategoryPageCopy = {
   searchToursPlaceholder: string;
@@ -778,6 +779,52 @@ const TopPicksSection = ({
   );
 };
 
+const CategoryGallerySection = ({ category }: { category: Category }) => {
+  if (!category.images || category.images.length === 0) return null;
+
+  return (
+    <section className="py-12 bg-white">
+      <div className="container mx-auto px-4">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl font-bold text-slate-900 mb-6">Experience gallery</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {category.images.map((image, index) => {
+              const seo = imageMetadataFor(image, category.imageMetadata, `${category.name} experience ${index + 1}`);
+              return (
+                <div key={`${image}-${index}`} className={`relative overflow-hidden rounded-2xl ${index === 0 ? 'col-span-2 row-span-2 min-h-72' : 'min-h-36'}`}>
+                  <Image src={image} alt={seo.alt} title={seo.title} fill className="object-cover transition-transform duration-500 hover:scale-105" sizes="(max-width: 1024px) 50vw, 25vw" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const CategoryTravelTipsSection = ({ category }: { category: Category }) => {
+  if (!category.travelTips || category.travelTips.length === 0) return null;
+
+  return (
+    <section className="py-12 bg-slate-50">
+      <div className="container mx-auto px-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold text-slate-900 mb-6">Travel tips</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {category.travelTips.map((tip, index) => (
+              <article key={`${tip.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="font-semibold text-slate-900">{tip.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{tip.content}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const BookingGuidanceSection = ({ copy }: { copy: CategoryPageCopy }) => (
   <section className="py-12 bg-slate-50">
     <div className="container mx-auto px-4">
@@ -811,6 +858,7 @@ const CategoryHeroSection = ({
   rtl: boolean;
 }) => {
   const heroImage = category.heroImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=80&fm=jpg';
+  const heroSeo = imageMetadataFor(heroImage, category.imageMetadata, category.name);
 
   return (
     <section className="relative w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]">
@@ -818,7 +866,8 @@ const CategoryHeroSection = ({
       <div className="absolute inset-0 z-0">
         <Image
           src={heroImage}
-          alt={category.name}
+          alt={heroSeo.alt}
+          title={heroSeo.title}
           fill
           className="object-cover"
           priority
@@ -998,9 +1047,20 @@ export default function CategoryPageClient({
             }
         }
 
-        const popularDestinations = Array.from(destinationMap.values())
+        const autoPopularDestinations = Array.from(destinationMap.values())
             .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
             .slice(0, 4);
+        const curatedPopularDestinations = (category.popularDestinationIds || [])
+            .filter((destination): destination is Exclude<typeof destination, string> => typeof destination === 'object' && destination !== null)
+            .map((destination) => ({
+                name: destination.name,
+                slug: destination.slug,
+                image: destination.image,
+                count: destinationMap.get(destination.slug)?.count || 0,
+            }));
+        const popularDestinations = curatedPopularDestinations.length > 0
+            ? curatedPopularDestinations
+            : autoPopularDestinations;
 
         const sortedPrices = [...prices].sort((a, b) => a - b);
         const minPrice = sortedPrices[0];
@@ -1022,14 +1082,16 @@ export default function CategoryPageClient({
             durationSummary,
             locale,
         });
-        const faqItems = buildCategoryFaqs({
-            category,
-            destinations: popularDestinations,
-            minPriceLabel,
-            durationSummary,
-            tourCount: categoryTours.length,
-            locale,
-        });
+        const faqItems = category.faqs && category.faqs.length > 0
+            ? category.faqs
+            : buildCategoryFaqs({
+                category,
+                destinations: popularDestinations,
+                minPriceLabel,
+                durationSummary,
+                tourCount: categoryTours.length,
+                locale,
+            });
 
         return {
             overviewParagraphs,
@@ -1130,9 +1192,13 @@ export default function CategoryPageClient({
                 {/* About Section */}
                 <AboutSection category={category} copy={copy} insights={categoryInsights} />
 
+                <CategoryGallerySection category={category} />
+
                 <TopPicksSection tours={topPicks} copy={copy} />
 
                 <BookingGuidanceSection copy={copy} />
+
+                <CategoryTravelTipsSection category={category} />
 
                 <div className="container mx-auto px-4 py-8">
                     <div className="max-w-7xl mx-auto">
