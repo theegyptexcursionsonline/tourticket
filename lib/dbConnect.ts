@@ -1,174 +1,104 @@
-// lib/dbConnect.ts
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import mongoose from 'mongoose';
+import { connectWithTransientRetry } from './mongoConnectionPolicy';
+export { isTransientMongoConnectionError } from './mongoConnectionPolicy';
 
-// Check if database connection is available
+type Cache = {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+};
+
+const globalWithMongoose = global as typeof globalThis & { mongoose?: Cache };
+const cached = globalWithMongoose.mongoose ?? (globalWithMongoose.mongoose = {
+  conn: null,
+  promise: null,
+});
+
 export function isDatabaseAvailable(): boolean {
   return !!process.env.MONGODB_URI;
 }
 
-// Get MONGODB_URI lazily to allow builds without env vars
 function getMongoUri(): string {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
-    throw new Error(
-      'Please define the MONGODB_URI environment variable inside .env.local'
-    );
+    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
   }
   return uri;
 }
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections from growing exponentially
- * during API Route usage.
- */
-let cached = (global as any).mongoose;
+function loadModels() {
+  const models: [string, string][] = [
+    ['User', './models/user'], ['Tour', './models/Tour'],
+    ['Destination', './models/Destination'], ['Category', './models/Category'],
+    ['Review', './models/Review'], ['Booking', './models/Booking'],
+    ['Blog', './models/Blog'], ['AttractionPage', './models/AttractionPage'],
+    ['Discount', './models/Discount'], ['Job', './models/Job'], ['Otp', './models/Otp'],
+  ];
+  for (const [name, path] of models) {
+    if (!mongoose.models[name]) require(path);
+  }
+}
 
-if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
+const connectOptions: mongoose.ConnectOptions = {
+  bufferCommands: false,
+  maxPoolSize: 5,
+  minPoolSize: 0,
+  maxConnecting: 1,
+  maxIdleTimeMS: 60_000,
+  serverSelectionTimeoutMS: 10_000,
+  connectTimeoutMS: 10_000,
+  socketTimeoutMS: 45_000,
+  family: 4,
+};
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function connectWithRetry(): Promise<typeof mongoose> {
+  // One short retry absorbs occasional Atlas/Netlify TLS handshakes without
+  // turning a real outage into a retry storm.
+  return connectWithTransientRetry(
+    () => mongoose.connect(getMongoUri(), connectOptions),
+    () => wait(250 + Math.floor(Math.random() * 250)),
+  );
 }
 
 async function dbConnect() {
-  // Check if database is available
-  if (!isDatabaseAvailable()) {
-    throw new Error(
-      'Please define the MONGODB_URI environment variable inside .env.local'
-    );
-  }
+  if (!isDatabaseAvailable()) getMongoUri();
 
-  if (cached.conn) {
+  if (cached.conn && mongoose.connection.readyState === mongoose.ConnectionStates.connected) {
     return cached.conn;
   }
 
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      // Increased timeouts for build process (handles 300+ concurrent static pages)
-      maxPoolSize: 5, // Keep low for serverless (Netlify) compatibility
-      serverSelectionTimeoutMS: 30000, // 30 seconds (was 5s - too short for builds)
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 30000, // Add explicit connect timeout
-      family: 4, // Use IPv4, skip trying IPv6
-    };
+  if (cached.conn && mongoose.connection.readyState !== mongoose.ConnectionStates.connected) {
+    cached.conn = null;
+    cached.promise = null;
+  }
 
-    cached.promise = mongoose.connect(getMongoUri(), opts).then((mongoose) => {
-      console.log('Database connected successfully');
-      return mongoose;
-    }).catch((error) => {
-      // Reset promise on connection failure to allow retry
-      cached.promise = null;
-      console.error('Failed to connect to MongoDB:', error);
-      throw error;
+  if (!cached.promise) {
+    const attempt = connectWithRetry();
+    cached.promise = attempt;
+    attempt.catch(() => {
+      if (cached.promise === attempt) cached.promise = null;
+      cached.conn = null;
     });
   }
 
-  try {
-    cached.conn = await cached.promise;
-    
-    // Ensure all models are loaded - this is crucial for proper model registration
-    // Core Models
-    if (!mongoose.models.User) {
-      require('./models/user');
-    }
-    
-    if (!mongoose.models.Tour) {
-      require('./models/Tour');
-    }
-    
-    if (!mongoose.models.Destination) {
-      require('./models/Destination');
-    }
-    
-    if (!mongoose.models.Category) {
-      require('./models/Category');
-    }
-    
-    if (!mongoose.models.Review) {
-      require('./models/Review');
-    }
-    
-    if (!mongoose.models.Booking) {
-      require('./models/Booking');
-    }
-    
-    if (!mongoose.models.Blog) {
-      require('./models/Blog');
-    }
-    
-    // New Models
-    if (!mongoose.models.AttractionPage) {
-      require('./models/AttractionPage');
-    }
-    
-    if (!mongoose.models.Discount) {
-      require('./models/Discount');
-    }
-    
-    if (!mongoose.models.Job) {
-      require('./models/Job');
-    }
-    
-    if (!mongoose.models.Otp) {
-      require('./models/Otp');
-    }
-
-    // Log loaded models for debugging (optional - remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      const modelNames = Object.keys(mongoose.models);
-      console.log('Loaded models:', modelNames.join(', '));
-    }
-    
-  } catch (e) {
-    cached.promise = null;
-    console.error('Database connection error:', e);
-    throw e;
-  }
-
-  return cached.conn;
+  const connection = await cached.promise;
+  cached.conn = connection;
+  loadModels();
+  return connection;
 }
 
-// Helper function to check connection status
 export function getConnectionStatus() {
-  const states = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting',
-  };
-  
-  return states[mongoose.connection.readyState as keyof typeof states] || 'unknown';
+  return ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown';
 }
 
-// Helper function to close connection (useful for testing)
 export async function closeConnection() {
-  if (cached.conn) {
+  if (mongoose.connection.readyState !== mongoose.ConnectionStates.disconnected) {
     await mongoose.connection.close();
-    cached.conn = null;
-    cached.promise = null;
-    console.log('Database connection closed');
   }
+  cached.conn = null;
+  cached.promise = null;
 }
-
-// Event listeners for connection monitoring
-mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to MongoDB');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('Mongoose connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('Mongoose disconnected from MongoDB');
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  await closeConnection();
-  process.exit(0);
-});
 
 export default dbConnect;
