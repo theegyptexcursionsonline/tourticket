@@ -46,9 +46,9 @@ Tenant-scoped network APIs and existing admin permission checks remain intact.
 
 - TypeScript: passed in all three repositories
 - ESLint: passed with zero errors and zero warnings in all three repositories
-- Jest: 1,443 tests passed (646 main + 427 English network + 370 German network)
+- Jest: 1,461 tests passed (661 main + 429 English network + 371 German network)
 - Production builds: passed in all three repositories
-- New regression coverage: image metadata normalization, gallery upload order/error/retry behavior, and destination tour curation/exclusivity
+- New regression coverage: image metadata normalization, gallery upload order/error/retry behavior, destination tour curation/exclusivity, and tenant/locale-safe search result de-duplication
 
 ## Deployment and live proof
 
