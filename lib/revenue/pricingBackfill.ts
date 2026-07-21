@@ -2,6 +2,7 @@ import Availability from '@/lib/models/Availability';
 import RevenuePriceOverride from '@/lib/models/RevenuePriceOverride';
 import Tour from '@/lib/models/Tour';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
+import { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
 import { catalogueGuestPrices } from '@/lib/revenue/pricingResolver';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 
@@ -9,22 +10,54 @@ export type PricingBackfillResult = {
   dryRun: boolean;
   toursScanned: number;
   toursKeyed: number;
+  guestPriceSetsMaterialized: number;
   legacyOverridesImported: number;
   summariesRebuilt: number;
 };
 
-export async function backfillRevenuePricing(dryRun: boolean): Promise<PricingBackfillResult> {
-  const tours = await Tour.find({ $or: [{ tenantId: 'default' }, { tenantId: null }, { tenantId: { $exists: false } }] });
+export type PricingBackfillOptions = {
+  tourIds?: string[];
+  materializeGuestPrices?: boolean;
+};
+
+export async function backfillRevenuePricing(dryRun: boolean, options: PricingBackfillOptions = {}): Promise<PricingBackfillResult> {
+  const query: Record<string, unknown> = {
+    $or: [{ tenantId: 'default' }, { tenantId: null }, { tenantId: { $exists: false } }],
+  };
+  if (options.tourIds?.length) query._id = { $in: options.tourIds };
+  const tours = await Tour.find(query);
   let keyed = 0;
+  let guestPriceSets = 0;
   let legacy = 0;
   let summaries = 0;
   for (const tour of tours) {
-    const options = ensureBookingOptionPricingKeys(String(tour._id), tour.toObject().bookingOptions);
+    const tourObject = tour.toObject();
+    let bookingOptions = ensureBookingOptionPricingKeys(String(tour._id), tourObject.bookingOptions) ?? [];
     const needsKeys = (tour.bookingOptions || []).some((option) => !option.pricingKey);
-    if (needsKeys) {
+    let revenueGuestPrices = tourObject.revenueGuestPrices;
+    let materializedForTour = 0;
+    if (options.materializeGuestPrices) {
+      const standardPrices = explicitCatalogueGuestPrices(Number(tour.discountPrice), revenueGuestPrices);
+      if (!standardPrices.verified) {
+        revenueGuestPrices = standardPrices.prices;
+        materializedForTour += 1;
+      }
+      bookingOptions = bookingOptions.map((option) => {
+        const optionPrices = explicitCatalogueGuestPrices(Number(option.price), option.guestPrices);
+        if (optionPrices.verified) return option;
+        materializedForTour += 1;
+        return { ...option, guestPrices: optionPrices.prices };
+      });
+    }
+    if (needsKeys || materializedForTour > 0) {
       // Avoid Tour post-save integrations (for example Algolia) during this data migration.
-      if (!dryRun) await Tour.updateOne({ _id: tour._id }, { $set: { bookingOptions: options } }, { runValidators: true });
-      keyed += 1;
+      if (!dryRun) {
+        const update: Record<string, unknown> = { bookingOptions };
+        if (materializedForTour > 0) update.revenueGuestPrices = revenueGuestPrices;
+        await Tour.updateOne({ _id: tour._id }, { $set: update }, { runValidators: true });
+      }
+      if (needsKeys) keyed += 1;
+      guestPriceSets += materializedForTour;
     }
     const availabilities = await Availability.find({ tour: tour._id, 'slots.price': { $ne: null } }).lean();
     for (const availability of availabilities) {
@@ -47,5 +80,12 @@ export async function backfillRevenuePricing(dryRun: boolean): Promise<PricingBa
       summaries += 1;
     }
   }
-  return { dryRun, toursScanned: tours.length, toursKeyed: keyed, legacyOverridesImported: legacy, summariesRebuilt: summaries };
+  return {
+    dryRun,
+    toursScanned: tours.length,
+    toursKeyed: keyed,
+    guestPriceSetsMaterialized: guestPriceSets,
+    legacyOverridesImported: legacy,
+    summariesRebuilt: summaries,
+  };
 }

@@ -27,24 +27,30 @@ async function run() {
   const date = new Date('2026-08-15T00:00:00.000Z');
   await Availability.create({ tour: tour._id, date, slots: [{ time: '10:00', capacity: 10, booked: 0, blocked: false, price: 140 }] });
 
-  const dryRun = await backfillRevenuePricing(true);
-  assert(dryRun.toursKeyed === 1 && dryRun.legacyOverridesImported === 1, 'Dry run did not identify the expected migration work.');
-  assert((await Tour.findById(tour._id).lean())?.bookingOptions?.every((option: any) => !option.pricingKey), 'Dry run mutated pricing keys.');
+  const scope = { tourIds: [String(tour._id)], materializeGuestPrices: true };
+  const dryRun = await backfillRevenuePricing(true, scope);
+  assert(dryRun.toursKeyed === 1 && dryRun.guestPriceSetsMaterialized === 3 && dryRun.legacyOverridesImported === 1, 'Dry run did not identify the expected migration work.');
+  const afterDryRun: any = await Tour.findById(tour._id).lean();
+  assert(afterDryRun?.bookingOptions?.every((option: any) => !option.pricingKey), 'Dry run mutated pricing keys.');
+  assert(!afterDryRun.revenueGuestPrices && afterDryRun.bookingOptions.every((option: any) => !option.guestPrices), 'Dry run mutated guest prices.');
   assert(await RevenuePriceOverride.countDocuments() === 0, 'Dry run created an override.');
 
-  const applied = await backfillRevenuePricing(false);
-  assert(applied.toursKeyed === 1 && applied.legacyOverridesImported === 1, 'Migration did not apply expected changes.');
+  const applied = await backfillRevenuePricing(false, scope);
+  assert(applied.toursKeyed === 1 && applied.guestPriceSetsMaterialized === 3 && applied.legacyOverridesImported === 1, 'Migration did not apply expected changes.');
   const migrated: any = await Tour.findById(tour._id).lean();
   const keys = migrated.bookingOptions.map((option: any) => option.pricingKey);
   assert(keys.length === 2 && new Set(keys).size === 2 && keys.every(Boolean), 'Pricing keys were not uniquely persisted.');
+  assert(migrated.revenueGuestPrices.adult === 100 && migrated.revenueGuestPrices.child === 50 && migrated.revenueGuestPrices.infant === 0, 'Standard guest-price fallback was not materialized exactly.');
+  assert(migrated.bookingOptions[0].guestPrices.adult === 120 && migrated.bookingOptions[0].guestPrices.child === 60 && migrated.bookingOptions[0].guestPrices.infant === 0, 'Shared option guest prices were not materialized exactly.');
+  assert(migrated.bookingOptions[1].guestPrices.adult === 200 && migrated.bookingOptions[1].guestPrices.child === 100 && migrated.bookingOptions[1].guestPrices.infant === 0, 'Private option guest prices were not materialized exactly.');
   // Public quote resolution intentionally rejects drafts. Publish only inside
   // this disposable local database before checking storefront parity.
   await Tour.updateOne({ _id: tour._id }, { $set: { isPublished: true } });
   const effective = await resolveEffectivePrice({ tourId: String(tour._id), optionKey: 'standard', date: '2026-08-15', time: '10:00' });
   assert(effective.version === 1 && effective.prices.adult === 140 && effective.prices.child === 70, 'Legacy override does not resolve through the public pricing authority.');
 
-  const replay = await backfillRevenuePricing(false);
-  assert(replay.toursKeyed === 0 && replay.legacyOverridesImported === 0, 'Migration replay was not idempotent.');
+  const replay = await backfillRevenuePricing(false, scope);
+  assert(replay.toursKeyed === 0 && replay.guestPriceSetsMaterialized === 0 && replay.legacyOverridesImported === 0, 'Migration replay was not idempotent.');
   const afterReplay: any = await Tour.findById(tour._id).lean();
   assert(JSON.stringify(afterReplay.bookingOptions.map((option: any) => option.pricingKey)) === JSON.stringify(keys), 'Pricing keys changed after replay.');
   assert(await RevenuePriceOverride.countDocuments() === 1, 'Migration replay duplicated overrides.');
