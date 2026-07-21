@@ -6,6 +6,7 @@ import { classifyExistingPriceExecution } from '@/lib/revenue/priceWriteIdempote
 import { normalizePriceDate, resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
 import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
 import type { PriceWrite } from '@/lib/revenue/priceWriteValidation';
+import { assertRevenuePilotCommissioningAllowed, commissioningMovementIsSafe } from '@/lib/revenue/commissioningGate';
 import type { HydratedDocument } from 'mongoose';
 export { validatePriceWrite } from '@/lib/revenue/priceWriteValidation';
 
@@ -169,14 +170,16 @@ export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string,
       return { current: await safeEffectivePrice(input), state: 'conflict' as const, reason: 'The execution ID is already bound to another idempotency key.' };
     }
     if (disposition !== 'pending') return replayExistingExecution(existing, input);
-    assertRevenuePilotTourAllowed(input.target.tourId);
+    if (input.mode === 'commissioning') assertRevenuePilotCommissioningAllowed(input);
+    else assertRevenuePilotTourAllowed(input.target.tourId);
     const acquired = await acquireExistingPending(existing, input);
     if ('result' in acquired) return acquired.result;
     intent = acquired.intent;
     current = acquired.effective;
     claimToken = acquired.claimToken;
   } else {
-    assertRevenuePilotTourAllowed(input.target.tourId);
+    if (input.mode === 'commissioning') assertRevenuePilotCommissioningAllowed(input);
+    else assertRevenuePilotTourAllowed(input.target.tourId);
     current = await resolveEffectivePrice(input.target);
     try {
       intent = await RevenuePriceExecution.create({
@@ -221,7 +224,12 @@ export async function applyPriceWrite(input: PriceWrite, idempotencyKey: string,
   }
   const configuredMovement = Number(process.env.REVENUEPILOT_MAX_WRITE_PERCENT || 5);
   const maxMovement = Math.min(Number.isFinite(configuredMovement) ? configuredMovement : 5, input.policySnapshot.maxChangePercent);
-  if (movement(current.prices, input.prices) > maxMovement) {
+  if (input.mode === 'commissioning' && !commissioningMovementIsSafe(current.prices, input.prices)) {
+    const reason = 'Commissioning movement must be non-zero and no more than 1% or $1 for every paid guest type.';
+    const receipt = await markBlocked(intent, reason, 'commissioning_movement_blocked', current.prices);
+    return { receipt: receipt.toObject(), current, state: 'blocked' as const, reason };
+  }
+  if (input.mode !== 'commissioning' && movement(current.prices, input.prices) > maxMovement) {
     const reason = `Maximum movement is ${maxMovement}%.`;
     const receipt = await markBlocked(intent, reason, 'movement_blocked', current.prices);
     return { receipt: receipt.toObject(), current, state: 'blocked' as const, reason };

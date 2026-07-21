@@ -8,7 +8,7 @@ export interface IRevenuePriceExecution extends Document {
   tenantId: string;
   recommendationId: string;
   actor: string;
-  mode: 'manual' | 'assist' | 'autopilot' | 'rollback';
+  mode: 'manual' | 'assist' | 'autopilot' | 'commissioning' | 'rollback';
   target: { tourId: Types.ObjectId; optionKey: string; date: Date; time: string };
   currency: string;
   expectedVersion: number;
@@ -45,7 +45,7 @@ const RevenuePriceExecutionSchema = new Schema<IRevenuePriceExecution>({
   tenantId: { type: String, required: true, index: true },
   recommendationId: { type: String, required: true },
   actor: { type: String, required: true },
-  mode: { type: String, enum: ['manual', 'assist', 'autopilot', 'rollback'], required: true },
+  mode: { type: String, enum: ['manual', 'assist', 'autopilot', 'commissioning', 'rollback'], required: true },
   target: {
     tourId: { type: Schema.Types.ObjectId, ref: 'Tour', required: true },
     optionKey: { type: String, required: true },

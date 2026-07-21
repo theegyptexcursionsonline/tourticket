@@ -5,6 +5,7 @@ import { applyPriceWrite, validatePriceWrite } from '@/lib/revenue/priceWrite';
 import { requireRevenueIdempotencyKey, RevenuePricingWriteError } from '@/lib/revenue/priceWriteGate';
 import { revalidatePricingPaths } from '@/lib/revenue/revalidatePricing';
 import { reconcileTourPricingProjection } from '@/lib/revenue/pricingSummary';
+import { assertRevenuePilotCommissioningAllowed } from '@/lib/revenue/commissioningGate';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,10 +15,11 @@ export async function POST(request: NextRequest) {
   const bodyText = await request.text();
   const auth = await authenticateRevenueRequest(request, bodyText, 'write');
   if (auth.response) return auth.response;
-  if (process.env.REVENUEPILOT_PRICING_API_ENABLED !== 'true') return revenueError(503, 'WRITES_DISABLED', 'RevenuePilot pricing writes are globally disabled.');
   try {
     const idempotencyKey = requireRevenueIdempotencyKey(request.headers.get('idempotency-key'));
     const input = validatePriceWrite(JSON.parse(bodyText));
+    if (input.mode === 'commissioning') assertRevenuePilotCommissioningAllowed(input);
+    else if (process.env.REVENUEPILOT_PRICING_API_ENABLED !== 'true') return revenueError(503, 'WRITES_DISABLED', 'RevenuePilot pricing writes are globally disabled.');
     if (input.tenantId !== 'default') return revenueError(403, 'TENANT_FORBIDDEN', 'This identity is scoped to EEO only.');
     await dbConnect();
     const result = await applyPriceWrite(input, idempotencyKey, bodyText);

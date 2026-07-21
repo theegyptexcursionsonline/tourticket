@@ -13,10 +13,15 @@ describe('RevenuePilot pricing readiness posture', () => {
     delete process.env.REVENUEPILOT_HMAC_SCOPES;
     delete process.env.REVENUEPILOT_ALLOWED_TOUR_IDS;
     delete process.env.CRON_SECRET;
+    delete process.env.REVENUEPILOT_COMMISSIONING_ENABLED;
+    delete process.env.REVENUEPILOT_COMMISSIONING_CONFIRMATION;
+    delete process.env.REVENUEPILOT_COMMISSIONING_TARGET;
+    delete process.env.REVENUEPILOT_COMMISSIONING_NOT_AFTER;
     process.env.REVENUEPILOT_PRICING_API_ENABLED = 'false';
     const result = revenuePilotPricingReadiness(process.env);
     expect(result).toEqual({
       status: 'disabled',
+      commissioningStatus: 'disabled',
       productionCanaryPrerequisitesConfigured: false,
       checks: {
         pricingApiEnabled: false,
@@ -29,6 +34,9 @@ describe('RevenuePilot pricing readiness posture', () => {
         exactOneTourCanaryConfigured: false,
         maximumMovementSafe: true,
         pricingProjectionRecoveryConfigured: false,
+        commissioningRequested: false,
+        commissioningExactTargetConfigured: false,
+        commissioningWindowActive: false,
       },
     });
     expect(JSON.stringify(result)).not.toContain(tourId);

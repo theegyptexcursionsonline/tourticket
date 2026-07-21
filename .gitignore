@@ -70,6 +70,7 @@ Thumbs.db
 *.md
 !docs/PUBLIC_INTEGRITY.md
 !docs/FIREBASE_CREDENTIALS.md
+!docs/REVENUEPILOT_COMMISSIONING.md
 
 # Local Netlify folder
 .netlify
