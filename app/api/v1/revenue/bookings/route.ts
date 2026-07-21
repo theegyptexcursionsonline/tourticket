@@ -6,6 +6,7 @@ import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { authenticateRevenueRequest } from '@/lib/revenue/machineResponse';
 import mongoose from 'mongoose';
+import { revenueBookingCurrency } from '@/lib/revenue/bookingContract';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ tenantId: 'default', bookings: rows.map((row) => ({
     id: String(row._id), tourId: String(row.tour), date: new Date(row.date).toISOString().slice(0, 10), time: row.time,
     guests: { adult: row.adultGuests || 0, child: row.childGuests || 0, infant: row.infantGuests || 0 },
-    totalPrice: row.totalPrice, currency: row.currency, status: row.status,
+    totalPrice: row.totalPrice, currency: revenueBookingCurrency(row.currency), status: row.status,
     optionKey: row.selectedBookingOption?.pricingKey || null, bookedAt: row.createdAt, updatedAt: row.updatedAt,
   })), nextCursor: rows.length === limit ? { updatedSince: rows.at(-1)?.updatedAt, afterId: String(rows.at(-1)?._id) } : null }, { headers: { 'Cache-Control': 'no-store' } });
 }
