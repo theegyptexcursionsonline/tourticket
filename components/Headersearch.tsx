@@ -13,7 +13,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
-import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
+import { filterTourSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import 'instantsearch.css/themes/satellite.css';
 import type { SearchHit } from './componentTypes';
 
@@ -393,7 +393,11 @@ function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const tenantHits = filterSearchHitsByTenant(hits as unknown as SearchHit[], DEFAULT_SEARCH_TENANT);
+  const tenantHits = filterTourSearchHitsByTenant(
+    hits as unknown as SearchHit[],
+    DEFAULT_SEARCH_TENANT,
+    'en'
+  );
   const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;

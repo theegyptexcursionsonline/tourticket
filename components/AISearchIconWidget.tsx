@@ -6,6 +6,7 @@ import { Sparkles, X, Search, ChevronUp, MapPin, Clock, AlertCircle, Compass, Ta
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { filterTourSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import Image from 'next/image';
 import type { SearchHit } from './componentTypes';
 import 'instantsearch.css/themes/satellite.css';
@@ -17,6 +18,7 @@ const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technol
 const INDEX_DESTINATIONS = 'destinations';
 const INDEX_CATEGORIES = 'categories';
 const INDEX_BLOGS = 'blogs';
+const DEFAULT_SEARCH_TENANT = 'default';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 
@@ -54,7 +56,12 @@ function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
 // Custom Hits components (same as main AISearchWidget)
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const limitedHits = hits.slice(0, limit);
+  const tenantHits = filterTourSearchHitsByTenant(
+    hits as unknown as SearchHit[],
+    DEFAULT_SEARCH_TENANT,
+    'en'
+  );
+  const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
 
@@ -66,7 +73,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             <MapPin className="w-3 md:w-3.5 h-3 md:h-3.5 text-white" strokeWidth={2.5} />
           </div>
           <span className="text-[11px] md:text-xs font-semibold text-gray-700 tracking-wide">Tours</span>
-          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{hits.length}</span>
+          <span className="ml-auto text-[10px] md:text-xs font-medium text-gray-400 bg-gray-100/80 backdrop-blur-sm px-2 md:px-2.5 py-0.5 md:py-1 rounded-full">{tenantHits.length}</span>
         </div>
       </div>
       {(limitedHits as unknown as SearchHit[]).map((hit, index) => (

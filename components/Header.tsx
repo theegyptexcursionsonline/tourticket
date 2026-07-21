@@ -46,7 +46,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
-import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
+import {
+  filterSearchHitsByTenant,
+  filterTourSearchHitsByTenant,
+} from '@/lib/tenantSearchHitFilter';
 import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
@@ -137,7 +140,11 @@ function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const { hits } = useHits();
-  const tenantHits = filterSearchHitsByTenant(hits as unknown as SearchHit[], DEFAULT_SEARCH_TENANT);
+  const tenantHits = filterTourSearchHitsByTenant(
+    hits as unknown as SearchHit[],
+    DEFAULT_SEARCH_TENANT,
+    'en'
+  );
   const limitedHits = tenantHits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -621,9 +628,10 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
       : isRecord(value) && Array.isArray(value.hits)
         ? value.hits
         : [value];
-    const tours = filterSearchHitsByTenant(
+    const tours = filterTourSearchHitsByTenant(
       candidates.filter(isSearchHit),
-      DEFAULT_SEARCH_TENANT
+      DEFAULT_SEARCH_TENANT,
+      'en'
     ).filter((item) => item.title && item.slug);
 
     if (tours.length > 0) return <TourSlider tours={tours} />;

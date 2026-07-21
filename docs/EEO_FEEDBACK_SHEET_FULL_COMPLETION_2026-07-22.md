@@ -18,7 +18,7 @@ Scope: Main EEO, English network, and German network
 11. Added and publicly rendered `Need to know` content.
 12. Cleaned the tour overview into a full-width readable content block inside the main detail column.
 13. New catalogue/category records save and appear on the storefront through cache invalidation.
-14. Search-result tour links are built from the valid storefront route and no longer produce the reported 404 path.
+14. Search-result tour links use the valid storefront route; translated duplicate records collapse by slug and non-English orphan hits are excluded from English results.
 15. Destination `Best Deals` and `Top 10` are independently curated, mutually exclusive, limited to their intended counts, persisted, and rendered in the selected order.
 16. Added clearer field names and helper text throughout destination editing.
 17. Destination hero/gallery, practical information, FAQs, tips, and curated-tour changes render publicly after save.

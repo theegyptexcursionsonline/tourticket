@@ -14,7 +14,10 @@ import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useTranslations } from 'next-intl';
 import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
-import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
+import {
+  filterSearchHitsByTenant,
+  filterTourSearchHitsByTenant,
+} from '@/lib/tenantSearchHitFilter';
 import { shouldRenderAISearchWidgetForHost } from '@/lib/aiSearchWidgetHosts';
 import Image from 'next/image';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type EeoWindow, type SearchHit } from './componentTypes';
@@ -782,7 +785,7 @@ export default function AISearchWidget() {
         }]);
         const firstResult = response.results[0] as SearchResponse<SearchHit>;
         if (firstResult?.hits && firstResult.hits.length > 0) {
-          setFeaturedTours(filterSearchHitsByTenant(firstResult.hits, DEFAULT_SEARCH_TENANT));
+          setFeaturedTours(filterTourSearchHitsByTenant(firstResult.hits, DEFAULT_SEARCH_TENANT, 'en'));
         } else {
           // Fallback: fetch any tours if no featured tours
           const fallbackResponse = await searchClient.search([{
@@ -793,7 +796,9 @@ export default function AISearchWidget() {
             }
           }]);
           const fallbackResult = fallbackResponse.results[0] as SearchResponse<SearchHit>;
-          setFeaturedTours(filterSearchHitsByTenant(fallbackResult?.hits || [], DEFAULT_SEARCH_TENANT));
+          setFeaturedTours(
+            filterTourSearchHitsByTenant(fallbackResult?.hits || [], DEFAULT_SEARCH_TENANT, 'en')
+          );
         }
       } catch (error) {
         console.error('Error fetching featured tours:', error);
@@ -964,7 +969,11 @@ export default function AISearchWidget() {
               }
             }]);
             let firstResult = response.results[0] as SearchResponse<SearchHit>;
-            let scopedHits = filterSearchHitsByTenant(firstResult?.hits || [], DEFAULT_SEARCH_TENANT);
+            let scopedHits = filterTourSearchHitsByTenant(
+              firstResult?.hits || [],
+              DEFAULT_SEARCH_TENANT,
+              'en'
+            );
 
             // If no results, try with just keywords
             if (scopedHits.length === 0) {
@@ -977,7 +986,11 @@ export default function AISearchWidget() {
                 }
               }]);
               firstResult = response.results[0] as SearchResponse<SearchHit>;
-              scopedHits = filterSearchHitsByTenant(firstResult?.hits || [], DEFAULT_SEARCH_TENANT);
+              scopedHits = filterTourSearchHitsByTenant(
+                firstResult?.hits || [],
+                DEFAULT_SEARCH_TENANT,
+                'en'
+              );
             }
 
             return scopedHits[0];
@@ -1092,7 +1105,11 @@ export default function AISearchWidget() {
       : isRecord(value) && Array.isArray(value.hits)
         ? value.hits
         : [value];
-    const tours = filterSearchHitsByTenant(candidates.filter(isSearchHit), DEFAULT_SEARCH_TENANT)
+    const tours = filterTourSearchHitsByTenant(
+      candidates.filter(isSearchHit),
+      DEFAULT_SEARCH_TENANT,
+      'en'
+    )
       .filter((item) => item.title && item.slug);
     if (tours.length > 0) return <TourSlider tours={tours} />;
 
