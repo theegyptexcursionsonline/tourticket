@@ -4,8 +4,15 @@
  * These tests require a running server (dev or production).
  * They validate HTTP-level behavior: status codes, headers, response shapes.
  *
- * Run with: pnpm test:api
- * Skips automatically if no server is running on the configured port.
+ * Deliberately excluded from `pnpm test` / `pnpm test:unit` — a cold checkout has
+ * no server, and failing there would say nothing about the code. Run explicitly:
+ *
+ *   pnpm dev            # or point TEST_BASE_URL at an already-running deploy
+ *   pnpm test:api
+ *
+ * CI runs it against `pnpm start` (see .github/workflows). When the server is
+ * unreachable this suite FAILS rather than skipping — a green `pnpm test:api`
+ * has to mean the endpoints were really exercised.
  */
 import supertest from 'supertest';
 
@@ -17,8 +24,12 @@ beforeAll(async () => {
   try {
     const res = await request.get('/').timeout(5000);
     if (res.status >= 500) throw new Error(`Server returned HTTP ${res.status}`);
-  } catch {
-    throw new Error(`Required API test server is not available at ${BASE_URL}`);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Required API test server is not available at ${BASE_URL} (${reason}). ` +
+        'Start one with `pnpm dev`, or set TEST_BASE_URL to a running deploy, then re-run `pnpm test:api`.',
+    );
   }
 });
 
