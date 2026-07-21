@@ -74,6 +74,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get('q') || '').trim();
+    if (q.length > 100) {
+      return NextResponse.json({ success: false, error: 'Search is too long' }, { status: 400 });
+    }
     const kind = (searchParams.get('kind') || 'all') as PageKind | 'all';
     const status = searchParams.get('status') || 'all';
     const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get('limit')) || 20));

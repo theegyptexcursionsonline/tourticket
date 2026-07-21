@@ -13,6 +13,7 @@ import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefr
 const ADMIN_TOUR_LIST_PROJECTION = [
   'title',
   'slug',
+  'urlType',
   'price',
   'originalPrice',
   'discountPrice',

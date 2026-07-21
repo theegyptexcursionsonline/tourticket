@@ -22,6 +22,12 @@ import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
+import {
+  bindTimeSlotsToOption,
+  findSelectedBookingOption,
+  isSelectedTimeSlot,
+  nextAddOnSelectionQuantity,
+} from '@/lib/bookings/bookingSelection';
 
 // Enhanced Types with database compatibility
 interface Tour {
@@ -103,6 +109,7 @@ interface BookingOption {
 
 interface TimeSlot {
   id: string;
+  optionId?: string;
   time: string;
   available: number;
   price: number;
@@ -746,7 +753,7 @@ const TourOptionCard: React.FC<{
 
         <div className="grid grid-cols-1 gap-2">
           {option.timeSlots.map(timeSlot => {
-            const isSelected = selectedTimeSlot?.id === timeSlot.id;
+            const isSelected = isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id);
             const isLowAvailability = timeSlot.available <= 3;
             const isSoldOut = timeSlot.available === 0;
 
@@ -829,13 +836,11 @@ const AddOnCard: React.FC<{
   quantity: number;
   onQuantityChange: (id: string, quantity: number) => void;
   guestCount: number;
-}> = ({ addOn, quantity, onQuantityChange, guestCount }) => {
+}> = ({ addOn, quantity, onQuantityChange, guestCount: _guestCount }) => {
   const { formatPrice } = useSettings();
   const IconComponent = addOn.icon || Gift;
   const isSelected = quantity > 0;
   
-  const calculatedQuantity = addOn.perGuest ? guestCount : quantity;
-
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Photography': return 'from-purple-400 to-pink-400';
@@ -847,7 +852,7 @@ const AddOnCard: React.FC<{
   };
 
   const handleToggle = () => {
-    onQuantityChange(addOn.id, isSelected ? 0 : calculatedQuantity);
+    onQuantityChange(addOn.id, nextAddOnSelectionQuantity(quantity));
   };
 
   return (
@@ -1070,8 +1075,9 @@ const BookingSummaryCard: React.FC<{
 
         {/* Selected Tour Option */}
         {(() => {
-          const selectedOption = availability?.tourOptions.find(option =>
-            option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+          const selectedOption = findSelectedBookingOption(
+            availability?.tourOptions,
+            bookingData.selectedTimeSlot,
           );
           
           if (selectedOption) {
@@ -1464,7 +1470,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: option.duration || tourDisplayData?.duration || '3 hours',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
-            timeSlots: baseTimeSlots.map((slot: TimeSlot) => ({
+            timeSlots: bindTimeSlotsToOption(optionId, baseTimeSlots).map((slot: TimeSlot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
@@ -1495,7 +1501,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: tourDisplayData?.duration || '3 hours',
             languages: tourDisplayData?.languages || ['English'],
             description: 'Perfect introduction to the destination with expert guide',
-            timeSlots: baseTimeSlots.map((slot) => ({
+            timeSlots: bindTimeSlotsToOption(fallbackOptionId, baseTimeSlots).map((slot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
@@ -1570,8 +1576,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     if (bookingData.selectedTimeSlot) {
       basePrice = bookingData.selectedTimeSlot.price;
       
-      const selectedOption = availability?.tourOptions.find(option =>
-        option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+      const selectedOption = findSelectedBookingOption(
+        availability?.tourOptions,
+        bookingData.selectedTimeSlot,
       );
       
       originalBasePrice = bookingData.selectedTimeSlot.originalPrice ||
@@ -1782,7 +1789,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
     let effectiveSlot = timeSlot;
     try {
-      const selectedOption = availability?.tourOptions.find((option) => option.timeSlots.some((slot) => slot.id === timeSlot.id));
+      const selectedOption = findSelectedBookingOption(availability?.tourOptions, timeSlot);
       const tourId = tour._id || tour.id;
       if (selectedOption && selectedOption.id !== 'standard-default' && !selectedOption.pricingKey) {
         throw new Error('This booking option is awaiting a pricing-key migration. Please choose another option or contact support.');
@@ -1890,8 +1897,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     );
 
     try {
-      const selectedOption = availability?.tourOptions.find(option =>
-        option.timeSlots?.some(slot => slot.id === bookingData.selectedTimeSlot?.id)
+      const selectedOption = findSelectedBookingOption(
+        availability?.tourOptions,
+        bookingData.selectedTimeSlot,
       );
 
       if (!selectedOption && !tourDisplayData) {

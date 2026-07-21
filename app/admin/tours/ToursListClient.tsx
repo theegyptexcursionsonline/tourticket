@@ -25,6 +25,8 @@ import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
 import { TourActions } from './TourActions';
 import Link from 'next/link';
+import { contentPath } from '@/lib/content/contentUrl';
+import { storefrontPreviewUrl } from '@/lib/admin/storefrontPreviewUrl';
 
 type CategoryRef = { name?: string; title?: string } | null;
 
@@ -32,6 +34,8 @@ type TourType = {
   _id: string;
   title?: string;
   name?: string;
+  slug?: string;
+  urlType?: string;
   image?: string;
   images?: string[];
   destination?: { name?: string } | null;
@@ -123,6 +127,14 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
     const queryString = params.toString();
     return `/admin/tours/edit/${tourId}${queryString ? `?returnTo=${encodeURIComponent(`/admin/tours?${queryString}`)}` : ''}`;
   };
+
+  const getPreviewUrl = (tour: TourType) => storefrontPreviewUrl(
+    contentPath('tour', tour.slug || '', tour.urlType),
+    {
+      configuredBaseUrl: process.env.NEXT_PUBLIC_BASE_URL,
+      adminOrigin: typeof window !== 'undefined' ? window.location.origin : null,
+    },
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -411,7 +423,20 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                       <span className="text-sm font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <TourActions tourId={t._id} />
+                      <div className="flex items-center justify-end gap-2">
+                        {t.slug && (
+                          <a
+                            href={getPreviewUrl(t)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
+                            title="Open public tour"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </a>
+                        )}
+                        <TourActions tourId={t._id} />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -501,6 +526,18 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                     <TourActions tourId={t._id} />
                   </div>
                 </div>
+
+                {t.slug && (
+                  <a
+                    href={getPreviewUrl(t)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>View public tour</span>
+                  </a>
+                )}
 
                 {/* Duration and Date */}
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100">
