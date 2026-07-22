@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { Calendar, Clock, User, Tag, Eye, Heart, Search, Filter } from 'lucide-react';
 import { IBlog } from '@/lib/models/Blog';
+import { imageMetadataFor } from '@/lib/content/imageMetadata';
 
 // Extend IBlog with virtual fields from the Mongoose schema
 interface BlogWithVirtuals extends IBlog {
@@ -24,7 +25,8 @@ const BlogCard = ({ blog }: { blog: BlogWithVirtuals }) => (
     <div className="relative h-64 overflow-hidden">
       <Image
         src={blog.featuredImage}
-        alt={blog.title}
+        alt={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).alt}
+        title={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).title}
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-110"
       />
@@ -104,7 +106,8 @@ const FeaturedBlogCard = ({ blog }: { blog: BlogWithVirtuals }) => (
   <Link href={`/blog/${blog.slug}`} className="group block relative h-96 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300">
     <Image
       src={blog.featuredImage}
-      alt={blog.title}
+      alt={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).alt}
+      title={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).title}
       fill
       className="object-cover transition-transform duration-500 group-hover:scale-105"
     />

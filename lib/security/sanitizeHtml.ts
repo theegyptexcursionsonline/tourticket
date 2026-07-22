@@ -22,7 +22,7 @@ export function sanitizeRichHtml(value: unknown): string {
     allowedAttributes: {
       '*': ['class', 'id', 'title', 'dir', 'lang'],
       a: ['href', 'target', 'rel', 'aria-label'],
-      img: ['src', 'alt', 'width', 'height', 'loading'],
+      img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
       iframe: ['src', 'title', 'width', 'height', 'allow', 'allowfullscreen', 'loading'],
       th: ['colspan', 'rowspan', 'scope'],
       td: ['colspan', 'rowspan'],

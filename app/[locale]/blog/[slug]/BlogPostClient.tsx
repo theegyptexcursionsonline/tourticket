@@ -25,6 +25,7 @@ import {
 import toast from 'react-hot-toast';
 import { useLocale } from 'next-intl';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
+import { imageMetadataFor, type ImageMetadata } from '@/lib/content/imageMetadata';
 
 interface AuthorProfile {
   name: string;
@@ -57,6 +58,7 @@ export interface BlogPost {
   content: string;
   excerpt?: string;
   featuredImage?: string;
+  imageMetadata?: ImageMetadata[];
   metaDescription?: string;
   updatedAt?: string | Date;
   category?: string;
@@ -392,7 +394,14 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
       {/* Hero */}
       <header className="relative h-[440px] md:h-[540px]">
         {blog.featuredImage ? (
-          <Image src={blog.featuredImage} alt={blog.title} fill className="object-cover" priority />
+          <Image
+            src={blog.featuredImage}
+            alt={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).alt}
+            title={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).title}
+            fill
+            className="object-cover"
+            priority
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-amber-700 to-stone-800" />
         )}
@@ -519,7 +528,13 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
                     <Link key={p._id} href={`/blog/${p.slug}`} className="snap-start shrink-0 w-64 rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
                       <div className="relative h-32 bg-slate-100">
                         {p.featuredImage ? (
-                          <Image src={p.featuredImage} alt={p.title} fill className="object-cover" />
+                          <Image
+                            src={p.featuredImage}
+                            alt={imageMetadataFor(p.featuredImage, p.imageMetadata, p.title).alt}
+                            title={imageMetadataFor(p.featuredImage, p.imageMetadata, p.title).title}
+                            fill
+                            className="object-cover"
+                          />
                         ) : null}
                       </div>
                       <div className="p-3">

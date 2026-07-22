@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { ArrowRight } from 'lucide-react';
 import { Link } from '@/i18n/routing';
+import { imageMetadataFor, type ImageMetadata } from '@/lib/content/imageMetadata';
 
 type Translation = { title?: string; excerpt?: string };
 type Post = {
@@ -11,6 +12,7 @@ type Post = {
   title: string;
   excerpt: string;
   featuredImage?: string;
+  imageMetadata?: ImageMetadata[];
   category?: string;
   readTime?: number;
   publishedAt?: string;
@@ -76,7 +78,8 @@ export default function HomeBlogSection() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={post.featuredImage}
-                    alt={title(post)}
+                    alt={imageMetadataFor(post.featuredImage, post.imageMetadata, title(post)).alt}
+                    title={imageMetadataFor(post.featuredImage, post.imageMetadata, title(post)).title}
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />

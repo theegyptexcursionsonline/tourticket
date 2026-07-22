@@ -5,6 +5,7 @@ import Blog from '@/lib/models/Blog';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { ensureImageMetadata } from '@/lib/content/imageMetadata';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const data = await request.json();
+    data.imageMetadata = ensureImageMetadata(data.imageMetadata, [data.featuredImage, ...(data.images || [])]);
     const created = await Blog.create(data);
     revalidateStorefrontContent();
     return NextResponse.json({ success: true, data: created, message: 'Blog post created' }, { status: 201 });

@@ -95,7 +95,7 @@ async function getBlogPost(slug: string) {
   })
     .limit(8)
     .sort({ publishedAt: -1 })
-    .select('title slug excerpt featuredImage author publishedAt readTime')
+    .select('title slug excerpt featuredImage imageMetadata author publishedAt readTime')
     .lean();
 
   // Relevant bookable tours for the "Tours you'll love" section: match by the

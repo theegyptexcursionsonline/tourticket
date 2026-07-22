@@ -17,7 +17,7 @@ export async function GET() {
     const docs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
       .sort({ featured: -1, publishedAt: -1 })
       .limit(6)
-      .select('slug title excerpt featuredImage category readTime publishedAt translations')
+      .select('slug title excerpt featuredImage imageMetadata category readTime publishedAt translations')
       .lean();
 
     const posts = (docs as unknown as Record<string, unknown>[]).map((d) => {
@@ -30,6 +30,7 @@ export async function GET() {
         title: d.title,
         excerpt: d.excerpt,
         featuredImage: d.featuredImage,
+        imageMetadata: d.imageMetadata,
         category: d.category,
         readTime: d.readTime,
         publishedAt: d.publishedAt,
