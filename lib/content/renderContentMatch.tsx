@@ -4,7 +4,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { ContentMatch } from '@/lib/content/resolveContentBySlug';
-import { localizedContentPath } from '@/lib/content/contentUrl';
+import { contentPath } from '@/lib/content/contentUrl';
 import { renderTourDetail, getTourMetadata } from '@/app/[locale]/[slug]/TourDetailContent';
 import {
   renderDestinationDetail,
@@ -41,7 +41,10 @@ export async function getContentMatchMetadata(
   match: ContentMatch,
   locale: string
 ): Promise<Metadata | null> {
-  const canonicalPath = localizedContentPath(match.type, match.slug, match.urlType, locale, match.citySlug);
+  // Locale-less on purpose: metadataAlternates() localizes the canonical and
+  // hreflang set itself — passing a locale-prefixed path doubled the locale
+  // (/de/de/…) on every non-default-locale detail page.
+  const canonicalPath = contentPath(match.type, match.slug, match.urlType, match.citySlug);
   switch (match.type) {
     case 'tour':
       return getTourMetadata(match.slug, locale, canonicalPath);
