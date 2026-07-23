@@ -26,6 +26,7 @@ import toast from 'react-hot-toast';
 import { useLocale } from 'next-intl';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 import { imageMetadataFor, type ImageMetadata } from '@/lib/content/imageMetadata';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface AuthorProfile {
   name: string;
@@ -225,7 +226,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
 /* ---------- Small Tour Card used in sidebar CTA ---------- */
 function MiniTourCard({ tour }: { tour: TourPreview }) {
   return (
-    <Link href={tour?.slug ? `/tour/${tour.slug}` : '#'} className="flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
+    <Link href={tour?.slug ? contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType) : '#'} className="flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
       <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
         {tour?.image ? (
           <Image src={tour.image} alt={tour.title} fill className="object-cover" />

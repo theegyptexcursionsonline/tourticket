@@ -26,6 +26,7 @@ import Image from 'next/image';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface BookingUser {
   _id: string;
@@ -812,7 +813,7 @@ const UserBookingDetailPage = () => {
         {booking.tour.slug && (
           <div className="mt-6">
             <button
-              onClick={() => router.push(`/tour/${booking.tour.slug}`)}
+              onClick={() => booking.tour.slug && router.push(contentPath('tour', booking.tour.slug, (booking.tour as { urlType?: string }).urlType))}
               className="w-full px-6 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-sm"
             >
               View Tour Details

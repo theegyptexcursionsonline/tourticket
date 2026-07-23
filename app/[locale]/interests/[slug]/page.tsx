@@ -7,6 +7,7 @@ import CollectionSchema from '@/components/schema/CollectionSchema';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import type { Category as CategoryData, Review, Tour } from '@/types';
+import { contentPath } from '@/lib/content/contentUrl';
 
 // Types
 interface InterestPageProps {
@@ -132,7 +133,7 @@ export default async function Page(props: InterestPageProps) {
         name={interest.name}
         description={interest.description}
         url={`/interests/${params.slug}`}
-        items={interest.tours.map((tour) => ({ name: tour.title, url: `/tour/${tour.slug}`, image: tour.image }))}
+        items={interest.tours.map((tour) => ({ name: tour.title, url: contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType), image: tour.image }))}
       />
       <Header startSolid />
       <InterestLandingPage interest={interest} />

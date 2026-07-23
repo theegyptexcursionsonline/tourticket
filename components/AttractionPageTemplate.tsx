@@ -11,6 +11,7 @@ import {
 import { CategoryPageData, Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import type { LinkedPageCardData } from '@/components/AttractionLandingPage';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface AttractionPageTemplateProps {
   page: CategoryPageData;
@@ -29,7 +30,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
       transition={{ delay: index * 0.1 }}
     >
       <Link
-        href={`/tour/${tour.slug}`}
+        href={contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}
         className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
       >
         <div className="relative h-48 overflow-hidden">
@@ -140,7 +141,7 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
     >
-      <Link href={`/tour/${tour.slug}`} className="group">
+      <Link href={contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)} className="group">
         <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-6">
           <div className="relative w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
             <Image

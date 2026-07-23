@@ -15,6 +15,7 @@ import {
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { contentPath } from '@/lib/content/contentUrl';
 
 export async function getCategoryMetadata(slug: string, locale: string): Promise<Metadata | null> {
   await dbConnect();
@@ -247,7 +248,7 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
         url={`/categories/${slug}`}
         items={categoryTours.map((tour) => ({
           name: String(tour.title || ''),
-          url: `/tour/${String(tour.slug || '')}`,
+          url: contentPath('tour', String(tour.slug || ''), (tour as { urlType?: string }).urlType),
           image: typeof tour.image === 'string' ? tour.image : undefined,
         }))}
       />

@@ -14,6 +14,7 @@ import {
   readBoundedJson,
 } from '@/lib/security/publicInput';
 import { isClaimableGuestProfile } from '@/lib/auth/guestProfileClaim';
+import { contentPath } from '@/lib/content/contentUrl';
 
 export async function POST(request: NextRequest) {
   try {
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
         title: tour.title,
         image: tour.images?.[0] || `${baseUrl}/pyramid.png`,
         price: tour.discountPrice ? `From $${tour.discountPrice}` : 'From $99',
-        link: `${baseUrl}/tour/${tour.slug}`
+        link: `${baseUrl}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`
       }));
 
       // Fallback if no tours found

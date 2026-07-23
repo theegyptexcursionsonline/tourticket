@@ -1,6 +1,7 @@
 // Place + TouristDestination schema for destination detail pages
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
+import { contentPath } from '@/lib/content/contentUrl';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
 
@@ -48,7 +49,7 @@ export default function DestinationSchema({ name, slug, description, image, coun
         containsPlace: tours.slice(0, 10).map((t) => ({
           '@type': 'TouristAttraction',
           name: t.title,
-          url: `${BASE_URL}/tour/${t.slug}`,
+          url: `${BASE_URL}${contentPath('tour', t.slug, (t as { urlType?: string }).urlType)}`,
           image: t.image,
         })),
       },
@@ -62,7 +63,7 @@ export default function DestinationSchema({ name, slug, description, image, coun
               itemListElement: tours.slice(0, 20).map((t, i) => ({
                 '@type': 'ListItem',
                 position: i + 1,
-                url: `${BASE_URL}/tour/${t.slug}`,
+                url: `${BASE_URL}${contentPath('tour', t.slug, (t as { urlType?: string }).urlType)}`,
                 name: t.title,
                 image: t.image,
               })),

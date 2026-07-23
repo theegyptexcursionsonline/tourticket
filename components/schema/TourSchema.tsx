@@ -1,6 +1,7 @@
 // TourProduct + Event + Offer + AggregateRating + Review + ImageObject schema for tour detail pages
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
+import { contentPath } from '@/lib/content/contentUrl';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
 const SCHEMA_START_DATE = new Date().toISOString().split('T')[0];
@@ -46,7 +47,7 @@ interface Props {
 
 export default function TourSchema({ tour, reviews = [] }: Props) {
   const price = tour.discountPrice || tour.originalPrice || 0;
-  const tourUrl = `${BASE_URL}/tour/${tour.slug}`;
+  const tourUrl = `${BASE_URL}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`;
   const destName = typeof tour.destination === 'object' ? tour.destination?.name : tour.destination;
   const catName = typeof tour.category === 'object' ? tour.category?.name : tour.category;
 

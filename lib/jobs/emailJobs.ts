@@ -4,6 +4,7 @@ import Booking, { type IBooking } from '@/lib/models/Booking';
 import Tour, { type ITour } from '@/lib/models/Tour';
 import User, { type IUser } from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
+import { contentPath } from '@/lib/content/contentUrl';
 
 type PopulatedBooking = Omit<IBooking, 'tour' | 'user'> & {
   tour: ITour;
@@ -138,7 +139,7 @@ export async function sendTripCompletionEmails() {
           customerEmail: booking.user.email,
           tourTitle: booking.tour.title,
           bookingDate: formatBookingDate(booking.date),
-          reviewLink: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/${booking.tour.slug}?review=true`,
+          reviewLink: `${process.env.NEXT_PUBLIC_BASE_URL}${contentPath('tour', booking.tour.slug, (booking.tour as { urlType?: string }).urlType)}?review=true`,
           photoSharingLink: `${process.env.NEXT_PUBLIC_BASE_URL}/share-photos/${booking._id}`,
           recommendedTours: [
             {

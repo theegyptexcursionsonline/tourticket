@@ -29,6 +29,7 @@ import { useNavData } from '@/contexts/NavDataContext';
 import { useLocale } from 'next-intl';
 import type { SearchHit } from './componentTypes';
 import { tourSearchHref } from '@/lib/search/tourSearchHref';
+import { contentPath } from '@/lib/content/contentUrl';
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
 
@@ -573,7 +574,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
             <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Tours</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {searchResults.map((tour) => (
-                <a key={tour._id} href={`/tour/${tour.slug}`} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
+                <a key={tour._id} href={contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
                   <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden relative">
                     <Image src={tour.image} alt={tour.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                   </div>

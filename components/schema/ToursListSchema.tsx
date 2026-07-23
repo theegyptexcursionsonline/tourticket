@@ -1,6 +1,7 @@
 // ItemList schema for tour listing pages — Google Things To Do
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
+import { contentPath } from '@/lib/content/contentUrl';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
 
@@ -41,13 +42,13 @@ export default function ToursListSchema({
     itemListElement: tours.map((tour, i) => ({
       '@type': 'ListItem',
       position: i + 1,
-      url: `${BASE_URL}/tour/${tour.slug}`,
+      url: `${BASE_URL}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`,
       name: tour.title,
       image: tour.image,
       item: {
         '@type': 'TouristTrip',
         name: tour.title,
-        url: `${BASE_URL}/tour/${tour.slug}`,
+        url: `${BASE_URL}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`,
         image: tour.image,
         description: tour.title,
         offers: {
