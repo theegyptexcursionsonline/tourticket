@@ -593,6 +593,16 @@ const TourOptionCard: React.FC<{
   tour: Tour; // Added tour prop
 }> = ({ option, onSelect, selectedTimeSlot, adults, childCount, tour }) => {
   const { formatPrice } = useSettings();
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [descOverflows, setDescOverflows] = useState(false);
+  const descRef = useRef<HTMLParagraphElement>(null);
+
+  // Only offer "Read more" when the clamped text is actually cut off.
+  useEffect(() => {
+    const el = descRef.current;
+    if (el) setDescOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [option.description]);
+
   const basePrice = option.price;
   const subtotal = (adults * basePrice) + (childCount * basePrice * 0.5);
   const originalSubtotal = option.originalPrice ? (adults * option.originalPrice) + (childCount * option.originalPrice * 0.5) : subtotal;
@@ -693,9 +703,37 @@ const TourOptionCard: React.FC<{
       </div>
 
       {/* Description */}
-      <p className="text-xs text-gray-700 leading-relaxed mb-2 bg-white rounded-xl px-3 py-2 border border-gray-100 line-clamp-2">
-        {option.description}
-      </p>
+      {option.description && (
+        <div className="mb-2 bg-white rounded-xl border border-gray-100">
+          <div className="relative">
+            <p
+              ref={descRef}
+              className={`text-xs text-gray-700 leading-relaxed px-3 pt-2 ${descExpanded ? 'pb-1' : 'pb-2 line-clamp-2'}`}
+            >
+              {option.description}
+            </p>
+            {!descExpanded && descOverflows && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-white to-transparent rounded-b-xl" />
+            )}
+          </div>
+          {descOverflows && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDescExpanded((prev) => !prev);
+              }}
+              className="flex items-center gap-1 px-3 pb-2 text-[11px] font-semibold text-red-600 hover:text-red-700"
+            >
+              {descExpanded ? 'Show less' : 'Read more'}
+              <ChevronDown
+                size={12}
+                className={`transition-transform ${descExpanded ? 'rotate-180' : ''}`}
+              />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Highlights */}
       {option.highlights && (
@@ -1178,6 +1216,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const [isProcessing, setIsProcessing] = useState<false | 'cart' | 'checkout'>(false);
   
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const participantsRef = useRef<HTMLDivElement>(null);
   const scrollableContentRef = useRef<HTMLDivElement>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const lastToastTimeSlotRef = useRef<string | null>(null);
@@ -2044,6 +2083,20 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
   }, [showDatePicker]);
 
+  useEffect(() => {
+    if (showParticipantsDropdown && participantsRef.current && scrollableContentRef.current) {
+      setTimeout(() => {
+        const scrollContainer = scrollableContentRef.current;
+        const elementToScrollTo = participantsRef.current;
+
+        scrollContainer!.scrollTo({
+          top: elementToScrollTo!.offsetTop,
+          behavior: 'smooth'
+        });
+      }, 150);
+    }
+  }, [showParticipantsDropdown]);
+
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -2187,7 +2240,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             </div>
 
             {/* Participants */}
-            <div className="participants-dropdown">
+            <div ref={participantsRef} className="participants-dropdown">
               <h3 className="font-semibold text-gray-800 mb-2 text-sm">2. How many participants?</h3>
               <div className="relative">
                 <motion.button
