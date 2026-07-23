@@ -24,6 +24,7 @@ interface CategoryFormData {
   name: string;
   slug: string;
   urlType: UrlType;
+  cityDestination: string;
   description: string;
   longDescription: string;
   heroImage: string;
@@ -53,6 +54,7 @@ const defaultFormData: CategoryFormData = {
   name: '',
   slug: '',
   urlType: 'default',
+  cityDestination: '',
   description: '',
   longDescription: '',
   heroImage: '',
@@ -107,7 +109,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [destinations, setDestinations] = useState<Array<{ _id: string; name: string }>>([]);
+  const [destinations, setDestinations] = useState<Array<{ _id: string; name: string; slug?: string }>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,9 +117,10 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
       .then((response) => response.json())
       .then((data) => {
         if (!cancelled && data.success && Array.isArray(data.data)) {
-          setDestinations(data.data.map((destination: { _id: unknown; name?: unknown }) => ({
+          setDestinations(data.data.map((destination: { _id: unknown; name?: unknown; slug?: unknown }) => ({
             _id: String(destination._id),
             name: String(destination.name || 'Untitled destination'),
+            slug: destination.slug ? String(destination.slug) : undefined,
           })));
         }
       })
@@ -140,6 +143,9 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
           name: category.name || '',
           slug: category.slug || '',
           urlType: (category.urlType as UrlType) || 'default',
+          cityDestination: category.cityDestination
+            ? String((category.cityDestination as { _id?: unknown })._id || category.cityDestination)
+            : '',
           description: category.description || '',
           longDescription: category.longDescription || '',
           heroImage: category.heroImage || '',
@@ -263,6 +269,11 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.urlType === 'city' && !formData.cityDestination) {
+      setError('The City URL type needs an owning city — pick one under URL Type.');
+      toast.error('Pick the owning city for the City URL type.');
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -286,6 +297,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
         travelTips: formData.travelTips.filter((item) => item.title.trim() && item.content.trim()),
         popularDestinationIds: formData.popularDestinationIds,
         keywords: Array.isArray(formData.keywords) ? formData.keywords.filter(item => item && item.trim() !== '') : [],
+        cityDestination: formData.urlType === 'city' ? formData.cityDestination || undefined : undefined,
         ...(hasTranslations ? { translations } : {}),
       };
 
@@ -441,7 +453,14 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                               <span className="text-xs font-medium text-slate-500">Preview:</span>
                               <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                {contentPath('category', formData.slug || 'your-slug', formData.urlType)}
+                                {contentPath(
+                                  'category',
+                                  formData.slug || 'your-slug',
+                                  formData.urlType,
+                                  formData.urlType === 'city'
+                                    ? destinations.find(d => d._id === formData.cityDestination)?.slug || '{destination}'
+                                    : undefined,
+                                )}
                               </span>
                             </div>
                           </div>
@@ -462,6 +481,24 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                             </div>
                             <p className="text-xs text-slate-500">Choose the public URL shape. Changing it 301-redirects the old URL.</p>
+                            {formData.urlType === 'city' && (
+                              <div className="space-y-2">
+                                <FormLabel icon={Globe}>City (destination)</FormLabel>
+                                <select
+                                  name="cityDestination"
+                                  value={formData.cityDestination}
+                                  onChange={handleChange}
+                                  className={`${inputBase} appearance-none cursor-pointer`}
+                                  required
+                                >
+                                  <option value="">Select the owning city…</option>
+                                  {destinations.map(d => (
+                                    <option key={d._id} value={d._id}>{d.name}</option>
+                                  ))}
+                                </select>
+                                <p className="text-xs text-slate-500">The category will live under this city&apos;s slug.</p>
+                              </div>
+                            )}
                           </div>
                         </div>
 

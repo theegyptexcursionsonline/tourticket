@@ -9,6 +9,7 @@ import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections'
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -102,6 +103,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Name and slug are required'
+      }, { status: 400 });
+    }
+
+    // The city URL shape needs a real owning destination to build /{city}/{slug}.
+    if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
+      return NextResponse.json({
+        success: false,
+        error: 'The City URL type requires an owning city (cityDestination).'
       }, { status: 400 });
     }
 

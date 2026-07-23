@@ -369,6 +369,7 @@ export interface AttractionPageFormData {
   pageType: 'attraction' | 'category';
   categoryId: string;
   urlType: string;
+  cityDestination: string;
   heroImage: string;
   images: string[];
   imageMetadata?: ImageMetadata[];

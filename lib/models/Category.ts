@@ -9,6 +9,7 @@ export interface ICategory extends Document {
   name: string;
   slug: string;
   urlType?: UrlType;
+  cityDestination?: mongoose.Types.ObjectId;
   description?: string;
   longDescription?: string;
   
@@ -108,6 +109,12 @@ const CategorySchema: Schema<ICategory> = new Schema({
     type: String,
     enum: URL_TYPES,
     default: 'default',
+  },
+  // Owning city for the `city` urlType (/{city}/{slug}); ignored otherwise.
+  cityDestination: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Destination',
+    required: false,
   },
   description: {
     type: String,

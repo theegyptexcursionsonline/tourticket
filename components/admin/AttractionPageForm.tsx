@@ -44,6 +44,7 @@ const defaultFormData: AttractionPageFormData = {
   pageType: 'attraction',
   categoryId: '',
   urlType: 'default',
+  cityDestination: '',
   heroImage: '',
   images: [],
   imageMetadata: [],
@@ -237,6 +238,24 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
     pageType: initialPageType,
   });
   const [categories, setCategories] = useState<Category[]>([]);
+  const [cityDestinations, setCityDestinations] = useState<Array<{ _id: string; name: string; slug?: string }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/admin/tours/destinations')
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled && data.success && Array.isArray(data.data)) {
+          setCityDestinations(data.data.map((destination: { _id: unknown; name?: unknown; slug?: unknown }) => ({
+            _id: String(destination._id),
+            name: String(destination.name || 'Untitled destination'),
+            slug: destination.slug ? String(destination.slug) : undefined,
+          })));
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -283,6 +302,9 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
           pageType: page.pageType || 'attraction',
           categoryId: typeof page.categoryId === 'object' ? page.categoryId._id : (page.categoryId || ''),
           urlType: page.urlType || 'default',
+          cityDestination: page.cityDestination
+            ? String((page.cityDestination as { _id?: unknown })._id || page.cityDestination)
+            : '',
           heroImage: page.heroImage || '',
           images: Array.isArray(page.images) ? page.images : [], // FIX: Ensure it's always an array
           imageMetadata: ensureImageMetadata(page.imageMetadata, [page.heroImage || '', ...(page.images || [])]),
@@ -444,6 +466,11 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.pageType === 'attraction' && formData.urlType === 'city' && !formData.cityDestination) {
+      setError('The City URL type needs an owning city — pick one under URL Type.');
+      toast.error('Pick the owning city for the City URL type.');
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -473,6 +500,7 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
         faqs: (cleanedData.faqs || []).filter((item) => item.question.trim() && item.answer.trim()),
         travelTips: (cleanedData.travelTips || []).filter((item) => item.title.trim() && item.content.trim()),
         keywords: Array.isArray(cleanedData.keywords) ? cleanedData.keywords.filter(item => item && item.trim() !== '') : [],
+        cityDestination: cleanedData.urlType === 'city' ? cleanedData.cityDestination || undefined : undefined,
         // Curated listings persist under their model field names
         linkedTourIds: Array.isArray(linkedTours) ? linkedTours : [],
         linkedPageIds: Array.isArray(linkedPages) ? linkedPages : [],
@@ -699,7 +727,14 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                               <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
                                 {formData.pageType === 'category'
                                   ? `/category/${formData.slug || 'your-slug'}`
-                                  : contentPath('page', formData.slug || 'your-slug', formData.urlType)}
+                                  : contentPath(
+                                      'page',
+                                      formData.slug || 'your-slug',
+                                      formData.urlType,
+                                      formData.urlType === 'city'
+                                        ? cityDestinations.find(d => d._id === formData.cityDestination)?.slug || '{destination}'
+                                        : undefined,
+                                    )}
                               </span>
                             </div>
                           </div>
@@ -753,6 +788,24 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                               </div>
                               <SmallHint>Choose the public URL shape. Changing it 301-redirects the old URL.</SmallHint>
+                              {formData.urlType === 'city' && (
+                                <div className="space-y-2">
+                                  <FormLabel icon={Globe}>City (destination)</FormLabel>
+                                  <select
+                                    name="cityDestination"
+                                    value={formData.cityDestination}
+                                    onChange={handleChange}
+                                    className={`${inputBase} appearance-none cursor-pointer`}
+                                    required
+                                  >
+                                    <option value="">Select the owning city…</option>
+                                    {cityDestinations.map(d => (
+                                      <option key={d._id} value={d._id}>{d.name}</option>
+                                    ))}
+                                  </select>
+                                  <SmallHint>The page will live under this city&apos;s slug.</SmallHint>
+                                </div>
+                              )}
                             </div>
                           )}
                           {formData.pageType === 'category' && (

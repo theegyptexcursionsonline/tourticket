@@ -66,6 +66,14 @@ export async function PUT(
     }
 
     const body = await request.json();
+
+    // The city URL shape needs a real owning destination to build /{city}/{slug}.
+    if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
+      return NextResponse.json({
+        success: false,
+        error: 'The City URL type requires an owning city (cityDestination).'
+      }, { status: 400 });
+    }
     
     // Check if slug is being changed and if it conflicts
     if (body.slug) {

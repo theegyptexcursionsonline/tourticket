@@ -6,6 +6,7 @@ import Category from '@/lib/models/Category';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import mongoose from 'mongoose';
 import {
   PageLinkValidationError,
   validateAndNormalizePageLinks,
@@ -134,6 +135,14 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     delete body.tenantId;
+
+    // The city URL shape needs a real owning destination to build /{city}/{slug}.
+    if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
+      return NextResponse.json({
+        success: false,
+        error: 'The City URL type requires an owning city (cityDestination).'
+      }, { status: 400 });
+    }
     console.log('Creating attraction page with data:', body);
     
     // Validate required fields

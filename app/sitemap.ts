@@ -133,11 +133,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Category) {
       const categories = await Category.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1, urlType: 1 }
-      ).lean();
+        { slug: 1, updatedAt: 1, urlType: 1, cityDestination: 1 }
+      ).populate('cityDestination', 'slug').lean();
 
       for (const cat of categories) {
-        const path = contentPath('category', cat.slug, cat.urlType);
+        const catCity = cat.cityDestination && typeof cat.cityDestination === 'object'
+          ? (cat.cityDestination as { slug?: string }).slug
+          : undefined;
+        const path = contentPath('category', cat.slug, cat.urlType, catCity);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: cat.updatedAt || new Date(),
@@ -193,13 +196,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (AttractionPage) {
       const attractions = await AttractionPage.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1, pageType: 1, urlType: 1 }
-      ).lean();
+        { slug: 1, updatedAt: 1, pageType: 1, urlType: 1, cityDestination: 1 }
+      ).populate('cityDestination', 'slug').lean();
 
       for (const attraction of attractions) {
+        const pageCity = attraction.cityDestination && typeof attraction.cityDestination === 'object'
+          ? (attraction.cityDestination as { slug?: string }).slug
+          : undefined;
         const path = attraction.pageType === 'category'
           ? `/category/${attraction.slug}`
-          : contentPath('page', attraction.slug, attraction.urlType);
+          : contentPath('page', attraction.slug, attraction.urlType, pageCity);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: attraction.updatedAt || new Date(),

@@ -29,6 +29,7 @@ export interface IAttractionPage extends Document {
 
   // Public URL shape (attraction pages only; category-landing pages keep /category/{slug})
   urlType?: UrlType;
+  cityDestination?: mongoose.Types.ObjectId;
 
   // Content
   heroImage?: string; // NOW OPTIONAL
@@ -149,6 +150,12 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
     type: String,
     enum: URL_TYPES,
     default: 'default',
+  },
+  // Owning city for the `city` urlType (/{city}/{slug}); ignored otherwise.
+  cityDestination: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Destination',
+    required: false,
   },
   heroImage: {
     type: String,

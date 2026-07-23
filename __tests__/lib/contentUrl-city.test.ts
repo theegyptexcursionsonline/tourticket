@@ -52,6 +52,16 @@ describe('city urlType mapping', () => {
     );
   });
 
+  it('nests categories and attraction pages under their owning city the same way', () => {
+    expect(contentPath('category', 'day-trips', 'city', 'hurghada')).toBe('/hurghada/day-trips');
+    expect(contentPath('page', 'snorkeling', 'city', 'hurghada')).toBe('/hurghada/snorkeling');
+  });
+
+  it('category/page without an owning city fall back to their default segment', () => {
+    expect(contentPath('category', 'day-trips', 'city')).toBe('/categories/day-trips');
+    expect(contentPath('page', 'snorkeling', 'city')).toBe('/attraction/snorkeling');
+  });
+
   it('city sentinel segment can never equal a fixed route segment', () => {
     expect(segmentFor('tour', 'city')).toBe(CITY_SEGMENT);
     for (const fixed of ['', 'tour', 'experience', 'destination', 'destinations', 'categories', 'attraction']) {

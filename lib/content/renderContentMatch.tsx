@@ -51,7 +51,7 @@ export async function getContentMatchMetadata(
     case 'destination':
       return getDestinationMetadata(match.slug, locale, canonicalPath);
     case 'category':
-      return getCategoryMetadata(match.slug, locale);
+      return getCategoryMetadata(match.slug, locale, canonicalPath);
     case 'page':
       return getAttractionMetadata(match.slug, locale, canonicalPath);
     default:

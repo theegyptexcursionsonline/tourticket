@@ -10,6 +10,7 @@ import { Tour as TourType, Category as CategoryType } from '@/types';
 import CategoryPageClient from './CategoryPageClient';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import {
   selectLocalizedTaxonomyEntries,
   selectLocalizedTours,
@@ -17,7 +18,7 @@ import {
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { contentPath } from '@/lib/content/contentUrl';
 
-export async function getCategoryMetadata(slug: string, locale: string): Promise<Metadata | null> {
+export async function getCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
   await dbConnect();
 
   const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER })
@@ -51,6 +52,7 @@ export async function getCategoryMetadata(slug: string, locale: string): Promise
     title: String(category.metaTitle || `${categoryName} Tours | Egypt Excursions Online`),
     description: String(category.metaDescription || categoryDescription.substring(0, 160) || `Explore ${categoryName} tours and activities`),
     keywords: Array.isArray(category.keywords) ? category.keywords.map(String).join(', ') : undefined,
+    ...(canonicalPath ? { alternates: metadataAlternates(locale, canonicalPath) } : {}),
     openGraph: {
       title: categoryName,
       description: categoryDescription.substring(0, 160),
