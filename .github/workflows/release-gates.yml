@@ -34,16 +34,18 @@ jobs:
       STRIPE_SECRET_KEY: sk_test_ci_placeholder
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.26.2
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Seed isolated CI database
+        run: node scripts/seed-ci-fixtures.mjs
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test:unit
@@ -73,18 +75,64 @@ jobs:
           mkdir -p security-artifacts
           pnpm list --prod --depth Infinity --json > security-artifacts/tourticket-dependency-tree.json
           pnpm licenses list --prod --json > security-artifacts/tourticket-licenses.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: tourticket-supply-chain
           path: security-artifacts/
           retention-days: 30
+
+  playwright:
+    name: Playwright E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      MONGODB_URI: mongodb://127.0.0.1:27017/tourticket_e2e_ci
+      NEXT_PUBLIC_BASE_URL: http://127.0.0.1:3000
+      JWT_SECRET: ci-only-jwt-secret-not-for-production-0123456789
+      REVENUEPILOT_PRICING_API_ENABLED: "false"
+      STRIPE_SECRET_KEY: sk_test_ci_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.26.2
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Seed isolated CI database
+        run: node scripts/seed-ci-fixtures.mjs
+      - name: Run browser journeys against the production build
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() }}
+        with:
+          name: tourticket-playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   source-integrity:
     name: Source integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - name: Reject whitespace errors and committed secrets

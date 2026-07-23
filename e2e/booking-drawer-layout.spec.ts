@@ -88,7 +88,7 @@ test.describe('Booking drawer overflow containment', () => {
     // Resolve a real detail URL through the scoped live-search endpoint there.
     if (!tourSlug) {
       const searchResponse = await request.get(
-        '/api/search/live?q=sharm&limit=10',
+        '/api/search/live?q=cairo&limit=10',
       );
       if (searchResponse.ok()) {
         tourSlug = firstTourSlug(await searchResponse.json());
@@ -230,6 +230,17 @@ test.describe('Booking drawer overflow containment', () => {
       await expect(footer).toBeVisible();
       // Measure stable layout, not Framer Motion's entrance transform.
       await page.waitForTimeout(1_200);
+
+      // Force a deterministic overflow condition so CI verifies the fixed
+      // header/footer contract even when the isolated tour has minimal copy.
+      await scroller.evaluate((element) => {
+        const probe = document.createElement('div');
+        probe.dataset.testid = 'forced-overflow-probe';
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.height = '600px';
+        probe.style.flex = '0 0 600px';
+        element.appendChild(probe);
+      });
 
       const scrollMetrics = await scroller.evaluate((element) => ({
         scrollHeight: element.scrollHeight,
