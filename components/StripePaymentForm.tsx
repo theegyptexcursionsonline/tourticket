@@ -35,8 +35,11 @@ interface CheckoutPricing {
   total: number;
 }
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Keep non-payment pages usable when Stripe is intentionally unavailable
+// (for example, isolated CI). Checkout renders its unavailable state instead
+// of asking Stripe.js to parse an undefined key.
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 interface PaymentFormProps {
   clientSecret: string;
