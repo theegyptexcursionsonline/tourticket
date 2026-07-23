@@ -12,10 +12,12 @@ export type ContentType = 'tour' | 'destination' | 'category' | 'page';
 
 // The URL shapes an admin can choose from. `default` keeps the item on its
 // historical path (tours at the root, destinations under /destinations, etc.)
-// so existing URLs never move unless an admin opts in.
-export type UrlType = 'default' | 'direct' | 'tour' | 'experience' | 'destination';
+// so existing URLs never move unless an admin opts in. `city` nests the item
+// under its own destination's slug (/{city}/{slug}) — tours only, since only
+// tours carry a required owning destination.
+export type UrlType = 'default' | 'direct' | 'tour' | 'experience' | 'destination' | 'city';
 
-export const URL_TYPES: UrlType[] = ['default', 'direct', 'tour', 'experience', 'destination'];
+export const URL_TYPES: UrlType[] = ['default', 'direct', 'tour', 'experience', 'destination', 'city'];
 
 // Human labels for the admin dropdown.
 export const URL_TYPE_LABELS: Record<UrlType, string> = {
@@ -24,7 +26,12 @@ export const URL_TYPE_LABELS: Record<UrlType, string> = {
   tour: '/tour/{slug}',
   experience: '/experience/{slug}',
   destination: '/destination/{slug}',
+  city: 'City  /{destination}/{slug}',
 };
+
+// Sentinel segment for the city shape — the real first segment is the item's
+// destination slug, so it can never equal a fixed route segment.
+export const CITY_SEGMENT = '{city}';
 
 // The path segment each explicit urlType maps to. '' means the root ("direct").
 const SEGMENT_FOR_URL_TYPE: Record<Exclude<UrlType, 'default'>, string> = {
@@ -32,6 +39,7 @@ const SEGMENT_FOR_URL_TYPE: Record<Exclude<UrlType, 'default'>, string> = {
   tour: 'tour',
   experience: 'experience',
   destination: 'destination',
+  city: CITY_SEGMENT,
 };
 
 // Backward-compatible segment per content type when urlType is `default` /
@@ -57,7 +65,22 @@ export function segmentFor(type: ContentType, urlType?: string | null): string {
 }
 
 // Path relative to the locale root. Always a leading slash, never a locale.
-export function contentPath(type: ContentType, slug: string, urlType?: string | null): string {
+// `citySlug` is the item's destination slug and only matters for the `city`
+// urlType; without it the item safely falls back to its default shape.
+export function contentPath(
+  type: ContentType,
+  slug: string,
+  urlType?: string | null,
+  citySlug?: string | null
+): string {
+  const t = normalizeUrlType(urlType);
+  if (t === 'city') {
+    if (citySlug) return `/${citySlug}/${slug}`;
+    // No city known at this call site — link the default shape; the detail
+    // route 301s to the city canonical.
+    const seg = DEFAULT_SEGMENT[type];
+    return seg ? `/${seg}/${slug}` : `/${slug}`;
+  }
   const seg = segmentFor(type, urlType);
   return seg ? `/${seg}/${slug}` : `/${slug}`;
 }
@@ -68,8 +91,9 @@ export function localizedContentPath(
   type: ContentType,
   slug: string,
   urlType: string | null | undefined,
-  locale: string
+  locale: string,
+  citySlug?: string | null
 ): string {
-  const path = contentPath(type, slug, urlType);
+  const path = contentPath(type, slug, urlType, citySlug);
   return locale && locale !== defaultLocale ? `/${locale}${path}` : path;
 }

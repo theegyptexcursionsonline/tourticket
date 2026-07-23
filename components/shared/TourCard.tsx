@@ -13,6 +13,7 @@ import { Category, Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useWishlist } from '@/contexts/WishlistContext';
 import toast from 'react-hot-toast';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface TourCardProps {
   tour: Tour;
@@ -101,7 +102,7 @@ const TourCard: React.FC<TourCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`/${tour.slug}`} className="block">
+      <Link href={contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType, destination?.slug)} className="block">
         <div className="bg-white rounded-2xl overflow-hidden transition-all duration-500 sm:hover:-translate-y-2 border border-slate-100">
           {/* Image Section */}
           <div className="relative h-56 overflow-hidden">

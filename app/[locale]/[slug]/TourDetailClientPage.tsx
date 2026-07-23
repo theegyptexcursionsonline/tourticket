@@ -1482,7 +1482,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
-                      <Link key={String(relatedTour._id)} href={contentPath('tour', relatedTour.slug, relatedTour.urlType)} className="group">
+                      <Link key={String(relatedTour._id)} href={contentPath('tour', relatedTour.slug, relatedTour.urlType, (relatedTour.destination as { slug?: string } | undefined)?.slug)} className="group">
                         <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                           <div className="relative">
                             <Image

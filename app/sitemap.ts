@@ -70,11 +70,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Tour) {
       const tours = await Tour.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1, urlType: 1 }
-      ).lean();
+        { slug: 1, updatedAt: 1, urlType: 1, destination: 1 }
+      ).populate('destination', 'slug').lean();
 
       for (const tour of tours) {
-        const path = contentPath('tour', tour.slug, tour.urlType);
+        const citySlug = tour.destination && typeof tour.destination === 'object'
+          ? (tour.destination as { slug?: string }).slug
+          : undefined;
+        const path = contentPath('tour', tour.slug, tour.urlType, citySlug);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: tour.updatedAt || new Date(),

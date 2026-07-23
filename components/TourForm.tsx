@@ -60,6 +60,7 @@ interface Category {
 interface Destination {
     _id: string;
     name: string;
+    slug?: string;
     duplicateIds?: string[];
     duplicateCount?: number;
     tourCount?: number;
@@ -1339,7 +1340,14 @@ const addItineraryItem = () => {
                                                 <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                                                     <span className="text-xs font-medium text-slate-500">Preview:</span>
                                                     <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                                        {contentPath('tour', formData.slug || 'your-slug', formData.urlType)}
+                                                        {contentPath(
+                                                            'tour',
+                                                            formData.slug || 'your-slug',
+                                                            formData.urlType,
+                                                            formData.urlType === 'city'
+                                                                ? destinations.find(d => d._id === formData.destination)?.slug || '{destination}'
+                                                                : undefined,
+                                                        )}
                                                     </span>
                                                 </div>
                                             </div>

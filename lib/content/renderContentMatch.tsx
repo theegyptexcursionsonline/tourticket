@@ -41,7 +41,7 @@ export async function getContentMatchMetadata(
   match: ContentMatch,
   locale: string
 ): Promise<Metadata | null> {
-  const canonicalPath = localizedContentPath(match.type, match.slug, match.urlType, locale);
+  const canonicalPath = localizedContentPath(match.type, match.slug, match.urlType, locale, match.citySlug);
   switch (match.type) {
     case 'tour':
       return getTourMetadata(match.slug, locale, canonicalPath);
