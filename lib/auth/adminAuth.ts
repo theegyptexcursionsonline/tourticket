@@ -15,11 +15,13 @@ export interface AdminAuthContext {
   email?: string;
   role: AdminRole;
   permissions: AdminPermission[];
+  twoFactorEnabled: boolean;
 }
 
 interface RequireAdminOptions {
   permissions?: AdminPermission[];
   requireAll?: boolean;
+  allowTwoFactorEnrollment?: boolean;
 }
 
 function unauthorizedResponse() {
@@ -32,6 +34,17 @@ function unauthorizedResponse() {
 function forbiddenResponse() {
   return NextResponse.json(
     { success: false, error: 'You do not have permission to perform this action.' },
+    { status: 403 },
+  );
+}
+
+function twoFactorSetupRequiredResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Two-factor authentication setup is required before using the admin portal.',
+      code: 'TWO_FACTOR_SETUP_REQUIRED',
+    },
     { status: 403 },
   );
 }
@@ -102,6 +115,7 @@ export async function requireAdminAuth(
       email: typeof payload.email === 'string' ? payload.email : undefined,
       role: 'super_admin',
       permissions: getDefaultPermissions('super_admin'),
+      twoFactorEnabled: true,
     };
 
     const { permissions = [], requireAll = true } = options;
@@ -127,7 +141,7 @@ export async function requireAdminAuth(
       isActive: true,
       role: { $ne: 'customer' },
     })
-      .select('email role permissions adminPortalScopes')
+      .select('email role permissions adminPortalScopes twoFactorEnabled')
       .lean();
   } catch (error) {
     console.error(
@@ -145,6 +159,10 @@ export async function requireAdminAuth(
     return forbiddenResponse();
   }
 
+  if (!currentUser.twoFactorEnabled && !options.allowTwoFactorEnrollment) {
+    return twoFactorSetupRequiredResponse();
+  }
+
   const role = currentUser.role as AdminRole;
   const permissionsFromDatabase =
     Array.isArray(currentUser.permissions) && currentUser.permissions.length > 0
@@ -156,6 +174,7 @@ export async function requireAdminAuth(
     email: currentUser.email,
     role,
     permissions: permissionsFromDatabase,
+    twoFactorEnabled: Boolean(currentUser.twoFactorEnabled),
   };
 
   const { permissions = [], requireAll = true } = options;

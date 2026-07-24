@@ -38,6 +38,7 @@ interface AdminPayloadSource {
   firstName: string;
   lastName: string;
   role: string;
+  twoFactorEnabled?: boolean;
 }
 
 async function recordFailedAttempt(user: IUser): Promise<Date | null> {
@@ -60,6 +61,7 @@ function buildAdminUserPayload(user: AdminPayloadSource, permissions: AdminPermi
     name: `${user.firstName} ${user.lastName}`.trim(),
     role: user.role,
     permissions,
+    twoFactorEnabled: user._id === 'env-admin' ? true : Boolean(user.twoFactorEnabled),
   };
 }
 

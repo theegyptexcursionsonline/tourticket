@@ -34,7 +34,7 @@ function isSameOriginMutation(request: NextRequest): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdminAuth(request);
+  const auth = await requireAdminAuth(request, { allowTwoFactorEnrollment: true });
   if (auth instanceof NextResponse) return auth;
 
   const user = await User.findById(auth.userId).select('twoFactorEnabled twoFactorEnabledAt').lean();
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     success: true,
     enabled: Boolean(user.twoFactorEnabled),
     enabledAt: user.twoFactorEnabledAt || null,
+    required: true,
   });
 }
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
   if (!isSameOriginMutation(request)) {
     return NextResponse.json({ success: false, error: 'Invalid request origin.' }, { status: 403 });
   }
-  const auth = await requireAdminAuth(request);
+  const auth = await requireAdminAuth(request, { allowTwoFactorEnrollment: true });
   if (auth instanceof NextResponse) return auth;
 
   const body = await request.json().catch(() => null) as {
@@ -64,6 +65,16 @@ export async function POST(request: NextRequest) {
   const code = typeof body?.code === 'string' ? body.code.trim() : '';
   if (!['setup', 'enable', 'regenerate', 'disable'].includes(action) || code.length > 64) {
     return NextResponse.json({ success: false, error: 'Invalid request.' }, { status: 400 });
+  }
+  if (action === 'disable') {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Two-factor authentication is required for every admin account and cannot be disabled.',
+        code: 'TWO_FACTOR_REQUIRED',
+      },
+      { status: 403 },
+    );
   }
 
   const user = await User.findById(auth.userId)
@@ -128,12 +139,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, recoveryCodes });
   }
 
-  user.twoFactorEnabled = false;
-  user.twoFactorSecret = undefined;
-  user.twoFactorPendingSecret = undefined;
-  user.twoFactorRecoveryCodeHashes = undefined;
-  user.twoFactorEnabledAt = undefined;
-  user.twoFactorLastUsedStep = undefined;
-  await user.save({ validateBeforeSave: false });
-  return NextResponse.json({ success: true, enabled: false });
+  return NextResponse.json({ success: false, error: 'Invalid request.' }, { status: 400 });
 }
