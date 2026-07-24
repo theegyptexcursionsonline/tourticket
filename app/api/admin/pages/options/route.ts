@@ -14,6 +14,10 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function isObjectId(value: string): boolean {
+  return /^[a-f\d]{24}$/i.test(value);
+}
+
 export async function GET(request: NextRequest) {
   const adminAuth = await requireAdminAuth(request, { permissions: ['manageContent'] });
   if (adminAuth instanceof NextResponse) return adminAuth;
@@ -32,9 +36,22 @@ export async function GET(request: NextRequest) {
     const ids = idsParam ? idsParam.split(',').filter(Boolean).slice(0, 100) : null;
 
     if (kind === 'tours') {
-      const filter: Record<string, unknown> = { ...DEFAULT_TENANT_FILTER };
-      if (ids) filter._id = { $in: ids };
-      else if (search) filter.$or = [{ title: search }, { slug: search }];
+      const filter: Record<string, unknown> = ids
+        ? { $and: [DEFAULT_TENANT_FILTER, { _id: { $in: ids } }] }
+        : search
+          ? {
+              $and: [
+                DEFAULT_TENANT_FILTER,
+                {
+                  $or: [
+                    { title: search },
+                    { slug: search },
+                    ...(isObjectId(q) ? [{ _id: q }] : []),
+                  ],
+                },
+              ],
+            }
+          : DEFAULT_TENANT_FILTER;
       const tours = await Tour.find(filter)
         .select('title slug image isPublished')
         .sort({ isFeatured: -1, rating: -1 })

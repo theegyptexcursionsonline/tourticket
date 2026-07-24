@@ -2,6 +2,7 @@
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'node:crypto';
 import { syncTourToAlgolia } from '@/lib/algolia';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
@@ -9,6 +10,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
+import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 
 const ADMIN_TOUR_LIST_PROJECTION = [
   'title',
@@ -96,6 +98,8 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
+    const tourId = randomBytes(12).toString('hex');
+    body._id = tourId;
     body.tenantId = 'default';
     delete body.$set;
     delete body.$unset;
@@ -108,7 +112,10 @@ export async function POST(request: NextRequest) {
 
     // Clean booking options to remove invalid enum values
     if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
-      body.bookingOptions = cleanBookingOptions(body.bookingOptions);
+      body.bookingOptions = ensureBookingOptionPricingKeys(
+        String(tourId),
+        cleanBookingOptions(body.bookingOptions),
+      );
     }
 
     // Clean main tour difficulty field

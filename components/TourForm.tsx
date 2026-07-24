@@ -14,6 +14,7 @@ import {
     Plus,
     Image as ImageIcon,
     Check,
+    Copy,
     Calendar,
     Clock,
     HelpCircle,
@@ -91,6 +92,7 @@ interface GuestPriceInput {
 }
 
 interface BookingOption {
+    pricingKey?: string;
     type: string;
     label: string;
     price: number | string;
@@ -554,6 +556,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 faqs: ((tourToEdit.faq || tourToEdit.faqs)?.length ?? 0) > 0 ? (tourToEdit.faq || tourToEdit.faqs)! : [{ question: '', answer: '' }],
                 bookingOptions: (tourToEdit.bookingOptions?.length ?? 0) > 0
                     ? tourToEdit.bookingOptions!.map((option: BookingOption) => ({
+                        pricingKey: option.pricingKey,
                         type: option.type || 'Per Person',
                         label: option.label || '',
                         price: option.price || 0,
@@ -2246,6 +2249,29 @@ const addItineraryItem = () => {
                                                     {/* Option Configuration */}
                                                     <div className={`overflow-hidden transition-all duration-300 ${expandedOptionIndex === index ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                                         <div className="p-6 space-y-6">
+                                                            <div className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 sm:flex-row sm:items-center">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                                                                        Option ID · RevenuePilot
+                                                                    </p>
+                                                                    <code className="mt-1 block break-all font-mono text-xs text-slate-700">
+                                                                        {option.pricingKey || 'Assigned automatically when this tour is saved'}
+                                                                    </code>
+                                                                </div>
+                                                                {option.pricingKey && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            void navigator.clipboard.writeText(option.pricingKey!);
+                                                                            toast.success('Option ID copied');
+                                                                        }}
+                                                                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                                                                    >
+                                                                        <Copy className="h-3.5 w-3.5" />
+                                                                        Copy ID
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                                 <div className="space-y-2">
                                                                     <label className="block text-sm font-medium text-slate-700">Option Name *</label>
