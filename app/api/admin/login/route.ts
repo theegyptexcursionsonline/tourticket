@@ -13,6 +13,7 @@ import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit'
 import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
 import { canAccessMainAdminPortal } from '@/lib/auth/adminPortalScope';
 import { recordLoginAudit } from '@/lib/auth/loginAudit';
+import { verifyAndConsumeUserSecondFactor } from '@/lib/auth/userSecondFactor';
 
 const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.8HtM5QX69q7OVWdfPQV3vF5wPfhJQmC';
 
@@ -64,10 +65,11 @@ function buildAdminUserPayload(user: AdminPayloadSource, permissions: AdminPermi
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, username, password } = await readBoundedJson<{
+    const { email, username, password, twoFactorCode } = await readBoundedJson<{
       email?: unknown;
       username?: unknown;
       password?: unknown;
+      twoFactorCode?: unknown;
     }>(request, 4_096);
 
     const rawIdentifier = typeof email === 'string' ? email : username;
@@ -150,7 +152,10 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await User.findOne({ email: identifier })
-      .select('+password +adminLoginAttempts +adminLockUntil');
+      .select(
+        '+password +adminLoginAttempts +adminLockUntil +twoFactorSecret '
+        + '+twoFactorRecoveryCodeHashes +twoFactorLastUsedStep',
+      );
     if (!user) {
       // Keep missing-account and wrong-password response timing comparable.
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
@@ -197,6 +202,18 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'This account is not assigned to this admin portal.' },
         { status: 403 },
       );
+    }
+
+    if (user.twoFactorEnabled) {
+      if (typeof twoFactorCode !== 'string' || !twoFactorCode.trim()) {
+        await recordLoginAudit(request.headers, identifier, 'two_factor_required');
+        return NextResponse.json({ success: true, requiresTwoFactor: true });
+      }
+      if (twoFactorCode.length > 64 || !await verifyAndConsumeUserSecondFactor(user, twoFactorCode)) {
+        const lockUntil = await recordFailedAttempt(user);
+        await recordLoginAudit(request.headers, identifier, 'wrong_second_factor');
+        return lockUntil ? lockedResponse(lockUntil) : invalidResponse();
+      }
     }
 
     const permissions =

@@ -24,6 +24,7 @@ import {
   Layout,
   ImageIcon,
   Shield,
+  ShieldCheck,
   CalendarCheck,
   Gift,
   Loader2,
@@ -47,6 +48,7 @@ const navItems = [
   { href: "/admin/blog", label: "Blog", icon: PenSquare, permissions: ["manageContent"] },
   { href: "/admin/users", label: "User", icon: Users, permissions: ["manageUsers"] },
   { href: "/admin/team", label: "Team Access", icon: Shield, permissions: ["manageUsers"] },
+  { href: "/admin/security", label: "Security", icon: ShieldCheck, permissions: [] },
 ];
 
 /** Sidebar logo — statically imported so it's always bundled */

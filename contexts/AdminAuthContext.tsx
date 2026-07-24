@@ -25,7 +25,7 @@ interface AdminAuthContextValue {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, twoFactorCode?: string) => Promise<LoginResult>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -35,6 +35,11 @@ interface AdminAuthContextValue {
 interface AdminLoginResponse {
   error?: string;
   user?: AdminUser;
+  requiresTwoFactor?: boolean;
+}
+
+interface LoginResult {
+  requiresTwoFactor: boolean;
 }
 
 const AdminAuthContext = createContext<AdminAuthContextValue | undefined>(undefined);
@@ -147,7 +152,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   }, [refreshUserWithToken]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, twoFactorCode?: string): Promise<LoginResult> => {
       setIsLoading(true);
       const startedAt = Date.now();
       const controller = new AbortController();
@@ -160,7 +165,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, username: email, password }),
+            body: JSON.stringify({ email, username: email, password, twoFactorCode }),
             signal: controller.signal,
           });
         } catch (fetchError) {
@@ -201,6 +206,10 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
           throw new Error(data?.error || `Login failed (${response.status})`);
         }
 
+        if (data.requiresTwoFactor) {
+          return { requiresTwoFactor: true };
+        }
+
         if (!data.user) {
           throw new Error('Login succeeded without an admin profile');
         }
@@ -215,6 +224,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
 
         persistSession(normalizedUser);
         toast.success('Welcome back!');
+        return { requiresTwoFactor: false };
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : 'Failed to log in');
         throw error;

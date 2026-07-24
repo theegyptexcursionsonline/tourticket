@@ -77,6 +77,12 @@ export interface IUser extends Document {
   invitationExpires?: Date;
   requirePasswordChange?: boolean;
   adminPortalScopes?: AdminPortalScope[];
+  twoFactorEnabled: boolean;
+  twoFactorSecret?: string;
+  twoFactorPendingSecret?: string;
+  twoFactorRecoveryCodeHashes?: string[];
+  twoFactorEnabledAt?: Date;
+  twoFactorLastUsedStep?: number;
   wishlist?: mongoose.Types.ObjectId[]; // Array of Tour IDs
   cart?: ICartItem[]; // Array of cart items
 }
@@ -186,6 +192,15 @@ const UserSchema: Schema<IUser> = new Schema({
     enum: ['main', 'multiTenant'],
     default: undefined,
   },
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  twoFactorSecret: { type: String, select: false },
+  twoFactorPendingSecret: { type: String, select: false },
+  twoFactorRecoveryCodeHashes: { type: [String], select: false, default: undefined },
+  twoFactorEnabledAt: { type: Date },
+  twoFactorLastUsedStep: { type: Number, select: false },
   createdAt: {
     type: Date,
     default: Date.now,
