@@ -42,9 +42,13 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
 
   if (!destination) return null;
 
+  // Country is optional — never let a blank one print "undefined" in the title.
+  const namePart = destination.country
+    ? `${destination.name}, ${destination.country}`
+    : String(destination.name);
   const title = destination.metaTitle
     ? String(destination.metaTitle)
-    : `${destination.name}, ${destination.country} - Tours & Activities | Egypt Excursions Online`;
+    : `${namePart} - Tours & Activities | Egypt Excursions Online`;
   const description =
     typeof destination.metaDescription === 'string'
       ? destination.metaDescription
@@ -56,7 +60,7 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
     description,
     alternates: metadataAlternates(locale, canonicalPath),
     openGraph: {
-      title: `${destination.name}, ${destination.country}`,
+      title: namePart,
       description,
       images: destination.image ? [destination.image as string] : [],
       type: 'website',
