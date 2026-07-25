@@ -17,7 +17,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
+  webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER === '1' ? undefined : {
     // Next 16's development RSC renderer overflows while serializing this
     // large page tree in both Turbopack and webpack modes. E2E should exercise
     // the same optimized runtime that is deployed, so build and start it here.

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DestinationManager from '../DestinationManager'
 import { IDestination } from '@/lib/models/Destination'
@@ -109,63 +109,76 @@ describe('DestinationManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    global.fetch = jest.fn()
+    // The component fetches /api/admin/tours on mount, so every test needs a
+    // settled default — an unresolved mock leaves that effect rejecting mid-test.
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: [] }),
+    })
   })
 
+  // The component fetches /api/admin/tours on mount. Render through this helper so
+  // that update settles inside act() instead of leaking into a later test.
+  const renderManager = async (destinations: IDestination[] = mockDestinations) => {
+    const result = render(<DestinationManager initialDestinations={destinations} />)
+    await act(async () => {})
+    return result
+  }
+
   describe('Initial Rendering', () => {
-    it('should render header with title', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should render header with title', async () => {
+      await renderManager()
 
       expect(screen.getByText('Destination Manager')).toBeInTheDocument()
       expect(screen.getByText('Manage your tour destinations and locations')).toBeInTheDocument()
     })
 
-    it('should display destination count', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should display destination count', async () => {
+      await renderManager()
 
       expect(screen.getByText('2')).toBeInTheDocument()
       expect(screen.getByText('destinations available')).toBeInTheDocument()
     })
 
-    it('should render all destination cards', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should render all destination cards', async () => {
+      await renderManager()
 
       expect(screen.getByText('Cairo')).toBeInTheDocument()
       expect(screen.getByText('Luxor')).toBeInTheDocument()
     })
 
-    it('should show add destination button', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should show add destination button', async () => {
+      await renderManager()
 
       expect(screen.getByRole('button', { name: /add destination/i })).toBeInTheDocument()
     })
   })
 
   describe('Destination Cards', () => {
-    it('should display destination details', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should display destination details', async () => {
+      await renderManager()
 
       expect(screen.getAllByText('Egypt')[0]).toBeInTheDocument()
       expect(screen.getAllByText('/cairo')[0]).toBeInTheDocument()
       expect(screen.getAllByText('50 tours')[0]).toBeInTheDocument()
     })
 
-    it('should show featured badge for featured destinations', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should show featured badge for featured destinations', async () => {
+      await renderManager()
 
       expect(screen.getByText('Featured')).toBeInTheDocument()
     })
 
-    it('should show published/draft status', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should show published/draft status', async () => {
+      await renderManager()
 
       expect(screen.getByText('Published')).toBeInTheDocument()
       expect(screen.getByText('Draft')).toBeInTheDocument()
     })
 
-    it('should display placeholder for missing images', () => {
+    it('should display placeholder for missing images', async () => {
       const noImage = [{ ...mockDestinations[0], image: '' }]
-      render(<DestinationManager initialDestinations={noImage} />)
+      await renderManager(noImage)
 
       // When no image is provided, the component renders a placeholder div with an SVG icon
       // instead of an <img> element. Verify the placeholder container is present.
@@ -175,8 +188,8 @@ describe('DestinationManager', () => {
   })
 
   describe('Empty State', () => {
-    it('should show empty state when no destinations', () => {
-      render(<DestinationManager initialDestinations={[]} />)
+    it('should show empty state when no destinations', async () => {
+      await renderManager([])
 
       expect(screen.getByText('No destinations yet')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /add first destination/i })).toBeInTheDocument()
@@ -186,7 +199,7 @@ describe('DestinationManager', () => {
   describe('Create Destination Flow', () => {
     it('should open panel when add button is clicked', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       const addButton = screen.getByRole('button', { name: /add destination/i })
       await user.click(addButton)
@@ -198,7 +211,7 @@ describe('DestinationManager', () => {
 
     it('should show all tabs in create panel', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -213,7 +226,7 @@ describe('DestinationManager', () => {
 
     it('should require name and description fields', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -225,15 +238,13 @@ describe('DestinationManager', () => {
 
     it('should auto-generate slug from name', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
-      await waitFor(async () => {
-        const nameInput = screen.getByLabelText(/destination name/i)
-        await user.clear(nameInput)
-        await user.type(nameInput, 'New Destination')
-      })
+      const nameInput = await screen.findByLabelText(/destination name/i)
+      await user.clear(nameInput)
+      await user.type(nameInput, 'New Destination')
 
       const slugInput = screen.getByLabelText(/url slug/i) as HTMLInputElement
       await waitFor(() => {
@@ -252,7 +263,7 @@ describe('DestinationManager', () => {
         json: async () => ({ success: true, data: [] }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       const cairoCard = screen.getByText('Cairo').closest('.group')
       expect(cairoCard).toBeTruthy()
@@ -274,7 +285,7 @@ describe('DestinationManager', () => {
         json: async () => ({ success: true, data: [] }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       const cairoCard = screen.getByText('Cairo').closest('.group')
       expect(cairoCard).toBeTruthy()
@@ -293,7 +304,7 @@ describe('DestinationManager', () => {
     it('should show validation error when submitting without required fields', async () => {
       const user = userEvent.setup()
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -308,7 +319,7 @@ describe('DestinationManager', () => {
 
     it('should disable save button when form is invalid', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -329,20 +340,18 @@ describe('DestinationManager', () => {
         json: async () => ({ success: true, data: {} }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
-      await waitFor(async () => {
-        const nameInput = screen.getByLabelText(/destination name/i)
-        await user.type(nameInput, 'Aswan')
+      await user.type(await screen.findByLabelText(/destination name/i), 'Aswan')
+      await user.type(screen.getByLabelText(/short description/i), 'Beautiful Nubian city')
 
-        const descInput = screen.getByLabelText(/short description/i)
-        await user.type(descInput, 'Beautiful Nubian city')
-
-        const saveButton = screen.getByRole('button', { name: /save destination/i })
-        await user.click(saveButton)
-      })
+      // Save stays disabled until both required fields are filled — wait for the
+      // form to become valid before clicking, otherwise the click is a no-op.
+      const saveButton = screen.getByRole('button', { name: /save destination/i })
+      await waitFor(() => expect(saveButton).toBeEnabled())
+      await user.click(saveButton)
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith('Destination created successfully!')
@@ -359,28 +368,25 @@ describe('DestinationManager', () => {
         json: async () => ({ success: true, data: {} }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       const cairoCard = screen.getByText('Cairo').closest('.group')
-      if (cairoCard) {
-        const editButton = cairoCard.querySelector('button[title="Edit destination"]')
-        if (editButton) {
-          await user.click(editButton)
+      expect(cairoCard).toBeTruthy()
+      const editButton = cairoCard!.querySelector('button[title="Edit destination"]')
+      expect(editButton).toBeTruthy()
+      await user.click(editButton!)
 
-          await waitFor(async () => {
-            const descInput = screen.getByLabelText(/short description/i)
-            await user.clear(descInput)
-            await user.type(descInput, 'Updated description')
+      const descInput = await screen.findByLabelText(/short description/i)
+      await user.clear(descInput)
+      await user.type(descInput, 'Updated description')
 
-            const saveButton = screen.getByRole('button', { name: /save destination/i })
-            await user.click(saveButton)
-          })
+      const saveButton = screen.getByRole('button', { name: /save destination/i })
+      await waitFor(() => expect(saveButton).toBeEnabled())
+      await user.click(saveButton)
 
-          await waitFor(() => {
-            expect(toast.success).toHaveBeenCalledWith('Destination updated successfully!')
-          })
-        }
-      }
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Destination updated successfully!')
+      })
     })
 
     it('should handle API errors gracefully', async () => {
@@ -394,20 +400,16 @@ describe('DestinationManager', () => {
         json: async () => ({ error: 'Server error' }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
-      await waitFor(async () => {
-        const nameInput = screen.getByLabelText(/destination name/i)
-        await user.type(nameInput, 'Test')
+      await user.type(await screen.findByLabelText(/destination name/i), 'Test')
+      await user.type(screen.getByLabelText(/short description/i), 'Test description')
 
-        const descInput = screen.getByLabelText(/short description/i)
-        await user.type(descInput, 'Test description')
-
-        const saveButton = screen.getByRole('button', { name: /save destination/i })
-        await user.click(saveButton)
-      })
+      const saveButton = screen.getByRole('button', { name: /save destination/i })
+      await waitFor(() => expect(saveButton).toBeEnabled())
+      await user.click(saveButton)
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalled()
@@ -425,7 +427,7 @@ describe('DestinationManager', () => {
         json: async () => ({ success: true }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       const cairoCard = screen.getByText('Cairo').closest('.group')
       if (cairoCard) {
@@ -444,14 +446,11 @@ describe('DestinationManager', () => {
   describe('Tab Navigation', () => {
     it('should switch between tabs', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
-      await waitFor(async () => {
-        const locationTab = screen.getByRole('button', { name: /location/i })
-        await user.click(locationTab)
-      })
+      await user.click(await screen.findByRole('button', { name: /location/i }))
 
       // The labels use htmlFor="coordinates.lat" but the inputs use name= not id=,
       // so getByLabelText won't find them. Use getByText to verify they're visible.
@@ -463,21 +462,16 @@ describe('DestinationManager', () => {
   describe('Array Field Management', () => {
     it('should add items to array fields', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
-      await waitFor(async () => {
-        const contentTab = screen.getByRole('button', { name: /content/i })
-        await user.click(contentTab)
-      })
+      await user.click(await screen.findByRole('button', { name: /content/i }))
 
       // There are multiple "Add" buttons on the Content tab (highlights, things to do, etc.)
       // Find the first one which is for Highlights
-      await waitFor(async () => {
-        const addButtons = screen.getAllByRole('button', { name: /^add$/i })
-        await user.click(addButtons[0])
-      })
+      const addButtons = await screen.findAllByRole('button', { name: /^add$/i })
+      await user.click(addButtons[0])
 
       const highlightInputs = screen.getAllByPlaceholderText(/enter a highlight/i)
       expect(highlightInputs.length).toBeGreaterThan(0)
@@ -493,7 +487,7 @@ describe('DestinationManager', () => {
         json: async () => ({ success: true, url: '/images/new-image.jpg' }),
       })
 
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -507,7 +501,7 @@ describe('DestinationManager', () => {
   describe('Accessibility', () => {
     it('should have proper labels for form inputs', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -518,8 +512,8 @@ describe('DestinationManager', () => {
       })
     })
 
-    it('should have accessible buttons', () => {
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+    it('should have accessible buttons', async () => {
+      await renderManager()
 
       const buttons = screen.getAllByRole('button')
       buttons.forEach(button => {
@@ -531,7 +525,7 @@ describe('DestinationManager', () => {
   describe('Panel Behavior', () => {
     it('should close panel when cancel is clicked', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 
@@ -549,7 +543,7 @@ describe('DestinationManager', () => {
 
     it('should close panel when backdrop is clicked', async () => {
       const user = userEvent.setup()
-      render(<DestinationManager initialDestinations={mockDestinations} />)
+      await renderManager()
 
       await user.click(screen.getByRole('button', { name: /add destination/i }))
 

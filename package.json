@@ -30,6 +30,7 @@
     "revenue:backfill-pricing": "tsx scripts/backfill-revenue-pricing.ts",
     "revenue:verify-migration": "tsx scripts/verify-revenue-pricing-migration.ts",
     "revenue:verify-e2e": "tsx scripts/verify-revenue-pricing-e2e.ts",
+    "revenue:verify-production": "tsx scripts/verify-revenue-production.ts",
     "bookings:verify-payment-index": "tsx scripts/sync-booking-index.ts",
     "checkout:verify-inventory": "tsx scripts/verify-checkout-inventory.ts",
     "bookings:verify-refunds": "tsx scripts/verify-booking-refunds.ts"

@@ -70,12 +70,14 @@ pnpm start           # serve the production build
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test         # = test:unit — the suite that runs anywhere, no server needed
 pnpm test:unit
-pnpm test:api
-pnpm test:e2e
+pnpm test:api     # needs a live app (pnpm dev / pnpm start, or TEST_BASE_URL)
+pnpm test:e2e     # needs a live app; Playwright runner
 pnpm audit --prod
 pnpm revenue:verify-migration # disposable localhost database only
 pnpm revenue:verify-e2e       # disposable localhost database only
+pnpm revenue:verify-production # read-only live deploy, auth-boundary, schedule and recovery gate
 pnpm bookings:verify-payment-index # read-only multi-item payment-index gate
 pnpm checkout:verify-inventory     # disposable localhost concurrency/expiry gate
 pnpm bookings:verify-refunds       # disposable localhost, mocked Stripe state-machine gate
@@ -96,6 +98,10 @@ TourTicket is authoritative for catalogue and date/time guest prices. RevenuePil
 The write path fails closed unless the target tour is listed exactly in `REVENUEPILOT_ALLOWED_TOUR_IDS`; an empty list, malformed ID, or wildcard disables execution. Start a canary with one ID only. Every apply and rollback idempotency key is bound to the exact signed request body. Apply also rechecks publication, tenant, schedule, exact time, stop sales (including option-level stop sales), blocked slots, and remaining capacity immediately before the compare-and-swap update. Rollback remains callable when the global apply flag is off so an already-applied canary write can be reversed, but it is still HMAC-authenticated, allowlisted, version-fenced, and concurrency-leased.
 
 Keep `REVENUEPILOT_PRICING_API_ENABLED=false` and do not configure production allowlisted tours until the immutable-option-key backfill, catalogue/checkout parity report, shadow qualification, restricted canary, rollback drill, and signed acceptance are complete. The current cross-repository launch checklist is in `foxes-revenue-pilot/docs/LAUNCH_READINESS.md`.
+
+After an approved production publish, run `pnpm revenue:verify-production` from the exact published commit. The command is read-only and fails closed unless Netlify production matches local `HEAD`, the five-minute revenue-maintenance function is deployed, a successful recovery run occurred after that deploy and remains fresh, the machine and cron boundaries reject anonymous requests, the projection-recovery credential is configured, writes are disabled, and the tour allowlist is empty. Before—not during—the restricted one-tour canary, use `REVENUEPILOT_PRODUCTION_PROFILE=canary-staged pnpm revenue:verify-production`; that profile still requires writes to be disabled and requires exactly one approved tour. This verifier intentionally never certifies an enabled write posture.
+
+`.github/workflows/revenue-production-readonly.yml` runs the same fail-closed verifier daily and on demand after the repository has a `NETLIFY_AUTH_TOKEN` Actions secret. It reads deploy, function and log evidence only; it never invokes the maintenance job or changes pricing posture.
 
 Stripe checkout stores a seven-day server-side quote snapshot so delayed webhooks recover the full authoritative cart without relying on size-limited Stripe metadata. Before exposing a payable client secret, TourTicket leases the exact tenant/tour/date/time departure and creates an expiring option/guest hold. Storefront, webhook, bank-transfer, and manual-admin bookings share that serialized capacity guard. A successful booking converts its hold to ordinary `Pending`/`Confirmed` booking capacity; failed/canceled payments release it. If an expired hold belongs to a succeeded charge without every durable booking, the reconciliation job issues one idempotent full refund and cancels any partial booking rows rather than retaining unfulfilled revenue.
 

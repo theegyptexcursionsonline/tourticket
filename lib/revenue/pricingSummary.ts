@@ -124,7 +124,15 @@ export async function refreshTourPricingSummary(tourId: string, currency = 'USD'
  * reported as fully propagated while Algolia/listing projection is stale.
  */
 export async function syncTourPricingSearchIndex(tourId: string) {
-  if (process.env.NODE_ENV !== 'production' && process.env.REVENUEPILOT_SKIP_SEARCH_SYNC === 'true') return true;
+  if (process.env.NODE_ENV !== 'production' && process.env.REVENUEPILOT_SKIP_SEARCH_SYNC === 'true') {
+    // Local harnesses skip the external Algolia push but must still settle the
+    // projection ledger, or read-back propagation would stay pending forever.
+    await Tour.updateOne(
+      { _id: tourId, ...DEFAULT_TENANT_FILTER, 'pricingSearchProjection.projectionToken': { $exists: true } },
+      { $set: { 'pricingSearchProjection.status': 'verified', 'pricingSearchProjection.syncedAt': new Date() } },
+    );
+    return true;
+  }
   const now = new Date();
   const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER }).lean<ProjectionTour | null>();
   if (!tour) return false;

@@ -90,3 +90,7 @@ docs/claude-memory.md
 
 # Local QA proof bundles — never committed to the client repo
 readiness-proof/
+output/
+docs/proof-*/
+playwright-report/data/
+playwright-report/trace/
