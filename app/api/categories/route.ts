@@ -18,6 +18,10 @@ export async function GET(request: NextRequest) {
     const searchParams = new URL(request.url).searchParams;
     const featuredOnly = searchParams.get('featured') === 'true';
     const locale = searchParams.get('locale') || 'en';
+    // Storefront navigation hides categories with no tours yet. Admin pickers
+    // must see them, otherwise a brand-new category can never be assigned its
+    // first tour — it only becomes selectable once it already has one.
+    const includeEmpty = searchParams.get('includeEmpty') === 'true';
 
     const categories = await Category.find({
       ...(featuredOnly ? { featured: true } : {}),
@@ -63,7 +67,7 @@ export async function GET(request: NextRequest) {
     );
 
     const visibleCategories = filterVisibleTaxonomyEntries(localizedCategories, {
-      requireTours: true,
+      requireTours: !includeEmpty,
     }).sort((a, b) => {
       const orderA = typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER;
       const orderB = typeof b.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER;

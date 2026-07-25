@@ -648,7 +648,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             try {
                 const [destRes, catRes, attractionsRes] = await Promise.all([
                     fetch('/api/admin/tours/destinations'),
-                    fetch('/api/categories'),
+                    // includeEmpty: a newly created category has no tours yet and
+                    // would otherwise be missing from this picker.
+                    fetch('/api/categories?includeEmpty=true'),
                     fetch('/api/attractions-interests')
                 ]);
 
