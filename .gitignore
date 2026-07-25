@@ -87,3 +87,6 @@ qa-screenshots/
 CLAUDE.md
 AGENTS.md
 docs/claude-memory.md
+
+# Local QA proof bundles — never committed to the client repo
+readiness-proof/
