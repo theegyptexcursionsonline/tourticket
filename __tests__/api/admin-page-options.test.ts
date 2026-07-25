@@ -55,6 +55,7 @@ function installTourQueryMock() {
       title: 'Cairo English Tour',
       slug: 'cairo-english-tour',
       isPublished: true,
+      bookingOptions: [{ pricingKey: 'private-luxor-tour-123' }],
     },
   ]);
 }
@@ -92,6 +93,8 @@ describe('GET /api/admin/pages/options', () => {
           $or: [
             { title: expect.any(RegExp) },
             { slug: expect.any(RegExp) },
+            { 'bookingOptions.pricingKey': 'cairo' },
+            { 'bookingOptions.id': 'cairo' },
           ],
         },
       ],
@@ -107,6 +110,20 @@ describe('GET /api/admin/pages/options', () => {
 
     const filter = mockTourFind.mock.calls[0][0];
     expect(filter.$and[0].$or).toContainEqual({ tenantId: 'default' });
-    expect(filter.$and[1].$or[2]._id).toBe(tourId);
+    expect(filter.$and[1].$or).toContainEqual({ _id: tourId });
+  });
+
+  it('searches by Option ID and reports the matched identifier', async () => {
+    const { GET } = await import('@/app/api/admin/pages/options/route');
+    const optionId = 'private-luxor-tour-123';
+    const response = await GET({
+      url: `https://dashboard2.egypt-excursionsonline.com/api/admin/pages/options?kind=tours&q=${optionId}`,
+    } as never);
+    const body = await response.json();
+    const filter = mockTourFind.mock.calls[0][0];
+
+    expect(filter.$and[0].$or).toContainEqual({ tenantId: 'default' });
+    expect(filter.$and[1].$or).toContainEqual({ 'bookingOptions.pricingKey': optionId });
+    expect(body.data[0].matchedOptionIds).toEqual([optionId]);
   });
 });

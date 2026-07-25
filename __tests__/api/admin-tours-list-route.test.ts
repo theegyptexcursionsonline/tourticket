@@ -58,6 +58,9 @@ const fixture = {
     { _id: 'review-1', comment: 'Must never be returned' },
     { _id: 'review-2', comment: 'Must never be returned' },
   ],
+  bookingOptions: [
+    { _id: 'option-subdoc-1', pricingKey: 'private-luxor-tour-123' },
+  ],
 };
 
 function installTourQueryMock() {
@@ -98,7 +101,9 @@ describe('GET /api/admin/tours list payload', () => {
       ]),
     }));
     expect(body.data[0].reviewCount).toBe(2);
+    expect(body.data[0].optionIds).toEqual(['private-luxor-tour-123', 'option-subdoc-1']);
     expect(body.data[0].reviews).toBeUndefined();
+    expect(body.data[0].bookingOptions).toBeUndefined();
     expect(body.data[0].description).toBeUndefined();
     expect(body.data[0].attractions).toBeUndefined();
     expect(body.data[0].interests).toBeUndefined();
@@ -112,7 +117,8 @@ describe('GET /api/admin/tours list payload', () => {
     expect(projection).toContain('title');
     expect(projection).toContain('review');
     expect(projection).not.toContain('description');
-    expect(projection).not.toContain('bookingOptions');
+    expect(projection).toContain('bookingOptions.pricingKey');
+    expect(projection).not.toContain('bookingOptions.description');
     expect(mockPopulate).toHaveBeenCalledTimes(2);
     expect(mockPopulate).toHaveBeenNthCalledWith(1, {
       path: 'category',

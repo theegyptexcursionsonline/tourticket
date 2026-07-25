@@ -7,6 +7,7 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { findMatchingTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
 
 const LIMIT = 20;
 
@@ -46,14 +47,17 @@ export async function GET(request: NextRequest) {
                   $or: [
                     { title: search },
                     { slug: search },
+                    { 'bookingOptions.pricingKey': q },
+                    { 'bookingOptions.id': q },
                     ...(isObjectId(q) ? [{ _id: q }] : []),
+                    ...(isObjectId(q) ? [{ 'bookingOptions._id': q }] : []),
                   ],
                 },
               ],
             }
           : DEFAULT_TENANT_FILTER;
       const tours = await Tour.find(filter)
-        .select('title slug image isPublished')
+        .select('title slug image isPublished bookingOptions.pricingKey bookingOptions.id bookingOptions._id')
         .sort({ isFeatured: -1, rating: -1 })
         .limit(ids ? ids.length : LIMIT)
         .lean();
@@ -65,6 +69,7 @@ export async function GET(request: NextRequest) {
           slug: String(tour.slug || ''),
           image: tour.image ? String(tour.image) : undefined,
           isPublished: tour.isPublished === true,
+          matchedOptionIds: findMatchingTourOptionIds(tour.bookingOptions, q),
         })),
       });
     }
