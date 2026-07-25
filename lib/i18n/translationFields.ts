@@ -41,6 +41,7 @@ export const destinationTranslationFields: TranslationFieldDef[] = [
   { key: 'highlights', label: 'Highlights', type: 'array', maxLength: 200 },
   { key: 'thingsToDo', label: 'Things to Do', type: 'array', maxLength: 300 },
   { key: 'localCustoms', label: 'Local Customs', type: 'array', maxLength: 500 },
+  { key: 'weatherWarnings', label: 'Weather Warnings', type: 'array', maxLength: 300 },
 ];
 
 // ── Tour translatable fields (matches TourTranslationSchema) ──
@@ -104,3 +105,23 @@ export const normalizeTranslations = (
     return {};
   }
 };
+
+// ── Repeated sub-document blocks ──
+// FAQs and travel tips are arrays of objects, so they can't be edited through
+// the flat field editor. Auto-translate still covers them: these specs tell the
+// translator which sub-fields carry customer-readable text.
+
+export interface StructuredTranslationSpec {
+  key: string;
+  fields: string[];
+}
+
+export const destinationStructuredFields: StructuredTranslationSpec[] = [
+  { key: 'faqs', fields: ['question', 'answer'] },
+  { key: 'travelTips', fields: ['title', 'content'] },
+];
+
+export const attractionPageStructuredFields: StructuredTranslationSpec[] = [
+  { key: 'faqs', fields: ['question', 'answer'] },
+  { key: 'travelTips', fields: ['title', 'content'] },
+];

@@ -10,12 +10,13 @@ import CategoryModel from '@/lib/models/Category';
 import ReviewModel from '@/lib/models/Review';
 import DestinationPageClient from './DestinationPageClient';
 import DestinationSchema from '@/components/schema/DestinationSchema';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
 import {
   selectLocalizedTaxonomyEntries,
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { destinationStructuredFields } from '@/lib/i18n/translationFields';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import type { Category, Destination, Review, Tour } from '@/types';
@@ -196,7 +197,11 @@ async function getPageData(slug: string, locale: string) {
     relatedDestinationCountBySlug.set(slug, Math.max(relatedDestinationCountBySlug.get(slug) || 0, count));
   }
 
-  const localizedDestination = localizeEntityFields(destinationCandidate, locale, [
+  const localizedDestination = localizeEntityFields(localizeStructuredEntries(
+    destinationCandidate,
+    locale,
+    destinationStructuredFields
+  ), locale, [
     'name',
     'country',
     'description',
@@ -212,6 +217,7 @@ async function getPageData(slug: string, locale: string) {
     'localCustoms',
     'metaTitle',
     'metaDescription',
+    'weatherWarnings',
   ]);
 
   for (const field of ['longDescription', 'description'] as const) {

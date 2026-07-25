@@ -14,7 +14,8 @@ import {
   resolveAttractionPageTours,
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import { attractionPageStructuredFields } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 type PageRecord = Record<string, unknown>;
@@ -35,7 +36,11 @@ async function getAttractionPageData(slug: string, locale: string) {
     if (!page) return null;
 
     const plain = JSON.parse(JSON.stringify(page)) as PageRecord;
-    const localized = localizeEntityFields(plain, locale, ATTRACTION_PAGE_LOCALIZED_FIELDS);
+    const localized = localizeEntityFields(
+      localizeStructuredEntries(plain, locale, attractionPageStructuredFields),
+      locale,
+      ATTRACTION_PAGE_LOCALIZED_FIELDS
+    );
 
     const [{ tours, totalTours }, linkedPages] = await Promise.all([
       resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),

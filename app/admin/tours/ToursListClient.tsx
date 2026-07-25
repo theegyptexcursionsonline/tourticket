@@ -47,6 +47,7 @@ type TourType = {
   discountPrice?: number;
   duration?: string | number;
   createdAt?: string;
+  updatedAt?: string;
   isPublished?: boolean;
   isFeatured?: boolean;
   optionIds?: string[];
@@ -90,7 +91,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
   const [activeTab, setActiveTab] = useState<TabFilter>(initialTab);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'table' | 'cards'>('cards');
-  const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'updated' | 'price-asc' | 'price-desc'>('newest');
   const [perPage, setPerPage] = useState(12);
   const [page, setPage] = useState(initialPage);
 
@@ -161,6 +162,13 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
     if (sortBy === 'newest')
       list.sort(
         (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+    // Last modified: editors asked to find what they touched most recently.
+    if (sortBy === 'updated')
+      list.sort(
+        (a, b) =>
+          new Date(b.updatedAt || b.createdAt || 0).getTime() -
+          new Date(a.updatedAt || a.createdAt || 0).getTime()
       );
     if (sortBy === 'price-asc')
       list.sort(
@@ -264,6 +272,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                 className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 appearance-none cursor-pointer text-slate-700 font-medium"
               >
                 <option value="newest">📅 Newest First</option>
+                <option value="updated">🕒 Last Modified</option>
                 <option value="price-asc">💰 Price: Low to High</option>
                 <option value="price-desc">💰 Price: High to Low</option>
               </select>

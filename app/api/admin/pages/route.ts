@@ -2,22 +2,25 @@
 // categories (Category) in one cursor-paginated feed, newest first. The two
 // collections stay separate models; this endpoint only unifies management.
 import { NextRequest, NextResponse } from 'next/server';
-import { Types } from 'mongoose';
+import { Types, type PipelineStage } from 'mongoose';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { contentPath } from '@/lib/content/contentUrl';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import {
+  buildPagesCursorFilter,
+  buildSortValueStage,
+  resolvePagesSortKey,
+  SORT_VALUE_FIELD,
+  type PagesCursor,
+  type PagesSortKey,
+} from '@/lib/admin/pagesListSort';
 
 const MAX_LIMIT = 50;
 
 type PageKind = 'attraction' | 'category-landing' | 'category';
-
-interface PagesCursor {
-  c: string; // createdAt ISO
-  id: string; // _id tiebreak
-}
 
 interface UnifiedRow {
   id: string;
@@ -32,6 +35,8 @@ interface UnifiedRow {
   isPublished: boolean;
   featured: boolean;
   createdAt: string;
+  updatedAt: string;
+  sortValue: string;
 }
 
 function decodeCursor(raw: string | null): PagesCursor | null {
@@ -54,15 +59,21 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function cursorFilter(cursor: PagesCursor | null): Record<string, unknown> {
-  if (!cursor) return {};
-  const createdAt = new Date(cursor.c);
-  return {
-    $or: [
-      { createdAt: { $lt: createdAt } },
-      { createdAt, _id: { $lt: new Types.ObjectId(cursor.id) } },
-    ],
-  };
+// Legacy category/page docs predate timestamps, and `new Date(undefined)`
+// throws on .toISOString() — which took the whole list down with a 500 rather
+// than dropping one date cell. Fall back to the ObjectId's embedded timestamp.
+function isoStamp(value: unknown, fallbackId: unknown): string {
+  for (const candidate of [value]) {
+    if (candidate) {
+      const parsed = new Date(candidate as string);
+      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+    }
+  }
+  try {
+    return new Types.ObjectId(String(fallbackId)).getTimestamp().toISOString();
+  } catch {
+    return new Date(0).toISOString();
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -80,6 +91,7 @@ export async function GET(request: NextRequest) {
     const kind = (searchParams.get('kind') || 'all') as PageKind | 'all';
     const status = searchParams.get('status') || 'all';
     const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get('limit')) || 20));
+    const sortKey: PagesSortKey = resolvePagesSortKey(searchParams.get('sort'));
     const cursor = decodeCursor(searchParams.get('cursor'));
 
     const search = q ? new RegExp(escapeRegex(q), 'i') : null;
@@ -87,16 +99,18 @@ export async function GET(request: NextRequest) {
     const wantAttractionPages = kind === 'all' || kind === 'attraction' || kind === 'category-landing';
     const wantCategories = kind === 'all' || kind === 'category';
 
-    const attractionConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, cursorFilter(cursor)];
+    const cursorMatch = buildPagesCursorFilter(cursor, (id) => new Types.ObjectId(id));
+
+    const attractionConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
     const attractionFilter: Record<string, unknown> = { $and: attractionConditions };
     if (kind === 'attraction') attractionFilter.pageType = 'attraction';
     if (kind === 'category-landing') attractionFilter.pageType = 'category';
     if (status === 'published') attractionFilter.isPublished = true;
     if (status === 'draft') attractionFilter.isPublished = { $ne: true };
-    // Push (never replace $and): the tenant scope and cursor must survive search.
+    // Push (never replace $and): the tenant scope must survive search.
     if (search) attractionConditions.push({ $or: [{ title: search }, { slug: search }] });
 
-    const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, cursorFilter(cursor)];
+    const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
     const categoryFilter: Record<string, unknown> = { $and: categoryConditions };
     if (status === 'published') categoryFilter.isPublished = { $ne: false };
     if (status === 'draft') categoryFilter.isPublished = false;
@@ -104,20 +118,33 @@ export async function GET(request: NextRequest) {
 
     const fetchSize = limit + 1;
 
+    // The cursor is applied after $addFields so it compares against the
+    // computed sort value, not the (sometimes absent) raw timestamp.
+    const pipeline = (match: Record<string, unknown>, project: Record<string, 1>): PipelineStage[] => [
+      { $match: match },
+      buildSortValueStage(sortKey) as unknown as PipelineStage,
+      ...(Object.keys(cursorMatch).length > 0 ? [{ $match: cursorMatch }] : []),
+      { $sort: { [SORT_VALUE_FIELD]: -1, _id: -1 } },
+      { $limit: fetchSize },
+      { $project: { ...project, [SORT_VALUE_FIELD]: 1 } },
+    ];
+
     const [pages, categories] = await Promise.all([
       wantAttractionPages
-        ? AttractionPage.find(attractionFilter)
-            .select('title slug description heroImage pageType urlType isPublished featured createdAt')
-            .sort({ createdAt: -1, _id: -1 })
-            .limit(fetchSize)
-            .lean()
+        ? AttractionPage.aggregate(
+            pipeline(attractionFilter, {
+              title: 1, slug: 1, description: 1, heroImage: 1, pageType: 1,
+              urlType: 1, isPublished: 1, featured: 1, createdAt: 1, updatedAt: 1,
+            })
+          )
         : [],
       wantCategories
-        ? Category.find(categoryFilter)
-            .select('name slug description heroImage urlType isPublished featured createdAt')
-            .sort({ createdAt: -1, _id: -1 })
-            .limit(fetchSize)
-            .lean()
+        ? Category.aggregate(
+            pipeline(categoryFilter, {
+              name: 1, slug: 1, description: 1, heroImage: 1,
+              urlType: 1, isPublished: 1, featured: 1, createdAt: 1, updatedAt: 1,
+            })
+          )
         : [],
     ]);
 
@@ -139,7 +166,9 @@ export async function GET(request: NextRequest) {
         editHref: `/admin/attraction-pages/${String(page._id)}/edit`,
         isPublished: page.isPublished === true,
         featured: page.featured === true,
-        createdAt: new Date(page.createdAt as string).toISOString(),
+        createdAt: isoStamp(page.createdAt, page._id),
+        updatedAt: isoStamp(page.updatedAt || page.createdAt, page._id),
+        sortValue: isoStamp(page[SORT_VALUE_FIELD], page._id),
       });
     }
 
@@ -156,19 +185,22 @@ export async function GET(request: NextRequest) {
         editHref: `/admin/categories/${String(category._id)}/edit`,
         isPublished: category.isPublished !== false,
         featured: category.featured === true,
-        createdAt: new Date(category.createdAt as string).toISOString(),
+        createdAt: isoStamp(category.createdAt, category._id),
+        updatedAt: isoStamp(category.updatedAt || category.createdAt, category._id),
+        sortValue: isoStamp(category[SORT_VALUE_FIELD], category._id),
       });
     }
 
+    // Merge the two model streams on the same computed value the DB sorted by.
     rows.sort((a, b) => {
-      if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+      if (a.sortValue !== b.sortValue) return a.sortValue < b.sortValue ? 1 : -1;
       return a.id < b.id ? 1 : -1;
     });
 
     const pageRows = rows.slice(0, limit);
     const hasMore = rows.length > limit;
     const last = pageRows[pageRows.length - 1];
-    const nextCursor = hasMore && last ? encodeCursor({ c: last.createdAt, id: last.id }) : null;
+    const nextCursor = hasMore && last ? encodeCursor({ c: last.sortValue, id: last.id }) : null;
 
     const [attractionCount, landingCount, categoryCount] = await Promise.all([
       AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'attraction' }] }),

@@ -32,8 +32,11 @@ function CreatePageChooser() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
             {([
               { id: 'attraction', label: 'Attraction', description: 'A standalone attraction or interest page with curated tours.', icon: Landmark },
-              { id: 'catalogue', label: 'Catalogue', description: 'A tour collection used in the tour Catalogue selector.', icon: LayoutGrid },
-              { id: 'category', label: 'Category', description: 'A landing page linked to an existing catalogue.', icon: Tag },
+              // Client-requested naming swap (26 Jul): the tour collection is
+              // called "Category" and the landing page is called "Catalogue".
+              // Labels only — the underlying ids and behaviour are unchanged.
+              { id: 'catalogue', label: 'Category', description: 'A tour collection used in the tour Category selector.', icon: LayoutGrid },
+              { id: 'category', label: 'Catalogue', description: 'A landing page linked to an existing category.', icon: Tag },
             ] as const).map((option) => {
               const Icon = option.icon;
               const selected = kind === option.id;

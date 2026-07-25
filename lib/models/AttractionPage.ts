@@ -14,6 +14,8 @@ export interface IAttractionPageTranslation {
   features?: string[];
   metaTitle?: string;
   metaDescription?: string;
+  faqs?: Array<{ question?: string; answer?: string }>;
+  travelTips?: Array<{ title?: string; content?: string }>;
 }
 
 export interface IAttractionPage extends Document {
@@ -79,6 +81,9 @@ const AttractionPageTranslationSchema = new Schema<IAttractionPageTranslation>(
     features: [{ type: String, trim: true, maxlength: 300 }],
     metaTitle: { type: String, trim: true, maxlength: 60 },
     metaDescription: { type: String, trim: true, maxlength: 160 },
+    // Repeated blocks: translated index-by-index against the English source.
+    faqs: [{ question: { type: String, trim: true, maxlength: 300 }, answer: { type: String, trim: true, maxlength: 2000 } }],
+    travelTips: [{ title: { type: String, trim: true, maxlength: 200 }, content: { type: String, trim: true, maxlength: 1000 } }],
   },
   { _id: false }
 );

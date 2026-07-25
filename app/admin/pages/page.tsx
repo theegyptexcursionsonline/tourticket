@@ -27,6 +27,7 @@ interface UnifiedRow {
   isPublished: boolean;
   featured: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface Counts {
@@ -44,10 +45,13 @@ interface PagesResponse {
   error?: string;
 }
 
+// Naming per the client (26 Jul): the tour collection is a "Category" and the
+// landing page built on top of one is a "Catalogue". Labels only — the stored
+// kinds are unchanged.
 const KIND_LABELS: Record<PageKind, string> = {
   attraction: 'Attraction',
-  'category-landing': 'Category',
-  category: 'Catalogue',
+  'category-landing': 'Catalogue',
+  category: 'Category',
 };
 
 const KIND_BADGES: Record<PageKind, string> = {
@@ -67,6 +71,7 @@ export default function UnifiedPagesAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKind, setFilterKind] = useState<'all' | PageKind>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
+  const [sortBy, setSortBy] = useState<'created' | 'updated'>('created');
   const requestSeq = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
 
@@ -81,9 +86,10 @@ export default function UnifiedPagesAdmin() {
     if (searchTerm.trim()) params.set('q', searchTerm.trim());
     if (filterKind !== 'all') params.set('kind', filterKind);
     if (filterStatus !== 'all') params.set('status', filterStatus);
+    if (sortBy !== 'created') params.set('sort', sortBy);
     if (cursor) params.set('cursor', cursor);
     return params.toString();
-  }, [searchTerm, filterKind, filterStatus]);
+  }, [searchTerm, filterKind, filterStatus, sortBy]);
 
   const fetchPage = useCallback(async (cursor: string | null, append: boolean) => {
     const seq = ++requestSeq.current;
@@ -209,8 +215,8 @@ export default function UnifiedPagesAdmin() {
           >
             <option value="all">All Types</option>
             <option value="attraction">Attraction</option>
-            <option value="category-landing">Category</option>
-            <option value="category">Catalogue</option>
+            <option value="category">Category</option>
+            <option value="category-landing">Catalogue</option>
           </select>
 
           <select
@@ -221,6 +227,15 @@ export default function UnifiedPagesAdmin() {
             <option value="all">All Status</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
+          </select>
+
+          <select
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          >
+            <option value="created">Sort: Newest First</option>
+            <option value="updated">Sort: Last Modified</option>
           </select>
         </div>
       </div>
@@ -241,7 +256,7 @@ export default function UnifiedPagesAdmin() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{sortBy === 'updated' ? 'Modified' : 'Created'}</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -297,7 +312,10 @@ export default function UnifiedPagesAdmin() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : 'N/A'}
+                      {(() => {
+                        const stamp = sortBy === 'updated' ? row.updatedAt || row.createdAt : row.createdAt;
+                        return stamp ? new Date(stamp).toLocaleDateString() : 'N/A';
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
@@ -363,11 +381,11 @@ export default function UnifiedPagesAdmin() {
           </div>
           <div className="bg-white p-4 rounded-lg shadow text-center">
             <div className="text-2xl font-bold text-purple-600">{counts['category-landing']}</div>
-            <div className="text-sm text-gray-500">Categories</div>
+            <div className="text-sm text-gray-500">Catalogues</div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow text-center">
             <div className="text-2xl font-bold text-green-600">{counts.category}</div>
-            <div className="text-sm text-gray-500">Catalogues</div>
+            <div className="text-sm text-gray-500">Categories</div>
           </div>
         </div>
       )}

@@ -23,9 +23,16 @@ export async function GET(request: NextRequest) {
     // first tour — it only becomes selectable once it already has one.
     const includeEmpty = searchParams.get('includeEmpty') === 'true';
 
+    // Scope to this site's own categories. Without it the picker also lists the
+    // German network's categories (e.g. "Abendtouren") in the English admin.
     const categories = await Category.find({
-      ...(featuredOnly ? { featured: true } : {}),
-      isPublished: true,
+      $and: [
+        DEFAULT_TENANT_FILTER,
+        {
+          ...(featuredOnly ? { featured: true } : {}),
+          isPublished: true,
+        },
+      ],
     })
       .sort({ order: 1, name: 1 })
       .lean();
