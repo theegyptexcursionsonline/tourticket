@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Phone, Mail, MessageSquare, Facebook, Instagram, Twitter, Youtube, Loader2, MapPin, Clock, Send } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import Script from 'next/script';
 
@@ -268,7 +268,6 @@ export default function ContactClientPage() {
           onLoad={() => setRecaptchaLoaded(true)}
         />
       )}
-      <Toaster position="top-center" />
       <Header startSolid />
       <ModernHero />
 

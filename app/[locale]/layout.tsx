@@ -12,7 +12,7 @@ import { WishlistProvider } from "@/contexts/WishlistContext";
 import { NavDataProvider } from "@/contexts/NavDataContext";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
-import { Toaster } from 'react-hot-toast';
+import AppToaster from '@/components/ui/AppToaster';
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
@@ -192,55 +192,7 @@ export default async function LocaleLayout({
                     {children}
                     <CartSidebar />
                     <WishlistSidebar />
-                    <Toaster
-                      position={dir === 'rtl' ? 'top-left' : 'top-right'}
-                      reverseOrder={false}
-                      gutter={8}
-                      toastOptions={{
-                        duration: 4000,
-                        style: {
-                          background: '#fff',
-                          color: '#333',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '12px',
-                          padding: '12px 16px',
-                          fontSize: '14px',
-                          maxWidth: '500px',
-                        },
-                        success: {
-                          duration: 4000,
-                          style: {
-                            background: '#f0fdf4',
-                            color: '#166534',
-                            border: '1px solid #bbf7d0',
-                          },
-                          iconTheme: {
-                            primary: '#22c55e',
-                            secondary: '#f0fdf4',
-                          },
-                        },
-                        error: {
-                          duration: 6000,
-                          style: {
-                            background: '#fef2f2',
-                            color: '#b91c1c',
-                            border: '1px solid #fecaca',
-                            whiteSpace: 'pre-line',
-                          },
-                          iconTheme: {
-                            primary: '#ef4444',
-                            secondary: '#fef2f2',
-                          },
-                        },
-                        loading: {
-                          style: {
-                            background: '#f8fafc',
-                            color: '#475569',
-                            border: '1px solid #e2e8f0',
-                          },
-                        },
-                      }}
-                    />
+                    <AppToaster direction={dir} />
                   </NavDataProvider>
                 </WishlistProvider>
               </CartProvider>

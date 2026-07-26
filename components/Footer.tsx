@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import Image from "next/image";
 import { Link } from '@/i18n/routing';
 import { useNavData } from '@/contexts/NavDataContext';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import type { EeoWindow } from './componentTypes';
@@ -177,7 +177,6 @@ export default function Footer() {
 
   return (
     <footer className="bg-white text-slate-700 pb-20 md:pb-24">
-      <Toaster position="top-center" />
       <div className="container mx-auto px-4 py-12">
 
         {/* App Download Banner */}

@@ -19,8 +19,7 @@ describe('main EEO admin control contracts', () => {
 
   it('renders admin success and error feedback', () => {
     const source = read('app/admin/AdminClientLayout.tsx');
-    expect(source).toContain("import { Toaster } from 'react-hot-toast'");
-    expect(source).toContain('<Toaster');
-    expect(source).toContain('position="top-right"');
+    expect(source).toContain("import AppToaster from '@/components/ui/AppToaster'");
+    expect(source).toContain('<AppToaster');
   });
 });
