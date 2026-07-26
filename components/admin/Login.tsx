@@ -14,11 +14,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [password, setPassword] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
-  const { login, isLoading } = useAdminAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAdminAuth();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     toast.dismiss();
+    setIsSubmitting(true);
     try {
       const result = await login(email, password, requiresTwoFactor ? twoFactorCode : undefined);
       if (result.requiresTwoFactor) {
@@ -29,6 +31,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       onLoginSuccess();
     } catch (error) {
       console.error('Login error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -129,10 +133,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
           <button
             type="submit"
-            disabled={isLoading || (requiresTwoFactor && !twoFactorCode.trim())}
+            disabled={isSubmitting || (requiresTwoFactor && !twoFactorCode.trim())}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 font-semibold text-white shadow-lg shadow-red-200 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoading ? 'Verifying…' : requiresTwoFactor ? 'Verify and continue' : 'Secure login'}
+            {isSubmitting ? 'Verifying…' : requiresTwoFactor ? 'Verify and continue' : 'Secure login'}
           </button>
         </form>
       </section>

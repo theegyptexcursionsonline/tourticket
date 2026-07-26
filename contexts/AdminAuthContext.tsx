@@ -159,7 +159,6 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const login = useCallback(
     async (email: string, password: string, twoFactorCode?: string): Promise<LoginResult> => {
-      setIsLoading(true);
       const startedAt = Date.now();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS);
@@ -236,7 +235,6 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
         throw error;
       } finally {
         clearTimeout(timeoutId);
-        setIsLoading(false);
       }
     },
     [persistSession],
