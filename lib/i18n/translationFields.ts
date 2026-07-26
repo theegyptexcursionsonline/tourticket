@@ -114,14 +114,50 @@ export const normalizeTranslations = (
 export interface StructuredTranslationSpec {
   key: string;
   fields: string[];
+  /** Stable field used to match translated entries after media is reordered. */
+  identityField?: string;
+  /** Keep empty readable fields in the prompt so the translator can generate them. */
+  generateMissingFields?: boolean;
+}
+
+export interface StructuredObjectTranslationSpec {
+  key: string;
+  fields: string[];
 }
 
 export const destinationStructuredFields: StructuredTranslationSpec[] = [
   { key: 'faqs', fields: ['question', 'answer'] },
   { key: 'travelTips', fields: ['title', 'content'] },
+  {
+    key: 'imageMetadata',
+    fields: ['alt', 'title'],
+    identityField: 'url',
+    generateMissingFields: true,
+  },
+];
+
+export const destinationStructuredObjectFields: StructuredObjectTranslationSpec[] = [
+  { key: 'averageTemperature', fields: ['summer', 'winter'] },
+];
+
+export const categoryStructuredFields: StructuredTranslationSpec[] = [
+  { key: 'faqs', fields: ['question', 'answer'] },
+  { key: 'travelTips', fields: ['title', 'content'] },
+  {
+    key: 'imageMetadata',
+    fields: ['alt', 'title'],
+    identityField: 'url',
+    generateMissingFields: true,
+  },
 ];
 
 export const attractionPageStructuredFields: StructuredTranslationSpec[] = [
   { key: 'faqs', fields: ['question', 'answer'] },
   { key: 'travelTips', fields: ['title', 'content'] },
+  {
+    key: 'imageMetadata',
+    fields: ['alt', 'title'],
+    identityField: 'url',
+    generateMissingFields: true,
+  },
 ];

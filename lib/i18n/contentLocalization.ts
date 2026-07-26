@@ -58,6 +58,7 @@ export const localizeEntityFields = <T extends UnknownRecord>(
 export interface StructuredEntrySpec {
   key: string;
   fields: string[];
+  identityField?: string;
 }
 
 export const localizeStructuredEntries = <T extends UnknownRecord>(
@@ -79,7 +80,11 @@ export const localizeStructuredEntries = <T extends UnknownRecord>(
     localized[spec.key] = source.map((item, index) => {
       const original = asRecord(item);
       if (!original) return item;
-      const replacement = asRecord(translated[index]);
+      const identity = spec.identityField ? original[spec.identityField] : undefined;
+      const matched = spec.identityField && identity !== undefined
+        ? translated.find((entry) => asRecord(entry)?.[spec.identityField as string] === identity)
+        : undefined;
+      const replacement = asRecord(matched) || asRecord(translated[index]);
       if (!replacement) return item;
 
       const merged: UnknownRecord = { ...original };
@@ -91,6 +96,35 @@ export const localizeStructuredEntries = <T extends UnknownRecord>(
       }
       return merged;
     });
+  }
+
+  return localized as T;
+};
+
+/** Merge translated nested objects field-by-field without losing fallbacks. */
+export const localizeStructuredObjects = <T extends UnknownRecord>(
+  entity: T,
+  locale: string,
+  specs: StructuredEntrySpec[],
+  fallbackLocale = 'en'
+): T => {
+  const bucket = getLocaleBucket(entity.translations, locale, fallbackLocale);
+  if (!bucket) return { ...entity };
+
+  const localized = { ...entity } as UnknownRecord;
+  for (const spec of specs) {
+    const source = asRecord(entity[spec.key]);
+    const translated = asRecord(bucket[spec.key]);
+    if (!source || !translated) continue;
+
+    const merged: UnknownRecord = { ...source };
+    for (const field of spec.fields) {
+      const value = translated[field];
+      if (value !== undefined && value !== null && !isEmptyString(value)) {
+        merged[field] = value;
+      }
+    }
+    localized[spec.key] = merged;
   }
 
   return localized as T;

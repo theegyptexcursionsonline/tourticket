@@ -7,7 +7,8 @@ import { CategoryPageData } from '@/types';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPageModel from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import { attractionPageStructuredFields } from '@/lib/i18n/translationFields';
 import {
   ATTRACTION_PAGE_LOCALIZED_FIELDS,
   resolveAttractionPageTours,
@@ -47,7 +48,11 @@ async function getCategoryPage(categoryName: string, locale: string): Promise<Ca
     // Localize the page's own content (translations added with the unified
     // Pages section), then the linked category's fields below.
     serializedPage = localizeEntityFields(
-      serializedPage as Record<string, unknown>,
+      localizeStructuredEntries(
+        serializedPage as Record<string, unknown>,
+        locale,
+        attractionPageStructuredFields
+      ),
       locale,
       ATTRACTION_PAGE_LOCALIZED_FIELDS
     );

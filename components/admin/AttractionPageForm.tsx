@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -762,32 +761,15 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="space-y-3">
-                            <FormLabel icon={Grid3x3} required>Page Type</FormLabel>
-                            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
-                              {([
-                                ['attraction', 'Attraction'],
-                                ['category', 'Catalogue'],
-                              ] as const).map(([value, label]) => (
-                                <button
-                                  key={value}
-                                  type="button"
-                                  onClick={() => setFormData((prev) => ({ ...prev, pageType: value }))}
-                                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                                    formData.pageType === value
-                                      ? 'bg-white text-indigo-700 shadow-sm'
-                                      : 'text-slate-600 hover:text-slate-900'
-                                  }`}
-                                >
-                                  {label}
-                                </button>
-                              ))}
+                            <FormLabel icon={Grid3x3}>Content type</FormLabel>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <p className="text-sm font-semibold text-slate-800">
+                                {formData.pageType === 'category' ? 'Catalogue' : 'Attraction'}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Chosen from Create New Page and kept fixed so the public URL and saved content model cannot drift.
+                              </p>
                             </div>
-                            <SmallHint>
-                              Need a Category (tour collection with its own URL type and filters)?{' '}
-                              <Link href="/admin/pages/create?type=category" className="text-indigo-600 hover:underline font-medium">
-                                Create a Category instead
-                              </Link>
-                            </SmallHint>
                           </div>
                           {formData.pageType === 'attraction' && (
                             <div className="space-y-3">

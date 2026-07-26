@@ -14,15 +14,23 @@ import {
   categoryTranslationFields,
   attractionPageTranslationFields,
   destinationStructuredFields,
+  destinationStructuredObjectFields,
+  categoryStructuredFields,
   attractionPageStructuredFields,
+  type StructuredObjectTranslationSpec,
+  type StructuredTranslationSpec,
 } from './translationFields';
-import { extractStructuredSpecContent } from './structuredContent';
+import {
+  extractStructuredObjectContent,
+  extractStructuredSpecContent,
+  normalizeStructuredTranslationContent,
+} from './structuredContent';
 import {
   buildTranslationLengthInstruction,
   enforceTranslationFieldLimits,
 } from './translationLimits';
 
-export { extractStructuredSpecContent };
+export { extractStructuredObjectContent, extractStructuredSpecContent };
 
 type FieldValues = Record<string, string | string[]>;
 type TranslationsMap = Record<string, Record<string, string | string[]>>;
@@ -328,22 +336,29 @@ ${locale === 'ar' ? '- Produce proper RTL text for Arabic\n' : ''}- Keep the wor
 }
 
 export async function translateStructuredSpecContentForLocale(
-  content: Record<string, Array<Record<string, string>>>,
+  content: Record<string, unknown>,
   entityLabel: string,
-  locale: string
+  locale: string,
+  context?: FieldValues
 ): Promise<StructuredTranslationMap> {
   const openai = getOpenAIClient();
   if (!openai || Object.keys(content).length === 0) return {};
 
   const localeName = localeNames[locale] || locale;
+  const contextSection = context && Object.keys(context).length > 0
+    ? `\nPage context (use this to generate relevant missing alt/title text):\n${JSON.stringify(context, null, 2)}\n`
+    : '';
   const prompt = `You are a professional translator for a tour booking website. Translate the following structured English ${entityLabel} content into ${localeName} (${locale}).
 
 Content to translate:
 ${JSON.stringify(content, null, 2)}
+${contextSection}
 
 Rules:
 - Preserve the same JSON keys and array order exactly
+- Preserve URLs and identifiers exactly; never translate or rewrite them
 - Translate only text values that customers can read
+- When an alt or title value is empty, generate a concise, natural value from the page context
 - Keep proper nouns in their commonly used local form
 ${locale === 'ar' ? '- Produce proper RTL text for Arabic\n' : ''}- Keep the wording natural for a tourism website
 - Keep empty values empty
@@ -372,6 +387,36 @@ ${locale === 'ar' ? '- Produce proper RTL text for Arabic\n' : ''}- Keep the wor
     console.error(`Auto-translate failed for structured ${entityLabel} content (${locale}):`, error);
     throw error instanceof Error ? error : new Error('Translation failed');
   }
+}
+
+/**
+ * Shared path for destination/category/page translations. Both the background
+ * helpers and the admin streaming endpoint call this so structured fields
+ * cannot silently diverge again.
+ */
+export async function translateStructuredEntityContentForLocale(
+  fields: FieldValues,
+  fieldDefs: TranslationFieldDef[],
+  structuredContent: Record<string, unknown>,
+  arraySpecs: StructuredTranslationSpec[],
+  objectSpecs: StructuredObjectTranslationSpec[],
+  entityLabel: string,
+  locale: string
+): Promise<Record<string, unknown>> {
+  const [flatTranslations, rawStructuredTranslations] = await Promise.all([
+    translateEntityFieldsForLocale(fields, fieldDefs, entityLabel, locale),
+    translateStructuredSpecContentForLocale(structuredContent, entityLabel, locale, fields),
+  ]);
+
+  return {
+    ...flatTranslations,
+    ...normalizeStructuredTranslationContent(
+      structuredContent,
+      rawStructuredTranslations,
+      arraySpecs,
+      objectSpecs
+    ),
+  };
 }
 
 export async function translateTourContentForLocale(
@@ -483,14 +528,21 @@ export async function autoTranslateDestination(destinationId: string): Promise<v
   if (!dest) throw new Error('Destination not found');
 
   const fields = extractFields(dest as Record<string, unknown>, destinationTranslationFields);
-  const structured = extractStructuredSpecContent(dest as Record<string, unknown>, destinationStructuredFields);
-  const translations = await translateLocalesSettled(async (locale) => {
-    const [flat, blocks] = await Promise.all([
-      translateEntityFieldsForLocale(fields, destinationTranslationFields, 'destination', locale),
-      translateStructuredSpecContentForLocale(structured, 'destination', locale),
-    ]);
-    return { ...flat, ...blocks };
-  });
+  const structured = {
+    ...extractStructuredSpecContent(dest as Record<string, unknown>, destinationStructuredFields),
+    ...extractStructuredObjectContent(dest as Record<string, unknown>, destinationStructuredObjectFields),
+  };
+  const translations = await translateLocalesSettled((locale) =>
+    translateStructuredEntityContentForLocale(
+      fields,
+      destinationTranslationFields,
+      structured,
+      destinationStructuredFields,
+      destinationStructuredObjectFields,
+      'destination',
+      locale
+    )
+  );
   if (Object.keys(translations).length === 0) throw new Error('No destination translations were generated');
 
   await Destination.findByIdAndUpdate(destinationId, { $set: buildTranslationsSetOps(translations) });
@@ -504,8 +556,20 @@ export async function autoTranslateCategory(categoryId: string): Promise<void> {
   if (!cat) throw new Error('Category not found');
 
   const fields = extractFields(cat as Record<string, unknown>, categoryTranslationFields);
+  const structured = extractStructuredSpecContent(
+    cat as Record<string, unknown>,
+    categoryStructuredFields
+  );
   const translations = await translateLocalesSettled(
-    (locale) => translateEntityFieldsForLocale(fields, categoryTranslationFields, 'category', locale)
+    (locale) => translateStructuredEntityContentForLocale(
+      fields,
+      categoryTranslationFields,
+      structured,
+      categoryStructuredFields,
+      [],
+      'category page',
+      locale
+    )
   );
   if (Object.keys(translations).length === 0) throw new Error('No category translations were generated');
 
@@ -521,13 +585,17 @@ export async function autoTranslateAttractionPage(pageId: string): Promise<void>
 
   const fields = extractFields(page as Record<string, unknown>, attractionPageTranslationFields);
   const structured = extractStructuredSpecContent(page as Record<string, unknown>, attractionPageStructuredFields);
-  const translations = await translateLocalesSettled(async (locale) => {
-    const [flat, blocks] = await Promise.all([
-      translateEntityFieldsForLocale(fields, attractionPageTranslationFields, 'landing page', locale),
-      translateStructuredSpecContentForLocale(structured, 'landing page', locale),
-    ]);
-    return { ...flat, ...blocks };
-  });
+  const translations = await translateLocalesSettled((locale) =>
+    translateStructuredEntityContentForLocale(
+      fields,
+      attractionPageTranslationFields,
+      structured,
+      attractionPageStructuredFields,
+      [],
+      'landing page',
+      locale
+    )
+  );
   if (Object.keys(translations).length === 0) throw new Error('No page translations were generated');
 
   await AttractionPage.findByIdAndUpdate(pageId, { $set: buildTranslationsSetOps(translations) });

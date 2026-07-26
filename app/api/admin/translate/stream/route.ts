@@ -6,9 +6,11 @@ import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
 import {
-  translateEntityFieldsForLocale,
+  translateStructuredEntityContentForLocale,
   translateTourContentForLocale,
   extractFields,
+  extractStructuredObjectContent,
+  extractStructuredSpecContent,
   extractStructuredTourContent,
 } from '@/lib/i18n/autoTranslate';
 import {
@@ -18,6 +20,12 @@ import {
   destinationTranslationFields,
   categoryTranslationFields,
   attractionPageTranslationFields,
+  destinationStructuredFields,
+  destinationStructuredObjectFields,
+  categoryStructuredFields,
+  attractionPageStructuredFields,
+  type StructuredObjectTranslationSpec,
+  type StructuredTranslationSpec,
 } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
@@ -56,6 +64,22 @@ export async function POST(request: NextRequest) {
   };
 
   const fieldDefs = fieldDefsMap[modelType];
+  const structuredArraySpecsMap: Record<
+    Exclude<ModelType, 'tour'>,
+    StructuredTranslationSpec[]
+  > = {
+    destination: destinationStructuredFields,
+    category: categoryStructuredFields,
+    'attraction-page': attractionPageStructuredFields,
+  };
+  const structuredObjectSpecsMap: Record<
+    Exclude<ModelType, 'tour'>,
+    StructuredObjectTranslationSpec[]
+  > = {
+    destination: destinationStructuredObjectFields,
+    category: [],
+    'attraction-page': [],
+  };
 
   const encoder = new TextEncoder();
 
@@ -106,6 +130,18 @@ export async function POST(request: NextRequest) {
         const structuredTourContent = modelType === 'tour'
           ? extractStructuredTourContent(doc)
           : null;
+        const structuredArraySpecs = modelType === 'tour'
+          ? []
+          : structuredArraySpecsMap[modelType];
+        const structuredObjectSpecs = modelType === 'tour'
+          ? []
+          : structuredObjectSpecsMap[modelType];
+        const structuredEntityContent = modelType === 'tour'
+          ? {}
+          : {
+              ...extractStructuredSpecContent(doc, structuredArraySpecs),
+              ...extractStructuredObjectContent(doc, structuredObjectSpecs),
+            };
 
         const hasFlatFields = Object.keys(fields).length > 0;
         const hasStructuredFields = modelType === 'tour' && structuredTourContent
@@ -113,7 +149,7 @@ export async function POST(request: NextRequest) {
               const value = structuredTourContent[key as keyof typeof structuredTourContent];
               return Array.isArray(value) && value.length > 0;
             })
-          : false;
+          : Object.keys(structuredEntityContent).length > 0;
 
         if (!hasFlatFields && !hasStructuredFields) {
           send('error', { error: 'No translatable content found' });
@@ -150,9 +186,12 @@ export async function POST(request: NextRequest) {
                   bookingOptions: [],
                   addOns: [],
                 }, locale)
-              : await translateEntityFieldsForLocale(
+              : await translateStructuredEntityContentForLocale(
                   fields,
                   fieldDefs,
+                  structuredEntityContent,
+                  structuredArraySpecs,
+                  structuredObjectSpecs,
                   modelType,
                   locale
                 );

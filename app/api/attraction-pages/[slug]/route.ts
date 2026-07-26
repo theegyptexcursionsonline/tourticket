@@ -10,7 +10,8 @@ import {
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import { attractionPageStructuredFields } from '@/lib/i18n/translationFields';
 
 interface CategorySummary {
   _id: unknown;
@@ -155,7 +156,11 @@ export async function GET(
 
     const responseData = {
       ...localizeEntityFields(
-        JSON.parse(JSON.stringify(populatedPage)) as Record<string, unknown>,
+        localizeStructuredEntries(
+          JSON.parse(JSON.stringify(populatedPage)) as Record<string, unknown>,
+          request.nextUrl.searchParams.get('locale') || 'en',
+          attractionPageStructuredFields,
+        ),
         request.nextUrl.searchParams.get('locale') || 'en',
         ATTRACTION_PAGE_LOCALIZED_FIELDS,
       ),
