@@ -67,7 +67,7 @@
     "mongodb": "^6.21.0",
     "mongoose": "^8.24.1",
     "motion": "^12.42.2",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
     "next-intl": "^4.13.2",
     "openai": "^6.46.0",
     "pdf-lib": "^1.17.1",
@@ -127,9 +127,12 @@
     "overrides": {
       "@types/react": "19.0.10",
       "@types/react-dom": "19.0.4",
+      "fast-uri": "3.1.4",
       "fast-xml-parser": "5.7.0",
-      "postcss": "8.5.17",
+      "minimatch@>=10.2.0>brace-expansion": "5.0.8",
+      "postcss": "8.5.23",
       "protobufjs": "7.6.5",
+      "sharp": "0.35.3",
       "uuid": "11.1.1",
       "webpack": "5.104.1",
       "yaml": "2.8.3"
