@@ -18,6 +18,7 @@ import {
 import withAuth from '@/components/admin/withAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { ADMIN_PERMISSIONS } from '@/lib/constants/adminPermissions';
+import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
 interface TeamMember {
   _id: string;
@@ -91,7 +92,10 @@ const TeamPage = () => {
       if (!response.ok) {
         throw new Error('Failed to load team members');
       }
-      const data = await response.json();
+      const data = await readJsonResponse<{ data?: TeamMember[] }>(
+        response,
+        'Failed to load team members.',
+      );
       setMembers(data.data || []);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Unable to load team'));
@@ -117,12 +121,20 @@ const TeamPage = () => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = await readJsonResponse<{
+        data: TeamMember;
+        error?: string;
+        convertedExistingCustomer?: boolean;
+      }>(response, 'Unable to invite this teammate. Please try again.');
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create team member');
       }
 
-      toast.success('Invitation sent! Team member will receive an email to set their password.');
+      toast.success(
+        data.convertedExistingCustomer
+          ? 'Existing customer added to the team. A password setup invitation was sent.'
+          : 'Invitation sent! Team member will receive an email to set their password.',
+      );
       setMembers((prev) => [data.data, ...prev]);
       setFormData({
         firstName: '',
@@ -154,7 +166,10 @@ const TeamPage = () => {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = await readJsonResponse<{ error?: string }>(
+          response,
+          'Failed to update member.',
+        );
         throw new Error(data.error || 'Failed to update member');
       }
       toast.success('Team member updated');
@@ -185,7 +200,10 @@ const TeamPage = () => {
         body: JSON.stringify({ isActive: !member.isActive }),
       });
       if (!response.ok) {
-        const data = await response.json();
+        const data = await readJsonResponse<{ error?: string }>(
+          response,
+          'Failed to update status.',
+        );
         throw new Error(data.error || 'Failed to update status');
       }
       toast.success(`Access ${member.isActive ? 'revoked' : 'restored'}`);
@@ -213,7 +231,10 @@ const TeamPage = () => {
         method: 'DELETE',
       });
       
-      const data = await response.json();
+      const data = await readJsonResponse<{ error?: string }>(
+        response,
+        'Failed to delete member.',
+      );
       if (!response.ok) {
         throw new Error(data.error || 'Failed to delete member');
       }
@@ -241,7 +262,10 @@ const TeamPage = () => {
         body: JSON.stringify({ password: passwordResetModal.newPassword }),
       });
 
-      const data = await response.json();
+      const data = await readJsonResponse<{ error?: string }>(
+        response,
+        'Failed to reset password.',
+      );
       if (!response.ok) {
         throw new Error(data.error || 'Failed to reset password');
       }
@@ -268,7 +292,10 @@ const TeamPage = () => {
         method: 'POST',
       });
 
-      const data = await response.json();
+      const data = await readJsonResponse<{ error?: string }>(
+        response,
+        'Failed to resend invitation.',
+      );
       if (!response.ok) {
         throw new Error(data.error || 'Failed to resend invitation');
       }

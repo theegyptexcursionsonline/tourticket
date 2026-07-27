@@ -8,6 +8,7 @@ import {
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
 import type { AdminPortalScope } from '@/lib/auth/adminPortalScope';
+import { WORK_EMAIL_PATTERN } from '@/lib/validation/email';
 
 // Cart item interface for storing in user document
 export interface ICartItem {
@@ -104,7 +105,7 @@ const UserSchema: Schema<IUser> = new Schema({
     unique: true,
     lowercase: true,
     match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      WORK_EMAIL_PATTERN,
       'Please provide a valid email address.',
     ],
   },
