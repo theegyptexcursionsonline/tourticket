@@ -7,6 +7,7 @@ const mockFindOneAndUpdate = jest.fn();
 const mockUpdateOne = jest.fn();
 const mockCreate = jest.fn();
 const mockFindByIdAndDelete = jest.fn();
+const mockFindOneAndDelete = jest.fn();
 const mockFind = jest.fn();
 const mockFindSort = jest.fn();
 const mockFindLean = jest.fn();
@@ -46,6 +47,7 @@ jest.mock('@/lib/models/user', () => ({
     updateOne: mockUpdateOne,
     create: mockCreate,
     findByIdAndDelete: mockFindByIdAndDelete,
+    findOneAndDelete: mockFindOneAndDelete,
     find: mockFind,
   },
 }));
@@ -62,12 +64,15 @@ const request = (body: unknown) => ({
 
 const createdUser = {
   _id: 'member-1',
-  firstName: 'Esraa',
-  lastName: 'Khaled',
-  email: 'esraa.khaled@excursions.online',
-  role: 'operations',
-  permissions: ['manageBookings'],
+  firstName: 'New',
+  lastName: 'Teammate',
+  email: 'new.teammate@excursions.online',
+  role: 'customer',
+  permissions: [],
   isActive: false,
+  pendingAdminRole: 'operations',
+  pendingAdminPermissions: ['manageBookings'],
+  pendingAdminScopes: ['main'],
   createdAt: new Date('2026-07-27T00:00:00.000Z'),
 };
 
@@ -104,21 +109,31 @@ describe('EEO Main POST /api/admin/team', () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({ success: true, data: [] });
     expect(mockFind).toHaveBeenCalledWith({
-      role: { $ne: 'customer' },
-      $or: [
-        { adminPortalScopes: 'main' },
+      $and: [
         {
-          $and: [
+          $or: [
+            { role: { $ne: 'customer' } },
+            { pendingAdminRole: { $exists: true } },
+          ],
+        },
+        {
+          $or: [
+            { adminPortalScopes: 'main' },
+            { pendingAdminScopes: 'main' },
             {
-              $or: [
-                { adminPortalScopes: { $exists: false } },
-                { adminPortalScopes: { $size: 0 } },
-              ],
-            },
-            {
-              $or: [
-                { tenantIds: { $exists: false } },
-                { tenantIds: { $size: 0 } },
+              $and: [
+                {
+                  $or: [
+                    { adminPortalScopes: { $exists: false } },
+                    { adminPortalScopes: { $size: 0 } },
+                  ],
+                },
+                {
+                  $or: [
+                    { tenantIds: { $exists: false } },
+                    { tenantIds: { $size: 0 } },
+                  ],
+                },
               ],
             },
           ],
@@ -127,12 +142,12 @@ describe('EEO Main POST /api/admin/team', () => {
     });
   });
 
-  it('accepts modern long TLD work emails and scopes new admins to the main portal', async () => {
+  it('accepts modern long TLD work emails without granting access before acceptance', async () => {
     const { POST } = await import('@/app/api/admin/team/route');
     const response = await POST(request({
-      firstName: 'Esraa',
-      lastName: 'Khaled',
-      email: 'esraa.khaled@excursions.online',
+      firstName: 'New',
+      lastName: 'Teammate',
+      email: 'new.teammate@excursions.online',
       permissions: ['manageBookings'],
     }) as never);
     const body = await response.json();
@@ -140,73 +155,123 @@ describe('EEO Main POST /api/admin/team', () => {
     expect(response.status).toBe(201);
     expect(body.success).toBe(true);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      email: 'esraa.khaled@excursions.online',
-      adminPortalScopes: ['main'],
-    }));
-  });
-
-  it('promotes an existing customer identity and sends a password-setup invitation', async () => {
-    mockFindOneSelect.mockResolvedValue({
-      _id: 'customer-1',
-      firstName: 'Sara',
-      lastName: 'Sameh Baz',
-      email: 'sara.sameh.foxes@gmail.com',
+      email: 'new.teammate@excursions.online',
       role: 'customer',
       permissions: [],
-      isActive: true,
-      requirePasswordChange: false,
-    });
+      isActive: false,
+      pendingAdminRole: 'operations',
+      pendingAdminPermissions: ['manageBookings'],
+      pendingAdminScopes: ['main'],
+    }));
+    const [created] = mockCreate.mock.calls[0];
+    expect(created).not.toHaveProperty('adminPortalScopes');
+  });
+
+  const existingCustomer = {
+    _id: 'customer-1',
+    firstName: 'Existing',
+    lastName: 'Shopper',
+    email: 'existing.customer@example.com',
+    role: 'customer',
+    permissions: [],
+    isActive: true,
+    requirePasswordChange: false,
+  };
+
+  it('invites an existing customer without granting any admin access yet', async () => {
+    mockFindOneSelect.mockResolvedValue(existingCustomer);
     mockFindOneAndUpdate.mockResolvedValue({
-      _id: 'customer-1',
-      firstName: 'Sara',
-      lastName: 'Sameh Baz',
-      email: 'sara.sameh.foxes@gmail.com',
-      role: 'operations',
-      permissions: ['manageTours'],
-      isActive: true,
-      requirePasswordChange: true,
-      adminPortalScopes: ['main'],
+      ...existingCustomer,
+      pendingAdminRole: 'operations',
+      pendingAdminPermissions: ['manageTours'],
+      pendingAdminScopes: ['main'],
     });
 
     const { POST } = await import('@/app/api/admin/team/route');
     const response = await POST(request({
-      firstName: 'Sarah',
-      lastName: 'Sameh',
-      email: 'sara.sameh.foxes@gmail.com',
+      firstName: 'Existing',
+      lastName: 'Shopper',
+      email: 'existing.customer@example.com',
       permissions: ['manageTours'],
     }) as never);
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.convertedExistingCustomer).toBe(true);
-    expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
-      { _id: 'customer-1', role: 'customer', isActive: true },
-      {
-        $set: expect.objectContaining({
-          role: 'operations',
-          permissions: ['manageTours'],
-          requirePasswordChange: true,
-        }),
-        $addToSet: { adminPortalScopes: 'main' },
-      },
-      { new: true, runValidators: true },
-    );
     expect(mockCreate).not.toHaveBeenCalled();
+
+    const [, update] = mockFindOneAndUpdate.mock.calls[0];
+    // The whole point: the invitation records an offer and touches nothing
+    // that could let the account act as an admin before accepting it.
+    expect(update.$set).toEqual(expect.objectContaining({
+      pendingAdminRole: 'operations',
+      pendingAdminPermissions: ['manageTours'],
+      pendingAdminScopes: ['main'],
+    }));
+    expect(update.$set).not.toHaveProperty('role');
+    expect(update.$set).not.toHaveProperty('permissions');
+    expect(update.$set).not.toHaveProperty('isActive');
+    expect(update.$set).not.toHaveProperty('password');
+    expect(update).not.toHaveProperty('$addToSet');
+
     expect(mockSendAdminInviteEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        inviteeName: 'Sara Sameh Baz',
-        inviteeEmail: 'sara.sameh.foxes@gmail.com',
+        inviteeName: 'Existing Shopper',
+        inviteeEmail: 'existing.customer@example.com',
       }),
     );
+  });
+
+  it('reports a pending invitee as inactive so the list never implies live access', async () => {
+    mockFindOneSelect.mockResolvedValue(existingCustomer);
+    mockFindOneAndUpdate.mockResolvedValue({
+      ...existingCustomer,
+      isActive: true,
+      pendingAdminRole: 'operations',
+      pendingAdminPermissions: ['manageTours'],
+    });
+
+    const { POST } = await import('@/app/api/admin/team/route');
+    const response = await POST(request({
+      firstName: 'Existing',
+      lastName: 'Shopper',
+      email: 'existing.customer@example.com',
+      permissions: ['manageTours'],
+    }) as never);
+    const body = await response.json();
+
+    expect(body.data).toEqual(expect.objectContaining({
+      role: 'operations',
+      isActive: false,
+      invitationPending: true,
+    }));
+  });
+
+  it('refuses to re-invite an account that already has a live invitation', async () => {
+    mockFindOneSelect.mockResolvedValue({
+      ...existingCustomer,
+      pendingAdminRole: 'operations',
+      invitationExpires: new Date(Date.now() + 60_000),
+    });
+
+    const { POST } = await import('@/app/api/admin/team/route');
+    const response = await POST(request({
+      firstName: 'Existing',
+      lastName: 'Shopper',
+      email: 'existing.customer@example.com',
+    }) as never);
+
+    expect(response.status).toBe(409);
+    expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
   it('returns a structured JSON error and rolls back when email delivery fails', async () => {
     mockSendAdminInviteEmail.mockRejectedValueOnce(new Error('provider rejected'));
     const { POST } = await import('@/app/api/admin/team/route');
     const response = await POST(request({
-      firstName: 'Esraa',
-      lastName: 'Khaled',
-      email: 'esraa.khaled@excursions.online',
+      firstName: 'New',
+      lastName: 'Teammate',
+      email: 'new.teammate@excursions.online',
     }) as never);
     const body = await response.json();
 
@@ -215,50 +280,39 @@ describe('EEO Main POST /api/admin/team', () => {
       success: false,
       error: 'Failed to send invitation email. Please check the address and try again.',
     });
-    expect(mockFindByIdAndDelete).toHaveBeenCalledWith('member-1');
+    expect(mockFindOneAndDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: 'member-1' }),
+    );
   });
 
-  it('restores a customer account if its admin invitation email cannot be sent', async () => {
-    mockFindOneSelect.mockResolvedValue({
-      _id: 'customer-1',
-      role: 'customer',
-      permissions: [],
-      isActive: true,
-      requirePasswordChange: false,
-    });
+  it('withdraws only the invitation when the email cannot be sent to a customer', async () => {
+    mockFindOneSelect.mockResolvedValue(existingCustomer);
     mockFindOneAndUpdate.mockResolvedValue({
-      ...createdUser,
-      _id: 'customer-1',
-      email: 'sara.sameh.foxes@gmail.com',
-      role: 'operations',
-      isActive: true,
+      ...existingCustomer,
+      pendingAdminRole: 'operations',
     });
     mockSendAdminInviteEmail.mockRejectedValueOnce(new Error('provider rejected'));
 
     const { POST } = await import('@/app/api/admin/team/route');
     const response = await POST(request({
-      firstName: 'Sara',
-      lastName: 'Sameh',
-      email: 'sara.sameh.foxes@gmail.com',
+      firstName: 'Existing',
+      lastName: 'Shopper',
+      email: 'existing.customer@example.com',
       permissions: ['manageTours'],
     }) as never);
 
     expect(response.status).toBe(502);
-    expect(mockUpdateOne).toHaveBeenCalledWith(
-      expect.objectContaining({ _id: 'customer-1' }),
-      expect.objectContaining({
-        $set: expect.objectContaining({
-          role: 'customer',
-          permissions: [],
-          requirePasswordChange: false,
-        }),
-        $unset: expect.objectContaining({
-          invitationToken: 1,
-          invitationExpires: 1,
-          adminPortalScopes: 1,
-        }),
-      }),
-    );
+    const [, rollback] = mockUpdateOne.mock.calls[0];
+    expect(rollback.$unset).toEqual(expect.objectContaining({
+      invitationToken: 1,
+      invitationExpires: 1,
+      pendingAdminRole: 1,
+      pendingAdminPermissions: 1,
+      pendingAdminScopes: 1,
+    }));
+    // A Mailgun outage must not cost the customer their account.
+    expect(rollback).not.toHaveProperty('$set');
+    expect(mockFindOneAndDelete).not.toHaveBeenCalled();
     expect(mockFindByIdAndDelete).not.toHaveBeenCalled();
   });
 

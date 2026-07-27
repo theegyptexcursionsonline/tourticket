@@ -2,6 +2,7 @@ import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isInvitationAcceptPath } from './lib/routing/invitationRoute';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -46,9 +47,11 @@ export function proxy(request: NextRequest) {
     '/manifest.json',
   ];
 
-  const isDashboardPassthrough = dashboardPassthroughPaths.some(
-    (p) => pathname === p || pathname.startsWith(p + '/')
-  );
+  const isDashboardPassthrough =
+    isInvitationAcceptPath(pathname) ||
+    dashboardPassthroughPaths.some(
+      (p) => pathname === p || pathname.startsWith(p + '/')
+    );
 
   if (isDashboardSubdomain && !isDashboardPassthrough) {
     const url = request.nextUrl.clone();

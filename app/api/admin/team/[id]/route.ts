@@ -12,6 +12,11 @@ import {
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
 import { EmailService } from '@/lib/email/emailService';
+import {
+  clearPendingAdminGrant,
+  hasPortalMembership,
+  revokePortalScope,
+} from '@/lib/admin/teamMembership';
 
 type AdminUserSource = Pick<IUser, 'firstName' | 'lastName' | 'email' | 'role' | 'permissions' | 'isActive' | 'lastLoginAt' | 'createdAt'> & { _id: unknown };
 
@@ -90,10 +95,16 @@ export async function PATCH(
   // For high-frequency updates, consider using findByIdAndUpdate with versioning.
   const user = await User.findById(id).select('+password');
 
-  if (!user || user.role === 'customer') {
+  if (!user || user.role === 'customer' || !hasPortalMembership(user, 'main')) {
     return NextResponse.json(
       { success: false, error: 'Team member not found' },
       { status: 404 },
+    );
+  }
+  if (user.pendingAdminScopes?.includes('main')) {
+    return NextResponse.json(
+      { success: false, error: 'Accept or withdraw the pending invitation before editing access.' },
+      { status: 409 },
     );
   }
 
@@ -178,15 +189,100 @@ export async function DELETE(
     );
   }
 
-  const user = await User.findById(id);
-  if (!user || user.role === 'customer') {
+  const user = await User.findById(id).select('+invitationToken +invitationExpires');
+  if (!user || (user.role === 'customer' && !user.pendingAdminRole)) {
+    return NextResponse.json(
+      { success: false, error: 'Team member not found' },
+      { status: 404 },
+    );
+  }
+  const hasPendingMainInvite = Boolean(
+    user.pendingAdminRole && user.pendingAdminScopes?.includes('main'),
+  );
+  if (!hasPendingMainInvite && !hasPortalMembership(user, 'main')) {
     return NextResponse.json(
       { success: false, error: 'Team member not found' },
       { status: 404 },
     );
   }
 
-  // Send notification email before deleting
+  if (String(user._id) === String(auth.userId)) {
+    return NextResponse.json(
+      { success: false, error: 'You cannot remove your own admin access.' },
+      { status: 400 },
+    );
+  }
+
+  // Withdrawing a pending offer must not touch any existing account, role,
+  // password, booking, portal, or brand assignment.
+  if (hasPendingMainInvite) {
+    const withdrawn = await User.updateOne(
+      {
+        _id: user._id,
+        pendingAdminRole: user.pendingAdminRole,
+        pendingAdminScopes: 'main',
+      },
+      {
+        $unset: {
+          invitationToken: 1,
+          invitationExpires: 1,
+          ...clearPendingAdminGrant(1),
+        },
+      },
+    );
+    if (withdrawn.modifiedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'The invitation changed. Refresh and try again.' },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({
+      success: true,
+      outcome: 'invitation_withdrawn',
+      message: 'Invitation withdrawn. The existing account and access remain unchanged.',
+    });
+  }
+
+  // Removing the last owner would leave the portal unadministrable.
+  if (user.role === 'super_admin') {
+    const remainingOwners = await User.countDocuments({
+      _id: { $ne: user._id },
+      role: 'super_admin',
+      isActive: true,
+    });
+    if (remainingOwners === 0) {
+      return NextResponse.json(
+        { success: false, error: 'This is the last owner account. Promote another owner first.' },
+        { status: 409 },
+      );
+    }
+  }
+
+  const revocation = revokePortalScope(user, 'main');
+
+  // Withdrawing an unaccepted invitation removes the offer, nothing else.
+  const update: Record<string, unknown> = {
+    $unset: {
+      invitationToken: 1,
+      invitationExpires: 1,
+      ...clearPendingAdminGrant(1),
+    },
+  };
+
+  if (revocation.outcome === 'reverted_to_customer') {
+    // Never delete the person. Bookings, profile and storefront sign-in belong
+    // to them, not to the admin role being removed.
+    update.$set = {
+      role: 'customer',
+      permissions: [],
+    };
+    (update.$unset as Record<string, unknown>).adminPortalScopes = 1;
+  } else {
+    update.$set = { adminPortalScopes: revocation.adminPortalScopes };
+  }
+
+  await User.updateOne({ _id: user._id }, update);
+
   EmailService.sendAdminAccessUpdateEmail({
     inviteeName: formatName(user) || user.email,
     inviteeEmail: user.email,
@@ -196,14 +292,14 @@ export async function DELETE(
     portalLink: getPortalLink(),
     supportEmail: getSupportEmail(),
   }).catch((error) => {
-    console.error('Failed to send admin deletion email', error);
+    console.error('Failed to send admin access removal email', error);
   });
-
-  // Permanently delete the user
-  await User.findByIdAndDelete(id);
 
   return NextResponse.json({
     success: true,
-    message: 'Team member permanently deleted.',
+    outcome: revocation.outcome,
+    message: revocation.outcome === 'reverted_to_customer'
+        ? 'Removed from the team. The account keeps its customer profile, bookings and sign-in.'
+        : 'Removed from this portal. Their access to other portals is unchanged.',
   });
 }

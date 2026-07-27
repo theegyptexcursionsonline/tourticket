@@ -13,21 +13,47 @@ import {
 } from '@/lib/constants/adminPermissions';
 import { EmailService } from '@/lib/email/emailService';
 import { isValidWorkEmail } from '@/lib/validation/email';
+import {
+  clearPendingAdminGrant,
+  hasPortalMembership,
+} from '@/lib/admin/teamMembership';
 
-type AdminUserSource = Pick<IUser, 'firstName' | 'lastName' | 'email' | 'role' | 'permissions' | 'isActive' | 'lastLoginAt' | 'createdAt'> & { _id: unknown };
+type AdminUserSource = Pick<
+  IUser,
+  | 'firstName'
+  | 'lastName'
+  | 'email'
+  | 'role'
+  | 'permissions'
+  | 'isActive'
+  | 'lastLoginAt'
+  | 'createdAt'
+  | 'pendingAdminRole'
+  | 'pendingAdminPermissions'
+  | 'pendingAdminScopes'
+  | 'requirePasswordChange'
+> & { _id: unknown };
 
-const sanitize = (user: AdminUserSource) => ({
-  id: String(user._id),
-  _id: String(user._id),
-  firstName: user.firstName,
-  lastName: user.lastName,
-  email: user.email,
-  role: user.role,
-  permissions: user.permissions || [],
-  isActive: user.isActive,
-  lastLoginAt: user.lastLoginAt,
-  createdAt: user.createdAt,
-});
+const sanitize = (user: AdminUserSource) => {
+  // A pending invitee holds no admin access yet. Show the access they were
+  // offered so the list reads sensibly, but never as though it were live.
+  const invitationPending = Boolean(user.pendingAdminRole);
+
+  return {
+    id: String(user._id),
+    _id: String(user._id),
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.pendingAdminRole || user.role,
+    permissions: user.pendingAdminPermissions || user.permissions || [],
+    isActive: invitationPending ? false : user.isActive,
+    invitationPending,
+    requiresPasswordSetup: Boolean(user.requirePasswordChange),
+    lastLoginAt: user.lastLoginAt,
+    createdAt: user.createdAt,
+  };
+};
 
 function normalizePermissions(
   requested: unknown,
@@ -66,21 +92,33 @@ export async function GET(request: NextRequest) {
   await dbConnect();
 
   const teamMembers = await User.find({
-    role: { $ne: 'customer' },
-    $or: [
-      { adminPortalScopes: 'main' },
+    $and: [
       {
-        $and: [
+        $or: [
+          { role: { $ne: 'customer' } },
+          // Customers holding an unaccepted invitation belong on the list so
+          // the invite stays visible and can be resent or withdrawn.
+          { pendingAdminRole: { $exists: true } },
+        ],
+      },
+      {
+        $or: [
+          { adminPortalScopes: 'main' },
+          { pendingAdminScopes: 'main' },
           {
-            $or: [
-              { adminPortalScopes: { $exists: false } },
-              { adminPortalScopes: { $size: 0 } },
-            ],
-          },
-          {
-            $or: [
-              { tenantIds: { $exists: false } },
-              { tenantIds: { $size: 0 } },
+            $and: [
+              {
+                $or: [
+                  { adminPortalScopes: { $exists: false } },
+                  { adminPortalScopes: { $size: 0 } },
+                ],
+              },
+              {
+                $or: [
+                  { tenantIds: { $exists: false } },
+                  { tenantIds: { $size: 0 } },
+                ],
+              },
             ],
           },
         ],
@@ -147,46 +185,56 @@ export async function POST(request: NextRequest) {
 
     const existing = await User.findOne({ email: normalizedEmail })
       .select('+invitationToken +invitationExpires');
-    let convertedCustomer = false;
-    let originalCustomerState: {
-      permissions: AdminPermission[];
-      adminPortalScopes?: string[];
-      requirePasswordChange: boolean;
-    } | null = null;
+    let existingAccountInvitation = false;
     let user;
 
     if (existing) {
-      if (existing.role !== 'customer') {
+      if (
+        existing.role !== 'customer'
+        && hasPortalMembership(existing, 'main')
+      ) {
         return NextResponse.json(
-          { success: false, error: 'This account is already an administrator.' },
+          { success: false, error: 'This account already has access to the EEO Main portal.' },
           { status: 409 },
         );
       }
       if (!existing.isActive) {
         return NextResponse.json(
-          { success: false, error: 'This customer account is inactive and cannot be added to the team.' },
+          { success: false, error: 'This account is inactive. Restore it before sending a portal invitation.' },
+          { status: 409 },
+        );
+      }
+      if (existing.pendingAdminRole && existing.invitationExpires && existing.invitationExpires > new Date()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'A team invitation is already pending for this account. Use Resend invite instead.',
+          },
           { status: 409 },
         );
       }
 
-      originalCustomerState = {
-        permissions: [...(existing.permissions || [])],
-        adminPortalScopes: Array.isArray(existing.adminPortalScopes)
-          ? [...existing.adminPortalScopes]
-          : undefined,
-        requirePasswordChange: Boolean(existing.requirePasswordChange),
-      };
+      // Offer the role, do not grant it. Existing customer/admin identity,
+      // password and current portal access remain unchanged until acceptance.
       user = await User.findOneAndUpdate(
-        { _id: existing._id, role: 'customer', isActive: true },
+        {
+          _id: existing._id,
+          isActive: true,
+          $or: [
+            { pendingAdminRole: { $exists: false } },
+            { invitationExpires: { $lte: new Date() } },
+          ],
+        },
         {
           $set: {
-            role: normalizedRole,
-            permissions: effectivePermissions,
             invitationToken,
             invitationExpires,
-            requirePasswordChange: true,
+            pendingAdminRole: normalizedRole,
+            pendingAdminPermissions: effectivePermissions,
+            pendingAdminScopes: ['main'],
+            pendingAdminInvitedAt: new Date(),
+            pendingAdminInvitedBy: auth.email || 'Admin Team',
           },
-          $addToSet: { adminPortalScopes: 'main' },
         },
         { new: true, runValidators: true },
       );
@@ -196,10 +244,10 @@ export async function POST(request: NextRequest) {
           { status: 409 },
         );
       }
-      convertedCustomer = true;
+      existingAccountInvitation = true;
     } else {
-      // New team members receive an unusable random password until they accept
-      // the invitation and choose their own.
+      // New invitees are also represented as pending. They receive an unusable
+      // random password and no admin role/scope until acceptance.
       const temporaryPassword = crypto.randomBytes(16).toString('hex');
       const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
       user = await User.create({
@@ -207,13 +255,17 @@ export async function POST(request: NextRequest) {
         lastName: lastName.trim(),
         email: normalizedEmail,
         password: hashedPassword,
-        role: normalizedRole,
-        permissions: effectivePermissions,
+        role: 'customer',
+        permissions: [],
         isActive: false, // Inactive until they accept invitation
         invitationToken,
         invitationExpires,
         requirePasswordChange: true,
-        adminPortalScopes: ['main'],
+        pendingAdminRole: normalizedRole,
+        pendingAdminPermissions: effectivePermissions,
+        pendingAdminScopes: ['main'],
+        pendingAdminInvitedAt: new Date(),
+        pendingAdminInvitedBy: auth.email || 'Admin Team',
       });
     }
 
@@ -237,33 +289,22 @@ export async function POST(request: NextRequest) {
         supportEmail: getSupportEmail(),
       });
     } catch (emailError) {
-      console.error('Failed to send admin invite email, rolling back user creation:', emailError);
-      if (convertedCustomer && originalCustomerState) {
-        const rollback: {
-          $set: Record<string, unknown>;
-          $unset: Record<string, 1>;
-        } = {
-          $set: {
-            role: 'customer',
-            permissions: originalCustomerState.permissions,
-            requirePasswordChange: originalCustomerState.requirePasswordChange,
-          },
-          $unset: {
-            invitationToken: 1,
-            invitationExpires: 1,
-          },
-        };
-        if (originalCustomerState.adminPortalScopes) {
-          rollback.$set.adminPortalScopes = originalCustomerState.adminPortalScopes;
-        } else {
-          rollback.$unset.adminPortalScopes = 1;
-        }
+      console.error('Failed to send admin invite email, rolling back invitation:', emailError);
+      if (existingAccountInvitation) {
+        // Withdraw only the invitation this request wrote. The customer's
+        // identity, bookings and profile must survive an email outage.
         await User.updateOne(
           { _id: user._id, invitationToken },
-          rollback,
+          {
+            $unset: {
+              invitationToken: 1,
+              invitationExpires: 1,
+              ...clearPendingAdminGrant(1),
+            },
+          },
         );
       } else {
-        await User.findByIdAndDelete(user._id);
+        await User.findOneAndDelete({ _id: user._id, invitationToken });
       }
       return NextResponse.json(
         {
@@ -278,9 +319,10 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         data: sanitize(user),
-        convertedExistingCustomer: convertedCustomer,
+        existingAccountInvitation,
+        convertedExistingCustomer: existingAccountInvitation,
       },
-      { status: convertedCustomer ? 200 : 201 },
+      { status: existingAccountInvitation ? 200 : 201 },
     );
   } catch (error) {
     const err = error as { name?: string; code?: number; message?: string };

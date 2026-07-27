@@ -31,33 +31,43 @@ export async function POST(
     );
   }
 
-  const user = await User.findById(id);
+  const user = await User.findById(id)
+    .select('+invitationToken +invitationExpires');
 
-  if (!user || user.role === 'customer') {
+  if (
+    !user
+    || !user.pendingAdminRole
+    || !user.pendingAdminScopes?.includes('main')
+  ) {
     return NextResponse.json(
       { success: false, error: 'Team member not found' },
       { status: 404 },
     );
   }
 
-  // Check if user is already active
-  if (user.isActive) {
+  const previousToken = user.invitationToken;
+  const previousExpires = user.invitationExpires;
+  const invitationToken = crypto.randomBytes(32).toString('hex');
+  const invitationExpires = new Date();
+  invitationExpires.setDate(invitationExpires.getDate() + 7);
+
+  const rotated = await User.findOneAndUpdate(
+    {
+      _id: user._id,
+      pendingAdminRole: user.pendingAdminRole,
+      pendingAdminScopes: 'main',
+    },
+    { $set: { invitationToken, invitationExpires } },
+    { new: true, runValidators: true },
+  );
+  if (!rotated) {
     return NextResponse.json(
-      { success: false, error: 'This user is already active. Use password reset instead.' },
-      { status: 400 },
+      { success: false, error: 'The invitation changed. Refresh and try again.' },
+      { status: 409 },
     );
   }
 
-  // Generate new invitation token
-  const invitationToken = crypto.randomBytes(32).toString('hex');
-  const invitationExpires = new Date();
-  invitationExpires.setDate(invitationExpires.getDate() + 7); // 7 days from now
-
-  user.invitationToken = invitationToken;
-  user.invitationExpires = invitationExpires;
-  await user.save({ validateBeforeSave: false });
-
-  const inviteeName = `${user.firstName} ${user.lastName}`.trim();
+  const inviteeName = `${rotated.firstName} ${rotated.lastName}`.trim();
   const inviterName = auth.email || 'Admin Team';
   
   // Generate invitation link
@@ -67,12 +77,12 @@ export async function POST(
   // Send email
   try {
     await EmailService.sendAdminInviteEmail({
-      inviteeName: inviteeName || user.email,
-      inviteeEmail: user.email,
+      inviteeName: inviteeName || rotated.email,
+      inviteeEmail: rotated.email,
       inviterName,
       temporaryPassword: '', // No longer sending password
-      role: user.role,
-      permissions: user.permissions,
+      role: user.pendingAdminRole,
+      permissions: user.pendingAdminPermissions || [],
       portalLink: invitationLink,
       supportEmail: getSupportEmail(),
     });
@@ -83,13 +93,16 @@ export async function POST(
     });
   } catch (emailError) {
     console.error('Failed to resend invitation email:', emailError);
+    const rollback = previousToken && previousExpires
+      ? { $set: { invitationToken: previousToken, invitationExpires: previousExpires } }
+      : { $unset: { invitationToken: 1, invitationExpires: 1 } };
+    await User.updateOne({ _id: user._id, invitationToken }, rollback);
     return NextResponse.json(
       { 
         success: false, 
         error: 'Failed to send invitation email. Please check email configuration and try again.' 
       },
-      { status: 500 },
+      { status: 502 },
     );
   }
 }
-

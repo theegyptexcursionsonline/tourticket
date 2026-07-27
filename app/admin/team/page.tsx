@@ -28,6 +28,8 @@ interface TeamMember {
   role: string;
   permissions: string[];
   isActive: boolean;
+  /** Invited but not yet accepted — holds no access on this portal yet. */
+  invitationPending?: boolean;
   lastLoginAt?: string;
   createdAt?: string;
 }
@@ -124,6 +126,7 @@ const TeamPage = () => {
       const data = await readJsonResponse<{
         data: TeamMember;
         error?: string;
+        existingAccountInvitation?: boolean;
         convertedExistingCustomer?: boolean;
       }>(response, 'Unable to invite this teammate. Please try again.');
       if (!response.ok) {
@@ -131,9 +134,9 @@ const TeamPage = () => {
       }
 
       toast.success(
-        data.convertedExistingCustomer
-          ? 'Existing customer added to the team. A password setup invitation was sent.'
-          : 'Invitation sent! Team member will receive an email to set their password.',
+        data.existingAccountInvitation || data.convertedExistingCustomer
+          ? 'Invitation sent. The existing account remains unchanged until it is accepted.'
+          : 'Secure invitation sent. Access begins only after it is accepted.',
       );
       setMembers((prev) => [data.data, ...prev]);
       setFormData({
@@ -217,11 +220,14 @@ const TeamPage = () => {
     }
   };
 
-  const deleteMember = async (member: TeamMember) => {
+  const removeMember = async (member: TeamMember) => {
     if (!token) return;
-    
-    const confirmMessage = `Are you sure you want to permanently delete ${member.firstName} ${member.lastName}?\n\nThis action cannot be undone and will remove all their access.`;
-    
+
+    const name = `${member.firstName} ${member.lastName}`.trim();
+    const confirmMessage = member.invitationPending
+      ? `Withdraw the team invitation for ${name}?\n\nTheir customer account, bookings and sign-in are not affected.`
+      : `Remove ${name} from the EEO Main team?\n\nThey lose admin access to this portal. Their customer account, bookings and any access to other EEO portals stay exactly as they are.`;
+
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -230,19 +236,19 @@ const TeamPage = () => {
       const response = await authorizedFetch(`/api/admin/team/${member._id}`, {
         method: 'DELETE',
       });
-      
-      const data = await readJsonResponse<{ error?: string }>(
+
+      const data = await readJsonResponse<{ error?: string; message?: string }>(
         response,
-        'Failed to delete member.',
+        'Failed to remove member.',
       );
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete member');
+        throw new Error(data.error || 'Failed to remove member');
       }
-      
+
       setMembers((prev) => prev.filter((item) => item._id !== member._id));
-      toast.success(`${member.firstName} ${member.lastName} has been deleted`);
+      toast.success(data.message || `${name} was removed from the team`);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Unable to delete member'));
+      toast.error(getErrorMessage(error, 'Unable to remove member'));
     }
   };
 
@@ -341,7 +347,7 @@ const TeamPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <form
           onSubmit={handleInvite}
-          className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 md:p-6 space-y-4 lg:col-span-1"
+          className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 md:p-6 space-y-4 lg:col-span-1 lg:sticky lg:top-24 lg:self-start"
         >
           <div className="flex items-start gap-3 mb-4">
             <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-500 flex-shrink-0">
@@ -349,7 +355,9 @@ const TeamPage = () => {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base md:text-lg font-semibold text-slate-900">Invite teammate</h2>
-              <p className="text-xs md:text-sm text-slate-500">They&apos;ll receive an email to set their password</p>
+              <p className="text-xs md:text-sm text-slate-500">
+                Access stays pending until they accept the secure email invitation.
+              </p>
             </div>
           </div>
 
@@ -469,9 +477,19 @@ const TeamPage = () => {
                       {member.firstName?.charAt(0).toUpperCase() || 'T'}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm md:text-base text-slate-900 font-semibold truncate">
-                        {member.firstName} {member.lastName}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm md:text-base text-slate-900 font-semibold truncate">
+                          {member.firstName} {member.lastName}
+                        </p>
+                        {member.invitationPending && (
+                          <span
+                            className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                            title="Invited, but has not accepted yet. No admin access is active."
+                          >
+                            Invitation pending — no access yet
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs md:text-sm text-slate-500 truncate">{member.email}</p>
                     </div>
                   </div>
@@ -487,12 +505,17 @@ const TeamPage = () => {
                         return (
                           <button
                             key={permission}
+                            type="button"
+                            disabled={member.invitationPending}
                             onClick={() => togglePermission(member, permission)}
                             className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-full text-xs font-medium border transition ${
                               active
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                 : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                            }`}
+                            } ${member.invitationPending ? 'cursor-default opacity-80' : ''}`}
+                            title={member.invitationPending
+                              ? 'Offered permission. It becomes active only after acceptance.'
+                              : 'Update this team member permission'}
                           >
                             {permissionLabels[permission] || permission}
                           </button>
@@ -503,7 +526,7 @@ const TeamPage = () => {
 
                   {/* Actions */}
                   <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                    {!member.isActive && (
+                    {member.invitationPending && (
                       <button
                         onClick={() => handleResendInvitation(member)}
                         className="inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 transition"
@@ -514,6 +537,7 @@ const TeamPage = () => {
                       </button>
                     )}
                     
+                    {!member.invitationPending && (
                     <button
                       onClick={() => setPasswordResetModal({ isOpen: true, member, newPassword: '', showPassword: false, isResetting: false })}
                       className="inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-xl border border-purple-200 text-purple-600 hover:bg-purple-50 transition"
@@ -522,7 +546,9 @@ const TeamPage = () => {
                       <Key className="h-3.5 w-3.5 md:h-4 md:w-4" /> 
                       <span>Reset Password</span>
                     </button>
+                    )}
 
+                    {!member.invitationPending && (
                     <button
                       onClick={() => toggleStatus(member)}
                       className={`inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-xl border transition ${
@@ -545,14 +571,17 @@ const TeamPage = () => {
                         </>
                       )}
                     </button>
+                    )}
                     
                     <button
-                      onClick={() => deleteMember(member)}
+                      onClick={() => removeMember(member)}
                       className="inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition"
-                      title="Permanently delete this team member"
+                      title={member.invitationPending
+                        ? 'Withdraw this invitation. The customer account is not affected.'
+                        : 'Remove admin access to this portal. The account, bookings and other portals are not affected.'}
                     >
-                      <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> 
-                      <span>Delete</span>
+                      <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <span>{member.invitationPending ? 'Withdraw invite' : 'Remove'}</span>
                     </button>
                   </div>
                 </div>
