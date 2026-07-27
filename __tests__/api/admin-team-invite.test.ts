@@ -7,6 +7,9 @@ const mockFindOneAndUpdate = jest.fn();
 const mockUpdateOne = jest.fn();
 const mockCreate = jest.fn();
 const mockFindByIdAndDelete = jest.fn();
+const mockFind = jest.fn();
+const mockFindSort = jest.fn();
+const mockFindLean = jest.fn();
 const mockSendAdminInviteEmail = jest.fn();
 
 jest.mock('next/server', () => {
@@ -43,6 +46,7 @@ jest.mock('@/lib/models/user', () => ({
     updateOne: mockUpdateOne,
     create: mockCreate,
     findByIdAndDelete: mockFindByIdAndDelete,
+    find: mockFind,
   },
 }));
 jest.mock('@/lib/email/emailService', () => ({
@@ -68,6 +72,14 @@ const createdUser = {
 };
 
 describe('EEO Main POST /api/admin/team', () => {
+  const consoleErrorSpy = jest
+    .spyOn(console, 'error')
+    .mockImplementation(() => undefined);
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockRequireAdminAuth.mockResolvedValue({
@@ -77,8 +89,42 @@ describe('EEO Main POST /api/admin/team', () => {
     });
     mockFindOne.mockReturnValue({ select: mockFindOneSelect });
     mockFindOneSelect.mockResolvedValue(null);
+    mockFind.mockReturnValue({ sort: mockFindSort });
+    mockFindSort.mockReturnValue({ lean: mockFindLean });
+    mockFindLean.mockResolvedValue([]);
     mockCreate.mockResolvedValue(createdUser);
     mockSendAdminInviteEmail.mockResolvedValue(undefined);
+  });
+
+  it('keeps network-only administrators out of the main EEO team list', async () => {
+    const { GET } = await import('@/app/api/admin/team/route');
+    const response = await GET({} as never);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ success: true, data: [] });
+    expect(mockFind).toHaveBeenCalledWith({
+      role: { $ne: 'customer' },
+      $or: [
+        { adminPortalScopes: 'main' },
+        {
+          $and: [
+            {
+              $or: [
+                { adminPortalScopes: { $exists: false } },
+                { adminPortalScopes: { $size: 0 } },
+              ],
+            },
+            {
+              $or: [
+                { tenantIds: { $exists: false } },
+                { tenantIds: { $size: 0 } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
   });
 
   it('accepts modern long TLD work emails and scopes new admins to the main portal', async () => {

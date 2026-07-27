@@ -78,6 +78,7 @@ export interface IUser extends Document {
   invitationExpires?: Date;
   requirePasswordChange?: boolean;
   adminPortalScopes?: AdminPortalScope[];
+  tenantIds?: string[];
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
   twoFactorPendingSecret?: string;
@@ -191,6 +192,10 @@ const UserSchema: Schema<IUser> = new Schema({
   adminPortalScopes: {
     type: [String],
     enum: ['main', 'multiTenant'],
+    default: undefined,
+  },
+  tenantIds: {
+    type: [String],
     default: undefined,
   },
   twoFactorEnabled: {

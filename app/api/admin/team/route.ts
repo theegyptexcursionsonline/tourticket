@@ -65,7 +65,28 @@ export async function GET(request: NextRequest) {
 
   await dbConnect();
 
-  const teamMembers = await User.find({ role: { $ne: 'customer' } })
+  const teamMembers = await User.find({
+    role: { $ne: 'customer' },
+    $or: [
+      { adminPortalScopes: 'main' },
+      {
+        $and: [
+          {
+            $or: [
+              { adminPortalScopes: { $exists: false } },
+              { adminPortalScopes: { $size: 0 } },
+            ],
+          },
+          {
+            $or: [
+              { tenantIds: { $exists: false } },
+              { tenantIds: { $size: 0 } },
+            ],
+          },
+        ],
+      },
+    ],
+  })
     .sort({ createdAt: -1 })
     .lean();
 
