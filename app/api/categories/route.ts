@@ -4,7 +4,8 @@ import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import Tour from '@/lib/models/Tour';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import { categoryStructuredFields } from '@/lib/i18n/translationFields';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
@@ -62,7 +63,10 @@ export async function GET(request: NextRequest) {
       locale,
       ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
     ).map((category: Record<string, unknown>) =>
-      localizeEntityFields(category, locale, [
+      localizeEntityFields(
+        localizeStructuredEntries(category, locale, categoryStructuredFields),
+        locale,
+        [
         'name',
         'description',
         'longDescription',
@@ -70,7 +74,8 @@ export async function GET(request: NextRequest) {
         'features',
         'metaTitle',
         'metaDescription',
-      ])
+        ]
+      )
     );
 
     const visibleCategories = filterVisibleTaxonomyEntries(localizedCategories, {

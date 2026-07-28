@@ -9,7 +9,8 @@ import DestinationModel from '@/lib/models/Destination';
 import { Tour as TourType, Category as CategoryType } from '@/types';
 import CategoryPageClient from './CategoryPageClient';
 import CollectionSchema from '@/components/schema/CollectionSchema';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import { categoryStructuredFields } from '@/lib/i18n/translationFields';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import {
   selectLocalizedTaxonomyEntries,
@@ -32,7 +33,10 @@ export async function getCategoryMetadata(slug: string, locale: string, canonica
   )[0];
 
   const category = categoryCandidate
-    ? localizeEntityFields(categoryCandidate, locale, [
+    ? localizeEntityFields(
+        localizeStructuredEntries(categoryCandidate, locale, categoryStructuredFields),
+        locale,
+        [
         'name',
         'description',
         'longDescription',
@@ -40,7 +44,8 @@ export async function getCategoryMetadata(slug: string, locale: string, canonica
         'metaDescription',
         'highlights',
         'features',
-      ])
+        ]
+      )
     : null;
 
   if (!category) return null;
@@ -113,7 +118,10 @@ async function getPageData(slug: string, locale: string) {
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
   }
 
-  const localizedCategory = localizeEntityFields(categoryCandidate, locale, [
+  const localizedCategory = localizeEntityFields(
+    localizeStructuredEntries(categoryCandidate, locale, categoryStructuredFields),
+    locale,
+    [
     'name',
     'description',
     'longDescription',
@@ -121,7 +129,8 @@ async function getPageData(slug: string, locale: string) {
     'features',
     'metaTitle',
     'metaDescription',
-  ]);
+    ]
+  );
 
   const localizedTours = selectLocalizedTours(
     serializedTourCandidates.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),

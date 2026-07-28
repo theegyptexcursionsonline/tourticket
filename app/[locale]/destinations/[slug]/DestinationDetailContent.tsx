@@ -10,13 +10,20 @@ import CategoryModel from '@/lib/models/Category';
 import ReviewModel from '@/lib/models/Review';
 import DestinationPageClient from './DestinationPageClient';
 import DestinationSchema from '@/components/schema/DestinationSchema';
-import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import {
+  localizeEntityFields,
+  localizeStructuredEntries,
+  localizeStructuredObjects,
+} from '@/lib/i18n/contentLocalization';
 import {
   selectLocalizedTaxonomyEntries,
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { destinationStructuredFields } from '@/lib/i18n/translationFields';
+import {
+  destinationStructuredFields,
+  destinationStructuredObjectFields,
+} from '@/lib/i18n/translationFields';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import type { Category, Destination, Review, Tour } from '@/types';
@@ -198,7 +205,11 @@ async function getPageData(slug: string, locale: string) {
   }
 
   const localizedDestination = localizeEntityFields(localizeStructuredEntries(
-    destinationCandidate,
+    localizeStructuredObjects(
+      destinationCandidate,
+      locale,
+      destinationStructuredObjectFields
+    ),
     locale,
     destinationStructuredFields
   ), locale, [
