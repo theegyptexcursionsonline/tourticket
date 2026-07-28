@@ -195,12 +195,17 @@ export async function requireAdminAuth(
     Array.isArray(currentUser.permissions) && currentUser.permissions.length > 0
       ? (currentUser.permissions as AdminPermission[])
       : getDefaultPermissions(role);
+  const enrollmentBoundary = enrollmentSession
+    || !currentUser.twoFactorEnabled
+    || recoveryPending;
 
   const authContext: AdminAuthContext = {
     userId,
     email: currentUser.email,
     role,
-    permissions: enrollmentSession ? [] : permissionsFromDatabase,
+    // An older full-session cookie may predate mandatory 2FA. Keep even the
+    // profile response least-privileged until setup is fully acknowledged.
+    permissions: enrollmentBoundary ? [] : permissionsFromDatabase,
     twoFactorEnabled: Boolean(currentUser.twoFactorEnabled),
     twoFactorRecoveryPending: recoveryPending,
   };

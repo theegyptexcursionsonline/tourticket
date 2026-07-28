@@ -94,6 +94,7 @@ describe('mandatory admin two-factor enrollment', () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toMatchObject({
       userId: '507f1f77bcf86cd799439011',
+      permissions: [],
       twoFactorEnabled: false,
     });
   });
