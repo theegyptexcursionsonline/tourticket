@@ -18,6 +18,7 @@ interface AdminUser {
   role: string;
   permissions: string[];
   twoFactorEnabled: boolean;
+  twoFactorRecoveryPending?: boolean;
   isActive?: boolean;
 }
 
@@ -142,14 +143,12 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
       localStorage.removeItem('admin-auth-token');
       localStorage.removeItem('admin-user');
 
-      // Optimistic hydration: paint the shell from the per-tab profile right
-      // away; the cookie is still re-validated below and an invalid session
-      // clears state and lands on the login screen.
+      // Hydrate identity text, but keep the security boundary loading until
+      // the httpOnly cookie and current 2FA state are re-validated.
       const cachedProfile = readSessionProfile();
       if (cachedProfile) {
         setToken(COOKIE_SESSION_SENTINEL);
         setUser(cachedProfile);
-        setIsLoading(false);
       }
 
       void refreshUserWithToken().finally(() => setIsLoading(false));

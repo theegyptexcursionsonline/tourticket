@@ -9,6 +9,10 @@ import {
   getDefaultPermissions,
 } from '@/lib/constants/adminPermissions';
 import { canAccessMainAdminPortal } from '@/lib/auth/adminPortalScope';
+import {
+  ADMIN_ENROLLMENT_SCOPE,
+  ADMIN_SESSION_SCOPE,
+} from '@/lib/auth/adminSession';
 
 export interface AdminAuthContext {
   userId: string;
@@ -16,6 +20,7 @@ export interface AdminAuthContext {
   role: AdminRole;
   permissions: AdminPermission[];
   twoFactorEnabled: boolean;
+  twoFactorRecoveryPending?: boolean;
 }
 
 interface RequireAdminOptions {
@@ -44,6 +49,17 @@ function twoFactorSetupRequiredResponse() {
       success: false,
       error: 'Two-factor authentication setup is required before using the admin portal.',
       code: 'TWO_FACTOR_SETUP_REQUIRED',
+    },
+    { status: 403 },
+  );
+}
+
+function recoveryAcknowledgementRequiredResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Save and confirm your recovery codes before using the admin portal.',
+      code: 'TWO_FACTOR_RECOVERY_ACK_REQUIRED',
     },
     { status: 403 },
   );
@@ -100,7 +116,9 @@ export async function requireAdminAuth(
   }
 
   const payload = await verifyToken(token);
-  if (!payload || payload.scope !== 'admin') {
+  const scope = payload?.scope;
+  const enrollmentSession = scope === ADMIN_ENROLLMENT_SCOPE;
+  if (!payload || (scope !== ADMIN_SESSION_SCOPE && !enrollmentSession)) {
     return unauthorizedResponse();
   }
 
@@ -116,6 +134,7 @@ export async function requireAdminAuth(
       role: 'super_admin',
       permissions: getDefaultPermissions('super_admin'),
       twoFactorEnabled: true,
+      twoFactorRecoveryPending: false,
     };
 
     const { permissions = [], requireAll = true } = options;
@@ -141,7 +160,7 @@ export async function requireAdminAuth(
       isActive: true,
       role: { $ne: 'customer' },
     })
-      .select('email role permissions adminPortalScopes twoFactorEnabled')
+      .select('email role permissions adminPortalScopes twoFactorEnabled twoFactorRecoveryPending')
       .lean();
   } catch (error) {
     console.error(
@@ -159,8 +178,16 @@ export async function requireAdminAuth(
     return forbiddenResponse();
   }
 
+  const recoveryPending = Boolean(currentUser.twoFactorRecoveryPending);
+  if (enrollmentSession && currentUser.twoFactorEnabled && !recoveryPending) {
+    return unauthorizedResponse();
+  }
+
   if (!currentUser.twoFactorEnabled && !options.allowTwoFactorEnrollment) {
     return twoFactorSetupRequiredResponse();
+  }
+  if (recoveryPending && !options.allowTwoFactorEnrollment) {
+    return recoveryAcknowledgementRequiredResponse();
   }
 
   const role = currentUser.role as AdminRole;
@@ -173,8 +200,9 @@ export async function requireAdminAuth(
     userId,
     email: currentUser.email,
     role,
-    permissions: permissionsFromDatabase,
+    permissions: enrollmentSession ? [] : permissionsFromDatabase,
     twoFactorEnabled: Boolean(currentUser.twoFactorEnabled),
+    twoFactorRecoveryPending: recoveryPending,
   };
 
   const { permissions = [], requireAll = true } = options;

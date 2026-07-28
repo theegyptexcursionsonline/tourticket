@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
-import { getDefaultPermissions } from '@/lib/constants/adminPermissions';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth(request, { allowTwoFactorEnrollment: true });
@@ -23,6 +22,7 @@ export async function GET(request: NextRequest) {
         role: 'super_admin',
         permissions: auth.permissions,
         twoFactorEnabled: true,
+        twoFactorRecoveryPending: false,
       },
     });
   }
@@ -37,11 +37,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const permissions =
-    Array.isArray(user.permissions) && user.permissions.length > 0
-      ? user.permissions
-      : getDefaultPermissions(user.role);
-
   return NextResponse.json({
     success: true,
     user: {
@@ -52,8 +47,9 @@ export async function GET(request: NextRequest) {
       lastName: user.lastName,
       name: `${user.firstName} ${user.lastName}`.trim(),
       role: user.role,
-      permissions,
+      permissions: auth.permissions,
       twoFactorEnabled: Boolean(user.twoFactorEnabled),
+      twoFactorRecoveryPending: Boolean(user.twoFactorRecoveryPending),
       isActive: user.isActive,
       lastLoginAt: user.lastLoginAt,
     },

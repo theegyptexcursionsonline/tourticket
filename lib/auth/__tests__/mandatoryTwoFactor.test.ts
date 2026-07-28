@@ -1,4 +1,4 @@
-let mockAdminRecord = {
+let mockAdminRecord: Record<string, unknown> = {
   email: 'admin@example.com',
   role: 'admin',
   permissions: ['manageDashboard'],
@@ -60,7 +60,24 @@ const request = {
 
 describe('mandatory admin two-factor enrollment', () => {
   beforeEach(() => {
-    mockAdminRecord = { ...mockAdminRecord, twoFactorEnabled: false };
+    mockAdminRecord = {
+      ...mockAdminRecord,
+      twoFactorEnabled: false,
+      twoFactorRecoveryPending: false,
+    };
+  });
+
+  it('blocks normal admin APIs until recovery codes are acknowledged', async () => {
+    mockAdminRecord = {
+      ...mockAdminRecord,
+      twoFactorEnabled: true,
+      twoFactorRecoveryPending: true,
+    };
+    const result = await requireAdminAuth(request);
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as any).body).toMatchObject({
+      code: 'TWO_FACTOR_RECOVERY_ACK_REQUIRED',
+    });
   });
 
   it('blocks normal admin API access for an unenrolled account', async () => {
