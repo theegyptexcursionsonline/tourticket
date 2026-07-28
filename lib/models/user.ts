@@ -87,6 +87,8 @@ export interface IUser extends Document {
   pendingAdminInvitedAt?: Date;
   pendingAdminInvitedBy?: string;
   adminPortalScopes?: AdminPortalScope[];
+  formerAdminScopes?: AdminPortalScope[];
+  formerAdminTenantIds?: string[];
   tenantIds?: string[];
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
@@ -217,6 +219,17 @@ const UserSchema: Schema<IUser> = new Schema({
   adminPortalScopes: {
     type: [String],
     enum: ['main', 'multiTenant'],
+    default: undefined,
+  },
+  // Revoking team access preserves the customer identity. These markers keep
+  // former members recoverable and make permanent deletion an explicit action.
+  formerAdminScopes: {
+    type: [String],
+    enum: ['main', 'multiTenant'],
+    default: undefined,
+  },
+  formerAdminTenantIds: {
+    type: [String],
     default: undefined,
   },
   tenantIds: {

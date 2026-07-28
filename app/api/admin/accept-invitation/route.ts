@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       },
       {
         $set: set,
+        $pull: { formerAdminScopes: 'main' },
         $unset: {
           invitationToken: 1,
           invitationExpires: 1,

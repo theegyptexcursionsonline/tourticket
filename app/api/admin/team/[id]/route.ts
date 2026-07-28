@@ -280,6 +280,7 @@ export async function DELETE(
   } else {
     update.$set = { adminPortalScopes: revocation.adminPortalScopes };
   }
+  update.$addToSet = { formerAdminScopes: 'main' };
 
   await User.updateOne({ _id: user._id }, update);
 

@@ -31,6 +31,7 @@ type AdminUserSource = Pick<
   | 'pendingAdminRole'
   | 'pendingAdminPermissions'
   | 'pendingAdminScopes'
+  | 'formerAdminScopes'
   | 'requirePasswordChange'
 > & { _id: unknown };
 
@@ -38,6 +39,9 @@ const sanitize = (user: AdminUserSource) => {
   // A pending invitee holds no admin access yet. Show the access they were
   // offered so the list reads sensibly, but never as though it were live.
   const invitationPending = Boolean(user.pendingAdminRole);
+  const accessRemoved = Boolean(
+    !invitationPending && user.formerAdminScopes?.includes('main'),
+  );
 
   return {
     id: String(user._id),
@@ -49,6 +53,7 @@ const sanitize = (user: AdminUserSource) => {
     permissions: user.pendingAdminPermissions || user.permissions || [],
     isActive: invitationPending ? false : user.isActive,
     invitationPending,
+    accessRemoved,
     requiresPasswordSetup: Boolean(user.requirePasswordChange),
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,
@@ -99,6 +104,7 @@ export async function GET(request: NextRequest) {
           // Customers holding an unaccepted invitation belong on the list so
           // the invite stays visible and can be resent or withdrawn.
           { pendingAdminRole: { $exists: true } },
+          { formerAdminScopes: 'main' },
         ],
       },
       {
@@ -152,7 +158,13 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const { firstName, lastName, email, role = 'operations', permissions } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      role = 'operations',
+      permissions,
+    } = body;
 
     if (
       typeof firstName !== 'string'
@@ -198,12 +210,6 @@ export async function POST(request: NextRequest) {
           { status: 409 },
         );
       }
-      if (!existing.isActive) {
-        return NextResponse.json(
-          { success: false, error: 'This account is inactive. Restore it before sending a portal invitation.' },
-          { status: 409 },
-        );
-      }
       if (existing.pendingAdminRole && existing.invitationExpires && existing.invitationExpires > new Date()) {
         return NextResponse.json(
           {
@@ -219,7 +225,7 @@ export async function POST(request: NextRequest) {
       user = await User.findOneAndUpdate(
         {
           _id: existing._id,
-          isActive: true,
+          ...(existing.isActive ? { isActive: true } : { isActive: false }),
           $or: [
             { pendingAdminRole: { $exists: false } },
             { invitationExpires: { $lte: new Date() } },

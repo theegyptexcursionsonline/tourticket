@@ -114,6 +114,7 @@ describe('EEO Main POST /api/admin/team', () => {
           $or: [
             { role: { $ne: 'customer' } },
             { pendingAdminRole: { $exists: true } },
+            { formerAdminScopes: 'main' },
           ],
         },
         {
