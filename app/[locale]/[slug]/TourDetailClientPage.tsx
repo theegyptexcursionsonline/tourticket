@@ -146,72 +146,40 @@ const inferItineraryIcon = (item: ItineraryItem): string => {
   return 'location';
 };
 
-// Extract enhancement data from the actual tour object with SMART fallbacks
+const cleanList = (values?: string[]) =>
+  Array.isArray(values) ? values.map((value) => value?.trim()).filter(Boolean) as string[] : [];
+
+const cleanText = (value?: string) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+// Only the tour's own content reaches the page. An empty field hides its
+// section — the editor states that contract, and generic filler here would
+// publish policies and promises the operator never agreed to.
 const extractEnhancementData = (tour: ITour): TourEnhancement => {
   return {
     itinerary: tour.itinerary && tour.itinerary.length > 0 ? tour.itinerary.map(item => ({
       ...item,
       icon: item.icon && item.icon !== 'location' ? item.icon : inferItineraryIcon(item)
     })) : [],
-    
-    whatToBring: tour.whatToBring && tour.whatToBring.length > 0 ? tour.whatToBring : [
-      "Camera for photos",
-      "Comfortable walking shoes", 
-      "Valid ID or passport",
-      "Weather-appropriate clothing",
-      "Water bottle"
-    ],
-    
-    whatToWear: tour.whatToWear && tour.whatToWear.length > 0 ? tour.whatToWear : [
-      "Comfortable walking shoes",
-      "Weather-appropriate clothing", 
-      "Modest attire for religious sites",
-      "Layers for varying temperatures"
-    ],
-    
-    physicalRequirements: tour.physicalRequirements || "Moderate walking required. Tour involves stairs and uneven surfaces. Please inform us of any mobility concerns.",
-    
-    accessibilityInfo: tour.accessibilityInfo && tour.accessibilityInfo.length > 0 ? tour.accessibilityInfo : [
-      "Limited wheelchair accessibility - please contact us in advance",
-      "Audio guides available for hearing impaired visitors", 
-      "Service animals are welcome",
-      "Please inform us of any special requirements when booking"
-    ],
-    
-    groupSize: tour.groupSize || { min: 1, max: tour.maxGroupSize || 20 },
-    transportationDetails: tour.transportationDetails || "Meeting point instructions will be provided upon booking confirmation.",
-    mealInfo: tour.mealInfo || "No meals included unless specified. Local restaurant recommendations available from your guide.",
-    weatherPolicy: tour.weatherPolicy || "Tours operate rain or shine. In case of severe weather, tours may be rescheduled or refunded.",
-    photoPolicy: tour.photoPolicy || "Photography is encouraged. Please respect photography restrictions at certain venues and other guests' privacy.",
-    tipPolicy: tour.tipPolicy || "Gratuities are not included but are appreciated for exceptional service.",
-    
-    healthSafety: tour.healthSafety && tour.healthSafety.length > 0 ? tour.healthSafety : [
-      "Enhanced safety protocols in place",
-      "Hand sanitizer available", 
-      "First aid trained guides",
-      "Emergency procedures established",
-      "Local health guidelines followed"
-    ],
-    
-    culturalInfo: tour.culturalInfo && tour.culturalInfo.length > 0 ? tour.culturalInfo : [
-      "Learn about local history and culture",
-      "Discover architectural highlights", 
-      "Understand local traditions and customs",
-      "Experience authentic local atmosphere",
-      "Professional guide commentary"
-    ],
-    
-    seasonalVariations: tour.seasonalVariations || "Tour experience may vary by season. Check specific seasonal considerations when booking.",
-    
-    localCustoms: tour.localCustoms && tour.localCustoms.length > 0 ? tour.localCustoms : [
-      "Arrive at meeting point 15 minutes early",
-      "Respect local customs and dress codes",
-      "Follow guide instructions at all times", 
-      "Be respectful of other tour participants",
-      "Ask questions - guides love sharing knowledge!"
-    ],
-    notSuitableFor: tour.notSuitableFor || [],
-    needToKnow: tour.needToKnow || [],
+
+    whatToBring: cleanList(tour.whatToBring),
+    whatToWear: cleanList(tour.whatToWear),
+    physicalRequirements: cleanText(tour.physicalRequirements),
+    accessibilityInfo: cleanList(tour.accessibilityInfo),
+    groupSize: tour.groupSize || (tour.maxGroupSize ? { min: 1, max: tour.maxGroupSize } : undefined),
+    transportationDetails: cleanText(tour.transportationDetails),
+    mealInfo: cleanText(tour.mealInfo),
+    weatherPolicy: cleanText(tour.weatherPolicy),
+    photoPolicy: cleanText(tour.photoPolicy),
+    tipPolicy: cleanText(tour.tipPolicy),
+    healthSafety: cleanList(tour.healthSafety),
+    culturalInfo: cleanList(tour.culturalInfo),
+    seasonalVariations: cleanText(tour.seasonalVariations),
+    localCustoms: cleanList(tour.localCustoms),
+    notSuitableFor: cleanList(tour.notSuitableFor),
+    needToKnow: cleanList(tour.needToKnow),
   };
 };
 
@@ -609,13 +577,24 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
   );
 };
 
-const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
+const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const hasBring = (enhancement.whatToBring?.length ?? 0) > 0;
+  const hasWear = (enhancement.whatToWear?.length ?? 0) > 0;
+  const hasContent = hasBring || hasWear || Boolean(enhancement.physicalRequirements)
+    || (enhancement.notSuitableFor?.length ?? 0) > 0 || (enhancement.needToKnow?.length ?? 0) > 0
+    || Boolean(enhancement.groupSize);
+
+  if (!hasContent) return null;
+
+  return (
   <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Backpack size={24} className="text-blue-600" />
       Practical Information
     </h3>
+    {(hasBring || hasWear) && (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {hasBring && (
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Backpack size={20} className="text-blue-600" />
@@ -630,7 +609,9 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
           ))}
         </ul>
       </div>
+      )}
 
+      {hasWear && (
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Sun size={20} className="text-yellow-600" />
@@ -645,7 +626,9 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
           ))}
         </ul>
       </div>
+      )}
     </div>
+    )}
 
     {enhancement.physicalRequirements && (
       <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
@@ -710,16 +693,24 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       </div>
     )}
   </div>
-);
+  );
+};
 
-const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
+const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const hasAccess = (enhancement.accessibilityInfo?.length ?? 0) > 0;
+  const hasSafety = (enhancement.healthSafety?.length ?? 0) > 0;
+  if (!hasAccess && !hasSafety && !enhancement.transportationDetails) return null;
+
+  return (
   <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Accessibility size={24} className="text-purple-600" />
       Accessibility & Special Requirements
     </h3>
 
+    {(hasAccess || hasSafety) && (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {hasAccess && (
       <div className="bg-purple-50 p-6 rounded-xl">
         <h4 className="font-bold text-purple-900 mb-4">Accessibility Information</h4>
         <ul className="space-y-3">
@@ -731,7 +722,9 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
           ))}
         </ul>
       </div>
+      )}
 
+      {hasSafety && (
       <div className="bg-green-50 p-6 rounded-xl">
         <h4 className="font-bold text-green-900 mb-4">Health & Safety Measures</h4>
         <ul className="space-y-3">
@@ -743,7 +736,9 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
           ))}
         </ul>
       </div>
+      )}
     </div>
+    )}
 
     {enhancement.transportationDetails && (
       <div className="bg-slate-50 p-6 rounded-xl">
@@ -755,57 +750,58 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
       </div>
     )}
   </div>
-);
+  );
+};
 
-const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
+const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const policies = [
+    { key: 'weather', value: enhancement.weatherPolicy, title: 'Weather Policy', icon: Umbrella,
+      wrap: 'bg-sky-50', head: 'text-sky-900', tint: 'text-sky-600', body: 'text-sky-800' },
+    { key: 'photo', value: enhancement.photoPolicy, title: 'Photography Policy', icon: Camera,
+      wrap: 'bg-pink-50', head: 'text-pink-900', tint: 'text-pink-600', body: 'text-pink-800' },
+    { key: 'tip', value: enhancement.tipPolicy, title: 'Gratuity Policy', icon: CreditCard,
+      wrap: 'bg-yellow-50', head: 'text-yellow-900', tint: 'text-yellow-600', body: 'text-yellow-800' },
+    { key: 'meal', value: enhancement.mealInfo, title: 'Meal Information', icon: Utensils,
+      wrap: 'bg-orange-50', head: 'text-orange-900', tint: 'text-orange-600', body: 'text-orange-800' },
+  ].filter((policy) => Boolean(policy.value));
+
+  if (policies.length === 0) return null;
+
+  return (
   <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Shield size={24} className="text-red-600" />
       Policies
     </h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-sky-50 p-6 rounded-xl">
-        <h4 className="font-bold text-sky-900 mb-3 flex items-center gap-2">
-          <Umbrella size={20} className="text-sky-600" />
-          Weather Policy
-        </h4>
-        <p className="text-sky-800 text-sm leading-relaxed">{enhancement.weatherPolicy}</p>
-      </div>
-
-      <div className="bg-pink-50 p-6 rounded-xl">
-        <h4 className="font-bold text-pink-900 mb-3 flex items-center gap-2">
-          <Camera size={20} className="text-pink-600" />
-          Photography Policy
-        </h4>
-        <p className="text-pink-800 text-sm leading-relaxed">{enhancement.photoPolicy}</p>
-      </div>
-
-      <div className="bg-yellow-50 p-6 rounded-xl">
-        <h4 className="font-bold text-yellow-900 mb-3 flex items-center gap-2">
-          <CreditCard size={20} className="text-yellow-600" />
-          Gratuity Policy
-        </h4>
-        <p className="text-yellow-800 text-sm leading-relaxed">{enhancement.tipPolicy}</p>
-      </div>
-
-      <div className="bg-orange-50 p-6 rounded-xl">
-        <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2">
-          <Utensils size={20} className="text-orange-600" />
-          Meal Information
-        </h4>
-        <p className="text-orange-800 text-sm leading-relaxed">{enhancement.mealInfo}</p>
-      </div>
+      {policies.map(({ key, value, title, icon: Icon, wrap, head, tint, body }) => (
+        <div key={key} className={`${wrap} p-6 rounded-xl`}>
+          <h4 className={`font-bold ${head} mb-3 flex items-center gap-2`}>
+            <Icon size={20} className={tint} />
+            {title}
+          </h4>
+          <p className={`${body} text-sm leading-relaxed`}>{value}</p>
+        </div>
+      ))}
     </div>
   </div>
-);
+  );
+};
 
-const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
+const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const hasHighlights = (enhancement.culturalInfo?.length ?? 0) > 0;
+  const hasCustoms = (enhancement.localCustoms?.length ?? 0) > 0;
+  if (!hasHighlights && !hasCustoms && !enhancement.seasonalVariations) return null;
+
+  return (
   <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-24">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Heart size={24} className="text-teal-600" />
       Cultural Information
     </h3>
+    {(hasHighlights || hasCustoms) && (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {hasHighlights && (
       <div className="bg-indigo-50 p-6 rounded-xl">
         <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
           <Eye size={20} className="text-indigo-600" />
@@ -820,7 +816,9 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
           ))}
         </ul>
       </div>
+      )}
 
+      {hasCustoms && (
       <div className="bg-teal-50 p-6 rounded-xl">
         <h4 className="font-bold text-teal-900 mb-4 flex items-center gap-2">
           <Heart size={20} className="text-teal-600" />
@@ -835,7 +833,9 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
           ))}
         </ul>
       </div>
+      )}
     </div>
+    )}
 
     {enhancement.seasonalVariations && (
       <div className="bg-slate-50 p-6 rounded-xl">
@@ -847,45 +847,17 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       </div>
     )}
   </div>
-);
+  );
+};
 
 const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const faqsToShow = faqs && faqs.length > 0 ? faqs : [
-    {
-      question: "What happens if I&apos;m late for the departure?",
-      answer: "Please arrive 15 minutes before departure. Late arrivals cannot be accommodated due to strict departure schedules. No refunds are provided for missed departures due to tardiness."
-    },
-    {
-      question: "Can dietary restrictions be accommodated?",
-      answer: "Yes! We offer vegetarian options and can accommodate most dietary restrictions with advance notice. Please inform us at least 24 hours before your tour."
-    },
-    {
-      question: "Is this tour suitable for children?",
-      answer: "Absolutely! Children 4-13 receive discounted pricing, and children 0-3 travel free. The tour is family-friendly with safety measures in place."
-    },
-    {
-      question: "What if the weather is bad?",
-      answer: "Tours operate in most weather conditions. Only severe weather will result in cancellation with full refund."
-    },
-    {
-      question: "Can I bring my own food or drinks?",
-      answer: "Outside food and beverages policies vary by tour. Special dietary needs can be accommodated with advance notice."
-    },
-    {
-      question: "Is the tour wheelchair accessible?",
-      answer: "Accessibility varies by tour. Please contact us in advance to discuss specific needs and ensure we can accommodate your requirements."
-    },
-    {
-      question: "Can I reschedule my booking?",
-      answer: "Yes, bookings can be rescheduled up to 24 hours before departure subject to availability. Changes within 24 hours may incur additional fees."
-    },
-    {
-      question: "Are professional photos available?",
-      answer: "Professional photography services can be arranged for an additional fee. Please inquire when booking. Personal photography is encouraged throughout the tour."
-    }
-  ];
+  const faqsToShow = (faqs || []).filter((faq) => faq?.question?.trim() && faq?.answer?.trim());
+
+  // No invented Q&A: the old fallback answered refund, reschedule-fee and
+  // child-pricing questions on the operator's behalf.
+  if (faqsToShow.length === 0) return null;
 
   return (
     <div ref={sectionRef} id="faq" className="space-y-4 scroll-mt-24">
@@ -1211,16 +1183,27 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     `${tour.title} image ${selectedImageIndex + 1}`
   );
 
+  // A tab must not jump to a section that renders nothing, so each one is
+  // gated on the same content its section requires.
+  const hasAny = (...values: Array<string[] | string | object | undefined>) =>
+    values.some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
+
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: Eye },
-    { id: 'itinerary', label: 'Itinerary', icon: Clock },
-    { id: 'practical', label: 'What to Know', icon: Backpack },
-    { id: 'accessibility', label: 'Accessibility', icon: Accessibility },
-    { id: 'policies', label: 'Policies', icon: Shield },
-    { id: 'cultural', label: 'Cultural Info', icon: Heart },
-    { id: 'reviews', label: 'Reviews', icon: Star },
-    { id: 'faq', label: 'FAQ', icon: MessageCircle }
-  ];
+    { id: 'overview', label: 'Overview', icon: Eye, show: true },
+    { id: 'itinerary', label: 'Itinerary', icon: Clock, show: (enhancement.itinerary?.length ?? 0) > 0 },
+    { id: 'practical', label: 'What to Know', icon: Backpack,
+      show: hasAny(enhancement.whatToBring, enhancement.whatToWear, enhancement.physicalRequirements,
+        enhancement.notSuitableFor, enhancement.needToKnow, enhancement.groupSize) },
+    { id: 'accessibility', label: 'Accessibility', icon: Accessibility,
+      show: hasAny(enhancement.accessibilityInfo, enhancement.healthSafety, enhancement.transportationDetails) },
+    { id: 'policies', label: 'Policies', icon: Shield,
+      show: hasAny(enhancement.weatherPolicy, enhancement.photoPolicy, enhancement.tipPolicy, enhancement.mealInfo) },
+    { id: 'cultural', label: 'Cultural Info', icon: Heart,
+      show: hasAny(enhancement.culturalInfo, enhancement.localCustoms, enhancement.seasonalVariations) },
+    { id: 'reviews', label: 'Reviews', icon: Star, show: true },
+    { id: 'faq', label: 'FAQ', icon: MessageCircle,
+      show: (tour.faq || []).some((faq) => faq?.question?.trim() && faq?.answer?.trim()) }
+  ].filter((tab) => tab.show);
 
   const handleQuickAdd = async () => {
     if (isAdding) return;

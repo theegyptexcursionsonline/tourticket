@@ -17,6 +17,7 @@ import Image from 'next/image';
 import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import { attractionPageTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
+import SearchableCheckboxList from '@/components/admin/SearchableCheckboxList';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredContentEditor';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
@@ -831,22 +832,16 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                           {formData.pageType === 'category' && (
                             <div className="space-y-3">
                               <FormLabel icon={MapPin}>Category</FormLabel>
-                              <div className="relative">
-                                <select 
-                                  name="categoryId" 
-                                  value={formData.categoryId} 
-                                  onChange={handleChange} 
-                                  className={`${inputBase} appearance-none cursor-pointer`}
-                                >
-                                  <option value="">Select a category</option>
-                                  {categories.map((category) => (
-                                    <option key={category._id} value={category._id}>
-                                      {category.name}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                              </div>
+                              <SearchableCheckboxList
+                                options={categories.map((category) => ({ id: String(category._id), label: category.name }))}
+                                selectedIds={formData.categoryId ? [String(formData.categoryId)] : []}
+                                onToggle={(id) => setFormData((prev) => ({
+                                  ...prev,
+                                  categoryId: String(prev.categoryId) === id ? '' : id,
+                                }))}
+                                emptyLabel="No categories available"
+                                searchPlaceholder="Search categories…"
+                              />
                             </div>
                           )}
                         </div>

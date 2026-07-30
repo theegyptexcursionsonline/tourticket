@@ -48,6 +48,7 @@ import TourStructuredTranslationEditor from '@/components/admin/TourStructuredTr
 import { tourTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 import Image from 'next/image';
 import { isRecord } from './componentTypes';
+import SearchableCheckboxList from '@/components/admin/SearchableCheckboxList';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata, type ImageMetadata } from '@/lib/content/imageMetadata';
@@ -826,6 +827,17 @@ const handleItineraryChange = (index: number, field: string, value: string | num
   setFormData((p) => ({ ...p, itinerary: updatedItinerary }));
 };
 
+// The storefront renders one "Includes" chip per entry, so the textarea is
+// stored as a list rather than a blob.
+const handleItineraryIncludesChange = (index: number, value: string) => {
+  const updatedItinerary = [...formData.itinerary];
+  updatedItinerary[index] = {
+    ...updatedItinerary[index],
+    includes: value.split('\n').map((line) => line.trim()).filter(Boolean),
+  };
+  setFormData((p) => ({ ...p, itinerary: updatedItinerary }));
+};
+
 // Ensure icon is properly saved when adding new items
 const addItineraryItem = () => {
   const newDay = formData.itinerary.length + 1;
@@ -1422,30 +1434,13 @@ const addItineraryItem = () => {
                                             </div>
                                             <div className="space-y-3">
                                                 <FormLabel icon={Grid3x3} required>Categories</FormLabel>
-                                                <div className="border border-slate-300 rounded-xl p-4 max-h-48 overflow-y-auto bg-white">
-                                                    {categories.length === 0 ? (
-                                                        <p className="text-sm text-slate-500">No categories available</p>
-                                                    ) : (
-                                                        <div className="space-y-2">
-                                                            {categories.map((cat) => {
-                                                                const formCategories = formData.category || [];
-                                                                const catId = String(cat._id);
-                                                                const isChecked = formCategories.some(id => String(id) === catId);
-                                                                return (
-                                                                    <label key={cat._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={isChecked}
-                                                                            onChange={() => handleMultiSelectChange('category', cat._id)}
-                                                                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                                                                        />
-                                                                        <span className="text-sm text-slate-700">{cat.name}</span>
-                                                                    </label>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <SearchableCheckboxList
+                                                    options={categories.map((cat) => ({ id: String(cat._id), label: cat.name }))}
+                                                    selectedIds={(formData.category || []).map(String)}
+                                                    onToggle={(id) => handleMultiSelectChange('category', id)}
+                                                    emptyLabel="No categories available"
+                                                    searchPlaceholder="Search categories…"
+                                                />
                                                 <SmallHint>Select one or more categories for this tour</SmallHint>
                                             </div>
                                         </div>
@@ -1455,69 +1450,26 @@ const addItineraryItem = () => {
                                             {/* Attractions */}
                                             <div className="space-y-3">
                                                 <FormLabel icon={MapPin}>Attractions</FormLabel>
-                                                <div className="border border-slate-300 rounded-xl p-4 max-h-48 overflow-y-auto bg-white">
-                                                    {attractions.length === 0 ? (
-                                                        <p className="text-sm text-slate-500">No attractions available</p>
-                                                    ) : (
-                                                        <div className="space-y-2">
-                                                            {attractions.map((attr) => {
-                                                                const formAttractions = formData.attractions || [];
-                                                                const attrId = String(attr._id);
-                                                                const isChecked = formAttractions.some(id => String(id) === attrId);
-
-                                                                if (formAttractions.length > 0 && attr === attractions[0]) {
-                                                                    console.log('First attraction comparison:', {
-                                                                        attrId,
-                                                                        attrIdType: typeof attr._id,
-                                                                        formAttractions,
-                                                                        formTypes: formAttractions.map(id => typeof id),
-                                                                        isChecked
-                                                                    });
-                                                                }
-
-                                                                return (
-                                                                <label key={attr._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={isChecked}
-                                                                        onChange={() => handleMultiSelectChange('attractions', attr._id)}
-                                                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                                                                    />
-                                                                    <span className="text-sm text-slate-700">{attr.title}</span>
-                                                                </label>
-                                                            )})}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <SearchableCheckboxList
+                                                    options={attractions.map((attr) => ({ id: String(attr._id), label: attr.title }))}
+                                                    selectedIds={(formData.attractions || []).map(String)}
+                                                    onToggle={(id) => handleMultiSelectChange('attractions', id)}
+                                                    emptyLabel="No attractions available"
+                                                    searchPlaceholder="Search attractions…"
+                                                />
                                                 <SmallHint>Select attractions related to this tour</SmallHint>
                                             </div>
 
                                             {/* Catalogue pages */}
                                             <div className="space-y-3">
                                                 <FormLabel icon={Star}>Catalogue</FormLabel>
-                                                <div className="border border-slate-300 rounded-xl p-4 max-h-48 overflow-y-auto bg-white">
-                                                    {interests.length === 0 ? (
-                                                        <p className="text-sm text-slate-500">No catalogue pages available</p>
-                                                    ) : (
-                                                        <div className="space-y-2">
-                                                            {interests.map((interest) => {
-                                                                const formInterests = formData.interests || [];
-                                                                const interestId = String(interest._id);
-                                                                const isChecked = formInterests.some(id => String(id) === interestId);
-                                                                return (
-                                                                <label key={interest._id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={isChecked}
-                                                                        onChange={() => handleMultiSelectChange('interests', interest._id)}
-                                                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                                                                    />
-                                                                    <span className="text-sm text-slate-700">{interest.title}</span>
-                                                                </label>
-                                                            )})}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <SearchableCheckboxList
+                                                    options={interests.map((interest) => ({ id: String(interest._id), label: interest.title }))}
+                                                    selectedIds={(formData.interests || []).map(String)}
+                                                    onToggle={(id) => handleMultiSelectChange('interests', id)}
+                                                    emptyLabel="No catalogue pages available"
+                                                    searchPlaceholder="Search catalogue pages…"
+                                                />
                                                 <SmallHint>Select catalogue pages that should feature this tour</SmallHint>
                                             </div>
                                         </div>
@@ -2139,12 +2091,49 @@ const addItineraryItem = () => {
   </div>
   <div className="space-y-2">
     <label className="text-xs font-medium text-slate-500">Description</label>
-    <textarea 
-      value={day.description} 
+    <textarea
+      value={day.description}
       onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
-      className={`${textareaBase} resize-none`} 
+      className={`${textareaBase} resize-none`}
       rows={2}
-      placeholder="Day description" 
+      placeholder="Day description"
+    />
+  </div>
+  <div className="space-y-2">
+    <label className="text-xs font-medium text-slate-500">Start time</label>
+    <input
+      value={day.time || ''}
+      onChange={(e) => handleItineraryChange(i, 'time', e.target.value)}
+      className={inputBase}
+      placeholder="e.g. 08:00 AM"
+    />
+  </div>
+  <div className="space-y-2">
+    <label className="text-xs font-medium text-slate-500">Duration</label>
+    <input
+      value={day.duration || ''}
+      onChange={(e) => handleItineraryChange(i, 'duration', e.target.value)}
+      className={inputBase}
+      placeholder="e.g. 1.5 hours"
+    />
+  </div>
+  <div className="space-y-2">
+    <label className="text-xs font-medium text-slate-500">Location</label>
+    <input
+      value={day.location || ''}
+      onChange={(e) => handleItineraryChange(i, 'location', e.target.value)}
+      className={inputBase}
+      placeholder="e.g. Egyptian Museum"
+    />
+  </div>
+  <div className="space-y-2 lg:col-span-3">
+    <label className="text-xs font-medium text-slate-500">Includes <span className="font-normal">(one per line)</span></label>
+    <textarea
+      value={(day.includes || []).join('\n')}
+      onChange={(e) => handleItineraryIncludesChange(i, e.target.value)}
+      className={`${textareaBase} resize-none`}
+      rows={2}
+      placeholder={'Transfer\nGuided Tour\nEntry'}
     />
   </div>
 </div>

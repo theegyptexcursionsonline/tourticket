@@ -39,11 +39,8 @@ type CategoryPageCopy = {
   highlights: string;
   features: string;
   essentialInformation: string;
-  essentialInfoItems: string[];
   discover: string;
   tourCount: (count: number) => string;
-  ratingStat: string;
-  travelersStat: string;
   addToCartAria: string;
   viewDetails: string;
   availableTours: string;
@@ -60,7 +57,6 @@ type CategoryPageCopy = {
   popularDestinations: string;
   perfectFor: string;
   categoryFaq: string;
-  planWithConfidence: string;
   startingFrom: string;
   priceRange: string;
   tripLengths: string;
@@ -69,8 +65,6 @@ type CategoryPageCopy = {
   learnMore: string;
   topPicks: string;
   handpickedTours: string;
-  chooseExperience: string;
-  chooseExperienceItems: string[];
 };
 
 const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
@@ -98,16 +92,8 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     highlights: 'Highlights',
     features: 'Features',
     essentialInformation: 'Essential Information',
-    essentialInfoItems: [
-      'All tours include professional English-speaking guides',
-      'Pickup and drop-off from your hotel in Cairo or Giza',
-      'Small group sizes for a more personalized experience',
-      'Clear cancellation policy: 100% at 7+ days, 50% at 3–7 days, no refund under 3 days',
-    ],
     discover: 'DISCOVER',
     tourCount: (count: number) => `${count}+ Tours`,
-    ratingStat: '4.8/5 Rating',
-    travelersStat: '50K+ Travelers',
     addToCartAria: 'Add to cart',
     viewDetails: 'View Details',
     availableTours: 'Available Tours',
@@ -125,7 +111,6 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     popularDestinations: 'Popular Destinations',
     perfectFor: 'Perfect For',
     categoryFaq: 'Frequently Asked Questions',
-    planWithConfidence: 'Plan With Confidence',
     startingFrom: 'Starting From',
     priceRange: 'Price Range',
     tripLengths: 'Trip Lengths',
@@ -134,13 +119,6 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     learnMore: 'Learn More',
     topPicks: 'Top Picks In This Category',
     handpickedTours: 'Handpicked tours worth shortlisting first',
-    chooseExperience: 'How to Choose the Right Experience',
-    chooseExperienceItems: [
-      'Compare the duration first so the tour fits naturally into your travel day.',
-      'Check what is included, especially transfers, guide services, and entrance fees.',
-      'Look at the destination and activity style to match the energy you want from the day.',
-      'Use ratings and highlights together to spot the strongest-value tours quickly.',
-    ],
   },
   ar: {
     searchToursPlaceholder: 'ابحث عن الجولات...',
@@ -166,16 +144,8 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     highlights: 'أبرز النقاط',
     features: 'المزايا',
     essentialInformation: 'معلومات أساسية',
-    essentialInfoItems: [
-      'تشمل جميع الجولات مرشدين محترفين يتحدثون الإنجليزية',
-      'خدمة الاستلام والتوصيل من فندقك في القاهرة أو الجيزة',
-      'مجموعات صغيرة لتجربة أكثر تخصيصًا',
-      'سياسة إلغاء مرنة - يمكنك الإلغاء حتى 24 ساعة قبل الموعد لاسترداد كامل المبلغ',
-    ],
     discover: 'اكتشف',
     tourCount: (count: number) => `${count}+ جولة`,
-    ratingStat: 'تقييم 4.8/5',
-    travelersStat: '+50 ألف مسافر',
     addToCartAria: 'أضف إلى السلة',
     viewDetails: 'عرض التفاصيل',
     availableTours: 'الجولات المتاحة',
@@ -192,7 +162,6 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     popularDestinations: 'الوجهات الأكثر شهرة',
     perfectFor: 'مناسبة لـ',
     categoryFaq: 'الأسئلة الشائعة',
-    planWithConfidence: 'خطط بثقة',
     startingFrom: 'الأسعار تبدأ من',
     priceRange: 'نطاق الأسعار',
     tripLengths: 'مدد الرحلات',
@@ -201,13 +170,6 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     learnMore: 'اعرف المزيد',
     topPicks: 'أفضل الاختيارات في هذه الفئة',
     handpickedTours: 'جولات مختارة تستحق أن تبدأ بها',
-    chooseExperience: 'كيف تختار التجربة المناسبة',
-    chooseExperienceItems: [
-      'ابدأ بمقارنة المدة حتى تناسب الجولة يوم سفرك بسهولة.',
-      'تحقق مما هو مشمول، خاصةً التنقلات وخدمة المرشد ورسوم الدخول.',
-      'انظر إلى الوجهة ونوع النشاط لتختار مستوى الحركة والطاقة المناسب لك.',
-      'استخدم التقييمات مع النقاط البارزة لاكتشاف أفضل قيمة بسرعة.',
-    ],
   },
 };
 
@@ -269,126 +231,12 @@ const formatDurationSummary = (durations: string[], locale: string) => {
   return `${sorted[0]} - ${sorted[sorted.length - 1]}`;
 };
 
-const buildTravelerTypes = (category: Category, locale: string) => {
-  const source = `${category.name} ${category.slug} ${(category.description || '')}`.toLowerCase();
-
-  if (locale.startsWith('ar')) {
-    if (source.includes('adventure') || source.includes('safari') || source.includes('desert')) {
-      return ['عشاق المغامرة', 'المسافرون النشطون', 'الأزواج والأصدقاء', 'من يبحثون عن أنشطة خارجية'];
-    }
-
-    return ['زوار مصر لأول مرة', 'الأزواج والعائلات', 'محبو الجولات المنظمة', 'من يريدون الحجز السهل والمرن'];
-  }
-
-  if (source.includes('adventure') || source.includes('safari') || source.includes('desert')) {
-    return ['Thrill seekers', 'Active travelers', 'Couples and friends', 'Anyone craving outdoor energy'];
-  }
-
-  return ['First-time visitors', 'Couples and families', 'Travelers who prefer guided experiences', 'Guests looking for easy planning'];
-};
-
-const buildOverviewParagraphs = ({
-  category,
-  destinations,
-  minPriceLabel,
-  durationSummary,
-  locale,
-}: {
-  category: Category;
-  destinations: CategoryInsightDestination[];
-  minPriceLabel: string | null;
-  durationSummary: string;
-  locale: string;
-}) => {
-  const baseDescription = category.longDescription || category.description || '';
-  const destinationNames = destinations.slice(0, 3).map((destination) => destination.name);
-  const destinationsText = destinationNames.length > 0
-    ? destinationNames.join(', ')
-    : locale.startsWith('ar')
-      ? 'أشهر الوجهات في مصر'
-      : 'top destinations across Egypt';
-
-  const generatedParagraphs = locale.startsWith('ar')
-    ? [
-        `${category.name} تجمع بين تجارب متنوعة عبر ${destinationsText}. ستجد هنا أنشطة مناسبة للمسافرين الذين يريدون أكثر من مجرد زيارة سريعة، مع خيارات تساعدك على اختيار التجربة التي تناسب طاقتك ووقتك وميزانيتك.`,
-        `${minPriceLabel ? `تبدأ الأسعار من ${minPriceLabel}` : 'تتوفر خيارات سعرية متنوعة'} وتمتد المدد عادة من ${durationSummary}. هذا يمنحك مرونة لاختيار جولة قصيرة سريعة أو يوم مليء بالمغامرة حسب خطتك داخل مصر.`,
-      ]
-    : [
-        `${category.name} brings together some of the most memorable experiences across ${destinationsText}. It is designed for travelers who want more than a quick stop, with options that match different energy levels, budgets, and styles of trip.`,
-        `${minPriceLabel ? `Prices start from ${minPriceLabel}` : 'You will find a healthy spread of price points'} and most experiences range across ${durationSummary}. That makes it easy to choose anything from a quick outing to a full day built around this category.`,
-      ];
-
-  const paragraphs = baseDescription
-    ? [baseDescription, ...generatedParagraphs]
-    : generatedParagraphs;
-
-  return paragraphs.filter(Boolean);
-};
-
-const buildCategoryFaqs = ({
-  category,
-  destinations,
-  minPriceLabel,
-  durationSummary,
-  tourCount,
-  locale,
-}: {
-  category: Category;
-  destinations: CategoryInsightDestination[];
-  minPriceLabel: string | null;
-  durationSummary: string;
-  tourCount: number;
-  locale: string;
-}) => {
-  const destinationText = destinations.slice(0, 3).map((destination) => destination.name).join(', ');
-
-  if (locale.startsWith('ar')) {
-    return [
-      {
-        question: `ما الذي يشمله قسم ${category.name}؟`,
-        answer: `يشمل هذا القسم حاليًا ${tourCount} تجارب وجولات مختارة بعناية، مع خيارات تناسب أنماط سفر مختلفة وميزانيات متنوعة.`,
-      },
-      {
-        question: `ما هي أكثر الوجهات شهرة ضمن ${category.name}؟`,
-        answer: destinationText
-          ? `أشهر الوجهات في هذه الفئة تشمل ${destinationText}، ويمكنك استعراض كل وجهة لمعرفة عدد التجارب المتاحة فيها.`
-          : 'تتوزع هذه التجارب عبر أكثر من وجهة في مصر بحسب التوفر الحالي على الموقع.',
-      },
-      {
-        question: `كم تستغرق تجارب ${category.name} عادة؟`,
-        answer: `المدد المتوفرة عادة تمتد عبر ${durationSummary}، لذلك يمكنك اختيار تجربة سريعة أو برنامج أطول بحسب يومك وخطتك.`,
-      },
-      {
-        question: `ما نطاق الأسعار المتوقع؟`,
-        answer: minPriceLabel
-          ? `تبدأ الأسعار من ${minPriceLabel} وتختلف حسب مدة الجولة وما تتضمنه من خدمات ومواصلات وتجهيزات.`
-          : 'تختلف الأسعار حسب مدة الجولة وما تتضمنه من خدمات ومواصلات وتجهيزات.',
-      },
-    ];
-  }
-
-  return [
-    {
-      question: `What is included in the ${category.name} category?`,
-      answer: `This category currently brings together ${tourCount} curated tours and experiences, giving you a mix of styles, budgets, and pacing in one place.`,
-    },
-    {
-      question: `Which destinations are most popular for ${category.name}?`,
-      answer: destinationText
-        ? `The strongest destinations in this category right now include ${destinationText}, and each one has its own mix of tours to compare.`
-        : 'These experiences are spread across multiple destinations in Egypt depending on current availability.',
-    },
-    {
-      question: `How long do these ${category.name.toLowerCase()} experiences usually last?`,
-      answer: `Most experiences in this category span ${durationSummary}, so you can choose something short and flexible or plan around a longer outing.`,
-    },
-    {
-      question: 'What should I expect on pricing?',
-      answer: minPriceLabel
-        ? `Prices currently start from ${minPriceLabel}, with the total depending on duration, inclusions, transport, and the style of experience you book.`
-        : 'Prices vary depending on duration, inclusions, transport, and the overall style of experience you choose.',
-    },
-  ];
+const buildOverviewParagraphs = ({ category }: { category: Category }) => {
+  // Only what an editor actually wrote. The previous version appended two
+  // machine-written paragraphs to every category — including ones that already
+  // had a description — so the page said things nobody had approved.
+  const baseDescription = (category.longDescription || category.description || '').trim();
+  return baseDescription ? [baseDescription] : [];
 };
 
 // --- SearchAndFilter Component ---
@@ -648,15 +496,6 @@ const AboutSection = ({
               </div>
             </div>
           )}
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">{copy.planWithConfidence}</h3>
-            <ul className="space-y-2 text-gray-700">
-              {copy.essentialInfoItems.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </div>
         </div>
       </div>
     </section>
@@ -825,25 +664,6 @@ const CategoryTravelTipsSection = ({ category }: { category: Category }) => {
   );
 };
 
-const BookingGuidanceSection = ({ copy }: { copy: CategoryPageCopy }) => (
-  <section className="py-12 bg-slate-50">
-    <div className="container mx-auto px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">{copy.chooseExperience}</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {copy.chooseExperienceItems.map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-                <p className="text-slate-700 leading-relaxed">{item}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
 
 // --- Hero Section Component ---
 const CategoryHeroSection = ({
@@ -896,11 +716,6 @@ const CategoryHeroSection = ({
               <Tag size={14} className="sm:w-4 sm:h-4" />
               <span className="font-semibold">{copy.tourCount(tourCount)}</span>
             </span>
-            <span className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-              <Star size={14} className="sm:w-4 sm:h-4 fill-current text-yellow-400" />
-              <span className="font-semibold">{copy.ratingStat}</span>
-            </span>
-            <span className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full font-semibold">{copy.travelersStat}</span>
           </div>
         </div>
       </div>
@@ -1073,25 +888,12 @@ export default function CategoryPageClient({
             : null;
 
         const expectationItems = Array.from(highlightSet).slice(0, 6);
-        const travelerTypes = buildTravelerTypes(category, locale);
+        const travelerTypes = (category.features || []).map((f) => f?.trim()).filter(Boolean) as string[];
         const durationSummary = formatDurationSummary(Array.from(durationSet), locale);
-        const overviewParagraphs = buildOverviewParagraphs({
-            category,
-            destinations: popularDestinations,
-            minPriceLabel,
-            durationSummary,
-            locale,
-        });
-        const faqItems = category.faqs && category.faqs.length > 0
-            ? category.faqs
-            : buildCategoryFaqs({
-                category,
-                destinations: popularDestinations,
-                minPriceLabel,
-                durationSummary,
-                tourCount: categoryTours.length,
-                locale,
-            });
+        const overviewParagraphs = buildOverviewParagraphs({ category });
+        const faqItems = (category.faqs || []).filter(
+            (faq) => faq?.question?.trim() && faq?.answer?.trim(),
+        );
 
         return {
             overviewParagraphs,
@@ -1105,7 +907,10 @@ export default function CategoryPageClient({
         } satisfies CategoryInsights;
     }, [category, categoryTours, formatPrice, locale]);
 
+    // Top Picks only earns its own section when it can show something the grid
+    // below does not; with three tours or fewer the two lists were identical.
     const topPicks = useMemo(() => {
+        if (categoryTours.length <= 3) return [];
         return [...categoryTours]
             .sort((a, b) => {
                 const ratingDelta = (b.rating || 0) - (a.rating || 0);
@@ -1115,9 +920,14 @@ export default function CategoryPageClient({
             .slice(0, 3);
     }, [categoryTours]);
 
+    const topPickIds = useMemo(
+        () => new Set(topPicks.map((tour) => String(tour._id))),
+        [topPicks],
+    );
+
     // Filter and sort tours
     const filteredAndSortedTours = useMemo(() => {
-        let filtered = [...categoryTours];
+        let filtered = categoryTours.filter((tour) => !topPickIds.has(String(tour._id)));
 
         // Search filter
         if (searchQuery) {
@@ -1176,7 +986,7 @@ export default function CategoryPageClient({
         }
 
         return filtered;
-    }, [categoryTours, searchQuery, sortBy, selectedDuration, priceRange]);
+    }, [categoryTours, topPickIds, searchQuery, sortBy, selectedDuration, priceRange]);
 
     return (
         <>
@@ -1196,7 +1006,6 @@ export default function CategoryPageClient({
 
                 <TopPicksSection tours={topPicks} copy={copy} />
 
-                <BookingGuidanceSection copy={copy} />
 
                 <CategoryTravelTipsSection category={category} />
 
