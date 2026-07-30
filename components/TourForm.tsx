@@ -2105,9 +2105,9 @@ const addItineraryItem = () => {
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
-                                                            {day.day}
+                                                            {i + 1}
                                                         </div>
-                                                        <h4 className="font-semibold text-slate-900">Day {day.day}</h4>
+                                                        <h4 className="font-semibold text-slate-900">{day.title?.trim() || `Stop ${i + 1}`}</h4>
                                                     </div>
                                                     <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
                                                 </button>

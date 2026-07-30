@@ -90,7 +90,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
 
   const [activeTab, setActiveTab] = useState<TabFilter>(initialTab);
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<'table' | 'cards'>('cards');
+  const [view, setView] = useState<'table' | 'cards'>('table');
   const [sortBy, setSortBy] = useState<'newest' | 'updated' | 'price-asc' | 'price-desc'>('newest');
   const [perPage, setPerPage] = useState(12);
   const [page, setPage] = useState(initialPage);

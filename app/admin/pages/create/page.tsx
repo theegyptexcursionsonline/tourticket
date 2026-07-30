@@ -59,9 +59,11 @@ function CreatePageChooser() {
         </div>
       </div>
 
+      {/* Keyed by kind: switching the chooser must remount the form, otherwise
+          initialPageType is stale and the wrong page type gets created. */}
       {kind === 'catalogue'
-        ? <CategoryForm />
-        : <AttractionPageForm initialPageType={kind === 'category' ? 'category' : 'attraction'} />}
+        ? <CategoryForm key={kind} />
+        : <AttractionPageForm key={kind} initialPageType={kind === 'category' ? 'category' : 'attraction'} />}
     </div>
   );
 }

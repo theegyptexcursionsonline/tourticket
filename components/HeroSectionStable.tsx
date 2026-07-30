@@ -93,26 +93,30 @@ function BackgroundSlideshow({
   }, [autoplay, delay, index, slides.length]);
 
   const activeIndex = index % slides.length;
-  const activeSlide = slides[activeIndex];
 
+  // All slides stay mounted and cross-fade via opacity; remounting a single
+  // keyed slide (the previous approach) made every swap an instant cut because
+  // a freshly mounted element has no opacity change to animate.
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
-      <div
-        key={`${activeSlide.desktop}-${activeIndex}`}
-        className="absolute inset-0 h-full w-full transition-opacity duration-700 ease-in-out"
-        style={{ transitionDuration: `${fadeMs}ms` }}
-      >
-        <Image
-          src={activeSlide.mobile || activeSlide.desktop}
-          alt={activeSlide.alt}
-          fill
-          priority={activeIndex === 0}
-          quality={75}
-          sizes="100vw"
-          loading={activeIndex === 0 ? 'eager' : 'lazy'}
-          className="object-cover"
-        />
-      </div>
+      {slides.map((slide, i) => (
+        <div
+          key={`${slide.desktop}-${i}`}
+          className="absolute inset-0 h-full w-full transition-opacity ease-in-out"
+          style={{ transitionDuration: `${fadeMs}ms`, opacity: i === activeIndex ? 1 : 0 }}
+        >
+          <Image
+            src={slide.mobile || slide.desktop}
+            alt={slide.alt}
+            fill
+            priority={i === 0}
+            quality={75}
+            sizes="100vw"
+            loading={i === 0 ? 'eager' : 'lazy'}
+            className="object-cover"
+          />
+        </div>
+      ))}
     </div>
   );
 }
