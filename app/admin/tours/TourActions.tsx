@@ -3,12 +3,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Edit, Archive, MoreVertical, X, Check } from "lucide-react";
+import { Edit, Archive, MoreVertical, X, Check, Undo2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
-export const TourActions = ({ tourId }: { tourId: string }) => {
+export const TourActions = ({ tourId, isArchived = false }: { tourId: string; isArchived?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -106,6 +106,49 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
     }
   };
 
+  const refreshList = () => {
+    const currentPath = window.location.pathname;
+    const params = searchParams.toString();
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('admin-tours-cache:')) sessionStorage.removeItem(key);
+      }
+    } catch { /* storage unavailable */ }
+    window.dispatchEvent(new CustomEvent('admin-tours-changed'));
+    router.push(params ? `${currentPath}?${params}` : currentPath);
+    router.refresh();
+  };
+
+  const handleRestore = async () => {
+    setIsOpen(false);
+    const promise = (async () => {
+      const res = await fetch(`/api/admin/tours/${tourId}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restoreFromArchive: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Failed to restore' }));
+        throw new Error(err?.message || 'Restore failed');
+      }
+      return res;
+    })();
+
+    toast.promise(promise, {
+      loading: 'Restoring tour...',
+      success: 'Tour restored to Draft.',
+      error: (err) => `Restore failed: ${err?.message ?? 'Unknown error'}`,
+    });
+
+    try {
+      await promise;
+      refreshList();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
       <button
@@ -138,15 +181,27 @@ export const TourActions = ({ tourId }: { tourId: string }) => {
               <span>Edit</span>
             </Link>
 
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none"
-              role="menuitem"
-            >
-              <Archive className="w-4 h-4 text-rose-500" />
-              <span>Archive</span>
-            </button>
+            {isArchived ? (
+              <button
+                type="button"
+                onClick={handleRestore}
+                className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none"
+                role="menuitem"
+              >
+                <Undo2 className="w-4 h-4 text-emerald-600" />
+                <span>Restore to Draft</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none"
+                role="menuitem"
+              >
+                <Archive className="w-4 h-4 text-rose-500" />
+                <span>Archive</span>
+              </button>
+            )}
           </div>
         </div>
       )}

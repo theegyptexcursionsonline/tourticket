@@ -20,6 +20,7 @@ import {
   FileText,
   CheckCircle,
   Edit3,
+  Archive,
 } from 'lucide-react';
 import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
@@ -50,8 +51,18 @@ type TourType = {
   updatedAt?: string;
   isPublished?: boolean;
   isFeatured?: boolean;
+  archivedAt?: string | null;
+  createdBy?: { id?: string; name?: string; email?: string } | null;
+  updatedBy?: { id?: string; name?: string; email?: string } | null;
   optionIds?: string[];
 };
+
+const editorLabel = (tour: TourType) =>
+  tour.updatedBy?.name || tour.updatedBy?.email || tour.createdBy?.name || tour.createdBy?.email || '';
+
+// Archived is derived, not stored as a status: adding an enum would have meant
+// migrating every tour and rewriting each isPublished query.
+const isArchived = (tour: TourType) => Boolean(tour.archivedAt);
 
 function getCategoryNames(t: TourType): string {
   const cats = Array.isArray(t.category) ? t.category : t.category ? [t.category] : [];
@@ -76,7 +87,7 @@ function Badge({ children, className = '', icon: Icon }: {
   );
 }
 
-type TabFilter = 'all' | 'published' | 'draft' | 'featured';
+type TabFilter = 'all' | 'published' | 'draft' | 'featured' | 'archived';
 
 export function ToursListClient({ tours }: { tours: TourType[] }) {
   const { selectedCurrency } = useSettings();
@@ -92,6 +103,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'table' | 'cards'>('table');
   const [sortBy, setSortBy] = useState<'newest' | 'updated' | 'price-asc' | 'price-desc'>('newest');
+  const [editorFilter, setEditorFilter] = useState<string>(searchParams.get('editor') || '');
   const [perPage, setPerPage] = useState(12);
   const [page, setPage] = useState(initialPage);
 
@@ -106,6 +118,12 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
       params.set('status', activeTab);
     }
 
+    if (editorFilter) {
+      params.set('editor', editorFilter);
+    } else {
+      params.delete('editor');
+    }
+
     // Handle page parameter
     if (page === 1) {
       params.delete('page');
@@ -115,7 +133,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
 
     const newUrl = params.toString() ? `?${params.toString()}` : '';
     router.replace(`/admin/tours${newUrl}`, { scroll: false });
-  }, [activeTab, page, router, searchParams]);
+  }, [activeTab, page, editorFilter, router, searchParams]);
 
   const formatPrice = (p?: number) => {
     if (p === undefined || p === null) return '—';
@@ -143,15 +161,26 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
     const q = query.trim().toLowerCase();
     let list = [...tours];
 
-    // Apply tab filter first
-    if (activeTab === 'published') {
-      list = list.filter((t) => t.isPublished === true);
-    } else if (activeTab === 'draft') {
-      list = list.filter((t) => t.isPublished !== true);
-    } else if (activeTab === 'featured') {
-      list = list.filter((t) => t.isFeatured === true);
+    // Archived is derived from archivedAt rather than stored as a status, so
+    // every existing isPublished query stays correct and nothing needs migrating.
+    // Archived tours are kept out of the other tabs — the point of archiving is
+    // that they stop cluttering Drafts.
+    if (activeTab === 'archived') {
+      list = list.filter((t) => isArchived(t));
+    } else {
+      list = list.filter((t) => !isArchived(t));
+      if (activeTab === 'published') {
+        list = list.filter((t) => t.isPublished === true);
+      } else if (activeTab === 'draft') {
+        list = list.filter((t) => t.isPublished !== true);
+      } else if (activeTab === 'featured') {
+        list = list.filter((t) => t.isFeatured === true);
+      }
     }
-    // 'all' shows everything, no filter needed
+
+    if (editorFilter) {
+      list = list.filter((tour) => editorLabel(tour) === editorFilter);
+    }
 
     // Apply search filter
     if (q) {
@@ -180,7 +209,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
       );
 
     return list;
-  }, [tours, query, sortBy, activeTab]);
+  }, [tours, query, sortBy, activeTab, editorFilter]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -189,16 +218,29 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
   // Reset page when filters change
   useEffect(() => {
     queueMicrotask(() => setPage(1));
-  }, [query, sortBy, activeTab]);
+  }, [query, sortBy, activeTab, editorFilter]);
 
   // Calculate counts for each tab
   const tabCounts = useMemo(() => {
+    const live = tours.filter((t) => !isArchived(t));
     return {
-      all: tours.length,
-      published: tours.filter((t) => t.isPublished === true).length,
-      draft: tours.filter((t) => t.isPublished !== true).length,
-      featured: tours.filter((t) => t.isFeatured === true).length,
+      all: live.length,
+      published: live.filter((t) => t.isPublished === true).length,
+      draft: live.filter((t) => t.isPublished !== true).length,
+      featured: live.filter((t) => t.isFeatured === true).length,
+      archived: tours.filter((t) => isArchived(t)).length,
     };
+  }, [tours]);
+
+  // Who has touched these tours — built from the loaded set so the list only
+  // ever offers names that will actually match something.
+  const editorOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const tour of tours) {
+      const label = editorLabel(tour);
+      if (label) names.add(label);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [tours]);
 
   const tabs = [
@@ -206,6 +248,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
     { id: 'published' as TabFilter, label: 'Published', icon: CheckCircle, count: tabCounts.published },
     { id: 'draft' as TabFilter, label: 'Draft', icon: Edit3, count: tabCounts.draft },
     { id: 'featured' as TabFilter, label: 'Featured', icon: Star, count: tabCounts.featured },
+    { id: 'archived' as TabFilter, label: 'Archived', icon: Archive, count: tabCounts.archived },
   ];
 
   return (
@@ -260,6 +303,30 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                 className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-slate-700 font-medium"
               />
             </div>
+
+            {/* Filter by the person who created or last edited a tour */}
+            {editorOptions.length > 0 && (
+              <div className="relative sm:w-56">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Filter className="h-4 w-4 text-slate-400" />
+                </div>
+                <select
+                  value={editorFilter}
+                  onChange={(e) => setEditorFilter(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 appearance-none cursor-pointer text-slate-700 font-medium"
+                >
+                  <option value="">👤 Any editor</option>
+                  {editorOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
+                  <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            )}
 
             {/* Enhanced Sort Dropdown */}
             <div className="relative sm:w-56">
@@ -441,7 +508,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                             <Eye className="h-5 w-5" />
                           </a>
                         )}
-                        <TourActions tourId={t._id} />
+                        <TourActions tourId={t._id} isArchived={isArchived(t)} />
                       </div>
                     </td>
                   </tr>
@@ -529,7 +596,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                   </div>
                   
                   <div className="flex-shrink-0">
-                    <TourActions tourId={t._id} />
+                    <TourActions tourId={t._id} isArchived={isArchived(t)} />
                   </div>
                 </div>
 

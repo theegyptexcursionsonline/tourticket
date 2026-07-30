@@ -12,6 +12,7 @@ import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { collectTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 const ADMIN_TOUR_LIST_PROJECTION = [
   'title',
@@ -35,6 +36,9 @@ const ADMIN_TOUR_LIST_PROJECTION = [
   'tenantId',
   'createdAt',
   'updatedAt',
+  'archivedAt',
+  'createdBy',
+  'updatedBy',
 ].join(' ');
 
 function addReviewCounts(tours: unknown[]) {
@@ -140,6 +144,12 @@ export async function POST(request: NextRequest) {
     }
     if (body.interests && Array.isArray(body.interests)) {
       body.interests = body.interests.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0);
+    }
+
+    const author = auditStamp(auth);
+    if (author) {
+      body.createdBy = author;
+      body.updatedBy = author;
     }
 
     const tour = await Tour.create(body);

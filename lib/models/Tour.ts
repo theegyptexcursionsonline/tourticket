@@ -186,6 +186,8 @@ export interface ITour extends Document {
   isFeatured?: boolean;
   isPublished?: boolean;
   archivedAt?: Date;
+  createdBy?: { id?: string; name?: string; email?: string };
+  updatedBy?: { id?: string; name?: string; email?: string };
   archivedBy?: string;
 
   // Relationships
@@ -857,6 +859,18 @@ const TourSchema: Schema<ITour> = new Schema({
     index: true
   },
   archivedAt: { type: Date, index: true },
+  // Snapshot rather than a live ref: team members get removed, and the record
+  // of who touched a tour must survive that.
+  createdBy: {
+    id: { type: String, trim: true },
+    name: { type: String, trim: true },
+    email: { type: String, trim: true },
+  },
+  updatedBy: {
+    id: { type: String, trim: true },
+    name: { type: String, trim: true },
+    email: { type: String, trim: true },
+  },
   archivedBy: { type: String, trim: true, maxlength: 255 },
 
   // Meta

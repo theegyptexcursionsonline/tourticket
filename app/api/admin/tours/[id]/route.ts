@@ -6,6 +6,7 @@ import Category from "@/lib/models/Category";
 import mongoose from "mongoose";
 import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { auditStamp } from '@/lib/admin/auditStamp';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -123,9 +124,21 @@ export async function PUT(
             body.archivedAt = null;
             body.archivedBy = null;
         }
+        if (body.restoreFromArchive === true) {
+            // Restore without publishing: the tour returns to Draft, which is
+            // what an editor wants when reviving something for further work.
+            body.archivedAt = null;
+            body.archivedBy = null;
+            delete body.restoreFromArchive;
+        }
 
         console.log('Updating tour with ID:', id);
         console.log('Request body:', body);
+
+        // Record who made this edit (never blanked by a body that omits it).
+        const editor = auditStamp(auth);
+        if (editor) body.updatedBy = editor;
+        delete body.createdBy;
 
         // Map 'faqs' from form to 'faq' in the database model
         if (body.faqs) {
