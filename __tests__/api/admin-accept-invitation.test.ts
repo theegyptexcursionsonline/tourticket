@@ -44,9 +44,6 @@ const token = 'a'.repeat(64);
 const request = (body: unknown) => ({
   json: jest.fn().mockResolvedValue(body),
 });
-const getRequest = (invitationToken = token) => ({
-  url: `https://example.com/api/admin/accept-invitation?token=${invitationToken}`,
-});
 
 describe('EEO Main POST /api/admin/accept-invitation', () => {
   beforeEach(() => {
@@ -65,7 +62,6 @@ describe('EEO Main POST /api/admin/accept-invitation', () => {
       tenantIds: [],
       isActive: true,
       requirePasswordChange: false,
-      password: 'existing-password-hash',
       pendingAdminRole: 'operations',
       pendingAdminPermissions: ['manageTours'],
       pendingAdminScopes: ['main'],
@@ -101,74 +97,6 @@ describe('EEO Main POST /api/admin/accept-invitation', () => {
       pendingAdminPermissions: 1,
       pendingAdminScopes: 1,
     }));
-  });
-
-  it('requires an admin password for an active Google customer that has no local password', async () => {
-    const googleCustomer = {
-      _id: 'google-customer-1',
-      email: 'google.customer@example.com',
-      authProvider: 'google',
-      role: 'customer',
-      permissions: [],
-      adminPortalScopes: [],
-      tenantIds: [],
-      isActive: true,
-      requirePasswordChange: false,
-      password: undefined,
-      pendingAdminRole: 'operations',
-      pendingAdminPermissions: ['manageTours'],
-      pendingAdminScopes: ['main'],
-    };
-    mockSelect.mockResolvedValue(googleCustomer);
-
-    const { POST } = await import('@/app/api/admin/accept-invitation/route');
-    const missing = await POST(request({ token }) as never);
-    expect(missing.status).toBe(400);
-    expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
-
-    mockSelect.mockResolvedValue(googleCustomer);
-    mockFindOneAndUpdate.mockResolvedValue({ email: googleCustomer.email });
-    const accepted = await POST(
-      request({ token, password: 'SecurePass123!' }) as never,
-    );
-    const body = await accepted.json();
-
-    expect(accepted.status).toBe(200);
-    expect(body.existingAccount).toBe(false);
-    expect(mockHash).toHaveBeenCalledWith('SecurePass123!', 10);
-    expect(mockFindOneAndUpdate.mock.calls[0][1].$set).toEqual(
-      expect.objectContaining({
-        password: 'hashed-password',
-        role: 'operations',
-        isActive: true,
-      }),
-    );
-  });
-
-  it('tells a Google customer to create a password before accepting', async () => {
-    mockSelect.mockResolvedValue({
-      firstName: 'Google',
-      lastName: 'Customer',
-      email: 'google.customer@example.com',
-      role: 'customer',
-      isActive: true,
-      requirePasswordChange: false,
-      password: undefined,
-      pendingAdminRole: 'operations',
-      invitationExpires: new Date(Date.now() + 60_000),
-    });
-
-    const { GET } = await import('@/app/api/admin/accept-invitation/route');
-    const response = await GET(getRequest() as never);
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body.user).toEqual(expect.objectContaining({
-      email: 'google.customer@example.com',
-      role: 'operations',
-      requiresPasswordSetup: true,
-    }));
-    expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('+password'));
   });
 
   it('requires and hashes a password only for a brand-new inactive invitee', async () => {
@@ -208,7 +136,6 @@ describe('EEO Main POST /api/admin/accept-invitation', () => {
       role: 'customer',
       permissions: [],
       isActive: true,
-      password: 'existing-password-hash',
       pendingAdminRole: 'operations',
       pendingAdminPermissions: ['manageTours'],
       pendingAdminScopes: ['main'],

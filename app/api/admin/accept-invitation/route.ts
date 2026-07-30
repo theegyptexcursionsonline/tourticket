@@ -54,14 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // The admin portal currently authenticates with email/password. Existing
-    // customer accounts may be Google/Firebase-only and therefore have no
-    // local password even though they are active storefront customers. Let
-    // those users create an admin password while accepting the offer without
-    // changing their customer auth provider or identity.
-    const requiresPasswordSetup = Boolean(
-      user.requirePasswordChange || !user.isActive || !user.password,
-    );
+    const requiresPasswordSetup = Boolean(user.requirePasswordChange || !user.isActive);
     if (
       requiresPasswordSetup
       && (typeof password !== 'string' || password.length < 8)
@@ -150,10 +143,7 @@ export async function GET(request: NextRequest) {
     const user = await User.findOne({
       invitationToken: token,
       invitationExpires: { $gt: new Date() },
-    }).select(
-      'firstName lastName email role pendingAdminRole requirePasswordChange '
-      + 'isActive +invitationExpires +password',
-    );
+    }).select('firstName lastName email role pendingAdminRole requirePasswordChange isActive +invitationExpires');
 
     if (!user) {
       return NextResponse.json(
@@ -174,9 +164,7 @@ export async function GET(request: NextRequest) {
         // Show the role being offered, not the one currently held.
         role: user.pendingAdminRole || user.role,
         expiresAt: user.invitationExpires,
-        requiresPasswordSetup: Boolean(
-          user.requirePasswordChange || !user.isActive || !user.password,
-        ),
+        requiresPasswordSetup: Boolean(user.requirePasswordChange || !user.isActive),
       },
     });
   } catch (error) {

@@ -131,31 +131,16 @@ export async function syncFirebaseUserToMongo(firebaseUser: {
   let isNewUser = false;
 
   if (user) {
-    if (!user.isActive || user.isGuestProfile) {
-      throw Object.assign(new Error('Firebase sync is restricted to active claimed accounts'), { code: 'ACCOUNT_LINK_REQUIRED' });
+    if (!user.isActive || user.role !== 'customer' || user.isGuestProfile) {
+      throw Object.assign(new Error('Firebase sync is restricted to active customer accounts'), { code: 'ACCOUNT_LINK_REQUIRED' });
     }
-
-    if (user.role !== 'customer') {
-      // A customer promoted into an admin portal still owns the same
-      // storefront identity. Permit the already-bound Firebase UID to sign in,
-      // but never let a Firebase profile update rename an administrator's
-      // login identity. Email changes require an explicit account-link flow.
-      if (user.email.trim().toLowerCase() !== email) {
-        throw Object.assign(new Error('Admin email changes require explicit linking'), { code: 'ACCOUNT_LINK_REQUIRED' });
-      }
-      user.emailVerified = firebaseUser.emailVerified;
-      user.photoURL = firebaseUser.photoURL || user.photoURL;
-      user.lastLoginAt = new Date();
-      await user.save();
-    } else {
-      // Update existing customer (same Firebase account)
-      user.email = email;
-      user.emailVerified = firebaseUser.emailVerified;
-      user.photoURL = firebaseUser.photoURL || user.photoURL;
-      user.authProvider = authProvider;
-      user.lastLoginAt = new Date();
-      await user.save();
-    }
+    // Update existing user (same Firebase account)
+    user.email = email;
+    user.emailVerified = firebaseUser.emailVerified;
+    user.photoURL = firebaseUser.photoURL || user.photoURL;
+    user.authProvider = authProvider;
+    user.lastLoginAt = new Date();
+    await user.save();
   } else {
     // Check if user exists by email (migration case or different auth method)
     user = await User.findOne({ email }).select('+firebaseUid +password') as IUser | null;

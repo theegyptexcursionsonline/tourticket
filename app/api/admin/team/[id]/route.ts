@@ -34,11 +34,7 @@ const sanitize = (user: AdminUserSource) => ({
 });
 
 const normalizeRole = (role: unknown): AdminRole => {
-  if (
-    typeof role === 'string'
-    && role !== 'customer'
-    && ADMIN_ROLES.includes(role as AdminRole)
-  ) {
+  if (typeof role === 'string' && ADMIN_ROLES.includes(role as AdminRole)) {
     return role as AdminRole;
   }
   return 'operations';

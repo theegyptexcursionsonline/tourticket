@@ -169,9 +169,9 @@ function AcceptInvitationContent() {
             <Shield className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Accept Invitation</h1>
-              <p className="text-slate-600">
+          <p className="text-slate-600">
             {invitationData?.requiresPasswordSetup
-              ? 'Create a secure admin password to join the team'
+              ? 'Create your password to join the team'
               : 'Review and accept your team access'}
           </p>
         </div>
@@ -229,9 +229,6 @@ function AcceptInvitationContent() {
                 </button>
               </div>
               <p className="text-xs text-slate-500 mt-2">Must be at least 8 characters</p>
-              <p className="mt-2 text-xs text-slate-500">
-                Existing Google or Firebase customer sign-in and booking history stay unchanged.
-              </p>
               </div>
 
               {/* Confirm Password Field */}
