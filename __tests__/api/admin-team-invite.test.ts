@@ -168,6 +168,24 @@ describe('EEO Main POST /api/admin/team', () => {
     expect(created).not.toHaveProperty('adminPortalScopes');
   });
 
+  it('never accepts customer as the pending admin role', async () => {
+    const { POST } = await import('@/app/api/admin/team/route');
+    const response = await POST(request({
+      firstName: 'New',
+      lastName: 'Teammate',
+      email: 'new.teammate@excursions.online',
+      role: 'customer',
+      permissions: ['manageBookings'],
+    }) as never);
+
+    expect(response.status).toBe(201);
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'customer',
+      pendingAdminRole: 'operations',
+      pendingAdminPermissions: ['manageBookings'],
+    }));
+  });
+
   const existingCustomer = {
     _id: 'customer-1',
     firstName: 'Existing',
