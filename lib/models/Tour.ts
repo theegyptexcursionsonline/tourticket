@@ -71,6 +71,24 @@ export interface IAddOn {
 
 export interface ITourTranslation {
   title?: string;
+  difficulty?: string;
+  keywords?: string[];
+  whatToBring?: string[];
+  whatToWear?: string[];
+  notSuitableFor?: string[];
+  needToKnow?: string[];
+  accessibilityInfo?: string[];
+  healthSafety?: string[];
+  culturalInfo?: string[];
+  localCustoms?: string[];
+  physicalRequirements?: string;
+  transportationDetails?: string;
+  mealInfo?: string;
+  weatherPolicy?: string;
+  photoPolicy?: string;
+  tipPolicy?: string;
+  seasonalVariations?: string;
+  imageMetadata?: Array<{ url?: string; alt?: string; title?: string }>;
   description?: string;
   longDescription?: string;
   location?: string;
@@ -464,6 +482,15 @@ const AddOnTranslationItemSchema = new Schema(
   { _id: false }
 );
 
+const ImageMetadataTranslationItemSchema = new Schema(
+  {
+    url: { type: String, trim: true },
+    alt: { type: String, trim: true, maxlength: 300 },
+    title: { type: String, trim: true, maxlength: 300 },
+  },
+  { _id: false }
+);
+
 const TourTranslationSchema = new Schema<ITourTranslation>(
   {
     title: { type: String, trim: true, maxlength: 200 },
@@ -478,6 +505,24 @@ const TourTranslationSchema = new Schema<ITourTranslation>(
     tags: [{ type: String, trim: true, maxlength: 50 }],
     metaTitle: { type: String, trim: true, maxlength: 60 },
     metaDescription: { type: String, trim: true, maxlength: 160 },
+    difficulty: { type: String, trim: true, maxlength: 50 },
+    keywords: [{ type: String, trim: true, maxlength: 100 }],
+    whatToBring: [{ type: String, trim: true, maxlength: 300 }],
+    whatToWear: [{ type: String, trim: true, maxlength: 300 }],
+    notSuitableFor: [{ type: String, trim: true, maxlength: 300 }],
+    needToKnow: [{ type: String, trim: true, maxlength: 300 }],
+    accessibilityInfo: [{ type: String, trim: true, maxlength: 300 }],
+    healthSafety: [{ type: String, trim: true, maxlength: 300 }],
+    culturalInfo: [{ type: String, trim: true, maxlength: 300 }],
+    localCustoms: [{ type: String, trim: true, maxlength: 300 }],
+    physicalRequirements: { type: String, trim: true, maxlength: 500 },
+    transportationDetails: { type: String, trim: true, maxlength: 500 },
+    mealInfo: { type: String, trim: true, maxlength: 500 },
+    weatherPolicy: { type: String, trim: true, maxlength: 500 },
+    photoPolicy: { type: String, trim: true, maxlength: 500 },
+    tipPolicy: { type: String, trim: true, maxlength: 500 },
+    seasonalVariations: { type: String, trim: true, maxlength: 500 },
+    imageMetadata: [ImageMetadataTranslationItemSchema],
     itinerary: [ItineraryTranslationItemSchema],
     faq: [FAQTranslationItemSchema],
     bookingOptions: [BookingOptionTranslationItemSchema],

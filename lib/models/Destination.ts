@@ -3,6 +3,7 @@ import mongoose, { Document, Schema, models } from 'mongoose';
 import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
+import { isDefaultTenant } from '@/lib/tenant/tenantScope';
 
 export interface IDestination extends Document {
   // Basic Info
@@ -135,6 +136,8 @@ const DestinationTranslationSchema = new Schema(
     currency: { type: String, trim: true, uppercase: true },
     timezone: { type: String, trim: true, maxlength: 100 },
     climate: { type: String, trim: true, maxlength: 500 },
+    summerTemperature: { type: String, trim: true, maxlength: 100 },
+    winterTemperature: { type: String, trim: true, maxlength: 100 },
     visaRequirements: { type: String, trim: true, maxlength: 1000 },
     languagesSpoken: [{ type: String, trim: true, maxlength: 50 }],
     highlights: [{ type: String, trim: true, maxlength: 200 }],
@@ -436,10 +439,12 @@ DestinationSchema.pre('save', function(next) {
   next();
 });
 
-// Post-save hook to sync to Algolia
+// Post-save hook to sync to Algolia.
+// Default-site content only — see the matching guard on Blog: an unstamped hit
+// is read as default-site content by the search UIs.
 DestinationSchema.post('save', async function(doc) {
   try {
-    if (doc.isPublished) {
+    if (doc.isPublished && isDefaultTenant(doc.tenantId)) {
       const { syncDestinationToAlgolia } = await import('../algolia');
       await syncDestinationToAlgolia(doc);
       console.log(`Auto-synced destination ${doc._id} to Algolia`);

@@ -58,6 +58,13 @@ export const localizeEntityFields = <T extends UnknownRecord>(
 export interface StructuredEntrySpec {
   key: string;
   fields: string[];
+  /**
+   * Merge by this identifying field instead of by array position. Image
+   * metadata needs it: galleries get reordered without the translations
+   * moving with them, and positional merging would then caption the wrong
+   * picture.
+   */
+  matchKey?: string;
 }
 
 export const localizeStructuredEntries = <T extends UnknownRecord>(
@@ -76,10 +83,21 @@ export const localizeStructuredEntries = <T extends UnknownRecord>(
     const translated = bucket[spec.key];
     if (!Array.isArray(source) || !Array.isArray(translated)) continue;
 
+    const byKey = spec.matchKey
+      ? new Map(
+          translated
+            .map((entry) => asRecord(entry))
+            .filter((entry): entry is UnknownRecord => Boolean(entry && entry[spec.matchKey!]))
+            .map((entry) => [String(entry[spec.matchKey!]), entry]),
+        )
+      : null;
+
     localized[spec.key] = source.map((item, index) => {
       const original = asRecord(item);
       if (!original) return item;
-      const replacement = asRecord(translated[index]);
+      const replacement = byKey
+        ? byKey.get(String(original[spec.matchKey!])) ?? null
+        : asRecord(translated[index]);
       if (!replacement) return item;
 
       const merged: UnknownRecord = { ...original };

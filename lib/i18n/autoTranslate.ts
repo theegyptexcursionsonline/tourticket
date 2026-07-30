@@ -51,11 +51,18 @@ interface StructuredAddOnItem {
   description?: string;
 }
 
+interface StructuredImageMetadataItem {
+  url?: string;
+  alt?: string;
+  title?: string;
+}
+
 interface StructuredTourContent {
   itinerary: StructuredItineraryItem[];
   faq: StructuredFaqItem[];
   bookingOptions: StructuredBookingOptionItem[];
   addOns: StructuredAddOnItem[];
+  imageMetadata: StructuredImageMetadataItem[];
 }
 
 const hasText = (value: unknown): value is string =>
@@ -164,9 +171,11 @@ export async function translateEntityFieldsForLocale(
 
   const localeName = localeNames[locale] || locale;
 
-  // Identify which defined fields are missing so AI can generate them
+  // Identify which defined fields are missing so AI can generate them.
+  // Policy and operational fields are excluded: writing a weather or gratuity
+  // policy that exists in no language is how a translation becomes a promise.
   const missingFields = fieldDefs
-    .filter((def) => !fieldsToTranslate[def.key])
+    .filter((def) => !fieldsToTranslate[def.key] && !def.neverGenerate)
     .map((def) => `${def.key} (${def.type === 'array' ? 'array of strings' : def.type}, ${def.label})`);
 
   const missingSection = missingFields.length > 0
@@ -265,14 +274,30 @@ export function extractStructuredTourContent(doc: Record<string, unknown>): Stru
       })
     : [];
 
-  return { itinerary, faq, bookingOptions, addOns };
+  // url is carried through untranslated so the storefront can match each
+  // caption back to its image even after the gallery is reordered.
+  const imageMetadata = Array.isArray(doc.imageMetadata)
+    ? doc.imageMetadata
+        .map((item) => {
+          const record = (item || {}) as Record<string, unknown>;
+          return {
+            url: hasText(record.url) ? record.url : undefined,
+            alt: hasText(record.alt) ? record.alt : undefined,
+            title: hasText(record.title) ? record.title : undefined,
+          };
+        })
+        .filter((entry) => entry.url && (entry.alt || entry.title))
+    : [];
+
+  return { itinerary, faq, bookingOptions, addOns, imageMetadata };
 }
 
 const hasStructuredTourContent = (content: StructuredTourContent) =>
   content.itinerary.some((item) => Object.values(item).some((value) => hasText(value) || (Array.isArray(value) && value.length > 0))) ||
   content.faq.some((item) => Object.values(item).some((value) => hasText(value))) ||
   content.bookingOptions.some((item) => Object.values(item).some((value) => hasText(value))) ||
-  content.addOns.some((item) => Object.values(item).some((value) => hasText(value)));
+  content.addOns.some((item) => Object.values(item).some((value) => hasText(value))) ||
+  content.imageMetadata.some((item) => hasText(item.alt) || hasText(item.title));
 
 export async function translateStructuredTourContentForLocale(
   content: StructuredTourContent,
@@ -288,6 +313,7 @@ export async function translateStructuredTourContentForLocale(
   if (content.faq.length > 0) contentToTranslate.faq = content.faq;
   if (content.bookingOptions.length > 0) contentToTranslate.bookingOptions = content.bookingOptions;
   if (content.addOns.length > 0) contentToTranslate.addOns = content.addOns;
+  if (content.imageMetadata.length > 0) contentToTranslate.imageMetadata = content.imageMetadata;
 
   const prompt = `You are a professional translator for a tour booking website. Translate the following structured English tour content into ${localeName} (${locale}).
 
@@ -300,6 +326,7 @@ Rules:
 - Keep proper nouns in their commonly used local form
 ${locale === 'ar' ? '- Produce proper RTL text for Arabic\n' : ''}- Keep the wording natural for a tourism website
 - Keep empty values empty
+- In imageMetadata, translate only alt and title; copy every url through unchanged
 - Return only a valid JSON object`;
 
   try {
@@ -319,6 +346,14 @@ ${locale === 'ar' ? '- Produce proper RTL text for Arabic\n' : ''}- Keep the wor
     const parsed = JSON.parse(text) as StructuredTranslationMap;
     if (typeof parsed !== 'object' || parsed === null) {
       throw new Error('Translation model returned invalid structured content');
+    }
+    // The url is the join key back to the image, so never trust a rewritten
+    // one — restore it from the source by position.
+    if (Array.isArray(parsed.imageMetadata)) {
+      parsed.imageMetadata = (parsed.imageMetadata as Array<Record<string, unknown>>).map((entry, index) => ({
+        ...entry,
+        url: content.imageMetadata[index]?.url,
+      })).filter((entry) => entry.url);
     }
     return parsed;
   } catch (error) {
@@ -401,10 +436,21 @@ const FIELD_FALLBACKS: Record<string, { from: string; transform?: (v: string) =>
   metaDescription: { from: 'description', transform: (v) => v.length > 160 ? v.slice(0, 157) + '...' : v },
 };
 
+// A few translatable values live one level down (destination temperatures are
+// stored as averageTemperature.summer/winter), so the flat field list reaches
+// them through a synthetic key.
+const NESTED_SOURCES: Record<string, [string, string]> = {
+  summerTemperature: ['averageTemperature', 'summer'],
+  winterTemperature: ['averageTemperature', 'winter'],
+};
+
 export function extractFields(doc: Record<string, unknown>, fieldDefs: TranslationFieldDef[]): FieldValues {
   const fields: FieldValues = {};
   for (const def of fieldDefs) {
-    let val = doc[def.key];
+    const nested = NESTED_SOURCES[def.key];
+    let val = nested
+      ? (doc[nested[0]] as Record<string, unknown> | undefined)?.[nested[1]]
+      : doc[def.key];
 
     // Apply fallback if field is empty
     if ((!val || (typeof val === 'string' && !val.trim()) || (Array.isArray(val) && val.length === 0)) && FIELD_FALLBACKS[def.key]) {

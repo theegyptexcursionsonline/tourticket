@@ -8,6 +8,12 @@ export interface TranslationFieldDef {
   type: TranslationFieldType;
   maxLength?: number;
   rows?: number;
+  /**
+   * When the English source is empty, the translator is allowed to write this
+   * field from context (useful for SEO copy). Never set it on operational or
+   * policy content: an invented Arabic cancellation policy is worse than none.
+   */
+  neverGenerate?: boolean;
 }
 
 /** Locales that need translations (everything except 'en' which is the source) */
@@ -40,8 +46,10 @@ export const destinationTranslationFields: TranslationFieldDef[] = [
   { key: 'languagesSpoken', label: 'Languages Spoken', type: 'array', maxLength: 50 },
   { key: 'highlights', label: 'Highlights', type: 'array', maxLength: 200 },
   { key: 'thingsToDo', label: 'Things to Do', type: 'array', maxLength: 300 },
-  { key: 'localCustoms', label: 'Local Customs', type: 'array', maxLength: 500 },
+  { key: 'localCustoms', label: 'Local Customs', type: 'array', maxLength: 500, neverGenerate: true },
   { key: 'weatherWarnings', label: 'Weather Warnings', type: 'array', maxLength: 300 },
+  { key: 'summerTemperature', label: 'Summer Temperature', type: 'input', maxLength: 100, neverGenerate: true },
+  { key: 'winterTemperature', label: 'Winter Temperature', type: 'input', maxLength: 100, neverGenerate: true },
 ];
 
 // ── Tour translatable fields (matches TourTranslationSchema) ──
@@ -59,7 +67,35 @@ export const tourTranslationFields: TranslationFieldDef[] = [
   { key: 'whatsIncluded', label: "What's Included", type: 'array', maxLength: 300 },
   { key: 'whatsNotIncluded', label: "What's Not Included", type: 'array', maxLength: 300 },
   { key: 'tags', label: 'Tags', type: 'array', maxLength: 50 },
+  { key: 'difficulty', label: 'Difficulty', type: 'input', maxLength: 50, neverGenerate: true },
+  { key: 'keywords', label: 'Keywords', type: 'array', maxLength: 100, neverGenerate: true },
+  { key: 'whatToBring', label: 'What to Bring', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'whatToWear', label: 'What to Wear', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'notSuitableFor', label: 'Not Suitable For', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'needToKnow', label: 'Need to Know', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'accessibilityInfo', label: 'Accessibility Info', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'healthSafety', label: 'Health & Safety', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'culturalInfo', label: 'Cultural Highlights', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'localCustoms', label: 'Local Customs', type: 'array', maxLength: 300, neverGenerate: true },
+  { key: 'physicalRequirements', label: 'Physical Requirements', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
+  { key: 'transportationDetails', label: 'Transportation Details', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
+  { key: 'mealInfo', label: 'Meal Information', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
+  { key: 'weatherPolicy', label: 'Weather Policy', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
+  { key: 'photoPolicy', label: 'Photography Policy', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
+  { key: 'tipPolicy', label: 'Gratuity Policy', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
+  { key: 'seasonalVariations', label: 'Seasonal Variations', type: 'textarea', maxLength: 500, rows: 2, neverGenerate: true },
 ];
+
+/**
+ * Per-image alt text and title. Shared by every model that stores
+ * `imageMetadata`, and matched by `url` rather than position because gallery
+ * order changes independently of the translations.
+ */
+export const imageMetadataStructuredField: StructuredTranslationSpec = {
+  key: 'imageMetadata',
+  fields: ['alt', 'title'],
+  matchKey: 'url',
+};
 
 // ── Category translatable fields (matches CategoryTranslationSchema) ──
 
@@ -114,6 +150,8 @@ export const normalizeTranslations = (
 export interface StructuredTranslationSpec {
   key: string;
   fields: string[];
+  /** Merge translated entries by this field instead of by array position. */
+  matchKey?: string;
 }
 
 export const destinationStructuredFields: StructuredTranslationSpec[] = [

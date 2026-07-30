@@ -220,6 +220,23 @@ async function getPageData(slug: string, locale: string) {
     'weatherWarnings',
   ]);
 
+  // Temperatures live under averageTemperature but translate as flat strings,
+  // so fold the localized values back into the shape the page renders.
+  const tempBucket = (destinationCandidate as Record<string, unknown>).translations as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  const localeTemps = locale === 'en' ? undefined : tempBucket?.[locale];
+  if (localeTemps?.summerTemperature || localeTemps?.winterTemperature) {
+    const source = (destinationCandidate as Record<string, unknown>).averageTemperature as
+      | Record<string, unknown>
+      | undefined;
+    (localizedDestination as Record<string, unknown>).averageTemperature = {
+      ...(source || {}),
+      ...(localeTemps.summerTemperature ? { summer: localeTemps.summerTemperature } : {}),
+      ...(localeTemps.winterTemperature ? { winter: localeTemps.winterTemperature } : {}),
+    };
+  }
+
   for (const field of ['longDescription', 'description'] as const) {
     const ld = localizedDestination as Record<string, unknown>;
     if (typeof ld[field] === 'string') {
