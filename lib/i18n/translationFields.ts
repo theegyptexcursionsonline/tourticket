@@ -157,9 +157,11 @@ export interface StructuredTranslationSpec {
 export const destinationStructuredFields: StructuredTranslationSpec[] = [
   { key: 'faqs', fields: ['question', 'answer'] },
   { key: 'travelTips', fields: ['title', 'content'] },
+  imageMetadataStructuredField,
 ];
 
 export const attractionPageStructuredFields: StructuredTranslationSpec[] = [
   { key: 'faqs', fields: ['question', 'answer'] },
   { key: 'travelTips', fields: ['title', 'content'] },
+  imageMetadataStructuredField,
 ];

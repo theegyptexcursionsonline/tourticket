@@ -8,6 +8,7 @@ import Category from '@/lib/models/Category';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { findMatchingTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
+import { hasGermanLikeContent, selectLocalizedTours, TOUR_LOCALE_FIELDS } from '@/lib/i18n/localizedCollections';
 
 const LIMIT = 20;
 
@@ -57,13 +58,21 @@ export async function GET(request: NextRequest) {
             }
           : DEFAULT_TENANT_FILTER;
       const tours = await Tour.find(filter)
-        .select('title slug image isPublished bookingOptions.pricingKey bookingOptions.id bookingOptions._id')
+        .select('title slug description image isPublished tenantId translations bookingOptions.pricingKey bookingOptions.id bookingOptions._id')
         .sort({ isFeatured: -1, rating: -1 })
-        .limit(ids ? ids.length : LIMIT)
+        .limit(ids ? ids.length : LIMIT * 4)
         .lean();
+      // Preserve exact selected-id lookups so a legacy selection can still be
+      // seen and removed. Interactive search is English-only and de-duplicated
+      // by slug so translated copy documents never appear twice.
+      const visibleTours = ids
+        ? tours
+        : selectLocalizedTours(tours as Array<Record<string, unknown>>, 'en')
+            .filter((tour) => !hasGermanLikeContent(tour, TOUR_LOCALE_FIELDS))
+            .slice(0, LIMIT);
       return NextResponse.json({
         success: true,
-        data: (tours as Array<Record<string, unknown>>).map((tour) => ({
+        data: (visibleTours as Array<Record<string, unknown>>).map((tour) => ({
           id: String(tour._id),
           title: String(tour.title || ''),
           slug: String(tour.slug || ''),

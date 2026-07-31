@@ -42,6 +42,16 @@ describe('structured translation extraction', () => {
     expect(content.faqs).toHaveLength(1);
   });
 
+  it('keeps image URLs as stable join keys while extracting captions', () => {
+    const content = extractStructuredSpecContent(
+      { imageMetadata: [{ url: 'hero.jpg', alt: 'Cairo skyline', title: 'Sunset' }] },
+      attractionPageStructuredFields
+    );
+    expect(content.imageMetadata).toEqual([
+      { url: 'hero.jpg', alt: 'Cairo skyline', title: 'Sunset' },
+    ]);
+  });
+
   it('keeps weather warnings translatable as a flat array field', () => {
     expect(destinationTranslationFields.map((f) => f.key)).toContain('weatherWarnings');
   });
@@ -91,5 +101,25 @@ describe('structured translation merge on read', () => {
   it('leaves the entity untouched when the locale has no bucket', () => {
     const localized = localizeStructuredEntries(entity, 'fr', destinationStructuredFields);
     expect(localized.faqs[0].question).toBe('Is it hot?');
+  });
+
+  it('matches translated image captions by URL after gallery reordering', () => {
+    const localized = localizeStructuredEntries({
+      imageMetadata: [
+        { url: 'second.jpg', alt: 'Second' },
+        { url: 'first.jpg', alt: 'First' },
+      ],
+      translations: {
+        de: {
+          imageMetadata: [
+            { url: 'first.jpg', alt: 'Erste' },
+            { url: 'second.jpg', alt: 'Zweite' },
+          ],
+        },
+      },
+    }, 'de', attractionPageStructuredFields);
+
+    expect(localized.imageMetadata[0].alt).toBe('Zweite');
+    expect(localized.imageMetadata[1].alt).toBe('Erste');
   });
 });

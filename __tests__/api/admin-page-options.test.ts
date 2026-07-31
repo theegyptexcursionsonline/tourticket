@@ -57,6 +57,14 @@ function installTourQueryMock() {
       isPublished: true,
       bookingOptions: [{ pricingKey: 'private-luxor-tour-123' }],
     },
+    {
+      _id: '64b64c9bfc13ae1f19e8a002',
+      title: 'Kairo Tagesausflug mit Mittagessen',
+      slug: 'kairo-tagesausflug',
+      description: 'Geführte Tour mit Abholung und Mittagessen',
+      isPublished: true,
+      bookingOptions: [],
+    },
   ]);
 }
 
@@ -79,6 +87,7 @@ describe('GET /api/admin/pages/options', () => {
 
     expect(response.status).toBe(200);
     expect(body.data).toHaveLength(1);
+    expect(body.data[0].title).toBe('Cairo English Tour');
     expect(filter).toEqual({
       $and: [
         {

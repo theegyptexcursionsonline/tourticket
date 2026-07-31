@@ -4,6 +4,8 @@ import {
   tourTranslationFields,
   destinationTranslationFields,
   imageMetadataStructuredField,
+  destinationStructuredFields,
+  attractionPageStructuredFields,
 } from '@/lib/i18n/translationFields';
 import { localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
 
@@ -42,6 +44,22 @@ describe('auto-translate covers every reported field', () => {
     const keys = destinationTranslationFields.map((f) => f.key);
     expect(keys).toContain('summerTemperature');
     expect(keys).toContain('winterTemperature');
+  });
+
+  it('translates image metadata, FAQs, and travel tips for destinations and pages', () => {
+    for (const specs of [destinationStructuredFields, attractionPageStructuredFields]) {
+      expect(specs).toContainEqual(imageMetadataStructuredField);
+      expect(specs).toContainEqual({ key: 'faqs', fields: ['question', 'answer'] });
+      expect(specs).toContainEqual({ key: 'travelTips', fields: ['title', 'content'] });
+    }
+  });
+
+  it('includes structured destination/page content in the manual translation stream', () => {
+    const streamRoute = read('app/api/admin/translate/stream/route.ts');
+    expect(streamRoute).toContain('extractStructuredSpecContent');
+    expect(streamRoute).toContain('translateStructuredSpecContentForLocale');
+    expect(streamRoute).toContain('destinationStructuredFields');
+    expect(streamRoute).toContain('attractionPageStructuredFields');
   });
 });
 

@@ -16,9 +16,11 @@ export interface IAttractionPageTranslation {
   metaDescription?: string;
   faqs?: Array<{ question?: string; answer?: string }>;
   travelTips?: Array<{ title?: string; content?: string }>;
+  imageMetadata?: Array<{ url?: string; alt?: string; title?: string }>;
 }
 
 export interface IAttractionPage extends Document {
+  tenantId?: string;
   archivedAt?: Date | null;
   archivedBy?: string;
   // Basic Info
@@ -86,6 +88,11 @@ const AttractionPageTranslationSchema = new Schema<IAttractionPageTranslation>(
     // Repeated blocks: translated index-by-index against the English source.
     faqs: [{ question: { type: String, trim: true, maxlength: 300 }, answer: { type: String, trim: true, maxlength: 2000 } }],
     travelTips: [{ title: { type: String, trim: true, maxlength: 200 }, content: { type: String, trim: true, maxlength: 1000 } }],
+    imageMetadata: [{
+      url: { type: String, trim: true },
+      alt: { type: String, trim: true, maxlength: 200 },
+      title: { type: String, trim: true, maxlength: 200 },
+    }],
   },
   { _id: false }
 );
@@ -101,6 +108,8 @@ const TravelTipSchema = new Schema({
 }, { _id: false });
 
 const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
+  // Shared collection: missing tenantId is the legacy/default EEO tenant.
+  tenantId: { type: String, trim: true, index: true },
   title: {
     type: String,
     required: [true, 'Page title is required'],
@@ -111,7 +120,6 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
   slug: {
     type: String,
     required: [true, 'Slug is required'],
-    unique: true,
     lowercase: true,
     trim: true,
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
@@ -280,6 +288,7 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
 
 // Indexes
 AttractionPageSchema.index({ title: 'text', description: 'text' });
+AttractionPageSchema.index({ tenantId: 1, slug: 1 }, { unique: true });
 AttractionPageSchema.index({ pageType: 1, isPublished: 1 });
 AttractionPageSchema.index({ featured: 1, isPublished: 1 });
 
