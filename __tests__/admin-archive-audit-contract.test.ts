@@ -118,3 +118,13 @@ describe('a slug collision explains itself', () => {
       .toContain("[data.error, data.details].filter(Boolean).join(' — ')");
   });
 });
+
+describe('tour editor pickers are searchable', () => {
+  it.each(['categories', 'attractions', 'catalogue pages'])('offers a search box for %s', (label) => {
+    expect(read('components/TourForm.tsx')).toContain(`searchPlaceholder="Search ${label}…"`);
+  });
+
+  it('shows the search box however short the list is', () => {
+    expect(read('components/admin/SearchableCheckboxList.tsx')).toContain('searchThreshold = 0');
+  });
+});

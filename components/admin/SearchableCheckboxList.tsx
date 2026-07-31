@@ -14,7 +14,11 @@ interface SearchableCheckboxListProps {
   onToggle: (id: string) => void;
   emptyLabel: string;
   searchPlaceholder?: string;
-  /** Show the search field once the list is long enough to need one. */
+  /**
+   * Lists shorter than this hide the search field. Defaults to showing it
+   * always: these pickers were reported as hard to use, and a box that
+   * disappears when a list happens to be short is the same complaint again.
+   */
   searchThreshold?: number;
 }
 
@@ -24,7 +28,7 @@ export default function SearchableCheckboxList({
   onToggle,
   emptyLabel,
   searchPlaceholder = 'Search…',
-  searchThreshold = 6,
+  searchThreshold = 0,
 }: SearchableCheckboxListProps) {
   const [query, setQuery] = useState('');
   const selected = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
