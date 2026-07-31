@@ -12,6 +12,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import Image from 'next/image';
 import TranslationEditor from '@/components/admin/TranslationEditor';
+import ContentStructuredTranslationEditor from '@/components/admin/ContentStructuredTranslationEditor';
 import { categoryTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
@@ -826,6 +827,16 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                           onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
                           modelType="category"
                           entityId={categoryId}
+                        />
+                        <ContentStructuredTranslationEditor
+                          value={formData.translations}
+                          onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                          faqs={formData.faqs}
+                          travelTips={formData.travelTips}
+                          imageMetadata={ensureImageMetadata(
+                            formData.imageMetadata,
+                            [formData.heroImage, ...formData.images].filter(Boolean),
+                          )}
                         />
                       </div>
                     )}

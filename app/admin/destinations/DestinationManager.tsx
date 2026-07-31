@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
 import TranslationEditor from '@/components/admin/TranslationEditor';
+import ContentStructuredTranslationEditor from '@/components/admin/ContentStructuredTranslationEditor';
 import { destinationTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import Image from 'next/image';
@@ -1535,6 +1536,16 @@ setTimeout(() => router.refresh(), 0);
                       onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
                       modelType="destination"
                       entityId={editingDestination?._id ? String(editingDestination._id) : undefined}
+                    />
+                    <ContentStructuredTranslationEditor
+                      value={formData.translations}
+                      onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                      faqs={formData.faqs}
+                      travelTips={formData.travelTips}
+                      imageMetadata={ensureImageMetadata(
+                        formData.imageMetadata,
+                        [formData.image, ...formData.images].filter(Boolean),
+                      )}
                     />
                   </div>
                 )}

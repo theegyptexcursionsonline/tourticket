@@ -9,7 +9,8 @@ import DestinationModel from '@/lib/models/Destination';
 import { Tour as TourType, Category as CategoryType } from '@/types';
 import CategoryPageClient from './CategoryPageClient';
 import CollectionSchema from '@/components/schema/CollectionSchema';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
+import { categoryStructuredFields } from '@/lib/i18n/translationFields';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import {
   selectLocalizedTaxonomyEntries,
@@ -113,15 +114,19 @@ async function getPageData(slug: string, locale: string) {
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
   }
 
-  const localizedCategory = localizeEntityFields(categoryCandidate, locale, [
-    'name',
-    'description',
-    'longDescription',
-    'highlights',
-    'features',
-    'metaTitle',
-    'metaDescription',
-  ]);
+  const localizedCategory = localizeStructuredEntries(
+    localizeEntityFields(categoryCandidate, locale, [
+      'name',
+      'description',
+      'longDescription',
+      'highlights',
+      'features',
+      'metaTitle',
+      'metaDescription',
+    ]),
+    locale,
+    categoryStructuredFields,
+  );
 
   const localizedTours = selectLocalizedTours(
     serializedTourCandidates.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),

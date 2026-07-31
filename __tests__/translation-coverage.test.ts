@@ -5,6 +5,7 @@ import {
   destinationTranslationFields,
   imageMetadataStructuredField,
   destinationStructuredFields,
+  categoryStructuredFields,
   attractionPageStructuredFields,
 } from '@/lib/i18n/translationFields';
 import { localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
@@ -47,7 +48,7 @@ describe('auto-translate covers every reported field', () => {
   });
 
   it('translates image metadata, FAQs, and travel tips for destinations and pages', () => {
-    for (const specs of [destinationStructuredFields, attractionPageStructuredFields]) {
+    for (const specs of [destinationStructuredFields, categoryStructuredFields, attractionPageStructuredFields]) {
       expect(specs).toContainEqual(imageMetadataStructuredField);
       expect(specs).toContainEqual({ key: 'faqs', fields: ['question', 'answer'] });
       expect(specs).toContainEqual({ key: 'travelTips', fields: ['title', 'content'] });
@@ -59,7 +60,24 @@ describe('auto-translate covers every reported field', () => {
     expect(streamRoute).toContain('extractStructuredSpecContent');
     expect(streamRoute).toContain('translateStructuredSpecContentForLocale');
     expect(streamRoute).toContain('destinationStructuredFields');
+    expect(streamRoute).toContain('categoryStructuredFields');
     expect(streamRoute).toContain('attractionPageStructuredFields');
+  });
+
+  it('renders manual controls for every structured block in pages, categories, destinations, and tours', () => {
+    const editor = read('components/admin/ContentStructuredTranslationEditor.tsx');
+    expect(editor).toContain('FAQs');
+    expect(editor).toContain('Travel tips');
+    expect(editor).toContain('Image alt text and titles');
+
+    for (const file of [
+      'components/admin/AttractionPageForm.tsx',
+      'components/admin/CategoryForm.tsx',
+      'app/admin/destinations/DestinationManager.tsx',
+      'components/admin/TourStructuredTranslationEditor.tsx',
+    ]) {
+      expect(read(file)).toContain('ContentStructuredTranslationEditor');
+    }
   });
 });
 

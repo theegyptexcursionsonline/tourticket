@@ -21,6 +21,7 @@ import {
   categoryTranslationFields,
   attractionPageTranslationFields,
   destinationStructuredFields,
+  categoryStructuredFields,
   attractionPageStructuredFields,
   type StructuredTranslationSpec,
 } from '@/lib/i18n/translationFields';
@@ -113,6 +114,8 @@ export async function POST(request: NextRequest) {
           : null;
         const structuredSpecs: StructuredTranslationSpec[] = modelType === 'destination'
           ? destinationStructuredFields
+          : modelType === 'category'
+            ? categoryStructuredFields
           : modelType === 'attraction-page'
             ? attractionPageStructuredFields
             : [];

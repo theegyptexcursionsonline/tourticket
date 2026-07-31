@@ -16,6 +16,7 @@ import type { ContentFaq, ContentTravelTip, ImageMetadata } from '@/types';
 import Image from 'next/image';
 import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
 import TranslationEditor from '@/components/admin/TranslationEditor';
+import ContentStructuredTranslationEditor from '@/components/admin/ContentStructuredTranslationEditor';
 import { attractionPageTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
 import SearchableCheckboxList from '@/components/admin/SearchableCheckboxList';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
@@ -1150,13 +1151,25 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                     {activeTab === 'translations' && (
                       <div className="space-y-6">
                         {pageId ? (
-                          <TranslationEditor
-                            fields={attractionPageTranslationFields}
-                            value={formData.translations || {}}
-                            onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
-                            modelType="attraction-page"
-                            entityId={pageId}
-                          />
+                          <>
+                            <TranslationEditor
+                              fields={attractionPageTranslationFields}
+                              value={formData.translations || {}}
+                              onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                              modelType="attraction-page"
+                              entityId={pageId}
+                            />
+                            <ContentStructuredTranslationEditor
+                              value={formData.translations || {}}
+                              onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
+                              faqs={formData.faqs}
+                              travelTips={formData.travelTips}
+                              imageMetadata={ensureImageMetadata(
+                                formData.imageMetadata,
+                                [formData.heroImage || '', ...(formData.images || [])].filter(Boolean),
+                              )}
+                            />
+                          </>
                         ) : (
                           <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                             <Globe className="w-10 h-10 mx-auto mb-3 text-slate-300" />

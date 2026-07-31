@@ -11,6 +11,7 @@ import {
   destinationStructuredFields,
   destinationTranslationFields,
   attractionPageStructuredFields,
+  categoryStructuredFields,
 } from '@/lib/i18n/translationFields';
 
 describe('structured translation extraction', () => {
@@ -40,6 +41,20 @@ describe('structured translation extraction', () => {
       attractionPageStructuredFields
     );
     expect(content.faqs).toHaveLength(1);
+  });
+
+  it('covers the same blocks for migrated category pages', () => {
+    const content = extractStructuredSpecContent(
+      {
+        faqs: [{ question: 'Who can join?', answer: 'Everyone.' }],
+        travelTips: [{ title: 'Arrive early', content: 'Come 15 minutes before.' }],
+        imageMetadata: [{ url: 'category.jpg', alt: 'Category hero', title: 'Hero' }],
+      },
+      categoryStructuredFields,
+    );
+    expect(content.faqs).toHaveLength(1);
+    expect(content.travelTips).toHaveLength(1);
+    expect(content.imageMetadata?.[0]).toMatchObject({ url: 'category.jpg', alt: 'Category hero' });
   });
 
   it('keeps image URLs as stable join keys while extracting captions', () => {
