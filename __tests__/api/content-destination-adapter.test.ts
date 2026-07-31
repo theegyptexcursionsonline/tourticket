@@ -44,9 +44,26 @@ jest.mock('@/lib/models/Destination', () => ({
   },
 }));
 
+// The real claim helper runs against an in-memory receipt store so replay
+// behaviour is proven end-to-end rather than stubbed out.
+const mockReceiptStore: { current: ReceiptStore | null } = { current: null };
+jest.mock('@/lib/models/ContentPublishReceipt', () => ({
+  __esModule: true,
+  default: {
+    create: (doc: never) => mockReceiptStore.current!.model.create(doc),
+    findOne: (selector: never) => mockReceiptStore.current!.model.findOne(selector),
+    findOneAndUpdate: (selector: never, update: never) =>
+      mockReceiptStore.current!.model.findOneAndUpdate(selector, update),
+    updateOne: (selector: never, update: never) =>
+      mockReceiptStore.current!.model.updateOne(selector, update),
+    deleteOne: (selector: never) => mockReceiptStore.current!.model.deleteOne(selector),
+  },
+}));
+
 import { POST } from '@/app/api/admin/content/destination/route';
 import { GET } from '@/app/api/admin/content/destination/[slug]/route';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
 
 const validPayload = {
   name: 'Makadi Bay',
@@ -54,13 +71,20 @@ const validPayload = {
   description: 'Resort bay on the Red Sea coast south of Hurghada.',
 };
 
-function postReq(body: Record<string, unknown>) {
-  return { json: async () => body } as never;
+function postReq(body: Record<string, unknown>, headers: Record<string, string> = {}) {
+  const normalized = new Map(
+    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  return {
+    json: async () => body,
+    headers: { get: (name: string) => normalized.get(name.toLowerCase()) ?? null },
+  } as never;
 }
 
 beforeEach(() => {
   destinationFindOne.mockReset();
   destinationCreate.mockReset();
+  mockReceiptStore.current = createReceiptStore();
 });
 
 describe('POST /api/admin/content/destination', () => {
@@ -132,6 +156,75 @@ describe('POST /api/admin/content/destination', () => {
     for (const call of destinationFindOne.mock.calls) {
       expect(call[0]).toMatchObject({ tenantId: 'makadi-bay' });
     }
+  });
+
+  it('drops unsupported-locale translations and reports them', async () => {
+    destinationFindOne.mockResolvedValue(null);
+    destinationCreate.mockResolvedValue({ _id: 'id4', slug: validPayload.slug });
+
+    const res = await POST(
+      postReq({
+        payload: validPayload,
+        translations: { de: { name: 'Makadi-Bucht' }, it: { name: 'Baia di Makadi' } },
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    expect(destinationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ translations: { de: { name: 'Makadi-Bucht' } } }),
+    );
+    expect(await res.json()).toEqual(expect.objectContaining({ droppedLocales: ['it'] }));
+  });
+
+  it('rejects a defaultLocale this site does not serve', async () => {
+    const res = await POST(postReq({ payload: validPayload, defaultLocale: 'it' }));
+
+    expect(res.status).toBe(400);
+    expect(destinationCreate).not.toHaveBeenCalled();
+  });
+
+  it('files a non-default base payload under its own language bucket', async () => {
+    destinationFindOne.mockResolvedValue(null);
+    destinationCreate.mockResolvedValue({ _id: 'id5', slug: validPayload.slug });
+
+    const res = await POST(postReq({ payload: validPayload, defaultLocale: 'de' }));
+
+    expect(res.status).toBe(201);
+    expect(destinationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        translations: expect.objectContaining({
+          de: expect.objectContaining({ name: validPayload.name }),
+        }),
+      }),
+    );
+  });
+});
+
+describe('POST /api/admin/content/destination — Idempotency-Key', () => {
+  const headers = { 'Idempotency-Key': '9f7d2c8a-1234-4c5d-8e9f-000000000002' };
+
+  it('creates exactly one destination when the engine replays the same key', async () => {
+    destinationFindOne.mockResolvedValue(null);
+    destinationCreate.mockResolvedValue({ _id: 'dest-1', slug: validPayload.slug });
+
+    const first = await POST(postReq({ payload: validPayload }, headers));
+    const second = await POST(postReq({ payload: validPayload }, headers));
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(await second.json()).toEqual(await first.json());
+    expect(destinationCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases the claim on a duplicate-name rejection', async () => {
+    destinationFindOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ _id: 'dup', name: validPayload.name });
+
+    const res = await POST(postReq({ payload: validPayload }, headers));
+
+    expect(res.status).toBe(409);
+    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
   });
 });
 

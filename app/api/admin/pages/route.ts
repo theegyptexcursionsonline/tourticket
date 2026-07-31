@@ -107,6 +107,10 @@ export async function GET(request: NextRequest) {
     if (kind === 'category-landing') attractionFilter.pageType = 'category';
     if (status === 'published') attractionFilter.isPublished = true;
     if (status === 'draft') attractionFilter.isPublished = { $ne: true };
+    // Archived rows are hidden everywhere except their own filter, which is
+    // the point of archiving: they stop cluttering the working lists.
+    if (status === 'archived') attractionFilter.archivedAt = { $ne: null };
+    else attractionFilter.archivedAt = null;
     // Push (never replace $and): the tenant scope must survive search.
     if (search) attractionConditions.push({ $or: [{ title: search }, { slug: search }] });
 
@@ -114,6 +118,8 @@ export async function GET(request: NextRequest) {
     const categoryFilter: Record<string, unknown> = { $and: categoryConditions };
     if (status === 'published') categoryFilter.isPublished = { $ne: false };
     if (status === 'draft') categoryFilter.isPublished = false;
+    if (status === 'archived') categoryFilter.archivedAt = { $ne: null };
+    else categoryFilter.archivedAt = null;
     if (search) categoryConditions.push({ $or: [{ name: search }, { slug: search }] });
 
     const fetchSize = limit + 1;

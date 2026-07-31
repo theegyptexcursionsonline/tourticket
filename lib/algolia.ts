@@ -32,6 +32,7 @@ interface AlgoliaTourSource {
 
 interface AlgoliaDestinationSource {
   _id: unknown;
+  tenantId?: string;
   name?: string;
   slug?: string;
   description?: string;
@@ -67,6 +68,7 @@ interface AlgoliaCategorySource {
 
 interface AlgoliaBlogSource {
   _id: SearchId;
+  tenantId?: string;
   title?: string;
   slug?: string;
   excerpt?: string;
@@ -392,6 +394,9 @@ export const configureAlgoliaIndex = async () => {
 export const formatDestinationForAlgolia = (destination: AlgoliaDestinationSource) => {
   return {
     objectID: String(destination._id),
+    // See formatBlogForAlgolia — an unstamped record reads as default-site
+    // content, so the owning tenant must always travel with the hit.
+    tenantId: destination.tenantId || 'default',
     name: destination.name || '',
     slug: destination.slug || '',
     description: destination.description || '',
@@ -566,6 +571,10 @@ export const deleteCategoryFromAlgolia = async (categoryId: string) => {
 export const formatBlogForAlgolia = (blog: AlgoliaBlogSource) => {
   return {
     objectID: blog._id.toString(),
+    // Stamped so search hits stay attributable to their owner: a record with no
+    // tenantId is read as default-site content by searchHitBelongsToTenant, so
+    // omitting it would let another tenant's post surface in this site's search.
+    tenantId: blog.tenantId || 'default',
     title: blog.title || '',
     slug: blog.slug || '',
     excerpt: blog.excerpt || '',

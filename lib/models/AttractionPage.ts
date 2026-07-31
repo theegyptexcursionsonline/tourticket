@@ -19,6 +19,8 @@ export interface IAttractionPageTranslation {
 }
 
 export interface IAttractionPage extends Document {
+  archivedAt?: Date | null;
+  archivedBy?: string;
   // Basic Info
   title: string;
   slug: string;
@@ -266,6 +268,10 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
     default: false,
     index: true,
   },
+  // Archived is derived from this timestamp rather than a status enum, so
+  // existing isPublished queries keep working and nothing needs migrating.
+  archivedAt: { type: Date, index: true },
+  archivedBy: { type: String, trim: true },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

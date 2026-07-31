@@ -5,6 +5,8 @@ import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 
 export interface ICategory extends Document {
+  archivedAt?: Date | null;
+  archivedBy?: string;
   // Basic Info
   name: string;
   slug: string;
@@ -234,6 +236,10 @@ const CategorySchema: Schema<ICategory> = new Schema({
     default: 0,
     min: [0, 'Tour count cannot be negative'],
   },
+  // Archived is derived from this timestamp rather than a status enum, so
+  // existing isPublished queries keep working and nothing needs migrating.
+  archivedAt: { type: Date, index: true },
+  archivedBy: { type: String, trim: true },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

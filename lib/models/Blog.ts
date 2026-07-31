@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
+import { isDefaultTenant } from '@/lib/tenant/tenantScope';
 
 export interface IBlog extends Document {
   // Basic Info
@@ -367,10 +368,13 @@ BlogSchema.statics.getByCategory = function(category: string) {
   return this.find({ status: 'published', category }).sort({ publishedAt: -1 });
 };
 
-// Post-save hook to sync to Algolia
+// Post-save hook to sync to Algolia.
+// Only default-site content belongs in this storefront's index: search UIs read
+// a hit with no tenant marker as default-site content, so indexing another
+// tenant's post here would surface it on the wrong site.
 BlogSchema.post('save', async function(doc) {
   try {
-    if (doc.status === 'published') {
+    if (doc.status === 'published' && isDefaultTenant(doc.tenantId)) {
       const { syncBlogToAlgolia } = await import('../algolia');
       await syncBlogToAlgolia(doc);
       console.log(`Auto-synced blog ${doc._id} to Algolia`);

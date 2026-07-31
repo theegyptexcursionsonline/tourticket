@@ -80,3 +80,25 @@ describe('hero images can be reordered safely', () => {
     expect(page).toContain('handleMoveImage');
   });
 });
+
+describe('pages and destinations can be archived from the row', () => {
+  const list = read('app/admin/pages/page.tsx');
+
+  it('offers archive and restore actions without opening the page', () => {
+    expect(list).toContain('setArchived(row, true)');
+    expect(list).toContain('setArchived(row, false)');
+  });
+
+  it('filters archived rows in the database query, not in the browser', () => {
+    // client-side filtering would silently drop rows past the cursor
+    const route = read('app/api/admin/pages/route.ts');
+    expect(route).toContain("status === 'archived'");
+    expect(route).toContain('attractionFilter.archivedAt = null');
+    expect(route).toContain('categoryFilter.archivedAt = null');
+  });
+
+  it('stores the archive timestamp on both page models', () => {
+    expect(read('lib/models/AttractionPage.ts')).toContain('archivedAt');
+    expect(read('lib/models/Category.ts')).toContain('archivedAt');
+  });
+});

@@ -24,6 +24,7 @@
     "test:e2e:report": "env -u NO_COLOR playwright show-report",
     "test:all": "pnpm test:unit && pnpm test:e2e",
     "ci": "pnpm typecheck && pnpm lint && pnpm test:unit && pnpm build && pnpm test:e2e",
+    "blog:migrate-tenant-index": "tsx scripts/migrate-blog-slug-tenant-index.ts",
     "algolia:sync": "tsx scripts/sync-algolia.ts",
     "algolia:clear-sync": "tsx scripts/sync-algolia.ts --clear",
     "algolia:sync-all": "tsx scripts/sync-all-algolia.ts",

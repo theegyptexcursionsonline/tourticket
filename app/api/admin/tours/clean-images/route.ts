@@ -5,6 +5,7 @@ import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import AttractionPage from '@/lib/models/AttractionPage'; // Add this import
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
 const PLACEHOLDER_PATTERNS = [
@@ -113,7 +114,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Clean Destinations
+    // DEFAULT_TENANT_FILTER is itself an $or, so it is combined under $and
+    // rather than spread — this admin sweep must never read or rewrite another
+    // tenant's destinations.
     const destinationsWithPlaceholders = await Destination.find({
+      $and: [DEFAULT_TENANT_FILTER],
       $or: [
         { heroImage: { $regex: PLACEHOLDER_PATTERNS.join('|'), $options: 'i' } },
         { image: { $regex: PLACEHOLDER_PATTERNS.join('|'), $options: 'i' } }
@@ -265,7 +270,11 @@ export async function GET(request: NextRequest) {
     }));
 
     // Check Destinations
+    // DEFAULT_TENANT_FILTER is itself an $or, so it is combined under $and
+    // rather than spread — this admin sweep must never read or rewrite another
+    // tenant's destinations.
     const destinationsWithPlaceholders = await Destination.find({
+      $and: [DEFAULT_TENANT_FILTER],
       $or: [
         { heroImage: { $regex: PLACEHOLDER_PATTERNS.join('|'), $options: 'i' } },
         { image: { $regex: PLACEHOLDER_PATTERNS.join('|'), $options: 'i' } }

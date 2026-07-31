@@ -8,7 +8,19 @@ import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
 import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
 import { storedTenantId, tenantSlugFilter } from "@/lib/tenant/tenantScope";
-import { filterSupportedTranslations } from "@/lib/i18n/supportedTranslations";
+import {
+  filterSupportedTranslations,
+  resolveBaseLocale,
+  withBaseLocaleBucket,
+} from "@/lib/i18n/supportedTranslations";
+import {
+  beginPublish,
+  completePublish,
+  hashPublishRequest,
+  readIdempotencyKey,
+  releasePublishClaim,
+  type PublishClaim,
+} from "@/lib/content/publishIdempotency";
 import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 const BLOG_CATEGORIES = new Set([
@@ -64,9 +76,23 @@ function sanitizeFaqs(input: unknown): { question: string; answer: string }[] {
 
 type IncomingBody = {
   tenantId?: string;
+  // Language the base `payload` is written in; defaults to this site's default.
+  defaultLocale?: string;
   payload?: IncomingPayload;
   translations?: Record<string, Record<string, unknown>>;
 };
+
+// The localized fields a reader can overlay, mirrored from the base payload
+// when the engine wrote it in a non-default language.
+function baseLocaleBucket(payload: IncomingPayload): Record<string, unknown> {
+  return {
+    title: payload.title,
+    excerpt: payload.excerpt,
+    content: payload.content,
+    metaTitle: payload.metaTitle,
+    metaDescription: payload.metaDescription,
+  };
+}
 
 function liveUrlForBlog(slug: string): string {
   const base =
@@ -106,15 +132,33 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error }, { status: 400 });
   const payload = body.payload!;
 
+  const base = resolveBaseLocale(body.defaultLocale);
+  if (!base.ok) return NextResponse.json({ error: base.error }, { status: 400 });
+
+  const { key: idempotencyKey, error: keyError } = readIdempotencyKey(
+    req.headers.get("idempotency-key"),
+  );
+  if (keyError) return NextResponse.json({ error: keyError }, { status: 400 });
+
   await dbConnect();
 
-  // Slugs are namespaced per tenant — the same slug may exist on another tenant.
-  const existing = await Blog.findOne(tenantSlugFilter(payload.slug!, body.tenantId));
-  if (existing) {
-    return NextResponse.json(
-      { error: `A blog post with slug "${payload.slug}" already exists`, existingId: String(existing._id) },
-      { status: 409 },
-    );
+  // Claim the key before writing anything; a replayed key returns the original
+  // response instead of publishing the post a second time.
+  let claim: PublishClaim | null = null;
+  if (idempotencyKey) {
+    const begun = await beginPublish({
+      idempotencyKey,
+      tenantId: body.tenantId,
+      contentType: "blog",
+      requestHash: hashPublishRequest(body),
+    });
+    if (begun.outcome === "replay") {
+      return NextResponse.json(begun.body, { status: begun.status });
+    }
+    if (begun.outcome === "error") {
+      return NextResponse.json({ error: begun.error }, { status: begun.status });
+    }
+    claim = begun;
   }
 
   const tags = Array.isArray(payload.tags)
@@ -123,7 +167,36 @@ export async function POST(req: NextRequest) {
         .slice(0, 10)
     : [];
 
-  const { translations, droppedLocales } = filterSupportedTranslations(body.translations);
+  const filtered = filterSupportedTranslations(body.translations);
+  const droppedLocales = filtered.droppedLocales;
+  const translations = withBaseLocaleBucket(
+    filtered.translations,
+    base.baseLocale,
+    baseLocaleBucket(payload),
+  );
+
+  // Slugs are namespaced per tenant — the same slug may exist on another tenant.
+  const existing = await Blog.findOne(tenantSlugFilter(payload.slug!, body.tenantId));
+  if (existing) {
+    // A resumed claim means a previous attempt for THIS key died mid-publish,
+    // so a record under the same slug is that attempt's own work — adopt it
+    // rather than reporting a duplicate the engine never created twice.
+    if (claim?.resumed) {
+      const adopted = {
+        id: String(existing._id),
+        slug: existing.slug,
+        liveUrl: liveUrlForBlog(existing.slug),
+        droppedLocales,
+      };
+      await completePublish(claim, 201, adopted);
+      return NextResponse.json(adopted, { status: 201 });
+    }
+    if (claim) await releasePublishClaim(claim);
+    return NextResponse.json(
+      { error: `A blog post with slug "${payload.slug}" already exists`, existingId: String(existing._id) },
+      { status: 409 },
+    );
+  }
 
   try {
     const doc = await Blog.create({
@@ -149,18 +222,22 @@ export async function POST(req: NextRequest) {
       translations,
     });
 
+    const created = {
+      id: String(doc._id),
+      slug: doc.slug,
+      liveUrl: liveUrlForBlog(doc.slug),
+      droppedLocales,
+    };
+
+    // Mark processed only now that the post is committed — an attempt that dies
+    // before this point leaves a stale claim the next retry can take over.
+    if (claim) await completePublish(claim, 201, created);
+
     revalidateStorefrontContent();
 
-    return NextResponse.json(
-      {
-        id: String(doc._id),
-        slug: doc.slug,
-        liveUrl: liveUrlForBlog(doc.slug),
-        droppedLocales,
-      },
-      { status: 201 },
-    );
+    return NextResponse.json(created, { status: 201 });
   } catch (err) {
+    if (claim) await releasePublishClaim(claim);
     const message = err instanceof Error ? err.message : "Insert failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -180,6 +257,9 @@ export async function PUT(req: NextRequest) {
   const error = validate(body.payload);
   if (error) return NextResponse.json({ error }, { status: 400 });
   const payload = body.payload!;
+
+  const base = resolveBaseLocale(body.defaultLocale);
+  if (!base.ok) return NextResponse.json({ error: base.error }, { status: 400 });
 
   await dbConnect();
 
@@ -212,7 +292,11 @@ export async function PUT(req: NextRequest) {
   if (body.translations) {
     const filtered = filterSupportedTranslations(body.translations);
     droppedLocales = filtered.droppedLocales;
-    existing.translations = filtered.translations as typeof existing.translations;
+    existing.translations = withBaseLocaleBucket(
+      filtered.translations,
+      base.baseLocale,
+      baseLocaleBucket(payload),
+    ) as typeof existing.translations;
   }
 
   try {

@@ -18,6 +18,7 @@ import {
   syncBlogsToAlgolia,
   configureAlgoliaIndex
 } from '../lib/algolia';
+import { DEFAULT_TENANT_FILTER } from '../lib/tenant/defaultTenantFilter';
 
 async function syncAllToAlgolia() {
   try {
@@ -56,7 +57,12 @@ async function syncAllToAlgolia() {
     // SYNC DESTINATIONS
     // =================================================================
     console.log('🗺️  Syncing Destinations...');
-    const destinations = await Destination.find({ isPublished: true }).lean();
+    // This index serves the default storefront only — never reindex another
+    // tenant's content into it.
+    const destinations = await Destination.find({
+      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
+    }).lean();
 
     if (destinations.length > 0) {
       await syncDestinationsToAlgolia(destinations);
@@ -84,7 +90,7 @@ async function syncAllToAlgolia() {
     // SYNC BLOGS
     // =================================================================
     console.log('📝 Syncing Blogs...');
-    const blogs = await Blog.find({ status: 'published' }).lean();
+    const blogs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER }).lean();
 
     if (blogs.length > 0) {
       await syncBlogsToAlgolia(blogs);
