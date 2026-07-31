@@ -550,8 +550,11 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
         }
         router.refresh();
       } else {
-        setError(data.error || 'Failed to save page');
-        toast.error(data.error || 'Failed to save page');
+        // The API sends `details` for validation problems; showing only the
+        // headline turned every one of them into a generic save failure.
+        const message = [data.error, data.details].filter(Boolean).join(' — ') || 'Failed to save page';
+        setError(message);
+        toast.error(message);
       }
     } catch (err) {
       const errorMessage = 'Network error occurred while saving the page';

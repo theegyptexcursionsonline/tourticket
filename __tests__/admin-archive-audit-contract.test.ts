@@ -102,3 +102,19 @@ describe('pages and destinations can be archived from the row', () => {
     expect(read('lib/models/Category.ts')).toContain('archivedAt');
   });
 });
+
+describe('a slug collision explains itself', () => {
+  it.each([
+    'app/api/admin/attraction-pages/route.ts',
+    'app/api/admin/attraction-pages/[id]/route.ts',
+  ])('%s reports a duplicate key as a conflict', (file) => {
+    const source = read(file);
+    expect(source).toContain('mongoError?.code === 11000');
+    expect(source).toContain('status: 409');
+  });
+
+  it('shows the reason in the form instead of a generic message', () => {
+    expect(read('components/admin/AttractionPageForm.tsx'))
+      .toContain("[data.error, data.details].filter(Boolean).join(' — ')");
+  });
+});
