@@ -104,6 +104,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
   return (
     <Link
       href={`/${tour.slug || '#'}`}
+      data-testid="featured-tour-card"
       className="block w-[260px] sm:w-[280px] md:w-[320px] lg:w-[340px] bg-white rounded-2xl overflow-hidden border border-gray-200 transform transition-all duration-300 hover:-translate-y-1 group focus:outline-none"
       style={{ boxShadow: 'none' }}
       aria-label={t('openTour', { title: tour.title || t('untitledTour') })}
@@ -282,9 +283,6 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
   }));
 
   const displayedTours = isMobileViewport ? validatedTours.slice(0, 8) : validatedTours;
-  // Duplicate only the displayed cards for seamless scrolling.
-  const duplicatedTours = displayedTours.length > 0 ? [...displayedTours, ...displayedTours] : [];
-  const shouldAnimateMarquee = displayedTours.length > (isMobileViewport ? 3 : 4);
 
   if (tours.length === 0) {
     return null;
@@ -319,43 +317,21 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
           </div>
         </div>
 
-        {/* Full-width carousel */}
-        <div className="w-full">
-          {shouldAnimateMarquee ? (
-            <div className="relative w-full overflow-hidden group py-4 sm:py-6">
-              {/* Very subtle gradient masks - minimal on mobile */}
-              <div className="absolute top-0 left-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-r from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
-              <div className="absolute top-0 right-0 w-4 sm:w-8 md:w-12 lg:w-16 h-full bg-gradient-to-l from-gray-50 via-gray-50/20 sm:via-gray-50/30 md:via-gray-50/40 to-transparent z-10 pointer-events-none" />
-
-              {/* Animated row */}
-              <div
-                className="flex gap-3 sm:gap-4 md:gap-6 animate-marquee group-hover:[animation-play-state:paused]"
-                style={{
-                  width: 'max-content',
-                  direction: 'ltr',
-                  animationName: rtl ? 'marquee-rtl' : 'marquee-ltr',
-                }}
-              >
-                {duplicatedTours.map((tour, idx) => (
-                  <div key={`${tour._id || tour.slug}-${idx}`} className="flex-shrink-0 px-1 sm:px-2">
-                    <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
-                  </div>
-                ))}
+        {/* Native horizontal scrolling keeps every tour available without a
+            continuously animating, duplicated card tree. */}
+        <div
+          data-testid="featured-tours-scroll"
+          className="scrollbar-hide w-full overflow-x-auto overscroll-x-contain py-4 sm:py-6"
+          dir={rtl ? 'rtl' : 'ltr'}
+          aria-label={t('title')}
+        >
+          <div className="flex w-max snap-x snap-proximity gap-3 px-4 sm:gap-4 md:gap-6 md:px-8">
+            {displayedTours.map((tour, idx) => (
+              <div key={`${tour._id || tour.slug}-${idx}`} className="flex-shrink-0 snap-start px-1 sm:px-2">
+                <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
               </div>
-            </div>
-          ) : (
-            <div className="py-4 sm:py-6">
-              <div className="container mx-auto px-4 md:px-8">
-                <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
-                  {displayedTours.map((tour, idx) => (
-                    <div key={`${tour._id || tour.slug}-${idx}`} className="px-1 sm:px-2">
-                      <TourCard tour={tour} onAddToCartClick={handleAddToCartClick} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </section>
 
@@ -375,29 +351,6 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-
-        @keyframes marquee-ltr {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-
-        @keyframes marquee-rtl {
-          from { transform: translateX(-50%); }
-          to { transform: translateX(0); }
-        }
-
-        .animate-marquee {
-          animation-duration: 40s;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-          will-change: transform;
-          backface-visibility: hidden;
-          perspective: 1000px;
-        }
-
-        @media (max-width: 640px) {
-          .animate-marquee { animation-duration: 32s; }
         }
 
         /* NO SHADOWS - Remove all shadows from featured tours section */
@@ -424,10 +377,6 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
           display: none;
         }
 
-        /* Smooth scrolling */
-        .featured-tours-section [class*="overflow"] {
-          scroll-behavior: smooth;
-        }
       `}</style>
     </>
   );

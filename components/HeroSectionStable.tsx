@@ -74,13 +74,16 @@ function BackgroundSlideshow({
   autoplay: boolean;
 }) {
   const [index, setIndex] = useState(0);
+  const [previousIndex, setPreviousIndex] = useState<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
+  const fadeTimeoutRef = useRef<number | null>(null);
   const slides = images.length ? images : DEFAULT_IMAGES;
 
   useEffect(() => {
     if (!autoplay || slides.length <= 1) return;
 
     timeoutRef.current = window.setTimeout(() => {
+      setPreviousIndex(index % slides.length);
       setIndex((current) => (current + 1) % slides.length);
     }, delay);
 
@@ -92,31 +95,76 @@ function BackgroundSlideshow({
     };
   }, [autoplay, delay, index, slides.length]);
 
-  const activeIndex = index % slides.length;
+  useEffect(() => {
+    if (previousIndex === null) return;
 
-  // All slides stay mounted and cross-fade via opacity; remounting a single
-  // keyed slide (the previous approach) made every swap an instant cut because
-  // a freshly mounted element has no opacity change to animate.
+    fadeTimeoutRef.current = window.setTimeout(() => {
+      setPreviousIndex(null);
+      fadeTimeoutRef.current = null;
+    }, fadeMs);
+
+    return () => {
+      if (fadeTimeoutRef.current) {
+        window.clearTimeout(fadeTimeoutRef.current);
+        fadeTimeoutRef.current = null;
+      }
+    };
+  }, [fadeMs, previousIndex]);
+
+  const activeIndex = index % slides.length;
+  const activeSlide = slides[activeIndex];
+  const previousSlide = previousIndex === null ? null : slides[previousIndex % slides.length];
+
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
-      {slides.map((slide, i) => (
+      {previousSlide && previousIndex !== activeIndex && (
         <div
-          key={`${slide.desktop}-${i}`}
-          className="absolute inset-0 h-full w-full transition-opacity ease-in-out"
-          style={{ transitionDuration: `${fadeMs}ms`, opacity: i === activeIndex ? 1 : 0 }}
+          key={`previous-${previousSlide.desktop}-${previousIndex}`}
+          data-hero-slide="previous"
+          className="absolute inset-0 h-full w-full"
         >
           <Image
-            src={slide.mobile || slide.desktop}
-            alt={slide.alt}
+            src={previousSlide.mobile || previousSlide.desktop}
+            alt={previousSlide.alt}
             fill
-            priority={i === 0}
             quality={75}
             sizes="100vw"
-            loading={i === 0 ? 'eager' : 'lazy'}
+            loading="lazy"
             className="object-cover"
           />
         </div>
-      ))}
+      )}
+
+      <div
+        key={`active-${activeSlide.desktop}-${activeIndex}`}
+        data-hero-slide="active"
+        className={previousSlide ? 'hero-slide-fade-in absolute inset-0 h-full w-full' : 'absolute inset-0 h-full w-full'}
+        style={previousSlide ? { animationDuration: `${fadeMs}ms` } : undefined}
+      >
+        <Image
+          src={activeSlide.mobile || activeSlide.desktop}
+          alt={activeSlide.alt}
+          fill
+          priority={activeIndex === 0}
+          quality={75}
+          sizes="100vw"
+          loading={activeIndex === 0 ? 'eager' : 'lazy'}
+          className="object-cover"
+        />
+      </div>
+
+      <style jsx>{`
+        .hero-slide-fade-in {
+          animation-name: hero-slide-fade-in;
+          animation-timing-function: ease-in-out;
+          animation-fill-mode: both;
+        }
+
+        @keyframes hero-slide-fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

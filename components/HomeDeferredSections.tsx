@@ -46,11 +46,11 @@ export default function HomeDeferredSections({
   dayTrips,
 }: HomeDeferredSectionsProps) {
   const isMobile = useIsMobileViewport();
-  const { ready: featuredReady, ref: featuredRef } = useInViewOnce<HTMLDivElement>('500px 0px');
-  const { ready: popularReady, ref: popularRef } = useInViewOnce<HTMLDivElement>('450px 0px');
-  const { ready: categoriesReady, ref: categoriesRef } = useInViewOnce<HTMLDivElement>('400px 0px');
-  const { ready: dayTripsReady, ref: dayTripsRef } = useInViewOnce<HTMLDivElement>('350px 0px');
-  const { ready: infoReady, ref: infoRef } = useInViewOnce<HTMLDivElement>('300px 0px');
+  const { ready: featuredReady, ref: featuredRef } = useInViewOnce<HTMLDivElement>('250px 0px');
+  const { ready: popularReady, ref: popularRef } = useInViewOnce<HTMLDivElement>('220px 0px');
+  const { ready: categoriesReady, ref: categoriesRef } = useInViewOnce<HTMLDivElement>('200px 0px');
+  const { ready: dayTripsReady, ref: dayTripsRef } = useInViewOnce<HTMLDivElement>('180px 0px');
+  const { ready: infoReady, ref: infoRef } = useInViewOnce<HTMLDivElement>('160px 0px');
   const featuredTours = isMobile ? tours.slice(0, 8) : tours;
   const popularInterests = isMobile ? featuredInterests.slice(0, 8) : featuredInterests;
   const interestCategories = isMobile ? categories.slice(0, 10) : categories;
@@ -133,8 +133,14 @@ function useInViewOnce<T extends HTMLElement>(rootMargin: string) {
 
     let observer: IntersectionObserver | undefined;
     let removeScrollListener: (() => void) | undefined;
+    let cancelScheduledMount: (() => void) | undefined;
+    let mountScheduled = false;
 
-    const showSection = () => setReady(true);
+    const showSection = () => {
+      if (mountScheduled) return;
+      mountScheduled = true;
+      cancelScheduledMount = scheduleSectionMount(() => setReady(true));
+    };
     const node = ref.current;
 
     if ('IntersectionObserver' in window && node) {
@@ -163,10 +169,26 @@ function useInViewOnce<T extends HTMLElement>(rootMargin: string) {
     return () => {
       if (observer) observer.disconnect();
       if (removeScrollListener) removeScrollListener();
+      if (cancelScheduledMount) cancelScheduledMount();
     };
   }, [ready, rootMargin]);
 
   return { ready, ref };
+}
+
+function scheduleSectionMount(callback: () => void) {
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (handler: () => void, options?: { timeout: number }) => number;
+    cancelIdleCallback?: (id: number) => void;
+  };
+
+  if (idleWindow.requestIdleCallback) {
+    const idleId = idleWindow.requestIdleCallback(callback, { timeout: 600 });
+    return () => idleWindow.cancelIdleCallback?.(idleId);
+  }
+
+  const timeoutId = window.setTimeout(callback, 32);
+  return () => window.clearTimeout(timeoutId);
 }
 
 function parseRootMargin(rootMargin: string) {
