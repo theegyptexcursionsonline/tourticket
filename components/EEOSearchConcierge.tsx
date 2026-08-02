@@ -9,6 +9,9 @@ const SEARCH_ORIGIN = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || 'https://se
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5umlfasNQfJywtFPs6g';
 const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
+// The launcher is served through the customer CDN. A release token prevents a
+// previously cached widget bundle from surviving a Search UI rollout.
+const LAUNCHER_RELEASE = '20260802-search-first';
 
 const copy: Record<string, { label: string; kicker: string; placeholder: string; submitLabel: string }> = {
   en: {
@@ -68,7 +71,7 @@ export default function EEOSearchConcierge() {
     const localizedCopy = copy[locale] || copy.en;
     const script = document.createElement('script');
     script.id = SCRIPT_ID;
-    script.src = `${SEARCH_ORIGIN}/widget/foxes-launcher.js`;
+    script.src = `${SEARCH_ORIGIN}/widget/foxes-launcher.js?v=${LAUNCHER_RELEASE}`;
     script.async = true;
     script.dataset.widgetId = WIDGET_ID;
     script.dataset.apiUrl = SEARCH_ORIGIN;
@@ -80,6 +83,7 @@ export default function EEOSearchConcierge() {
     script.dataset.color = '#0b5d3b';
     script.dataset.position = locale === 'ar' ? 'left' : 'right';
     script.dataset.dir = locale === 'ar' ? 'rtl' : 'ltr';
+    script.dataset.locale = locale;
     script.dataset.rememberDismiss = 'false';
     document.body.appendChild(script);
 

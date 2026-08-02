@@ -39,6 +39,8 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.submitLabel).toBe('Search');
       expect(script.dataset.color).toBe('#0b5d3b');
       expect(script.dataset.dir).toBe('ltr');
+      expect(script.dataset.locale).toBe('en');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260802-search-first');
     });
   });
 
@@ -54,6 +56,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.submitLabel).toBe('ابحث');
       expect(script.dataset.position).toBe('left');
       expect(script.dataset.dir).toBe('rtl');
+      expect(script.dataset.locale).toBe('ar');
     });
   });
 
