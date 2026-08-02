@@ -14,31 +14,31 @@ const copy: Record<string, { label: string; kicker: string; placeholder: string;
   en: {
     label: 'Search Egypt tours with AI',
     kicker: 'AI trip search',
-    placeholder: 'Search tours, places, or experiences...',
+    placeholder: 'Search Egypt tours...',
     submitLabel: 'Search',
   },
   ar: {
     label: 'ابحث عن رحلات مصر بالذكاء الاصطناعي',
     kicker: 'بحث ذكي للرحلات',
-    placeholder: 'ابحث عن جولات وأماكن وتجارب...',
+    placeholder: 'ابحث عن رحلات مصر...',
     submitLabel: 'ابحث',
   },
   de: {
     label: 'Ägypten-Touren mit KI suchen',
     kicker: 'KI-Reisesuche',
-    placeholder: 'Touren, Orte oder Erlebnisse suchen...',
+    placeholder: 'Ägypten-Touren suchen...',
     submitLabel: 'Suchen',
   },
   fr: {
     label: 'Rechercher des excursions en Égypte avec l’IA',
     kicker: 'Recherche voyage IA',
-    placeholder: 'Rechercher des excursions, lieux ou expériences...',
+    placeholder: 'Excursions en Égypte...',
     submitLabel: 'Rechercher',
   },
   es: {
     label: 'Buscar tours por Egipto con IA',
     kicker: 'Búsqueda de viajes con IA',
-    placeholder: 'Buscar tours, lugares o experiencias...',
+    placeholder: 'Buscar tours en Egipto...',
     submitLabel: 'Buscar',
   },
 };
