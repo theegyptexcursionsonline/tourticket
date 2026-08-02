@@ -32,9 +32,13 @@ describe('EEOSearchConcierge', () => {
       const script = document.getElementById('eeo-search-concierge-script') as HTMLScriptElement;
       expect(script).toBeInTheDocument();
       expect(script.dataset.widgetId).toBe('wgt_6JW5umlfasNQfJywtFPs6g');
-      expect(script.dataset.style).toBe('concierge');
-      expect(script.dataset.label).toBe('Plan your Egypt trip');
-      expect(script.dataset.kicker).toBe('AI trip concierge');
+      expect(script.dataset.style).toBe('searchbar');
+      expect(script.dataset.label).toBe('Search Egypt tours with AI');
+      expect(script.dataset.kicker).toBe('AI trip search');
+      expect(script.dataset.placeholder).toBe('Search tours, places, or experiences...');
+      expect(script.dataset.submitLabel).toBe('Search');
+      expect(script.dataset.color).toBe('#0b5d3b');
+      expect(script.dataset.dir).toBe('ltr');
     });
   });
 
@@ -45,8 +49,11 @@ describe('EEOSearchConcierge', () => {
 
     await waitFor(() => {
       const script = document.getElementById('eeo-search-concierge-script') as HTMLScriptElement;
-      expect(script.dataset.label).toBe('خطط لرحلتك في مصر');
+      expect(script.dataset.label).toBe('ابحث عن رحلات مصر بالذكاء الاصطناعي');
+      expect(script.dataset.placeholder).toBe('ابحث عن جولات وأماكن وتجارب...');
+      expect(script.dataset.submitLabel).toBe('ابحث');
       expect(script.dataset.position).toBe('left');
+      expect(script.dataset.dir).toBe('rtl');
     });
   });
 

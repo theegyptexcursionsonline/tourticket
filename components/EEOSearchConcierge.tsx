@@ -10,12 +10,37 @@ const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5uml
 const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
 
-const copy: Record<string, { label: string; kicker: string }> = {
-  en: { label: 'Plan your Egypt trip', kicker: 'AI trip concierge' },
-  ar: { label: 'خطط لرحلتك في مصر', kicker: 'مساعد السفر الذكي' },
-  de: { label: 'Ägyptenreise planen', kicker: 'KI-Reiseassistent' },
-  fr: { label: 'Planifier votre voyage', kicker: 'Concierge voyage IA' },
-  es: { label: 'Planifica tu viaje', kicker: 'Asistente de viaje IA' },
+const copy: Record<string, { label: string; kicker: string; placeholder: string; submitLabel: string }> = {
+  en: {
+    label: 'Search Egypt tours with AI',
+    kicker: 'AI trip search',
+    placeholder: 'Search tours, places, or experiences...',
+    submitLabel: 'Search',
+  },
+  ar: {
+    label: 'ابحث عن رحلات مصر بالذكاء الاصطناعي',
+    kicker: 'بحث ذكي للرحلات',
+    placeholder: 'ابحث عن جولات وأماكن وتجارب...',
+    submitLabel: 'ابحث',
+  },
+  de: {
+    label: 'Ägypten-Touren mit KI suchen',
+    kicker: 'KI-Reisesuche',
+    placeholder: 'Touren, Orte oder Erlebnisse suchen...',
+    submitLabel: 'Suchen',
+  },
+  fr: {
+    label: 'Rechercher des excursions en Égypte avec l’IA',
+    kicker: 'Recherche voyage IA',
+    placeholder: 'Rechercher des excursions, lieux ou expériences...',
+    submitLabel: 'Rechercher',
+  },
+  es: {
+    label: 'Buscar tours por Egipto con IA',
+    kicker: 'Búsqueda de viajes con IA',
+    placeholder: 'Buscar tours, lugares o experiencias...',
+    submitLabel: 'Buscar',
+  },
 };
 
 const HIDDEN_ROUTES = ['/admin', '/checkout', '/booking', '/payment', '/login', '/signup'];
@@ -47,11 +72,14 @@ export default function EEOSearchConcierge() {
     script.async = true;
     script.dataset.widgetId = WIDGET_ID;
     script.dataset.apiUrl = SEARCH_ORIGIN;
-    script.dataset.style = 'concierge';
+    script.dataset.style = 'searchbar';
     script.dataset.label = localizedCopy.label;
     script.dataset.kicker = localizedCopy.kicker;
-    script.dataset.color = '#155eef';
+    script.dataset.placeholder = localizedCopy.placeholder;
+    script.dataset.submitLabel = localizedCopy.submitLabel;
+    script.dataset.color = '#0b5d3b';
     script.dataset.position = locale === 'ar' ? 'left' : 'right';
+    script.dataset.dir = locale === 'ar' ? 'rtl' : 'ltr';
     script.dataset.rememberDismiss = 'false';
     document.body.appendChild(script);
 
