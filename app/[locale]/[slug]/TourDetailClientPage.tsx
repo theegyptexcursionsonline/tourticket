@@ -18,7 +18,6 @@ import {
 // Components
 import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
-import TourPageAIWidget from '@/components/TourPageAIWidget';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
@@ -1679,7 +1678,6 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       />
 
       {/* AI Magic Widget for Tour Pages */}
-      <TourPageAIWidget />
 
       <div className="sr-only" aria-live="polite">
         {liveMessage}

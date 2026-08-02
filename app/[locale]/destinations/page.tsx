@@ -5,7 +5,6 @@ import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AISearchWidget from '@/components/AISearchWidget';
 import DestinationsClientPage from './DestinationsClientPage';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import { IDestination } from '@/lib/models/Destination';
@@ -160,8 +159,6 @@ export default async function DestinationsIndexPage({
         <DestinationsClientPage destinations={destinations as (IDestination & { tourCount: number })[]} />
       </main>
       <Footer />
-      {/* AI Search Widget */}
-      <AISearchWidget />
     </>
   );
 }

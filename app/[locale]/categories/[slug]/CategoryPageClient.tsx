@@ -6,7 +6,6 @@ import { Link } from '@/i18n/routing';
 import { Star, Clock, ShoppingCart, Search, MapPin, Users, Award, TrendingUp, CheckCircle2, Tag, Compass, ChevronDown } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AISearchWidget from '@/components/AISearchWidget';
 import RelatedInterests from '@/components/RelatedInterests';
 import { Tour, Category } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
@@ -1084,9 +1083,6 @@ export default function CategoryPageClient({
             </main>
 
             <Footer />
-
-            {/* AI Search Widget */}
-            <AISearchWidget />
 
             {selectedTour && <BookingSidebar
                 isOpen={isBookingSidebarOpen}

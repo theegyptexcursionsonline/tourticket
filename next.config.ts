@@ -2,24 +2,30 @@
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const { withSentryConfig } = require('@sentry/nextjs');
+const configuredSearchOrigin = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || '';
+const searchWidgetOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(configuredSearchOrigin)
+  ? configuredSearchOrigin
+  : 'https://search.foxestechnology.com';
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"} https://www.googletagmanager.com https://maps.googleapis.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://js.stripe.com https://static.cloudflareinsights.com https://s.adroll.com https://d.adroll.com https://connect.facebook.net https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://widget.intercom.io https://js.intercomcdn.com`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"} ${searchWidgetOrigin} https://www.googletagmanager.com https://maps.googleapis.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://js.stripe.com https://static.cloudflareinsights.com https://s.adroll.com https://d.adroll.com https://connect.facebook.net https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://widget.intercom.io https://js.intercomcdn.com`,
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com https://js.intercomcdn.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https:",
-  "connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.algolia.io https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://connect.foxestechnology.com wss://connect.foxestechnology.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://static.cloudflareinsights.com https://*.elfsight.com https://*.elfsightcdn.com https://*.adroll.com https://connect.facebook.net https://www.facebook.com https://api.exchangerate-api.com https://api.fixer.io https://res.cloudinary.com https://foxes-tools-api-production.up.railway.app",
-  "frame-src 'self' https://www.googletagmanager.com https://*.stripe.com https://www.google.com https://accounts.google.com https://*.firebaseapp.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://*.intercom.io https://intercom-sheets.com",
+  `connect-src 'self' ${searchWidgetOrigin} https://*.algolia.net https://*.algolianet.com https://*.algolia.io https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://connect.foxestechnology.com wss://connect.foxestechnology.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://static.cloudflareinsights.com https://*.elfsight.com https://*.elfsightcdn.com https://*.adroll.com https://connect.facebook.net https://www.facebook.com https://api.exchangerate-api.com https://api.fixer.io https://res.cloudinary.com https://foxes-tools-api-production.up.railway.app`,
+  `frame-src 'self' ${searchWidgetOrigin} https://www.googletagmanager.com https://*.stripe.com https://www.google.com https://accounts.google.com https://*.firebaseapp.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://*.intercom.io https://intercom-sheets.com`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "manifest-src 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  process.env.NODE_ENV === 'production' ? "upgrade-insecure-requests" : '',
+  process.env.NODE_ENV === 'production' && !searchWidgetOrigin.startsWith('http://')
+    ? "upgrade-insecure-requests"
+    : '',
 ].filter(Boolean).join('; ');
 
 /** @type {import('next').NextConfig} */

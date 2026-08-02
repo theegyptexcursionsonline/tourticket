@@ -1,11 +1,9 @@
 import React from 'react';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
-import DeferredAISearchWidget from '@/components/DeferredAISearchWidget';
+import { act, render } from '@testing-library/react';
 import HeroSectionStable from '@/components/HeroSectionStable';
 import FeaturedToursServer from '@/components/FeaturedToursServer';
 
 jest.mock('@/components/BookingSidebar', () => () => null);
-jest.mock('@/components/AISearchWidget', () => () => <div data-testid="full-ai-search-widget" />);
 jest.mock('next/image', () => ({
   __esModule: true,
   default: ({ fill: _fill, priority: _priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean; priority?: boolean }) => <img {...props} />,
@@ -66,24 +64,4 @@ describe('homepage performance contracts', () => {
     expect(container.querySelector('.animate-marquee')).not.toBeInTheDocument();
   });
 
-  it('keeps the full AI search bundle out of the scroll path until the visitor opens it', async () => {
-    const requestAnimationFrameSpy = jest
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((callback) => {
-        callback(0);
-        return 1;
-      });
-    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
-    Object.defineProperty(window, 'scrollY', { configurable: true, value: 900 });
-
-    const { getByRole, queryByTestId } = render(<DeferredAISearchWidget />);
-
-    act(() => window.dispatchEvent(new Event('scroll')));
-    expect(queryByTestId('full-ai-search-widget')).not.toBeInTheDocument();
-
-    fireEvent.click(getByRole('button', { name: 'Open tour search and AI travel assistant' }));
-    await waitFor(() => expect(queryByTestId('full-ai-search-widget')).toBeInTheDocument());
-
-    requestAnimationFrameSpy.mockRestore();
-  });
 });

@@ -110,6 +110,7 @@ describe('public integrity route regressions', () => {
     expect(config).toContain('https://*.stripe.com');
     expect(config).toContain('https://*.intercom.io');
     expect(config).toContain("script-src-attr 'none'");
+    expect(config).toContain('https://search.foxestechnology.com');
   });
 
   it('keeps main-admin metrics tenant-scoped and lets booking operators read tour labels', () => {

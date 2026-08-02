@@ -21,6 +21,7 @@ import { selectLocalizedTaxonomyEntries } from "@/lib/i18n/localizedCollections"
 import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
 import type { Category as CategoryData, Destination as DestinationData } from '@/types';
 import GoogleTagManager from './GoogleTagManager';
+import EEOSearchConcierge from '@/components/EEOSearchConcierge';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -193,6 +194,7 @@ export default async function LocaleLayout({
                     <CartSidebar />
                     <WishlistSidebar />
                     <AppToaster direction={dir} />
+                    <EEOSearchConcierge />
                   </NavDataProvider>
                 </WishlistProvider>
               </CartProvider>

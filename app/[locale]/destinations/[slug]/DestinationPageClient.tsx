@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AISearchWidget from '@/components/AISearchWidget';
 import { Destination, Tour, Category, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
@@ -2515,9 +2514,6 @@ export default function DestinationPageClient({
         
       </main>
       <Footer />
-
-      {/* AI Search Widget */}
-      <AISearchWidget />
 
       {selectedTour && (
         <BookingSidebar

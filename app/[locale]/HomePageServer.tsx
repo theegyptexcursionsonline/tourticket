@@ -9,7 +9,6 @@ import HeroSettings from '@/lib/models/HeroSettings';
 import SpecialOffer from '@/lib/models/SpecialOffer';
 import Header from '@/components/Header';
 import HeroSectionStable from '@/components/HeroSectionStable';
-import DeferredAISearchWidget from '@/components/DeferredAISearchWidget';
 import HomeDeferredSections from '@/components/HomeDeferredSections';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
@@ -459,7 +458,6 @@ export default async function HomePageServer() {
         categories={categories}
         dayTrips={dayTrips}
       />
-      <DeferredAISearchWidget />
     </main>
     </>
   );

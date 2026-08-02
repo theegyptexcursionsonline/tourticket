@@ -7,7 +7,6 @@ import { Star, Search as SearchIcon, SlidersHorizontal } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AISearchWidget from '@/components/AISearchWidget';
 import { useTranslations } from 'next-intl';
 
 interface SearchClientProps {
@@ -277,8 +276,6 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
 
       <Footer />
 
-      {/* AI Search Widget */}
-      <AISearchWidget />
     </>
   );
   
