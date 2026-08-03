@@ -36,6 +36,7 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { formatExperienceDescription } from '@/lib/content/experienceDescription';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { contentPath } from '@/lib/content/contentUrl';
+import { itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -440,15 +441,13 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   return icons[iconType || 'location'] || icons.location;
 };
 
-const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: ItineraryItem[], tourTitle: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
-  // Extract locations for map
-  const locations = itinerary
-    .filter(item => item.location)
-    .map(item => item.location)
-    .join('|');
-
-  // Use tour title as fallback if no locations
-  const mapQuery = locations || tourTitle;
+const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  // The map only exists when the editor typed explicit step locations —
+  // guessing from the tour title placed markers on random keyword matches.
+  const stops = itineraryMapStops(itinerary);
+  const staticMapUrl = itineraryStaticMapUrl(stops, process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const showMap = stops.length === 1 || Boolean(staticMapUrl);
+  const mapQuery = stops.join('|');
 
   return (
     <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
@@ -457,8 +456,8 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
         Detailed Itinerary
       </h3>
 
-      {/* Split Layout: Itinerary Items + Map */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Split Layout: Itinerary Items + Map (map only with explicit locations) */}
+      <div className={`grid grid-cols-1 ${showMap ? 'lg:grid-cols-2' : ''} gap-6`}>
         {/* Left: Itinerary Timeline */}
         <div className="relative order-2 lg:order-1">
           {/* Dotted line connector */}
@@ -540,37 +539,60 @@ const ItinerarySection = ({ itinerary, tourTitle, sectionRef }: { itinerary: Iti
           </div>
         </div>
 
-        {/* Right: Google Map */}
-        <div className="relative order-1 lg:order-2 lg:sticky lg:top-24 h-[400px] lg:h-[700px]">
-          <div className="h-full rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg">
-            <iframe
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(mapQuery)}&zoom=12`}
-            ></iframe>
-          </div>
+        {/* Right: map — interactive place embed for one stop, multi-marker
+            static map for a real route. No locations, no map. */}
+        {showMap && (
+          <div className="relative order-1 lg:order-2 lg:sticky lg:top-24 h-[400px] lg:h-[700px]">
+            <div className="h-full rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-100">
+              {staticMapUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={staticMapUrl}
+                  alt={`Route map: ${stops.join(', ')}`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(stops[0])}&zoom=12`}
+                ></iframe>
+              )}
+            </div>
 
-          {/* Map Controls Overlay */}
-          <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Navigation size={16} className="text-blue-600" />
-                <span className="text-sm font-medium text-slate-800">Tour Route</span>
+            {/* Map Controls Overlay */}
+            <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Navigation size={16} className="text-blue-600" />
+                  <span className="text-sm font-medium text-slate-800">Tour Route</span>
+                  {stops.length > 1 && (
+                    <span className="hidden sm:flex items-center gap-3 text-xs text-slate-600 ml-2">
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" /> Main stop
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" /> Other stop
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(mapQuery)}`, '_blank')}
+                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1"
+                >
+                  <Navigation size={12} />
+                  Open Maps
+                </button>
               </div>
-              <button
-                onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(mapQuery)}`, '_blank')}
-                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1"
-              >
-                <Navigation size={12} />
-                Open Maps
-              </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1406,7 +1428,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
               <OverviewSection tour={tour} sectionRef={overviewRef} />
               
               {enhancement.itinerary && enhancement.itinerary.length > 0 && (
-                <ItinerarySection itinerary={enhancement.itinerary} tourTitle={tour.title} sectionRef={itineraryRef} />
+                <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />
               )}
               
               <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />

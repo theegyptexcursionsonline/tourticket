@@ -1,0 +1,47 @@
+import { itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
+
+describe('itineraryMapStops', () => {
+  it('returns nothing when no step has an explicit location', () => {
+    expect(itineraryMapStops([{ location: '' }, {}, { location: '   ' }])).toEqual([]);
+  });
+
+  it('keeps editor order and drops blank steps', () => {
+    expect(itineraryMapStops([
+      { location: 'El Gouna' },
+      { location: '' },
+      { location: 'Valley of the Kings' },
+      { location: 'Luxor Temple' },
+    ])).toEqual(['El Gouna', 'Valley of the Kings', 'Luxor Temple']);
+  });
+
+  it('folds a round trip back into the start marker', () => {
+    expect(itineraryMapStops([
+      { location: 'El Gouna' },
+      { location: 'Luxor' },
+      { location: 'el gouna' },
+    ])).toEqual(['El Gouna', 'Luxor']);
+  });
+
+  it('renders a stop visited twice only once', () => {
+    expect(itineraryMapStops([
+      { location: 'Cairo' },
+      { location: 'Giza' },
+      { location: 'Cairo' },
+      { location: 'Saqqara' },
+    ])).toEqual(['Cairo', 'Giza', 'Saqqara']);
+  });
+});
+
+describe('itineraryStaticMapUrl', () => {
+  it('needs a key and at least two stops', () => {
+    expect(itineraryStaticMapUrl(['Cairo', 'Giza'], undefined)).toBeNull();
+    expect(itineraryStaticMapUrl(['Cairo'], 'k')).toBeNull();
+  });
+
+  it('gives the start a prominent marker and the rest smaller ones', () => {
+    const url = itineraryStaticMapUrl(['El Gouna', 'Valley of the Kings', 'Luxor'], 'k');
+    expect(url).toContain('staticmap');
+    expect(url).toContain(encodeURIComponent('size:mid|color:red|label:1|El Gouna'));
+    expect(url).toContain(encodeURIComponent('size:small|color:blue|Valley of the Kings|Luxor'));
+  });
+});
