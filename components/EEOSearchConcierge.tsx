@@ -11,38 +11,33 @@ const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
-const LAUNCHER_RELEASE = '20260802-search-first';
+const LAUNCHER_RELEASE = '20260803-instant-open';
 
-const copy: Record<string, { label: string; kicker: string; placeholder: string; submitLabel: string }> = {
+const copy: Record<string, { label: string; kicker: string; placeholder: string }> = {
   en: {
     label: 'Search Egypt tours with AI',
     kicker: 'AI trip search',
     placeholder: 'Search Egypt tours...',
-    submitLabel: 'Search',
   },
   ar: {
     label: 'ابحث عن رحلات مصر بالذكاء الاصطناعي',
     kicker: 'بحث ذكي للرحلات',
     placeholder: 'ابحث عن رحلات مصر...',
-    submitLabel: 'ابحث',
   },
   de: {
     label: 'Ägypten-Touren mit KI suchen',
     kicker: 'KI-Reisesuche',
     placeholder: 'Ägypten-Touren suchen...',
-    submitLabel: 'Suchen',
   },
   fr: {
     label: 'Rechercher des excursions en Égypte avec l’IA',
     kicker: 'Recherche voyage IA',
     placeholder: 'Excursions en Égypte...',
-    submitLabel: 'Rechercher',
   },
   es: {
     label: 'Buscar tours por Egipto con IA',
     kicker: 'Búsqueda de viajes con IA',
     placeholder: 'Buscar tours en Egipto...',
-    submitLabel: 'Buscar',
   },
 };
 
@@ -79,7 +74,6 @@ export default function EEOSearchConcierge() {
     script.dataset.label = localizedCopy.label;
     script.dataset.kicker = localizedCopy.kicker;
     script.dataset.placeholder = localizedCopy.placeholder;
-    script.dataset.submitLabel = localizedCopy.submitLabel;
     script.dataset.color = '#0b5d3b';
     script.dataset.position = locale === 'ar' ? 'left' : 'right';
     script.dataset.dir = locale === 'ar' ? 'rtl' : 'ltr';

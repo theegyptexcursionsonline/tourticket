@@ -36,11 +36,11 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.label).toBe('Search Egypt tours with AI');
       expect(script.dataset.kicker).toBe('AI trip search');
       expect(script.dataset.placeholder).toBe('Search Egypt tours...');
-      expect(script.dataset.submitLabel).toBe('Search');
+      expect(script.dataset.submitLabel).toBeUndefined();
       expect(script.dataset.color).toBe('#0b5d3b');
       expect(script.dataset.dir).toBe('ltr');
       expect(script.dataset.locale).toBe('en');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260802-search-first');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260803-instant-open');
     });
   });
 
@@ -53,7 +53,7 @@ describe('EEOSearchConcierge', () => {
       const script = document.getElementById('eeo-search-concierge-script') as HTMLScriptElement;
       expect(script.dataset.label).toBe('ابحث عن رحلات مصر بالذكاء الاصطناعي');
       expect(script.dataset.placeholder).toBe('ابحث عن رحلات مصر...');
-      expect(script.dataset.submitLabel).toBe('ابحث');
+      expect(script.dataset.submitLabel).toBeUndefined();
       expect(script.dataset.position).toBe('left');
       expect(script.dataset.dir).toBe('rtl');
       expect(script.dataset.locale).toBe('ar');
