@@ -40,7 +40,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.color).toBe('#0b5d3b');
       expect(script.dataset.dir).toBe('ltr');
       expect(script.dataset.locale).toBe('en');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260803-instant-open');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260803-live-intent');
     });
   });
 
