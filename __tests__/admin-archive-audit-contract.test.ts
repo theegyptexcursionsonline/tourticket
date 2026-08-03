@@ -128,3 +128,17 @@ describe('tour editor pickers are searchable', () => {
     expect(read('components/admin/SearchableCheckboxList.tsx')).toContain('searchThreshold = 0');
   });
 });
+
+describe('partial page updates never blank content arrays', () => {
+  // Archiving from the list row sends only {archivedAt}. The PUT used to
+  // coerce images/highlights/features/keywords to [] whenever they were
+  // absent from the body — every archive click wiped the page's gallery.
+  it('gates the array coercions on the key being present in the request', () => {
+    const fs = require('node:fs');
+    const source = fs.readFileSync('app/api/admin/attraction-pages/[id]/route.ts', 'utf8');
+    for (const field of ['images', 'highlights', 'features', 'keywords']) {
+      expect(source).toContain(`'${field}' in body`);
+    }
+    expect(source).not.toMatch(/^\s*images: Array\.isArray/m);
+  });
+});
