@@ -1158,6 +1158,13 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                               onChange={(translations) => setFormData(prev => ({ ...prev, translations }))}
                               modelType="attraction-page"
                               entityId={pageId}
+                              sourceDraft={{
+                                ...formData,
+                                imageMetadata: ensureImageMetadata(
+                                  formData.imageMetadata,
+                                  [formData.heroImage || '', ...(formData.images || [])].filter(Boolean),
+                                ),
+                              }}
                             />
                             <ContentStructuredTranslationEditor
                               value={formData.translations || {}}

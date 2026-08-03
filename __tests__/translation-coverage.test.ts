@@ -64,6 +64,23 @@ describe('auto-translate covers every reported field', () => {
     expect(streamRoute).toContain('attractionPageStructuredFields');
   });
 
+  it('auto-translates the unsaved edit form, not the last saved document', () => {
+    expect(read('components/admin/TranslationEditor.tsx')).toContain('sourceDraft');
+
+    const streamRoute = read('app/api/admin/translate/stream/route.ts');
+    expect(streamRoute).toContain('sanitizeSourceDraft');
+    expect(streamRoute).toContain('applySourceDraft');
+
+    for (const file of [
+      'components/TourForm.tsx',
+      'components/admin/CategoryForm.tsx',
+      'components/admin/AttractionPageForm.tsx',
+      'app/admin/destinations/DestinationManager.tsx',
+    ]) {
+      expect(read(file)).toContain('sourceDraft={{');
+    }
+  });
+
   it('renders manual controls for every structured block in pages, categories, destinations, and tours', () => {
     const editor = read('components/admin/ContentStructuredTranslationEditor.tsx');
     expect(editor).toContain('FAQs');
