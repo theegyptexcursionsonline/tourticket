@@ -39,6 +39,8 @@ import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredContentEditor';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata } from '@/lib/content/imageMetadata';
+import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
+import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import type { ContentFaq, ContentTravelTip, ImageMetadata } from '@/types';
 
 interface Tour {
@@ -55,6 +57,8 @@ interface FormData {
   name: string;
   slug: string;
   urlType: UrlType;
+  breadcrumbLabel: string;
+  parentPage: ParentPageValue | null;
   country: string;
   image: string;
   images: string[];
@@ -120,6 +124,8 @@ export default function DestinationManager({ initialDestinations }: { initialDes
     name: '',
     slug: '',
     urlType: 'direct',
+    breadcrumbLabel: '',
+    parentPage: null,
     country: '',
     image: '',
     images: [],
@@ -182,6 +188,8 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       name: '',
       slug: '',
       urlType: 'direct',
+      breadcrumbLabel: '',
+      parentPage: null,
       country: '',
       image: '',
       images: [],
@@ -233,6 +241,8 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       name: dest.name || '',
       slug: dest.slug || '',
       urlType: dest.urlType || 'default',
+      breadcrumbLabel: dest.breadcrumbLabel || '',
+      parentPage: dest.parentPage || null,
       country: dest.country || '',
       image: dest.image || '',
       images: dest.images || [],
@@ -990,7 +1000,7 @@ setTimeout(() => router.refresh(), 0);
                           className={`${inputStyles} pr-20`} 
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 px-2 py-1 bg-slate-100 rounded-lg border border-slate-200">
-                          {contentPath('destination', formData.slug || 'slug', formData.urlType)}
+                          {contentPath('destination', formData.slug || 'slug', formData.urlType, null, formData.parentPage?.slug)}
                         </div>
                       </div>
                     </div>
@@ -1013,6 +1023,14 @@ setTimeout(() => router.refresh(), 0);
                       </select>
                       <p className="text-xs text-slate-500">Choose the public URL shape. Changing it 301-redirects the old URL.</p>
                     </div>
+
+                    <ContentNavigationFields
+                      breadcrumbLabel={formData.breadcrumbLabel}
+                      parentPage={formData.parentPage}
+                      excludeId={editingDestination?._id ? String(editingDestination._id) : undefined}
+                      onBreadcrumbLabelChange={(breadcrumbLabel) => setFormData((prev) => ({ ...prev, breadcrumbLabel }))}
+                      onParentPageChange={(parentPage) => setFormData((prev) => ({ ...prev, parentPage }))}
+                    />
 
                     {/* Description Fields */}
                     <div className="space-y-6">

@@ -23,6 +23,7 @@ import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredContentEditor';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata } from '@/lib/content/imageMetadata';
+import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 
 interface AttractionPageFormProps {
   pageId?: string;
@@ -47,6 +48,8 @@ const defaultFormData: AttractionPageFormData = {
   pageType: 'attraction',
   categoryId: '',
   urlType: 'direct',
+  breadcrumbLabel: '',
+  parentPage: null,
   cityDestination: '',
   heroImage: '',
   images: [],
@@ -328,6 +331,8 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
           pageType: page.pageType || 'attraction',
           categoryId: typeof page.categoryId === 'object' ? page.categoryId._id : (page.categoryId || ''),
           urlType: page.urlType || 'default',
+          breadcrumbLabel: page.breadcrumbLabel || '',
+          parentPage: page.parentPage || null,
           cityDestination: page.cityDestination
             ? String((page.cityDestination as { _id?: unknown })._id || page.cityDestination)
             : '',
@@ -761,6 +766,7 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                                   formData.urlType === 'city'
                                     ? cityDestinations.find(d => d._id === formData.cityDestination)?.slug || '{destination}'
                                     : undefined,
+                                  formData.parentPage?.slug,
                                 )}
                               </span>
                             </div>
@@ -849,6 +855,14 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                             </div>
                           )}
                         </div>
+
+                        <ContentNavigationFields
+                          breadcrumbLabel={formData.breadcrumbLabel}
+                          parentPage={formData.parentPage}
+                          onBreadcrumbLabelChange={(breadcrumbLabel) => setFormData((prev) => ({ ...prev, breadcrumbLabel }))}
+                          onParentPageChange={(parentPage) => setFormData((prev) => ({ ...prev, parentPage }))}
+                          excludeId={pageId}
+                        />
 
                         <div className="space-y-3">
                           <FormLabel icon={FileText} required>Description</FormLabel>

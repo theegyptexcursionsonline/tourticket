@@ -4,12 +4,15 @@ import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 import { isDefaultTenant } from '@/lib/tenant/tenantScope';
+import { ParentPageSchema, breadcrumbLabelField } from '@/lib/models/contentNavigationSchema';
 
 export interface IDestination extends Document {
   // Basic Info
   name: string;
   slug: string;
   urlType?: UrlType;
+  breadcrumbLabel?: string;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' } | null;
   country?: string;
 
   // Owning tenant for multi-tenant publishing; absent = default EEO site.
@@ -194,6 +197,8 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     enum: URL_TYPES,
     default: 'default',
   },
+  breadcrumbLabel: breadcrumbLabelField,
+  parentPage: { type: ParentPageSchema, default: undefined },
 country: {
   type: String,
   required: false,

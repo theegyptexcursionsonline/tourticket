@@ -11,6 +11,7 @@ import {
 } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
   await dbConnect();
   try {
     const body = await request.json();
+    Object.assign(body, sanitizeContentNavigation(body));
    
     // Only name and description are required
     const requiredFields = ['name', 'description'];

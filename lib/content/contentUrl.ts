@@ -66,14 +66,16 @@ export function attractionPagePath(
   slug: string,
   pageKind?: string | null,
   urlType?: string | null,
-  citySlug?: string | null
+  citySlug?: string | null,
+  parentSlug?: string | null,
 ): string {
+  if (parentSlug) return `/${parentSlug}/${slug}`;
   const t = normalizeUrlType(urlType);
   if (t === 'default') {
     const seg = pageDefaultSegment(pageKind);
     return seg ? `/${seg}/${slug}` : `/${slug}`;
   }
-  return contentPath('page', slug, urlType, citySlug);
+  return contentPath('page', slug, urlType, citySlug, parentSlug);
 }
 
 // What the URL Type dropdown offers. The platform decision (client sheet
@@ -105,8 +107,10 @@ export function contentPath(
   type: ContentType,
   slug: string,
   urlType?: string | null,
-  citySlug?: string | null
+  citySlug?: string | null,
+  parentSlug?: string | null,
 ): string {
+  if (parentSlug) return `/${parentSlug}/${slug}`;
   const t = normalizeUrlType(urlType);
   if (t === 'city') {
     if (citySlug) return `/${citySlug}/${slug}`;
@@ -126,8 +130,9 @@ export function localizedContentPath(
   slug: string,
   urlType: string | null | undefined,
   locale: string,
-  citySlug?: string | null
+  citySlug?: string | null,
+  parentSlug?: string | null,
 ): string {
-  const path = contentPath(type, slug, urlType, citySlug);
+  const path = contentPath(type, slug, urlType, citySlug, parentSlug);
   return locale && locale !== defaultLocale ? `/${locale}${path}` : path;
 }

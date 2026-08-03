@@ -53,8 +53,8 @@ export async function getContentMatchMetadata(
   // hreflang set itself — passing a locale-prefixed path doubled the locale
   // (/de/de/…) on every non-default-locale detail page.
   const canonicalPath = match.type === 'page'
-    ? attractionPagePath(match.slug, match.pageKind, match.urlType, match.citySlug)
-    : contentPath(match.type, match.slug, match.urlType, match.citySlug);
+    ? attractionPagePath(match.slug, match.pageKind, match.urlType, match.citySlug, match.parentSlug)
+    : contentPath(match.type, match.slug, match.urlType, match.citySlug, match.parentSlug);
   switch (match.type) {
     case 'tour':
       return getTourMetadata(match.slug, locale, canonicalPath);

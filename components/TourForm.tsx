@@ -54,6 +54,9 @@ import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata, type ImageMetadata } from '@/lib/content/imageMetadata';
 import { pruneBookingOptionTimeSlots } from '@/lib/pricing/bookingOptionSlots';
+import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
+import type { ParentPageValue } from '@/lib/content/contentNavigation';
+import { practicalDefaultText, type PracticalDefaultKey } from '@/lib/tours/practicalDefaults';
 
 // --- Interface Definitions ---
 interface Category {
@@ -143,6 +146,8 @@ interface TourFormData {
     title: string;
     slug: string;
     urlType: UrlType;
+    breadcrumbLabel: string;
+    parentPage: ParentPageValue | null;
     description: string;
     longDescription: string;
     duration: string;
@@ -252,15 +257,29 @@ const ContentTextarea = ({
     onChange,
     placeholder,
     list = false,
+    defaultKey,
 }: {
     label: string;
     value: string;
     onChange: (value: string) => void;
     placeholder: string;
     list?: boolean;
+    defaultKey?: PracticalDefaultKey;
 }) => (
     <div className="space-y-2">
-        <label className="text-sm font-semibold text-slate-700">{label}</label>
+        <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-700">{label}</label>
+            {defaultKey ? (
+                <button
+                    type="button"
+                    onClick={() => onChange(practicalDefaultText(defaultKey))}
+                    aria-pressed={value.trim() === practicalDefaultText(defaultKey).trim()}
+                    className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                >
+                    Use recommended default
+                </button>
+            ) : null}
+        </div>
         <textarea
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -474,6 +493,8 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         title: '',
         slug: '',
         urlType: 'direct',
+        breadcrumbLabel: '',
+        parentPage: null,
         description: '',
         longDescription: '',
         duration: '',
@@ -541,6 +562,8 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 title: tourToEdit.title || '',
                 slug: tourToEdit.slug || '',
                 urlType: (tourToEdit.urlType as UrlType) || 'default',
+                breadcrumbLabel: tourToEdit.breadcrumbLabel || '',
+                parentPage: tourToEdit.parentPage || null,
                 description: tourToEdit.description || '',
                 longDescription: tourToEdit.longDescription || '',
                 duration: tourToEdit.duration || '',
@@ -753,6 +776,8 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             title: '',
             slug: '',
             urlType: 'direct',
+            breadcrumbLabel: '',
+            parentPage: null,
             description: '',
             longDescription: '',
             duration: '',
@@ -1174,6 +1199,8 @@ const addItineraryItem = () => {
                 title: cleanedData.title.trim(),
                 slug: cleanedData.slug.trim(),
                 urlType: cleanedData.urlType || 'default',
+                breadcrumbLabel: cleanedData.breadcrumbLabel.trim(),
+                parentPage: cleanedData.parentPage,
                 description: cleanedData.description.trim(),
                 duration: cleanedData.duration.trim(),
                 price: parseFloat(String(cleanedData.discountPrice)) || 0,
@@ -1475,6 +1502,7 @@ const addItineraryItem = () => {
                                                             formData.urlType === 'city'
                                                                 ? destinations.find(d => d._id === formData.destination)?.slug || '{destination}'
                                                                 : undefined,
+                                                            formData.parentPage?.slug,
                                                         )}
                                                     </span>
                                                 </div>
@@ -1498,6 +1526,14 @@ const addItineraryItem = () => {
                                                 <SmallHint>Choose the public URL shape. Changing it 301-redirects the old URL.</SmallHint>
                                             </div>
                                         </div>
+
+                                        <ContentNavigationFields
+                                            breadcrumbLabel={formData.breadcrumbLabel}
+                                            parentPage={formData.parentPage}
+                                            onBreadcrumbLabelChange={(breadcrumbLabel) => setFormData((prev) => ({ ...prev, breadcrumbLabel }))}
+                                            onParentPageChange={(parentPage) => setFormData((prev) => ({ ...prev, parentPage }))}
+                                            excludeId={tourToEdit?._id}
+                                        />
 
                                         <div className="space-y-3">
                                             <FormLabel icon={FileText} required>Short Description</FormLabel>
@@ -2019,6 +2055,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, whatToBring: value.split('\n') }))}
                                                     placeholder="Hat and sunscreen\nValid ID"
                                                     list
+                                                    defaultKey="whatToBring"
                                                 />
                                                 <ContentTextarea
                                                     label="What to Wear"
@@ -2026,6 +2063,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, whatToWear: value.split('\n') }))}
                                                     placeholder="Comfortable shoes\nModest clothing for religious sites"
                                                     list
+                                                    defaultKey="whatToWear"
                                                 />
                                                 <ContentTextarea
                                                     label="Not Suitable For"
@@ -2033,6 +2071,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, notSuitableFor: value.split('\n') }))}
                                                     placeholder="Travelers with severe mobility limitations"
                                                     list
+                                                    defaultKey="notSuitableFor"
                                                 />
                                                 <ContentTextarea
                                                     label="Need to Know"
@@ -2040,6 +2079,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, needToKnow: value.split('\n') }))}
                                                     placeholder="Bring the booking confirmation\nPickup time is confirmed the evening before"
                                                     list
+                                                    defaultKey="needToKnow"
                                                 />
                                                 <ContentTextarea
                                                     label="Accessibility Info"
@@ -2047,6 +2087,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, accessibilityInfo: value.split('\n') }))}
                                                     placeholder="Wheelchair access is available with advance notice"
                                                     list
+                                                    defaultKey="accessibilityInfo"
                                                 />
                                                 <ContentTextarea
                                                     label="Health & Safety"
@@ -2054,6 +2095,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, healthSafety: value.split('\n') }))}
                                                     placeholder="First-aid-trained guide\nEmergency procedures in place"
                                                     list
+                                                    defaultKey="healthSafety"
                                                 />
                                                 <ContentTextarea
                                                     label="Cultural Highlights"
@@ -2061,6 +2103,7 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, culturalInfo: value.split('\n') }))}
                                                     placeholder="Local history and traditions"
                                                     list
+                                                    defaultKey="culturalInfo"
                                                 />
                                                 <ContentTextarea
                                                     label="Local Customs"
@@ -2068,48 +2111,56 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, localCustoms: value.split('\n') }))}
                                                     placeholder="Dress respectfully at religious sites"
                                                     list
+                                                    defaultKey="localCustoms"
                                                 />
                                                 <ContentTextarea
                                                     label="Physical Requirements"
                                                     value={formData.physicalRequirements}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, physicalRequirements: value }))}
                                                     placeholder="Describe walking, stairs, swimming, or fitness requirements"
+                                                    defaultKey="physicalRequirements"
                                                 />
                                                 <ContentTextarea
                                                     label="Transportation Details"
                                                     value={formData.transportationDetails}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, transportationDetails: value }))}
                                                     placeholder="Pickup area, vehicle type, and transfer details"
+                                                    defaultKey="transportationDetails"
                                                 />
                                                 <ContentTextarea
                                                     label="Meal Information"
                                                     value={formData.mealInfo}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, mealInfo: value }))}
                                                     placeholder="Included meals and dietary options"
+                                                    defaultKey="mealInfo"
                                                 />
                                                 <ContentTextarea
                                                     label="Weather Policy"
                                                     value={formData.weatherPolicy}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, weatherPolicy: value }))}
                                                     placeholder="What happens in poor weather"
+                                                    defaultKey="weatherPolicy"
                                                 />
                                                 <ContentTextarea
                                                     label="Photography Policy"
                                                     value={formData.photoPolicy}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, photoPolicy: value }))}
                                                     placeholder="Photography rules and restrictions"
+                                                    defaultKey="photoPolicy"
                                                 />
                                                 <ContentTextarea
                                                     label="Gratuity Policy"
                                                     value={formData.tipPolicy}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, tipPolicy: value }))}
                                                     placeholder="Whether gratuities are included or optional"
+                                                    defaultKey="tipPolicy"
                                                 />
                                                 <ContentTextarea
                                                     label="Seasonal Variations"
                                                     value={formData.seasonalVariations}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, seasonalVariations: value }))}
                                                     placeholder="Explain seasonal schedule or experience changes"
+                                                    defaultKey="seasonalVariations"
                                                 />
                                             </div>
                                         </div>

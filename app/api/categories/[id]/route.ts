@@ -5,6 +5,7 @@ import Category from '@/lib/models/Category';
 import mongoose from 'mongoose';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(
@@ -76,6 +77,7 @@ export async function PUT(
     }
 
     const body = await request.json();
+    Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
 
     // The city URL shape needs a real owning destination to build /{city}/{slug}.

@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { auditStamp } from '@/lib/admin/auditStamp';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -115,6 +116,7 @@ export async function PUT(
         await dbConnect();
         const { id } = await params;
         const body = await request.json();
+        Object.assign(body, sanitizeContentNavigation(body));
         delete body.tenantId;
         delete body.$set;
         delete body.$unset;

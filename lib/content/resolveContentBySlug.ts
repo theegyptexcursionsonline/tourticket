@@ -18,6 +18,7 @@ import {
   pageDefaultSegment,
   attractionPagePath,
   localizedContentPath,
+  CITY_SEGMENT,
 } from '@/lib/content/contentUrl';
 import { defaultLocale } from '@/i18n/config';
 
@@ -29,6 +30,8 @@ export interface ContentMatch {
   isPublished: boolean;
   citySlug?: string; // the owning destination's slug (tours only)
   pageKind?: AttractionPageKind; // 'page' matches: attraction vs catalogue
+  parentSlug?: string;
+  breadcrumbLabel?: string;
 }
 
 // Priority when a slug happens to exist in more than one collection.
@@ -41,6 +44,8 @@ interface ContentDocument {
   pageType?: string; // AttractionPage only: 'attraction' | 'category'
   destination?: { slug?: string } | null; // tours: required owning destination
   cityDestination?: { slug?: string } | null; // categories/pages: optional owning city
+  parentPage?: { slug?: string; label?: string } | null;
+  breadcrumbLabel?: string;
 }
 
 function citySlugOf(type: ContentType, doc: ContentDocument): string | undefined {
@@ -53,19 +58,19 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
 
   const [tour, destination, category, attractionPage] = await Promise.all([
     Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER })
-      .select('slug urlType isPublished destination')
+      .select('slug urlType isPublished destination parentPage breadcrumbLabel')
       .populate('destination', 'slug')
       .lean(),
-    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished').lean(),
+    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished parentPage breadcrumbLabel').lean(),
     Category.findOne({ slug, ...DEFAULT_TENANT_FILTER })
-      .select('slug urlType isPublished cityDestination')
+      .select('slug urlType isPublished cityDestination parentPage breadcrumbLabel')
       .populate('cityDestination', 'slug')
       .lean(),
     // Both attraction pages and catalogue pages participate in urlType routing.
     // A catalogue page's default shape is /category/{slug}, so its canonical
     // segment is derived from pageType, not the shared content-type default.
     AttractionPage.findOne({ slug, ...DEFAULT_TENANT_FILTER })
-      .select('slug urlType isPublished pageType cityDestination')
+      .select('slug urlType isPublished pageType cityDestination parentPage breadcrumbLabel')
       .populate('cityDestination', 'slug')
       .lean(),
   ]);
@@ -75,10 +80,12 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
     if (!doc) return;
     const urlType = normalizeUrlType(doc.urlType);
     const citySlug = citySlugOf(type, doc);
+    const parentSlug = doc.parentPage?.slug;
     const pageKind: AttractionPageKind | undefined =
       type === 'page' ? (doc.pageType === 'category' ? 'category' : 'attraction') : undefined;
-    const segment =
-      type === 'page' && urlType === 'default'
+    const segment = parentSlug
+      ? CITY_SEGMENT
+      : type === 'page' && urlType === 'default'
         ? pageDefaultSegment(pageKind)
         : segmentFor(type, urlType);
     matches.push({
@@ -88,6 +95,8 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
       segment,
       isPublished: doc.isPublished !== false,
       ...(citySlug ? { citySlug } : {}),
+      ...(parentSlug ? { parentSlug } : {}),
+      ...(doc.breadcrumbLabel ? { breadcrumbLabel: doc.breadcrumbLabel } : {}),
       ...(pageKind ? { pageKind } : {}),
     });
   };
@@ -112,10 +121,10 @@ export type ResolveDecision =
 // to /category/{slug}, never the shared 'page' default of /attraction/{slug}.
 function canonicalPathFor(match: ContentMatch, locale: string): string {
   if (match.type === 'page') {
-    const path = attractionPagePath(match.slug, match.pageKind, match.urlType, match.citySlug);
+    const path = attractionPagePath(match.slug, match.pageKind, match.urlType, match.citySlug, match.parentSlug);
     return locale && locale !== defaultLocale ? `/${locale}${path}` : path;
   }
-  return localizedContentPath(match.type, match.slug, match.urlType, locale, match.citySlug);
+  return localizedContentPath(match.type, match.slug, match.urlType, locale, match.citySlug, match.parentSlug);
 }
 
 // Decide what a detail route serving `expectedSegment` should do for `slug`.
@@ -157,8 +166,8 @@ export async function decideForCityPath(
   if (matches.length === 0) return { action: 'notFound' };
 
   const exact = matches.find(
-    (m) => m.urlType === 'city' && m.citySlug === citySlug && m.isPublished
-  ) || matches.find((m) => m.urlType === 'city' && m.citySlug === citySlug);
+    (m) => (m.parentSlug === citySlug || (m.urlType === 'city' && m.citySlug === citySlug)) && m.isPublished
+  ) || matches.find((m) => m.parentSlug === citySlug || (m.urlType === 'city' && m.citySlug === citySlug));
   if (exact) return { action: 'render', match: exact };
 
   // Real slug, wrong shape or wrong city → its canonical path, never a 404.

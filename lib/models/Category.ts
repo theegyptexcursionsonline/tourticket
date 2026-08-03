@@ -3,6 +3,7 @@ import mongoose, { Document, Schema, models } from 'mongoose';
 import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
+import { ParentPageSchema, breadcrumbLabelField } from '@/lib/models/contentNavigationSchema';
 
 export interface ICategory extends Document {
   tenantId?: string;
@@ -12,6 +13,8 @@ export interface ICategory extends Document {
   name: string;
   slug: string;
   urlType?: UrlType;
+  breadcrumbLabel?: string;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' } | null;
   cityDestination?: mongoose.Types.ObjectId;
   description?: string;
   longDescription?: string;
@@ -131,6 +134,8 @@ const CategorySchema: Schema<ICategory> = new Schema({
     enum: URL_TYPES,
     default: 'default',
   },
+  breadcrumbLabel: breadcrumbLabelField,
+  parentPage: { type: ParentPageSchema, default: undefined },
   // Owning city for the `city` urlType (/{city}/{slug}); ignored otherwise.
   cityDestination: {
     type: mongoose.Schema.Types.ObjectId,

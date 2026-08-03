@@ -5,6 +5,7 @@ import './Review';
 import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
+import { ParentPageSchema, breadcrumbLabelField } from '@/lib/models/contentNavigationSchema';
 
 export interface IItineraryItem {
   time?: string;
@@ -132,6 +133,8 @@ export interface ITour extends Document {
   title: string;
   slug: string;
   urlType?: UrlType;
+  breadcrumbLabel?: string;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' } | null;
   destination: mongoose.Schema.Types.ObjectId;
   category: mongoose.Schema.Types.ObjectId | mongoose.Schema.Types.ObjectId[];
   description: string;
@@ -581,6 +584,8 @@ const TourSchema: Schema<ITour> = new Schema({
     enum: URL_TYPES,
     default: 'default',
   },
+  breadcrumbLabel: breadcrumbLabelField,
+  parentPage: { type: ParentPageSchema, default: undefined },
   destination: {
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Destination', 

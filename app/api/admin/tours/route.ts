@@ -13,6 +13,7 @@ import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefr
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { collectTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
 import { auditStamp } from '@/lib/admin/auditStamp';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 
 const ADMIN_TOUR_LIST_PROJECTION = [
   'title',
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
+    Object.assign(body, sanitizeContentNavigation(body));
     const tourId = randomBytes(12).toString('hex');
     body._id = tourId;
     body.tenantId = 'default';

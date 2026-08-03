@@ -70,14 +70,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Tour) {
       const tours = await Tour.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1, urlType: 1, destination: 1 }
+        { slug: 1, updatedAt: 1, urlType: 1, destination: 1, parentPage: 1 }
       ).populate('destination', 'slug').lean();
 
       for (const tour of tours) {
         const citySlug = tour.destination && typeof tour.destination === 'object'
           ? (tour.destination as { slug?: string }).slug
           : undefined;
-        const path = contentPath('tour', tour.slug, tour.urlType, citySlug);
+        const path = contentPath('tour', tour.slug, tour.urlType, citySlug, tour.parentPage?.slug);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: tour.updatedAt || new Date(),
@@ -103,11 +103,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Destination) {
       const destinations = await Destination.find(
         { isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER },
-        { slug: 1, updatedAt: 1, urlType: 1 }
+        { slug: 1, updatedAt: 1, urlType: 1, parentPage: 1 }
       ).lean();
 
       for (const dest of destinations) {
-        const path = contentPath('destination', dest.slug, dest.urlType);
+        const path = contentPath('destination', dest.slug, dest.urlType, undefined, dest.parentPage?.slug);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: dest.updatedAt || new Date(),
@@ -133,14 +133,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Category) {
       const categories = await Category.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1, urlType: 1, cityDestination: 1 }
+        { slug: 1, updatedAt: 1, urlType: 1, cityDestination: 1, parentPage: 1 }
       ).populate('cityDestination', 'slug').lean();
 
       for (const cat of categories) {
         const catCity = cat.cityDestination && typeof cat.cityDestination === 'object'
           ? (cat.cityDestination as { slug?: string }).slug
           : undefined;
-        const path = contentPath('category', cat.slug, cat.urlType, catCity);
+        const path = contentPath('category', cat.slug, cat.urlType, catCity, cat.parentPage?.slug);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: cat.updatedAt || new Date(),
@@ -196,14 +196,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (AttractionPage) {
       const attractions = await AttractionPage.find(
         { isPublished: true },
-        { slug: 1, updatedAt: 1, pageType: 1, urlType: 1, cityDestination: 1 }
+        { slug: 1, updatedAt: 1, pageType: 1, urlType: 1, cityDestination: 1, parentPage: 1 }
       ).populate('cityDestination', 'slug').lean();
 
       for (const attraction of attractions) {
         const pageCity = attraction.cityDestination && typeof attraction.cityDestination === 'object'
           ? (attraction.cityDestination as { slug?: string }).slug
           : undefined;
-        const path = attractionPagePath(attraction.slug, attraction.pageType, attraction.urlType, pageCity);
+        const path = attractionPagePath(attraction.slug, attraction.pageType, attraction.urlType, pageCity, attraction.parentPage?.slug);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: attraction.updatedAt || new Date(),

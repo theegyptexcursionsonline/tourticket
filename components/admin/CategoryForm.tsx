@@ -20,11 +20,15 @@ import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredConten
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata } from '@/lib/content/imageMetadata';
 import type { ContentFaq, ContentTravelTip, ImageMetadata } from '@/types';
+import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
+import type { ParentPageValue } from '@/lib/content/contentNavigation';
 
 interface CategoryFormData {
   name: string;
   slug: string;
   urlType: UrlType;
+  breadcrumbLabel: string;
+  parentPage: ParentPageValue | null;
   cityDestination: string;
   description: string;
   longDescription: string;
@@ -55,6 +59,8 @@ const defaultFormData: CategoryFormData = {
   name: '',
   slug: '',
   urlType: 'direct',
+  breadcrumbLabel: '',
+  parentPage: null,
   cityDestination: '',
   description: '',
   longDescription: '',
@@ -148,6 +154,8 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
           name: category.name || '',
           slug: category.slug || '',
           urlType: (category.urlType as UrlType) || 'default',
+          breadcrumbLabel: category.breadcrumbLabel || '',
+          parentPage: category.parentPage || null,
           cityDestination: category.cityDestination
             ? String((category.cityDestination as { _id?: unknown })._id || category.cityDestination)
             : '',
@@ -465,6 +473,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                                   formData.urlType === 'city'
                                     ? destinations.find(d => d._id === formData.cityDestination)?.slug || '{destination}'
                                     : undefined,
+                                  formData.parentPage?.slug,
                                 )}
                               </span>
                             </div>
@@ -506,6 +515,14 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                             )}
                           </div>
                         </div>
+
+                        <ContentNavigationFields
+                          breadcrumbLabel={formData.breadcrumbLabel}
+                          parentPage={formData.parentPage}
+                          onBreadcrumbLabelChange={(breadcrumbLabel) => setFormData((prev) => ({ ...prev, breadcrumbLabel }))}
+                          onParentPageChange={(parentPage) => setFormData((prev) => ({ ...prev, parentPage }))}
+                          excludeId={categoryId}
+                        />
 
                         <div className="space-y-3">
                           <FormLabel icon={FileText}>Short Description</FormLabel>

@@ -9,6 +9,7 @@ import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections'
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     
     const body = await request.json();
+    Object.assign(body, sanitizeContentNavigation(body));
     
     // Validate required fields
     if (!body.name || !body.slug) {

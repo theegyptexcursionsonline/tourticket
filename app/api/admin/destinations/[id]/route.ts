@@ -9,6 +9,7 @@ import { autoTranslateDestination } from '@/lib/i18n/autoTranslate';
 import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 
 export async function PUT(
   request: NextRequest,
@@ -22,6 +23,7 @@ export async function PUT(
     await dbConnect();
 
     const data = await request.json();
+    const navigation = sanitizeContentNavigation(data);
     delete data.tenantId;
     const { id } = await params;
 
@@ -59,6 +61,8 @@ export async function PUT(
     
     // Prepare update data - only update fields that are provided
     const updateData: Partial<IDestination> = {};
+    if ('breadcrumbLabel' in navigation) updateData.breadcrumbLabel = navigation.breadcrumbLabel;
+    if ('parentPage' in navigation) updateData.parentPage = navigation.parentPage;
     
     // Basic fields
     if (data.name !== undefined) updateData.name = data.name;

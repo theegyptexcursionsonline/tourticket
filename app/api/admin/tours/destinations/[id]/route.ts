@@ -7,6 +7,7 @@ import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 
 export async function PUT(
   request: NextRequest,
@@ -20,6 +21,7 @@ export async function PUT(
     await dbConnect();
 
     const data = await request.json();
+    Object.assign(data, sanitizeContentNavigation(data));
     const { id } = await params;
     
     if (!mongoose.Types.ObjectId.isValid(id)) {

@@ -5,6 +5,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
+import Destination from '@/lib/models/Destination';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { findMatchingTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (kind === 'pages') {
+    if (kind === 'pages' || kind === 'parents') {
       const pageConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
       const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
       const pageFilter: Record<string, unknown> = { $and: pageConditions };
@@ -97,7 +98,19 @@ export async function GET(request: NextRequest) {
         categoryConditions.push({ $or: [{ name: search }, { slug: search }] });
       }
 
-      const [pages, categories] = await Promise.all([
+      const destinationConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
+      const destinationFilter: Record<string, unknown> = { $and: destinationConditions };
+      if (excludeId) {
+        categoryFilter._id = { $ne: excludeId };
+        destinationFilter._id = { $ne: excludeId };
+      }
+      if (ids) {
+        destinationConditions.push({ _id: { $in: ids } });
+      } else if (search) {
+        destinationConditions.push({ $or: [{ name: search }, { slug: search }] });
+      }
+
+      const [pages, categories, destinations] = await Promise.all([
         AttractionPage.find(pageFilter)
           .select('title slug heroImage pageType isPublished')
           .sort({ createdAt: -1 })
@@ -108,22 +121,40 @@ export async function GET(request: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(ids ? ids.length : LIMIT)
           .lean(),
+        kind === 'parents'
+          ? Destination.find(destinationFilter)
+              .select('name slug image isPublished')
+              .sort({ createdAt: -1 })
+              .limit(ids ? ids.length : LIMIT)
+              .lean()
+          : Promise.resolve([]),
       ]);
 
       return NextResponse.json({
         success: true,
         data: [
+          ...(destinations as Array<Record<string, unknown>>).map((destination) => ({
+            id: String(destination._id),
+            title: String(destination.name || ''),
+            label: String(destination.name || ''),
+            slug: String(destination.slug || ''),
+            image: destination.image ? String(destination.image) : undefined,
+            kind: 'destination',
+            isPublished: destination.isPublished !== false,
+          })),
           ...(pages as Array<Record<string, unknown>>).map((page) => ({
             id: String(page._id),
             title: String(page.title || ''),
+            label: String(page.title || ''),
             slug: String(page.slug || ''),
             image: page.heroImage ? String(page.heroImage) : undefined,
-            kind: page.pageType === 'category' ? 'category-landing' : 'attraction',
+            kind: page.pageType === 'category' ? (kind === 'parents' ? 'category-2' : 'category-landing') : 'attraction',
             isPublished: page.isPublished === true,
           })),
           ...(categories as Array<Record<string, unknown>>).map((category) => ({
             id: String(category._id),
             title: String(category.name || ''),
+            label: String(category.name || ''),
             slug: String(category.slug || ''),
             image: category.heroImage ? String(category.heroImage) : undefined,
             kind: 'category',

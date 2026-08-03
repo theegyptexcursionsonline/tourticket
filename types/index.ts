@@ -369,6 +369,8 @@ export interface AttractionPageFormData {
   pageType: 'attraction' | 'category';
   categoryId: string;
   urlType: string;
+  breadcrumbLabel: string;
+  parentPage: import('@/lib/content/contentNavigation').ParentPageValue | null;
   cityDestination: string;
   heroImage: string;
   images: string[];

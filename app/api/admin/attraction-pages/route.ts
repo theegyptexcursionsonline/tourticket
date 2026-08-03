@@ -5,6 +5,7 @@ import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import mongoose from 'mongoose';
 import {
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     
     const body = await request.json();
+    Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
 
     // The city URL shape needs a real owning destination to build /{city}/{slug}.
