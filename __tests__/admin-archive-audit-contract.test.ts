@@ -120,7 +120,7 @@ describe('a slug collision explains itself', () => {
 });
 
 describe('tour editor pickers are searchable', () => {
-  it.each(['categories', 'attractions', 'catalogue pages'])('offers a search box for %s', (label) => {
+  it.each(['categories', 'attractions', 'Category 2 pages'])('offers a search box for %s', (label) => {
     expect(read('components/TourForm.tsx')).toContain(`searchPlaceholder="Search ${label}…"`);
   });
 

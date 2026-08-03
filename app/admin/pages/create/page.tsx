@@ -36,7 +36,7 @@ function CreatePageChooser() {
               // called "Category" and the landing page is called "Catalogue".
               // Labels only — the underlying ids and behaviour are unchanged.
               { id: 'catalogue', label: 'Category', description: 'A tour collection used in the tour Category selector.', icon: LayoutGrid },
-              { id: 'category', label: 'Catalogue', description: 'A landing page linked to an existing category.', icon: Tag },
+              { id: 'category', label: 'Category 2', description: 'A landing page linked to an existing category.', icon: Tag },
             ] as const).map((option) => {
               const Icon = option.icon;
               const selected = kind === option.id;
