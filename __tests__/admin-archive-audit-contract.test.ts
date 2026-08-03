@@ -142,3 +142,15 @@ describe('partial page updates never blank content arrays', () => {
     expect(source).not.toMatch(/^\s*images: Array\.isArray/m);
   });
 });
+
+describe('partial tour updates never reset availability', () => {
+  // Restore-to-draft (and any other minimal PUT) sends only its own fields.
+  // The route used to fabricate a daily/10:00/capacity-10 availability when
+  // the body carried none — silently rewriting real schedules.
+  it('normalizes availability only when the request sends it', () => {
+    const fs = require('node:fs');
+    const source = fs.readFileSync('app/api/admin/tours/[id]/route.ts', 'utf8');
+    expect(source).not.toContain("body.availability = {");
+    expect(source).toContain('if (body.availability) {');
+  });
+});

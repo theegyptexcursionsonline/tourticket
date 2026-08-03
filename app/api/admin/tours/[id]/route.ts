@@ -210,7 +210,9 @@ export async function PUT(
             }
         }
 
-        // Ensure availability has proper structure
+        // Normalize availability only when the request actually sends it — a
+        // partial update (archive/restore sends only its own fields) must never
+        // replace a tour's real schedule with the daily/10:00 default.
         if (body.availability) {
             if (!body.availability.type) {
                 body.availability.type = 'daily';
@@ -221,12 +223,6 @@ export async function PUT(
             if (!body.availability.availableDays) {
                 body.availability.availableDays = [0, 1, 2, 3, 4, 5, 6];
             }
-        } else {
-            body.availability = {
-                type: 'daily',
-                availableDays: [0, 1, 2, 3, 4, 5, 6],
-                slots: [{ time: '10:00', capacity: 10 }]
-            };
         }
 
         const updatedTour = await Tour.findOneAndUpdate(
