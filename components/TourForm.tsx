@@ -2053,7 +2053,7 @@ const addItineraryItem = () => {
                                                     label="What to Bring"
                                                     value={formData.whatToBring.join('\n')}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, whatToBring: value.split('\n') }))}
-                                                    placeholder="Hat and sunscreen\nValid ID"
+                                                    placeholder={"Hat and sunscreen\nValid ID"}
                                                     list
                                                     defaultKey="whatToBring"
                                                 />
@@ -2061,7 +2061,7 @@ const addItineraryItem = () => {
                                                     label="What to Wear"
                                                     value={formData.whatToWear.join('\n')}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, whatToWear: value.split('\n') }))}
-                                                    placeholder="Comfortable shoes\nModest clothing for religious sites"
+                                                    placeholder={"Comfortable shoes\nModest clothing for religious sites"}
                                                     list
                                                     defaultKey="whatToWear"
                                                 />
@@ -2077,7 +2077,7 @@ const addItineraryItem = () => {
                                                     label="Need to Know"
                                                     value={formData.needToKnow.join('\n')}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, needToKnow: value.split('\n') }))}
-                                                    placeholder="Bring the booking confirmation\nPickup time is confirmed the evening before"
+                                                    placeholder={"Bring the booking confirmation\nPickup time is confirmed the evening before"}
                                                     list
                                                     defaultKey="needToKnow"
                                                 />
@@ -2093,7 +2093,7 @@ const addItineraryItem = () => {
                                                     label="Health & Safety"
                                                     value={formData.healthSafety.join('\n')}
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, healthSafety: value.split('\n') }))}
-                                                    placeholder="First-aid-trained guide\nEmergency procedures in place"
+                                                    placeholder={"First-aid-trained guide\nEmergency procedures in place"}
                                                     list
                                                     defaultKey="healthSafety"
                                                 />

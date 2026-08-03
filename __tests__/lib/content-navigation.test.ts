@@ -4,6 +4,8 @@ import {
   sanitizeContentNavigation,
 } from '@/lib/content/contentNavigation';
 import { practicalDefaultText } from '@/lib/tours/practicalDefaults';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 describe('content navigation', () => {
   it('sanitizes a valid parent snapshot and breadcrumb label', () => {
@@ -50,5 +52,11 @@ describe('practical information defaults', () => {
     expect(practicalDefaultText('whatToBring')).toContain('Camera for photos');
     expect(practicalDefaultText('weatherPolicy')).toContain('severe weather');
     expect(practicalDefaultText('needToKnow').split('\n')).toHaveLength(3);
+  });
+
+  it('renders multiline textarea hints as real line breaks', () => {
+    const formSource = readFileSync(join(process.cwd(), 'components/TourForm.tsx'), 'utf8');
+    expect(formSource).toContain('placeholder={"Hat and sunscreen\\nValid ID"}');
+    expect(formSource).not.toMatch(/placeholder="[^"]*\\n/);
   });
 });
