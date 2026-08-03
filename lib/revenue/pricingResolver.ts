@@ -6,6 +6,7 @@ import type { IBookingOption } from '@/lib/models/Tour';
 import type { Types } from 'mongoose';
 import { pricingCatalogueVersion } from '@/lib/revenue/pricingVersion';
 import { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
+import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 export { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
 
@@ -15,9 +16,11 @@ type CatalogueTour = {
   _id: Types.ObjectId;
   title: string;
   discountPrice: number;
+  discountPercent?: number;
   originalPrice?: number;
   bookingOptions?: IBookingOption[];
   revenueGuestPrices?: GuestPrices;
+  availability?: { slots?: Array<{ time?: string; capacity?: number; price?: number }> };
   updatedAt: Date;
 };
 
@@ -46,15 +49,22 @@ export async function resolveEffectivePrice(input: { tourId: string; optionKey?:
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new Error('Invalid price time');
   const optionKey = input.optionKey || STANDARD_OPTION_KEY;
   const tour = await Tour.findOne({ _id: input.tourId, isPublished: true, ...DEFAULT_TENANT_FILTER })
-    .select('_id title discountPrice originalPrice revenueGuestPrices bookingOptions updatedAt')
+    .select('_id title discountPrice discountPercent originalPrice revenueGuestPrices bookingOptions availability updatedAt')
     .lean<CatalogueTour | null>();
   if (!tour) throw new Error('Tour unavailable');
   const option = optionKey === STANDARD_OPTION_KEY
     ? null
     : tour.bookingOptions?.find((candidate) => candidate.pricingKey === optionKey);
   if (optionKey !== STANDARD_OPTION_KEY && !option) throw new Error('Pricing option unavailable');
-  const adult = Number(option?.price ?? tour.discountPrice);
-  if (!Number.isFinite(adult) || adult < 0) throw new Error('Invalid catalogue price');
+  const rawAdult = Number(option?.price ?? tour.discountPrice);
+  if (!Number.isFinite(rawAdult) || rawAdult < 0) throw new Error('Invalid catalogue price');
+  // The catalogue baseline goes through the shared discount helper: the tour's
+  // percentage applies to opted-in options and a slot may override the base,
+  // so this quote, the sidebar and the booking writer can never disagree.
+  const adult = authoritativeBasePrice(tour, {
+    selectedBookingOption: option ? { pricingKey: optionKey } : null,
+    selectedTime: input.time,
+  });
   const cataloguePrices = catalogueGuestPrices(adult, option?.guestPrices ?? tour.revenueGuestPrices);
   const date = normalizePriceDate(input.date);
   const override = await RevenuePriceOverride.findOne({ tenantId, tourId: tour._id, optionKey, date, time: input.time, active: true }).lean<PriceOverride | null>();

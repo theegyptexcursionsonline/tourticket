@@ -14,6 +14,31 @@ describe('pricing catalogue version', () => {
     expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({ ...base, bookingOptions: [{ ...base.bookingOptions[0], price: 110 }] }));
   });
 
+  it('binds the discount system to the version: percent, opt-in and slot prices count, schedules do not', () => {
+    const base = { discountPrice: 100, originalPrice: 120, bookingOptions: [{ pricingKey: 'shared', price: 100, type: 'group' }] };
+    expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({ ...base, discountPercent: 15 }));
+    expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({
+      ...base, bookingOptions: [{ ...base.bookingOptions[0], applyTourDiscount: true }],
+    }));
+    expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({
+      ...base, bookingOptions: [{ ...base.bookingOptions[0], timeSlots: [{ time: '10:00', price: 120 }] }],
+    }));
+    expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({
+      ...base, availability: { slots: [{ time: '10:00', price: 80 }] },
+    }));
+    // A blank percent and an unpriced slot are pricing-neutral, so legacy
+    // records hash identically whether or not the new fields were selected.
+    expect(pricingCatalogueVersion(base)).toBe(pricingCatalogueVersion({ ...base, discountPercent: 0 }));
+    expect(pricingCatalogueVersion(base)).toBe(pricingCatalogueVersion({
+      ...base, availability: { slots: [{ time: '10:00' }] },
+    }));
+    expect(pricingCatalogueVersion({
+      ...base, availability: { slots: [{ time: '10:00', price: 80 }] },
+    })).toBe(pricingCatalogueVersion({
+      ...base, availability: { slots: [{ time: '10:00', price: 80 }] },
+    }));
+  });
+
   it('compares explicit guest fields without object-order coupling', () => {
     expect(guestPricesEqual({ adult: 100, child: 50, infant: 0 }, { infant: 0, child: 50, adult: 100 })).toBe(true);
     expect(guestPricesEqual({ adult: 100, child: 50, infant: 0 }, { adult: 100, child: 49, infant: 0 })).toBe(false);

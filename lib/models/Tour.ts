@@ -20,6 +20,7 @@ export interface IItineraryItem {
 export interface IAvailabilitySlot {
   time: string;
   capacity: number;
+  price?: number;
 }
 
 export interface IAvailability extends Document {
@@ -55,7 +56,10 @@ export interface IBookingOption {
   badge?: string;
   discount?: number;
   isRecommended?: boolean;
-  timeSlots?: string[];
+  /** Opt this option into the tour's discount percentage. */
+  applyTourDiscount?: boolean;
+  /** Optional per-slot pricing; a blank price inherits the option's base. */
+  timeSlots?: Array<{ time: string; capacity?: number; price?: number }>;
 }
 
 export interface IAddOn {
@@ -135,6 +139,8 @@ export interface ITour extends Document {
   price?: number;
   originalPrice?: number;
   discountPrice: number;
+  /** Whole-number percentage applied to booking options that opt in. */
+  discountPercent?: number;
   revenueGuestPrices?: { adult: number; child: number; infant: number };
   duration: string;
   difficulty?: string;
@@ -252,11 +258,17 @@ const AvailabilitySlotSchema = new Schema<IAvailabilitySlot>({
       message: 'Time must be in HH:MM format'
     }
   },
-  capacity: { 
-    type: Number, 
-    required: true, 
+  capacity: {
+    type: Number,
+    required: true,
     min: [1, 'Capacity must be at least 1'],
     max: [1000, 'Capacity cannot exceed 1000']
+  },
+  // Optional universal fallback price. Booking-option slot prices take priority.
+  price: {
+    type: Number,
+    min: [0, 'Price cannot be negative'],
+    max: [999999, 'Price cannot exceed 999999'],
   },
 }, { _id: false });
 
@@ -370,13 +382,21 @@ const BookingOptionSchema = new Schema<IBookingOption>({
     max: [999999, 'Price cannot exceed 999999']
   },
   guestPrices: { type: RevenueGuestPricesSchema },
-  originalPrice: { 
-    type: Number, 
+  originalPrice: {
+    type: Number,
     min: [0, 'Original price cannot be negative'],
     max: [999999, 'Original price cannot exceed 999999']
   },
-  description: { 
-    type: String, 
+  applyTourDiscount: { type: Boolean, default: false },
+  timeSlots: [{
+    _id: false,
+    time: { type: String, trim: true, required: true },
+    capacity: { type: Number, min: 0 },
+    // Blank means "use the option's base price".
+    price: { type: Number, min: 0, max: 999999 },
+  }],
+  description: {
+    type: String,
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
@@ -617,12 +637,19 @@ const TourSchema: Schema<ITour> = new Schema({
     min: [0, 'Original price cannot be negative'],
     max: [999999, 'Original price cannot exceed 999999']
   },
-  discountPrice: { 
-    type: Number, 
+  discountPrice: {
+    type: Number,
     required: [true, 'Discount price is required'],
     min: [0, 'Discount price cannot be negative'],
     max: [999999, 'Discount price cannot exceed 999999'],
     index: true
+  },
+  // Percentage form of the discount, applied to booking options that opt in.
+  // The displayed price stays a money amount; only the input changes.
+  discountPercent: {
+    type: Number,
+    min: [0, 'Discount percent cannot be negative'],
+    max: [100, 'Discount percent cannot exceed 100'],
   },
   revenueGuestPrices: { type: RevenueGuestPricesSchema },
   duration: { 

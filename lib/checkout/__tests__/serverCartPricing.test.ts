@@ -19,6 +19,7 @@ jest.mock('@/lib/revenue/pricingResolver', () => ({
 
 import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
 import { resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
+import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 describe('secureCartPricing', () => {
   beforeEach(() => {
@@ -92,5 +93,129 @@ describe('secureCartPricing', () => {
     expect(item.guestPrices).toEqual({ adult: 126, child: 70, infant: 5 });
     expect(item.selectedBookingOption.price).toBe(126);
     expect(item.priceExecutionId).toBe('exec-1');
+  });
+});
+
+describe('secureCartPricing applies the tour discount exactly like the sidebar quote', () => {
+  // Charge == quote: the cart hydrator and the storefront both price through
+  // the shared discount helper, so these tests pin the charged amount to the
+  // number the customer was shown — opted-in options, non-opted options, slot
+  // overrides and the universal-slot standard path.
+  const discountedTour = {
+    _id: { toString: () => '507f1f77bcf86cd799439011' },
+    title: 'Discounted tour',
+    discountPrice: 100,
+    discountPercent: 20,
+    originalPrice: 120,
+    bookingOptions: [
+      {
+        label: 'Private',
+        type: 'Per Person',
+        price: 150,
+        pricingKey: 'private-key',
+        applyTourDiscount: true,
+        timeSlots: [
+          { time: '14:00', price: 200 },
+          { time: '16:00' },
+        ],
+      },
+      { label: 'Group', type: 'Per Person', price: 90, pricingKey: 'group-key', applyTourDiscount: false },
+    ],
+    addOns: [],
+    availability: { slots: [{ time: '09:00', capacity: 10, price: 75 }] },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    lean.mockResolvedValue(discountedTour);
+  });
+
+  it('charges the discounted option price when the option opted in', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 2,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'private-key', price: 0.01 },
+    }]);
+
+    // 150 - 20% = 120 per adult; child derives from the discounted base.
+    expect(item.selectedBookingOption.price).toBe(120);
+    expect(item.discountPrice).toBe(120);
+    expect(item.guestPrices).toEqual({ adult: 120, child: 60, infant: 0 });
+    // The strikethrough base is the pre-discount price, so a real reduction shows.
+    expect(item.selectedBookingOption.originalPrice).toBe(150);
+    // Identical to the helper every quote surface calls.
+    expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(discountedTour, {
+      selectedBookingOption: { pricingKey: 'private-key' },
+      selectedTime: null,
+    }));
+  });
+
+  it('charges full price for an option that did not opt in to the discount', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { id: 'option-1', pricingKey: 'group-key', price: 0.01 },
+    }]);
+    expect(item.selectedBookingOption.price).toBe(90);
+    expect(item.guestPrices).toEqual({ adult: 90, child: 45, infant: 0 });
+  });
+
+  it('discounts a time-slot price override for the selected time', async () => {
+    // selectedTime without selectedDate exercises the catalogue path directly.
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedTime: '14:00',
+      selectedBookingOption: { id: 'option-0', pricingKey: 'private-key' },
+    }]);
+    // slot 200 - 20% = 160
+    expect(item.selectedBookingOption.price).toBe(160);
+    expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(discountedTour, {
+      selectedBookingOption: { pricingKey: 'private-key' },
+      selectedTime: '14:00',
+    }));
+  });
+
+  it('falls back to the discounted option base when the slot has no price', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedTime: '16:00',
+      selectedBookingOption: { id: 'option-0', pricingKey: 'private-key' },
+    }]);
+    expect(item.selectedBookingOption.price).toBe(120);
+  });
+
+  it('prices the standard no-option path from a universal slot price', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedTime: '09:00',
+    }]);
+    expect(item.selectedBookingOption.price).toBe(75);
+    expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(discountedTour, {
+      selectedBookingOption: null,
+      selectedTime: '09:00',
+    }));
+  });
+
+  it('still rejects an option whose stored price is invalid', async () => {
+    lean.mockResolvedValueOnce({
+      ...discountedTour,
+      bookingOptions: [{ label: 'Broken', type: 'Per Person', price: Number.NaN, pricingKey: 'broken-key' }],
+    });
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { id: 'option-0', pricingKey: 'broken-key' },
+    }])).rejects.toThrow('Invalid catalogue price');
+  });
+
+  it('lets a version-bound RevenuePilot quote win over the catalogue discount', async () => {
+    jest.mocked(resolveEffectivePrice).mockResolvedValue({ version: 3, prices: { adult: 111, child: 55, infant: 0 } } as any);
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedDate: '2099-01-01',
+      selectedTime: '14:00',
+      priceVersion: 3,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'private-key' },
+    }]);
+    expect(item.selectedBookingOption.price).toBe(111);
+    expect(item.guestPrices).toEqual({ adult: 111, child: 55, infant: 0 });
   });
 });

@@ -21,6 +21,7 @@ import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
+import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import {
   bindTimeSlotsToOption,
@@ -38,6 +39,7 @@ interface Tour {
   image: string;
   originalPrice?: number;
   discountPrice: number;
+  discountPercent?: number;
   destination?: {
     _id: string;
     name: string;
@@ -73,7 +75,7 @@ interface Tour {
   availability?: {
     type: string;
     availableDays: number[];
-    slots: { time: string; capacity: number }[];
+    slots: { time: string; capacity: number; price?: number }[];
     blockedDates?: string[];
     startDate?: string;
     endDate?: string;
@@ -103,7 +105,10 @@ interface BookingOption {
   badge?: string;
   discount?: number;
   isRecommended?: boolean;
-  timeSlots?: TimeSlot[];
+  applyTourDiscount?: boolean;
+  /** Server-shaped TimeSlots from the options API, or raw model subdocs
+   *  ({time, capacity, price}) when falling back to the embedded tour. */
+  timeSlots?: Array<{ id?: string; time: string; capacity?: number; available?: number; price?: number; originalPrice?: number; isPopular?: boolean }>;
   title?: string;
 }
 
@@ -1431,6 +1436,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         ? tour.destination 
         : tour.destination?.name || 'Unknown',
       discountPrice: tour.discountPrice,
+      discountPercent: tour.discountPercent,
       originalPrice: tour.originalPrice,
       maxGroupSize: tour.maxGroupSize || 15,
       highlights: tour.highlights || [],
@@ -1445,15 +1451,19 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     };
   }, [tour]);
 
-  // Helper function to generate time slots from tour availability settings
-  const generateTimeSlotsFromAvailability = useCallback((price: number, optionIndex: number): TimeSlot[] => {
+  // Helper function to generate time slots from tour availability settings.
+  // `honorSlotPrice` applies a universal slot's own price — only the standard
+  // no-option path may do that, because checkout only honours universal slot
+  // prices when no booking option is selected (an option without configured
+  // slots is always charged at its own price).
+  const generateTimeSlotsFromAvailability = useCallback((price: number, optionIndex: number, honorSlotPrice = false): TimeSlot[] => {
     // Use actual slots from tour.availability if available
     if (tour?.availability?.slots && tour.availability.slots.length > 0) {
       return tour.availability.slots.map((slot, slotIndex) => ({
         id: `slot-${optionIndex}-${slotIndex}`,
         time: slot.time,
         available: slot.capacity,
-        price: price,
+        price: honorSlotPrice && typeof slot.price === 'number' && Number.isFinite(slot.price) ? slot.price : price,
         isPopular: slotIndex === 0, // Mark first slot as popular
         originalAvailable: slot.capacity,
       }));
@@ -1495,17 +1505,37 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       let tourOptions: TourOption[];
       if (bookingOptions.length > 0) {
         tourOptions = bookingOptions.map((option, index) => {
-          const optionPrice = option.price ?? tourDisplayData?.discountPrice ?? 50;
+          // Same helper the server charges with, so the quoted price and the
+          // charged price cannot drift apart. Options from the live endpoint
+          // arrive already priced (they carry no opt-in flag), so this is a
+          // passthrough for them and only reprices the embedded fallback.
+          const pricing = effectiveOptionPrice(tourDisplayData, option);
+          const optionPrice = typeof option.price === 'number' ? pricing.price : (tourDisplayData?.discountPrice ?? 50);
           const optionId = option.id || option._id || `option-${index}`;
           const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(optionId);
           const stopSaleReason = selectedStopSale?.reasons?.[optionId] || selectedStopSale?.reasons?.all;
-          const baseTimeSlots = option.timeSlots || generateTimeSlotsFromAvailability(optionPrice, index);
+          const baseTimeSlots: TimeSlot[] = Array.isArray(option.timeSlots) && option.timeSlots.length > 0
+            ? option.timeSlots.map((slot, slotIndex) => {
+                const slotPricing = effectiveOptionPrice(tourDisplayData, option, slot);
+                return {
+                  id: slot.id || `slot-${index}-${slotIndex}`,
+                  time: slot.time,
+                  available: slot.available ?? slot.capacity ?? 15,
+                  originalAvailable: slot.available ?? slot.capacity ?? 15,
+                  price: slotPricing.price,
+                  originalPrice: slotPricing.discountApplied ? slotPricing.originalPrice : slot.originalPrice,
+                  isPopular: slot.isPopular ?? slotIndex === 0,
+                };
+              })
+            : generateTimeSlotsFromAvailability(optionPrice, index);
           return {
             id: optionId,
             pricingKey: option.pricingKey,
             title: option.label || option.title || 'Tour Option',
             price: optionPrice,
-            originalPrice: option.originalPrice || optionPrice,
+            originalPrice: pricing.discountApplied
+              ? pricing.originalPrice
+              : (option.originalPrice || optionPrice),
             duration: option.duration || tourDisplayData?.duration || '3 hours',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
@@ -1525,9 +1555,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           };
         });
       } else {
-        // Fallback to default tour options using actual availability slots
+        // Fallback to default tour options using actual availability slots.
+        // The standard no-option path is the one place checkout honours a
+        // universal slot price, so quote it here too.
         const standardPrice = tourDisplayData?.discountPrice || 50;
-        const baseTimeSlots = generateTimeSlotsFromAvailability(standardPrice, 0);
+        const baseTimeSlots = generateTimeSlotsFromAvailability(standardPrice, 0, true);
         const fallbackOptionId = 'standard-default';
         const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(fallbackOptionId);
         tourOptions = [

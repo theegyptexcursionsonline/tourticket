@@ -3,6 +3,8 @@ import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
+import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
+import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
 
@@ -33,6 +35,8 @@ interface LeanBookingOption {
   originalPrice?: number;
   duration?: string;
   badge?: string;
+  applyTourDiscount?: boolean;
+  timeSlots?: Array<{ time?: string; capacity?: number; price?: number }>;
 }
 
 interface LeanAddOn {
@@ -47,9 +51,11 @@ interface LeanTour {
   _id: mongoose.Types.ObjectId;
   title: string;
   discountPrice: number;
+  discountPercent?: number;
   originalPrice?: number;
   bookingOptions?: LeanBookingOption[];
   addOns?: LeanAddOn[];
+  availability?: { slots?: Array<{ time?: string; capacity?: number; price?: number }> };
 }
 
 export interface SecureBookingOption {
@@ -130,7 +136,7 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
       _id: tourId,
       isPublished: true,
       ...DEFAULT_TENANT_FILTER,
-    }).select('_id title discountPrice originalPrice bookingOptions addOns').lean() as unknown as LeanTour | null;
+    }).select('_id title discountPrice discountPercent originalPrice bookingOptions addOns availability').lean() as unknown as LeanTour | null;
     if (!tour) throw new Error('Tour unavailable');
 
     const optionId = rawItem?.selectedBookingOption?.id
@@ -150,21 +156,44 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
       if (!dbOption.pricingKey) {
         throw new Error('Booking option pricing key is not configured');
       }
+      // A stored option with no usable price must throw, never silently
+      // price at 0 — check the raw number before the discount helper runs.
+      if (!Number.isFinite(Number(dbOption.price)) || Number(dbOption.price) < 0) {
+        throw new Error('Invalid catalogue price');
+      }
+      // Priced by the same helper as the resolver and the sidebar quote, so
+      // the tour's percentage discount and per-slot overrides reach every
+      // charge. Only identifiers are read from the cart — never a price.
+      const requestedTime = rawItem?.selectedTime ? String(rawItem.selectedTime) : null;
+      const slot = Array.isArray(dbOption.timeSlots) && requestedTime
+        ? dbOption.timeSlots.find((entry) => entry.time === requestedTime)
+        : undefined;
+      const pricing = effectiveOptionPrice(tour, dbOption, slot);
       option = {
         id: `option-${optionIndex}`,
         pricingKey: dbOption.pricingKey,
         title: dbOption.label || `${tour.title} - ${dbOption.type}`,
-        price: Number(dbOption.price),
-        originalPrice: Number(dbOption.originalPrice || tour.originalPrice || dbOption.price),
+        price: pricing.price,
+        originalPrice: pricing.discountApplied
+          ? pricing.originalPrice
+          : Number(dbOption.originalPrice || tour.originalPrice || dbOption.price),
         duration: dbOption.duration,
         badge: dbOption.badge,
       };
     } else {
+      if (!Number.isFinite(Number(tour.discountPrice)) || Number(tour.discountPrice) < 0) {
+        throw new Error('Invalid catalogue price');
+      }
       option = {
         id: 'standard-default',
         pricingKey: STANDARD_OPTION_KEY,
         title: `${tour.title} - Standard Experience`,
-        price: Number(tour.discountPrice),
+        // The standard path honours a universal availability-slot price for
+        // the selected time, exactly like the resolver's catalogue baseline.
+        price: authoritativeBasePrice(tour, {
+          selectedBookingOption: null,
+          selectedTime: rawItem?.selectedTime ? String(rawItem.selectedTime) : null,
+        }),
         originalPrice: Number(tour.originalPrice || tour.discountPrice),
       };
     }
