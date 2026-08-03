@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
-import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
+import { URL_TYPE_LABELS, contentPath, selectableUrlTypes, type UrlType } from '@/lib/content/contentUrl';
 import {
     Loader2,
     XCircle,
@@ -441,10 +441,13 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
     const [expandedItineraryIndex, setExpandedItineraryIndex] = useState<number | null>(0);
     const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
 
+    // The urlType the tour was loaded with — keeps a legacy shape selectable
+    // for that tour while new tours only ever offer Direct.
+    const [savedUrlType, setSavedUrlType] = useState<string | null>(null);
     const [formData, setFormData] = useState<TourFormData>({
         title: '',
         slug: '',
-        urlType: 'default',
+        urlType: 'direct',
         description: '',
         longDescription: '',
         duration: '',
@@ -505,6 +508,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         if (tourToEdit) {
             queueMicrotask(() => {
             setIsSlugManuallyEdited(Boolean(tourToEdit.slug));
+            setSavedUrlType((tourToEdit.urlType as UrlType) || 'default');
             
             const initialData: Partial<TourFormData> = {
                 title: tourToEdit.title || '',
@@ -702,10 +706,11 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
     }, [formData.attractions, formData.interests, attractions, interests]);
 
     const resetForm = () => {
+        setSavedUrlType(null);
         setFormData({
             title: '',
             slug: '',
-            urlType: 'default',
+            urlType: 'direct',
             description: '',
             longDescription: '',
             duration: '',
@@ -1378,7 +1383,7 @@ const addItineraryItem = () => {
                                                         onChange={handleChange}
                                                         className={`${inputBase} pl-10 appearance-none cursor-pointer`}
                                                     >
-                                                        {URL_TYPES.map((ut) => (
+                                                        {selectableUrlTypes(savedUrlType ?? 'direct').map((ut) => (
                                                             <option key={ut} value={ut}>{URL_TYPE_LABELS[ut]}</option>
                                                         ))}
                                                     </select>

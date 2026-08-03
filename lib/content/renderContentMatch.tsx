@@ -4,7 +4,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { ContentMatch } from '@/lib/content/resolveContentBySlug';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, attractionPagePath } from '@/lib/content/contentUrl';
 import { renderTourDetail, getTourMetadata } from '@/app/[locale]/[slug]/TourDetailContent';
 import {
   renderDestinationDetail,
@@ -18,6 +18,10 @@ import {
   renderAttractionDetail,
   getAttractionMetadata,
 } from '@/app/[locale]/attraction/[slug]/AttractionDetailContent';
+import {
+  renderCataloguePage,
+  getCataloguePageMetadata,
+} from '@/app/[locale]/category/[category-name]/CataloguePageContent';
 
 export async function renderContentMatch(
   match: ContentMatch,
@@ -31,7 +35,11 @@ export async function renderContentMatch(
     case 'category':
       return renderCategoryDetail(match.slug, locale);
     case 'page':
-      return renderAttractionDetail(match.slug, locale);
+      // One model, two kinds: catalogue pages render the catalogue template,
+      // attraction pages the attraction one, at whatever URL shape they chose.
+      return match.pageKind === 'category'
+        ? renderCataloguePage(match.slug, locale)
+        : renderAttractionDetail(match.slug, locale);
     default:
       return null;
   }
@@ -44,7 +52,9 @@ export async function getContentMatchMetadata(
   // Locale-less on purpose: metadataAlternates() localizes the canonical and
   // hreflang set itself — passing a locale-prefixed path doubled the locale
   // (/de/de/…) on every non-default-locale detail page.
-  const canonicalPath = contentPath(match.type, match.slug, match.urlType, match.citySlug);
+  const canonicalPath = match.type === 'page'
+    ? attractionPagePath(match.slug, match.pageKind, match.urlType, match.citySlug)
+    : contentPath(match.type, match.slug, match.urlType, match.citySlug);
   switch (match.type) {
     case 'tour':
       return getTourMetadata(match.slug, locale, canonicalPath);
@@ -53,7 +63,9 @@ export async function getContentMatchMetadata(
     case 'category':
       return getCategoryMetadata(match.slug, locale, canonicalPath);
     case 'page':
-      return getAttractionMetadata(match.slug, locale, canonicalPath);
+      return match.pageKind === 'category'
+        ? getCataloguePageMetadata(match.slug, locale, canonicalPath)
+        : getAttractionMetadata(match.slug, locale, canonicalPath);
     default:
       return null;
   }

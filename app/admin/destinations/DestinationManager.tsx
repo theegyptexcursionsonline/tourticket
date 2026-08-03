@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
+import { URL_TYPE_LABELS, contentPath, selectableUrlTypes, type UrlType } from '@/lib/content/contentUrl';
 import {
   PlusCircle, 
   Edit, 
@@ -113,10 +113,13 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [editingDestination, setEditingDestination] = useState<IDestination | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
   
+  // The urlType the destination was loaded with — keeps a legacy shape
+  // selectable for that record while new destinations only ever offer Direct.
+  const [savedUrlType, setSavedUrlType] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     slug: '',
-    urlType: 'default',
+    urlType: 'direct',
     country: '',
     image: '',
     images: [],
@@ -174,10 +177,11 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   }, [getAuthHeaders]);
 
   const resetForm = () => {
+    setSavedUrlType(null);
     setFormData({
       name: '',
       slug: '',
-      urlType: 'default',
+      urlType: 'direct',
       country: '',
       image: '',
       images: [],
@@ -224,6 +228,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
       return;
     }
     setEditingDestination(dest);
+    setSavedUrlType(dest.urlType || 'default');
     setFormData({
       name: dest.name || '',
       slug: dest.slug || '',
@@ -1002,7 +1007,7 @@ setTimeout(() => router.refresh(), 0);
                         onChange={(e) => setFormData(prev => ({ ...prev, urlType: e.target.value as UrlType }))}
                         className={inputStyles}
                       >
-                        {URL_TYPES.map((ut) => (
+                        {selectableUrlTypes(savedUrlType ?? 'direct').map((ut) => (
                           <option key={ut} value={ut}>{URL_TYPE_LABELS[ut]}</option>
                         ))}
                       </select>

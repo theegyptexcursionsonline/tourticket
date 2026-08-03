@@ -7,7 +7,7 @@ import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, attractionPagePath } from '@/lib/content/contentUrl';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import {
   buildPagesCursorFilter,
@@ -166,9 +166,7 @@ export async function GET(request: NextRequest) {
         description: page.description ? String(page.description) : undefined,
         image: page.heroImage ? String(page.heroImage) : undefined,
         urlType: String(page.urlType || 'default'),
-        publicPath: isLanding
-          ? `/category/${String(page.slug)}`
-          : contentPath('page', String(page.slug), page.urlType as string | undefined),
+        publicPath: attractionPagePath(String(page.slug), page.pageType as string, page.urlType as string | undefined),
         editHref: `/admin/attraction-pages/${String(page._id)}/edit`,
         isPublished: page.isPublished === true,
         featured: page.featured === true,

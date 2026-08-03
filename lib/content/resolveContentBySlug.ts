@@ -12,10 +12,14 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import {
   ContentType,
   UrlType,
+  AttractionPageKind,
   normalizeUrlType,
   segmentFor,
+  pageDefaultSegment,
+  attractionPagePath,
   localizedContentPath,
 } from '@/lib/content/contentUrl';
+import { defaultLocale } from '@/i18n/config';
 
 export interface ContentMatch {
   type: ContentType;
@@ -24,6 +28,7 @@ export interface ContentMatch {
   segment: string; // effective URL segment ('' = root, CITY_SEGMENT = /{city}/)
   isPublished: boolean;
   citySlug?: string; // the owning destination's slug (tours only)
+  pageKind?: AttractionPageKind; // 'page' matches: attraction vs catalogue
 }
 
 // Priority when a slug happens to exist in more than one collection.
@@ -33,6 +38,7 @@ interface ContentDocument {
   slug: string;
   urlType?: string;
   isPublished?: boolean;
+  pageType?: string; // AttractionPage only: 'attraction' | 'category'
   destination?: { slug?: string } | null; // tours: required owning destination
   cityDestination?: { slug?: string } | null; // categories/pages: optional owning city
 }
@@ -55,10 +61,11 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
       .select('slug urlType isPublished cityDestination')
       .populate('cityDestination', 'slug')
       .lean(),
-    // Only attraction-type pages participate in urlType routing; category-landing
-    // pages keep their fixed /category/{slug} path.
-    AttractionPage.findOne({ slug, pageType: 'attraction', ...DEFAULT_TENANT_FILTER })
-      .select('slug urlType isPublished cityDestination')
+    // Both attraction pages and catalogue pages participate in urlType routing.
+    // A catalogue page's default shape is /category/{slug}, so its canonical
+    // segment is derived from pageType, not the shared content-type default.
+    AttractionPage.findOne({ slug, ...DEFAULT_TENANT_FILTER })
+      .select('slug urlType isPublished pageType cityDestination')
       .populate('cityDestination', 'slug')
       .lean(),
   ]);
@@ -68,13 +75,20 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
     if (!doc) return;
     const urlType = normalizeUrlType(doc.urlType);
     const citySlug = citySlugOf(type, doc);
+    const pageKind: AttractionPageKind | undefined =
+      type === 'page' ? (doc.pageType === 'category' ? 'category' : 'attraction') : undefined;
+    const segment =
+      type === 'page' && urlType === 'default'
+        ? pageDefaultSegment(pageKind)
+        : segmentFor(type, urlType);
     matches.push({
       type,
       slug: String(doc.slug),
       urlType,
-      segment: segmentFor(type, urlType),
+      segment,
       isPublished: doc.isPublished !== false,
       ...(citySlug ? { citySlug } : {}),
+      ...(pageKind ? { pageKind } : {}),
     });
   };
 
@@ -92,6 +106,17 @@ export type ResolveDecision =
   | { action: 'render'; match: ContentMatch }
   | { action: 'redirect'; to: string }
   | { action: 'notFound' };
+
+// Locale-prefixed canonical path for a match. Attraction-page matches route
+// through attractionPagePath so a default-shaped catalogue page canonicalizes
+// to /category/{slug}, never the shared 'page' default of /attraction/{slug}.
+function canonicalPathFor(match: ContentMatch, locale: string): string {
+  if (match.type === 'page') {
+    const path = attractionPagePath(match.slug, match.pageKind, match.urlType, match.citySlug);
+    return locale && locale !== defaultLocale ? `/${locale}${path}` : path;
+  }
+  return localizedContentPath(match.type, match.slug, match.urlType, locale, match.citySlug);
+}
 
 // Decide what a detail route serving `expectedSegment` should do for `slug`.
 // - render: an item whose canonical segment equals this route's segment.
@@ -113,7 +138,7 @@ export async function decideForSegment(
   const canonical = matches.find((m) => m.isPublished) || matches[0];
   return {
     action: 'redirect',
-    to: localizedContentPath(canonical.type, canonical.slug, canonical.urlType, locale, canonical.citySlug),
+    to: canonicalPathFor(canonical, locale),
   };
 }
 
@@ -140,6 +165,6 @@ export async function decideForCityPath(
   const canonical = matches.find((m) => m.isPublished) || matches[0];
   return {
     action: 'redirect',
-    to: localizedContentPath(canonical.type, canonical.slug, canonical.urlType, locale, canonical.citySlug),
+    to: canonicalPathFor(canonical, locale),
   };
 }

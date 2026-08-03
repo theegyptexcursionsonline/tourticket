@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import mongoose from 'mongoose';
 import { locales, defaultLocale } from '@/i18n/config';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, attractionPagePath } from '@/lib/content/contentUrl';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 const BASE_URL = 'https://egypt-excursionsonline.com';
@@ -203,9 +203,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const pageCity = attraction.cityDestination && typeof attraction.cityDestination === 'object'
           ? (attraction.cityDestination as { slug?: string }).slug
           : undefined;
-        const path = attraction.pageType === 'category'
-          ? `/category/${attraction.slug}`
-          : contentPath('page', attraction.slug, attraction.urlType, pageCity);
+        const path = attractionPagePath(attraction.slug, attraction.pageType, attraction.urlType, pageCity);
         entries.push({
           url: `${BASE_URL}${path}`,
           lastModified: attraction.updatedAt || new Date(),

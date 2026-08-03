@@ -11,6 +11,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
 import { getErrorMessage } from './componentTypes';
+import { attractionPagePath } from '@/lib/content/contentUrl';
 
 // --- TYPES ---
 interface Interest {
@@ -27,6 +28,7 @@ interface CategoryPage {
   _id: string;
   slug: string;
   pageType: 'category';
+  urlType?: string;
   isPublished: boolean;
   heroImage?: string;
   categoryId?: {
@@ -47,7 +49,7 @@ const InterestCard = ({
   categoryPage?: CategoryPage;
 }) => {
   const linkUrl = categoryPage?.isPublished
-    ? `/category/${categoryPage.slug}`
+    ? attractionPagePath(categoryPage.slug, 'category', categoryPage.urlType)
     : interest.type === 'attraction'
       ? `/attraction/${interest.slug}`
       : `/categories/${interest.slug}`;

@@ -14,7 +14,7 @@ import Image from 'next/image';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import ContentStructuredTranslationEditor from '@/components/admin/ContentStructuredTranslationEditor';
 import { categoryTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
-import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
+import { URL_TYPE_LABELS, contentPath, selectableUrlTypes, type UrlType } from '@/lib/content/contentUrl';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredContentEditor';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
@@ -54,7 +54,7 @@ interface CategoryFormProps {
 const defaultFormData: CategoryFormData = {
   name: '',
   slug: '',
-  urlType: 'default',
+  urlType: 'direct',
   cityDestination: '',
   description: '',
   longDescription: '',
@@ -104,6 +104,9 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const isPanelOpen = true;
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
+  // The urlType the category was loaded with — keeps a legacy shape selectable
+  // for that record while new categories only ever offer Direct.
+  const [savedUrlType, setSavedUrlType] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
   const [loading, setLoading] = useState(false);
@@ -139,7 +142,8 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
       
       if (data.success) {
         const category = data.data;
-        
+
+        setSavedUrlType((category.urlType as UrlType) || 'default');
         setFormData({
           name: category.name || '',
           slug: category.slug || '',
@@ -475,7 +479,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                                 onChange={handleChange}
                                 className={`${inputBase} pl-10 appearance-none cursor-pointer`}
                               >
-                                {URL_TYPES.map((ut) => (
+                                {selectableUrlTypes(savedUrlType ?? 'direct').map((ut) => (
                                   <option key={ut} value={ut}>{URL_TYPE_LABELS[ut]}</option>
                                 ))}
                               </select>

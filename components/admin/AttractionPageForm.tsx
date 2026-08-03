@@ -14,7 +14,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AttractionPageFormData, Category } from '@/types';
 import type { ContentFaq, ContentTravelTip, ImageMetadata } from '@/types';
 import Image from 'next/image';
-import { URL_TYPES, URL_TYPE_LABELS, contentPath, type UrlType } from '@/lib/content/contentUrl';
+import { URL_TYPE_LABELS, attractionPagePath, selectableUrlTypes, type UrlType } from '@/lib/content/contentUrl';
 import TranslationEditor from '@/components/admin/TranslationEditor';
 import ContentStructuredTranslationEditor from '@/components/admin/ContentStructuredTranslationEditor';
 import { attractionPageTranslationFields, normalizeTranslations } from '@/lib/i18n/translationFields';
@@ -46,7 +46,7 @@ const defaultFormData: AttractionPageFormData = {
   longDescription: '',
   pageType: 'attraction',
   categoryId: '',
-  urlType: 'default',
+  urlType: 'direct',
   cityDestination: '',
   heroImage: '',
   images: [],
@@ -254,6 +254,9 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
+  // The urlType the page was loaded with: keeps a non-direct shape selectable
+  // for that page while new pages only ever offer Direct.
+  const [savedUrlType, setSavedUrlType] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<AttractionPageFormData>({
     ...defaultFormData,
@@ -316,6 +319,7 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
         const linkedPageIds: string[] = Array.isArray(page.linkedPageIds) ? page.linkedPageIds.map(String) : [];
         const linkedCategoryIds: string[] = Array.isArray(page.linkedCategoryIds) ? page.linkedCategoryIds.map(String) : [];
 
+        setSavedUrlType(page.urlType || 'default');
         setFormData({
           title: page.title || '',
           slug: page.slug || '',
@@ -488,7 +492,7 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.pageType === 'attraction' && formData.urlType === 'city' && !formData.cityDestination) {
+    if (formData.urlType === 'city' && !formData.cityDestination) {
       setError('The City URL type needs an owning city — pick one under URL Type.');
       toast.error('Pick the owning city for the City URL type.');
       return;
@@ -750,16 +754,14 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                               <span className="text-xs font-medium text-slate-500">Preview:</span>
                               <span className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded border">
-                                {formData.pageType === 'category'
-                                  ? `/category/${formData.slug || 'your-slug'}`
-                                  : contentPath(
-                                      'page',
-                                      formData.slug || 'your-slug',
-                                      formData.urlType,
-                                      formData.urlType === 'city'
-                                        ? cityDestinations.find(d => d._id === formData.cityDestination)?.slug || '{destination}'
-                                        : undefined,
-                                    )}
+                                {attractionPagePath(
+                                  formData.slug || 'your-slug',
+                                  formData.pageType,
+                                  formData.urlType,
+                                  formData.urlType === 'city'
+                                    ? cityDestinations.find(d => d._id === formData.cityDestination)?.slug || '{destination}'
+                                    : undefined,
+                                )}
                               </span>
                             </div>
                           </div>
@@ -794,17 +796,16 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                               </Link>
                             </SmallHint>
                           </div>
-                          {formData.pageType === 'attraction' && (
-                            <div className="space-y-3">
+                          <div className="space-y-3">
                               <FormLabel icon={Globe}>URL Type</FormLabel>
                               <div className="relative">
                                 <select
                                   name="urlType"
-                                  value={formData.urlType || 'default'}
+                                  value={formData.urlType || 'direct'}
                                   onChange={handleChange}
                                   className={`${inputBase} appearance-none cursor-pointer`}
                                 >
-                                  {URL_TYPES.map((type) => (
+                                  {selectableUrlTypes(savedUrlType ?? 'direct').map((type) => (
                                     <option key={type} value={type}>
                                       {URL_TYPE_LABELS[type as UrlType]}
                                     </option>
@@ -832,7 +833,6 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                                 </div>
                               )}
                             </div>
-                          )}
                           {formData.pageType === 'category' && (
                             <div className="space-y-3">
                               <FormLabel icon={MapPin}>Category</FormLabel>

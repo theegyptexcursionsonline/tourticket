@@ -51,6 +51,40 @@ export const DEFAULT_SEGMENT: Record<ContentType, string> = {
   page: 'attraction', // attraction/landing pages live under /attraction
 };
 
+// AttractionPage documents carry two kinds sharing one model: attraction
+// pages historically live under /attraction, catalogue pages under /category.
+export type AttractionPageKind = 'attraction' | 'category';
+
+export function pageDefaultSegment(pageKind?: string | null): string {
+  return pageKind === 'category' ? 'category' : DEFAULT_SEGMENT.page;
+}
+
+// Public path for an AttractionPage of either kind. Same contract as
+// contentPath, but the `default` urlType resolves per page kind so existing
+// catalogue URLs never move unless an admin opts in.
+export function attractionPagePath(
+  slug: string,
+  pageKind?: string | null,
+  urlType?: string | null,
+  citySlug?: string | null
+): string {
+  const t = normalizeUrlType(urlType);
+  if (t === 'default') {
+    const seg = pageDefaultSegment(pageKind);
+    return seg ? `/${seg}/${slug}` : `/${slug}`;
+  }
+  return contentPath('page', slug, urlType, citySlug);
+}
+
+// What the URL Type dropdown offers. The platform decision (client sheet
+// 02.08) is that new content lives at the root: only `direct` is selectable,
+// plus the item's current value so an existing page is never silently moved
+// off its shape by merely opening the editor.
+export function selectableUrlTypes(current?: string | null): UrlType[] {
+  const normalized = normalizeUrlType(current);
+  return normalized === 'direct' ? ['direct'] : ['direct', normalized];
+}
+
 // The set of segments that a request path can carry for a given content type.
 // Used by the resolver to map an incoming URL segment back to a content type.
 export function normalizeUrlType(urlType?: string | null): UrlType {

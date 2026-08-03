@@ -9,6 +9,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay, EffectCoverflow } from 'swiper/modules';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { attractionPagePath } from '@/lib/content/contentUrl';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -29,6 +30,7 @@ interface CategoryPage {
   _id: string;
   slug: string;
   pageType: 'category';
+  urlType?: string;
   isPublished: boolean;
   heroImage?: string;
   categoryId?: {
@@ -60,7 +62,7 @@ const InterestCard = ({
   rtl: boolean;
 }) => {
   const linkUrl = categoryPage?.isPublished
-    ? `/category/${categoryPage.slug}`
+    ? attractionPagePath(categoryPage.slug, 'category', categoryPage.urlType)
     : interest.type === 'attraction'
       ? `/attraction/${interest.slug}`
       : `/categories/${interest.slug}`;

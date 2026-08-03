@@ -38,6 +38,7 @@ import {
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Grid } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
+import { attractionPagePath } from '@/lib/content/contentUrl';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -58,6 +59,7 @@ interface CategoryPage {
   title: string;
   slug: string;
   pageType: 'category';
+  urlType?: string;
   categoryId?: {
     _id: string;
     name: string;
@@ -126,7 +128,7 @@ const InterestCard = ({
 }) => {
   const getLink = () => {
     if (categoryPage && categoryPage.isPublished) {
-      return `/category/${categoryPage.slug}`;
+      return attractionPagePath(categoryPage.slug, 'category', categoryPage.urlType);
     }
     
     if (interest.type === 'attraction') {

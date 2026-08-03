@@ -1,80 +1,36 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import AttractionPageTemplate from '@/components/AttractionPageTemplate';
-import { CategoryPageData } from '@/types';
+import { notFound, permanentRedirect } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPageModel from '@/lib/models/AttractionPage';
-import Category from '@/lib/models/Category';
-import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
-import {
-  ATTRACTION_PAGE_LOCALIZED_FIELDS,
-  resolveAttractionPageTours,
-  resolveLinkedPageCards,
-} from '@/lib/attractionPages/pageContent';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { attractionPagePath, normalizeUrlType } from '@/lib/content/contentUrl';
+import { defaultLocale } from '@/i18n/config';
+import {
+  renderCataloguePage,
+  getCataloguePageMetadata,
+} from './CataloguePageContent';
 
 interface CategoryPageProps {
   params: Promise<{ locale: string; 'category-name': string }>;
 }
 
-// Fetch category page directly from database
-async function getCategoryPage(categoryName: string, locale: string): Promise<CategoryPageData | null> {
-  try {
-    await dbConnect();
-    
-    const page = await AttractionPageModel.findOne({ 
-      slug: categoryName, 
-      pageType: 'category',
-      isPublished: true,
-      ...DEFAULT_TENANT_FILTER,
-    })
-    .populate({
-      path: 'categoryId',
-      model: Category,
-      match: DEFAULT_TENANT_FILTER,
-      select: 'name slug'
-    })
-    .lean();
+// A catalogue page whose admin moved it to another URL shape must 301 off the
+// historical /category path to its canonical one (mirrors the attraction and
+// category routes' urlType mechanics).
+async function canonicalRedirectTarget(slug: string, locale: string): Promise<string | null> {
+  await dbConnect();
+  const page = await AttractionPageModel.findOne({
+    slug,
+    pageType: 'category',
+    ...DEFAULT_TENANT_FILTER,
+  }).select('slug urlType cityDestination').populate('cityDestination', 'slug').lean() as {
+    urlType?: string;
+    cityDestination?: { slug?: string } | null;
+  } | null;
 
-    if (!page) {
-      return null;
-    }
-
-    let serializedPage = JSON.parse(JSON.stringify(page));
-
-    // Localize the page's own content (translations added with the unified
-    // Pages section), then the linked category's fields below.
-    serializedPage = localizeEntityFields(
-      serializedPage as Record<string, unknown>,
-      locale,
-      ATTRACTION_PAGE_LOCALIZED_FIELDS
-    );
-
-    if (serializedPage.categoryId && typeof serializedPage.categoryId === 'object') {
-      serializedPage.categoryId = localizeEntityFields(
-        serializedPage.categoryId as Record<string, unknown>,
-        locale,
-        ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
-      );
-    }
-
-    const [{ tours, totalTours }, linkedPages] = await Promise.all([
-      resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
-      resolveLinkedPageCards(page as unknown as Parameters<typeof resolveLinkedPageCards>[0], locale),
-    ]);
-
-    return {
-      ...serializedPage,
-      tours: JSON.parse(JSON.stringify(tours)),
-      totalTours,
-      linkedPages,
-    };
-  } catch (error) {
-    console.error('Error fetching category page:', error);
-    return null;
-  }
+  if (!page || normalizeUrlType(page.urlType) === 'default') return null;
+  const path = attractionPagePath(slug, 'category', page.urlType, page.cityDestination?.slug);
+  return locale && locale !== defaultLocale ? `/${locale}${path}` : path;
 }
 
 // Enable ISR with 60 second revalidation for instant page loads
@@ -89,48 +45,29 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const page = await getCategoryPage(resolvedParams['category-name'], resolvedParams.locale);
+  const metadata = await getCataloguePageMetadata(resolvedParams['category-name'], resolvedParams.locale);
 
-  if (!page) {
+  if (!metadata) {
     return {
       title: 'Category Not Found',
       description: 'The requested category page could not be found.'
     };
   }
-
-  return {
-    title: page.metaTitle || page.title,
-    description: page.metaDescription || page.description,
-    keywords: page.keywords?.join(', '),
-    openGraph: {
-      title: page.metaTitle || page.title,
-      description: page.metaDescription || page.description,
-      images: [page.heroImage],
-      type: 'website',
-    },
-    alternates: {
-      canonical: `/category/${page.slug}`,
-    },
-  };
+  return metadata;
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const resolvedParams = await params;
-  const page = await getCategoryPage(resolvedParams['category-name'], resolvedParams.locale);
+  const slug = resolvedParams['category-name'];
 
-  if (!page) {
-    notFound();
+  const target = await canonicalRedirectTarget(slug, resolvedParams.locale);
+  if (target) {
+    permanentRedirect(target);
   }
 
-  return (
-    <>
-      <Header />
-      <AttractionPageTemplate
-        page={page}
-        urlType="category"
-        linkedPages={page.linkedPages || []}
-      />
-      <Footer />
-    </>
-  );
+  const element = await renderCataloguePage(slug, resolvedParams.locale);
+  if (!element) {
+    notFound();
+  }
+  return element;
 }
