@@ -52,7 +52,21 @@ export default function EEOSearchConcierge() {
     const hidden = HIDDEN_ROUTES.some((route) => normalizedPath === route || normalizedPath.startsWith(`${route}/`));
     const allowedHost = shouldRenderAISearchWidgetForHost(window.location.hostname);
 
+    let dialogObserver: MutationObserver | null = null;
+
+    const syncLauncherVisibility = () => {
+      const host = document.getElementById(HOST_ID);
+      if (!host) return;
+
+      // The hosted launcher intentionally uses a very high z-index. Keep it out
+      // of the way while a first-party modal (booking, auth, lightbox, etc.) is
+      // mounted so it cannot obscure or intercept the modal controls.
+      const hasOpenAppDialog = document.querySelector('[role="dialog"]') !== null;
+      host.hidden = hasOpenAppDialog;
+    };
+
     const removeWidget = () => {
+      dialogObserver?.disconnect();
       document.getElementById(SCRIPT_ID)?.remove();
       document.getElementById(HOST_ID)?.remove();
     };
@@ -80,6 +94,10 @@ export default function EEOSearchConcierge() {
     script.dataset.locale = locale;
     script.dataset.rememberDismiss = 'false';
     document.body.appendChild(script);
+
+    dialogObserver = new MutationObserver(syncLauncherVisibility);
+    dialogObserver.observe(document.body, { childList: true, subtree: true });
+    syncLauncherVisibility();
 
     return removeWidget;
   }, [locale, pathname]);

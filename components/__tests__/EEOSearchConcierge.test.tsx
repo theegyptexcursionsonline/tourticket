@@ -83,4 +83,23 @@ describe('EEOSearchConcierge', () => {
       await waitFor(() => expect(document.getElementById('eeo-search-concierge-script')).toBeNull());
     }
   );
+
+  it('hides the hosted launcher while an application dialog is mounted', async () => {
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    document.body.appendChild(dialog);
+
+    await waitFor(() => expect(host.hidden).toBe(true));
+
+    dialog.remove();
+    await waitFor(() => expect(host.hidden).toBe(false));
+  });
 });

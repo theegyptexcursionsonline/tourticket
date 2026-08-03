@@ -138,5 +138,6 @@ describe('BookingSidebar containment regression contract', () => {
     expect(stickyButtonSource).toContain(
       'data-testid="open-booking-drawer-mobile"',
     );
+    expect(stickyButtonSource).toContain('z-[2147483004]');
   });
 });
