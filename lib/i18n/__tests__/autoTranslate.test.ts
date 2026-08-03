@@ -1,4 +1,4 @@
-import { translateEntityFields } from '../autoTranslate';
+import { extractFields, translateEntityFields } from '../autoTranslate';
 import { tourTranslationFields, destinationTranslationFields, categoryTranslationFields } from '../translationFields';
 
 // Mock the OpenAI client
@@ -183,6 +183,23 @@ describe('translateEntityFields', () => {
     expect(result.ar.name).toBe('القاهرة');
     expect(result.ar.country).toBe('مصر');
     expect(result.de.country).toBe('Ägypten');
+  });
+
+  it('extracts every destination field requested by the client translation contract', () => {
+    const fields = extractFields({
+      name: 'Cairo',
+      climate: 'Hot desert climate',
+      averageTemperature: { summer: '35°C', winter: '18°C' },
+      weatherWarnings: ['Avoid the midday heat'],
+    }, destinationTranslationFields);
+
+    expect(fields).toMatchObject({
+      name: 'Cairo',
+      climate: 'Hot desert climate',
+      summerTemperature: '35°C',
+      winterTemperature: '18°C',
+      weatherWarnings: ['Avoid the midday heat'],
+    });
   });
 
   it('works with category fields', async () => {

@@ -368,8 +368,8 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
-            <button 
-              onClick={() => router.push('/admin/pages')}
+            <button
+              onClick={() => router.back()}
               className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200 group"
             >
               <ArrowLeft className="h-5 w-5 text-slate-600 group-hover:text-indigo-600" />
@@ -1021,7 +1021,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                     <div className="flex items-center gap-4">
                       <button
                         type="button"
-                        onClick={() => router.push('/admin/pages')}
+                        onClick={() => router.back()}
                         className="flex-1 px-6 py-3 text-slate-700 font-semibold border border-slate-300 rounded-xl hover:bg-slate-50 transition-all duration-200"
                       >
                         Cancel

@@ -15,11 +15,12 @@ import {
 } from '@/lib/i18n/translationFields';
 
 describe('structured translation extraction', () => {
-  it('pulls FAQ and travel-tip text out of a destination', () => {
+  it('pulls FAQ, travel-tip, and per-image SEO text out of a destination', () => {
     const content = extractStructuredSpecContent(
       {
         faqs: [{ question: 'Is it hot?', answer: 'Very.', _id: 'abc' }],
         travelTips: [{ title: 'Bring water', content: 'Two litres per person.' }],
+        imageMetadata: [{ url: 'cairo.jpg', alt: 'Cairo skyline', title: 'Cairo at sunset' }],
       },
       destinationStructuredFields
     );
@@ -27,6 +28,7 @@ describe('structured translation extraction', () => {
     expect(content).toEqual({
       faqs: [{ question: 'Is it hot?', answer: 'Very.' }],
       travelTips: [{ title: 'Bring water', content: 'Two litres per person.' }],
+      imageMetadata: [{ url: 'cairo.jpg', alt: 'Cairo skyline', title: 'Cairo at sunset' }],
     });
   });
 

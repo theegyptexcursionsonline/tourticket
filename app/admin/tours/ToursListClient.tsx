@@ -64,12 +64,35 @@ const editorLabel = (tour: TourType) =>
 // migrating every tour and rewriting each isPublished query.
 const isArchived = (tour: TourType) => Boolean(tour.archivedAt);
 
-function getCategoryNames(t: TourType): string {
+export function getCategoryList(t: TourType): string[] {
   const cats = Array.isArray(t.category) ? t.category : t.category ? [t.category] : [];
-  return cats
-    .map((c) => c?.name || c?.title)
-    .filter(Boolean)
-    .join(', ');
+  return cats.map((c) => c?.name || c?.title).filter(Boolean) as string[];
+}
+
+function getCategoryNames(t: TourType): string {
+  return getCategoryList(t).join(', ');
+}
+
+// Table rows must stay flat no matter how many categories a tour has: show the
+// first two and fold the rest behind a +N counter (full list on hover).
+const VISIBLE_TABLE_CATEGORIES = 2;
+
+export function CategoryCell({ tour }: { tour: TourType }) {
+  const names = getCategoryList(tour);
+  if (names.length === 0) {
+    return <span className="text-sm font-medium text-slate-700">N/A</span>;
+  }
+  const extra = names.length - VISIBLE_TABLE_CATEGORIES;
+  return (
+    <span className="text-sm font-medium text-slate-700" title={names.join(', ')}>
+      {names.slice(0, VISIBLE_TABLE_CATEGORIES).join(', ')}
+      {extra > 0 && (
+        <span className="ml-1.5 inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-xs font-semibold text-indigo-600 align-middle">
+          +{extra}
+        </span>
+      )}
+    </span>
+  );
 }
 
 function Badge({ children, className = '', icon: Icon }: { 
@@ -490,7 +513,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                       <span className="text-sm font-medium text-slate-700">{t.destination?.name || 'N/A'}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-slate-700">{getCategoryNames(t) || 'N/A'}</span>
+                      <CategoryCell tour={t} />
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-slate-900">{formatPrice(t.discountPrice ?? t.price)}</span>
