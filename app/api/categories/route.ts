@@ -126,7 +126,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if slug already exists
-    const existingCategory = await Category.findOne({ slug: body.slug });
+    const existingCategory = await Category.findOne({
+      $and: [DEFAULT_TENANT_FILTER, { slug: body.slug }],
+    });
     if (existingCategory) {
       return NextResponse.json({
         success: false,
@@ -134,7 +136,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const category = new Category(body);
+    // The main portal owns only the default tenant. Never accept a caller-
+    // supplied tenant id on this route.
+    const category = new Category({ ...body, tenantId: 'default' });
     await category.save();
     revalidateStorefrontContent();
 
@@ -144,6 +148,15 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);
+
+    const mongoError = error as { code?: number; keyPattern?: Record<string, unknown> };
+    if (mongoError?.code === 11000) {
+      const field = Object.keys(mongoError.keyPattern || {}).join(', ') || 'slug';
+      return NextResponse.json({
+        success: false,
+        error: `A page with this URL already exists (${field}). Choose a different value.`,
+      }, { status: 409 });
+    }
     
     if (error instanceof Error && (error as Error).name === 'ValidationError') {
       return NextResponse.json({

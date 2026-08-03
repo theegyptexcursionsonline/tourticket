@@ -5,12 +5,20 @@ import Category from '@/lib/models/Category';
 import mongoose from 'mongoose';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminAuth = await requireAdminAuth(request, {
+      permissions: ['manageContent'],
+    });
+    if (adminAuth instanceof NextResponse) {
+      return adminAuth;
+    }
+
     await dbConnect();
 
     const { id } = await params;
@@ -21,7 +29,9 @@ export async function GET(
       }, { status: 400 });
     }
 
-    const category = await Category.findById(id).lean();
+    const category = await Category.findOne({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    }).lean();
 
     if (!category) {
       return NextResponse.json({
@@ -66,6 +76,7 @@ export async function PUT(
     }
 
     const body = await request.json();
+    delete body.tenantId;
 
     // The city URL shape needs a real owning destination to build /{city}/{slug}.
     if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
@@ -77,9 +88,11 @@ export async function PUT(
     
     // Check if slug is being changed and if it conflicts
     if (body.slug) {
-      const existingCategory = await Category.findOne({ 
-        slug: body.slug,
-        _id: { $ne: id }
+      const existingCategory = await Category.findOne({
+        $and: [
+          DEFAULT_TENANT_FILTER,
+          { slug: body.slug, _id: { $ne: id } },
+        ],
       });
       
       if (existingCategory) {
@@ -90,8 +103,8 @@ export async function PUT(
       }
     }
 
-    const category = await Category.findByIdAndUpdate(
-      id,
+    const category = await Category.findOneAndUpdate(
+      { $and: [DEFAULT_TENANT_FILTER, { _id: id }] },
       body,
       { new: true, runValidators: true }
     );
@@ -111,6 +124,15 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating category:', error);
+
+    const mongoError = error as { code?: number; keyPattern?: Record<string, unknown> };
+    if (mongoError?.code === 11000) {
+      const field = Object.keys(mongoError.keyPattern || {}).join(', ') || 'slug';
+      return NextResponse.json({
+        success: false,
+        error: `A page with this URL already exists (${field}). Choose a different value.`,
+      }, { status: 409 });
+    }
     
     if (error instanceof Error && (error as Error).name === 'ValidationError') {
       return NextResponse.json({
@@ -149,7 +171,9 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    const category = await Category.findByIdAndDelete(id);
+    const category = await Category.findOneAndDelete({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    });
 
     if (!category) {
       return NextResponse.json({

@@ -5,6 +5,7 @@ import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 
 export interface ICategory extends Document {
+  tenantId?: string;
   archivedAt?: Date | null;
   archivedBy?: string;
   // Basic Info
@@ -103,11 +104,14 @@ const TravelTipSchema = new Schema({
 }, { _id: false });
 
 const CategorySchema: Schema<ICategory> = new Schema({
+  // Categories share one collection across the main and network portals.
+  // Missing/empty values are legacy main-EEO records; new main records use
+  // `default`, while network records carry their brand tenant id.
+  tenantId: { type: String, trim: true, index: true },
   // Basic Info
   name: {
     type: String,
     required: [true, 'Category name is required'],
-    unique: true,
     trim: true,
     minlength: [2, 'Name must be at least 2 characters'],
     maxlength: [100, 'Name cannot exceed 100 characters'],
@@ -116,7 +120,6 @@ const CategorySchema: Schema<ICategory> = new Schema({
   slug: {
     type: String,
     required: [true, 'Slug is required'],
-    unique: true,
     lowercase: true,
     trim: true,
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
@@ -266,6 +269,8 @@ const CategorySchema: Schema<ICategory> = new Schema({
 CategorySchema.index({ name: 'text', description: 'text' });
 CategorySchema.index({ featured: 1, isPublished: 1 });
 CategorySchema.index({ order: 1 });
+CategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });
+CategorySchema.index({ tenantId: 1, slug: 1 }, { unique: true });
 
 // Pre-save middleware
 CategorySchema.pre('save', function(next) {
