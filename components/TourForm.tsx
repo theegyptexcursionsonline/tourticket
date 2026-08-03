@@ -53,6 +53,7 @@ import SearchableCheckboxList from '@/components/admin/SearchableCheckboxList';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata, type ImageMetadata } from '@/lib/content/imageMetadata';
+import { pruneBookingOptionTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 
 // --- Interface Definitions ---
 interface Category {
@@ -824,7 +825,16 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
     };
 
     const setAvailability = (availabilityData: Availability) => {
-        setFormData((prev) => ({ ...prev, availability: availabilityData }));
+        setFormData((prev) => ({
+            ...prev,
+            availability: availabilityData,
+            // Removing or renaming a universal slot must also remove it from
+            // every option. Otherwise the hidden stale slot remains bookable.
+            bookingOptions: pruneBookingOptionTimeSlots(
+                prev.bookingOptions,
+                availabilityData.slots,
+            ),
+        }));
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -1008,7 +1018,10 @@ const addItineraryItem = () => {
             return;
         }
 
-        const option = formData.bookingOptions[index];
+        const option = pruneBookingOptionTimeSlots(
+            [formData.bookingOptions[index]],
+            formData.availability?.slots,
+        )[0];
         if (!option.label?.trim()) {
             toast.error('Option name is required');
             return;
@@ -1152,6 +1165,10 @@ const addItineraryItem = () => {
         try {
             const { translations, ...cleanedData } = formData;
             const hasTranslations = Object.keys(translations).length > 0;
+            const syncedBookingOptions = pruneBookingOptionTimeSlots(
+                cleanedData.bookingOptions,
+                cleanedData.availability?.slots,
+            );
 
             const payload = {
                 title: cleanedData.title.trim(),
@@ -1203,8 +1220,8 @@ const addItineraryItem = () => {
                 needToKnow: cleanedData.needToKnow.filter((item) => item.trim()),
                 itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: ItineraryItem) => item.title?.trim() && item.description?.trim()) : [],
                 faq: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: FAQ) => faq.question?.trim() && faq.answer?.trim()) : [],
-                bookingOptions: Array.isArray(cleanedData.bookingOptions)
-                    ? cleanedData.bookingOptions
+                bookingOptions: Array.isArray(syncedBookingOptions)
+                    ? syncedBookingOptions
                         .filter((option: BookingOption) => option.label?.trim())
                         .map((option: BookingOption) => ({
                             ...option,

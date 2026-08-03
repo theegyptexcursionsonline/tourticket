@@ -13,6 +13,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
+import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -222,6 +223,30 @@ export async function PUT(
             }
             if (!body.availability.availableDays) {
                 body.availability.availableDays = [0, 1, 2, 3, 4, 5, 6];
+            }
+        }
+
+        // Booking-option time slots are a strict subset of the tour's
+        // universal availability. Enforce this on the API as well as in the
+        // form so a direct or stale request cannot revive a removed slot.
+        if (Array.isArray(body.bookingOptions)) {
+            let availabilitySlots = body.availability?.slots;
+            if (!Array.isArray(availabilitySlots)) {
+                const currentTour = await Tour.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
+                    .select('availability.slots')
+                    .lean<{ availability?: { slots?: Array<{ time?: string }> } } | null>();
+                if (!currentTour) {
+                    return NextResponse.json({ success: false, error: 'Tour not found' }, { status: 404 });
+                }
+                availabilitySlots = currentTour.availability?.slots || [];
+            }
+            const slotsAreValid = body.bookingOptions.every((option: { timeSlots?: Array<{ time?: string }> }) =>
+                hasOnlyConfiguredTimeSlots(option?.timeSlots, availabilitySlots));
+            if (!slotsAreValid) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Booking option contains a time slot that is not in tour availability',
+                }, { status: 400 });
             }
         }
 

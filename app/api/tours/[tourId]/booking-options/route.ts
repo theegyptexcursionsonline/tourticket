@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 
 export async function PUT(
   request: NextRequest,
@@ -21,9 +22,20 @@ export async function PUT(
     const { index, option } = await request.json();
     const { tourId } = await params;
 
+    if (!Number.isInteger(index) || index < 0 || !option || typeof option !== 'object') {
+      return NextResponse.json({ error: 'Invalid booking option' }, { status: 400 });
+    }
+
     const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });
     if (!tour) {
       return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
+    }
+
+    if (!hasOnlyConfiguredTimeSlots(option.timeSlots, tour.availability?.slots)) {
+      return NextResponse.json(
+        { error: 'Booking option contains a time slot that is not in tour availability' },
+        { status: 400 },
+      );
     }
 
     // Ensure bookingOptions array exists

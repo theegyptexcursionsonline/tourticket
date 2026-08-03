@@ -25,13 +25,20 @@ interface CartItemLike {
   price?: number;
 }
 
+export class AuthoritativePriceError extends Error {
+  constructor(message: 'Pricing option unavailable' | 'Invalid catalogue price') {
+    super(message);
+    this.name = 'AuthoritativePriceError';
+  }
+}
+
 /**
  * The price the customer may be charged for one guest of a cart item.
  *
  * Derived from the tour as stored, never from the cart the browser submitted:
  * a cart is user-supplied data, and the tour discount only exists server-side
- * as a percentage. Falls back to the cart value only when the option can no
- * longer be found, so an unrecognised item cannot silently become free.
+ * as a percentage. Missing catalogue data fails closed instead of trusting a
+ * price supplied by the customer.
  */
 export function authoritativeBasePrice(
   tour: StoredTour | null | undefined,
@@ -50,6 +57,10 @@ export function authoritativeBasePrice(
       ? options.find((candidate) => String(candidate.id ?? candidate._id ?? '') === String(requestedOptionId))
       : undefined);
 
+  if ((requestedPricingKey || requestedOptionId) && !option) {
+    throw new AuthoritativePriceError('Pricing option unavailable');
+  }
+
   if (option) {
     const slot = Array.isArray(option.timeSlots) && cartItem?.selectedTime
       ? option.timeSlots.find((entry) => entry.time === cartItem.selectedTime)
@@ -64,12 +75,9 @@ export function authoritativeBasePrice(
     return universalSlot.price;
   }
 
-  // No option selected (or it no longer exists): the tour's own price stands.
+  // No option selected: the tour's own stored price stands.
   const tourPrice = tour?.discountPrice ?? tour?.price;
   if (typeof tourPrice === 'number' && Number.isFinite(tourPrice)) return tourPrice;
 
-  return cartItem?.selectedBookingOption?.price
-    ?? cartItem?.discountPrice
-    ?? cartItem?.price
-    ?? 0;
+  throw new AuthoritativePriceError('Invalid catalogue price');
 }

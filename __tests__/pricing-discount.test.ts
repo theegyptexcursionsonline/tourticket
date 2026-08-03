@@ -90,12 +90,18 @@ describe('the server prices from the stored tour, not the submitted cart', () =>
     )).toBe(125);
   });
 
-  it('never makes an unrecognised item free', () => {
-    const price = authoritativeBasePrice(
+  it('rejects an unrecognised option instead of accepting its browser price', () => {
+    expect(() => authoritativeBasePrice(
       { bookingOptions: [] },
       { selectedBookingOption: { id: 'gone', price: 77 }, discountPrice: 55 },
-    );
-    expect(price).toBeGreaterThan(0);
+    )).toThrow('Pricing option unavailable');
+  });
+
+  it('fails closed when the catalogue has no stored price', () => {
+    expect(() => authoritativeBasePrice(
+      { bookingOptions: [] },
+      { selectedBookingOption: null, discountPrice: 12, price: 12 },
+    )).toThrow('Invalid catalogue price');
   });
 });
 

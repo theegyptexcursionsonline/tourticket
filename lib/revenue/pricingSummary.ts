@@ -3,11 +3,17 @@ import type { Types } from 'mongoose';
 import RevenuePriceOverride from '@/lib/models/RevenuePriceOverride';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
 
 type SummaryTour = {
   _id: Types.ObjectId;
   discountPrice?: number;
-  bookingOptions?: Array<{ price?: number }>;
+  discountPercent?: number;
+  bookingOptions?: Array<{
+    price?: number;
+    applyTourDiscount?: boolean;
+    timeSlots?: Array<{ price?: number }>;
+  }>;
 };
 
 type ProjectionTour = SummaryTour & {
@@ -35,11 +41,18 @@ const finitePrices = (values: unknown[]) => values
   .map(Number)
   .filter((value) => Number.isFinite(value) && value >= 0);
 
-export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'bookingOptions'>) {
-  const candidates = finitePrices([
-    tour.discountPrice,
-    ...(tour.bookingOptions || []).map((option) => option.price),
-  ]);
+export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'discountPercent' | 'bookingOptions'>) {
+  const options = Array.isArray(tour.bookingOptions)
+    ? tour.bookingOptions.filter((option) => Number.isFinite(Number(option.price)) && Number(option.price) >= 0)
+    : [];
+  const candidates = options.length > 0
+    ? finitePrices(options.flatMap((option) => {
+      const slots = Array.isArray(option.timeSlots) && option.timeSlots.length > 0
+        ? option.timeSlots
+        : [undefined];
+      return slots.map((slot) => effectiveOptionPrice(tour, option, slot).price);
+    }))
+    : finitePrices([tour.discountPrice]);
   return candidates.length ? Math.min(...candidates) : null;
 }
 
@@ -50,7 +63,7 @@ export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'bo
  */
 export async function refreshTourPricingSummary(tourId: string, currency = 'USD', authoritativeVersion?: number) {
   const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
-    .select('_id discountPrice bookingOptions')
+    .select('_id discountPrice discountPercent bookingOptions.price bookingOptions.applyTourDiscount bookingOptions.timeSlots.price')
     .lean<SummaryTour | null>();
   if (!tour) return null;
 
