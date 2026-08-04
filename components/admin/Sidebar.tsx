@@ -28,6 +28,7 @@ import {
   CalendarCheck,
   Gift,
   Loader2,
+  ScrollText,
 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 
@@ -48,6 +49,7 @@ const navItems = [
   { href: "/admin/blog", label: "Blog", icon: PenSquare, permissions: ["manageContent"] },
   { href: "/admin/users", label: "User", icon: Users, permissions: ["manageUsers"] },
   { href: "/admin/team", label: "Team Access", icon: Shield, permissions: ["manageUsers"] },
+  { href: "/admin/audit", label: "Audit", icon: ScrollText, permissions: ["manageAudit"] },
   { href: "/admin/security", label: "Security", icon: ShieldCheck, permissions: [] },
 ];
 

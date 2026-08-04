@@ -18,6 +18,7 @@ export const ADMIN_PERMISSIONS = [
   'manageDiscounts',
   'manageUsers',
   'manageReports',
+  'manageAudit',
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -42,4 +43,3 @@ export function getDefaultPermissions(role: AdminRole | undefined | null): Admin
 
   return ROLE_PERMISSION_MAP[role] || [];
 }
-

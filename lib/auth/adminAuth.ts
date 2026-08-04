@@ -17,6 +17,7 @@ import {
 export interface AdminAuthContext {
   userId: string;
   email?: string;
+  name?: string;
   role: AdminRole;
   permissions: AdminPermission[];
   twoFactorEnabled: boolean;
@@ -131,6 +132,7 @@ export async function requireAdminAuth(
     const authContext: AdminAuthContext = {
       userId,
       email: typeof payload.email === 'string' ? payload.email : undefined,
+      name: typeof payload.name === 'string' ? payload.name : undefined,
       role: 'super_admin',
       permissions: getDefaultPermissions('super_admin'),
       twoFactorEnabled: true,
@@ -142,7 +144,10 @@ export async function requireAdminAuth(
       ? permissions.every((permission) => authContext.permissions.includes(permission))
       : permissions.some((permission) => authContext.permissions.includes(permission));
 
-    return permissions.length === 0 || hasPermissions ? authContext : forbiddenResponse();
+    if (permissions.length > 0 && !hasPermissions) return forbiddenResponse();
+    const { recordAdminMutation } = await import('@/lib/admin/adminAudit');
+    await recordAdminMutation(request, authContext, { fallbackTenantIds: ['default'] });
+    return authContext;
   }
 
   if (!mongoose.isValidObjectId(userId)) {
@@ -160,7 +165,7 @@ export async function requireAdminAuth(
       isActive: true,
       role: { $ne: 'customer' },
     })
-      .select('email role permissions adminPortalScopes twoFactorEnabled twoFactorRecoveryPending')
+      .select('email firstName lastName role permissions adminPortalScopes twoFactorEnabled twoFactorRecoveryPending')
       .lean();
   } catch (error) {
     console.error(
@@ -192,7 +197,9 @@ export async function requireAdminAuth(
 
   const role = currentUser.role as AdminRole;
   const permissionsFromDatabase =
-    Array.isArray(currentUser.permissions) && currentUser.permissions.length > 0
+    role === 'admin' || role === 'super_admin'
+      ? getDefaultPermissions(role)
+      : Array.isArray(currentUser.permissions) && currentUser.permissions.length > 0
       ? (currentUser.permissions as AdminPermission[])
       : getDefaultPermissions(role);
   const enrollmentBoundary = enrollmentSession
@@ -202,6 +209,7 @@ export async function requireAdminAuth(
   const authContext: AdminAuthContext = {
     userId,
     email: currentUser.email,
+    name: [currentUser.firstName, currentUser.lastName].filter(Boolean).join(' ').trim() || undefined,
     role,
     // An older full-session cookie may predate mandatory 2FA. Keep even the
     // profile response least-privileged until setup is fully acknowledged.
@@ -211,17 +219,16 @@ export async function requireAdminAuth(
   };
 
   const { permissions = [], requireAll = true } = options;
-  if (permissions.length === 0) {
-    return authContext;
-  }
-
-  const hasPermissions = requireAll
+  const hasPermissions = permissions.length === 0 || (requireAll
     ? permissions.every((perm) => authContext.permissions.includes(perm) || role === 'super_admin')
-    : permissions.some((perm) => authContext.permissions.includes(perm) || role === 'super_admin');
+    : permissions.some((perm) => authContext.permissions.includes(perm) || role === 'super_admin'));
 
   if (!hasPermissions) {
     return forbiddenResponse();
   }
+
+  const { recordAdminMutation } = await import('@/lib/admin/adminAudit');
+  await recordAdminMutation(request, authContext, { fallbackTenantIds: ['default'] });
 
   return authContext;
 }
