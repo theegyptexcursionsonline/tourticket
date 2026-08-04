@@ -41,5 +41,5 @@ export default async function CityDetailPage({ params }: PageProps) {
   return element;
 }
 
-export const revalidate = 1800; // 30 min — same policy as the root detail route
+export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
