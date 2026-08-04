@@ -114,3 +114,32 @@ describe('automatic admin mutation capture', () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 });
+
+describe('recordAdminLogin', () => {
+  beforeEach(() => mockCreate.mockClear());
+
+  it('records a session login as an audit row', async () => {
+    const { recordAdminLogin } = await import('@/lib/admin/adminAudit');
+    await recordAdminLogin(
+      { userId: 'u1', email: 'Sara@EEO.com', name: 'Sara M', role: 'operations' },
+      '/api/admin/2fa',
+    );
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 'u1',
+      actorEmail: 'sara@eeo.com',
+      action: 'login',
+      resourceType: 'session',
+      path: '/api/admin/2fa',
+      tenantIds: ['default'],
+    }));
+  });
+
+  it('never throws when the audit sink is down', async () => {
+    mockCreate.mockRejectedValueOnce(new Error('mongo down'));
+    const { recordAdminLogin } = await import('@/lib/admin/adminAudit');
+    await expect(
+      recordAdminLogin({ userId: 'u1', role: 'admin' }, '/api/admin/login'),
+    ).resolves.toBeUndefined();
+  });
+});

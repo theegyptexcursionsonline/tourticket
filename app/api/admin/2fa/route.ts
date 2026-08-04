@@ -162,6 +162,13 @@ export async function POST(request: NextRequest) {
       role: user.role,
       permissions,
     });
+    const { recordAdminLogin } = await import('@/lib/admin/adminAudit');
+    await recordAdminLogin({
+      userId: String(user._id),
+      email: user.email,
+      name: [user.firstName, user.lastName].filter(Boolean).join(' '),
+      role: user.role,
+    }, '/api/admin/2fa');
     const response = NextResponse.json({
       success: true,
       enabled: true,

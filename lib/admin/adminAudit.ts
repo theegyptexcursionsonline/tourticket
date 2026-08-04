@@ -156,6 +156,40 @@ export async function recordAdminMutation(
   }
 }
 
+// Sign-ins are actions a supervisor follows too. Called from the session
+// completion points (password login for enrollment sessions, the 2FA verify
+// for every production admin) — never from the dev-only env-admin path.
+export async function recordAdminLogin(
+  actor: { userId: string; email?: string; name?: string; role: AdminRole },
+  path: string,
+  tenantIds: string[] = ['default'],
+): Promise<void> {
+  try {
+    const [{ default: dbConnect }, { default: AdminMutationAudit }] = await Promise.all([
+      import('@/lib/dbConnect'),
+      import('@/lib/models/AdminMutationAudit'),
+    ]);
+    await dbConnect();
+    await AdminMutationAudit.create({
+      actorUserId: actor.userId,
+      actorEmail: actor.email?.trim().toLowerCase(),
+      actorName: actor.name?.trim(),
+      actorRole: actor.role,
+      action: 'login',
+      resourceType: 'session',
+      summary: 'Signed in',
+      method: 'POST',
+      path,
+      tenantIds,
+    });
+  } catch (error) {
+    console.error(
+      'Admin login audit write failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+  }
+}
+
 export function escapeCsvCell(value: unknown): string {
   let text = value == null ? '' : String(value);
   if (/^[=+\-@]/.test(text)) text = `'${text}`;
