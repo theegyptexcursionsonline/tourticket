@@ -14,6 +14,16 @@ describe('itineraryMapStops', () => {
     ])).toEqual(['El Gouna', 'Valley of the Kings', 'Luxor Temple']);
   });
 
+  it('keeps timeline-only travel labels out of map geocoding', () => {
+    expect(itineraryMapStops([
+      { location: 'Your Hotel' },
+      { location: 'En Route' },
+      { location: 'Luxor' },
+      { location: 'Valley of the Kings' },
+      { location: 'Unterwegs' },
+    ])).toEqual(['Luxor', 'Valley of the Kings']);
+  });
+
   it('folds a round trip back into the start marker', () => {
     expect(itineraryMapStops([
       { location: 'El Gouna' },

@@ -10,10 +10,47 @@ export interface ItineraryStepLike {
   location?: string | null;
 }
 
+// Editor-facing itinerary copy often uses travel-stage labels in the location
+// field. Those labels are useful in the timeline, but they are not real map
+// places and can make Google zoom out to a world view. Keep them in the cards
+// while excluding them from map geocoding.
+const GENERIC_LOCATION_LABELS = new Set([
+  'your hotel',
+  'hotel pickup',
+  'hotel pick up',
+  'hotel drop-off',
+  'hotel drop off',
+  'pickup point',
+  'pick up point',
+  'drop-off point',
+  'drop off point',
+  'meeting point',
+  'start point',
+  'end point',
+  'en route',
+  'on the way',
+  'various locations',
+  'ihr hotel',
+  'hotelabholung',
+  'abholung vom hotel',
+  'rückfahrt zum hotel',
+  'unterwegs',
+]);
+
+function isMappableLocation(location: string): boolean {
+  const normalized = location
+    .toLocaleLowerCase()
+    .replace(/[–—]/g, '-')
+    .replace(/[.,:;!?]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return normalized.length > 2 && !GENERIC_LOCATION_LABELS.has(normalized);
+}
+
 export function itineraryMapStops(itinerary: ItineraryStepLike[]): string[] {
   const locations = (itinerary || [])
     .map((step) => String(step?.location || '').trim())
-    .filter(Boolean);
+    .filter(isMappableLocation);
 
   if (locations.length > 1 && locations[locations.length - 1].toLowerCase() === locations[0].toLowerCase()) {
     locations.pop();
