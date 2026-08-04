@@ -11,6 +11,7 @@ import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import mongoose from 'mongoose';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function GET(request: NextRequest) {
   try {
@@ -119,6 +120,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    body.parentPage = await validateParentPageSelection({
+      parentPage: body.parentPage,
+      currentSlug: body.slug,
+      tenantFilter: DEFAULT_TENANT_FILTER,
+    });
+
     // The city URL shape needs a real owning destination to build /{city}/{slug}.
     if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
       return NextResponse.json({
@@ -150,6 +157,10 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);
+
+    if (error instanceof ParentPageValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
 
     const mongoError = error as { code?: number; keyPattern?: Record<string, unknown> };
     if (mongoError?.code === 11000) {

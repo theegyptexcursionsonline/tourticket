@@ -43,6 +43,9 @@ export interface Destination {
   id?: string;
   name: string;
   slug: string;
+  urlType?: string;
+  breadcrumbLabel?: string;
+  parentPage?: import('@/lib/content/contentNavigation').ParentPageValue | null;
   country?: string;
   image: string;
   images?: string[];
@@ -106,6 +109,10 @@ export interface Category {
   id?: string;
   name: string;
   slug: string;
+  pageTemplate?: import('@/lib/content/pageTemplate').PageTemplate;
+  urlType?: string;
+  breadcrumbLabel?: string;
+  parentPage?: import('@/lib/content/contentNavigation').ParentPageValue | null;
   description?: string;
   longDescription?: string;
   heroImage?: string;
@@ -209,6 +216,8 @@ export interface Tour {
   id?: string | number;
   title: string;
   slug: string;
+  breadcrumbLabel?: string;
+  parentPage?: import('@/lib/content/contentNavigation').ParentPageValue | null;
   image: string;
   images?: string[];
   imageMetadata?: ImageMetadata[];
@@ -340,6 +349,9 @@ export interface AttractionPage {
   description: string;
   longDescription?: string;
   pageType: 'attraction' | 'category';
+  pageTemplate?: import('@/lib/content/pageTemplate').PageTemplate;
+  breadcrumbLabel?: string;
+  parentPage?: import('@/lib/content/contentNavigation').ParentPageValue | null;
   categoryId?: string | Category;
   heroImage: string;
   images?: string[];
@@ -367,6 +379,7 @@ export interface AttractionPageFormData {
   description: string;
   longDescription: string;
   pageType: 'attraction' | 'category';
+  pageTemplate: import('@/lib/content/pageTemplate').PageTemplate;
   categoryId: string;
   urlType: string;
   breadcrumbLabel: string;

@@ -14,6 +14,7 @@ import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { collectTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
 import { auditStamp } from '@/lib/admin/auditStamp';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 const ADMIN_TOUR_LIST_PROJECTION = [
   'title',
@@ -114,6 +115,12 @@ export async function POST(request: NextRequest) {
     body.tenantId = 'default';
     delete body.$set;
     delete body.$unset;
+    body.parentPage = await validateParentPageSelection({
+      parentPage: body.parentPage,
+      currentId: tourId,
+      currentSlug: body.slug,
+      tenantFilter: DEFAULT_TENANT_FILTER,
+    });
     
     // Map 'faqs' from form to 'faq' in the database model
     if (body.faqs) {
@@ -188,6 +195,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: populated ?? tour }, { status: 201 });
   } catch (error) {
+    if (error instanceof ParentPageValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     console.error('Error creating tour:', error);
     const message = error instanceof Error ? error.message : 'Unknown server error';
     return NextResponse.json({ success: false, error: message }, { status: 400 });

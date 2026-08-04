@@ -11,6 +11,15 @@ export const ParentPageSchema = new Schema(
       match: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
     },
     label: { type: String, required: true, trim: true, maxlength: 120 },
+    href: {
+      type: String,
+      trim: true,
+      maxlength: 300,
+      validate: {
+        validator: (value: string | undefined) => !value || (value.startsWith('/') && !value.startsWith('//')),
+        message: 'Parent page URL must be an internal path.',
+      },
+    },
     kind: {
       type: String,
       required: true,

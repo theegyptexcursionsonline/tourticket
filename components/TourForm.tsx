@@ -173,6 +173,7 @@ interface TourFormData {
     whatToWear: string[];
     physicalRequirements: string;
     accessibilityInfo: string[];
+    meetingPoint: string;
     transportationDetails: string;
     mealInfo: string;
     weatherPolicy: string;
@@ -517,6 +518,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         whatToWear: [''],
         physicalRequirements: '',
         accessibilityInfo: [''],
+        meetingPoint: '',
         transportationDetails: '',
         mealInfo: '',
         weatherPolicy: '',
@@ -597,6 +599,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 whatToWear: (tourToEdit.whatToWear?.length ?? 0) > 0 ? tourToEdit.whatToWear! : [''],
                 physicalRequirements: tourToEdit.physicalRequirements || '',
                 accessibilityInfo: (tourToEdit.accessibilityInfo?.length ?? 0) > 0 ? tourToEdit.accessibilityInfo! : [''],
+                meetingPoint: tourToEdit.meetingPoint || '',
                 transportationDetails: tourToEdit.transportationDetails || '',
                 mealInfo: tourToEdit.mealInfo || '',
                 weatherPolicy: tourToEdit.weatherPolicy || '',
@@ -701,10 +704,6 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             initialData.attractions = attractionIds;
             initialData.interests = interestIds;
 
-            console.log('Loading tour with attractions:', attractionIds);
-            console.log('Loading tour with interests:', interestIds);
-            console.log('Attraction IDs types:', attractionIds.map(id => typeof id));
-
             setFormData(initialData as TourFormData);
             
             // On edit, expand the first item in each collapsible section if they exist
@@ -762,14 +761,6 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         fetchData();
     }, [tourToEdit]);
 
-    // Debug logging for attractions/interests
-    useEffect(() => {
-        console.log('FormData changed - Attractions:', formData.attractions);
-        console.log('FormData changed - Interests:', formData.interests);
-        console.log('Available attractions:', attractions.map(a => ({ id: a._id, title: a.title })));
-        console.log('Available interests:', interests.map(i => ({ id: i._id, title: i.title })));
-    }, [formData.attractions, formData.interests, attractions, interests]);
-
     const resetForm = () => {
         setSavedUrlType(null);
         setFormData({
@@ -800,6 +791,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             whatToWear: [''],
             physicalRequirements: '',
             accessibilityInfo: [''],
+            meetingPoint: '',
             transportationDetails: '',
             mealInfo: '',
             weatherPolicy: '',
@@ -1234,6 +1226,7 @@ const addItineraryItem = () => {
                 whatToWear: cleanedData.whatToWear.filter((item) => item.trim()),
                 physicalRequirements: cleanedData.physicalRequirements.trim(),
                 accessibilityInfo: cleanedData.accessibilityInfo.filter((item) => item.trim()),
+                meetingPoint: cleanedData.meetingPoint.trim(),
                 transportationDetails: cleanedData.transportationDetails.trim(),
                 mealInfo: cleanedData.mealInfo.trim(),
                 weatherPolicy: cleanedData.weatherPolicy.trim(),
@@ -2119,6 +2112,12 @@ const addItineraryItem = () => {
                                                     onChange={(value) => setFormData((prev) => ({ ...prev, physicalRequirements: value }))}
                                                     placeholder="Describe walking, stairs, swimming, or fitness requirements"
                                                     defaultKey="physicalRequirements"
+                                                />
+                                                <ContentTextarea
+                                                    label="Meeting Point"
+                                                    value={formData.meetingPoint}
+                                                    onChange={(value) => setFormData((prev) => ({ ...prev, meetingPoint: value }))}
+                                                    placeholder="Exact pickup or meeting location shown on the storefront map"
                                                 />
                                                 <ContentTextarea
                                                     label="Transportation Details"

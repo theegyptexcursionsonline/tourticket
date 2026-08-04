@@ -134,7 +134,7 @@ export interface ITour extends Document {
   slug: string;
   urlType?: UrlType;
   breadcrumbLabel?: string;
-  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' } | null;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2'; href?: string } | null;
   destination: mongoose.Schema.Types.ObjectId;
   category: mongoose.Schema.Types.ObjectId | mongoose.Schema.Types.ObjectId[];
   description: string;

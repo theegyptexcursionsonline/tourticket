@@ -11,6 +11,7 @@ import {
   PageLinkValidationError,
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function GET(
   request: NextRequest,
@@ -84,6 +85,20 @@ export async function PUT(
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
+    if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
+      const currentPage = await AttractionPage.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: id }] })
+        .select('slug')
+        .lean<{ slug?: string } | null>();
+      if (!currentPage) {
+        return NextResponse.json({ success: false, error: 'Page not found' }, { status: 404 });
+      }
+      body.parentPage = await validateParentPageSelection({
+        parentPage: body.parentPage,
+        currentId: id,
+        currentSlug: body.slug || currentPage.slug,
+        tenantFilter: DEFAULT_TENANT_FILTER,
+      });
+    }
 
     // The city URL shape needs a real owning destination to build /{city}/{slug}.
     if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
@@ -174,6 +189,9 @@ export async function PUT(
   } catch (error) {
     console.error('❌ Error updating attraction page:', error);
     if (error instanceof PageLinkValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+    if (error instanceof ParentPageValidationError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     

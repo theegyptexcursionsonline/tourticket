@@ -24,6 +24,7 @@ import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredConten
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata } from '@/lib/content/imageMetadata';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
+import { PAGE_TEMPLATES, PAGE_TEMPLATE_LABELS, normalizePageTemplate } from '@/lib/content/pageTemplate';
 
 interface AttractionPageFormProps {
   pageId?: string;
@@ -46,6 +47,7 @@ const defaultFormData: AttractionPageFormData = {
   description: '',
   longDescription: '',
   pageType: 'attraction',
+  pageTemplate: 'classic',
   categoryId: '',
   urlType: 'direct',
   breadcrumbLabel: '',
@@ -329,6 +331,7 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
           description: page.description || '',
           longDescription: page.longDescription || '',
           pageType: page.pageType || 'attraction',
+          pageTemplate: normalizePageTemplate(page.pageTemplate),
           categoryId: typeof page.categoryId === 'object' ? page.categoryId._id : (page.categoryId || ''),
           urlType: page.urlType || 'default',
           breadcrumbLabel: page.breadcrumbLabel || '',
@@ -863,6 +866,37 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                           onParentPageChange={(parentPage) => setFormData((prev) => ({ ...prev, parentPage }))}
                           excludeId={pageId}
                         />
+
+                        <div className="space-y-3">
+                          <FormLabel icon={Grid3x3}>Landing page template</FormLabel>
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            {PAGE_TEMPLATES.map((template) => {
+                              const selected = formData.pageTemplate === template;
+                              const preview = template === 'classic'
+                                ? 'grid grid-cols-3 gap-1'
+                                : template === 'editorial'
+                                  ? 'grid grid-cols-[1.15fr_.85fr] gap-1'
+                                  : 'grid grid-cols-2 grid-rows-2 gap-1';
+                              return (
+                                <button
+                                  key={template}
+                                  type="button"
+                                  onClick={() => setFormData((current) => ({ ...current, pageTemplate: template }))}
+                                  aria-pressed={selected}
+                                  className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100' : 'border-slate-200 bg-white hover:border-slate-400'}`}
+                                >
+                                  <div className={`${preview} h-20 overflow-hidden rounded-xl bg-slate-100 p-1.5`} aria-hidden="true">
+                                    {template === 'classic' ? <><span className="col-span-3 rounded bg-slate-700" /><span className="rounded bg-white" /><span className="rounded bg-white" /><span className="rounded bg-white" /></> : null}
+                                    {template === 'editorial' ? <><span className="row-span-2 rounded bg-white" /><span className="rounded bg-slate-700" /><span className="rounded bg-slate-300" /></> : null}
+                                    {template === 'immersive' ? <><span className="row-span-2 rounded bg-slate-700" /><span className="rounded bg-slate-300" /><span className="rounded bg-white" /></> : null}
+                                  </div>
+                                  <p className="mt-3 text-sm font-bold text-slate-900">{PAGE_TEMPLATE_LABELS[template].title}</p>
+                                  <p className="mt-1 text-xs leading-5 text-slate-600">{PAGE_TEMPLATE_LABELS[template].description}</p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
                         <div className="space-y-3">
                           <FormLabel icon={FileText} required>Description</FormLabel>

@@ -7,6 +7,7 @@ export interface ParentPageValue {
   slug: string;
   label: string;
   kind: ParentContentKind;
+  href?: string;
 }
 
 export interface ContentNavigationValue {

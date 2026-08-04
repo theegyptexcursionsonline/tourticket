@@ -4,6 +4,7 @@ import { URL_TYPES, UrlType } from '@/lib/content/contentUrl';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 import { ParentPageSchema, breadcrumbLabelField } from '@/lib/models/contentNavigationSchema';
+import { PAGE_TEMPLATES, type PageTemplate } from '@/lib/content/pageTemplate';
 
 export interface ICategory extends Document {
   tenantId?: string;
@@ -12,9 +13,10 @@ export interface ICategory extends Document {
   // Basic Info
   name: string;
   slug: string;
+  pageTemplate?: PageTemplate;
   urlType?: UrlType;
   breadcrumbLabel?: string;
-  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' } | null;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2'; href?: string } | null;
   cityDestination?: mongoose.Types.ObjectId;
   description?: string;
   longDescription?: string;
@@ -133,6 +135,11 @@ const CategorySchema: Schema<ICategory> = new Schema({
     type: String,
     enum: URL_TYPES,
     default: 'default',
+  },
+  pageTemplate: {
+    type: String,
+    enum: PAGE_TEMPLATES,
+    default: 'classic',
   },
   breadcrumbLabel: breadcrumbLabelField,
   parentPage: { type: ParentPageSchema, default: undefined },

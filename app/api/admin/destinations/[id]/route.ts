@@ -10,6 +10,7 @@ import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function PUT(
   request: NextRequest,
@@ -62,7 +63,14 @@ export async function PUT(
     // Prepare update data - only update fields that are provided
     const updateData: Partial<IDestination> = {};
     if ('breadcrumbLabel' in navigation) updateData.breadcrumbLabel = navigation.breadcrumbLabel;
-    if ('parentPage' in navigation) updateData.parentPage = navigation.parentPage;
+    if ('parentPage' in navigation) {
+      updateData.parentPage = await validateParentPageSelection({
+        parentPage: navigation.parentPage,
+        currentId: id,
+        currentSlug: data.slug || existingDestination.slug,
+        tenantFilter: DEFAULT_TENANT_FILTER,
+      });
+    }
     
     // Basic fields
     if (data.name !== undefined) updateData.name = data.name;
@@ -203,6 +211,10 @@ export async function PUT(
 
   } catch (error: unknown) {
     console.error('Error updating destination:', error);
+
+    if (error instanceof ParentPageValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     
     if ((error as { code?: string | number }).code === 11000) {
       const field = Object.keys((error as { keyValue?: Record<string, unknown> }).keyValue || {})[0] || 'field';

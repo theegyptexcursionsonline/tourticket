@@ -4,6 +4,7 @@ import { URL_TYPES, type UrlType } from '@/lib/content/contentUrl';
 import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 import { ParentPageSchema, breadcrumbLabelField } from '@/lib/models/contentNavigationSchema';
+import { PAGE_TEMPLATES, type PageTemplate } from '@/lib/content/pageTemplate';
 
 export interface IAttractionPageTranslation {
   title?: string;
@@ -32,12 +33,13 @@ export interface IAttractionPage extends Document {
 
   // Page Type
   pageType: 'attraction' | 'category';
+  pageTemplate?: PageTemplate;
   categoryId?: mongoose.Schema.Types.ObjectId;
 
   // Public URL shape (attraction pages only; category-landing pages keep /category/{slug})
   urlType?: UrlType;
   breadcrumbLabel?: string;
-  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' } | null;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2'; href?: string } | null;
   cityDestination?: mongoose.Types.ObjectId;
 
   // Content
@@ -144,6 +146,11 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
     enum: ['attraction', 'category'],
     required: true,
     index: true,
+  },
+  pageTemplate: {
+    type: String,
+    enum: PAGE_TEMPLATES,
+    default: 'classic',
   },
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,

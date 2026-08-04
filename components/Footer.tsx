@@ -13,6 +13,7 @@ import type { EeoWindow } from './componentTypes';
 
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
+import InternalLinkBlock from '@/components/navigation/InternalLinkBlock';
 
 // =================================================================
 // --- FOOTER-SPECIFIC DATA ---
@@ -176,6 +177,8 @@ export default function Footer() {
   };
 
   return (
+    <>
+    <InternalLinkBlock />
     <footer className="bg-white text-slate-700 pb-20 md:pb-24">
       <div className="container mx-auto px-4 py-12">
 
@@ -628,5 +631,6 @@ export default function Footer() {
         </div>
       )}
     </footer>
+    </>
   );
 }

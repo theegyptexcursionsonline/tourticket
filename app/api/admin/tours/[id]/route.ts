@@ -8,6 +8,7 @@ import { syncTourToAlgolia, deleteTourFromAlgolia } from "@/lib/algolia";
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { auditStamp } from '@/lib/admin/auditStamp';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -122,6 +123,20 @@ export async function PUT(
         delete body.$unset;
         delete body.archivedAt;
         delete body.archivedBy;
+        if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
+            const currentTour = await Tour.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
+                .select('slug')
+                .lean<{ slug?: string } | null>();
+            if (!currentTour) {
+                return NextResponse.json({ success: false, error: 'Tour not found' }, { status: 404 });
+            }
+            body.parentPage = await validateParentPageSelection({
+                parentPage: body.parentPage,
+                currentId: id,
+                currentSlug: body.slug || currentTour.slug,
+                tenantFilter: DEFAULT_TENANT_FILTER,
+            });
+        }
         if (body.isPublished === true) {
             // Publishing is the explicit restore action for an archived tour.
             body.archivedAt = null;
@@ -300,6 +315,10 @@ export async function PUT(
 
     } catch (error: unknown) {
         console.error('Tour update error:', error);
+
+        if (error instanceof ParentPageValidationError) {
+            return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        }
         
         if ((error as { code?: string | number }).code === 11000) {
             const field = Object.keys((error as { keyPattern?: Record<string, unknown> }).keyPattern || {})[0] || 'field';

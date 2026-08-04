@@ -13,6 +13,7 @@ import {
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -78,6 +79,12 @@ export async function POST(request: NextRequest) {
       body.slug = normalizeDestinationSlug(body.slug);
     }
 
+    body.parentPage = await validateParentPageSelection({
+      parentPage: body.parentPage,
+      currentSlug: body.slug,
+      tenantFilter: DEFAULT_TENANT_FILTER,
+    });
+
     const duplicateQuery: Array<Record<string, string>> = [];
     if (body.slug) duplicateQuery.push({ slug: String(body.slug) });
     if (body.name) duplicateQuery.push({ name: String(body.name).trim() });
@@ -118,6 +125,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: destination }, { status: 201 });
 
   } catch (error) {
+    if (error instanceof ParentPageValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     if ((error as MongoError).code === 11000) {
       const keyValue = (error as MongoError & { keyValue?: Record<string, unknown> }).keyValue || {};
       const field = Object.keys(keyValue)[0] || 'field';

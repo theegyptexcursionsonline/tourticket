@@ -7,6 +7,7 @@ import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function GET(
   request: NextRequest,
@@ -80,6 +81,21 @@ export async function PUT(
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
 
+    if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
+      const currentCategory = await Category.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: id }] })
+        .select('slug')
+        .lean<{ slug?: string } | null>();
+      if (!currentCategory) {
+        return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
+      }
+      body.parentPage = await validateParentPageSelection({
+        parentPage: body.parentPage,
+        currentId: id,
+        currentSlug: body.slug || currentCategory.slug,
+        tenantFilter: DEFAULT_TENANT_FILTER,
+      });
+    }
+
     // The city URL shape needs a real owning destination to build /{city}/{slug}.
     if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
       return NextResponse.json({
@@ -126,6 +142,10 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating category:', error);
+
+    if (error instanceof ParentPageValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
 
     const mongoError = error as { code?: number; keyPattern?: Record<string, unknown> };
     if (mongoError?.code === 11000) {

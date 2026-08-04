@@ -8,6 +8,7 @@ import { normalizeDestinationSlug } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function PUT(
   request: NextRequest,
@@ -23,6 +24,9 @@ export async function PUT(
     const data = await request.json();
     Object.assign(data, sanitizeContentNavigation(data));
     const { id } = await params;
+    delete data.tenantId;
+    delete data.$set;
+    delete data.$unset;
     
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ 
@@ -37,6 +41,21 @@ export async function PUT(
 
     if (data.name && !data.slug) {
       data.slug = normalizeDestinationSlug(data.name);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(data, 'parentPage')) {
+      const currentDestination = await Destination.findOne({ _id: id, ...DEFAULT_TENANT_FILTER })
+        .select('slug')
+        .lean<{ slug?: string } | null>();
+      if (!currentDestination) {
+        return NextResponse.json({ success: false, error: 'Destination not found' }, { status: 404 });
+      }
+      data.parentPage = await validateParentPageSelection({
+        parentPage: data.parentPage,
+        currentId: id,
+        currentSlug: data.slug || currentDestination.slug,
+        tenantFilter: DEFAULT_TENANT_FILTER,
+      });
     }
 
     const duplicateQuery: Array<Record<string, string>> = [];
@@ -57,8 +76,8 @@ export async function PUT(
       }
     }
 
-    const destination = await Destination.findByIdAndUpdate(
-      id, 
+    const destination = await Destination.findOneAndUpdate(
+      { _id: id, ...DEFAULT_TENANT_FILTER },
       data, 
       { 
         new: true, 
@@ -82,6 +101,10 @@ export async function PUT(
     });
   } catch (error: unknown) {
     console.error('Error updating destination:', error);
+
+    if (error instanceof ParentPageValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     
     if ((error as { code?: string | number }).code === 11000) {
       const field = Object.keys((error as { keyValue?: Record<string, unknown> }).keyValue || {})[0] || 'field';
@@ -129,7 +152,11 @@ export async function DELETE(
     }
 
     // Check if destination has tours
-    const tourCount = await Tour.countDocuments({ destination: id });
+    const destinationExists = await Destination.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
+    if (!destinationExists) {
+      return NextResponse.json({ success: false, error: 'Destination not found' }, { status: 404 });
+    }
+    const tourCount = await Tour.countDocuments({ destination: id, ...DEFAULT_TENANT_FILTER });
     if (tourCount > 0) {
       if (!force) {
         return NextResponse.json({
@@ -141,12 +168,12 @@ export async function DELETE(
 
       // If force delete, unlink tours from this destination
       await Tour.updateMany(
-        { destination: id },
+        { destination: id, ...DEFAULT_TENANT_FILTER },
         { $unset: { destination: "" } }
       );
     }
 
-    const destination = await Destination.findByIdAndDelete(id);
+    const destination = await Destination.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
 
     if (!destination) {
       return NextResponse.json({

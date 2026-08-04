@@ -37,6 +37,9 @@ import { toDateOnlyString } from '@/utils/date';
 import type { LucideIcon } from 'lucide-react';
 import type { EeoWindow } from './componentTypes';
 import { contentPath } from '@/lib/content/contentUrl';
+import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
+import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
+import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -832,6 +835,15 @@ const OverviewSection = ({ tour, sectionRef }: { tour: Tour, sectionRef: React.R
 
 // Main TourPageClient component - Enhanced with review management and fixed pricing
 export default function TourPageClient({ tour, relatedTours, initialReviews }: TourPageClientProps) {
+  const breadcrumbs = buildContentBreadcrumbs({
+    currentTitle: tour.title,
+    breadcrumbLabel: tour.breadcrumbLabel,
+    parentPage: tour.parentPage,
+    rootLabel: 'Tours',
+    rootHref: '/search',
+  });
+  const meetingMapHref = meetingPointMapUrl(tour.meetingPoint);
+  const meetingMapEmbed = meetingPointEmbedUrl(tour.meetingPoint);
   const { formatPrice } = useSettings();
   const { addToCart } = useCart();
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
@@ -1021,17 +1033,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
         <div className="bg-slate-50/50 py-3 border-b border-slate-200/50">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between gap-4">
-              <nav className="flex items-center gap-1.5 text-xs">
-                <Link href="/" className="text-slate-500 hover:text-red-600 transition-colors">
-                  Home
-                </Link>
-                <span className="text-slate-400">/</span>
-                <Link href="/search" className="text-slate-500 hover:text-red-600 transition-colors">
-                  Tours
-                </Link>
-                <span className="text-slate-400">/</span>
-                <span className="text-slate-800 font-medium truncate max-w-[200px] md:max-w-none">{tour.title}</span>
-              </nav>
+              <div className="min-w-0 text-xs">
+                <ContentBreadcrumbs items={breadcrumbs} />
+              </div>
               <Link
                 href="/search"
                 className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm hover:underline transition-colors whitespace-nowrap"
@@ -1190,17 +1194,29 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
               
               <EnhancedFAQ faqs={tour.faq || []} sectionRef={faqRef} />
 
-              {tour.meetingPoint && (
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              {tour.meetingPoint && meetingMapHref && meetingMapEmbed && (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="p-6">
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
                   <div className="flex items-start gap-4">
                     <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
                     <div>
                       <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
                       <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
-                      <button className="text-red-600 hover:underline text-sm font-medium mt-2">View on map</button>
+                      <a href={meetingMapHref} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+                        <MapPin size={16} /> Open in Google Maps
+                      </a>
                     </div>
                   </div>
+                  </div>
+                  <iframe
+                    title={`Map of ${tour.meetingPoint}`}
+                    src={meetingMapEmbed}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="h-64 w-full border-0 sm:h-72"
+                    allowFullScreen
+                  />
                 </div>
               )}
 

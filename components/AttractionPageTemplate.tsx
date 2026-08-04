@@ -11,6 +11,9 @@ import {
 import { CategoryPageData, Tour, Review } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import type { LinkedPageCardData } from '@/components/AttractionLandingPage';
+import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
+import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
+import { normalizePageTemplate } from '@/lib/content/pageTemplate';
 import { contentPath } from '@/lib/content/contentUrl';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 
@@ -432,7 +435,8 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
   );
 };
 
-export default function AttractionPageTemplate({ page, urlType, linkedPages = [] }: AttractionPageTemplateProps) {
+export default function AttractionPageTemplate({ page, linkedPages = [] }: AttractionPageTemplateProps) {
+  const pageTemplate = normalizePageTemplate(page.pageTemplate);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
@@ -487,12 +491,19 @@ export default function AttractionPageTemplate({ page, urlType, linkedPages = []
   };
 
   const gridClass = gridCols[page.itemsPerRow as keyof typeof gridCols] || gridCols[4];
+  const breadcrumbs = buildContentBreadcrumbs({
+    currentTitle: page.title,
+    breadcrumbLabel: page.breadcrumbLabel,
+    parentPage: page.parentPage,
+    rootLabel: 'Categories',
+    rootHref: '/categories',
+  });
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-red-50">
+      <main data-page-template={pageTemplate} className={`min-h-screen ${pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : pageTemplate === 'immersive' ? 'bg-slate-950' : 'bg-gradient-to-br from-slate-50 via-white to-red-50'}`}>
         {/* Enhanced Hero Section */}
-        <section className="relative h-[70vh] overflow-hidden">
+        <section className={`relative overflow-hidden ${pageTemplate === 'immersive' ? 'h-[84vh]' : pageTemplate === 'editorial' ? 'h-[58vh] min-h-[520px]' : 'h-[70vh]'}`}>
           <div className="absolute inset-0">
             <Image
               src={page.heroImage}
@@ -502,47 +513,42 @@ export default function AttractionPageTemplate({ page, urlType, linkedPages = []
               priority
               sizes="100vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+            <div className={`absolute inset-0 ${pageTemplate === 'editorial' ? 'bg-gradient-to-r from-black/85 via-black/55 to-black/10' : pageTemplate === 'immersive' ? 'bg-gradient-to-t from-black/90 via-black/20 to-black/10' : 'bg-gradient-to-t from-black/70 via-black/30 to-transparent'}`} />
           </div>
           
-          <div className="relative z-10 h-full flex items-center justify-center">
-            <div className="text-center text-white max-w-5xl mx-auto px-6">
+          <div className={`relative z-10 h-full flex ${pageTemplate === 'immersive' ? 'items-end' : 'items-center'} ${pageTemplate === 'editorial' ? 'justify-start' : 'justify-center'}`}>
+            <div className={`${pageTemplate === 'editorial' ? 'text-left max-w-3xl ml-[max(1.5rem,calc((100vw-1280px)/2))]' : 'text-center max-w-5xl mx-auto'} text-white px-6 ${pageTemplate === 'immersive' ? 'pb-16' : ''}`}>
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
+                <h1 className={`${pageTemplate === 'immersive' ? 'text-5xl md:text-8xl' : 'text-5xl md:text-7xl'} font-extrabold leading-[1.02] tracking-tight`}>
                   {page.title}
                 </h1>
                 <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
                   {page.description}
                 </p>
                 
-                {/* Enhanced Breadcrumb */}
-                <nav className="flex items-center justify-center gap-2 text-sm opacity-90 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 inline-flex">
-                  <Link href="/" className="hover:text-yellow-300 transition-colors">Home</Link>
-                  <span>/</span>
-                  <span className="capitalize">{urlType}</span>
-                  <span>/</span>
-                  <span className="text-yellow-300">{page.title}</span>
-                </nav>
+                <div className={`inline-flex rounded-full bg-black/20 px-5 py-2.5 backdrop-blur-sm ${pageTemplate === 'editorial' ? '' : 'justify-center'}`}>
+                  <ContentBreadcrumbs items={breadcrumbs} tone="dark" />
+                </div>
               </motion.div>
             </div>
           </div>
         </section>
 
         {/* Content Section */}
-        <section className="py-16">
+        <section className={`py-16 ${pageTemplate === 'immersive' ? 'bg-white lg:mx-auto lg:my-8 lg:max-w-7xl lg:rounded-[2.5rem]' : ''}`}>
           <div className="container mx-auto px-6">
             {/* Long Description */}
             {page.longDescription && (
               <motion.div 
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-4xl mx-auto mb-16 text-center"
+                className={`max-w-4xl mx-auto mb-16 ${pageTemplate === 'editorial' ? 'text-left' : 'text-center'}`}
               >
-                <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className={`bg-white p-8 ${pageTemplate === 'editorial' ? 'border-y border-stone-300 shadow-none' : 'rounded-2xl shadow-lg'}`}>
                   <div className="prose prose-lg mx-auto">
                     <p className="text-slate-700 leading-relaxed text-lg">
                       {page.longDescription}
@@ -615,9 +621,9 @@ export default function AttractionPageTemplate({ page, urlType, linkedPages = []
         {/* Gallery — catalogue pages accepted uploads but never rendered them,
             unlike the attraction and category templates. */}
         {page.images && page.images.length > 0 && (
-          <section className="py-12 bg-slate-50">
+          <section className={`py-12 ${pageTemplate === 'immersive' ? 'bg-slate-950' : pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : 'bg-slate-50'}`}>
             <div className="container mx-auto px-6">
-              <h2 className="text-3xl font-bold text-slate-900 mb-6">Gallery</h2>
+              <h2 className={`text-3xl font-bold mb-6 ${pageTemplate === 'immersive' ? 'text-white' : 'text-slate-900'}`}>Gallery</h2>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {page.images.map((image, index) => {
                   const seo = imageMetadataFor(image, page.imageMetadata, `${page.title} ${index + 1}`);
@@ -644,7 +650,7 @@ export default function AttractionPageTemplate({ page, urlType, linkedPages = []
 
         {/* Tours Grid Section */}
         {page.tours && page.tours.length > 0 && (
-          <section className="py-16 bg-white">
+          <section className={`py-16 ${pageTemplate === 'immersive' ? 'rounded-t-[2.5rem] bg-white' : pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : 'bg-white'}`}>
             <div className="container mx-auto px-6">
               {/* Grid Header */}
               <div className="text-center mb-12">

@@ -12,6 +12,7 @@ import {
   PageLinkValidationError,
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
+import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -137,6 +138,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
+    body.parentPage = await validateParentPageSelection({
+      parentPage: body.parentPage,
+      currentSlug: body.slug,
+      tenantFilter: DEFAULT_TENANT_FILTER,
+    });
 
     // The city URL shape needs a real owning destination to build /{city}/{slug}.
     if (body.urlType === 'city' && !mongoose.Types.ObjectId.isValid(body.cityDestination)) {
@@ -210,6 +216,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating attraction page:', error);
     if (error instanceof PageLinkValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+    if (error instanceof ParentPageValidationError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     
