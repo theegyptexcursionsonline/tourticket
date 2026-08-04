@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import type { EeoWindow } from './componentTypes';
+import HostedAISearchEntry from '@/components/HostedAISearchEntry';
 
 interface HeroSettings {
   backgroundImages?: {
@@ -203,25 +202,6 @@ export default function HeroSectionStable({ initialSettings }: HeroSectionStable
     ? (initialSettings?.trustIndicators?.rating || tHero('ratingScore'))
     : tHero('ratingScore');
 
-  // The AI search widget is mounted once per page (the sticky singleton). The
-  // hero button just nudges that instance open instead of mounting a second
-  // copy — a couple of short, self-cancelling retries cover the case where the
-  // lazily-hydrated widget isn't listening yet. Once the widget consumes the
-  // pending flag it stops re-opening, so the user's close click always sticks.
-  const openAiWidget = () => {
-    const w = window as EeoWindow;
-    w.__pendingAIOpenAgent = true;
-    w.__pendingAIOpenAgentQuery = '';
-
-    const fire = () => {
-      if (!w.__pendingAIOpenAgent) return; // widget already opened; don't reopen
-      window.dispatchEvent(new CustomEvent('openAIAgent', { detail: { query: '' } }));
-    };
-
-    fire();
-    [300, 900, 1800].forEach((delay) => window.setTimeout(fire, delay));
-  };
-
   const overlayOpacity = overlay.opacity ?? 0.6;
   const overlayBackground = overlay.gradientType === 'custom'
     ? overlay.customGradient
@@ -259,27 +239,7 @@ export default function HeroSectionStable({ initialSettings }: HeroSectionStable
               {heroSubtitleText}
             </p>
 
-            <div className="mt-8 flex w-full justify-center md:justify-start lg:mt-10">
-              <button
-                type="button"
-                onClick={openAiWidget}
-                className="group relative w-full max-w-sm rounded-full border-2 border-white/30 bg-black/40 text-left shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-all duration-300 hover:border-white/50 hover:bg-black/50 md:max-w-xl"
-                aria-label={currentSuggestion}
-              >
-                <span className="flex items-center gap-3 px-4 py-4 md:px-5 md:py-5">
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-400 to-purple-500 shadow-lg shadow-blue-400/30 md:h-10 md:w-10">
-                    <Search className="h-4 w-4 text-white md:h-5 md:w-5" strokeWidth={2.5} />
-                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-gradient-to-br from-green-400 to-emerald-500 shadow-md" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-white/80 md:text-base">
-                    {currentSuggestion}
-                  </span>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-orange-500 shadow-lg md:h-10 md:w-10">
-                    <Sparkles className="h-4 w-4 text-white md:h-5 md:w-5" strokeWidth={2.5} />
-                  </span>
-                </span>
-              </button>
-            </div>
+            <HostedAISearchEntry placeholder={currentSuggestion} />
 
             {initialSettings?.trustIndicators?.isVisible !== false && (
               <div className="mt-6 flex items-center justify-center gap-6 text-sm text-white/80 md:justify-start">

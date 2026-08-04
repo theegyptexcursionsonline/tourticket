@@ -31,6 +31,7 @@ import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { curateDestinationTours } from '@/lib/content/destinationTourCuration';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
+import HostedAISearchEntry from '@/components/HostedAISearchEntry';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -850,7 +851,10 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 }
 
 // --- Hero Search Bar ---
-const HeroSearchBar = ({ suggestion }: { suggestion: string }) => {
+// Retained temporarily while the unified hosted-search rollout is verified;
+// it is deliberately not rendered so customers see one search experience.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const LegacyHeroSearchBar = ({ suggestion }: { suggestion: string }) => {
   const copy = useDestinationPageCopy();
   const locale = useLocale();
   const rtl = isRTL(locale);
@@ -1716,8 +1720,11 @@ const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: 
             {destination.description}
           </p>
 
-          <HeroSearchBar
-            suggestion={currentSuggestion}
+          <HostedAISearchEntry
+            placeholder={currentSuggestion}
+            initialQuery={copy.bestToursIn(destination.name)}
+            destinationSlug={destination.slug}
+            tone="light"
           />
 
           <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 text-white/90 text-xs sm:text-sm px-4 sm:px-0">

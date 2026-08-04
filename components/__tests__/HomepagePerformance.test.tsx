@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import HeroSectionStable from '@/components/HeroSectionStable';
 import FeaturedToursServer from '@/components/FeaturedToursServer';
 
@@ -62,6 +62,21 @@ describe('homepage performance contracts', () => {
     expect(container.querySelectorAll('h3')).toHaveLength(tours.length);
     expect(container.querySelector('[data-testid="featured-tours-scroll"]')).toBeInTheDocument();
     expect(container.querySelector('.animate-marquee')).not.toBeInTheDocument();
+  });
+
+  it('opens the singleton hosted search instead of mounting a second widget', () => {
+    const opened = jest.fn();
+    window.addEventListener('foxes:search:open', opened, { once: true });
+    render(<HeroSectionStable />);
+
+    fireEvent.click(screen.getByTestId('hosted-ai-search-entry'));
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect((opened.mock.calls[0][0] as CustomEvent).detail).toEqual(expect.objectContaining({
+      query: '',
+      mode: 'catalog',
+    }));
+    expect(document.querySelectorAll('[data-testid="hosted-ai-search-entry"]')).toHaveLength(1);
   });
 
 });

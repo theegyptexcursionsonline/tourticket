@@ -190,23 +190,20 @@ describe('DestinationPageClient', () => {
       expect(screen.getByText('50K+ Travelers')).toBeInTheDocument()
     })
 
-    it('should open search modal when search bar is clicked', async () => {
+    it('should open the hosted AI search with destination context', async () => {
       const user = userEvent.setup()
+      const receiveOpen = jest.fn()
+      window.addEventListener('foxes:search:open', receiveOpen, { once: true })
       render(<DestinationPageClient {...defaultProps} />)
 
-      // Find the search button by its class/structure
-      const searchButtons = screen.getAllByRole('button')
-      const searchButton = searchButtons.find(btn =>
-        btn.querySelector('.lucide-search')
-      )
+      await user.click(screen.getByTestId('hosted-ai-search-entry'))
 
-      if (searchButton) {
-        await user.click(searchButton)
-
-        await waitFor(() => {
-          expect(screen.getByTestId('search-modal')).toBeInTheDocument()
-        })
-      }
+      expect(receiveOpen).toHaveBeenCalledTimes(1)
+      expect((receiveOpen.mock.calls[0][0] as CustomEvent).detail).toEqual(expect.objectContaining({
+        query: 'Best tours in Cairo',
+        mode: 'catalog',
+        destinationSlug: 'cairo',
+      }))
     })
   })
 
