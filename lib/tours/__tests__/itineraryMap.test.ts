@@ -51,7 +51,15 @@ describe('itineraryStaticMapUrl', () => {
   it('gives the start a prominent marker and the rest smaller ones', () => {
     const url = itineraryStaticMapUrl(['El Gouna', 'Valley of the Kings', 'Luxor'], 'k');
     expect(url).toContain('staticmap');
-    expect(url).toContain(encodeURIComponent('size:mid|color:red|label:1|El Gouna'));
-    expect(url).toContain(encodeURIComponent('size:small|color:blue|Valley of the Kings|Luxor'));
+    expect(url).toContain(encodeURIComponent('size:mid|color:red|label:1|El Gouna, Egypt'));
+    expect(url).toContain(encodeURIComponent('size:small|color:blue|Valley of the Kings, Egypt|Luxor, Egypt'));
+  });
+
+  it('does not duplicate an existing Egypt country context', () => {
+    const url = itineraryStaticMapUrl(['Luxor, Egypt', 'Karnak, Ägypten'], 'k');
+    const markers = new URL(url!).searchParams.getAll('markers').join('|');
+    expect(markers).toContain('Luxor, Egypt');
+    expect(markers).toContain('Karnak, Ägypten');
+    expect(markers).not.toContain('Egypt, Egypt');
   });
 });
