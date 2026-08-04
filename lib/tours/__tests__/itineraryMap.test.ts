@@ -1,4 +1,4 @@
-import { itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
+import { itineraryEmbedMapUrl, itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
 
 describe('itineraryMapStops', () => {
   it('returns nothing when no step has an explicit location', () => {
@@ -61,5 +61,18 @@ describe('itineraryStaticMapUrl', () => {
     expect(markers).toContain('Luxor, Egypt');
     expect(markers).toContain('Karnak, Ägypten');
     expect(markers).not.toContain('Egypt, Egypt');
+  });
+});
+
+describe('itineraryEmbedMapUrl', () => {
+  it('country-scopes the no-key fallback to Egypt', () => {
+    expect(itineraryEmbedMapUrl('Luxor Restaurant')).toContain('Luxor%20Restaurant%2C%20Egypt');
+  });
+
+  it('uses the keyed place embed without duplicating an existing country', () => {
+    const url = itineraryEmbedMapUrl('Karnak, Egypt', 'secret key');
+    expect(url).toContain('/embed/v1/place?key=secret%20key');
+    expect(decodeURIComponent(url)).toContain('q=Karnak, Egypt');
+    expect(decodeURIComponent(url)).not.toContain('Egypt, Egypt');
   });
 });

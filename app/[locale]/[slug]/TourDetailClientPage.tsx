@@ -36,7 +36,7 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { formatExperienceDescription } from '@/lib/content/experienceDescription';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { contentPath } from '@/lib/content/contentUrl';
-import { itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
+import { itineraryEmbedMapUrl, itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -560,7 +560,7 @@ const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(stops[0])}&zoom=12`}
+                  src={itineraryEmbedMapUrl(stops[0], process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)}
                 ></iframe>
               )}
             </div>

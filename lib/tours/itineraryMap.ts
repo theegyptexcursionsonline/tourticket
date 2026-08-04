@@ -67,6 +67,21 @@ export function itineraryMapStops(itinerary: ItineraryStepLike[]): string[] {
   return stops;
 }
 
+function egyptScopedStop(stop: string): string {
+  return /(?:egypt|ägypten|مصر)/iu.test(stop) ? stop : `${stop}, Egypt`;
+}
+
+// A no-key fallback is still needed on tenant deployments that do not expose
+// the Google Embed API key. Country-scoping is mandatory: generic business
+// names such as "Luxor Restaurant" otherwise resolve to unrelated countries.
+export function itineraryEmbedMapUrl(stop: string, apiKey?: string | null): string {
+  const scopedStop = egyptScopedStop(stop);
+  if (apiKey) {
+    return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(scopedStop)}&zoom=12`;
+  }
+  return `https://www.google.com/maps?q=${encodeURIComponent(scopedStop)}&z=11&output=embed`;
+}
+
 // Static Maps URL with one prominent start marker and smaller markers for the
 // remaining stops. Only used for 2+ stops (a single stop keeps the richer
 // interactive place embed); returns null without a key so the caller can hide
@@ -77,9 +92,7 @@ export function itineraryStaticMapUrl(stops: string[], apiKey?: string | null): 
   // These storefronts sell Egypt experiences. Supplying the country context
   // prevents ambiguous editor labels (for example, "Luxor Restaurant") from
   // resolving to an unrelated place abroad and zooming the route to the world.
-  const mapStops = stops.map((stop) =>
-    /(?:egypt|ägypten|مصر)/iu.test(stop) ? stop : `${stop}, Egypt`,
-  );
+  const mapStops = stops.map(egyptScopedStop);
   const [start, ...rest] = mapStops;
   const parts = [
     'size=640x640',
