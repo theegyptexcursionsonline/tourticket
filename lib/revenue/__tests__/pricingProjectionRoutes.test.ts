@@ -1,4 +1,6 @@
 const mockAuthenticateRevenueRequest = jest.fn();
+
+export {};
 const mockApplyPriceWrite = jest.fn();
 const mockValidatePriceWrite = jest.fn();
 const mockRollbackPriceExecution = jest.fn();
