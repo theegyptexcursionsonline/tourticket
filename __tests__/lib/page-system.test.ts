@@ -63,6 +63,13 @@ describe('page-system helpers', () => {
     expect(meetingPointEmbedUrl(null)).toBeNull();
   });
 
+  it('renders the tour meeting point through the resilient no-key map helper', () => {
+    const source = readFileSync(join(process.cwd(), 'app/[locale]/[slug]/TourDetailClientPage.tsx'), 'utf8');
+    expect(source).toContain("import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';");
+    expect(source).toContain('src={meetingMapEmbed}');
+    expect(source).not.toContain('/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}');
+  });
+
   it('keeps only safe, complete internal links and localizes with English fallback', () => {
     expect(isSafeInternalHref('/destinations/hurghada')).toBe(true);
     expect(isSafeInternalHref('//attacker.example')).toBe(false);

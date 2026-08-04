@@ -37,6 +37,7 @@ import { formatExperienceDescription } from '@/lib/content/experienceDescription
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { contentPath } from '@/lib/content/contentUrl';
 import { itineraryEmbedMapUrl, itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
+import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -1150,6 +1151,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   const culturalRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLDivElement>(null);
+  const meetingMapHref = meetingPointMapUrl(tour.meetingPoint);
+  const meetingMapEmbed = meetingPointEmbedUrl(tour.meetingPoint);
 
   const inViewOptions = { amount: 0.1 as const };
   const isOverviewInView = useInView(overviewRef, inViewOptions);
@@ -1446,7 +1449,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
               
               <EnhancedFAQ faqs={tour.faq || []} sectionRef={faqRef} />
 
-              {tour.meetingPoint && (
+              {tour.meetingPoint && meetingMapHref && meetingMapEmbed && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
                   <div className="space-y-4">
@@ -1455,13 +1458,15 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       <div>
                         <p className="font-semibold text-slate-800">{tour.meetingPoint}</p>
                         <p className="text-sm text-slate-600 mt-1">Check-in 15 minutes before departure time</p>
-                        <button
-                          onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(tour.meetingPoint || '')}`, '_blank')}
+                        <a
+                          href={meetingMapHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="text-red-600 hover:underline text-sm font-medium mt-2 inline-flex items-center gap-1"
                         >
                           <Navigation size={14} />
                           Open in Google Maps
-                        </button>
+                        </a>
                       </div>
                     </div>
 
@@ -1474,7 +1479,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                         loading="lazy"
                         allowFullScreen
                         referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(tour.meetingPoint || '')}&zoom=15`}
+                        title={`Map of ${tour.meetingPoint}`}
+                        src={meetingMapEmbed}
                       ></iframe>
                     </div>
                   </div>
