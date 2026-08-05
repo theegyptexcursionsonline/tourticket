@@ -36,7 +36,12 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { formatExperienceDescription } from '@/lib/content/experienceDescription';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { contentPath } from '@/lib/content/contentUrl';
-import { itineraryEmbedMapUrl, itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
+import {
+  itineraryDirectionsUrl,
+  itineraryEmbedMapUrl,
+  itineraryMapStops,
+  itineraryStaticMapUrl,
+} from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 
 // Enhanced interfaces for additional tour data
@@ -448,9 +453,7 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
   const stops = itineraryMapStops(itinerary);
   const staticMapUrl = itineraryStaticMapUrl(stops, process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, tourLocation);
   const showMap = stops.length === 1 || Boolean(staticMapUrl);
-  const openMapsUrl = stops.length > 1
-    ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${stops[0]}, ${tourLocation || 'Egypt'}`)}&destination=${encodeURIComponent(`${stops[stops.length - 1]}, ${tourLocation || 'Egypt'}`)}&waypoints=${encodeURIComponent(stops.slice(1, -1).map((stop) => `${stop}, ${tourLocation || 'Egypt'}`).join('|'))}`
-    : `https://www.google.com/maps/search/${encodeURIComponent(`${stops[0] || ''}, ${tourLocation || 'Egypt'}`)}`;
+  const openMapsUrl = itineraryDirectionsUrl(stops, tourLocation);
 
   return (
     <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">

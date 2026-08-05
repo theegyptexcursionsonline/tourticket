@@ -186,3 +186,26 @@ export function itineraryStaticMapUrl(stops: string[], apiKey?: string | null, t
   ];
   return `https://maps.googleapis.com/maps/api/staticmap?${parts.join('&')}`;
 }
+
+export function itineraryDirectionsUrl(stops: string[], tourLocation?: string | null): string {
+  if (stops.length === 0) return 'https://www.google.com/maps';
+
+  const routeContext = routeLocation(stops, tourLocation);
+  const mapStops = stops.map((stop) => mapStopQuery(stop, routeContext));
+
+  if (mapStops.length === 1) {
+    const searchUrl = new URL('https://www.google.com/maps/search/');
+    searchUrl.searchParams.set('api', '1');
+    searchUrl.searchParams.set('query', mapStops[0]);
+    return searchUrl.toString();
+  }
+
+  const directionsUrl = new URL('https://www.google.com/maps/dir/');
+  directionsUrl.searchParams.set('api', '1');
+  directionsUrl.searchParams.set('origin', mapStops[0]);
+  directionsUrl.searchParams.set('destination', mapStops[mapStops.length - 1]);
+  if (mapStops.length > 2) {
+    directionsUrl.searchParams.set('waypoints', mapStops.slice(1, -1).join('|'));
+  }
+  return directionsUrl.toString();
+}

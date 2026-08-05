@@ -1,4 +1,9 @@
-import { itineraryEmbedMapUrl, itineraryMapStops, itineraryStaticMapUrl } from '@/lib/tours/itineraryMap';
+import {
+  itineraryDirectionsUrl,
+  itineraryEmbedMapUrl,
+  itineraryMapStops,
+  itineraryStaticMapUrl,
+} from '@/lib/tours/itineraryMap';
 
 describe('itineraryMapStops', () => {
   it('returns nothing when no step has an explicit location', () => {
@@ -106,5 +111,24 @@ describe('itineraryEmbedMapUrl', () => {
   it('uses the tour city to disambiguate a one-stop place embed', () => {
     expect(decodeURIComponent(itineraryEmbedMapUrl('Hanging Church', 'secret key', 'Cairo, Egypt')))
       .toContain('q=Hanging Church, Cairo, Egypt');
+  });
+});
+
+describe('itineraryDirectionsUrl', () => {
+  it('uses the visited itinerary city for the external route', () => {
+    const url = new URL(itineraryDirectionsUrl(
+      ['Luxor', 'Valley of the Kings', 'Karnak'],
+      'Makadi Bay',
+    ));
+    expect(url.searchParams.get('origin')).toBe('Luxor, Egypt');
+    expect(url.searchParams.get('destination')).toBe('Karnak, Luxor, Egypt');
+    expect(url.searchParams.get('waypoints')).toBe('Valley of the Kings, Luxor, Egypt');
+    expect(url.toString()).not.toContain('Makadi');
+  });
+
+  it('uses the published city for an ambiguous single stop', () => {
+    const url = new URL(itineraryDirectionsUrl(['Citadel'], 'Cairo'));
+    expect(url.pathname).toBe('/maps/search/');
+    expect(url.searchParams.get('query')).toBe('Citadel, Cairo, Egypt');
   });
 });
