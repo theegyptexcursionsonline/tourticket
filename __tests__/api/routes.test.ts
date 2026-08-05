@@ -48,6 +48,18 @@ jest.mock('@/lib/security/distributedAbuseLimit', () => ({
     retryAfterSeconds: 60,
   }),
 }));
+jest.mock('bcryptjs', () => ({
+  __esModule: true,
+  default: {
+    // Route-contract tests prove the response decision, not bcrypt cost. Real
+    // password hashing has dedicated coverage; keeping cost-12 work here made
+    // this smoke test exceed Jest's case budget under full-suite CPU load.
+    compare: jest.fn().mockResolvedValue(false),
+  },
+}));
+jest.mock('@/lib/auth/loginAudit', () => ({
+  recordLoginAudit: jest.fn().mockResolvedValue(undefined),
+}));
 
 jest.mock('mongoose', () => ({
   __esModule: true,
