@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
@@ -8,7 +9,7 @@ import Booking from '@/lib/models/Booking';
 // operator). For bookings with a completed refund/cancellation outcome this
 // re-runs the standard refund-notification path after releasing its one-shot
 // claim; for all other bookings it sends the current-status update directly.
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -51,3 +52,5 @@ export async function POST(
     return NextResponse.json({ success: false, error: 'Failed to resend notifications.' }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import InternalLinkBlock from '@/lib/models/InternalLinkBlock';
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+async function PUTHandler(request: NextRequest) {
   const auth = await requireAdminAuth(request, { permissions: ['manageContent'] });
   if (auth instanceof NextResponse) return auth;
 
@@ -50,3 +51,5 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to save internal links.' }, { status: 500 });
   }
 }
+
+export const PUT = withAdminAudit(PUTHandler);

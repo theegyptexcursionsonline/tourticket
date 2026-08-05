@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
@@ -32,7 +33,7 @@ import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStor
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category', 'attraction-page'] as const;
 type ModelType = (typeof VALID_MODEL_TYPES)[number];
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -259,3 +260,5 @@ export async function POST(request: NextRequest) {
     },
   });
 }
+
+export const POST = withAdminAudit(POSTHandler);

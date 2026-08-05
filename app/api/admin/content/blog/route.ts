@@ -3,6 +3,7 @@
 // Auth: Bearer token in Authorization header (CONTENT_ENGINE_API_KEY).
 // POST creates a new blog post; PUT updates an existing one by slug.
 
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
@@ -117,7 +118,7 @@ function validate(payload: IncomingPayload | undefined): string | null {
   return null;
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   const authError = verifyContentEngine(req);
   if (authError) return authError;
 
@@ -243,7 +244,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+async function PUTHandler(req: NextRequest) {
   const authError = verifyContentEngine(req);
   if (authError) return authError;
 
@@ -313,3 +314,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);
+export const PUT = withAdminAudit(PUTHandler);

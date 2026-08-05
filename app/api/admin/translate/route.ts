@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import {
@@ -27,7 +28,7 @@ async function defaultTenantDestinationExists(id: string) {
   return doc && (!doc.tenantId || doc.tenantId === 'default');
 }
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -78,3 +79,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

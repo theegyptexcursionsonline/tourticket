@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
@@ -14,7 +15,7 @@ const PLACEHOLDER_PATTERNS = [
   'example.com'
 ];
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   // Verify admin authentication
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -330,3 +331,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

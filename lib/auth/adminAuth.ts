@@ -139,14 +139,15 @@ export async function requireAdminAuth(
       twoFactorRecoveryPending: false,
     };
 
+    const { registerAdminAuditActor } = await import('@/lib/admin/adminAudit');
+    registerAdminAuditActor(authContext, { fallbackTenantIds: ['default'] });
+
     const { permissions = [], requireAll = true } = options;
     const hasPermissions = requireAll
       ? permissions.every((permission) => authContext.permissions.includes(permission))
       : permissions.some((permission) => authContext.permissions.includes(permission));
 
     if (permissions.length > 0 && !hasPermissions) return forbiddenResponse();
-    const { recordAdminMutation } = await import('@/lib/admin/adminAudit');
-    await recordAdminMutation(request, authContext, { fallbackTenantIds: ['default'] });
     return authContext;
   }
 
@@ -218,6 +219,11 @@ export async function requireAdminAuth(
     twoFactorRecoveryPending: recoveryPending,
   };
 
+  // The response-aware route wrapper writes the event after the handler
+  // finishes, so a permission rejection is visibly different from success.
+  const { registerAdminAuditActor } = await import('@/lib/admin/adminAudit');
+  registerAdminAuditActor(authContext, { fallbackTenantIds: ['default'] });
+
   const { permissions = [], requireAll = true } = options;
   const hasPermissions = permissions.length === 0 || (requireAll
     ? permissions.every((perm) => authContext.permissions.includes(perm) || role === 'super_admin')
@@ -226,9 +232,6 @@ export async function requireAdminAuth(
   if (!hasPermissions) {
     return forbiddenResponse();
   }
-
-  const { recordAdminMutation } = await import('@/lib/admin/adminAudit');
-  await recordAdminMutation(request, authContext, { fallbackTenantIds: ['default'] });
 
   return authContext;
 }

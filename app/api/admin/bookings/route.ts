@@ -1,4 +1,5 @@
 // app/api/admin/bookings/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
@@ -282,7 +283,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create manual booking
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   // Verify admin authentication (cookie + Authorization header fallback)
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -827,3 +828,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

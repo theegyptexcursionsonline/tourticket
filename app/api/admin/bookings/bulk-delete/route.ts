@@ -1,7 +1,8 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   // Verify admin authentication (cookie + Authorization header fallback)
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -15,3 +16,5 @@ export async function POST(request: NextRequest) {
     { status: 409 },
   );
 }
+
+export const POST = withAdminAudit(POSTHandler);

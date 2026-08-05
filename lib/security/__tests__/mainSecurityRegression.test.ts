@@ -49,9 +49,10 @@ describe('main storefront security regressions', () => {
 
   it('protects both placeholder-image maintenance methods', () => {
     const route = source('app/api/admin/tours/clean-images/route.ts');
-    const postSection = route.slice(route.indexOf('export async function POST'), route.indexOf('// GET endpoint'));
+    const postSection = route.slice(route.indexOf('async function POSTHandler'), route.indexOf('// GET endpoint'));
     const getSection = route.slice(route.indexOf('export async function GET'));
     expect(postSection).toContain('verifyAdmin(request)');
+    expect(route).toContain('export const POST = withAdminAudit(POSTHandler)');
     expect(getSection).toContain('verifyAdmin(request)');
   });
 

@@ -36,6 +36,7 @@ describe('main EEO team invitation UI contract', () => {
     expect(permanentRoute).toContain("auth.role !== 'super_admin'");
     expect(permanentRoute).toContain('inspectAccountDependencies');
     expect(permanentRoute).toContain('ACCOUNT_HAS_DEPENDENCIES');
-    expect(permanentRoute).toContain('adminmutationaudits');
+    expect(permanentRoute).toContain('registerAdminAuditDetail');
+    expect(permanentRoute).toContain('withAdminAudit(DELETEHandler)');
   });
 });

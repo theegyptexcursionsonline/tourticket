@@ -1,4 +1,5 @@
 // app/api/bookings/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(_request: NextRequest) {
+async function POSTHandler(_request: NextRequest) {
   // Booking creation must go through /api/checkout, where catalogue prices,
   // discounts, and payment status are verified server-side. This legacy route
   // previously trusted totalPrice and created Confirmed bookings directly.
@@ -135,3 +136,5 @@ export async function POST(_request: NextRequest) {
     { status: 405, headers: { Allow: 'GET' } },
   );
 }
+
+export const POST = withAdminAudit(POSTHandler);

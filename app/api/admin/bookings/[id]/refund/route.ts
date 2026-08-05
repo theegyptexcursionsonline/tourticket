@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
@@ -5,7 +6,7 @@ import { getServerStripe } from '@/lib/stripe/server';
 import { BookingRefundError, requestBookingRefund } from '@/lib/bookings/refunds';
 import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
 
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -66,3 +67,5 @@ export async function POST(
     return NextResponse.json({ success: false, error: 'Failed to process refund safely.' }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

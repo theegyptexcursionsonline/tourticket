@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
@@ -12,7 +13,7 @@ const getSupportEmail = () =>
   process.env.MAILGUN_FROM_EMAIL ||
   'support@tourticket.app';
 
-export async function POST(
+async function POSTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -106,3 +107,5 @@ export async function POST(
     );
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

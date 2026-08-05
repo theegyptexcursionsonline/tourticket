@@ -1,11 +1,12 @@
 // app/api/admin/hero-settings/images/[imageIndex]/activate/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
-export async function PUT(
+async function PUTHandler(
   request: NextRequest,
   { params }: { params: Promise<{ imageIndex: string }> }
 ) {
@@ -58,3 +59,5 @@ export async function PUT(
     );
   }
 }
+
+export const PUT = withAdminAudit(PUTHandler);

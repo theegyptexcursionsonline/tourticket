@@ -1,6 +1,7 @@
 // app/api/admin/content/destination/route.ts
 // Adapter route for the foxes-content-engine — destination content type.
 
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
@@ -86,7 +87,7 @@ function asStringArray(v: unknown, max = 10): string[] {
   return v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, max);
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   const authError = verifyContentEngine(req);
   if (authError) return authError;
 
@@ -212,3 +213,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

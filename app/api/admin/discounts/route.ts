@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   // Verify admin authentication
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -35,3 +36,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Server Error' }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

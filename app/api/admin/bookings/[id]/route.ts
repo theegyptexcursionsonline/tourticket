@@ -1,4 +1,5 @@
 // app/api/admin/bookings/[id]/route.ts (Enhanced with booking editing and notifications)
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Booking, { BOOKING_STATUSES, IBookingEditHistoryEntry } from '@/lib/models/Booking';
@@ -168,7 +169,7 @@ export async function GET(
 }
 
 // PATCH - Update booking (status, date, time, booking option) with email notifications
-export async function PATCH(
+async function PATCHHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -635,7 +636,7 @@ export async function PATCH(
 // DELETE - Financial bookings are immutable audit records. Operators must use
 // the cancellation/refund workflows so inventory, provider evidence and
 // customer notifications remain consistent.
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
 ) {
   // Verify admin authentication (cookie + Authorization header fallback)
@@ -651,3 +652,6 @@ export async function DELETE(
     { status: 409 },
   );
 }
+
+export const PATCH = withAdminAudit(PATCHHandler);
+export const DELETE = withAdminAudit(DELETEHandler);

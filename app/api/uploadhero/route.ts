@@ -1,4 +1,5 @@
 // app/api/uploadhero/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import type { UploadApiResponse } from 'cloudinary';
@@ -18,7 +19,7 @@ function bufferToStream(buffer: Buffer): Readable {
   return stream;
 }
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   try {
     const auth = await requireAdminAuth(request, { permissions: ['manageContent'] });
     if (auth instanceof NextResponse) return auth;
@@ -79,3 +80,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

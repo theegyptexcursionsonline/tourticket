@@ -1,4 +1,5 @@
 // app/api/admin/hero-settings/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import HeroSettings from '@/lib/models/HeroSettings';
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+async function PUTHandler(request: NextRequest) {
   // Verify admin authentication
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -147,3 +148,5 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const PUT = withAdminAudit(PUTHandler);

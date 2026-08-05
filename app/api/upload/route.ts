@@ -1,5 +1,6 @@
 // File: app/api/upload/route.ts
 
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { v2 as cloudinary } from 'cloudinary';
 import type { UploadApiResponse } from 'cloudinary';
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,7 +22,7 @@ function bufferToStream(buffer: Buffer): Readable {
   return stream;
 }
 
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   try {
     const auth = await requireAdminAuth(request, { permissions: ['manageContent'] });
     if (auth instanceof NextResponse) return auth;
@@ -78,3 +79,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Upload failed on the server.' }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

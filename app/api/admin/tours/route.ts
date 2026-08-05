@@ -1,4 +1,5 @@
 // app/api/admin/tours/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextRequest, NextResponse } from 'next/server';
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST a new tour
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   // Verify admin authentication
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -203,3 +204,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);

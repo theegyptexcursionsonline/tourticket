@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
@@ -68,7 +69,7 @@ const getSupportEmail = () =>
 
 const formatName = (user: Pick<IUser, 'firstName' | 'lastName'>) => `${user.firstName || ''} ${user.lastName || ''}`.trim();
 
-export async function PATCH(
+async function PATCHHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -170,7 +171,7 @@ export async function PATCH(
   return NextResponse.json({ success: true, data: sanitize(user) });
 }
 
-export async function DELETE(
+async function DELETEHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -304,3 +305,6 @@ export async function DELETE(
         : 'Removed from this portal. Their access to other portals is unchanged.',
   });
 }
+
+export const PATCH = withAdminAudit(PATCHHandler);
+export const DELETE = withAdminAudit(DELETEHandler);

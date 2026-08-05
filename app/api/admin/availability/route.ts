@@ -1,4 +1,5 @@
 // app/api/admin/availability/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import dbConnect from '@/lib/dbConnect';
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create or update availability
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -320,7 +321,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Bulk update availability
-export async function PUT(request: NextRequest) {
+async function PUTHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -561,7 +562,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Remove availability
-export async function DELETE(request: NextRequest) {
+async function DELETEHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -630,3 +631,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);
+export const PUT = withAdminAudit(PUTHandler);
+export const DELETE = withAdminAudit(DELETEHandler);

@@ -1,4 +1,5 @@
 // app/api/admin/special-offers/route.ts
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import SpecialOffer from '@/lib/models/SpecialOffer';
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create new special offer
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -218,7 +219,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update special offer
-export async function PUT(request: NextRequest) {
+async function PUTHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -330,7 +331,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Delete special offer
-export async function DELETE(request: NextRequest) {
+async function DELETEHandler(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -370,3 +371,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);
+export const PUT = withAdminAudit(PUTHandler);
+export const DELETE = withAdminAudit(DELETEHandler);

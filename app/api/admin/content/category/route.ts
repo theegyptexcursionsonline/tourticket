@@ -4,6 +4,7 @@
 // POST creates a new category; PUT updates an existing one by slug.
 // Reuses the existing Category model + the /{locale}/categories/{slug} page.
 
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/lib/models/Category";
@@ -66,7 +67,7 @@ function heroFrom(p: IncomingPayload): string | undefined {
   return p.heroImage || p.featuredImage || undefined;
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   const authError = verifyContentEngine(req);
   if (authError) return authError;
 
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+async function PUTHandler(req: NextRequest) {
   const authError = verifyContentEngine(req);
   if (authError) return authError;
 
@@ -184,3 +185,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);
+export const PUT = withAdminAudit(PUTHandler);

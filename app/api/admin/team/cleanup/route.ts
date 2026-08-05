@@ -1,3 +1,4 @@
+import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
@@ -11,7 +12,7 @@ import { clearPendingAdminGrant } from '@/lib/admin/teamMembership';
  * and access to another EEO portal. Expiry cleanup therefore removes only the
  * pending offer and its one-time token.
  */
-export async function POST(request: NextRequest) {
+async function POSTHandler(request: NextRequest) {
   const auth = await requireAdminAuth(request, { permissions: ['manageUsers'] });
   if (auth instanceof NextResponse) return auth;
 
@@ -49,3 +50,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAdminAudit(POSTHandler);
