@@ -44,7 +44,9 @@ describe('every admin mutation is auditable', () => {
   it('records a final outcome for every admin mutation route', () => {
     const offenders = adminMutationRouteFiles().filter((file) => {
       const source = fs.readFileSync(file, 'utf8');
-      return !source.includes('withAdminAudit') && !source.includes('recordAdminLogin');
+      const isLoginRoute = file === path.join(process.cwd(), 'app/api/admin/login/route.ts');
+      return !source.includes('withAdminAudit')
+        && !(isLoginRoute && source.includes('recordAdminLogin'));
     });
     expect(offenders.map((file) => path.relative(process.cwd(), file))).toEqual([]);
   });
