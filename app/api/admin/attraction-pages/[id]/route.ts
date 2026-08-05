@@ -173,7 +173,7 @@ async function PUTHandler(
       model: Category,
       match: DEFAULT_TENANT_FILTER,
       select: 'name slug'
-    });
+    }).lean();
 
     if (!page) {
       return NextResponse.json({

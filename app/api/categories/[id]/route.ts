@@ -84,7 +84,7 @@ async function PUTHandler(
 
     const beforeCategory = await Category.findOne({
       $and: [DEFAULT_TENANT_FILTER, { _id: id }],
-    });
+    }).lean();
     if (!beforeCategory) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
     }
@@ -103,7 +103,9 @@ async function PUTHandler(
       body.parentPage = await validateParentPageSelection({
         parentPage: body.parentPage,
         currentId: id,
-        currentSlug: body.slug || beforeCategory.slug,
+        currentSlug: body.slug || String(
+          (beforeCategory as unknown as { slug?: string }).slug || '',
+        ),
         tenantFilter: DEFAULT_TENANT_FILTER,
       });
     }
@@ -137,7 +139,7 @@ async function PUTHandler(
       { $and: [DEFAULT_TENANT_FILTER, { _id: id }] },
       body,
       { new: true, runValidators: true }
-    );
+    ).lean();
 
     if (!category) {
       return NextResponse.json({

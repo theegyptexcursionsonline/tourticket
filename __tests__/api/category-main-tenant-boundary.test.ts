@@ -5,6 +5,9 @@ const findOne = jest.fn();
 const findOneAndUpdate = jest.fn();
 const findOneAndDelete = jest.fn();
 const mockSave = jest.fn();
+const leanQuery = (value: unknown) => ({
+  lean: jest.fn().mockResolvedValue(value),
+});
 const mockCategoryConstructor = jest.fn((data: Record<string, unknown>) => ({
   ...data,
   save: mockSave,
@@ -111,17 +114,17 @@ describe('main category item tenant boundary', () => {
 
   it('checks a same-slug edit only inside the main tenant', async () => {
     findOne
-      .mockResolvedValueOnce({
+      .mockReturnValueOnce(leanQuery({
         _id: '68e1825fe6bab638df5a7f31',
         name: 'Nightlife & Bars',
         slug: 'nightlife-bars',
         tenantId: 'default',
-      })
+      }))
       .mockResolvedValueOnce(null);
-    findOneAndUpdate.mockResolvedValue({
+    findOneAndUpdate.mockReturnValue(leanQuery({
       _id: '68e1825fe6bab638df5a7f31',
       slug: 'nightlife-bars',
-    });
+    }));
     const { PUT } = await import('@/app/api/categories/[id]/route');
 
     const response = await PUT(request('PUT', {
@@ -144,13 +147,13 @@ describe('main category item tenant boundary', () => {
   });
 
   it('returns 404 rather than updating a category outside the main tenant', async () => {
-    findOne.mockResolvedValue({
+    findOne.mockReturnValue(leanQuery({
       _id: '68e1825fe6bab638df5a7f31',
       name: 'Nightlife & Bars',
       slug: 'nightlife-bars',
       tenantId: 'default',
-    });
-    findOneAndUpdate.mockResolvedValue(null);
+    }));
+    findOneAndUpdate.mockReturnValue(leanQuery(null));
     const { PUT } = await import('@/app/api/categories/[id]/route');
 
     const response = await PUT(request('PUT', { name: 'Changed' }), context);
