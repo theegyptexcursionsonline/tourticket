@@ -18,6 +18,7 @@ describe('itineraryMapStops', () => {
     expect(itineraryMapStops([
       { location: 'Your Hotel' },
       { location: 'En Route' },
+      { location: 'Local Restaurant' },
       { location: 'Luxor' },
       { location: 'Valley of the Kings' },
       { location: 'Unterwegs' },
@@ -48,11 +49,14 @@ describe('itineraryStaticMapUrl', () => {
     expect(itineraryStaticMapUrl(['Cairo'], 'k')).toBeNull();
   });
 
-  it('gives the start a prominent marker and the rest smaller ones', () => {
+  it('gives every stop a visible red numbered marker and connects the route with a strong red line', () => {
     const url = itineraryStaticMapUrl(['El Gouna', 'Valley of the Kings', 'Luxor'], 'k');
     expect(url).toContain('staticmap');
-    expect(url).toContain(encodeURIComponent('size:mid|color:red|label:1|El Gouna, Egypt'));
-    expect(url).toContain(encodeURIComponent('size:small|color:blue|Valley of the Kings, Egypt|Luxor, Egypt'));
+    expect(url).toContain(encodeURIComponent('size:mid|color:0xB91C1C|label:1|El Gouna, Egypt'));
+    expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:2|Valley of the Kings, Egypt'));
+    expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:3|Luxor, Egypt'));
+    expect(url).toContain(encodeURIComponent('weight:5|color:0xDC2626E6|geodesic:true|El Gouna, Egypt|Valley of the Kings, Egypt|Luxor, Egypt'));
+    expect(decodeURIComponent(url!)).not.toContain('color:blue');
   });
 
   it('does not duplicate an existing Egypt country context', () => {
@@ -61,6 +65,13 @@ describe('itineraryStaticMapUrl', () => {
     expect(markers).toContain('Luxor, Egypt');
     expect(markers).toContain('Karnak, Ägypten');
     expect(markers).not.toContain('Egypt, Egypt');
+  });
+
+  it('uses the published tour city to disambiguate short landmark names', () => {
+    const url = itineraryStaticMapUrl(['Egyptian Museum', 'Citadel'], 'k', 'Cairo, Egypt');
+    const markers = new URL(url!).searchParams.getAll('markers').join('|');
+    expect(markers).toContain('Egyptian Museum, Cairo, Egypt');
+    expect(markers).toContain('Citadel, Cairo, Egypt');
   });
 });
 
@@ -74,5 +85,10 @@ describe('itineraryEmbedMapUrl', () => {
     expect(url).toContain('/embed/v1/place?key=secret%20key');
     expect(decodeURIComponent(url)).toContain('q=Karnak, Egypt');
     expect(decodeURIComponent(url)).not.toContain('Egypt, Egypt');
+  });
+
+  it('uses the tour city to disambiguate a one-stop place embed', () => {
+    expect(decodeURIComponent(itineraryEmbedMapUrl('Hanging Church', 'secret key', 'Cairo, Egypt')))
+      .toContain('q=Hanging Church, Cairo, Egypt');
   });
 });

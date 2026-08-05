@@ -442,13 +442,15 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   return icons[iconType || 'location'] || icons.location;
 };
 
-const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   // The map only exists when the editor typed explicit step locations —
   // guessing from the tour title placed markers on random keyword matches.
   const stops = itineraryMapStops(itinerary);
-  const staticMapUrl = itineraryStaticMapUrl(stops, process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const staticMapUrl = itineraryStaticMapUrl(stops, process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, tourLocation);
   const showMap = stops.length === 1 || Boolean(staticMapUrl);
-  const mapQuery = stops.join('|');
+  const openMapsUrl = stops.length > 1
+    ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${stops[0]}, ${tourLocation || 'Egypt'}`)}&destination=${encodeURIComponent(`${stops[stops.length - 1]}, ${tourLocation || 'Egypt'}`)}&waypoints=${encodeURIComponent(stops.slice(1, -1).map((stop) => `${stop}, ${tourLocation || 'Egypt'}`).join('|'))}`
+    : `https://www.google.com/maps/search/${encodeURIComponent(`${stops[0] || ''}, ${tourLocation || 'Egypt'}`)}`;
 
   return (
     <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
@@ -540,17 +542,17 @@ const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[
           </div>
         </div>
 
-        {/* Right: map — interactive place embed for one stop, multi-marker
-            static map for a real route. No locations, no map. */}
+        {/* Right: interactive place embed for one stop, numbered static route
+            map for multiple stops. No locations, no map. */}
         {showMap && (
           <div className="relative order-1 lg:order-2 lg:sticky lg:top-24 h-[400px] lg:h-[700px]">
-            <div className="h-full rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-100">
+            <div className="h-[calc(100%-4rem)] rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-100">
               {staticMapUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={staticMapUrl}
-                  alt={`Route map: ${stops.join(', ')}`}
-                  className="h-full w-full object-cover"
+                  alt={`Numbered route map: ${stops.join(', ')}`}
+                  className="h-full w-full object-contain"
                   loading="lazy"
                 />
               ) : (
@@ -561,31 +563,32 @@ const ItinerarySection = ({ itinerary, sectionRef }: { itinerary: ItineraryItem[
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  src={itineraryEmbedMapUrl(stops[0], process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)}
+                  src={itineraryEmbedMapUrl(stops[0], process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, tourLocation)}
                 ></iframe>
               )}
             </div>
 
-            {/* Map Controls Overlay */}
-            <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Navigation size={16} className="text-blue-600" />
+            {/* Controls stay outside the image so they never cover a location marker. */}
+            <div className="mt-3 bg-white rounded-lg p-3 shadow-lg border border-slate-200">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Navigation size={16} className="text-red-600" />
                   <span className="text-sm font-medium text-slate-800">Tour Route</span>
                   {stops.length > 1 && (
-                    <span className="hidden sm:flex items-center gap-3 text-xs text-slate-600 ml-2">
+                    <span className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:ml-2">
                       <span className="flex items-center gap-1">
-                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" /> Main stop
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-700 text-[10px] font-bold text-white ring-2 ring-red-200">1</span> Start
                       </span>
+                      <span className="h-0.5 w-7 rounded-full bg-red-600" aria-hidden="true" />
                       <span className="flex items-center gap-1">
-                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" /> Other stop
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-red-100">2</span> Next stops
                       </span>
                     </span>
                   )}
                 </div>
                 <button
-                  onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(mapQuery)}`, '_blank')}
-                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1"
+                  onClick={() => window.open(openMapsUrl, '_blank', 'noopener,noreferrer')}
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 sm:w-auto sm:py-1.5"
                 >
                   <Navigation size={12} />
                   Open Maps
@@ -1431,7 +1434,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
               <OverviewSection tour={tour} sectionRef={overviewRef} />
               
               {enhancement.itinerary && enhancement.itinerary.length > 0 && (
-                <ItinerarySection itinerary={enhancement.itinerary} sectionRef={itineraryRef} />
+                <ItinerarySection itinerary={enhancement.itinerary} tourLocation={tour.location} sectionRef={itineraryRef} />
               )}
               
               <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />
