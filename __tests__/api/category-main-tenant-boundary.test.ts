@@ -110,7 +110,14 @@ describe('main category item tenant boundary', () => {
   });
 
   it('checks a same-slug edit only inside the main tenant', async () => {
-    findOne.mockResolvedValue(null);
+    findOne
+      .mockResolvedValueOnce({
+        _id: '68e1825fe6bab638df5a7f31',
+        name: 'Nightlife & Bars',
+        slug: 'nightlife-bars',
+        tenantId: 'default',
+      })
+      .mockResolvedValueOnce(null);
     findOneAndUpdate.mockResolvedValue({
       _id: '68e1825fe6bab638df5a7f31',
       slug: 'nightlife-bars',
@@ -137,7 +144,12 @@ describe('main category item tenant boundary', () => {
   });
 
   it('returns 404 rather than updating a category outside the main tenant', async () => {
-    findOne.mockResolvedValue(null);
+    findOne.mockResolvedValue({
+      _id: '68e1825fe6bab638df5a7f31',
+      name: 'Nightlife & Bars',
+      slug: 'nightlife-bars',
+      tenantId: 'default',
+    });
     findOneAndUpdate.mockResolvedValue(null);
     const { PUT } = await import('@/app/api/categories/[id]/route');
 

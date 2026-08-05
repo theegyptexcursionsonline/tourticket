@@ -541,11 +541,6 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
         linkedCategoryIds: Array.isArray(linkedCategories) ? linkedCategories : [],
       };
 
-      // ADD DEBUGGING
-      console.log('🔍 FRONTEND: Form data before submit:', formData);
-      console.log('📸 FRONTEND: Images being sent:', payload.images);
-      console.log('💾 FRONTEND: Full payload:', payload);
-
       const response = await fetch(url, {
         method,
         headers: {

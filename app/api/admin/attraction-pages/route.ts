@@ -1,4 +1,5 @@
-import { withAdminAudit } from '@/lib/admin/adminAudit';
+import { registerAdminAuditDetail, withAdminAudit } from '@/lib/admin/adminAudit';
+import { contentPageAuditDetail } from '@/lib/admin/contentPageAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
@@ -152,8 +153,6 @@ async function POSTHandler(request: NextRequest) {
         error: 'The City URL type requires an owning city (cityDestination).'
       }, { status: 400 });
     }
-    console.log('Creating attraction page with data:', body);
-    
     // Validate required fields
     const requiredFields = ['title', 'slug', 'description', 'heroImage', 'gridTitle', 'pageType'];
     const missingFields = requiredFields.filter(field => !body[field]);
@@ -208,7 +207,11 @@ async function POSTHandler(request: NextRequest) {
       select: 'name slug'
     });
 
-    console.log('Attraction page created successfully:', page._id);
+    registerAdminAuditDetail(contentPageAuditDetail({
+      kind: 'attraction page',
+      operation: 'create',
+      after: page,
+    }));
 
     return NextResponse.json({
       success: true,

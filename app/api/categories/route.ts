@@ -1,5 +1,6 @@
 // app/api/categories/route.ts
-import { withAdminAudit } from '@/lib/admin/adminAudit';
+import { registerAdminAuditDetail, withAdminAudit } from '@/lib/admin/adminAudit';
+import { contentPageAuditDetail } from '@/lib/admin/contentPageAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
@@ -151,6 +152,11 @@ async function POSTHandler(request: NextRequest) {
     const category = new Category({ ...body, tenantId: 'default' });
     await category.save();
     revalidateStorefrontContent();
+    registerAdminAuditDetail(contentPageAuditDetail({
+      kind: 'category page',
+      operation: 'create',
+      after: category,
+    }));
 
     return NextResponse.json({
       success: true,

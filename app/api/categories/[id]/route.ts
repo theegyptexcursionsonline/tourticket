@@ -1,5 +1,9 @@
 // app/api/categories/[id]/route.ts
-import { withAdminAudit } from '@/lib/admin/adminAudit';
+import { registerAdminAuditDetail, withAdminAudit } from '@/lib/admin/adminAudit';
+import {
+  contentPageAuditAttemptDetail,
+  contentPageAuditDetail,
+} from '@/lib/admin/contentPageAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
@@ -78,21 +82,28 @@ async function PUTHandler(
       }, { status: 400 });
     }
 
+    const beforeCategory = await Category.findOne({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    });
+    if (!beforeCategory) {
+      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
+    }
+    registerAdminAuditDetail(contentPageAuditAttemptDetail({
+      kind: 'category page',
+      operation: 'update',
+      record: beforeCategory,
+      resourceId: id,
+    }));
+
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
 
     if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
-      const currentCategory = await Category.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: id }] })
-        .select('slug')
-        .lean<{ slug?: string } | null>();
-      if (!currentCategory) {
-        return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
-      }
       body.parentPage = await validateParentPageSelection({
         parentPage: body.parentPage,
         currentId: id,
-        currentSlug: body.slug || currentCategory.slug,
+        currentSlug: body.slug || beforeCategory.slug,
         tenantFilter: DEFAULT_TENANT_FILTER,
       });
     }
@@ -136,6 +147,12 @@ async function PUTHandler(
     }
 
     revalidateStorefrontContent();
+    registerAdminAuditDetail(contentPageAuditDetail({
+      kind: 'category page',
+      operation: 'update',
+      before: beforeCategory,
+      after: category,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -206,6 +223,11 @@ async function DELETEHandler(
     }
 
     revalidateStorefrontContent();
+    registerAdminAuditDetail(contentPageAuditDetail({
+      kind: 'category page',
+      operation: 'delete',
+      before: category,
+    }));
 
     return NextResponse.json({
       success: true,

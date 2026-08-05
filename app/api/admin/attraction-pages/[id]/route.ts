@@ -1,4 +1,8 @@
-import { withAdminAudit } from '@/lib/admin/adminAudit';
+import { registerAdminAuditDetail, withAdminAudit } from '@/lib/admin/adminAudit';
+import {
+  contentPageAuditAttemptDetail,
+  contentPageAuditDetail,
+} from '@/lib/admin/contentPageAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
@@ -83,20 +87,27 @@ async function PUTHandler(
       }, { status: 400 });
     }
 
+    const beforePage = await AttractionPage.findOne({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    }).lean();
+    if (!beforePage) {
+      return NextResponse.json({ success: false, error: 'Page not found' }, { status: 404 });
+    }
+    registerAdminAuditDetail(contentPageAuditAttemptDetail({
+      kind: 'attraction page',
+      operation: 'update',
+      record: beforePage,
+      resourceId: id,
+    }));
+
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
     if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
-      const currentPage = await AttractionPage.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: id }] })
-        .select('slug')
-        .lean<{ slug?: string } | null>();
-      if (!currentPage) {
-        return NextResponse.json({ success: false, error: 'Page not found' }, { status: 404 });
-      }
       body.parentPage = await validateParentPageSelection({
         parentPage: body.parentPage,
         currentId: id,
-        currentSlug: body.slug || currentPage.slug,
+        currentSlug: body.slug || beforePage.slug,
         tenantFilter: DEFAULT_TENANT_FILTER,
       });
     }
@@ -108,11 +119,6 @@ async function PUTHandler(
         error: 'The City URL type requires an owning city (cityDestination).'
       }, { status: 400 });
     }
-    
-    // ADD DEBUGGING
-    console.log('🔍 Raw request body:', JSON.stringify(body, null, 2));
-    console.log('📸 Images field received:', body.images);
-    console.log('📸 Images type:', typeof body.images, Array.isArray(body.images));
     
     // Check if slug is being changed and if it conflicts
     if (body.slug) {
@@ -157,8 +163,6 @@ async function PUTHandler(
       ...('keywords' in body ? { keywords: Array.isArray(body.keywords) ? body.keywords : (body.keywords ? [body.keywords] : []) } : {}),
     };
 
-    console.log('💾 Final update data:', JSON.stringify(updateData, null, 2));
-
     const page = await AttractionPage.findOneAndUpdate(
       { $and: [DEFAULT_TENANT_FILTER, { _id: id }] },
       updateData, // Use processed data instead of raw body
@@ -179,9 +183,12 @@ async function PUTHandler(
     }
 
     revalidateStorefrontContent();
-
-    console.log('✅ Page updated successfully');
-    console.log('✅ Final saved images:', page.images);
+    registerAdminAuditDetail(contentPageAuditDetail({
+      kind: 'attraction page',
+      operation: 'update',
+      before: beforePage,
+      after: page,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -257,8 +264,11 @@ async function DELETEHandler(
     }
 
     revalidateStorefrontContent();
-
-    console.log('Attraction page deleted successfully:', id);
+    registerAdminAuditDetail(contentPageAuditDetail({
+      kind: 'attraction page',
+      operation: 'delete',
+      before: page,
+    }));
 
     return NextResponse.json({
       success: true,
