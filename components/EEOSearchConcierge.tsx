@@ -11,7 +11,7 @@ const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
-const LAUNCHER_RELEASE = '20260804-focus-ring';
+const LAUNCHER_RELEASE = '20260806-search-polish';
 
 const copy: Record<string, { label: string; kicker: string; placeholder: string }> = {
   en: {
