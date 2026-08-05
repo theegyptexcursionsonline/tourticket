@@ -55,9 +55,9 @@ describe('itineraryStaticMapUrl', () => {
     const url = itineraryStaticMapUrl(['El Gouna', 'Valley of the Kings', 'Luxor'], 'k');
     expect(url).toContain('staticmap');
     expect(url).toContain(encodeURIComponent('size:mid|color:0xB91C1C|label:1|El Gouna, Egypt'));
-    expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:2|Valley of the Kings, Egypt'));
+    expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:2|Valley of the Kings, Luxor, Egypt'));
     expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:3|Luxor, Egypt'));
-    expect(url).toContain(encodeURIComponent('weight:5|color:0xDC2626E6|geodesic:true|El Gouna, Egypt|Valley of the Kings, Egypt|Luxor, Egypt'));
+    expect(url).toContain(encodeURIComponent('weight:5|color:0xDC2626E6|geodesic:true|El Gouna, Egypt|Valley of the Kings, Luxor, Egypt|Luxor, Egypt'));
     expect(decodeURIComponent(url!)).not.toContain('color:blue');
   });
 
@@ -74,6 +74,20 @@ describe('itineraryStaticMapUrl', () => {
     const markers = new URL(url!).searchParams.getAll('markers').join('|');
     expect(markers).toContain('Egyptian Museum, Cairo, Egypt');
     expect(markers).toContain('Citadel, Cairo, Egypt');
+  });
+
+  it('uses an explicit itinerary city instead of the pickup destination', () => {
+    const url = itineraryStaticMapUrl(
+      ['Luxor', 'Valley of the Kings', 'Karnak'],
+      'k',
+      'Makadi Bay',
+    );
+    const markers = new URL(url!).searchParams.getAll('markers').join('|');
+    expect(markers).toContain('Luxor, Egypt');
+    expect(markers).toContain('Valley of the Kings, Luxor, Egypt');
+    expect(markers).toContain('Karnak, Luxor, Egypt');
+    expect(markers).not.toContain('Makadi Bay');
+    expect(markers).not.toContain('Luxor, Luxor');
   });
 });
 

@@ -59,6 +59,18 @@ const GENERIC_LOCATION_PATTERNS = [
   /(?:^|\s)(?:غداء|الغداء)$/u,
 ];
 
+// A tour's catalogue destination is often its pickup resort, not the city
+// visited by the itinerary (Makadi Bay → Luxor is a common example). Prefer an
+// explicit route city when the editor included one, otherwise retain the
+// published destination as the ambiguity guard for short landmark labels.
+const EGYPT_ROUTE_CITIES = new Set([
+  'abu simbel', 'alexandria', 'aswan', 'assuan', 'cairo', 'kairo', 'dahab',
+  'el gouna', 'fayoum', 'giza', 'hurghada', 'luxor', 'makadi bay',
+  'marsa alam', 'port said', 'safaga', 'sharm el-sheikh', 'sharm el sheikh',
+  'siwa', 'suez', 'taba', 'tanta', 'أبو سمبل', 'الإسكندرية', 'أسوان',
+  'القاهرة', 'دهب', 'الجيزة', 'الغردقة', 'الأقصر', 'مرسى علم', 'شرم الشيخ',
+]);
+
 function isMappableLocation(location: string): boolean {
   const normalized = location
     .toLocaleLowerCase()
@@ -99,13 +111,30 @@ function egyptScopedStop(stop: string): string {
   return hasEgyptCountryContext(stop) ? stop : `${stop}, Egypt`;
 }
 
-// Itinerary locations are short, editor-facing landmark names. When the tour
-// has a published city, include it in the Google query so names such as
-// "Citadel" and "Hanging Church" resolve to the tour's city rather than a
-// similarly named place elsewhere in Egypt.
+function normalizedPlace(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .replace(/(?:,?\s*(?:egypt|ägypten|مصر))$/iu, '')
+    .replace(/[.,:;!?]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function routeLocation(stops: string[], tourLocation?: string | null): string | null {
+  return [...stops].reverse().find((stop) => EGYPT_ROUTE_CITIES.has(normalizedPlace(stop)))
+    || String(tourLocation || '').trim()
+    || null;
+}
+
+// Itinerary locations are short, editor-facing landmark names. Include the
+// selected route context so names such as "Citadel" and "Hanging Church"
+// resolve to the visited city rather than a similarly named place elsewhere.
 function mapStopQuery(stop: string, tourLocation?: string | null): string {
   const normalizedTourLocation = String(tourLocation || '').trim();
-  if (!normalizedTourLocation || hasEgyptCountryContext(stop)) {
+  if (!normalizedTourLocation
+    || hasEgyptCountryContext(stop)
+    || EGYPT_ROUTE_CITIES.has(normalizedPlace(stop))
+    || normalizedPlace(stop) === normalizedPlace(normalizedTourLocation)) {
     return egyptScopedStop(stop);
   }
   return `${stop}, ${egyptScopedStop(normalizedTourLocation)}`;
@@ -132,7 +161,8 @@ export function itineraryStaticMapUrl(stops: string[], apiKey?: string | null, t
   // These storefronts sell Egypt experiences. Supplying the country context
   // prevents ambiguous editor labels (for example, "Luxor Restaurant") from
   // resolving to an unrelated place abroad and zooming the route to the world.
-  const mapStops = stops.map((stop) => mapStopQuery(stop, tourLocation));
+  const routeContext = routeLocation(stops, tourLocation);
+  const mapStops = stops.map((stop) => mapStopQuery(stop, routeContext));
   const markers = mapStops.map((stop, index) => {
     const label = STATIC_MAP_MARKER_LABELS[index];
     // Keep every stop in one red route system. The darker first marker makes
