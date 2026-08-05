@@ -19,6 +19,8 @@ describe('itineraryMapStops', () => {
       { location: 'Your Hotel' },
       { location: 'En Route' },
       { location: 'Local Restaurant' },
+      { location: 'Luxor Restaurant' },
+      { location: 'Cairo Lunch Stop' },
       { location: 'Luxor' },
       { location: 'Valley of the Kings' },
       { location: 'Unterwegs' },

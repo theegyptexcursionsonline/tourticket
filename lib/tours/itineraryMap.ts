@@ -47,6 +47,18 @@ const GENERIC_LOCATION_LABELS = new Set([
   'unterwegs',
 ]);
 
+// Editors also prefix generic meal stops with a city (for example,
+// "Luxor Restaurant" or "Cairo Restaurant"). Google can resolve those labels
+// to an unrelated business and stretch an otherwise local route across Egypt,
+// so treat them as timeline copy rather than itinerary landmarks.
+const GENERIC_LOCATION_PATTERNS = [
+  /(?:^|\s)(?:local\s+)?restaurant$/iu,
+  /(?:^|\s)restaurante$/iu,
+  /(?:^|\s)مطعم$/u,
+  /(?:^|\s)(?:lunch|mittagessen|almuerzo)(?:\s+(?:stop|break))?$/iu,
+  /(?:^|\s)(?:غداء|الغداء)$/u,
+];
+
 function isMappableLocation(location: string): boolean {
   const normalized = location
     .toLocaleLowerCase()
@@ -54,7 +66,9 @@ function isMappableLocation(location: string): boolean {
     .replace(/[.,:;!?]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return normalized.length > 2 && !GENERIC_LOCATION_LABELS.has(normalized);
+  return normalized.length > 2
+    && !GENERIC_LOCATION_LABELS.has(normalized)
+    && !GENERIC_LOCATION_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 export function itineraryMapStops(itinerary: ItineraryStepLike[]): string[] {
