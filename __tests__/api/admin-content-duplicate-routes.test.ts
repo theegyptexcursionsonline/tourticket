@@ -24,6 +24,7 @@ const categoryCountDocuments = jest.fn();
 const pageFindOne = jest.fn();
 const pageCreate = jest.fn();
 const pageCountDocuments = jest.fn();
+const pageDistinct = jest.fn();
 
 jest.mock('next/server', () => {
   class MockNextResponse {
@@ -73,7 +74,12 @@ jest.mock('@/lib/models/Category', () => ({
 }));
 jest.mock('@/lib/models/AttractionPage', () => ({
   __esModule: true,
-  default: { findOne: pageFindOne, create: pageCreate, countDocuments: pageCountDocuments },
+  default: {
+    findOne: pageFindOne,
+    create: pageCreate,
+    countDocuments: pageCountDocuments,
+    distinct: pageDistinct,
+  },
 }));
 jest.mock('@/lib/content/validateParentPage', () => ({
   ParentPageValidationError: class ParentPageValidationError extends Error {},
@@ -121,6 +127,7 @@ describe('admin content duplicate routes', () => {
     destinationCountDocuments.mockResolvedValue(1);
     categoryCountDocuments.mockResolvedValue(1);
     pageCountDocuments.mockResolvedValue(0);
+    pageDistinct.mockResolvedValue([]);
     tourCountDocuments.mockResolvedValue(0);
     tourCreate.mockImplementation(async (draft) => ({ ...draft }));
     destinationCreate.mockImplementation(async (draft) => ({ _id: '68e1825fe6bab638df5a7020', ...draft }));
@@ -208,6 +215,56 @@ describe('admin content duplicate routes', () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual(expect.objectContaining({ code: 'SOURCE_RELATIONSHIP_INVALID' }));
     expect(tourCreate).not.toHaveBeenCalled();
+  });
+
+  it('omits stale or cross-tenant optional page links while preserving valid main-tenant links', async () => {
+    tourFindOne.mockReturnValue(query({
+      title: 'Legacy Tour',
+      slug: 'legacy-tour',
+      destination: 'main-destination',
+      category: ['main-category'],
+      attractions: ['main-attraction', 'foreign-attraction', 'deleted-attraction'],
+      interests: ['main-interest', 'foreign-interest'],
+    }));
+    pageDistinct.mockResolvedValue(['main-attraction', 'main-interest']);
+
+    const { POST } = await import('@/app/api/admin/tours/[id]/duplicate/route');
+    const response = await POST(
+      request('http://localhost/api/admin/tours/68e1825fe6bab638df5a7010/duplicate'),
+      { params: Promise.resolve({ id: '68e1825fe6bab638df5a7010' }) },
+    );
+    const body = await response.json() as {
+      success?: boolean;
+      warnings?: Array<{ code?: string; count?: number; message?: string }>;
+      message?: string;
+    };
+
+    expect(response.status).toBe(201);
+    expect(pageDistinct).toHaveBeenCalledWith('_id', {
+      $and: [DEFAULT_TENANT_FILTER, {
+        _id: {
+          $in: [
+            'main-attraction', 'foreign-attraction', 'deleted-attraction',
+            'main-interest', 'foreign-interest',
+          ],
+        },
+      }],
+    });
+    expect(tourCreate).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'default',
+      attractions: ['main-attraction'],
+      interests: ['main-interest'],
+      isPublished: false,
+    }));
+    expect(body).toEqual(expect.objectContaining({
+      success: true,
+      warnings: [{ code: 'OPTIONAL_RELATIONSHIPS_OMITTED', count: 3, message: expect.any(String) }],
+      message: expect.stringContaining('3 unavailable optional page links were omitted'),
+    }));
+    expect(registerAdminAuditDetail).toHaveBeenCalledWith(expect.objectContaining({
+      summary: expect.stringContaining('omitted 3 unavailable optional page links'),
+      changedFields: ['title', 'slug', 'isPublished', 'attractions', 'interests'],
+    }));
   });
 
   it('fails closed instead of silently dropping a malformed parent relationship', async () => {

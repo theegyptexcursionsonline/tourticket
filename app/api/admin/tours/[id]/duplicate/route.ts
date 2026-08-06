@@ -39,28 +39,52 @@ function ids(value: unknown): string[] {
   return [...new Set(values.map(String).filter(Boolean))];
 }
 
-async function relationshipsBelongToMainTenant(source: SourceTour): Promise<boolean> {
+type ValidatedTourRelationships = {
+  source: SourceTour;
+  omittedOptionalRelationshipCount: number;
+};
+
+async function validateAndSanitizeRelationships(
+  source: SourceTour,
+): Promise<ValidatedTourRelationships | null> {
   const destinationId = source.destination ? String(source.destination) : '';
   const categoryIds = ids(source.category);
   const attractionIds = ids(source.attractions);
   const interestIds = ids(source.interests);
-  if (!destinationId || categoryIds.length === 0) return false;
+  if (!destinationId || categoryIds.length === 0) return null;
 
-  const [destinationCount, categoryCount, attractionCount, interestCount] = await Promise.all([
+  const optionalPageIds = [...new Set([...attractionIds, ...interestIds])];
+
+  const [destinationCount, categoryCount, allowedOptionalPageIds] = await Promise.all([
     Destination.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { _id: destinationId }] }),
     Category.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { _id: { $in: categoryIds } }] }),
-    attractionIds.length
-      ? AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { _id: { $in: attractionIds } }] })
-      : 0,
-    interestIds.length
-      ? AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { _id: { $in: interestIds } }] })
-      : 0,
+    optionalPageIds.length
+      ? AttractionPage.distinct('_id', {
+        $and: [DEFAULT_TENANT_FILTER, { _id: { $in: optionalPageIds } }],
+      })
+      : [],
   ]);
 
-  return destinationCount === 1
-    && categoryCount === categoryIds.length
-    && attractionCount === attractionIds.length
-    && interestCount === interestIds.length;
+  // Destination and category are required ownership relationships. A copy must
+  // fail closed if either points outside the main catalogue. Attractions and
+  // interests are optional curation links; legacy tours can retain deleted or
+  // formerly cross-tenant ids. Carry only ids that still resolve inside the
+  // main tenant so old tours remain copyable without leaking foreign content.
+  if (destinationCount !== 1 || categoryCount !== categoryIds.length) return null;
+
+  const allowed = new Set(allowedOptionalPageIds.map(String));
+  const safeAttractionIds = attractionIds.filter((id) => allowed.has(id));
+  const safeInterestIds = interestIds.filter((id) => allowed.has(id));
+  const sanitizedSource: SourceTour = { ...source };
+  if (source.attractions !== undefined) sanitizedSource.attractions = safeAttractionIds;
+  if (source.interests !== undefined) sanitizedSource.interests = safeInterestIds;
+
+  return {
+    source: sanitizedSource,
+    omittedOptionalRelationshipCount:
+      attractionIds.length - safeAttractionIds.length
+      + interestIds.length - safeInterestIds.length,
+  };
 }
 
 async function POSTHandler(
@@ -82,21 +106,24 @@ async function POSTHandler(
     if (!source) {
       return NextResponse.json({ success: false, error: 'Tour not found' }, { status: 404 });
     }
-    if (!(await relationshipsBelongToMainTenant(source))) {
+    const relationships = await validateAndSanitizeRelationships(source);
+    if (!relationships) {
       return NextResponse.json({
         success: false,
-        error: 'This tour contains a destination or page relationship outside the main EEO catalogue. Correct it before duplicating.',
+        error: 'This tour contains a required destination or category relationship outside the main EEO catalogue. Correct it before duplicating.',
         code: 'SOURCE_RELATIONSHIP_INVALID',
       }, { status: 409 });
     }
+
+    const duplicateSource = relationships.source;
 
     const duplicateId = randomBytes(12).toString('hex');
     const actor = auditStamp({ id: auth.userId, name: auth.name, email: auth.email });
     const duplicate = await createUniqueDuplicate({
       build: async (attempt) => {
-        const draft = buildTourDuplicate(source, { id: duplicateId, attempt, actor });
+        const draft = buildTourDuplicate(duplicateSource, { id: duplicateId, attempt, actor });
         const navigation = sanitizeContentNavigation(draft);
-        if (source.parentPage && !navigation.parentPage) {
+        if (duplicateSource.parentPage && !navigation.parentPage) {
           throw new ParentPageValidationError('The source tour has an invalid parent-page relationship.');
         }
         Object.assign(draft, navigation);
@@ -113,22 +140,36 @@ async function POSTHandler(
 
     await refreshTourPricingSummary(String(duplicate._id));
     revalidateTourStorefront();
+    const omittedCount = relationships.omittedOptionalRelationshipCount;
     registerAdminAuditDetail({
       action: 'create',
       resourceType: 'tours',
       resourceId: String(duplicate._id),
       resourceLabel: String(duplicate.title || 'Tour copy'),
-      summary: `Duplicated tour “${String(source.title || source.slug || id)}” as draft “${String(duplicate.title || '')}”`,
-      changedFields: ['title', 'slug', 'isPublished'],
+      summary: `Duplicated tour “${String(source.title || source.slug || id)}” as draft “${String(duplicate.title || '')}”${omittedCount > 0 ? `; omitted ${omittedCount} unavailable optional page ${omittedCount === 1 ? 'link' : 'links'}` : ''}`,
+      changedFields: omittedCount > 0
+        ? ['title', 'slug', 'isPublished', 'attractions', 'interests']
+        : ['title', 'slug', 'isPublished'],
       tenantIds: ['default'],
       replaceCapturedInput: true,
     });
+
+    const omissionMessage = omittedCount > 0
+      ? ` ${omittedCount} unavailable optional page ${omittedCount === 1 ? 'link was' : 'links were'} omitted.`
+      : '';
 
     return NextResponse.json({
       success: true,
       data: duplicate,
       editHref: `/admin/tours/edit/${String(duplicate._id)}`,
-      message: 'Draft tour copy created. Review its title and URL before publishing.',
+      message: `Draft tour copy created.${omissionMessage} Review its title and URL before publishing.`,
+      warnings: omittedCount > 0
+        ? [{
+          code: 'OPTIONAL_RELATIONSHIPS_OMITTED',
+          count: omittedCount,
+          message: `${omittedCount} unavailable optional page ${omittedCount === 1 ? 'link was' : 'links were'} not copied.`,
+        }]
+        : [],
     }, { status: 201 });
   } catch (error) {
     if (error instanceof ParentPageValidationError) {
