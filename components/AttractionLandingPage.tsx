@@ -41,6 +41,8 @@ interface AttractionData {
   reviews: Review[];
   gridTitle: string;
   gridSubtitle?: string;
+  linkedPagesTitle?: string;
+  linkedPagesSubtitle?: string;
   itemsPerRow?: number;
   showStats: boolean;
   isPublished: boolean;
@@ -585,7 +587,11 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
         </section>
       )}
 
-      <LinkedPageCardsSection pages={linkedPages || []} />
+      <LinkedPageCardsSection
+        pages={linkedPages || []}
+        title={attraction.linkedPagesTitle}
+        subtitle={attraction.linkedPagesSubtitle}
+      />
 
       {/* Reviews Section */}
       {attraction.reviews && attraction.reviews.length > 0 && (

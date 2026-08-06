@@ -368,6 +368,8 @@ export interface AttractionPage {
   travelTips?: ContentTravelTip[];
   gridTitle: string;
   gridSubtitle?: string;
+  linkedPagesTitle?: string;
+  linkedPagesSubtitle?: string;
   showStats?: boolean;
   itemsPerRow: number;
   metaTitle?: string;
@@ -400,6 +402,8 @@ export interface AttractionPageFormData {
   travelTips?: ContentTravelTip[];
   gridTitle: string;
   gridSubtitle: string;
+  linkedPagesTitle: string;
+  linkedPagesSubtitle: string;
   showStats: boolean;
   itemsPerRow: number;
   metaTitle: string;

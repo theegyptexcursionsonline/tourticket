@@ -112,7 +112,7 @@ describe('main EEO Pages management helpers', () => {
     });
     expect(attractionPageTranslationFields.map((field) => field.key)).toEqual(expect.arrayContaining([
       'title', 'description', 'longDescription', 'gridTitle', 'gridSubtitle',
-      'highlights', 'features', 'metaTitle', 'metaDescription',
+      'linkedPagesTitle', 'linkedPagesSubtitle', 'highlights', 'features', 'metaTitle', 'metaDescription',
     ]));
     expect(categoryTranslationFields.map((field) => field.key)).toEqual(expect.arrayContaining([
       'linkedPagesTitle', 'linkedPagesSubtitle',

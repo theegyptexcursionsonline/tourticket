@@ -125,6 +125,8 @@ export const attractionPageTranslationFields: TranslationFieldDef[] = [
   { key: 'longDescription', label: 'Long Description', type: 'textarea', maxLength: 2000, rows: 5 },
   { key: 'gridTitle', label: 'Grid Title', type: 'input', maxLength: 200 },
   { key: 'gridSubtitle', label: 'Grid Subtitle', type: 'textarea', maxLength: 500, rows: 2 },
+  { key: 'linkedPagesTitle', label: 'Other Page Listings Title', type: 'input', maxLength: 200 },
+  { key: 'linkedPagesSubtitle', label: 'Other Page Listings Subtitle', type: 'textarea', maxLength: 500, rows: 2 },
   { key: 'metaTitle', label: 'Meta Title', type: 'input', maxLength: 60 },
   { key: 'metaDescription', label: 'Meta Description', type: 'textarea', maxLength: 160, rows: 2 },
   { key: 'highlights', label: 'Highlights', type: 'array', maxLength: 200 },

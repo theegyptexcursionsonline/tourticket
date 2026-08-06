@@ -32,6 +32,12 @@ interface AttractionPageFormProps {
   initialPageType?: 'attraction' | 'category';
 }
 
+const defaultLinkedPagesSubtitle = (pageType: 'attraction' | 'category') => (
+  pageType === 'category'
+    ? 'Related guides and collections'
+    : 'Hand-picked guides and collections related to this page'
+);
+
 const defaultFormData: AttractionPageFormData = {
   title: '',
   slug: '',
@@ -53,6 +59,8 @@ const defaultFormData: AttractionPageFormData = {
   travelTips: [],
   gridTitle: '',
   gridSubtitle: '',
+  linkedPagesTitle: 'Explore more',
+  linkedPagesSubtitle: defaultLinkedPagesSubtitle('attraction'),
   showStats: true,
   itemsPerRow: 6,
   metaTitle: '',
@@ -101,6 +109,7 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
   const [formData, setFormData] = useState<AttractionPageFormData>({
     ...defaultFormData,
     pageType: initialPageType,
+    linkedPagesSubtitle: defaultLinkedPagesSubtitle(initialPageType),
   });
   const [categories, setCategories] = useState<Category[]>([]);
   const [cityDestinations, setCityDestinations] = useState<Array<{ _id: string; name: string; slug?: string }>>([]);
@@ -183,6 +192,8 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
           travelTips: Array.isArray(page.travelTips) ? page.travelTips as ContentTravelTip[] : [],
           gridTitle: page.gridTitle || '',
           gridSubtitle: page.gridSubtitle || '',
+          linkedPagesTitle: page.linkedPagesTitle || 'Explore more',
+          linkedPagesSubtitle: page.linkedPagesSubtitle ?? defaultLinkedPagesSubtitle(page.pageType || 'attraction'),
           showStats: page.showStats !== undefined ? page.showStats : true,
           itemsPerRow: page.itemsPerRow || 6,
           metaTitle: page.metaTitle || '',
@@ -1006,6 +1017,33 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                           }}
                         />
                         <div className="border-t border-slate-200" />
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                          <div className="space-y-3">
+                            <FormLabel icon={FileText}>Other Page Listings title</FormLabel>
+                            <input
+                              name="linkedPagesTitle"
+                              value={formData.linkedPagesTitle}
+                              onChange={handleChange}
+                              maxLength={200}
+                              className={inputBase}
+                              placeholder="Explore more"
+                            />
+                            <SmallHint>Displayed above the related page cards.</SmallHint>
+                          </div>
+                          <div className="space-y-3">
+                            <FormLabel icon={FileText}>Other Page Listings subtitle</FormLabel>
+                            <textarea
+                              name="linkedPagesSubtitle"
+                              value={formData.linkedPagesSubtitle}
+                              onChange={handleChange}
+                              maxLength={500}
+                              rows={3}
+                              className={textareaBase}
+                              placeholder={defaultLinkedPagesSubtitle(formData.pageType)}
+                            />
+                            <SmallHint>Leave empty to display the cards without a subtitle.</SmallHint>
+                          </div>
+                        </div>
                         <ContentListingPicker
                           label="Other page listings (attractions and categories)"
                           hint="Embed links to other pages (attraction pages, catalogues, or categories). They appear as an “Explore more” card grid on this page."

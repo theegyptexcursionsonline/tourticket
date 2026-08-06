@@ -46,6 +46,22 @@ describe('Category other page listings', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('keeps an intentionally blank subtitle blank', () => {
+    render(
+      <LinkedPageCardsSection
+        subtitle=""
+        pages={[{
+          id: 'page-blank-subtitle',
+          title: 'Aswan highlights',
+          href: '/aswan-highlights',
+          kind: 'page',
+        }]}
+      />,
+    );
+
+    expect(screen.queryByText('Hand-picked guides and collections related to this page')).not.toBeInTheDocument();
+  });
+
   it('lets an editor remove an already-selected page', () => {
     const onChange = jest.fn();
     render(
@@ -75,5 +91,21 @@ describe('Category other page listings', () => {
     expect(categoryRoute).toContain('includeTours: false');
     expect(storefront).toContain('resolveLinkedPageCards(category, locale)');
     expect(storefront).toContain('Promise.all([');
+  });
+
+  it('wires editable listing copy through Attraction and Category 2 pages', () => {
+    const attractionForm = readFileSync(join(process.cwd(), 'components/admin/AttractionPageForm.tsx'), 'utf8');
+    const attractionPage = readFileSync(join(process.cwd(), 'components/AttractionLandingPage.tsx'), 'utf8');
+    const category2Page = readFileSync(join(process.cwd(), 'components/AttractionPageTemplate.tsx'), 'utf8');
+    const model = readFileSync(join(process.cwd(), 'lib/models/AttractionPage.ts'), 'utf8');
+
+    expect(attractionForm).toContain('name="linkedPagesTitle"');
+    expect(attractionForm).toContain('name="linkedPagesSubtitle"');
+    expect(attractionPage).toContain('title={attraction.linkedPagesTitle}');
+    expect(attractionPage).toContain('subtitle={attraction.linkedPagesSubtitle}');
+    expect(category2Page).toContain('title={page.linkedPagesTitle}');
+    expect(category2Page).toContain("subtitle={page.linkedPagesSubtitle ?? 'Related guides and collections'}");
+    expect(model).toContain('linkedPagesTitle: {');
+    expect(model).toContain('linkedPagesSubtitle: {');
   });
 });

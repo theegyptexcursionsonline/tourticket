@@ -12,6 +12,8 @@ export interface IAttractionPageTranslation {
   longDescription?: string;
   gridTitle?: string;
   gridSubtitle?: string;
+  linkedPagesTitle?: string;
+  linkedPagesSubtitle?: string;
   highlights?: string[];
   features?: string[];
   metaTitle?: string;
@@ -55,6 +57,8 @@ export interface IAttractionPage extends Document {
   linkedTourIds?: mongoose.Types.ObjectId[];
   linkedPageIds?: mongoose.Types.ObjectId[];
   linkedCategoryIds?: mongoose.Types.ObjectId[];
+  linkedPagesTitle?: string;
+  linkedPagesSubtitle?: string;
 
   // Grid Settings
   gridTitle: string;
@@ -86,6 +90,8 @@ const AttractionPageTranslationSchema = new Schema<IAttractionPageTranslation>(
     longDescription: { type: String, trim: true, maxlength: 2000 },
     gridTitle: { type: String, trim: true, maxlength: 200 },
     gridSubtitle: { type: String, trim: true, maxlength: 500 },
+    linkedPagesTitle: { type: String, trim: true, maxlength: 200 },
+    linkedPagesSubtitle: { type: String, trim: true, maxlength: 500 },
     highlights: [{ type: String, trim: true, maxlength: 200 }],
     features: [{ type: String, trim: true, maxlength: 300 }],
     metaTitle: { type: String, trim: true, maxlength: 60 },
@@ -209,6 +215,16 @@ const AttractionPageSchema: Schema<IAttractionPage> = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
   }],
+  linkedPagesTitle: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Other page listings title cannot exceed 200 characters'],
+  },
+  linkedPagesSubtitle: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Other page listings subtitle cannot exceed 500 characters'],
+  },
   highlights: {
     type: [String],
     default: [],

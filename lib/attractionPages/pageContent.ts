@@ -18,6 +18,8 @@ export const ATTRACTION_PAGE_LOCALIZED_FIELDS = [
   'longDescription',
   'gridTitle',
   'gridSubtitle',
+  'linkedPagesTitle',
+  'linkedPagesSubtitle',
   'highlights',
   'features',
   'metaTitle',

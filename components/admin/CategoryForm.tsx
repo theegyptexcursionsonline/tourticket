@@ -193,7 +193,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
           linkedPageIds,
           linkedCategoryIds,
           linkedPagesTitle: category.linkedPagesTitle || 'Explore more',
-          linkedPagesSubtitle: category.linkedPagesSubtitle || 'Hand-picked guides and collections related to this page',
+          linkedPagesSubtitle: category.linkedPagesSubtitle ?? 'Hand-picked guides and collections related to this page',
           metaTitle: category.metaTitle || '',
           metaDescription: category.metaDescription || '',
           keywords: Array.isArray(category.keywords) ? category.keywords : [],
