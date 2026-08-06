@@ -31,9 +31,9 @@ describe('secureCartPricing', () => {
       originalPrice: 100,
       bookingOptions: [{ label: 'Premium', type: 'Per Person', price: 120, pricingKey: 'premium-key' }],
       addOns: [
-        { name: 'Lunch', description: 'Lunch package', price: 25, category: 'Food' },
-        { name: 'Photos', description: 'Photo package', price: 40, category: 'Food', pricingMethod: 'per_unit' },
-        { name: 'Guide', description: 'Private guide', price: 60, category: 'Experience', pricingMethod: 'per_person' },
+        { _id: { toString: () => 'addon-0' }, name: 'Lunch', description: 'Lunch package', price: 25, category: 'Food' },
+        { _id: { toString: () => 'addon-1' }, name: 'Photos', description: 'Photo package', price: 40, category: 'Food', pricingMethod: 'per_unit' },
+        { _id: { toString: () => 'addon-2' }, name: 'Guide', description: 'Private guide', price: 60, category: 'Experience', pricingMethod: 'per_person' },
       ],
     });
   });
@@ -76,6 +76,37 @@ describe('secureCartPricing', () => {
     }])).rejects.toThrow('Invalid add-on');
   });
 
+  it('selects a non-standard option by stable pricingKey without a positional option id', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { pricingKey: 'premium-key' },
+    }]);
+
+    expect(item.selectedBookingOption).toMatchObject({
+      id: 'option-0',
+      pricingKey: 'premium-key',
+      price: 120,
+    });
+  });
+
+  it('returns only authored add-ons and never manufactures fallback products', async () => {
+    lean.mockResolvedValueOnce({
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
+      title: 'No add-ons tour',
+      discountPrice: 80,
+      originalPrice: 100,
+      bookingOptions: [],
+      addOns: [],
+    });
+
+    const [item] = await secureCartPricing([{ id: '507f1f77bcf86cd799439011' }]);
+    expect(item.availableAddOns).toEqual([]);
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedAddOns: { 'photo-package-fallback': 1 },
+    }])).rejects.toThrow('Invalid add-on');
+  });
+
   it('rejects a stale quote version instead of silently repricing checkout', async () => {
     jest.mocked(resolveEffectivePrice).mockResolvedValue({ version: 2, prices: { adult: 126, child: 63, infant: 0 } } as any);
     await expect(secureCartPricing([{
@@ -93,6 +124,22 @@ describe('secureCartPricing', () => {
     expect(item.guestPrices).toEqual({ adult: 126, child: 70, infant: 5 });
     expect(item.selectedBookingOption.price).toBe(126);
     expect(item.priceExecutionId).toBe('exec-1');
+  });
+
+  it('rejects a stale catalogue source version even when the override version is unchanged', async () => {
+    jest.mocked(resolveEffectivePrice).mockResolvedValue({
+      version: 2,
+      sourceVersion: `pv1_${'b'.repeat(64)}`,
+      prices: { adult: 126, child: 70, infant: 5 },
+    } as any);
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedDate: '2026-08-01',
+      selectedTime: '10:00',
+      priceVersion: 2,
+      priceSourceVersion: `pv1_${'a'.repeat(64)}`,
+      selectedBookingOption: { pricingKey: 'premium-key' },
+    }])).rejects.toBeInstanceOf(PriceChangedError);
   });
 });
 

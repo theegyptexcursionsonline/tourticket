@@ -18,6 +18,21 @@ export interface InventoryHoldCartItem {
   selectedBookingOption?: { pricingKey?: string };
 }
 
+export interface InventoryAvailabilitySnapshot {
+  tenantId: 'default';
+  tourId: string;
+  date: string;
+  time: string;
+  optionKey: string;
+  requestedGuests: number;
+  startsAtUtc: string;
+  capacity: number;
+  booked: number;
+  activeHeld: number;
+  available: number;
+  availableAfterHold: number;
+}
+
 export class InventoryHoldError extends Error {
   status = 409;
   constructor(public code: string, message: string) {
@@ -226,6 +241,51 @@ async function activeHeldGuests(target: InventoryTarget, excludeId?: Types.Objec
   if (excludeId) query._id = { $ne: excludeId };
   const rows = await CheckoutInventoryHold.find(query).select('guests').lean<Array<{ guests?: number }>>();
   return rows.reduce((total, row) => total + Math.max(0, Number(row.guests || 0)), 0);
+}
+
+/**
+ * Read availability through the same departure resolver, active-hold query,
+ * and distributed inventory lease used by checkout. This is the only safe
+ * availability snapshot for a channel that is about to offer a hold.
+ */
+export async function inspectInventoryAvailability(item: InventoryHoldCartItem): Promise<InventoryAvailabilitySnapshot> {
+  const target = targetFor(item);
+  return withInventoryLease(target, async () => {
+    let evidence;
+    try {
+      evidence = await assertRevenuePriceTargetSellable({
+        tourId: target.tourId,
+        optionKey: target.optionKey,
+        date: target.date,
+        time: target.time,
+      });
+    } catch (error: unknown) {
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code || 'DEPARTURE_UNAVAILABLE')
+        : 'DEPARTURE_UNAVAILABLE';
+      throw new InventoryHoldError(
+        code,
+        error instanceof Error ? error.message : 'The requested departure is unavailable.',
+      );
+    }
+    const activeHeld = await activeHeldGuests(target);
+    const capacity = assertInventoryCapacity({
+      capacity: evidence.capacity,
+      booked: evidence.booked,
+      activeHeld,
+      requested: target.guests,
+    });
+    return {
+      ...target,
+      requestedGuests: target.guests,
+      startsAtUtc: evidence.startsAtUtc,
+      capacity: evidence.capacity,
+      booked: evidence.booked,
+      activeHeld,
+      available: capacity.availableBefore,
+      availableAfterHold: capacity.availableAfter,
+    };
+  });
 }
 
 async function reserveOne(reservationKey: string, item: InventoryHoldCartItem, itemIndex: number) {

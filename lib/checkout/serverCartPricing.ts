@@ -20,6 +20,7 @@ interface RawCartItem extends Record<string, unknown> {
   selectedDate?: unknown;
   selectedTime?: unknown;
   priceVersion?: unknown;
+  priceSourceVersion?: unknown;
   quantity?: unknown;
   childQuantity?: unknown;
   infantQuantity?: unknown;
@@ -93,11 +94,13 @@ export interface SecureCartItem extends Record<string, unknown> {
   selectedBookingOption: SecureBookingOption;
   guestPrices: { adult: number; child: number; infant: number };
   priceVersion: number;
+  priceSourceVersion: string | null;
   priceExecutionId: string | null;
   priceOverrideId: string | null;
   priceSource: 'catalogue' | 'override';
   selectedAddOns: Record<string, number>;
   selectedAddOnDetails: Record<string, SecureAddOnDetail>;
+  availableAddOns: SecureAddOnDetail[];
 }
 
 export class PriceChangedError extends Error {
@@ -109,20 +112,16 @@ export class PriceChangedError extends Error {
   }
 }
 
-const FALLBACK_ADDONS = [
-  { id: 'photo-package-fallback', title: 'Professional Photography Package', price: 35, category: 'Photography', perGuest: false },
-  { id: 'transport-premium-fallback', title: 'Premium Hotel Transfer Service', price: 15, category: 'Transport', perGuest: false },
-  { id: 'refreshment-upgrade-fallback', title: 'Gourmet Refreshment Package', price: 12, category: 'Food', perGuest: true },
-  { id: 'guide-upgrade-fallback', title: 'Private Guide Enhancement', price: 45, category: 'Experience', perGuest: false },
-];
-
 function quantity(value: unknown, fallback: number, minimum = 0): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(50, Math.max(minimum, Math.floor(parsed)));
 }
 
-export async function secureCartPricing(input: unknown): Promise<SecureCartItem[]> {
+export async function secureCartPricing(
+  input: unknown,
+  options: { allowUnversionedQuote?: boolean } = {},
+): Promise<SecureCartItem[]> {
   if (!Array.isArray(input) || input.length === 0 || input.length > 20) {
     throw new Error('Invalid cart');
   }
@@ -143,12 +142,25 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
       ? String(rawItem.selectedBookingOption.id)
       : '';
     const requestedPricingKey = rawItem?.selectedBookingOption?.pricingKey ? String(rawItem.selectedBookingOption.pricingKey) : '';
+    const optionIdIsStandard = !optionId || optionId === 'standard-default';
+    const pricingKeyIsStandard = !requestedPricingKey || requestedPricingKey === STANDARD_OPTION_KEY;
+    if (optionId && requestedPricingKey && optionIdIsStandard !== pricingKeyIsStandard) {
+      throw new Error('Invalid booking option');
+    }
+
     let option: SecureBookingOption;
-    if (optionId && optionId !== 'standard-default') {
+    if (!optionIdIsStandard || !pricingKeyIsStandard) {
       const match = optionId.match(/^option-(\d+)$/);
-      const optionIndex = requestedPricingKey
+      const pricingKeyIndex = requestedPricingKey
         ? tour.bookingOptions?.findIndex((candidate) => candidate?.pricingKey === requestedPricingKey)
-        : match ? Number(match[1]) : tour.bookingOptions?.findIndex((candidate) => String(candidate?._id || '') === optionId);
+        : undefined;
+      const optionIdIndex = match
+        ? Number(match[1])
+        : optionId ? tour.bookingOptions?.findIndex((candidate) => String(candidate?._id || '') === optionId) : undefined;
+      if (pricingKeyIndex !== undefined && optionIdIndex !== undefined && pricingKeyIndex !== optionIdIndex) {
+        throw new Error('Invalid booking option');
+      }
+      const optionIndex = pricingKeyIndex ?? optionIdIndex;
       if (optionIndex === undefined || optionIndex < 0 || !tour.bookingOptions?.[optionIndex]) {
         throw new Error('Invalid booking option');
       }
@@ -215,21 +227,26 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
         date: String(rawItem.selectedDate).slice(0, 10),
         time: String(rawItem.selectedTime),
       });
-      if ((process.env.REVENUEPILOT_PRICING_API_ENABLED === 'true' && rawItem?.priceVersion === undefined) || (rawItem?.priceVersion !== undefined && Number(rawItem.priceVersion) !== quote.version)) {
+      if ((!options.allowUnversionedQuote && process.env.REVENUEPILOT_PRICING_API_ENABLED === 'true' && rawItem?.priceVersion === undefined) || (rawItem?.priceVersion !== undefined && Number(rawItem.priceVersion) !== quote.version)) {
+        throw new PriceChangedError(quote);
+      }
+      if (rawItem?.priceSourceVersion !== undefined && String(rawItem.priceSourceVersion) !== quote.sourceVersion) {
         throw new PriceChangedError(quote);
       }
       option.price = quote.prices.adult;
     }
 
-    const catalogueAddons = tour.addOns?.length
-      ? tour.addOns.map((addon, index: number) => ({
-          id: String(addon?._id || `addon-${index}`),
+    // Checkout may only sell add-ons authored on the tour. Invented fallbacks
+    // are not a pricing authority and must never appear in a mobile quote.
+    const catalogueAddons = (tour.addOns || [])
+      .map((addon) => ({
+          id: addon?._id ? String(addon._id) : '',
           title: addon.name,
           price: Number(addon.price),
           category: addon.category || 'Experience',
           perGuest: isPerPersonAddOn(addon),
         }))
-      : FALLBACK_ADDONS;
+      .filter((addon) => Boolean(addon.id && addon.title) && Number.isFinite(addon.price) && addon.price >= 0);
 
     const selectedAddOns: Record<string, number> = {};
     const selectedAddOnDetails: Record<string, SecureAddOnDetail> = {};
@@ -269,11 +286,13 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
       selectedBookingOption: option,
       guestPrices: quote?.prices || { adult: option.price, child: Math.round(option.price * 50) / 100, infant: 0 },
       priceVersion: quote?.version || 0,
+      priceSourceVersion: quote?.sourceVersion || null,
       priceExecutionId: quote?.executionId || null,
       priceOverrideId: quote?.overrideId || null,
       priceSource: quote?.source === 'override' ? 'override' : 'catalogue',
       selectedAddOns,
       selectedAddOnDetails,
+      availableAddOns: catalogueAddons,
     };
   }));
 }
