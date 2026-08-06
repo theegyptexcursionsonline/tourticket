@@ -32,6 +32,7 @@ jest.mock('@/lib/revenue/pricingResolver', () => ({
 }));
 
 import {
+  commitInventoryReservationHold,
   createInventoryHolds,
   inspectInventoryAvailability,
 } from '@/lib/checkout/inventoryHolds';
@@ -40,6 +41,13 @@ type FakeHold = {
   _id: { toString: () => string };
   tenantId: string;
   reservationKey: string;
+  commerceContractVersion?: string;
+  commerceQuoteVersion?: string;
+  commerceTargetBinding?: string;
+  checkoutAttemptId?: string;
+  paymentAmountMinor?: number;
+  paymentCurrency?: string;
+  paymentIntentId?: string;
   itemIndex: number;
   tourId: string;
   date: Date;
@@ -47,8 +55,9 @@ type FakeHold = {
   time: string;
   optionKey: string;
   guests: number;
-  state: 'active' | 'released';
+  state: 'active' | 'converted' | 'released';
   expiresAt: Date;
+  convertedBookingId?: { toString: () => string };
 };
 
 const item = {
@@ -59,6 +68,15 @@ const item = {
   childQuantity: 0,
   infantQuantity: 0,
   selectedBookingOption: { pricingKey: 'standard' },
+};
+
+const commerceContext = {
+  contractVersion: 'eeo.mobile-commerce.v1',
+  quoteVersion: `mqv1_${'d'.repeat(64)}`,
+  targetBinding: 'e'.repeat(64),
+  checkoutAttemptId: '11111111-1111-4111-8111-111111111111',
+  paymentAmountMinor: 12500,
+  paymentCurrency: 'usd' as const,
 };
 
 describe('checkout inventory lease concurrency', () => {
@@ -104,9 +122,16 @@ describe('checkout inventory lease concurrency', () => {
       }),
     }));
     mockHoldFindOneAndUpdate.mockImplementation(async (filter: any, update: any) => {
-      let hold = holds.find((candidate) => candidate.tenantId === filter.tenantId
-        && candidate.reservationKey === filter.reservationKey
-        && candidate.itemIndex === filter.itemIndex);
+      let hold = filter._id
+        ? holds.find((candidate) => candidate._id.toString() === filter._id.toString())
+        : holds.find((candidate) => candidate.tenantId === filter.tenantId
+          && candidate.reservationKey === filter.reservationKey
+          && candidate.itemIndex === filter.itemIndex);
+      if (hold && filter.state && hold.state !== filter.state) return null;
+      if (hold && filter.expiresAt?.$gt && hold.expiresAt <= filter.expiresAt.$gt) return null;
+      if (hold && filter.$or && hold.paymentIntentId
+        && !filter.$or.some((condition: any) => condition.paymentIntentId === hold?.paymentIntentId)) return null;
+      if (!hold && filter._id) return null;
       if (!hold) {
         hold = {
           _id: { toString: () => `hold-${holds.length + 1}` },
@@ -186,5 +211,60 @@ describe('checkout inventory lease concurrency', () => {
       available: 2,
       availableAfterHold: 1,
     });
+  });
+
+  it('commits a paid hold exactly once across concurrent replay', async () => {
+    const reservationKey = 'f'.repeat(64);
+    const bookingId = { toString: () => '507f1f77bcf86cd799439099' };
+    await createInventoryHolds({ reservationKey, cart: [item], commerceContext });
+
+    const results = await Promise.all([
+      commitInventoryReservationHold({
+        reservationKey,
+        paymentIntentId: 'pi_mobile_commit_1',
+        itemIndex: 0,
+        bookingId: bookingId as never,
+        item,
+        commerceContext,
+      }),
+      commitInventoryReservationHold({
+        reservationKey,
+        paymentIntentId: 'pi_mobile_commit_1',
+        itemIndex: 0,
+        bookingId: bookingId as never,
+        item,
+        commerceContext,
+      }),
+    ]);
+
+    expect(results.map((result) => result.alreadyCommitted).sort()).toEqual([false, true]);
+    expect(holds).toHaveLength(1);
+    expect(holds[0]).toMatchObject({
+      state: 'converted',
+      paymentIntentId: 'pi_mobile_commit_1',
+    });
+  });
+
+  it('rejects a replay that changes the payment or booking binding', async () => {
+    const reservationKey = '9'.repeat(64);
+    const bookingId = { toString: () => '507f1f77bcf86cd799439099' };
+    await createInventoryHolds({ reservationKey, cart: [item], commerceContext });
+    await commitInventoryReservationHold({
+      reservationKey,
+      paymentIntentId: 'pi_mobile_commit_2',
+      itemIndex: 0,
+      bookingId: bookingId as never,
+      item,
+      commerceContext,
+    });
+
+    await expect(commitInventoryReservationHold({
+      reservationKey,
+      paymentIntentId: 'pi_mobile_commit_other',
+      itemIndex: 0,
+      bookingId: { toString: () => '507f1f77bcf86cd799439098' } as never,
+      item,
+      commerceContext,
+    })).rejects.toMatchObject({ code: 'INVENTORY_PAYMENT_CONFLICT', status: 409 });
   });
 });

@@ -5,6 +5,12 @@ export type CheckoutInventoryHoldState = 'active' | 'converted' | 'released' | '
 export interface ICheckoutInventoryHold extends Document {
   tenantId: string;
   reservationKey: string;
+  commerceContractVersion?: string;
+  commerceQuoteVersion?: string;
+  commerceTargetBinding?: string;
+  checkoutAttemptId?: string;
+  paymentAmountMinor?: number;
+  paymentCurrency?: string;
   paymentIntentId?: string;
   itemIndex: number;
   tourId: Types.ObjectId;
@@ -25,6 +31,16 @@ export interface ICheckoutInventoryHold extends Document {
 const CheckoutInventoryHoldSchema = new Schema<ICheckoutInventoryHold>({
   tenantId: { type: String, required: true, default: 'default' },
   reservationKey: { type: String, required: true },
+  commerceContractVersion: { type: String, maxlength: 100 },
+  commerceQuoteVersion: { type: String, maxlength: 100 },
+  commerceTargetBinding: { type: String, match: /^[a-f0-9]{64}$/ },
+  checkoutAttemptId: {
+    type: String,
+    lowercase: true,
+    match: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  },
+  paymentAmountMinor: { type: Number, min: 1, max: Number.MAX_SAFE_INTEGER },
+  paymentCurrency: { type: String, enum: ['usd'], lowercase: true },
   paymentIntentId: { type: String },
   itemIndex: { type: Number, required: true, min: 0 },
   tourId: { type: Schema.Types.ObjectId, ref: 'Tour', required: true },

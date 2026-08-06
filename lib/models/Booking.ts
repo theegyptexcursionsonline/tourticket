@@ -39,6 +39,10 @@ export interface IBooking extends Document {
   inventoryReservationState?: 'pending_conversion' | 'converted' | 'booking_authoritative';
   inventoryReservationFailureCode?: string;
   inventoryReservationFinalizedAt?: Date;
+  commerceContractVersion?: string;
+  commerceQuoteVersion?: string;
+  commerceTargetBinding?: string;
+  checkoutAttemptId?: string;
   paymentId?: string;
   paymentItemIndex?: number;
   confirmationSentAt?: Date;
@@ -267,6 +271,14 @@ const BookingSchema: Schema<IBooking> = new Schema({
   },
   inventoryReservationFailureCode: { type: String, maxlength: 200 },
   inventoryReservationFinalizedAt: { type: Date },
+  commerceContractVersion: { type: String, maxlength: 100 },
+  commerceQuoteVersion: { type: String, maxlength: 100 },
+  commerceTargetBinding: { type: String, match: /^[a-f0-9]{64}$/ },
+  checkoutAttemptId: {
+    type: String,
+    lowercase: true,
+    match: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  },
   
   paymentId: {
     type: String,

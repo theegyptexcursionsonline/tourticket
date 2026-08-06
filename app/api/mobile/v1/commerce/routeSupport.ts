@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { InventoryHoldError } from '@/lib/checkout/inventoryHolds';
@@ -15,11 +16,28 @@ type MobileRouteOptions = {
   networkLimit: number;
   subjectLimit?: number;
   successStatus?: number;
+  authorize?: (request: Request) => void;
   operation: (body: unknown) => Promise<unknown>;
 };
 
+export function requireMobileCommerceService(request: Request) {
+  const expected = process.env.MOBILE_COMMERCE_SERVICE_TOKEN?.trim() || '';
+  if (expected.length < 32) {
+    throw new MobileCommerceError(503, 'SERVICE_AUTH_UNAVAILABLE', 'The mobile commerce service bridge is not configured.');
+  }
+  const header = request.headers.get('authorization') || '';
+  const presented = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : '';
+  const expectedBuffer = Buffer.from(expected);
+  const presentedBuffer = Buffer.from(presented);
+  if (presentedBuffer.length !== expectedBuffer.length
+    || !timingSafeEqual(presentedBuffer, expectedBuffer)) {
+    throw new MobileCommerceError(401, 'SERVICE_AUTH_REQUIRED', 'Valid mobile commerce service authorization is required.');
+  }
+}
+
 export async function handleMobileCommerceRoute(request: Request, options: MobileRouteOptions) {
   try {
+    options.authorize?.(request);
     const body = await readBoundedJson<Record<string, unknown>>(request, 32 * 1_024);
     await dbConnect();
     const subject = typeof body.tourId === 'string' ? body.tourId.slice(0, 128) : undefined;

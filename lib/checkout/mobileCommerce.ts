@@ -1,11 +1,15 @@
 import { createHash } from 'node:crypto';
+import type Stripe from 'stripe';
+import StripeClient from 'stripe';
 import { checkoutItemSubtotal } from '@/lib/checkout/cartTotals';
 import { normalizeCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 import {
+  commitInventoryReservationHold,
   createInventoryHolds,
   inspectInventoryAvailability,
   releaseInventoryHolds,
   type InventoryAvailabilitySnapshot,
+  type InventoryHoldCommerceContext,
 } from '@/lib/checkout/inventoryHolds';
 import {
   secureCartPricing,
@@ -13,11 +17,22 @@ import {
   type SecureCartItem,
 } from '@/lib/checkout/serverCartPricing';
 import { signToken, verifyToken } from '@/lib/jwt';
+import Booking from '@/lib/models/Booking';
 import { STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export const MOBILE_COMMERCE_CONTRACT = 'eeo.mobile-commerce.v1' as const;
+export const MOBILE_COMMERCE_PAYMENT_METADATA = {
+  contractVersion: 'eeo_contract_version',
+  tenantId: 'eeo_tenant_id',
+  quoteVersion: 'eeo_quote_version',
+  checkoutAttemptId: 'eeo_checkout_attempt_id',
+  reservationKey: 'eeo_inventory_reservation',
+} as const;
+const MOBILE_COMMERCE_PAYMENT_IDEMPOTENCY_PREFIX = 'eeo-mobile-commerce-v1';
 const TENANT_ID = 'default' as const;
 const QUOTE_TTL_SECONDS = 5 * 60;
+let stripeInstance: StripeClient | null = null;
 
 export class MobileCommerceError extends Error {
   constructor(
@@ -72,12 +87,39 @@ type MobileQuoteCapability = {
 };
 
 type MobileHoldCapability = {
-  scope: 'mobile-commerce:release';
+  scope: 'mobile-commerce:hold-control';
   contractVersion: typeof MOBILE_COMMERCE_CONTRACT;
   tenantId: typeof TENANT_ID;
   reservationKey: string;
   targetBinding: string;
   quoteVersion: string;
+  checkoutAttemptId: string;
+  paymentAmountMinor: number;
+  paymentCurrency: 'usd';
+};
+
+type MobilePaymentIntentEvidence = Pick<
+  Stripe.PaymentIntent,
+  'id' | 'status' | 'amount' | 'amount_received' | 'currency' | 'metadata'
+>;
+
+export type MobileCommerceCommitDependencies = {
+  retrievePaymentIntent: (paymentIntentId: string) => Promise<MobilePaymentIntentEvidence>;
+};
+
+function stripe(): StripeClient {
+  if (!stripeInstance) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new MobileCommerceError(503, 'PAYMENT_VERIFICATION_UNAVAILABLE', 'Payment verification is not configured.');
+    }
+    stripeInstance = new StripeClient(key, { apiVersion: '2025-08-27.basil' });
+  }
+  return stripeInstance;
+}
+
+const defaultCommitDependencies: MobileCommerceCommitDependencies = {
+  retrievePaymentIntent: (paymentIntentId) => stripe().paymentIntents.retrieve(paymentIntentId),
 };
 
 function integer(value: unknown, minimum: number, maximum: number): number | null {
@@ -187,6 +229,48 @@ function targetBinding(target: MobileCommerceTarget): string {
     guests: target.guests,
     addOns: target.addOns,
   })).digest('hex');
+}
+
+function reservationKeyFor(checkoutAttemptId: string): string {
+  return createHash('sha256')
+    .update(`${MOBILE_COMMERCE_CONTRACT}\0${TENANT_ID}\0${checkoutAttemptId}`)
+    .digest('hex');
+}
+
+function holdCommerceContext(input: {
+  quoteVersion: string;
+  targetBinding: string;
+  checkoutAttemptId: string;
+  paymentAmountMinor: number;
+}): InventoryHoldCommerceContext {
+  return {
+    contractVersion: MOBILE_COMMERCE_CONTRACT,
+    quoteVersion: input.quoteVersion,
+    targetBinding: input.targetBinding,
+    checkoutAttemptId: input.checkoutAttemptId,
+    paymentAmountMinor: input.paymentAmountMinor,
+    paymentCurrency: 'usd',
+  };
+}
+
+function mobilePaymentBinding(input: {
+  reservationKey: string;
+  quoteVersion: string;
+  checkoutAttemptId: string;
+  paymentAmountMinor: number;
+}) {
+  return {
+    amountMinor: input.paymentAmountMinor,
+    currency: 'usd' as const,
+    idempotencyKey: `${MOBILE_COMMERCE_PAYMENT_IDEMPOTENCY_PREFIX}-${input.reservationKey}`,
+    metadata: {
+      [MOBILE_COMMERCE_PAYMENT_METADATA.contractVersion]: MOBILE_COMMERCE_CONTRACT,
+      [MOBILE_COMMERCE_PAYMENT_METADATA.tenantId]: TENANT_ID,
+      [MOBILE_COMMERCE_PAYMENT_METADATA.quoteVersion]: input.quoteVersion,
+      [MOBILE_COMMERCE_PAYMENT_METADATA.checkoutAttemptId]: input.checkoutAttemptId,
+      [MOBILE_COMMERCE_PAYMENT_METADATA.reservationKey]: input.reservationKey,
+    },
+  };
 }
 
 function quoteVersion(item: SecureCartItem, target: MobileCommerceTarget): string {
@@ -336,10 +420,18 @@ export async function createMobileCommerceHold(value: unknown) {
     });
   }
 
-  const reservationKey = createHash('sha256')
-    .update(`${MOBILE_COMMERCE_CONTRACT}\0${TENANT_ID}\0${idempotencyKey}`)
-    .digest('hex');
-  const holds = await createInventoryHolds({ reservationKey, cart: [item] });
+  const reservationKey = reservationKeyFor(idempotencyKey);
+  const paymentAmountMinor = Math.round(quote.pricing.subtotal * 100);
+  if (!Number.isSafeInteger(paymentAmountMinor) || paymentAmountMinor <= 0) {
+    throw new MobileCommerceError(422, 'QUOTE_UNAVAILABLE', 'The quote total cannot be charged safely.');
+  }
+  const commerceContext = holdCommerceContext({
+    quoteVersion: quote.quoteVersion,
+    targetBinding: binding,
+    checkoutAttemptId: idempotencyKey,
+    paymentAmountMinor,
+  });
+  const holds = await createInventoryHolds({ reservationKey, cart: [item], commerceContext });
   const hold = holds[0] as unknown as { state?: string; expiresAt?: Date | string } | undefined;
   const expiresAt = hold?.expiresAt ? new Date(hold.expiresAt) : new Date(Number.NaN);
   if (hold?.state !== 'active' || !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
@@ -348,12 +440,15 @@ export async function createMobileCommerceHold(value: unknown) {
   const ttlSeconds = Math.max(1, Math.floor((expiresAt.getTime() - Date.now()) / 1_000));
   const holdToken = await signToken({
     sub: `mobile-commerce:hold:${target.tourId}`,
-    scope: 'mobile-commerce:release',
+    scope: 'mobile-commerce:hold-control',
     contractVersion: MOBILE_COMMERCE_CONTRACT,
     tenantId: TENANT_ID,
     reservationKey,
     targetBinding: binding,
     quoteVersion: quote.quoteVersion,
+    checkoutAttemptId: idempotencyKey,
+    paymentAmountMinor,
+    paymentCurrency: 'usd',
   }, { expiresIn: `${ttlSeconds}s` });
   return {
     contractVersion: MOBILE_COMMERCE_CONTRACT,
@@ -362,6 +457,265 @@ export async function createMobileCommerceHold(value: unknown) {
     expiresAt: expiresAt.toISOString(),
     quote,
     holdToken,
+    paymentBinding: mobilePaymentBinding({
+      reservationKey,
+      quoteVersion: quote.quoteVersion,
+      checkoutAttemptId: idempotencyKey,
+      paymentAmountMinor,
+    }),
+  };
+}
+
+type CanonicalMobileBooking = {
+  _id: import('mongoose').Types.ObjectId;
+  tenantId?: string | null;
+  bookingReference?: string;
+  tour?: unknown;
+  dateString?: string;
+  time?: string;
+  guests?: number;
+  totalPrice?: number;
+  currency?: string;
+  status?: string;
+  source?: string;
+  paymentStatus?: string;
+  amountPaid?: number;
+  paymentConfirmedAt?: Date;
+  paymentConfirmedBy?: string;
+  paymentId?: string;
+  paymentItemIndex?: number;
+  selectedBookingOption?: { pricingKey?: string };
+  commerceContractVersion?: string;
+  commerceQuoteVersion?: string;
+  commerceTargetBinding?: string;
+  checkoutAttemptId?: string;
+};
+
+function assertCapabilityShape(capability: MobileHoldCapability) {
+  if (!/^[a-f0-9]{64}$/.test(String(capability.reservationKey || ''))
+    || !/^mqv1_[a-f0-9]{64}$/.test(String(capability.quoteVersion || ''))
+    || !/^[a-f0-9]{64}$/.test(String(capability.targetBinding || ''))
+    || !normalizeCheckoutAttemptId(capability.checkoutAttemptId)
+    || !Number.isSafeInteger(capability.paymentAmountMinor)
+    || capability.paymentAmountMinor <= 0
+    || capability.paymentCurrency !== 'usd') {
+    throw new MobileCommerceError(401, 'CAPABILITY_INVALID', 'The hold capability is malformed.');
+  }
+}
+
+function assertPaymentEvidence(
+  payment: MobilePaymentIntentEvidence,
+  capability: MobileHoldCapability,
+) {
+  const metadata = payment.metadata || {};
+  if (payment.id === ''
+    || payment.status !== 'succeeded'
+    || payment.amount !== capability.paymentAmountMinor
+    || payment.amount_received !== capability.paymentAmountMinor
+    || payment.currency.toLowerCase() !== capability.paymentCurrency
+    || metadata[MOBILE_COMMERCE_PAYMENT_METADATA.contractVersion] !== capability.contractVersion
+    || metadata[MOBILE_COMMERCE_PAYMENT_METADATA.tenantId] !== capability.tenantId
+    || metadata[MOBILE_COMMERCE_PAYMENT_METADATA.quoteVersion] !== capability.quoteVersion
+    || metadata[MOBILE_COMMERCE_PAYMENT_METADATA.checkoutAttemptId] !== capability.checkoutAttemptId
+    || metadata[MOBILE_COMMERCE_PAYMENT_METADATA.reservationKey] !== capability.reservationKey) {
+    throw new MobileCommerceError(409, 'PAYMENT_EVIDENCE_MISMATCH', 'The successful payment does not match this held quote.');
+  }
+}
+
+function assertBookingMatchesCommit(
+  booking: CanonicalMobileBooking,
+  input: {
+    target: MobileCommerceTarget;
+    capability: MobileHoldCapability;
+    paymentIntentId: string;
+  },
+) {
+  const expectedAmount = input.capability.paymentAmountMinor;
+  if (String(booking.tour || '') !== input.target.tourId
+    || booking.dateString !== input.target.date
+    || booking.time !== input.target.time
+    || Number(booking.guests) !== (
+      input.target.guests.adults + input.target.guests.children + input.target.guests.infants
+    )
+    || booking.selectedBookingOption?.pricingKey !== input.target.pricingKey
+    || Math.round(Number(booking.totalPrice) * 100) !== expectedAmount
+    || Math.round(Number(booking.amountPaid) * 100) !== expectedAmount
+    || String(booking.currency || '').toLowerCase() !== input.capability.paymentCurrency
+    || booking.status !== 'Confirmed'
+    || booking.source !== 'online'
+    || booking.paymentStatus !== 'paid'
+    || booking.paymentId !== input.paymentIntentId
+    || booking.paymentItemIndex !== 0
+    || booking.paymentConfirmedBy !== `stripe:${input.paymentIntentId}`
+    || !booking.paymentConfirmedAt) {
+    throw new MobileCommerceError(409, 'BOOKING_EVIDENCE_MISMATCH', 'The canonical booking does not match the paid held quote.');
+  }
+}
+
+async function claimCanonicalMobileBooking(input: {
+  bookingId: string;
+  target: MobileCommerceTarget;
+  capability: MobileHoldCapability;
+  paymentIntentId: string;
+}) {
+  const booking = await Booking.findOne({
+    _id: input.bookingId,
+    paymentId: input.paymentIntentId,
+    paymentItemIndex: 0,
+    $and: [DEFAULT_TENANT_FILTER],
+  }).select([
+    '_id', 'tenantId', 'bookingReference', 'tour', 'dateString', 'time', 'guests',
+    'totalPrice', 'currency', 'status', 'source', 'paymentStatus', 'amountPaid',
+    'paymentConfirmedAt', 'paymentConfirmedBy', 'paymentId', 'paymentItemIndex',
+    'selectedBookingOption', 'commerceContractVersion', 'commerceQuoteVersion',
+    'commerceTargetBinding', 'checkoutAttemptId',
+  ].join(' ')).lean<CanonicalMobileBooking | null>();
+  if (!booking) {
+    throw new MobileCommerceError(404, 'BOOKING_NOT_FOUND', 'The canonical paid booking was not found.');
+  }
+  assertBookingMatchesCommit(booking, input);
+  const expectedBindings = {
+    commerceContractVersion: input.capability.contractVersion,
+    commerceQuoteVersion: input.capability.quoteVersion,
+    commerceTargetBinding: input.capability.targetBinding,
+    checkoutAttemptId: input.capability.checkoutAttemptId,
+  };
+  for (const [field, expected] of Object.entries(expectedBindings)) {
+    const existing = booking[field as keyof CanonicalMobileBooking];
+    if (existing !== undefined && existing !== null && existing !== expected) {
+      throw new MobileCommerceError(409, 'BOOKING_COMMIT_CONFLICT', 'The booking is already bound to different commerce evidence.');
+    }
+  }
+  const claimed = await Booking.findOneAndUpdate(
+    {
+      _id: booking._id,
+      paymentId: input.paymentIntentId,
+      paymentItemIndex: 0,
+      $and: [
+        DEFAULT_TENANT_FILTER,
+        ...Object.entries(expectedBindings).map(([field, expected]) => ({
+          $or: [{ [field]: { $exists: false } }, { [field]: expected }],
+        })),
+      ],
+    },
+    [
+      {
+        $set: {
+          tenantId: TENANT_ID,
+          ...expectedBindings,
+          inventoryReservationState: {
+            $cond: [
+              { $eq: ['$inventoryReservationState', 'converted'] },
+              'converted',
+              'pending_conversion',
+            ],
+          },
+        },
+      },
+      { $unset: 'inventoryReservationFailureCode' },
+    ],
+    { new: true },
+  ).lean<CanonicalMobileBooking | null>();
+  if (!claimed) {
+    throw new MobileCommerceError(409, 'BOOKING_COMMIT_CONFLICT', 'The booking was claimed by different commerce evidence.');
+  }
+  return claimed;
+}
+
+/**
+ * Private BFF callback after Stripe success. Stripe and the canonical booking
+ * are both independently revalidated; no client assertion can consume stock.
+ */
+export async function commitMobileCommerceHold(
+  value: unknown,
+  dependencies: MobileCommerceCommitDependencies = defaultCommitDependencies,
+) {
+  const target = normalizeMobileCommerceTarget(value);
+  const input = value as Record<string, unknown>;
+  const checkoutAttemptId = normalizeCheckoutAttemptId(input.idempotencyKey);
+  const paymentIntentId = typeof input.paymentIntentId === 'string' ? input.paymentIntentId.trim() : '';
+  const bookingId = typeof input.bookingId === 'string' ? input.bookingId.trim().toLowerCase() : '';
+  const requestedQuoteVersion = typeof input.quoteVersion === 'string' ? input.quoteVersion.trim() : '';
+  if (!checkoutAttemptId) {
+    throw new MobileCommerceError(400, 'INVALID_IDEMPOTENCY_KEY', 'The original checkout-attempt UUID is required.');
+  }
+  if (!/^pi_[A-Za-z0-9_]+$/.test(paymentIntentId) || !/^[a-f0-9]{24}$/.test(bookingId)) {
+    throw new MobileCommerceError(400, 'INVALID_COMMIT_TARGET', 'A valid payment and canonical booking are required.');
+  }
+  const token = normalizeCapability(input.holdToken, 'HOLD_CAPABILITY_REQUIRED');
+  const capability = await verifyCapability<MobileHoldCapability>(token, 'mobile-commerce:hold-control');
+  assertCapabilityShape(capability);
+  const binding = targetBinding(target);
+  const reservationKey = reservationKeyFor(checkoutAttemptId);
+  if (capability.targetBinding !== binding
+    || capability.reservationKey !== reservationKey
+    || capability.checkoutAttemptId !== checkoutAttemptId
+    || capability.quoteVersion !== requestedQuoteVersion) {
+    throw new MobileCommerceError(403, 'CAPABILITY_TARGET_MISMATCH', 'The hold capability does not match this payment checkout.');
+  }
+
+  let payment: MobilePaymentIntentEvidence;
+  try {
+    payment = await dependencies.retrievePaymentIntent(paymentIntentId);
+  } catch {
+    throw new MobileCommerceError(503, 'PAYMENT_VERIFICATION_UNAVAILABLE', 'The payment provider could not be verified.');
+  }
+  if (payment.id !== paymentIntentId) {
+    throw new MobileCommerceError(409, 'PAYMENT_EVIDENCE_MISMATCH', 'The payment provider returned different evidence.');
+  }
+  assertPaymentEvidence(payment, capability);
+  const booking = await claimCanonicalMobileBooking({
+    bookingId,
+    target,
+    capability,
+    paymentIntentId,
+  });
+  const committed = await commitInventoryReservationHold({
+    reservationKey,
+    paymentIntentId,
+    itemIndex: 0,
+    bookingId: booking._id,
+    item: pricingInput(target),
+    commerceContext: holdCommerceContext({
+      quoteVersion: capability.quoteVersion,
+      targetBinding: capability.targetBinding,
+      checkoutAttemptId: capability.checkoutAttemptId,
+      paymentAmountMinor: capability.paymentAmountMinor,
+    }),
+  });
+  const finalized = await Booking.updateOne(
+    {
+      _id: booking._id,
+      tenantId: TENANT_ID,
+      commerceContractVersion: capability.contractVersion,
+      commerceQuoteVersion: capability.quoteVersion,
+      commerceTargetBinding: capability.targetBinding,
+      checkoutAttemptId: capability.checkoutAttemptId,
+    },
+    [
+      {
+        $set: {
+          inventoryReservationState: 'converted',
+          inventoryReservationFinalizedAt: {
+            $ifNull: ['$inventoryReservationFinalizedAt', new Date()],
+          },
+        },
+      },
+      { $unset: 'inventoryReservationFailureCode' },
+    ],
+  );
+  if (finalized.matchedCount !== 1) {
+    throw new MobileCommerceError(503, 'BOOKING_COMMIT_RECEIPT_FAILED', 'Inventory was protected, but its booking receipt needs reconciliation.');
+  }
+  return {
+    contractVersion: MOBILE_COMMERCE_CONTRACT,
+    tenantId: TENANT_ID,
+    status: 'converted' as const,
+    alreadyCommitted: committed.alreadyCommitted,
+    paymentIntentId,
+    bookingId: String(booking._id),
+    bookingReference: booking.bookingReference || null,
+    quoteVersion: capability.quoteVersion,
   };
 }
 
@@ -374,12 +728,8 @@ export async function releaseMobileCommerceHold(value: unknown) {
     throw new MobileCommerceError(403, 'RELEASE_SCOPE_INVALID', 'The release request is outside this contract scope.');
   }
   const token = normalizeCapability(input.holdToken, 'HOLD_CAPABILITY_REQUIRED');
-  const capability = await verifyCapability<MobileHoldCapability>(token, 'mobile-commerce:release');
-  if (!/^[a-f0-9]{64}$/.test(String(capability.reservationKey || ''))
-    || !/^mqv1_[a-f0-9]{64}$/.test(String(capability.quoteVersion || ''))
-    || !/^[a-f0-9]{64}$/.test(String(capability.targetBinding || ''))) {
-    throw new MobileCommerceError(401, 'CAPABILITY_INVALID', 'The hold capability is malformed.');
-  }
+  const capability = await verifyCapability<MobileHoldCapability>(token, 'mobile-commerce:hold-control');
+  assertCapabilityShape(capability);
   const releasedCount = await releaseInventoryHolds({
     reservationKey: capability.reservationKey,
     reason: 'mobile_capability_release',

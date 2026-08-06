@@ -33,6 +33,15 @@ export interface InventoryAvailabilitySnapshot {
   availableAfterHold: number;
 }
 
+export interface InventoryHoldCommerceContext {
+  contractVersion: string;
+  quoteVersion: string;
+  targetBinding: string;
+  checkoutAttemptId: string;
+  paymentAmountMinor: number;
+  paymentCurrency: 'usd';
+}
+
 export class InventoryHoldError extends Error {
   status = 409;
   constructor(public code: string, message: string) {
@@ -53,6 +62,12 @@ type InventoryTarget = {
 type HoldRow = {
   _id: Types.ObjectId;
   reservationKey: string;
+  commerceContractVersion?: string;
+  commerceQuoteVersion?: string;
+  commerceTargetBinding?: string;
+  checkoutAttemptId?: string;
+  paymentAmountMinor?: number;
+  paymentCurrency?: string;
   paymentIntentId?: string;
   itemIndex: number;
   tourId: Types.ObjectId;
@@ -229,6 +244,25 @@ function sameTarget(hold: HoldRow, target: InventoryTarget) {
     && Number(hold.guests) === target.guests;
 }
 
+function validCommerceContext(context: InventoryHoldCommerceContext): boolean {
+  return /^[A-Za-z0-9._-]{1,100}$/.test(context.contractVersion)
+    && /^mqv1_[a-f0-9]{64}$/.test(context.quoteVersion)
+    && /^[a-f0-9]{64}$/.test(context.targetBinding)
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(context.checkoutAttemptId)
+    && Number.isSafeInteger(context.paymentAmountMinor)
+    && context.paymentAmountMinor > 0
+    && context.paymentCurrency === 'usd';
+}
+
+function sameCommerceContext(hold: HoldRow, context: InventoryHoldCommerceContext): boolean {
+  return hold.commerceContractVersion === context.contractVersion
+    && hold.commerceQuoteVersion === context.quoteVersion
+    && hold.commerceTargetBinding === context.targetBinding
+    && hold.checkoutAttemptId === context.checkoutAttemptId
+    && Number(hold.paymentAmountMinor) === context.paymentAmountMinor
+    && hold.paymentCurrency === context.paymentCurrency;
+}
+
 async function activeHeldGuests(target: InventoryTarget, excludeId?: Types.ObjectId) {
   const query: Record<string, unknown> = {
     tenantId: target.tenantId,
@@ -288,7 +322,12 @@ export async function inspectInventoryAvailability(item: InventoryHoldCartItem):
   });
 }
 
-async function reserveOne(reservationKey: string, item: InventoryHoldCartItem, itemIndex: number) {
+async function reserveOne(
+  reservationKey: string,
+  item: InventoryHoldCartItem,
+  itemIndex: number,
+  commerceContext?: InventoryHoldCommerceContext,
+) {
   const target = targetFor(item);
   return withInventoryLease(target, async () => {
     const existing = await CheckoutInventoryHold.findOne({
@@ -298,6 +337,9 @@ async function reserveOne(reservationKey: string, item: InventoryHoldCartItem, i
     }).lean<HoldRow | null>();
     if (existing && !sameTarget(existing, target)) {
       throw new InventoryHoldError('INVENTORY_IDEMPOTENCY_CONFLICT', 'The reservation key is already bound to different inventory.');
+    }
+    if (existing && commerceContext && !sameCommerceContext(existing, commerceContext)) {
+      throw new InventoryHoldError('INVENTORY_IDEMPOTENCY_CONFLICT', 'The reservation key is already bound to different commerce evidence.');
     }
     if (existing?.state === 'converted') return existing;
     // A retry must return the original hold window, not extend inventory
@@ -330,6 +372,14 @@ async function reserveOne(reservationKey: string, item: InventoryHoldCartItem, i
           time: target.time,
           optionKey: target.optionKey,
           guests: target.guests,
+          ...(commerceContext ? {
+            commerceContractVersion: commerceContext.contractVersion,
+            commerceQuoteVersion: commerceContext.quoteVersion,
+            commerceTargetBinding: commerceContext.targetBinding,
+            checkoutAttemptId: commerceContext.checkoutAttemptId,
+            paymentAmountMinor: commerceContext.paymentAmountMinor,
+            paymentCurrency: commerceContext.paymentCurrency,
+          } : {}),
           state: 'active',
           expiresAt: new Date(now.getTime() + holdDurationMs()),
           cleanupAt: new Date(now.getTime() + CLEANUP_MS),
@@ -349,20 +399,98 @@ async function reserveOne(reservationKey: string, item: InventoryHoldCartItem, i
 export async function createInventoryHolds(input: {
   reservationKey: string;
   cart: InventoryHoldCartItem[];
+  commerceContext?: InventoryHoldCommerceContext;
 }) {
-  if (!/^[a-f0-9]{64}$/i.test(input.reservationKey) || !Array.isArray(input.cart) || input.cart.length === 0 || input.cart.length > 10) {
+  if (!/^[a-f0-9]{64}$/i.test(input.reservationKey)
+    || !Array.isArray(input.cart)
+    || input.cart.length === 0
+    || input.cart.length > 10
+    || (input.commerceContext !== undefined && !validCommerceContext(input.commerceContext))) {
     throw new InventoryHoldError('INVALID_INVENTORY_RESERVATION', 'Inventory reservation input is invalid.');
   }
   const holds = [];
   try {
     for (let itemIndex = 0; itemIndex < input.cart.length; itemIndex += 1) {
-      holds.push(await reserveOne(input.reservationKey, input.cart[itemIndex], itemIndex));
+      holds.push(await reserveOne(input.reservationKey, input.cart[itemIndex], itemIndex, input.commerceContext));
     }
     return holds;
   } catch (error) {
     await releaseInventoryHolds({ reservationKey: input.reservationKey, reason: 'reservation_failed' });
     throw error;
   }
+}
+
+/**
+ * Atomically bind a paid provider intent and consume one capability-backed
+ * reservation. The departure lease keeps conversion serialized with new holds;
+ * the durable Booking already counts capacity before the active hold disappears.
+ */
+export async function commitInventoryReservationHold(input: {
+  reservationKey: string;
+  paymentIntentId: string;
+  itemIndex: number;
+  bookingId: Types.ObjectId;
+  item: InventoryHoldCartItem;
+  commerceContext: InventoryHoldCommerceContext;
+}) {
+  if (!/^[a-f0-9]{64}$/i.test(input.reservationKey)
+    || !/^pi_[A-Za-z0-9_]+$/.test(input.paymentIntentId)
+    || !Number.isInteger(input.itemIndex)
+    || input.itemIndex < 0
+    || !validCommerceContext(input.commerceContext)) {
+    throw new InventoryHoldError('INVALID_INVENTORY_COMMIT', 'Inventory commit input is invalid.');
+  }
+  const target = targetFor(input.item);
+  return withInventoryLease(target, async () => {
+    const hold = await CheckoutInventoryHold.findOne({
+      tenantId: target.tenantId,
+      reservationKey: input.reservationKey,
+      itemIndex: input.itemIndex,
+    }).lean<HoldRow | null>();
+    if (!hold) throw new InventoryHoldError('INVENTORY_HOLD_MISSING', 'The inventory hold is missing.');
+    if (!sameTarget(hold, target) || !sameCommerceContext(hold, input.commerceContext)) {
+      throw new InventoryHoldError('INVENTORY_COMMIT_CONFLICT', 'The inventory hold does not match the paid commerce evidence.');
+    }
+    if (hold.paymentIntentId && hold.paymentIntentId !== input.paymentIntentId) {
+      throw new InventoryHoldError('INVENTORY_PAYMENT_CONFLICT', 'Inventory is already bound to a different payment.');
+    }
+    if (hold.state === 'converted') {
+      if (String(hold.convertedBookingId) !== String(input.bookingId)
+        || hold.paymentIntentId !== input.paymentIntentId) {
+        throw new InventoryHoldError('INVENTORY_CONVERSION_CONFLICT', 'Inventory was converted to a different payment or booking.');
+      }
+      return { hold, alreadyCommitted: true as const };
+    }
+    const now = new Date();
+    if (hold.state !== 'active' || new Date(hold.expiresAt).getTime() <= now.getTime()) {
+      throw new InventoryHoldError('INVENTORY_HOLD_INACTIVE', 'The paid inventory hold is no longer active.');
+    }
+    const converted = await CheckoutInventoryHold.findOneAndUpdate(
+      {
+        _id: hold._id,
+        state: 'active',
+        expiresAt: { $gt: now },
+        $or: [
+          { paymentIntentId: { $exists: false } },
+          { paymentIntentId: input.paymentIntentId },
+        ],
+      },
+      {
+        $set: {
+          paymentIntentId: input.paymentIntentId,
+          state: 'converted',
+          convertedBookingId: input.bookingId,
+          convertedAt: now,
+          cleanupAt: new Date(now.getTime() + CLEANUP_MS),
+        },
+      },
+      { new: true },
+    );
+    if (!converted) {
+      throw new InventoryHoldError('INVENTORY_COMMIT_CONFLICT', 'The inventory hold was changed by another commit.');
+    }
+    return { hold: converted, alreadyCommitted: false as const };
+  });
 }
 
 export async function bindInventoryHoldsToPayment(reservationKey: string, paymentIntentId: string) {
