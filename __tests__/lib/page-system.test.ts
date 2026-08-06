@@ -56,6 +56,18 @@ describe('page-system helpers', () => {
     ]);
   });
 
+  it('renders the live tour page from the saved parent-aware breadcrumb contract', () => {
+    const source = readFileSync(join(process.cwd(), 'app/[locale]/[slug]/TourDetailClientPage.tsx'), 'utf8');
+
+    expect(source).toContain("import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';");
+    expect(source).toContain("import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';");
+    expect(source).toContain('parentPage: tour.parentPage');
+    expect(source).toContain("rootLabel: 'Tours'");
+    expect(source).toContain("rootHref: '/search'");
+    expect(source).toContain('<ContentBreadcrumbs items={breadcrumbs} />');
+    expect(source).not.toContain('<nav className="flex items-center gap-1.5 text-xs">');
+  });
+
   it('creates encoded Google map links only for non-empty meeting points', () => {
     expect(meetingPointMapUrl(' Marina, Hurghada ')).toBe('https://www.google.com/maps/search/?api=1&query=Marina%2C%20Hurghada');
     expect(meetingPointEmbedUrl('Marina, Hurghada')).toBe('https://www.google.com/maps?q=Marina%2C%20Hurghada&output=embed');

@@ -24,6 +24,7 @@ import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import ElfsightWidget from '@/components/ElfsightWidget';
 import InteractiveItineraryMap from '@/components/tours/InteractiveItineraryMap';
 import TourPriceDisplay from '@/components/pricing/TourPriceDisplay';
+import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
 // Hooks and contexts
@@ -38,6 +39,7 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { formatExperienceDescription } from '@/lib/content/experienceDescription';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { contentPath } from '@/lib/content/contentUrl';
+import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import {
   itineraryDirectionsUrl,
   itineraryEmbedMapUrl,
@@ -1075,6 +1077,13 @@ interface TourPageClientProps {
 
 // Main TourPageClient component
 export default function TourPageClient({ tour, relatedTours, initialReviews = [], initialStopSaleDates }: TourPageClientProps) {
+  const breadcrumbs = buildContentBreadcrumbs({
+    currentTitle: tour.title,
+    breadcrumbLabel: tour.breadcrumbLabel,
+    parentPage: tour.parentPage,
+    rootLabel: 'Tours',
+    rootHref: '/search',
+  });
   const { formatPrice } = useSettings();
   const tourBasePricing = effectiveTourPrice(tour);
   const { addToCart } = useCart();
@@ -1281,17 +1290,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         <div className="bg-slate-50/50 py-3 border-b border-slate-200/50">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between gap-4">
-              <nav className="flex items-center gap-1.5 text-xs">
-                <Link href="/" className="text-slate-500 hover:text-red-600 transition-colors">
-                  Home
-                </Link>
-                <span className="text-slate-400">/</span>
-                <Link href="/search" className="text-slate-500 hover:text-red-600 transition-colors">
-                  Tours
-                </Link>
-                <span className="text-slate-400">/</span>
-                <span className="text-slate-800 font-medium truncate max-w-[200px] md:max-w-none">{tour.title}</span>
-              </nav>
+              <div className="min-w-0 text-xs">
+                <ContentBreadcrumbs items={breadcrumbs} />
+              </div>
               <Link
                 href="/search"
                 className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm hover:underline transition-colors whitespace-nowrap"
