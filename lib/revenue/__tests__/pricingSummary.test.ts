@@ -34,6 +34,10 @@ describe('catalogueFromPrice', () => {
     })).toBe(120);
   });
 
+  it('advertises the automatically discounted tour base when no options exist', () => {
+    expect(catalogueFromPrice({ discountPrice: 100, discountPercent: 20, bookingOptions: [] })).toBe(80);
+  });
+
   it('ignores invalid prices and returns null when no catalogue price is usable', () => {
     expect(catalogueFromPrice({ discountPrice: Number.NaN, bookingOptions: [{ price: -1 }] })).toBeNull();
   });

@@ -21,6 +21,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
+import TourPriceDisplay from '@/components/pricing/TourPriceDisplay';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 // Add these new imports for reviews
@@ -40,6 +41,7 @@ import { contentPath } from '@/lib/content/contentUrl';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
+import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -845,6 +847,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
   const meetingMapHref = meetingPointMapUrl(tour.meetingPoint);
   const meetingMapEmbed = meetingPointEmbedUrl(tour.meetingPoint);
   const { formatPrice } = useSettings();
+  const tourBasePricing = effectiveTourPrice(tour);
   const { addToCart } = useCart();
   const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -986,7 +989,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
         selectedDate: toDateOnlyString(new Date()),
         selectedTime: 'Anytime',
         selectedAddOns: {},
-        totalPrice: tour.discountPrice,
+        totalPrice: tourBasePricing.price,
       } as CartItem;
       addToCart(quickAddCartItem);
       setAdded(true);
@@ -1154,15 +1157,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     </div>
                   </div>
 
-                  <div className="text-right flex-shrink-0">
-                    {tour.originalPrice && tour.originalPrice > tour.discountPrice && (
-                      <p className="text-slate-500 line-through text-lg mb-1">{formatPrice(tour.originalPrice)}</p>
-                    )}
-                    <p className="text-3xl md:text-4xl font-extrabold text-red-600 mb-1">
-                      {formatPrice(tour.discountPrice)}
-                    </p>
-                    <p className="text-sm text-slate-500">per person</p>
-                  </div>
+                  <TourPriceDisplay tour={tour} formatPrice={formatPrice} />
                 </div>
               </div>
 
@@ -1270,14 +1265,13 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 mb-6">
-                  <div className="text-center mb-6">
-                    <div className="flex items-baseline justify-center gap-2 mb-2">
-                      {tour.originalPrice && tour.originalPrice > tour.discountPrice && (
-                        <span className="text-slate-500 line-through text-lg">{formatPrice(tour.originalPrice)}</span>
-                      )}
-                      <span className="text-4xl font-extrabold text-red-600">{formatPrice(tour.discountPrice)}</span>
-                    </div>
-                    <p className="text-sm text-slate-500">per person</p>
+                  <div className="mb-6">
+                    <TourPriceDisplay
+                      tour={tour}
+                      formatPrice={formatPrice}
+                      align="center"
+                      priceClassName="text-4xl font-extrabold text-red-600"
+                    />
                   </div>
 
                   <div className="space-y-4 mb-6">
@@ -1433,7 +1427,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as React.ComponentProps<typeof BookingSidebar>['tour']} />
 
       <StickyBookButton
-        price={tour.discountPrice}
+        price={tourBasePricing.price}
         currency={'$'}
         onClick={openBookingSidebar}
         hidden={isBookingSidebarOpen}

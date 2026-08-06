@@ -1,4 +1,4 @@
-import { effectiveOptionPrice } from './effectivePrice';
+import { effectiveOptionPrice, effectiveTourPrice } from './effectivePrice';
 
 interface StoredBookingOption {
   id?: string;
@@ -72,12 +72,14 @@ export function authoritativeBasePrice(
     ? tour.availability.slots.find((entry) => entry.time === cartItem.selectedTime)
     : undefined;
   if (typeof universalSlot?.price === 'number' && Number.isFinite(universalSlot.price)) {
-    return universalSlot.price;
+    return effectiveTourPrice(tour, universalSlot).price;
   }
 
-  // No option selected: the tour's own stored price stands.
+  // No option selected: apply the tour percentage to its own base price.
   const tourPrice = tour?.discountPrice ?? tour?.price;
-  if (typeof tourPrice === 'number' && Number.isFinite(tourPrice)) return tourPrice;
+  if (typeof tourPrice === 'number' && Number.isFinite(tourPrice)) {
+    return effectiveTourPrice(tour).price;
+  }
 
   throw new AuthoritativePriceError('Invalid catalogue price');
 }

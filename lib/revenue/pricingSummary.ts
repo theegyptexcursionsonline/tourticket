@@ -3,7 +3,7 @@ import type { Types } from 'mongoose';
 import RevenuePriceOverride from '@/lib/models/RevenuePriceOverride';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
+import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 
 type SummaryTour = {
   _id: Types.ObjectId;
@@ -52,7 +52,9 @@ export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'di
         : [undefined];
       return slots.map((slot) => effectiveOptionPrice(tour, option, slot).price);
     }))
-    : finitePrices([tour.discountPrice]);
+    : (Number.isFinite(Number(tour.discountPrice)) && Number(tour.discountPrice) >= 0
+      ? finitePrices([effectiveTourPrice(tour).price])
+      : []);
   return candidates.length ? Math.min(...candidates) : null;
 }
 

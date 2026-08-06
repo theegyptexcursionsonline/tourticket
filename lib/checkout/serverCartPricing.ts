@@ -3,7 +3,7 @@ import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
-import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
+import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
@@ -184,6 +184,11 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
       if (!Number.isFinite(Number(tour.discountPrice)) || Number(tour.discountPrice) < 0) {
         throw new Error('Invalid catalogue price');
       }
+      const requestedTime = rawItem?.selectedTime ? String(rawItem.selectedTime) : null;
+      const selectedSlot = Array.isArray(tour.availability?.slots) && requestedTime
+        ? tour.availability.slots.find((entry) => entry.time === requestedTime)
+        : undefined;
+      const pricing = effectiveTourPrice(tour, selectedSlot);
       option = {
         id: 'standard-default',
         pricingKey: STANDARD_OPTION_KEY,
@@ -192,9 +197,11 @@ export async function secureCartPricing(input: unknown): Promise<SecureCartItem[
         // the selected time, exactly like the resolver's catalogue baseline.
         price: authoritativeBasePrice(tour, {
           selectedBookingOption: null,
-          selectedTime: rawItem?.selectedTime ? String(rawItem.selectedTime) : null,
+          selectedTime: requestedTime,
         }),
-        originalPrice: Number(tour.originalPrice || tour.discountPrice),
+        originalPrice: pricing.discountApplied
+          ? pricing.originalPrice
+          : Number(tour.originalPrice || tour.discountPrice),
       };
     }
 

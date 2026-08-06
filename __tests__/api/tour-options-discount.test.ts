@@ -84,6 +84,7 @@ describe('GET /api/tours/[tourId]/options quotes exactly what checkout charges',
     const priv = options.find((option) => option.pricingKey === 'private-key');
     expect(priv.price).toBe(120); // 150 - 20%
     expect(priv.originalPrice).toBe(150);
+    expect(priv.discount).toBe(20);
     expect(priv.guestPrices).toEqual({ adult: 120, child: 60, infant: 0 });
     expect(priv.price).toBe(authoritativeBasePrice(discountedTour, {
       selectedBookingOption: { pricingKey: 'private-key' },
@@ -129,12 +130,17 @@ describe('GET /api/tours/[tourId]/options quotes exactly what checkout charges',
     const [standard] = await (response as unknown as { json: () => Promise<any[]> }).json();
 
     const slot9 = standard.timeSlots.find((slot: { time: string }) => slot.time === '09:00');
-    expect(slot9.price).toBe(75); // universal slot price
+    expect(standard.price).toBe(80); // tour base 100 - 20%
+    expect(standard.originalPrice).toBe(100);
+    expect(standard.discount).toBe(20);
+    expect(slot9.price).toBe(60); // universal slot 75 - 20%
+    expect(slot9.originalPrice).toBe(75);
     expect(slot9.price).toBe(authoritativeBasePrice(discountedTour, {
       selectedBookingOption: null,
       selectedTime: '09:00',
     }));
     const slot11 = standard.timeSlots.find((slot: { time: string }) => slot.time === '11:00');
-    expect(slot11.price).toBe(100); // unpriced slot inherits the tour price
+    expect(slot11.price).toBe(80); // unpriced slot inherits the discounted tour price
+    expect(slot11.originalPrice).toBe(100);
   });
 });

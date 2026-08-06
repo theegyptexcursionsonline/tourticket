@@ -82,11 +82,11 @@ describe('resolveEffectivePrice catalogue baseline with tour discounts', () => {
     expect(quote.prices.adult).toBe(90);
   });
 
-  it('prices the standard path from a universal slot, else the tour price untouched by the percentage', async () => {
+  it('applies the percentage automatically to the standard universal slot and tour base', async () => {
     const slotQuote = await resolveEffectivePrice({ tourId: 'a'.repeat(24), date: '2099-01-01', time: '09:00' });
-    expect(slotQuote.prices.adult).toBe(75);
+    expect(slotQuote.prices.adult).toBe(60);
     const plainQuote = await resolveEffectivePrice({ tourId: 'a'.repeat(24), date: '2099-01-01', time: '11:00' });
-    expect(plainQuote.prices.adult).toBe(100);
+    expect(plainQuote.prices.adult).toBe(80);
   });
 
   it('invalidates explicit guest prices once the discount moves the adult baseline', async () => {

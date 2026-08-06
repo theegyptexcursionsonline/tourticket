@@ -649,8 +649,8 @@ const TourSchema: Schema<ITour> = new Schema({
     max: [999999, 'Discount price cannot exceed 999999'],
     index: true
   },
-  // Percentage form of the discount, applied to booking options that opt in.
-  // The displayed price stays a money amount; only the input changes.
+  // Percentage form of the discount. It applies automatically to the tour's
+  // base/universal-slot prices and to booking options that explicitly opt in.
   discountPercent: {
     type: Number,
     min: [0, 'Discount percent cannot be negative'],
@@ -1067,7 +1067,7 @@ TourSchema.pre('save', async function(next) {
     }
     
     // Validation for price consistency
-    if (this.originalPrice && this.discountPrice && this.discountPrice > this.originalPrice) {
+    if (!this.discountPercent && this.originalPrice && this.discountPrice && this.discountPrice > this.originalPrice) {
       return next(new Error('Discount price cannot be higher than original price'));
     }
     

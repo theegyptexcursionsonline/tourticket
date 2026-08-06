@@ -53,6 +53,7 @@ import SearchableCheckboxList from '@/components/admin/SearchableCheckboxList';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
 import { ensureImageMetadata, type ImageMetadata } from '@/lib/content/imageMetadata';
+import { applyDiscountPercent } from '@/lib/pricing/effectivePrice';
 import { pruneBookingOptionTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
@@ -153,7 +154,6 @@ interface TourFormData {
     duration: string;
     discountPrice: string | number;
     discountPercent: string | number;
-    originalPrice: string | number;
     revenueGuestPrices?: GuestPriceInput;
     destination: string;
     category: string[];
@@ -501,7 +501,6 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
         duration: '',
         discountPrice: '',
         discountPercent: '',
-        originalPrice: '',
         revenueGuestPrices: { child: '', infant: '' },
         destination: '',
         category: [],
@@ -571,7 +570,6 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 duration: tourToEdit.duration || '',
                 discountPrice: tourToEdit.discountPrice || tourToEdit.price || '',
                 discountPercent: tourToEdit.discountPercent ?? '',
-                originalPrice: tourToEdit.originalPrice || '',
                 revenueGuestPrices: tourToEdit.revenueGuestPrices
                     ? {
                         adult: tourToEdit.discountPrice || tourToEdit.price || '',
@@ -774,7 +772,6 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             duration: '',
             discountPrice: '',
             discountPercent: '',
-            originalPrice: '',
             revenueGuestPrices: { child: '', infant: '' },
             destination: '',
             category: [],
@@ -1205,7 +1202,6 @@ const addItineraryItem = () => {
                     : Math.max(0, Math.min(100, parseFloat(String(cleanedData.discountPercent)) || 0)),
                 revenueGuestPrices: normalizeGuestPrices(cleanedData.discountPrice, cleanedData.revenueGuestPrices),
                 longDescription: cleanedData.longDescription?.trim() || cleanedData.description.trim(),
-                originalPrice: cleanedData.originalPrice ? parseFloat(String(cleanedData.originalPrice)) : undefined,
                 destination: cleanedData.destination,
                 category: cleanedData.category,
                 difficulty: cleanedData.difficulty || 'Easy',
@@ -1650,24 +1646,14 @@ const addItineraryItem = () => {
                                                     placeholder="e.g. 15"
                                                 />
                                                 <SmallHint>
-                                                    Applies to any booking option you tick &ldquo;Apply tour discount&rdquo; on.
-                                                    Customers still see a discounted price, not a percentage.
+                                                    Automatically applies to the Base Price and universal slot prices. Booking options apply it when their checkbox is enabled.
                                                 </SmallHint>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <FormLabel icon={CurrencyIcon}>Original Price ({selectedCurrency.symbol})</FormLabel>
-                                                <div className="relative">
-                                                    <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                    <input 
-                                                        name="originalPrice" 
-                                                        type="number" 
-                                                        step="0.01" 
-                                                        value={formData.originalPrice || ''} 
-                                                        onChange={handleChange} 
-                                                        className={`${inputBase} pl-10`} 
-                                                        placeholder="20.00" 
-                                                    />
-                                                </div>
+                                                {Number(formData.discountPercent) > 0 && Number(formData.discountPrice) >= 0 && (
+                                                    <p className="text-xs font-semibold text-emerald-700" data-testid="discounted-base-price-preview">
+                                                        Customer price: <span className="line-through text-slate-500">{selectedCurrency.symbol}{Number(formData.discountPrice).toFixed(2)}</span>{' '}
+                                                        {selectedCurrency.symbol}{applyDiscountPercent(Number(formData.discountPrice), Number(formData.discountPercent)).toFixed(2)}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="space-y-3">
                                                 <FormLabel icon={Tag}>Tags (comma separated)</FormLabel>

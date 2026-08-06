@@ -1,4 +1,10 @@
-import { effectiveOptionPrice, applyDiscountPercent, normalizeDiscountPercent } from '@/lib/pricing/effectivePrice';
+import {
+  effectiveOptionPrice,
+  effectiveTourPrice,
+  applyDiscountPercent,
+  normalizeDiscountPercent,
+  percentageOff,
+} from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 describe('a tour discount is a percentage that options opt into', () => {
@@ -50,6 +56,31 @@ describe('a tour discount is a percentage that options opt into', () => {
   });
 });
 
+describe('the tour base and universal slot prices apply the percentage automatically', () => {
+  it('derives the customer price from the stored base and ignores a legacy original field', () => {
+    expect(effectiveTourPrice({ discountPrice: 50, originalPrice: 999, discountPercent: 10 })).toEqual({
+      price: 45, originalPrice: 50, discountApplied: true,
+    });
+  });
+
+  it('applies the same percentage to a universal slot override', () => {
+    expect(effectiveTourPrice({ discountPrice: 50, discountPercent: 10 }, { price: 60 })).toEqual({
+      price: 54, originalPrice: 60, discountApplied: true,
+    });
+  });
+
+  it('retains a legacy pair only when no percentage is configured', () => {
+    expect(effectiveTourPrice({ discountPrice: 80, originalPrice: 100 })).toEqual({
+      price: 80, originalPrice: 100, discountApplied: true,
+    });
+  });
+
+  it('calculates the visible badge only for a real reduction', () => {
+    expect(percentageOff(60, 54)).toBe(10);
+    expect(percentageOff(50, 50)).toBe(0);
+  });
+});
+
 describe('the server prices from the stored tour, not the submitted cart', () => {
   const tour = {
     discountPercent: 25,
@@ -80,14 +111,14 @@ describe('the server prices from the stored tour, not the submitted cart', () =>
   });
 
   it('uses the tour price when no option was chosen', () => {
-    expect(authoritativeBasePrice(tour, { selectedBookingOption: null })).toBe(90);
+    expect(authoritativeBasePrice(tour, { selectedBookingOption: null })).toBe(67.5);
   });
 
-  it('uses a stored universal slot price when the tour has no matching option', () => {
+  it('discounts a stored universal slot price when the tour has no matching option', () => {
     expect(authoritativeBasePrice(
-      { discountPrice: 90, availability: { slots: [{ time: '14:00', price: 125 }] } },
+      { discountPrice: 90, discountPercent: 20, availability: { slots: [{ time: '14:00', price: 125 }] } },
       { selectedBookingOption: null, selectedTime: '14:00' },
-    )).toBe(125);
+    )).toBe(100);
   });
 
   it('rejects an unrecognised option instead of accepting its browser price', () => {

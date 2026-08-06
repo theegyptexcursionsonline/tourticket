@@ -2,6 +2,7 @@
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
 import { contentPath } from '@/lib/content/contentUrl';
+import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
 const SCHEMA_START_DATE = new Date().toISOString().split('T')[0];
@@ -26,6 +27,7 @@ interface Tour {
   images?: string[];
   originalPrice?: number;
   discountPrice?: number;
+  discountPercent?: number;
   duration?: string;
   rating?: number;
   reviewCount?: number;
@@ -46,7 +48,8 @@ interface Props {
 }
 
 export default function TourSchema({ tour, reviews = [] }: Props) {
-  const price = tour.discountPrice || tour.originalPrice || 0;
+  const pricing = effectiveTourPrice(tour);
+  const price = pricing.price;
   const tourUrl = `${BASE_URL}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`;
   const destName = typeof tour.destination === 'object' ? tour.destination?.name : tour.destination;
   const catName = typeof tour.category === 'object' ? tour.category?.name : tour.category;
@@ -96,11 +99,11 @@ export default function TourSchema({ tour, reviews = [] }: Props) {
           url: tourUrl,
           priceCurrency: 'USD',
           price: price.toString(),
-          ...(tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice
+          ...(pricing.discountApplied
             ? {
                 priceSpecification: {
                   '@type': 'PriceSpecification',
-                  price: tour.discountPrice.toString(),
+                  price: pricing.price.toString(),
                   priceCurrency: 'USD',
                   valueAddedTaxIncluded: true,
                 },
@@ -151,7 +154,7 @@ export default function TourSchema({ tour, reviews = [] }: Props) {
         offers: {
           '@type': 'AggregateOffer',
           lowPrice: price.toString(),
-          highPrice: (tour.originalPrice || price).toString(),
+          highPrice: pricing.originalPrice.toString(),
           priceCurrency: 'USD',
           availability: 'https://schema.org/InStock',
           url: tourUrl,

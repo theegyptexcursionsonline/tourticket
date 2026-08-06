@@ -183,12 +183,13 @@ describe('secureCartPricing applies the tour discount exactly like the sidebar q
     expect(item.selectedBookingOption.price).toBe(120);
   });
 
-  it('prices the standard no-option path from a universal slot price', async () => {
+  it('discounts the standard no-option universal slot price', async () => {
     const [item] = await secureCartPricing([{
       id: '507f1f77bcf86cd799439011',
       selectedTime: '09:00',
     }]);
-    expect(item.selectedBookingOption.price).toBe(75);
+    expect(item.selectedBookingOption.price).toBe(60);
+    expect(item.selectedBookingOption.originalPrice).toBe(75);
     expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(discountedTour, {
       selectedBookingOption: null,
       selectedTime: '09:00',

@@ -4,7 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
-import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
+import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 // Helper function to check if string is a valid MongoDB ObjectId
@@ -100,35 +100,42 @@ export async function GET(
           groupSize: option.groupSize || `Max ${tour.maxGroupSize || 15} people`,
           difficulty: option.difficulty || tour.difficulty || 'Easy',
           badge: option.badge || (option.isRecommended ? 'Recommended' : undefined),
-          discount: option.discount,
+          discount: pricing.discountApplied
+            ? percentageOff(pricing.originalPrice, pricing.price)
+            : option.discount,
           isRecommended: option.isRecommended || false,
         };
       });
     } else {
       // Fallback: Generate default option if no booking options exist
+      const tourPricing = effectiveTourPrice(tour);
       tourOptions = [
         {
           id: 'standard-default',
           pricingKey: 'standard',
           title: `${tour.title} - Standard Experience`,
-          price: tour.discountPrice,
-          guestPrices: explicitCatalogueGuestPrices(Number(tour.discountPrice), tour.revenueGuestPrices).prices,
-          originalPrice: tour.originalPrice,
+          price: tourPricing.price,
+          guestPrices: explicitCatalogueGuestPrices(tourPricing.price, tour.revenueGuestPrices).prices,
+          originalPrice: tourPricing.discountApplied ? tourPricing.originalPrice : tour.originalPrice,
           duration: tour.duration || '3 hours',
           languages: tour.languages || ['English'],
           description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
           // The standard no-option path honours a universal slot price, so
           // quote each slot exactly the way checkout will charge it.
-          timeSlots: availabilitySlots.map((slot) => ({
-            ...slot,
-            price: authoritativeBasePrice(tour, { selectedBookingOption: null, selectedTime: slot.time }),
-            originalPrice: tour.originalPrice,
-            isPopular: false,
-          })),
+          timeSlots: availabilitySlots.map((slot, index: number) => {
+            const slotPricing = effectiveTourPrice(tour, tour.availability?.slots?.[index]);
+            return {
+              ...slot,
+              price: authoritativeBasePrice(tour, { selectedBookingOption: null, selectedTime: slot.time }),
+              originalPrice: slotPricing.discountApplied ? slotPricing.originalPrice : tour.originalPrice,
+              isPopular: false,
+            };
+          }),
           highlights: tour.highlights?.slice(0, 3) || ['Expert guide included', 'Small group experience', 'Photo opportunities'],
           groupSize: `Max ${tour.maxGroupSize || 15} people`,
           difficulty: 'Easy',
           badge: 'Most Popular',
+          discount: percentageOff(tourPricing.originalPrice, tourPricing.price) || undefined,
           isRecommended: true,
         }
       ];

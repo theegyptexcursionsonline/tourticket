@@ -21,7 +21,7 @@ import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
-import { effectiveOptionPrice } from '@/lib/pricing/effectivePrice';
+import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import {
   bindTimeSlotsToOption,
@@ -799,6 +799,7 @@ const TourOptionCard: React.FC<{
             const isSelected = isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id);
             const isLowAvailability = timeSlot.available <= 3;
             const isSoldOut = timeSlot.available === 0;
+            const slotDiscount = percentageOff(timeSlot.originalPrice, timeSlot.price);
 
             return (
               <motion.button
@@ -829,8 +830,24 @@ const TourOptionCard: React.FC<{
                         Popular
                       </div>
                     )}
-                    <div className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-gray-600'}`}>
-                      {formatPrice(timeSlot.price)}
+                    <div className="flex items-center justify-end gap-1.5">
+                      {slotDiscount > 0 && (
+                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {slotDiscount}% off
+                        </span>
+                      )}
+                      <div>
+                        {slotDiscount > 0 && (
+                          <div className={`text-[10px] line-through ${isSelected ? 'text-red-100' : 'text-gray-400'}`}>
+                            {formatPrice(timeSlot.originalPrice!)}
+                          </div>
+                        )}
+                        <div className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-gray-700'}`}>
+                          {formatPrice(timeSlot.price)}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1212,6 +1229,7 @@ interface BookingSidebarProps {
 const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, initialStopSaleDates }) => {
   const router = useRouter();
   const { formatPrice } = useSettings();
+  const tourBasePricing = useMemo(() => effectiveTourPrice(tour), [tour]);
   const { addToCart } = useCart();
   const locale = useLocale();
   const rtl = isRTL(locale);
@@ -1459,14 +1477,18 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const generateTimeSlotsFromAvailability = useCallback((price: number, optionIndex: number, honorSlotPrice = false): TimeSlot[] => {
     // Use actual slots from tour.availability if available
     if (tour?.availability?.slots && tour.availability.slots.length > 0) {
-      return tour.availability.slots.map((slot, slotIndex) => ({
-        id: `slot-${optionIndex}-${slotIndex}`,
-        time: slot.time,
-        available: slot.capacity,
-        price: honorSlotPrice && typeof slot.price === 'number' && Number.isFinite(slot.price) ? slot.price : price,
-        isPopular: slotIndex === 0, // Mark first slot as popular
-        originalAvailable: slot.capacity,
-      }));
+      return tour.availability.slots.map((slot, slotIndex) => {
+        const slotPricing = honorSlotPrice ? effectiveTourPrice(tour, slot) : null;
+        return {
+          id: `slot-${optionIndex}-${slotIndex}`,
+          time: slot.time,
+          available: slot.capacity,
+          price: slotPricing?.price ?? price,
+          originalPrice: slotPricing?.discountApplied ? slotPricing.originalPrice : undefined,
+          isPopular: slotIndex === 0, // Mark first slot as popular
+          originalAvailable: slot.capacity,
+        };
+      });
     }
 
     // Fallback to default slots if none configured in admin
@@ -1548,7 +1570,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             groupSize: option.groupSize || `Max ${tourDisplayData?.maxGroupSize || 15} people`,
             difficulty: option.difficulty || 'Easy',
             badge: option.badge || (index === 0 ? 'Most Popular' : undefined),
-            discount: option.discount || (tourDisplayData?.originalPrice && tourDisplayData.originalPrice > tourDisplayData.discountPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : undefined),
+            discount: option.discount || percentageOff(
+              pricing.discountApplied ? pricing.originalPrice : option.originalPrice,
+              optionPrice,
+            ) || undefined,
             isRecommended: option.isRecommended ?? index === 0,
             isStopSaleBlocked,
             stopSaleReason,
@@ -1558,7 +1583,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         // Fallback to default tour options using actual availability slots.
         // The standard no-option path is the one place checkout honours a
         // universal slot price, so quote it here too.
-        const standardPrice = tourDisplayData?.discountPrice || 50;
+        const standardPricing = effectiveTourPrice(tourDisplayData);
+        const standardPrice = standardPricing.price;
         const baseTimeSlots = generateTimeSlotsFromAvailability(standardPrice, 0, true);
         const fallbackOptionId = 'standard-default';
         const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(fallbackOptionId);
@@ -1568,7 +1594,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             pricingKey: 'standard',
             title: 'Standard Tour Experience',
             price: standardPrice,
-            originalPrice: tourDisplayData?.originalPrice || standardPrice,
+            originalPrice: standardPricing.discountApplied
+              ? standardPricing.originalPrice
+              : (tourDisplayData?.originalPrice || standardPrice),
             duration: tourDisplayData?.duration || '3 hours',
             languages: tourDisplayData?.languages || ['English'],
             description: 'Perfect introduction to the destination with expert guide',
@@ -1581,7 +1609,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             groupSize: `Max ${tourDisplayData?.maxGroupSize || 15} people`,
             difficulty: 'Easy',
             badge: 'Most Popular',
-            discount: tourDisplayData?.originalPrice && tourDisplayData.originalPrice > tourDisplayData.discountPrice ? Math.round(((tourDisplayData.originalPrice - tourDisplayData.discountPrice) / tourDisplayData.originalPrice) * 100) : undefined,
+            discount: percentageOff(standardPricing.originalPrice, standardPricing.price) || undefined,
             isRecommended: true,
             isStopSaleBlocked,
             stopSaleReason: selectedStopSale?.reasons?.[fallbackOptionId] || selectedStopSale?.reasons?.all,
@@ -1656,8 +1684,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                          selectedOption?.originalPrice ||
                          bookingData.selectedTimeSlot.price;
     } else if (tourDisplayData) {
-      basePrice = tourDisplayData.discountPrice;
-      originalBasePrice = tourDisplayData.originalPrice || tourDisplayData.discountPrice;
+      basePrice = tourBasePricing.price;
+      originalBasePrice = tourBasePricing.originalPrice;
     }
 
     const childPrice = bookingData.selectedTimeSlot?.guestPrices?.child ?? basePrice * 0.5;
@@ -1691,7 +1719,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       total: subtotalCalc + addOnsCalc,
       totalSavings: totalSavingsCalc,
     };
-  }, [bookingData, availability, tourDisplayData]);
+  }, [bookingData, availability, tourDisplayData, tourBasePricing.originalPrice, tourBasePricing.price]);
 
   // Reset when sidebar opens
   useEffect(() => {
@@ -2201,14 +2229,19 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             {/* Compact Price Section */}
             <div className="flex justify-between items-center bg-gray-100 rounded-2xl p-4 text-gray-800 border border-gray-200">
               <div>
-                {tourDisplayData?.originalPrice && (
+                {tourBasePricing.discountApplied && (
                   <span className="text-sm text-gray-500 line-through block">
-                    {formatPrice(tourDisplayData.originalPrice)}
+                    {formatPrice(tourBasePricing.originalPrice)}
                   </span>
                 )}
                 <span className="text-2xl sm:text-3xl font-bold text-red-600 block">
-                  {formatPrice(tourDisplayData?.discountPrice || 0)}
+                  {formatPrice(tourBasePricing.price)}
                 </span>
+                {percentageOff(tourBasePricing.originalPrice, tourBasePricing.price) > 0 && (
+                  <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+                    {percentageOff(tourBasePricing.originalPrice, tourBasePricing.price)}% OFF
+                  </span>
+                )}
                 <span className="text-xs text-gray-500">per person</span>
               </div>
               <div className="flex items-center gap-2 text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full text-sm">
