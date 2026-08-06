@@ -463,13 +463,16 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
       </h3>
 
       {/* Split Layout: Itinerary Items + Map (map only with explicit locations) */}
-      <div className={`grid grid-cols-1 ${showMap ? 'lg:grid-cols-2' : ''} gap-6`}>
+      <div className={`grid grid-cols-1 ${showMap ? 'lg:grid-cols-2' : ''} items-start gap-6`}>
         {/* Left: Itinerary Timeline */}
-        <div className="relative order-2 lg:order-1">
+        <div className="relative order-2 min-w-0 lg:order-1">
           {/* Dotted line connector */}
           <div className="absolute left-[18px] top-[18px] bottom-[18px] w-0.5 border-l-2 border-dashed border-slate-300"></div>
 
-          <div className="max-h-[600px] lg:max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
+          {/* Keep the complete timeline in the document scroll. A nested
+              scrollbar hides later stops and prevents the map from staying
+              alongside the itinerary until the final stop. */}
+          <div className="pr-1 sm:pr-2">
             {itinerary.map((item, index) => (
               <div key={index} className="relative flex items-start gap-4 pb-6 last:pb-0">
                 {/* Timeline connection point */}
@@ -548,14 +551,14 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
         {/* Right: interactive place embed for one stop, numbered static route
             map for multiple stops. No locations, no map. */}
         {showMap && (
-          <div className="relative order-1 lg:order-2 lg:sticky lg:top-24 h-[400px] lg:h-[700px]">
-            <div className="h-[calc(100%-4rem)] rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-100">
+          <div className="relative order-1 w-full lg:order-2 lg:sticky lg:top-24 lg:self-start">
+            <div className="aspect-square w-full overflow-hidden rounded-2xl border-2 border-slate-200 bg-slate-100 shadow-lg">
               {staticMapUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={staticMapUrl}
                   alt={`Numbered route map: ${stops.join(', ')}`}
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-cover"
                   loading="lazy"
                 />
               ) : (

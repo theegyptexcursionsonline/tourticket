@@ -26,6 +26,12 @@ describe('itineraryMapStops', () => {
       { location: 'Local Restaurant' },
       { location: 'Luxor Restaurant' },
       { location: 'Cairo Lunch Stop' },
+      { location: 'Red Sea' },
+      { location: 'On the boat' },
+      { location: 'On board' },
+      { location: 'Rotes Meer' },
+      { location: 'Auf dem Boot' },
+      { location: 'البحر الأحمر' },
       { location: 'Luxor' },
       { location: 'Valley of the Kings' },
       { location: 'Unterwegs' },
@@ -59,11 +65,26 @@ describe('itineraryStaticMapUrl', () => {
   it('gives every stop a visible red numbered marker and connects the route with a strong red line', () => {
     const url = itineraryStaticMapUrl(['El Gouna', 'Valley of the Kings', 'Luxor'], 'k');
     expect(url).toContain('staticmap');
-    expect(url).toContain(encodeURIComponent('size:mid|color:0xB91C1C|label:1|El Gouna, Egypt'));
-    expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:2|Valley of the Kings, Luxor, Egypt'));
-    expect(url).toContain(encodeURIComponent('size:mid|color:0xEF4444|label:3|Luxor, Egypt'));
+    expect(url).toContain(encodeURIComponent('scale:2|color:0xB91C1C|label:1|El Gouna, Egypt'));
+    expect(url).toContain(encodeURIComponent('scale:2|color:0xEF4444|label:2|Valley of the Kings, Luxor, Egypt'));
+    expect(url).toContain(encodeURIComponent('scale:2|color:0xEF4444|label:3|Luxor, Egypt'));
     expect(url).toContain(encodeURIComponent('weight:5|color:0xDC2626E6|geodesic:true|El Gouna, Egypt|Valley of the Kings, Luxor, Egypt|Luxor, Egypt'));
+    expect(url).toContain(encodeURIComponent('feature:poi|element:labels|visibility:off'));
+    expect(url).toContain(encodeURIComponent('feature:transit|element:labels|visibility:off'));
     expect(decodeURIComponent(url!)).not.toContain('color:blue');
+  });
+
+  it('extracts the route city from a detailed tour location without duplicating place names', () => {
+    const url = itineraryStaticMapUrl(
+      ['Orange Bay, Giftun Island', 'Hurghada Marina'],
+      'k',
+      'Orange Bay, Giftun Island, Hurghada',
+    );
+    const markers = new URL(url!).searchParams.getAll('markers').join('|');
+    expect(markers).toContain('Orange Bay, Giftun Island, Hurghada, Egypt');
+    expect(markers).toContain('Hurghada Marina, Egypt');
+    expect(markers).not.toContain('Orange Bay, Giftun Island, Orange Bay');
+    expect(markers).not.toContain('Hurghada Marina, Hurghada');
   });
 
   it('does not duplicate an existing Egypt country context', () => {

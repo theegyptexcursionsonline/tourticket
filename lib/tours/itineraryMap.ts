@@ -34,6 +34,13 @@ const GENERIC_LOCATION_LABELS = new Set([
   'end point',
   'en route',
   'on the way',
+  'on the boat',
+  'on board',
+  'aboard the boat',
+  'onboard',
+  'at sea',
+  'red sea',
+  'the red sea',
   'various locations',
   'local restaurant',
   'restaurant',
@@ -45,6 +52,11 @@ const GENERIC_LOCATION_LABELS = new Set([
   'abholung vom hotel',
   'rückfahrt zum hotel',
   'unterwegs',
+  'auf dem boot',
+  'an bord',
+  'rotes meer',
+  'على متن القارب',
+  'البحر الأحمر',
 ]);
 
 // Editors also prefix generic meal stops with a city (for example,
@@ -115,15 +127,36 @@ function normalizedPlace(value: string): string {
   return value
     .toLocaleLowerCase()
     .replace(/(?:,?\s*(?:egypt|ägypten|مصر))$/iu, '')
-    .replace(/[.,:;!?]+$/g, '')
+    .replace(/[.,:;!?]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+function containsPlace(value: string, place: string): boolean {
+  const normalizedValue = normalizedPlace(value);
+  const normalizedNeedle = normalizedPlace(place);
+  return normalizedValue === normalizedNeedle
+    || normalizedValue.startsWith(`${normalizedNeedle} `)
+    || normalizedValue.endsWith(` ${normalizedNeedle}`)
+    || normalizedValue.includes(` ${normalizedNeedle} `);
+}
+
+function egyptRouteCity(value: string): string | null {
+  const city = [...EGYPT_ROUTE_CITIES]
+    .sort((a, b) => b.length - a.length)
+    .find((city) => containsPlace(value, city)) || null;
+  if (!city) return null;
+  return city.replace(/(^|[\s-])\p{L}/gu, (letter) => letter.toLocaleUpperCase());
+}
+
 function routeLocation(stops: string[], tourLocation?: string | null): string | null {
-  return [...stops].reverse().find((stop) => EGYPT_ROUTE_CITIES.has(normalizedPlace(stop)))
-    || String(tourLocation || '').trim()
-    || null;
+  for (const stop of [...stops].reverse()) {
+    const city = egyptRouteCity(stop);
+    if (city) return city;
+  }
+
+  const publishedLocation = String(tourLocation || '').trim();
+  return egyptRouteCity(publishedLocation) || publishedLocation || null;
 }
 
 // Itinerary locations are short, editor-facing landmark names. Include the
@@ -133,9 +166,12 @@ function mapStopQuery(stop: string, tourLocation?: string | null): string {
   const normalizedTourLocation = String(tourLocation || '').trim();
   if (!normalizedTourLocation
     || hasEgyptCountryContext(stop)
-    || EGYPT_ROUTE_CITIES.has(normalizedPlace(stop))
-    || normalizedPlace(stop) === normalizedPlace(normalizedTourLocation)) {
+    || egyptRouteCity(stop)
+    || containsPlace(stop, normalizedTourLocation)) {
     return egyptScopedStop(stop);
+  }
+  if (containsPlace(normalizedTourLocation, stop)) {
+    return egyptScopedStop(normalizedTourLocation);
   }
   return `${stop}, ${egyptScopedStop(normalizedTourLocation)}`;
 }
@@ -169,13 +205,20 @@ export function itineraryStaticMapUrl(stops: string[], apiKey?: string | null, t
     // the starting point distinct without forcing visitors to decode a second
     // unrelated colour.
     const color = index === 0 ? STATIC_MAP_START_COLOR : STATIC_MAP_STOP_COLOR;
-    const marker = `size:mid|color:${color}${label ? `|label:${label}` : ''}|${stop}`;
+    // Static maps are requested at scale=2. Scale the default-size pin with
+    // the image so the numbered marker remains large and readable after the
+    // browser downsizes the high-DPI asset.
+    const marker = `scale:2|color:${color}${label ? `|label:${label}` : ''}|${stop}`;
     return `markers=${encodeURIComponent(marker)}`;
   });
   const parts = [
     'size=640x640',
     'scale=2',
     'maptype=roadmap',
+    // Remove competing business/transit labels so the custom red route pins
+    // remain the strongest visual signal without hiding roads or place names.
+    `style=${encodeURIComponent('feature:poi|element:labels|visibility:off')}`,
+    `style=${encodeURIComponent('feature:transit|element:labels|visibility:off')}`,
     // This is route order, not turn-by-turn driving directions. Directions
     // need a server-side Directions API request and a client-approved key.
     // A thicker, high-opacity red stroke remains legible over Google's blue
