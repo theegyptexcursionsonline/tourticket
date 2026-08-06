@@ -56,4 +56,10 @@ describe('CategoryForm back navigation keeps list filters (#17)', () => {
   it('uses history back for both the arrow and Cancel', () => {
     expect(source.match(/router\.back\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
   });
+
+  it('includes the visible SEO keyword draft when Save is clicked directly', () => {
+    expect(source).toContain('normalizeCategoryKeywords(\n      formData.keywords,\n      keywordDraft,');
+    expect(source).toContain('keywords: keywordsForSave');
+    expect(source).toContain('value={keywordDraft}');
+  });
 });

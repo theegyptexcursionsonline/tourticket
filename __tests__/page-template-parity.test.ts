@@ -60,6 +60,12 @@ describe('attraction templates never publish invented figures', () => {
     expect(source).not.toContain('4.8');
     expect(source).toContain('if (!avgRating && !showActivities) return null;');
   });
+
+  it('renders the editor-owned attraction title without a static prefix', () => {
+    const source = read('components/AttractionLandingPage.tsx');
+    expect(source).toContain('{attraction.title}');
+    expect(source).not.toContain('`Things to do in ${attraction.title}`');
+  });
 });
 
 describe('curated popular destinations override the automatic list', () => {

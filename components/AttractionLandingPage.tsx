@@ -435,8 +435,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
             </div>
             
             <h1 className={`${pageTemplate === 'immersive' ? 'text-5xl md:text-7xl lg:text-8xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-bold text-white mb-6 leading-[1.02] tracking-tight`}>
-              {/* Don't double the phrase when the page title already says it */}
-              {/things to do/i.test(attraction.title) ? attraction.title : `Things to do in ${attraction.title}`}
+              {attraction.title}
             </h1>
             
             <QuickInfo attraction={attraction} />

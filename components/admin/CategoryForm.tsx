@@ -23,6 +23,7 @@ import type { ContentFaq, ContentTravelTip, ImageMetadata } from '@/types';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import { PAGE_TEMPLATES, PAGE_TEMPLATE_LABELS, normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
+import { normalizeCategoryKeywords } from '@/lib/content/categoryKeywords';
 
 interface CategoryFormData {
   name: string;
@@ -118,6 +119,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const [savedUrlType, setSavedUrlType] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
+  const [keywordDraft, setKeywordDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +188,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
           featured: category.featured || false,
           translations: normalizeTranslations(category.translations),
         });
+        setKeywordDraft('');
         setIsSlugManuallyEdited(Boolean(category.slug));
       } else {
         setError(data.error || 'Failed to fetch category data');
@@ -248,6 +251,21 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
     }));
   };
 
+  const commitKeywordDraft = () => {
+    const { keywords, invalidKeywords } = normalizeCategoryKeywords(formData.keywords, keywordDraft);
+    if (invalidKeywords.length > 0) {
+      const message = 'Each SEO keyword must be 50 characters or fewer.';
+      setError(message);
+      toast.error(message);
+      return false;
+    }
+
+    setFormData((prev) => ({ ...prev, keywords }));
+    setKeywordDraft('');
+    setError(null);
+    return true;
+  };
+
   const updateImageMetadata = (value: ImageMetadata) => {
     setFormData((prev) => ({
       ...prev,
@@ -291,6 +309,18 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
       toast.error('Pick the owning city for the City URL type.');
       return;
     }
+
+    const { keywords: keywordsForSave, invalidKeywords } = normalizeCategoryKeywords(
+      formData.keywords,
+      keywordDraft,
+    );
+    if (invalidKeywords.length > 0) {
+      const message = 'Each SEO keyword must be 50 characters or fewer.';
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -313,7 +343,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
         faqs: formData.faqs.filter((item) => item.question.trim() && item.answer.trim()),
         travelTips: formData.travelTips.filter((item) => item.title.trim() && item.content.trim()),
         popularDestinationIds: formData.popularDestinationIds,
-        keywords: Array.isArray(formData.keywords) ? formData.keywords.filter(item => item && item.trim() !== '') : [],
+        keywords: keywordsForSave,
         cityDestination: formData.urlType === 'city' ? formData.cityDestination || undefined : undefined,
         ...(hasTranslations ? { translations } : {}),
       };
@@ -329,6 +359,8 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
       const data = await response.json();
 
       if (data.success) {
+        setFormData((prev) => ({ ...prev, keywords: keywordsForSave }));
+        setKeywordDraft('');
         toast.success(`Category ${categoryId ? 'updated' : 'created'} successfully!`);
         if (!categoryId && data.data?._id) {
           router.replace(`/admin/categories/${data.data._id}/edit`);
@@ -945,33 +977,20 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                               type="text"
                               id="keyword-input"
                               placeholder="Add a keyword"
+                              value={keywordDraft}
+                              onChange={(event) => setKeywordDraft(event.target.value)}
                               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              onKeyPress={(e) => {
+                              onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   e.preventDefault();
-                                  const value = (e.target as HTMLInputElement).value;
-                                  if (value.trim()) {
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      keywords: [...prev.keywords, value.trim()]
-                                    }));
-                                    (e.target as HTMLInputElement).value = '';
-                                  }
+                                  commitKeywordDraft();
                                 }
                               }}
                             />
                             <button
                               type="button"
-                              onClick={() => {
-                                const input = document.getElementById('keyword-input') as HTMLInputElement;
-                                if (input?.value.trim()) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    keywords: [...prev.keywords, input.value.trim()]
-                                  }));
-                                  input.value = '';
-                                }
-                              }}
+                              onClick={commitKeywordDraft}
+                              aria-label="Add SEO keyword"
                               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                             >
                               <Plus className="w-4 h-4" />
@@ -995,6 +1014,9 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                               </span>
                             ))}
                           </div>
+                          <SmallHint>
+                            Press Enter, use +, or save the page directly. Commas add multiple keywords.
+                          </SmallHint>
                         </div>
                       </div>
                     )}
