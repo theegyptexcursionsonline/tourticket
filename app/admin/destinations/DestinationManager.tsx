@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -607,6 +608,12 @@ setTimeout(() => router.refresh(), 0);
     },
   );
 
+  const handleDestinationPreview = (event: MouseEvent<HTMLAnchorElement>, dest: IDestination) => {
+    event.preventDefault();
+    event.stopPropagation();
+    window.open(destinationPreviewUrl(dest), '_blank', 'noopener,noreferrer');
+  };
+
   const inputStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
   const textareaStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
@@ -706,12 +713,13 @@ setTimeout(() => router.refresh(), 0);
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
               
               {/* Action Buttons */}
-              <div className="absolute right-3 top-3 flex translate-x-0 flex-col gap-2 opacity-100 transition-all duration-300 sm:translate-x-2 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
+              <div className="absolute right-3 top-3 z-10 flex translate-x-0 flex-col gap-2 opacity-100 transition-all duration-300 sm:translate-x-2 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
                 {dest.isPublished ? (
                   <a
                     href={destinationPreviewUrl(dest)}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(event) => handleDestinationPreview(event, dest)}
                     className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white hover:text-indigo-600"
                     title="Preview destination"
                     aria-label={`Preview ${dest.name} on live site`}

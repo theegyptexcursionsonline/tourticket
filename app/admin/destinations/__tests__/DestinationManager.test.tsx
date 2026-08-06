@@ -176,7 +176,9 @@ describe('DestinationManager', () => {
       expect(screen.getByText('Draft')).toBeInTheDocument()
     })
 
-    it('opens each published destination on the storefront and keeps draft previews fail-closed', async () => {
+    it('opens each published destination in a new storefront tab and keeps draft previews fail-closed', async () => {
+      const user = userEvent.setup()
+      const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null)
       await renderManager()
 
       const publishedPreview = screen.getByRole('link', { name: 'Preview Cairo on live site' })
@@ -184,8 +186,19 @@ describe('DestinationManager', () => {
       expect(publishedPreview).toHaveAttribute('target', '_blank')
       expect(publishedPreview).toHaveAttribute('rel', 'noopener noreferrer')
 
-      expect(screen.getByRole('button', { name: 'Preview Luxor unavailable until published' }))
-        .toBeDisabled()
+      await user.click(publishedPreview)
+      expect(openSpy).toHaveBeenCalledTimes(1)
+      expect(openSpy).toHaveBeenCalledWith(
+        'http://localhost/destinations/cairo',
+        '_blank',
+        'noopener,noreferrer',
+      )
+
+      const draftPreview = screen.getByRole('button', { name: 'Preview Luxor unavailable until published' })
+      expect(draftPreview).toBeDisabled()
+      await user.click(draftPreview)
+      expect(openSpy).toHaveBeenCalledTimes(1)
+      openSpy.mockRestore()
     })
 
     it('should display placeholder for missing images', async () => {
