@@ -176,6 +176,18 @@ describe('DestinationManager', () => {
       expect(screen.getByText('Draft')).toBeInTheDocument()
     })
 
+    it('opens each published destination on the storefront and keeps draft previews fail-closed', async () => {
+      await renderManager()
+
+      const publishedPreview = screen.getByRole('link', { name: 'Preview Cairo on live site' })
+      expect(publishedPreview).toHaveAttribute('href', 'http://localhost/destinations/cairo')
+      expect(publishedPreview).toHaveAttribute('target', '_blank')
+      expect(publishedPreview).toHaveAttribute('rel', 'noopener noreferrer')
+
+      expect(screen.getByRole('button', { name: 'Preview Luxor unavailable until published' }))
+        .toBeDisabled()
+    })
+
     it('should display placeholder for missing images', async () => {
       const noImage = [{ ...mockDestinations[0], image: '' }]
       await renderManager(noImage)

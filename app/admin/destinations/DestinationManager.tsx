@@ -39,6 +39,7 @@ import Image from 'next/image';
 import ImageSeoFields from '@/components/admin/ImageSeoFields';
 import { FaqEditor, TravelTipsEditor } from '@/components/admin/StructuredContentEditor';
 import { uploadImageFiles } from '@/lib/admin/uploadImages';
+import { storefrontPreviewUrl } from '@/lib/admin/storefrontPreviewUrl';
 import { ensureImageMetadata } from '@/lib/content/imageMetadata';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
@@ -598,6 +599,14 @@ setTimeout(() => router.refresh(), 0);
     }
   };
 
+  const destinationPreviewUrl = (dest: IDestination) => storefrontPreviewUrl(
+    contentPath('destination', dest.slug || '', dest.urlType, null, dest.parentPage?.slug),
+    {
+      configuredBaseUrl: process.env.NEXT_PUBLIC_BASE_URL,
+      adminOrigin: typeof window !== 'undefined' ? window.location.origin : null,
+    },
+  );
+
   const inputStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
   const textareaStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
@@ -698,6 +707,28 @@ setTimeout(() => router.refresh(), 0);
               
               {/* Action Buttons */}
               <div className="absolute right-3 top-3 flex translate-x-0 flex-col gap-2 opacity-100 transition-all duration-300 sm:translate-x-2 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
+                {dest.isPublished ? (
+                  <a
+                    href={destinationPreviewUrl(dest)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white hover:text-indigo-600"
+                    title="Preview destination"
+                    aria-label={`Preview ${dest.name} on live site`}
+                  >
+                    <Eye size={16} />
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-xl bg-white/80 text-slate-400 shadow-lg backdrop-blur-sm"
+                    title="Preview unavailable until published"
+                    aria-label={`Preview ${dest.name} unavailable until published`}
+                  >
+                    <Eye size={16} />
+                  </button>
+                )}
                 <button 
                   onClick={() => openPanelForEdit(dest)} 
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-indigo-600 shadow-lg transition-all duration-200 transform hover:scale-110"
