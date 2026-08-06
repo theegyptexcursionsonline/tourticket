@@ -3,6 +3,8 @@ import {
   itineraryDirectionsUrl,
   itineraryEmbedMapUrl,
   itineraryMapStops,
+  itineraryPickupBaseQuery,
+  itineraryRouteContextQuery,
   itineraryStaticMapUrl,
 } from '@/lib/tours/itineraryMap';
 
@@ -67,6 +69,16 @@ describe('itineraryMapStops', () => {
       { location: 'Valley of the Kings' },
       { location: 'Unterwegs' },
     ])).toEqual(['Luxor', 'Valley of the Kings']);
+  });
+
+  it('treats resort-wide "<city> Hotels" pickup labels as lifecycle stages, not places', () => {
+    expect(itineraryMapStops([
+      { location: 'Sharm Hotels' },
+      { location: 'Hurghada hotels' },
+      { location: 'فنادق الغردقة' },
+      { location: 'Steigenberger Hotel' },
+      { location: 'Cairo' },
+    ])).toEqual(['Steigenberger Hotel', 'Cairo']);
   });
 
   it('folds a round trip back into the start marker', () => {
@@ -145,6 +157,39 @@ describe('itineraryStaticMapUrl', () => {
     expect(markers).toContain('Karnak, Luxor, Egypt');
     expect(markers).not.toContain('Makadi Bay');
     expect(markers).not.toContain('Luxor, Luxor');
+  });
+});
+
+describe('itineraryRouteContextQuery', () => {
+  it('prefers a stop that IS a city over a city embedded in a later landmark label', () => {
+    // Sharm→Cairo bus tour: "Giza Plateau" appears after "Cairo", but the
+    // explicit "Cairo" stop names the visited city — suffixing the museum
+    // with "Giza" made Google free to pick a different museum district.
+    expect(itineraryRouteContextQuery(
+      ['Cairo', 'Giza Plateau', 'Egyptian Museum', 'Khan el-Khalili'],
+      'Sharm el-Sheikh',
+    )).toBe('Cairo, Egypt');
+  });
+
+  it('keeps the embedded-city fallback when no stop is exactly a city', () => {
+    expect(itineraryRouteContextQuery(
+      ['Orange Bay, Giftun Island', 'Hurghada Marina'],
+      'Orange Bay, Giftun Island, Hurghada',
+    )).toBe('Hurghada, Egypt');
+  });
+});
+
+describe('itineraryPickupBaseQuery', () => {
+  it('anchors generic pickup/drop-off stages at the published pickup resort', () => {
+    expect(itineraryPickupBaseQuery('Sharm el-Sheikh')).toBe('Sharm El-Sheikh, Egypt');
+    expect(itineraryPickupBaseQuery('Makadi Bay')).toBe('Makadi Bay, Egypt');
+  });
+
+  it('returns nothing without a recognisable city so callers fall back to the route context', () => {
+    expect(itineraryPickupBaseQuery('Egypt')).toBeNull();
+    expect(itineraryPickupBaseQuery('Some Unknown Village')).toBeNull();
+    expect(itineraryPickupBaseQuery('')).toBeNull();
+    expect(itineraryPickupBaseQuery(null)).toBeNull();
   });
 });
 

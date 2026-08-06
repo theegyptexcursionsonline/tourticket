@@ -7,8 +7,10 @@ import {
   isItineraryMappableLocation,
   itineraryMapQuery,
   itineraryMapStops,
+  itineraryPickupBaseQuery,
   itineraryRouteContextQuery,
   type ItineraryRouteCoordinate,
+  type ItineraryRoutePosition,
 } from '@/lib/tours/itineraryMap';
 
 export interface InteractiveItineraryItem {
@@ -200,7 +202,9 @@ export default function InteractiveItineraryMap({
   const infoWindowRef = useRef<InfoWindowInstance | null>(null);
   const googleRef = useRef<GoogleMapsApi | null>(null);
   const activeIndexRef = useRef(activeIndex);
+  const focusedStageRef = useRef<number | null>(null);
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'fallback'>(() => apiKey ? 'loading' : 'fallback');
+  const [stagePositions, setStagePositions] = useState<ItineraryRoutePosition[]>([]);
 
   const selected = itinerary[activeIndex] || itinerary[0];
   const physicalStops = useMemo(() => itineraryMapStops(itinerary), [itinerary]);
@@ -239,10 +243,18 @@ export default function InteractiveItineraryMap({
           return position ? { index, position } : null;
         }))).filter((anchor): anchor is { index: number; position: ItineraryRouteCoordinate } => Boolean(anchor));
 
-        const routeBase = routeContext ? await resolveQuery(routeContext) : null;
+        // Missing first/last anchors are the generic pickup and drop-off
+        // stages, which happen at the tour's pickup resort — not in the
+        // visited city. Anchor them there so a Sharm→Cairo route starts and
+        // ends in Sharm; fall back to the route context only when the
+        // published location names no recognisable city.
+        const pickupBase = itineraryPickupBaseQuery(tourLocation);
+        const routeBase = (pickupBase ? await resolveQuery(pickupBase) : null)
+          || (routeContext ? await resolveQuery(routeContext) : null);
         const positions = completeItineraryRoute(itinerary.length, exactAnchors, routeBase);
         if (cancelled || positions.length !== itinerary.length) throw new Error('Route stages could not be positioned');
         positionsRef.current = positions;
+        setStagePositions(positions);
 
         const map = new google.maps.Map(mapElementRef.current, {
           center: positions[0],
@@ -322,6 +334,9 @@ export default function InteractiveItineraryMap({
       routeLine?.setMap(null);
       infoWindowRef.current?.close();
       mapInstanceRef.current = null;
+      positionsRef.current = [];
+      focusedStageRef.current = null;
+      setStagePositions([]);
     };
   }, [apiKey, itinerary, onSelect, physicalStops, tourLocation]);
 
@@ -340,10 +355,25 @@ export default function InteractiveItineraryMap({
     });
     infoWindowRef.current.setContent(infoCard(item, activeIndex, position.approximate));
     infoWindowRef.current.open({ map, anchor: marker, shouldFocus: false });
-    map.panTo(position);
+    // The first run after the map becomes ready is the initial render, not a
+    // visitor selection — panning then would drag a fitted multi-city route
+    // (Sharm↔Cairo) off-centre onto stage 1. Keep the full-route overview and
+    // pan only when the visitor changes stage.
+    if (focusedStageRef.current !== null && focusedStageRef.current !== activeIndex) {
+      map.panTo(position);
+    }
+    focusedStageRef.current = activeIndex;
   }, [activeIndex, itinerary, mapState]);
 
-  const selectedIsExact = Boolean(selected?.location && isItineraryMappableLocation(selected.location));
+  // Once the route is computed, the badge reports where the marker actually
+  // is: an "exact" editor place whose geocode failed renders interpolated, and
+  // labelling that pin "Exact place" would contradict the map. Before the
+  // route resolves (or on the static fallback) the label falls back to the
+  // editor-location check.
+  const selectedPosition = stagePositions[activeIndex];
+  const selectedIsExact = selectedPosition
+    ? !selectedPosition.approximate
+    : Boolean(selected?.location && isItineraryMappableLocation(selected.location));
 
   return (
     <div data-testid="interactive-itinerary-map" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">

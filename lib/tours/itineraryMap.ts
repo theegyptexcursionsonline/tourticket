@@ -21,6 +21,8 @@ const STATIC_MAP_ROUTE_COLOR = '0xDC2626E6';
 // while excluding them from map geocoding.
 const GENERIC_LOCATION_LABELS = new Set([
   'your hotel',
+  'hotel',
+  'hotels',
   'hotel pickup',
   'hotel pick up',
   'hotel drop-off',
@@ -69,6 +71,13 @@ const GENERIC_LOCATION_PATTERNS = [
   /(?:^|\s)مطعم$/u,
   /(?:^|\s)(?:lunch|mittagessen|almuerzo)(?:\s+(?:stop|break))?$/iu,
   /(?:^|\s)(?:غداء|الغداء)$/u,
+  // "Sharm Hotels" / "Hurghada Hotels" style pickup labels name every hotel in
+  // a resort at once. Geocoding one produces an arbitrary business — with the
+  // route-city suffix appended it can even land in another governorate — so
+  // treat the plural form as a lifecycle stage. A singular named hotel (for
+  // example "Steigenberger Hotel") stays a real, geocodable meeting point.
+  /(?:^|\s)hotels$/iu,
+  /^فنادق(?:\s|$)/u,
 ];
 
 // A tour's catalogue destination is often its pickup resort, not the city
@@ -150,7 +159,16 @@ function egyptRouteCity(value: string): string | null {
 }
 
 function routeLocation(stops: string[], tourLocation?: string | null): string | null {
-  for (const stop of [...stops].reverse()) {
+  // A stop that IS a city ("Cairo") names the visited city explicitly and
+  // outranks a city merely embedded in a landmark label ("Giza Plateau") —
+  // otherwise a Sharm→Cairo itinerary suffixes its other stops with the
+  // landmark's district instead of the city the editor actually listed.
+  const reversedStops = [...stops].reverse();
+  for (const stop of reversedStops) {
+    const city = egyptRouteCity(stop);
+    if (city && normalizedPlace(stop) === normalizedPlace(city)) return city;
+  }
+  for (const stop of reversedStops) {
     const city = egyptRouteCity(stop);
     if (city) return city;
   }
@@ -183,6 +201,17 @@ export function itineraryMapQuery(stop: string, tourLocation?: string | null): s
 export function itineraryRouteContextQuery(stops: string[], tourLocation?: string | null): string | null {
   const context = routeLocation(stops, tourLocation);
   return context ? egyptScopedStop(context) : null;
+}
+
+// Generic pickup and drop-off stages happen where the customer stays: the
+// tour's published location (its pickup resort), not the visited route city.
+// A Sharm→Cairo bus tour must anchor its pickup marker in Sharm even though
+// every exact landmark sits in Cairo. Only a recognised city qualifies — an
+// unknown or country-level published location returns null so the caller can
+// fall back to the visited-city route context.
+export function itineraryPickupBaseQuery(tourLocation?: string | null): string | null {
+  const city = egyptRouteCity(String(tourLocation || '').trim());
+  return city ? egyptScopedStop(city) : null;
 }
 
 export interface ItineraryRouteCoordinate {
