@@ -33,7 +33,7 @@ import {
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
 import { buildTranslationsSetOps } from '@/lib/i18n/autoTranslate';
-import { attractionPageTranslationFields } from '@/lib/i18n/translationFields';
+import { attractionPageTranslationFields, categoryTranslationFields } from '@/lib/i18n/translationFields';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -77,6 +77,31 @@ describe('main EEO Pages management helpers', () => {
       .rejects.toBeInstanceOf(PageLinkValidationError);
   });
 
+  it('validates category listings without accepting tour links or self links', async () => {
+    await expect(validateAndNormalizePageLinks({
+      linkedTourIds: [tourId],
+      linkedPageIds: [pageId],
+      linkedCategoryIds: [categoryId],
+    }, {
+      currentCategoryId: categoryId,
+      includeTours: false,
+    })).rejects.toThrow('A category cannot list itself');
+
+    await expect(validateAndNormalizePageLinks({
+      linkedTourIds: [tourId],
+      linkedPageIds: [pageId],
+      linkedCategoryIds: [],
+    }, {
+      currentCategoryId: categoryId,
+      includeTours: false,
+    })).resolves.toEqual({
+      linkedPageIds: [pageId],
+      linkedCategoryIds: [],
+    });
+
+    expect(mockTourCount).not.toHaveBeenCalled();
+  });
+
   it('updates only translation locale buckets returned by the translator', () => {
     expect(buildTranslationsSetOps({
       ar: { title: 'رحلة سفاري' },
@@ -88,6 +113,9 @@ describe('main EEO Pages management helpers', () => {
     expect(attractionPageTranslationFields.map((field) => field.key)).toEqual(expect.arrayContaining([
       'title', 'description', 'longDescription', 'gridTitle', 'gridSubtitle',
       'highlights', 'features', 'metaTitle', 'metaDescription',
+    ]));
+    expect(categoryTranslationFields.map((field) => field.key)).toEqual(expect.arrayContaining([
+      'linkedPagesTitle', 'linkedPagesSubtitle',
     ]));
   });
 

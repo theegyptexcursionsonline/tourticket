@@ -20,6 +20,7 @@ import type { ContentFaq, ContentTravelTip, ImageMetadata } from '@/types';
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
+import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
 import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
 
 interface AttractionData {
@@ -584,47 +585,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
         </section>
       )}
 
-      {/* Linked pages (admin-curated) */}
-      {linkedPages && linkedPages.length > 0 && (
-        <section className="py-12 bg-slate-50">
-          <div className="container mx-auto px-6">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Explore more</h2>
-            <p className="text-slate-600 mb-8">Hand-picked guides and collections related to this page</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {linkedPages.map((page) => (
-                <Link
-                  key={page.id}
-                  href={page.href}
-                  className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-red-300 transition-all"
-                >
-                  {page.image && (
-                    <div className="relative h-40 w-full overflow-hidden">
-                      <Image
-                        src={page.image}
-                        alt={page.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      />
-                    </div>
-                  )}
-                  <div className="p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-red-600 transition-colors">
-                        {page.title}
-                      </h3>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-red-600 flex-shrink-0 transition-colors" />
-                    </div>
-                    {page.description && (
-                      <p className="text-sm text-slate-600 mt-2 line-clamp-2">{page.description}</p>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <LinkedPageCardsSection pages={linkedPages || []} />
 
       {/* Reviews Section */}
       {attraction.reviews && attraction.reviews.length > 0 && (

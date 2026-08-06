@@ -16,6 +16,8 @@ import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
+import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
+import type { LinkedPageCard } from '@/lib/attractionPages/pageContent';
 
 type CategoryPageCopy = {
   searchToursPlaceholder: string;
@@ -801,9 +803,11 @@ export default function CategoryPageClient({
     category,
     categoryTours,
     relatedInterests = [],
+    linkedPages = [],
 }: {
     category: Category;
     categoryTours: Tour[];
+    linkedPages?: LinkedPageCard[];
     relatedInterests?: Array<{
       _id: string;
       type: 'category' | 'attraction';
@@ -1083,6 +1087,12 @@ export default function CategoryPageClient({
                 </div>
 
                 <CategoryFaqSection copy={copy} faqItems={categoryInsights.faqItems} />
+
+                <LinkedPageCardsSection
+                    pages={linkedPages}
+                    title={category.linkedPagesTitle}
+                    subtitle={category.linkedPagesSubtitle}
+                />
 
                 {/* Related Categories Section */}
                 <div className="py-12 bg-white">

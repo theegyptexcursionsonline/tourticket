@@ -98,6 +98,11 @@ jest.mock('@/lib/models/Tour', () => {
   return { __esModule: true, default: mock };
 });
 
+jest.mock('@/lib/models/AttractionPage', () => ({
+  __esModule: true,
+  default: { countDocuments: jest.fn().mockResolvedValue(0) },
+}));
+
 const destChain = chainable([]);
 jest.mock('@/lib/models/Destination', () => {
   const mock: any = jest.fn().mockReturnValue(destChain);

@@ -24,6 +24,7 @@ import ContentNavigationFields from '@/components/admin/ContentNavigationFields'
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import { PAGE_TEMPLATES, PAGE_TEMPLATE_LABELS, normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
 import { normalizeCategoryKeywords } from '@/lib/content/categoryKeywords';
+import ContentListingPicker, { type ContentListingOption } from '@/components/admin/ContentListingPicker';
 
 interface CategoryFormData {
   name: string;
@@ -43,6 +44,10 @@ interface CategoryFormData {
   faqs: ContentFaq[];
   travelTips: ContentTravelTip[];
   popularDestinationIds: string[];
+  linkedPageIds: string[];
+  linkedCategoryIds: string[];
+  linkedPagesTitle: string;
+  linkedPagesSubtitle: string;
   metaTitle: string;
   metaDescription: string;
   keywords: string[];
@@ -76,6 +81,10 @@ const defaultFormData: CategoryFormData = {
   faqs: [],
   travelTips: [],
   popularDestinationIds: [],
+  linkedPageIds: [],
+  linkedCategoryIds: [],
+  linkedPagesTitle: 'Explore more',
+  linkedPagesSubtitle: 'Hand-picked guides and collections related to this page',
   metaTitle: '',
   metaDescription: '',
   keywords: [],
@@ -125,6 +134,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [destinations, setDestinations] = useState<Array<{ _id: string; name: string; slug?: string }>>([]);
+  const [selectedPages, setSelectedPages] = useState<ContentListingOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +163,8 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
       
       if (data.success) {
         const category = data.data;
+        const linkedPageIds = Array.isArray(category.linkedPageIds) ? category.linkedPageIds.map(String) : [];
+        const linkedCategoryIds = Array.isArray(category.linkedCategoryIds) ? category.linkedCategoryIds.map(String) : [];
 
         setSavedUrlType((category.urlType as UrlType) || 'default');
         setFormData({
@@ -178,6 +190,10 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
           faqs: Array.isArray(category.faqs) ? category.faqs : [],
           travelTips: Array.isArray(category.travelTips) ? category.travelTips : [],
           popularDestinationIds: Array.isArray(category.popularDestinationIds) ? category.popularDestinationIds.map(String) : [],
+          linkedPageIds,
+          linkedCategoryIds,
+          linkedPagesTitle: category.linkedPagesTitle || 'Explore more',
+          linkedPagesSubtitle: category.linkedPagesSubtitle || 'Hand-picked guides and collections related to this page',
           metaTitle: category.metaTitle || '',
           metaDescription: category.metaDescription || '',
           keywords: Array.isArray(category.keywords) ? category.keywords : [],
@@ -190,6 +206,21 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
         });
         setKeywordDraft('');
         setIsSlugManuallyEdited(Boolean(category.slug));
+        const linkedReferenceIds = [...linkedPageIds, ...linkedCategoryIds];
+        if (linkedReferenceIds.length > 0) {
+          const params = new URLSearchParams({ kind: 'pages', ids: linkedReferenceIds.join(',') });
+          if (categoryId) params.set('excludeId', categoryId);
+          fetch(`/api/admin/pages/options?${params.toString()}`)
+            .then((response) => response.json())
+            .then((payload) => {
+              if (!payload.success || !Array.isArray(payload.data)) return;
+              const byId = new Map((payload.data as ContentListingOption[]).map((option) => [option.id, option]));
+              setSelectedPages(linkedReferenceIds.map((id) => byId.get(id)).filter(Boolean) as ContentListingOption[]);
+            })
+            .catch(() => setSelectedPages([]));
+        } else {
+          setSelectedPages([]);
+        }
       } else {
         setError(data.error || 'Failed to fetch category data');
         toast.error(data.error || 'Failed to load category');
@@ -387,6 +418,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
     { id: 'basic', label: 'Basic Info', icon: Info },
     { id: 'media', label: 'Media', icon: Camera },
     { id: 'content', label: 'Content', icon: Sparkles },
+    { id: 'listings', label: 'Listings', icon: Grid3x3 },
     { id: 'translations', label: 'Translations', icon: Globe },
     { id: 'seo', label: 'SEO', icon: Globe },
     { id: 'settings', label: 'Settings', icon: Eye }
@@ -903,6 +935,61 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
 
                         <FaqEditor value={formData.faqs} onChange={(faqs) => setFormData((prev) => ({ ...prev, faqs }))} />
                         <TravelTipsEditor value={formData.travelTips} onChange={(travelTips) => setFormData((prev) => ({ ...prev, travelTips }))} />
+                      </div>
+                    )}
+
+                    {/* Listings Tab */}
+                    {activeTab === 'listings' && (
+                      <div className="space-y-8">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                          <h2 className="text-lg font-bold text-slate-900">Other Page Listings</h2>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Hand-pick attraction, catalogue, and category pages to show as cards on this category page.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                          <div className="space-y-3">
+                            <FormLabel icon={FileText}>Section title</FormLabel>
+                            <input
+                              name="linkedPagesTitle"
+                              value={formData.linkedPagesTitle}
+                              onChange={handleChange}
+                              maxLength={200}
+                              className={inputBase}
+                              placeholder="Explore more"
+                            />
+                            <SmallHint>Displayed above the linked page cards.</SmallHint>
+                          </div>
+                          <div className="space-y-3">
+                            <FormLabel icon={FileText}>Section subtitle</FormLabel>
+                            <textarea
+                              name="linkedPagesSubtitle"
+                              value={formData.linkedPagesSubtitle}
+                              onChange={handleChange}
+                              maxLength={500}
+                              rows={3}
+                              className={textareaBase}
+                              placeholder="Hand-picked guides and collections related to this page"
+                            />
+                            <SmallHint>Leave empty to display the cards without a subtitle.</SmallHint>
+                          </div>
+                        </div>
+                        <ContentListingPicker
+                          label="Pages and categories"
+                          hint="The cards appear in this order: selected pages first, followed by selected categories. Draft or unpublished pages never appear on the public site."
+                          placeholder="Search pages and categories…"
+                          optionsKind="pages"
+                          excludeId={categoryId}
+                          selected={selectedPages}
+                          onChange={(next) => {
+                            setSelectedPages(next);
+                            setFormData((current) => ({
+                              ...current,
+                              linkedPageIds: next.filter((item) => item.kind !== 'category').map((item) => item.id),
+                              linkedCategoryIds: next.filter((item) => item.kind === 'category').map((item) => item.id),
+                            }));
+                          }}
+                        />
                       </div>
                     )}
 

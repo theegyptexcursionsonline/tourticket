@@ -38,7 +38,14 @@ jest.mock('next/server', () => {
 jest.mock('@/lib/dbConnect', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('@/lib/models/Tour', () => ({
   __esModule: true,
-  default: { aggregate: jest.fn().mockResolvedValue([]) },
+  default: {
+    aggregate: jest.fn().mockResolvedValue([]),
+    countDocuments: jest.fn().mockResolvedValue(0),
+  },
+}));
+jest.mock('@/lib/models/AttractionPage', () => ({
+  __esModule: true,
+  default: { countDocuments: jest.fn().mockResolvedValue(0) },
 }));
 jest.mock('mongoose', () => ({
   __esModule: true,

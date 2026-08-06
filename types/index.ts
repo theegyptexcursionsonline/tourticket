@@ -123,6 +123,10 @@ export interface Category {
   faqs?: ContentFaq[];
   travelTips?: ContentTravelTip[];
   popularDestinationIds?: Array<string | Destination>;
+  linkedPageIds?: string[];
+  linkedCategoryIds?: string[];
+  linkedPagesTitle?: string;
+  linkedPagesSubtitle?: string;
   metaTitle?: string;
   metaDescription?: string;
   keywords?: string[];
@@ -140,6 +144,8 @@ export interface Category {
       longDescription?: string;
       highlights?: string[];
       features?: string[];
+      linkedPagesTitle?: string;
+      linkedPagesSubtitle?: string;
       metaTitle?: string;
       metaDescription?: string;
     }

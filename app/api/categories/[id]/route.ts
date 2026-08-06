@@ -13,6 +13,10 @@ import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStor
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import {
+  PageLinkValidationError,
+  validateAndNormalizePageLinks,
+} from '@/lib/attractionPages/validatePageLinks';
 
 export async function GET(
   request: NextRequest,
@@ -97,6 +101,10 @@ async function PUTHandler(
 
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
+    Object.assign(body, await validateAndNormalizePageLinks(body, {
+      currentCategoryId: id,
+      includeTours: false,
+    }));
     delete body.tenantId;
 
     if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
@@ -163,7 +171,7 @@ async function PUTHandler(
   } catch (error) {
     console.error('Error updating category:', error);
 
-    if (error instanceof ParentPageValidationError) {
+    if (error instanceof ParentPageValidationError || error instanceof PageLinkValidationError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 

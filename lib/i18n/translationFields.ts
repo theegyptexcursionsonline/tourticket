@@ -107,6 +107,8 @@ export const categoryTranslationFields: TranslationFieldDef[] = [
   { key: 'metaDescription', label: 'Meta Description', type: 'textarea', maxLength: 160, rows: 2 },
   { key: 'highlights', label: 'Highlights', type: 'array', maxLength: 200 },
   { key: 'features', label: 'Features', type: 'array', maxLength: 300 },
+  { key: 'linkedPagesTitle', label: 'Other Page Listings Title', type: 'input', maxLength: 200 },
+  { key: 'linkedPagesSubtitle', label: 'Other Page Listings Subtitle', type: 'textarea', maxLength: 500, rows: 2 },
 ];
 
 export const categoryStructuredFields: StructuredTranslationSpec[] = [

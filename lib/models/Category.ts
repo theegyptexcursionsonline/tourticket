@@ -32,6 +32,10 @@ export interface ICategory extends Document {
   faqs?: Array<{ question: string; answer: string }>;
   travelTips?: Array<{ title: string; content: string }>;
   popularDestinationIds?: mongoose.Types.ObjectId[];
+  linkedPageIds?: mongoose.Types.ObjectId[];
+  linkedCategoryIds?: mongoose.Types.ObjectId[];
+  linkedPagesTitle?: string;
+  linkedPagesSubtitle?: string;
   
   // SEO
   metaTitle?: string;
@@ -63,6 +67,8 @@ export interface ICategory extends Document {
       longDescription?: string;
       highlights?: string[];
       features?: string[];
+      linkedPagesTitle?: string;
+      linkedPagesSubtitle?: string;
       metaTitle?: string;
       metaDescription?: string;
       faqs?: Array<{ question?: string; answer?: string }>;
@@ -79,6 +85,8 @@ const CategoryTranslationSchema = new Schema(
     longDescription: { type: String, trim: true, maxlength: 2000 },
     highlights: [{ type: String, trim: true, maxlength: 200 }],
     features: [{ type: String, trim: true, maxlength: 300 }],
+    linkedPagesTitle: { type: String, trim: true, maxlength: 200 },
+    linkedPagesSubtitle: { type: String, trim: true, maxlength: 500 },
     metaTitle: { type: String, trim: true, maxlength: 60 },
     metaDescription: { type: String, trim: true, maxlength: 160 },
     faqs: [{
@@ -211,6 +219,26 @@ const CategorySchema: Schema<ICategory> = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Destination',
   }],
+  linkedPageIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AttractionPage',
+  }],
+  linkedCategoryIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+  }],
+  linkedPagesTitle: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Other page listings title cannot exceed 200 characters'],
+    default: 'Explore more',
+  },
+  linkedPagesSubtitle: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Other page listings subtitle cannot exceed 500 characters'],
+    default: 'Hand-picked guides and collections related to this page',
+  },
   
   // SEO
   metaTitle: {

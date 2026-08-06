@@ -14,6 +14,10 @@ import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStor
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import mongoose from 'mongoose';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import {
+  PageLinkValidationError,
+  validateAndNormalizePageLinks,
+} from '@/lib/attractionPages/validatePageLinks';
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,7 +68,7 @@ export async function GET(request: NextRequest) {
     const localizedCategories = selectLocalizedTaxonomyEntries(
       JSON.parse(JSON.stringify(categoriesWithCounts)),
       locale,
-      ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+      ['name', 'description', 'longDescription', 'highlights', 'features', 'linkedPagesTitle', 'linkedPagesSubtitle', 'metaTitle', 'metaDescription']
     ).map((category: Record<string, unknown>) =>
       localizeEntityFields(category, locale, [
         'name',
@@ -72,6 +76,8 @@ export async function GET(request: NextRequest) {
         'longDescription',
         'highlights',
         'features',
+        'linkedPagesTitle',
+        'linkedPagesSubtitle',
         'metaTitle',
         'metaDescription',
       ])
@@ -113,6 +119,7 @@ async function POSTHandler(request: NextRequest) {
     
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
+    Object.assign(body, await validateAndNormalizePageLinks(body, { includeTours: false }));
     
     // Validate required fields
     if (!body.name || !body.slug) {
@@ -165,7 +172,7 @@ async function POSTHandler(request: NextRequest) {
   } catch (error) {
     console.error('Error creating category:', error);
 
-    if (error instanceof ParentPageValidationError) {
+    if (error instanceof ParentPageValidationError || error instanceof PageLinkValidationError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 

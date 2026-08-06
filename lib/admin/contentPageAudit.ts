@@ -32,6 +32,8 @@ const TRACKED_FIELDS = [
   'linkedTourIds',
   'linkedPageIds',
   'linkedCategoryIds',
+  'linkedPagesTitle',
+  'linkedPagesSubtitle',
   'translations',
   'archivedAt',
 ] as const;
@@ -75,6 +77,8 @@ const FIELD_LABELS: Record<string, string> = {
   linkedTourIds: 'linked tours',
   linkedPageIds: 'linked pages',
   linkedCategoryIds: 'linked categories',
+  linkedPagesTitle: 'other page listings heading',
+  linkedPagesSubtitle: 'other page listings subheading',
   translations: 'translations',
   archivedAt: 'archive state',
 };

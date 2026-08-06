@@ -6,6 +6,12 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export class PageLinkValidationError extends Error {}
 
+interface PageLinkValidationOptions {
+  currentPageId?: string;
+  currentCategoryId?: string;
+  includeTours?: boolean;
+}
+
 function normalizeIds(value: unknown, label: string): string[] {
   if (value === undefined) return [];
   if (!Array.isArray(value)) throw new PageLinkValidationError(`${label} must be an array`);
@@ -19,17 +25,22 @@ function normalizeIds(value: unknown, label: string): string[] {
 
 export async function validateAndNormalizePageLinks(
   body: Record<string, unknown>,
-  currentPageId?: string,
+  current?: string | PageLinkValidationOptions,
 ) {
-  const includeTours = body.linkedTourIds !== undefined || !currentPageId;
-  const includePages = body.linkedPageIds !== undefined || !currentPageId;
-  const includeCategories = body.linkedCategoryIds !== undefined || !currentPageId;
+  const options = typeof current === 'string' ? { currentPageId: current } : current || {};
+  const isCreate = !options.currentPageId && !options.currentCategoryId;
+  const includeTours = options.includeTours !== false && (body.linkedTourIds !== undefined || isCreate);
+  const includePages = body.linkedPageIds !== undefined || isCreate;
+  const includeCategories = body.linkedCategoryIds !== undefined || isCreate;
   const linkedTourIds = includeTours ? normalizeIds(body.linkedTourIds, 'Tour listings') : [];
   const linkedPageIds = includePages ? normalizeIds(body.linkedPageIds, 'Page listings') : [];
   const linkedCategoryIds = includeCategories ? normalizeIds(body.linkedCategoryIds, 'Category listings') : [];
 
-  if (currentPageId && linkedPageIds.includes(currentPageId)) {
+  if (options.currentPageId && linkedPageIds.includes(options.currentPageId)) {
     throw new PageLinkValidationError('A page cannot list itself');
+  }
+  if (options.currentCategoryId && linkedCategoryIds.includes(options.currentCategoryId)) {
+    throw new PageLinkValidationError('A category cannot list itself');
   }
 
   const [tourCount, pageCount, categoryCount] = await Promise.all([

@@ -18,6 +18,7 @@ import {
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { contentPath } from '@/lib/content/contentUrl';
+import { resolveLinkedPageCards } from '@/lib/attractionPages/pageContent';
 
 export async function getCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
   await dbConnect();
@@ -82,7 +83,7 @@ async function getPageData(slug: string, locale: string) {
   const categoryCandidate = selectLocalizedTaxonomyEntries(
     serializedCategories,
     locale,
-    ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
+    ['name', 'description', 'longDescription', 'highlights', 'features', 'linkedPagesTitle', 'linkedPagesSubtitle', 'metaTitle', 'metaDescription']
   )[0];
 
   if (!categoryCandidate) {
@@ -121,6 +122,8 @@ async function getPageData(slug: string, locale: string) {
       'longDescription',
       'highlights',
       'features',
+      'linkedPagesTitle',
+      'linkedPagesSubtitle',
       'metaTitle',
       'metaDescription',
     ]),
@@ -241,11 +244,10 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
 
   if (!category) return null;
 
-  const relatedInterests = await getRelatedCategoryInterests(
-    String(category._id),
-    slug,
-    locale
-  );
+  const [relatedInterests, linkedPages] = await Promise.all([
+    getRelatedCategoryInterests(String(category._id), slug, locale),
+    resolveLinkedPageCards(category, locale),
+  ]);
 
   return (
     <>
@@ -263,6 +265,7 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
         category={category as unknown as CategoryType}
         categoryTours={categoryTours as unknown as TourType[]}
         relatedInterests={relatedInterests}
+        linkedPages={linkedPages}
       />
     </>
   );
