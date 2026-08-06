@@ -9,6 +9,8 @@ const SEARCH_ORIGIN = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || 'https://se
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5umlfasNQfJywtFPs6g';
 const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
+const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
+const MOBILE_ACTION_GAP_PX = 12;
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
 const LAUNCHER_RELEASE = '20260806-search-polish';
@@ -58,11 +60,33 @@ export default function EEOSearchConcierge() {
       const host = document.getElementById(HOST_ID);
       if (!host) return;
 
+      const launcher = host.shadowRoot?.querySelector<HTMLElement>('.launcher');
+
       // The hosted launcher intentionally uses a very high z-index. Keep it out
       // of the way while a first-party modal (booking, auth, lightbox, etc.) is
       // mounted so it cannot obscure or intercept the modal controls.
       const hasOpenAppDialog = document.querySelector('[role="dialog"]') !== null;
       host.hidden = hasOpenAppDialog;
+
+      if (!launcher) return;
+
+      // The mobile booking action and the hosted search launcher are both fixed
+      // to the viewport. Measure the rendered booking bar instead of assuming a
+      // device or safe-area height, then keep search visibly above it. A hidden
+      // desktop bar has a zero-height rect, so the launcher's own CSS can apply.
+      const bookingBar = document.querySelector<HTMLElement>(MOBILE_BOOKING_BAR_SELECTOR);
+      const bookingBarHeight = bookingBar?.getBoundingClientRect().height ?? 0;
+
+      if (!hasOpenAppDialog && bookingBarHeight > 0) {
+        launcher.style.setProperty(
+          'bottom',
+          `${Math.ceil(bookingBarHeight) + MOBILE_ACTION_GAP_PX}px`,
+          'important',
+        );
+        return;
+      }
+
+      launcher.style.removeProperty('bottom');
     };
 
     const removeWidget = () => {
@@ -97,9 +121,13 @@ export default function EEOSearchConcierge() {
 
     dialogObserver = new MutationObserver(syncLauncherVisibility);
     dialogObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', syncLauncherVisibility);
     syncLauncherVisibility();
 
-    return removeWidget;
+    return () => {
+      window.removeEventListener('resize', syncLauncherVisibility);
+      removeWidget();
+    };
   }, [locale, pathname]);
 
   return null;

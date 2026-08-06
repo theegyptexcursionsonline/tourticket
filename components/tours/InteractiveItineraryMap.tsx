@@ -200,7 +200,7 @@ export default function InteractiveItineraryMap({
   const infoWindowRef = useRef<InfoWindowInstance | null>(null);
   const googleRef = useRef<GoogleMapsApi | null>(null);
   const activeIndexRef = useRef(activeIndex);
-  const [mapState, setMapState] = useState<'loading' | 'ready' | 'fallback'>('loading');
+  const [mapState, setMapState] = useState<'loading' | 'ready' | 'fallback'>(() => apiKey ? 'loading' : 'fallback');
 
   const selected = itinerary[activeIndex] || itinerary[0];
   const physicalStops = useMemo(() => itineraryMapStops(itinerary), [itinerary]);
@@ -211,7 +211,6 @@ export default function InteractiveItineraryMap({
 
   useEffect(() => {
     if (!mapElementRef.current || itinerary.length === 0 || !apiKey) {
-      queueMicrotask(() => setMapState('fallback'));
       return;
     }
 
@@ -249,6 +248,7 @@ export default function InteractiveItineraryMap({
           center: positions[0],
           zoom: 10,
           mapTypeControl: false,
+          cameraControl: false,
           streetViewControl: false,
           fullscreenControl: true,
           gestureHandling: 'cooperative',

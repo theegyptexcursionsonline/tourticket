@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import fs from 'node:fs';
+import path from 'node:path';
 import InteractiveItineraryMap, { type InteractiveItineraryItem } from '../InteractiveItineraryMap';
 
 const itinerary: InteractiveItineraryItem[] = [
@@ -29,6 +31,14 @@ function ControlledMap() {
 }
 
 describe('InteractiveItineraryMap', () => {
+  it('keeps Google camera controls from covering route markers', () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'components/tours/InteractiveItineraryMap.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('cameraControl: false');
+  });
+
   it('exposes one tap and keyboard target for every itinerary stage', () => {
     render(<ControlledMap />);
     const stageButtons = screen.getAllByRole('button', { name: /Show stage/i });

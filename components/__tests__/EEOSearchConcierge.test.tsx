@@ -23,6 +23,7 @@ describe('EEOSearchConcierge', () => {
     cleanup();
     document.getElementById('eeo-search-concierge-script')?.remove();
     document.getElementById('foxes-launcher-host')?.remove();
+    document.querySelector('[data-mobile-booking-bar="true"]')?.remove();
   });
 
   it('loads one customer-branded hosted launcher on the EEO storefront', async () => {
@@ -101,5 +102,40 @@ describe('EEOSearchConcierge', () => {
 
     dialog.remove();
     await waitFor(() => expect(host.hidden).toBe(false));
+  });
+
+  it('keeps the hosted launcher above the rendered mobile booking bar', async () => {
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    const shadow = host.attachShadow({ mode: 'open' });
+    const launcher = document.createElement('form');
+    launcher.className = 'launcher searchbar';
+    shadow.appendChild(launcher);
+    document.body.appendChild(host);
+
+    const bookingBar = document.createElement('div');
+    bookingBar.dataset.mobileBookingBar = 'true';
+    bookingBar.getBoundingClientRect = () => ({
+      x: 0,
+      y: 768,
+      top: 768,
+      right: 390,
+      bottom: 844,
+      left: 0,
+      width: 390,
+      height: 76,
+      toJSON: () => ({}),
+    });
+    document.body.appendChild(bookingBar);
+
+    await waitFor(() => {
+      expect(launcher.style.getPropertyValue('bottom')).toBe('88px');
+      expect(launcher.style.getPropertyPriority('bottom')).toBe('important');
+    });
+
+    bookingBar.remove();
+    await waitFor(() => expect(launcher.style.getPropertyValue('bottom')).toBe(''));
   });
 });
