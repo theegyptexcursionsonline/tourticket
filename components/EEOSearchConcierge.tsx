@@ -13,7 +13,7 @@ const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
 const MOBILE_ACTION_GAP_PX = 12;
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
-const LAUNCHER_RELEASE = '20260806-search-polish';
+const LAUNCHER_RELEASE = '20260807-compact-launcher';
 
 const copy: Record<string, { label: string; kicker: string; placeholder: string }> = {
   en: {
@@ -55,6 +55,7 @@ export default function EEOSearchConcierge() {
     const allowedHost = shouldRenderAISearchWidgetForHost(window.location.hostname);
 
     let dialogObserver: MutationObserver | null = null;
+    let syncFrame: number | null = null;
 
     const syncLauncherVisibility = () => {
       const host = document.getElementById(HOST_ID);
@@ -64,8 +65,14 @@ export default function EEOSearchConcierge() {
 
       // The hosted launcher intentionally uses a very high z-index. Keep it out
       // of the way while a first-party modal (booking, auth, lightbox, etc.) is
-      // mounted so it cannot obscure or intercept the modal controls.
-      const hasOpenAppDialog = document.querySelector('[role="dialog"]') !== null;
+      // open so it cannot obscure or intercept the modal controls. Only a
+      // visible aria-modal dialog counts: embedded widgets — notably Google
+      // Maps InfoWindows on the itinerary map — also carry role="dialog" but
+      // are not blocking overlays, and matching them kept the launcher hidden
+      // for as long as a tour map had a stage card open.
+      const hasOpenAppDialog = Array.from(
+        document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
+      ).some((dialog) => !dialog.closest('.gm-style') && dialog.getClientRects().length > 0);
       host.hidden = hasOpenAppDialog;
 
       if (!launcher) return;
@@ -89,8 +96,23 @@ export default function EEOSearchConcierge() {
       launcher.style.removeProperty('bottom');
     };
 
+    // DOM churn arrives in bursts (map tiles, animations, list re-renders), and
+    // the sync reads layout via getBoundingClientRect. Coalesce to one sync per
+    // frame so a mutation storm near the itinerary map cannot thrash layout.
+    const scheduleSync = () => {
+      if (syncFrame !== null) return;
+      syncFrame = window.requestAnimationFrame(() => {
+        syncFrame = null;
+        syncLauncherVisibility();
+      });
+    };
+
     const removeWidget = () => {
       dialogObserver?.disconnect();
+      if (syncFrame !== null) {
+        window.cancelAnimationFrame(syncFrame);
+        syncFrame = null;
+      }
       document.getElementById(SCRIPT_ID)?.remove();
       document.getElementById(HOST_ID)?.remove();
     };
@@ -119,13 +141,21 @@ export default function EEOSearchConcierge() {
     script.dataset.rememberDismiss = 'false';
     document.body.appendChild(script);
 
-    dialogObserver = new MutationObserver(syncLauncherVisibility);
-    dialogObserver.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener('resize', syncLauncherVisibility);
+    dialogObserver = new MutationObserver(scheduleSync);
+    // Attribute changes matter too: modals and the mobile booking bar can be
+    // shown or hidden by a class/style toggle without any childList mutation,
+    // which previously left the launcher in a stale hidden/overlapped state.
+    dialogObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden', 'aria-modal', 'aria-hidden', 'open'],
+    });
+    window.addEventListener('resize', scheduleSync);
     syncLauncherVisibility();
 
     return () => {
-      window.removeEventListener('resize', syncLauncherVisibility);
+      window.removeEventListener('resize', scheduleSync);
       removeWidget();
     };
   }, [locale, pathname]);

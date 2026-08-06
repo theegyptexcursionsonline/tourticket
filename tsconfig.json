@@ -36,7 +36,6 @@
     "scripts/check-bad-bookings.js",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
+  "exclude": ["node_modules", ".claude"
   ]
 }

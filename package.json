@@ -15,7 +15,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "pnpm test:unit && printf '\\nNote: the server-dependent API suite (__tests__/api/supertest.test.ts) is NOT part of this run.\\nIt needs a live app on TEST_BASE_URL (default http://localhost:3000) — run it with: pnpm test:api\\n\\n'",
-    "test:unit": "jest --passWithNoTests --testPathIgnorePatterns='/e2e/' --testPathIgnorePatterns='supertest'",
+    "test:unit": "jest --passWithNoTests --testPathIgnorePatterns='/e2e/' --testPathIgnorePatterns='supertest' --testPathIgnorePatterns='/.claude/'",
     "test:api": "jest --testPathPatterns='supertest'",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

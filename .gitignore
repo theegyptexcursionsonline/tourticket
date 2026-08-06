@@ -96,3 +96,6 @@ playwright-report/data/
 playwright-report/trace/
 playwright-report/
 test-results/
+
+# agent workspace state — never commit
+.claude/

@@ -38,7 +38,13 @@ const customJestConfig = {
     '/.next/',
     '/.netlify/',
     '/e2e/',
+    // Agent worktrees hold stale checkouts whose tests resolve @/ against the
+    // live repo root — running them produces false failures.
+    '/.claude/',
   ],
+  // Also keep worktrees out of the haste map: their __mocks__ copies collide
+  // with the repo's own manual mocks ("duplicate manual mock found").
+  modulePathIgnorePatterns: ['<rootDir>/.claude/'],
   modulePathIgnorePatterns: [
     '<rootDir>/.netlify/',
   ],

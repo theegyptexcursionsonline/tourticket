@@ -41,7 +41,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.color).toBe('#0b5d3b');
       expect(script.dataset.dir).toBe('ltr');
       expect(script.dataset.locale).toBe('en');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260806-search-polish');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260807-compact-launcher');
     });
   });
 
@@ -85,7 +85,9 @@ describe('EEOSearchConcierge', () => {
     }
   );
 
-  it('hides the hosted launcher while an application dialog is mounted', async () => {
+  const visibleRects = () => [{ width: 320, height: 200 }] as unknown as DOMRectList;
+
+  it('hides the hosted launcher while a visible application modal is open', async () => {
     render(<EEOSearchConcierge />);
 
     const host = document.createElement('div');
@@ -96,12 +98,91 @@ describe('EEOSearchConcierge', () => {
 
     const dialog = document.createElement('div');
     dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.getClientRects = visibleRects;
     document.body.appendChild(dialog);
 
     await waitFor(() => expect(host.hidden).toBe(true));
 
     dialog.remove();
     await waitFor(() => expect(host.hidden).toBe(false));
+  });
+
+  it('ignores non-modal embedded dialogs such as Google Maps InfoWindows', async () => {
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    // Mirrors the itinerary map DOM: role="dialog" without aria-modal, inside .gm-style.
+    const mapRoot = document.createElement('div');
+    mapRoot.className = 'gm-style';
+    const infoWindow = document.createElement('div');
+    infoWindow.className = 'gm-style-iw gm-style-iw-c';
+    infoWindow.setAttribute('role', 'dialog');
+    infoWindow.getClientRects = visibleRects;
+    mapRoot.appendChild(infoWindow);
+    document.body.appendChild(mapRoot);
+
+    // A plain non-modal dialog outside the map must not hide the launcher either.
+    const nonModal = document.createElement('div');
+    nonModal.setAttribute('role', 'dialog');
+    nonModal.getClientRects = visibleRects;
+    document.body.appendChild(nonModal);
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(host.hidden).toBe(false);
+
+    mapRoot.remove();
+    nonModal.remove();
+  });
+
+  it('ignores a mounted modal that is not actually visible', async () => {
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.getClientRects = () => [] as unknown as DOMRectList;
+    document.body.appendChild(dialog);
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(host.hidden).toBe(false);
+
+    dialog.remove();
+  });
+
+  it('re-syncs when a modal is revealed by an attribute change alone', async () => {
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.className = 'closed';
+    dialog.getClientRects = () =>
+      (dialog.className === 'open' ? [{ width: 320, height: 200 }] : []) as unknown as DOMRectList;
+    document.body.appendChild(dialog);
+
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    dialog.className = 'open';
+    await waitFor(() => expect(host.hidden).toBe(true));
+
+    dialog.className = 'closed';
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    dialog.remove();
   });
 
   it('keeps the hosted launcher above the rendered mobile booking bar', async () => {
