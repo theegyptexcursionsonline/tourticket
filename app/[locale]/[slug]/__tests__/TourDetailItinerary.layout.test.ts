@@ -9,7 +9,13 @@ describe('tour detail itinerary layout', () => {
 
   it('keeps every itinerary stop in the document scroll', () => {
     expect(source).not.toContain('max-h-[600px] lg:max-h-[700px] overflow-y-auto');
+    expect(source).toContain('id="itinerary" className="space-y-6 scroll-mt-40"');
     expect(source).toContain('<div className="pr-1 sm:pr-2">');
+  });
+
+  it('offsets section anchors below the sticky header and section tabs', () => {
+    expect(source.match(/scroll-mt-40/g)).toHaveLength(8);
+    expect(source).not.toContain('scroll-mt-24');
   });
 
   it('bounds the sticky map to the full itinerary grid and avoids image letterboxing', () => {

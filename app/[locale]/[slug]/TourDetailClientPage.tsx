@@ -456,7 +456,7 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
   const openMapsUrl = itineraryDirectionsUrl(stops, tourLocation);
 
   return (
-    <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-24">
+    <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-40">
       <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
         <Clock size={24} className="text-red-600" />
         Detailed Itinerary
@@ -618,7 +618,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
   if (!hasContent) return null;
 
   return (
-  <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-24">
+  <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Backpack size={24} className="text-blue-600" />
       Practical Information
@@ -733,7 +733,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
   if (!hasAccess && !hasSafety && !enhancement.transportationDetails) return null;
 
   return (
-  <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-24">
+  <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Accessibility size={24} className="text-purple-600" />
       Accessibility & Special Requirements
@@ -799,7 +799,7 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   if (policies.length === 0) return null;
 
   return (
-  <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-24">
+  <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Shield size={24} className="text-red-600" />
       Policies
@@ -825,7 +825,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   if (!hasHighlights && !hasCustoms && !enhancement.seasonalVariations) return null;
 
   return (
-  <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-24">
+  <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Heart size={24} className="text-teal-600" />
       Cultural Information
@@ -891,7 +891,7 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefO
   if (faqsToShow.length === 0) return null;
 
   return (
-    <div ref={sectionRef} id="faq" className="space-y-4 scroll-mt-24">
+    <div ref={sectionRef} id="faq" className="space-y-4 scroll-mt-40">
       <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
         <MessageCircle size={24} className="text-orange-600" />
         Frequently Asked Questions
@@ -953,7 +953,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
     : tour.rating?.toFixed(1) || 'N/A';
 
   return (
-    <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-24">
+    <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-40">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
         <div className="flex items-center gap-2">
@@ -1016,7 +1016,7 @@ const ExperienceDescription = ({ html }: { html: string }) => {
 };
 
 const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
-  <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-24">
+  <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-40">
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
       <div className="mb-6">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-600">The experience</p>
