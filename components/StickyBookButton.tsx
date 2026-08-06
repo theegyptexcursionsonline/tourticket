@@ -7,9 +7,10 @@ interface StickyBookButtonProps {
   price: number;
   currency: string;
   onClick: () => void;
+  hidden?: boolean;
 }
 
-const StickyBookButton: React.FC<StickyBookButtonProps> = ({ price, onClick }) => {
+const StickyBookButton: React.FC<StickyBookButtonProps> = ({ price, onClick, hidden = false }) => {
   const [isVisible, setIsVisible] = useState(false);
   const { formatPrice } = useSettings();
 
@@ -30,7 +31,7 @@ const StickyBookButton: React.FC<StickyBookButtonProps> = ({ price, onClick }) =
     };
   }, []);
 
-  if (!isVisible) {
+  if (!isVisible || hidden) {
     return null;
   }
 

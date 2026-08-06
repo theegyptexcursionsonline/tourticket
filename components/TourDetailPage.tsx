@@ -1436,6 +1436,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
         price={tour.discountPrice}
         currency={'$'}
         onClick={openBookingSidebar}
+        hidden={isBookingSidebarOpen}
       />
 
       <div className="sr-only" aria-live="polite">

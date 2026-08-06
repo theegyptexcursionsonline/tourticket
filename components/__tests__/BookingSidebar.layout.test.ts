@@ -147,6 +147,8 @@ describe('BookingSidebar containment regression contract', () => {
     );
     expect(stickyButtonSource).toContain('z-[2147483004]');
     expect(stickyButtonSource).toContain('pb-[calc(1rem+env(safe-area-inset-bottom))]');
+    expect(stickyButtonSource).toContain('if (!isVisible || hidden)');
+    expect(tourPageSource).toContain('hidden={isBookingSidebarOpen}');
     expect(source).toContain('aria-label="Close booking drawer"');
   });
 });

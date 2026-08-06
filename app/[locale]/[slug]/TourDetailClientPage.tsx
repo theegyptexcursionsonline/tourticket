@@ -1692,6 +1692,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
         price={tour.discountPrice}
         currency={'$'}
         onClick={openBookingSidebar}
+        hidden={isBookingSidebarOpen}
       />
 
       {/* AI Magic Widget for Tour Pages */}
