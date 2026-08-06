@@ -300,6 +300,57 @@ describe('DestinationManager', () => {
     })
   })
 
+  describe('Duplicate Destination Flow', () => {
+    it('creates a draft copy and opens that returned copy for editing', async () => {
+      const user = userEvent.setup()
+      const copiedDestination = {
+        ...mockDestinations[0],
+        _id: '3',
+        name: 'Cairo (Copy)',
+        slug: 'cairo-copy',
+        featured: false,
+        isPublished: false,
+        tourCount: 0,
+      }
+
+      ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            success: true,
+            data: copiedDestination,
+            message: 'Draft destination copy created.',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: [] }),
+        })
+
+      await renderManager()
+      await user.click(screen.getByRole('button', { name: 'Duplicate Cairo as draft' }))
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/admin/destinations/1/duplicate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+        })
+        expect(screen.getByText('Edit Destination')).toBeInTheDocument()
+        expect((screen.getByLabelText(/destination name/i) as HTMLInputElement).value)
+          .toBe('Cairo (Copy)')
+        expect(mockRefresh).toHaveBeenCalled()
+      })
+    })
+  })
+
   describe('Form Validation', () => {
     it('should show validation error when submitting without required fields', async () => {
       const user = userEvent.setup()

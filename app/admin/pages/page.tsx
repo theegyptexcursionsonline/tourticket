@@ -6,7 +6,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Eye, Search, Loader2, Archive, Undo2, Link2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Search, Loader2, Archive, Undo2, Link2, Copy } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import Image from 'next/image';
 import { storefrontPreviewUrl } from '@/lib/admin/storefrontPreviewUrl';
@@ -62,6 +64,7 @@ const KIND_BADGES: Record<PageKind, string> = {
 };
 
 export default function UnifiedPagesAdmin() {
+  const router = useRouter();
   const { token } = useAdminAuth();
   const [rows, setRows] = useState<UnifiedRow[]>([]);
   const [counts, setCounts] = useState<Counts | null>(null);
@@ -69,6 +72,7 @@ export default function UnifiedPagesAdmin() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicatingKey, setDuplicatingKey] = useState<string | null>(null);
   // Filters live in the URL so returning from an editor (back button or the
   // list link) restores the last view instead of resetting to defaults.
   const initialParams = () =>
@@ -213,6 +217,43 @@ export default function UnifiedPagesAdmin() {
     } catch (err) {
       alert('Network error');
       console.error('Error changing archive state:', err);
+    }
+  };
+
+  const duplicateRow = async (row: UnifiedRow) => {
+    const rowKey = `${row.kind}-${row.id}`;
+    setDuplicatingKey(rowKey);
+    const promise = (async () => {
+      const response = await fetch('/api/admin/pages/duplicate', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ kind: row.kind, id: row.id }),
+      });
+      const data = await response.json().catch(() => ({})) as {
+        success?: boolean;
+        error?: string;
+        message?: string;
+        editHref?: string;
+      };
+      if (!response.ok || !data.success || !data.editHref) {
+        throw new Error(data.error || `Duplicate failed (${response.status})`);
+      }
+      return data;
+    })();
+
+    toast.promise(promise, {
+      loading: `Creating a draft copy of ${row.title}...`,
+      success: (data) => data.message || 'Draft page copy created.',
+      error: (failure) => `Duplicate failed: ${failure instanceof Error ? failure.message : 'Unknown error'}`,
+    });
+
+    try {
+      const data = await promise;
+      router.push(data.editHref!);
+    } catch (failure) {
+      console.error(failure);
+    } finally {
+      setDuplicatingKey(null);
     }
   };
 
@@ -400,6 +441,18 @@ export default function UnifiedPagesAdmin() {
                         >
                           <Edit className="w-4 h-4" />
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => void duplicateRow(row)}
+                          disabled={duplicatingKey === `${row.kind}-${row.id}`}
+                          className="rounded p-1 text-indigo-600 hover:text-indigo-900 disabled:cursor-wait disabled:opacity-50"
+                          title={`Duplicate ${KIND_LABELS[row.kind]} as draft`}
+                          aria-label={`Duplicate ${row.title} as draft`}
+                        >
+                          {duplicatingKey === `${row.kind}-${row.id}`
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Copy className="h-4 w-4" />}
+                        </button>
                         {filterStatus === 'archived' ? (
                           <button
                             onClick={() => setArchived(row, false)}

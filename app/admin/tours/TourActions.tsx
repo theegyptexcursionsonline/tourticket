@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Edit, Archive, MoreVertical, X, Check, Undo2 } from "lucide-react";
+import { Edit, Archive, MoreVertical, X, Check, Undo2, Copy, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
@@ -12,6 +12,7 @@ export const TourActions = ({ tourId, isArchived = false }: { tourId: string; is
   const [isOpen, setIsOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
@@ -149,6 +150,49 @@ export const TourActions = ({ tourId, isArchived = false }: { tourId: string; is
     }
   };
 
+  const handleDuplicate = async () => {
+    setIsOpen(false);
+    setIsDuplicating(true);
+    const promise = (async () => {
+      const response = await fetch(`/api/admin/tours/${tourId}/duplicate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json().catch(() => ({})) as {
+        success?: boolean;
+        error?: string;
+        message?: string;
+        editHref?: string;
+      };
+      if (!response.ok || !data.success || !data.editHref) {
+        throw new Error(data.error || `Duplicate failed (${response.status})`);
+      }
+      return data;
+    })();
+
+    toast.promise(promise, {
+      loading: 'Creating draft copy...',
+      success: (data) => data.message || 'Draft tour copy created.',
+      error: (error) => `Duplicate failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    });
+
+    try {
+      const data = await promise;
+      try {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('admin-tours-cache:')) sessionStorage.removeItem(key);
+        }
+      } catch { /* storage unavailable */ }
+      window.dispatchEvent(new CustomEvent('admin-tours-changed'));
+      router.push(data.editHref!);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
       <button
@@ -180,6 +224,17 @@ export const TourActions = ({ tourId, isArchived = false }: { tourId: string; is
               <Edit className="w-4 h-4 text-slate-500" />
               <span>Edit</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              disabled={isDuplicating}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+              role="menuitem"
+            >
+              {isDuplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+              <span>Duplicate as draft</span>
+            </button>
 
             {isArchived ? (
               <button

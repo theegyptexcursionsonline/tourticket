@@ -27,7 +27,8 @@ import {
   EyeOff,
   Info,
   Plus,
-  Minus
+  Minus,
+  Copy
 } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
 import TranslationEditor from '@/components/admin/TranslationEditor';
@@ -114,6 +115,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [duplicatingDestinationId, setDuplicatingDestinationId] = useState<string | null>(null);
   const [editingDestination, setEditingDestination] = useState<IDestination | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
   
@@ -559,6 +561,43 @@ setTimeout(() => router.refresh(), 0);
     });
   };
 
+  const handleDuplicate = async (dest: IDestination) => {
+    const destinationId = String(dest._id);
+    setDuplicatingDestinationId(destinationId);
+    const promise = (async () => {
+      const response = await fetch(`/api/admin/destinations/${destinationId}/duplicate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json().catch(() => ({})) as {
+        success?: boolean;
+        error?: string;
+        message?: string;
+        data?: IDestination;
+      };
+      if (!response.ok || !data.success || !data.data) {
+        throw new Error(data.error || `Duplicate failed (${response.status})`);
+      }
+      return data;
+    })();
+
+    toast.promise(promise, {
+      loading: `Creating a draft copy of ${dest.name}...`,
+      success: (data) => data.message || 'Draft destination copy created.',
+      error: (error) => `Duplicate failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    });
+
+    try {
+      const data = await promise;
+      openPanelForEdit(data.data!);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDuplicatingDestinationId(null);
+    }
+  };
+
   const inputStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700";
   const textareaStyles = "block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm disabled:bg-slate-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-slate-700 resize-vertical min-h-[100px]";
 
@@ -658,13 +697,25 @@ setTimeout(() => router.refresh(), 0);
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
               
               {/* Action Buttons */}
-              <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+              <div className="absolute right-3 top-3 flex translate-x-0 flex-col gap-2 opacity-100 transition-all duration-300 sm:translate-x-2 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
                 <button 
                   onClick={() => openPanelForEdit(dest)} 
                   className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-indigo-600 shadow-lg transition-all duration-200 transform hover:scale-110"
                   title="Edit destination"
                 >
                   <Edit size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDuplicate(dest)}
+                  disabled={duplicatingDestinationId === String(dest._id)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-60"
+                  title="Duplicate destination as draft"
+                  aria-label={`Duplicate ${dest.name} as draft`}
+                >
+                  {duplicatingDestinationId === String(dest._id)
+                    ? <Loader2 size={16} className="animate-spin" />
+                    : <Copy size={16} />}
                 </button>
                 <button
                   onClick={() => handleDelete(String(dest._id), dest.name)}
