@@ -5,6 +5,7 @@ const read = (file: string) => fs.readFileSync(path.join(process.cwd(), file), '
 
 const TOUR_PAGE = 'app/[locale]/[slug]/TourDetailClientPage.tsx';
 const CATEGORY_PAGE = 'app/[locale]/categories/[slug]/CategoryPageClient.tsx';
+const DESTINATION_PAGE = 'app/[locale]/destinations/[slug]/DestinationPageClient.tsx';
 
 // Phrases that were previously published on the operator's behalf when an
 // admin left a field empty. Several made commercial promises (refunds,
@@ -81,5 +82,27 @@ describe('category page publishes only operator-entered content', () => {
     ]) {
       expect(source).not.toContain(phrase);
     }
+  });
+});
+
+describe('destination page publishes only sourced statistics', () => {
+  it('contains no fabricated rating, traveler, review or support totals', () => {
+    const source = read(DESTINATION_PAGE);
+    for (const phrase of [
+      '50K+',
+      '50,000+',
+      '4.8/5',
+      '1,000+ reviews',
+      '24/7 if you need assistance',
+      '+50 ألف',
+    ]) {
+      expect(source).not.toContain(phrase);
+    }
+  });
+
+  it('derives review summary values from the rendered review records', () => {
+    const source = read(DESTINATION_PAGE);
+    expect(source).toContain('reviews.reduce((total, review) => total + review.rating, 0) / reviews.length');
+    expect(source).toContain('copy.reviewsSummary(averageRating, reviews.length)');
   });
 });

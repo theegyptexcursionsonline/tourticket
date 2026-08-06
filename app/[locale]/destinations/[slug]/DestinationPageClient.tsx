@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-    ArrowRight, Star, Tag, Clock, Users, ChevronLeft, ChevronRight,
+    ArrowRight, Star, Tag, Clock, ChevronLeft, ChevronRight,
     ShoppingCart, Award, MapPin, CheckCircle2,
     Calendar, Shield, Heart, MessageCircle,
     Sun, DollarSign, Languages, Phone,
@@ -141,16 +141,11 @@ type DestinationPageCopy = {
   thingsToDoIn: (destination: string) => string;
   bestToursIn: (destination: string) => string;
   toursCount: (count: number) => string;
-  ratingStat: string;
-  travelersStat: string;
   scrollLeft: string;
   scrollRight: string;
   bookNow: string;
   bookings: string;
   statsToursAvailable: string;
-  statsHappyTravelers: string;
-  statsAverageRating: string;
-  statsCustomerSupport: string;
   travelTipsTitle: string;
   travelTipsSubtitle: string;
   travelTipBestTime: string;
@@ -197,7 +192,7 @@ type DestinationPageCopy = {
   faqMeetingQ: string;
   faqMeetingA: string;
   reviewsTitle: (destination: string) => string;
-  reviewsSummary: string;
+  reviewsSummary: (average: number, count: number) => string;
   verifiedTraveler: string;
   readAllReviews: string;
   relatedDestinationsTitle: string;
@@ -250,17 +245,12 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     exploreDestination: (destination: string) => `Explore ${destination}`,
     thingsToDoIn: (destination: string) => `Things to do in ${destination}`,
     bestToursIn: (destination: string) => `Best tours in ${destination}`,
-    toursCount: (count: number) => `${count}+ Tours`,
-    ratingStat: '4.8/5 Rating',
-    travelersStat: '50K+ Travelers',
+    toursCount: (count: number) => `${count} ${count === 1 ? 'Tour' : 'Tours'}`,
     scrollLeft: 'Scroll left',
     scrollRight: 'Scroll right',
     bookNow: 'Book now',
     bookings: 'bookings',
     statsToursAvailable: 'Tours Available',
-    statsHappyTravelers: 'Happy Travelers',
-    statsAverageRating: 'Average Rating',
-    statsCustomerSupport: 'Customer Support',
     travelTipsTitle: 'Travel Tips & Essential Info',
     travelTipsSubtitle: 'Everything you need to know before you go',
     travelTipBestTime: 'Best Time to Visit',
@@ -319,9 +309,10 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
       `It varies by tour. Some tours include meals or snacks, while others don't. Each tour description clearly states what's included. Food tours naturally include multiple tastings as part of the experience.`,
     faqMeetingQ: 'How do I get to the meeting points?',
     faqMeetingA:
-      `All tour confirmations include detailed meeting point information with maps and directions. Most meeting points are at central, easy-to-reach locations with good public transport access. Our team is available 24/7 if you need assistance.`,
+      `All tour confirmations include detailed meeting point information with maps and directions. Most meeting points are at central, easy-to-reach locations with good public transport access.`,
     reviewsTitle: (destination: string) => `What Travelers Say About ${destination}`,
-    reviewsSummary: '4.8/5 from 1,000+ reviews',
+    reviewsSummary: (average: number, count: number) =>
+      `${average.toFixed(1)}/5 from ${count} ${count === 1 ? 'review' : 'reviews'}`,
     verifiedTraveler: 'Verified traveler',
     readAllReviews: 'Read All Reviews',
     relatedDestinationsTitle: 'Explore More Destinations',
@@ -331,7 +322,7 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     newsletterSubtitle: 'Subscribe to our newsletter and receive special offers, travel tips, and insider guides',
     newsletterEmailPlaceholder: 'Enter your email',
     newsletterSubscribe: 'Subscribe Now',
-    newsletterFootnote: 'Join 50,000+ travelers getting exclusive deals. Unsubscribe anytime.',
+    newsletterFootnote: 'Receive destination deals by email. Unsubscribe anytime.',
     infoBestTime: 'Best Time to Visit',
     infoCurrency: 'Currency',
     infoTimeZone: 'Time Zone',
@@ -372,17 +363,12 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     exploreDestination: (destination: string) => `استكشف ${destination}`,
     thingsToDoIn: (destination: string) => `أفضل الأنشطة في ${destination}`,
     bestToursIn: (destination: string) => `أفضل الجولات في ${destination}`,
-    toursCount: (count: number) => `${count}+ جولة`,
-    ratingStat: 'تقييم 4.8/5',
-    travelersStat: '+50 ألف مسافر',
+    toursCount: (count: number) => `${count} جولة`,
     scrollLeft: 'تمرير لليسار',
     scrollRight: 'تمرير لليمين',
     bookNow: 'احجز الآن',
     bookings: 'حجوزات',
     statsToursAvailable: 'جولات متاحة',
-    statsHappyTravelers: 'مسافرون سعداء',
-    statsAverageRating: 'متوسط التقييم',
-    statsCustomerSupport: 'دعم العملاء',
     travelTipsTitle: 'نصائح السفر ومعلومات أساسية',
     travelTipsSubtitle: 'كل ما تحتاج معرفته قبل السفر',
     travelTipBestTime: 'أفضل وقت للزيارة',
@@ -443,7 +429,8 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     faqMeetingA:
       `ستتضمن رسالة التأكيد كل تفاصيل نقطة الالتقاء مع الخرائط والاتجاهات، وغالبًا تكون في مواقع مركزية يسهل الوصول إليها.`,
     reviewsTitle: (destination: string) => `ماذا يقول المسافرون عن ${destination}`,
-    reviewsSummary: 'تقييم 4.8/5 من أكثر من 1000 مراجعة',
+    reviewsSummary: (average: number, count: number) =>
+      `تقييم ${average.toFixed(1)}/5 من ${count} ${count === 1 ? 'مراجعة' : 'مراجعات'}`,
     verifiedTraveler: 'مسافر موثّق',
     readAllReviews: 'قراءة جميع المراجعات',
     relatedDestinationsTitle: 'استكشف المزيد من الوجهات',
@@ -453,7 +440,7 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     newsletterSubtitle: 'اشترك في النشرة البريدية لتحصل على عروض خاصة ونصائح سفر وأدلة داخلية',
     newsletterEmailPlaceholder: 'أدخل بريدك الإلكتروني',
     newsletterSubscribe: 'اشترك الآن',
-    newsletterFootnote: 'انضم إلى أكثر من 50,000 مسافر يحصلون على عروض حصرية. يمكنك إلغاء الاشتراك في أي وقت.',
+    newsletterFootnote: 'استقبل عروض الوجهات عبر البريد الإلكتروني. يمكنك إلغاء الاشتراك في أي وقت.',
     infoBestTime: 'أفضل وقت للزيارة',
     infoCurrency: 'العملة',
     infoTimeZone: 'المنطقة الزمنية',
@@ -1732,11 +1719,6 @@ const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: 
               <Tag size={14} className="sm:w-4 sm:h-4" />
               <span className="font-semibold">{copy.toursCount(tourCount)}</span>
             </span>
-            <span className="flex items-center gap-1.5 sm:gap-2">
-              <Star size={14} className="sm:w-4 sm:h-4 fill-current text-yellow-400" />
-              <span className="font-semibold">{copy.ratingStat}</span>
-            </span>
-            <span className="font-semibold">{copy.travelersStat}</span>
           </div>
         </div>
       </div>
@@ -1950,26 +1932,16 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
 // --- Stats Banner ---
 const StatsSection = ({ destinationTours }: { destinationTours: Tour[] }) => {
   const copy = useDestinationPageCopy();
-  const stats = [
-    { value: `${destinationTours.length}+`, label: copy.statsToursAvailable, icon: <Calendar /> },
-    { value: '50K+', label: copy.statsHappyTravelers, icon: <Users /> },
-    { value: '4.8/5', label: copy.statsAverageRating, icon: <Star /> },
-    { value: '24/7', label: copy.statsCustomerSupport, icon: <Shield /> }
-  ];
 
   return (
     <section className="bg-slate-900 py-12 sm:py-16">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="flex justify-center mb-2 sm:mb-3 text-red-500">
-                {React.cloneElement(stat.icon, { size: 24, className: 'sm:w-8 sm:h-8' })}
-              </div>
-              <div className="text-2xl sm:text-4xl font-extrabold text-white mb-1 sm:mb-2">{stat.value}</div>
-              <div className="text-sm sm:text-base text-slate-300">{stat.label}</div>
-            </div>
-          ))}
+        <div className="mx-auto max-w-sm text-center">
+          <div className="flex justify-center mb-2 sm:mb-3 text-red-500">
+            <Calendar size={24} className="sm:w-8 sm:h-8" />
+          </div>
+          <div className="text-2xl sm:text-4xl font-extrabold text-white mb-1 sm:mb-2">{destinationTours.length}</div>
+          <div className="text-sm sm:text-base text-slate-300">{copy.statsToursAvailable}</div>
         </div>
       </div>
     </section>
@@ -2205,6 +2177,8 @@ const hasArabicChars = (value: string): boolean => /[\u0600-\u06FF]/.test(value)
 const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], destinationName: string }) => {
   const copy = useDestinationPageCopy();
   if (!reviews || reviews.length === 0) return null;
+  const averageRating = reviews.reduce((total, review) => total + review.rating, 0) / reviews.length;
+  const roundedRating = Math.round(averageRating);
 
   return (
     <section className="bg-slate-50 py-12 sm:py-20">
@@ -2215,9 +2189,14 @@ const ReviewsSection = ({ reviews, destinationName }: { reviews: Review[], desti
           </h2>
           <div className="flex items-center justify-center gap-2 text-yellow-500">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-4 h-4 sm:w-6 sm:h-6 fill-current" />
+              <Star
+                key={i}
+                className={`w-4 h-4 sm:w-6 sm:h-6 ${i < roundedRating ? 'fill-current' : 'text-slate-300'}`}
+              />
             ))}
-            <span className="ml-2 text-slate-600 font-bold text-sm sm:text-base">{copy.reviewsSummary}</span>
+            <span className="ml-2 text-slate-600 font-bold text-sm sm:text-base">
+              {copy.reviewsSummary(averageRating, reviews.length)}
+            </span>
           </div>
         </div>
 

@@ -175,19 +175,14 @@ describe('DestinationPageClient', () => {
     it('should display tour count', () => {
       render(<DestinationPageClient {...defaultProps} />)
 
-      expect(screen.getAllByText(/2\+ Tours/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/^2 Tours$/i).length).toBeGreaterThan(0)
     })
 
-    it('should display rating', () => {
+    it('should not invent destination rating or traveler totals', () => {
       render(<DestinationPageClient {...defaultProps} />)
 
-      expect(screen.getByText('4.8/5 Rating')).toBeInTheDocument()
-    })
-
-    it('should display traveler count', () => {
-      render(<DestinationPageClient {...defaultProps} />)
-
-      expect(screen.getByText('50K+ Travelers')).toBeInTheDocument()
+      expect(screen.queryByText('4.8/5 Rating')).not.toBeInTheDocument()
+      expect(screen.queryByText('50K+ Travelers')).not.toBeInTheDocument()
     })
 
     it('should open the hosted AI search with destination context', async () => {
@@ -208,12 +203,13 @@ describe('DestinationPageClient', () => {
   })
 
   describe('Stats Section', () => {
-    it('should display destination statistics', () => {
+    it('should display only the exact destination tour count', () => {
       render(<DestinationPageClient {...defaultProps} />)
 
-      expect(screen.getAllByText(/2\+ Tours/i).length).toBeGreaterThan(0)
-      expect(screen.getByText('50K+')).toBeInTheDocument()
-      expect(screen.getByText('Happy Travelers')).toBeInTheDocument()
+      expect(screen.getByText('Tours Available')).toBeInTheDocument()
+      expect(screen.queryByText('50K+')).not.toBeInTheDocument()
+      expect(screen.queryByText('24/7')).not.toBeInTheDocument()
+      expect(screen.queryByText('Average Rating')).not.toBeInTheDocument()
     })
   })
 
@@ -289,8 +285,8 @@ describe('DestinationPageClient', () => {
     it('should display tour count per category', () => {
       render(<DestinationPageClient {...defaultProps} />)
 
-      // The component renders tour count using toursCount() which formats as "N+ Tours"
-      const categoryTourCounts = screen.getAllByText('2+ Tours')
+      // The component renders the exact inventory count without implying additional tours.
+      const categoryTourCounts = screen.getAllByText('2 Tours')
       expect(categoryTourCounts.length).toBeGreaterThan(0)
     })
 
@@ -440,6 +436,7 @@ describe('DestinationPageClient', () => {
       render(<DestinationPageClient {...props} />)
 
       expect(screen.getByText(/What Travelers Say About Cairo/i)).toBeInTheDocument()
+      expect(screen.getByText('5.0/5 from 1 review')).toBeInTheDocument()
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('Amazing experience!')).toBeInTheDocument()
     })
@@ -452,13 +449,12 @@ describe('DestinationPageClient', () => {
   })
 
   describe('Hero Stats', () => {
-    it('should render stat labels in hero section', () => {
+    it('should render the real tour total without fabricated popularity claims', () => {
       render(<DestinationPageClient {...defaultProps} />)
 
-      // The hero section displays stat labels for tours, rating, and travelers
-      expect(screen.getAllByText(/2\+ Tours/i).length).toBeGreaterThan(0)
-      expect(screen.getByText('4.8/5 Rating')).toBeInTheDocument()
-      expect(screen.getByText('50K+ Travelers')).toBeInTheDocument()
+      expect(screen.getAllByText(/^2 Tours$/i).length).toBeGreaterThan(0)
+      expect(screen.queryByText('4.8/5 Rating')).not.toBeInTheDocument()
+      expect(screen.queryByText('50K+ Travelers')).not.toBeInTheDocument()
     })
   })
 
