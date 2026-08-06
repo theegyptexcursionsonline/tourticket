@@ -18,10 +18,16 @@ describe('tour detail itinerary layout', () => {
     expect(source).not.toContain('scroll-mt-24');
   });
 
-  it('bounds the sticky map to the full itinerary grid and avoids image letterboxing', () => {
+  it('bounds the interactive map to the full itinerary grid', () => {
     expect(source).toContain("items-start gap-6`}");
     expect(source).toContain('lg:sticky lg:top-24 lg:self-start');
-    expect(source).toContain('aspect-square w-full');
-    expect(source).toContain('className="h-full w-full object-cover"');
+    expect(source).toContain('<InteractiveItineraryMap');
+    expect(source).toContain('activeIndex={activeItineraryIndex}');
+  });
+
+  it('links every timeline card to the matching map stage', () => {
+    expect(source).toContain('data-itinerary-stage={index + 1}');
+    expect(source).toContain('onMouseEnter={() => selectItineraryStage(index)}');
+    expect(source).toContain('onClick={() => selectItineraryStage(index)}');
   });
 });

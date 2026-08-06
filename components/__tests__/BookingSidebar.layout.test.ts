@@ -43,6 +43,13 @@ describe('BookingSidebar containment regression contract', () => {
       'flex-col',
       'overflow-hidden',
     ]);
+    expectClasses('booking-drawer-shell', [
+      'min-h-0',
+      'w-[100dvw]',
+      'max-w-none',
+      'sm:w-full',
+      'sm:max-w-md',
+    ]);
   });
 
   it('keeps header, progress and footer above content and non-shrinking', () => {
@@ -139,5 +146,7 @@ describe('BookingSidebar containment regression contract', () => {
       'data-testid="open-booking-drawer-mobile"',
     );
     expect(stickyButtonSource).toContain('z-[2147483004]');
+    expect(stickyButtonSource).toContain('pb-[calc(1rem+env(safe-area-inset-bottom))]');
+    expect(source).toContain('aria-label="Close booking drawer"');
   });
 });

@@ -1,9 +1,40 @@
 import {
+  completeItineraryRoute,
   itineraryDirectionsUrl,
   itineraryEmbedMapUrl,
   itineraryMapStops,
   itineraryStaticMapUrl,
 } from '@/lib/tours/itineraryMap';
+
+describe('completeItineraryRoute', () => {
+  it('keeps exact landmarks fixed and fills every generic lifecycle stage', () => {
+    const route = completeItineraryRoute(
+      8,
+      [
+        { index: 3, position: { lat: 27.223, lng: 33.856 } },
+        { index: 6, position: { lat: 27.242, lng: 33.843 } },
+      ],
+      { lat: 27.257, lng: 33.812 },
+    );
+
+    expect(route).toHaveLength(8);
+    expect(route[3]).toEqual({ lat: 27.223, lng: 33.856, approximate: false });
+    expect(route[6]).toEqual({ lat: 27.242, lng: 33.843, approximate: false });
+    expect(route[1]?.approximate).toBe(true);
+    expect(route[4]?.approximate).toBe(true);
+    expect(route[7]?.approximate).toBe(true);
+  });
+
+  it('separates overlapping approximate round-trip markers so each remains selectable', () => {
+    const route = completeItineraryRoute(3, [], { lat: 27.25, lng: 33.81 });
+    expect(route).toHaveLength(3);
+    expect(route[0]).not.toEqual(route[2]);
+  });
+
+  it('does not invent route coordinates without an editor place or route base', () => {
+    expect(completeItineraryRoute(4, [], null)).toEqual([]);
+  });
+});
 
 describe('itineraryMapStops', () => {
   it('returns nothing when no step has an explicit location', () => {

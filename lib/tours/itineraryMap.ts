@@ -83,7 +83,7 @@ const EGYPT_ROUTE_CITIES = new Set([
   'القاهرة', 'دهب', 'الجيزة', 'الغردقة', 'الأقصر', 'مرسى علم', 'شرم الشيخ',
 ]);
 
-function isMappableLocation(location: string): boolean {
+export function isItineraryMappableLocation(location: string): boolean {
   const normalized = location
     .toLocaleLowerCase()
     .replace(/[–—]/g, '-')
@@ -98,7 +98,7 @@ function isMappableLocation(location: string): boolean {
 export function itineraryMapStops(itinerary: ItineraryStepLike[]): string[] {
   const locations = (itinerary || [])
     .map((step) => String(step?.location || '').trim())
-    .filter(isMappableLocation);
+    .filter(isItineraryMappableLocation);
 
   if (locations.length > 1 && locations[locations.length - 1].toLowerCase() === locations[0].toLowerCase()) {
     locations.pop();
@@ -174,6 +174,116 @@ function mapStopQuery(stop: string, tourLocation?: string | null): string {
     return egyptScopedStop(normalizedTourLocation);
   }
   return `${stop}, ${egyptScopedStop(normalizedTourLocation)}`;
+}
+
+export function itineraryMapQuery(stop: string, tourLocation?: string | null): string {
+  return mapStopQuery(stop, tourLocation);
+}
+
+export function itineraryRouteContextQuery(stops: string[], tourLocation?: string | null): string | null {
+  const context = routeLocation(stops, tourLocation);
+  return context ? egyptScopedStop(context) : null;
+}
+
+export interface ItineraryRouteCoordinate {
+  lat: number;
+  lng: number;
+}
+
+export interface ItineraryRouteAnchor {
+  index: number;
+  position: ItineraryRouteCoordinate;
+}
+
+export interface ItineraryRoutePosition extends ItineraryRouteCoordinate {
+  approximate: boolean;
+}
+
+const coordinatesMatch = (first: ItineraryRouteCoordinate, second: ItineraryRouteCoordinate) =>
+  Math.abs(first.lat - second.lat) < 0.00015 && Math.abs(first.lng - second.lng) < 0.00015;
+
+// Editors often describe lifecycle stages rather than exact addresses (for
+// example, "Red Sea" or "On the boat"). Those stages still need a visible,
+// selectable marker, but must not be presented as exact geocoded places. This
+// helper keeps exact editor landmarks fixed and interpolates all other stages
+// along the route. The caller labels every interpolated marker as approximate.
+export function completeItineraryRoute(
+  stageCount: number,
+  exactAnchors: ItineraryRouteAnchor[],
+  routeBase?: ItineraryRouteCoordinate | null,
+): ItineraryRoutePosition[] {
+  if (stageCount <= 0) return [];
+
+  const anchors = new Map<number, ItineraryRouteCoordinate>();
+  for (const anchor of exactAnchors) {
+    if (anchor.index >= 0 && anchor.index < stageCount
+      && Number.isFinite(anchor.position.lat) && Number.isFinite(anchor.position.lng)) {
+      anchors.set(anchor.index, anchor.position);
+    }
+  }
+
+  if (routeBase && Number.isFinite(routeBase.lat) && Number.isFinite(routeBase.lng)) {
+    if (!anchors.has(0)) anchors.set(0, routeBase);
+    if (!anchors.has(stageCount - 1)) anchors.set(stageCount - 1, routeBase);
+  }
+
+  const orderedAnchors = [...anchors.entries()].sort(([first], [second]) => first - second);
+  if (orderedAnchors.length === 0) return [];
+
+  const exactIndexes = new Set(exactAnchors.map((anchor) => anchor.index));
+  const positions: ItineraryRoutePosition[] = [];
+
+  for (let index = 0; index < stageCount; index += 1) {
+    const exact = anchors.get(index);
+    if (exact) {
+      positions.push({ ...exact, approximate: !exactIndexes.has(index) });
+      continue;
+    }
+
+    const previous = [...orderedAnchors].reverse().find(([anchorIndex]) => anchorIndex < index);
+    const next = orderedAnchors.find(([anchorIndex]) => anchorIndex > index);
+
+    if (previous && next) {
+      const fraction = (index - previous[0]) / (next[0] - previous[0]);
+      positions.push({
+        lat: previous[1].lat + ((next[1].lat - previous[1].lat) * fraction),
+        lng: previous[1].lng + ((next[1].lng - previous[1].lng) * fraction),
+        approximate: true,
+      });
+      continue;
+    }
+
+    const nearest = previous?.[1] || next?.[1];
+    if (!nearest) return [];
+    const angle = (index + 1) * 2.399963;
+    const radius = 0.0025 * (index + 1);
+    positions.push({
+      lat: nearest.lat + (Math.sin(angle) * radius),
+      lng: nearest.lng + (Math.cos(angle) * radius),
+      approximate: true,
+    });
+  }
+
+  // A round trip legitimately returns to its start. Separate overlapping
+  // approximate pins just enough for both numbered lifecycle stages to remain
+  // tappable; exact editor landmarks are never moved.
+  positions.forEach((position, index) => {
+    const collisionIndex = positions.findIndex((candidate, candidateIndex) =>
+      candidateIndex < index && coordinatesMatch(candidate, position));
+    if (collisionIndex < 0) return;
+
+    const angle = (index + 1) * 2.399963;
+    const offset = 0.0014 + ((index % 3) * 0.00035);
+    if (position.approximate) {
+      position.lat += Math.sin(angle) * offset;
+      position.lng += Math.cos(angle) * offset;
+    } else if (positions[collisionIndex]?.approximate) {
+      positions[collisionIndex]!.lat -= Math.sin(angle) * offset;
+      positions[collisionIndex]!.lng -= Math.cos(angle) * offset;
+    }
+  });
+
+  return positions;
 }
 
 // A no-key fallback is still needed on tenant deployments that do not expose

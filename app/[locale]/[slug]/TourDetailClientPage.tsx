@@ -22,6 +22,7 @@ import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import ElfsightWidget from '@/components/ElfsightWidget';
+import InteractiveItineraryMap from '@/components/tours/InteractiveItineraryMap';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 
 // Hooks and contexts
@@ -451,9 +452,14 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
   // The map only exists when the editor typed explicit step locations —
   // guessing from the tour title placed markers on random keyword matches.
   const stops = itineraryMapStops(itinerary);
-  const staticMapUrl = itineraryStaticMapUrl(stops, process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, tourLocation);
-  const showMap = stops.length === 1 || Boolean(staticMapUrl);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  const staticMapUrl = itineraryStaticMapUrl(stops, apiKey, tourLocation);
+  const showMap = stops.length > 0;
   const openMapsUrl = itineraryDirectionsUrl(stops, tourLocation);
+  const [activeItineraryIndex, setActiveItineraryIndex] = useState(0);
+  const selectItineraryStage = useCallback((index: number) => {
+    setActiveItineraryIndex(index);
+  }, []);
 
   return (
     <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-40">
@@ -504,7 +510,19 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
                 </div>
 
                 {/* Content card */}
-                <div className="flex-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all duration-200">
+                <button
+                  type="button"
+                  data-itinerary-stage={index + 1}
+                  aria-pressed={activeItineraryIndex === index}
+                  onMouseEnter={() => selectItineraryStage(index)}
+                  onFocus={() => selectItineraryStage(index)}
+                  onClick={() => selectItineraryStage(index)}
+                  className={`flex-1 bg-white p-4 rounded-xl border text-left shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${
+                    activeItineraryIndex === index
+                      ? 'border-red-300 ring-2 ring-red-100 shadow-lg'
+                      : 'border-slate-200 hover:border-red-200 hover:shadow-lg'
+                  }`}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
@@ -542,65 +560,27 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
                       </div>
                     </div>
                   )}
-                </div>
+                </button>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right: interactive place embed for one stop, numbered static route
-            map for multiple stops. No locations, no map. */}
+        {/* Right: every itinerary lifecycle stage gets a numbered interactive
+            marker. Generic stages are interpolated and disclosed as
+            approximate; editor-entered landmarks stay exact. */}
         {showMap && (
           <div className="relative order-1 w-full lg:order-2 lg:sticky lg:top-24 lg:self-start">
-            <div className="aspect-square w-full overflow-hidden rounded-2xl border-2 border-slate-200 bg-slate-100 shadow-lg">
-              {staticMapUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={staticMapUrl}
-                  alt={`Numbered route map: ${stops.join(', ')}`}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <iframe
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={itineraryEmbedMapUrl(stops[0], process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, tourLocation)}
-                ></iframe>
-              )}
-            </div>
-
-            {/* Controls stay outside the image so they never cover a location marker. */}
-            <div className="mt-3 bg-white rounded-lg p-3 shadow-lg border border-slate-200">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Navigation size={16} className="text-red-600" />
-                  <span className="text-sm font-medium text-slate-800">Tour Route</span>
-                  {stops.length > 1 && (
-                    <span className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:ml-2">
-                      <span className="flex items-center gap-1">
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-700 text-[10px] font-bold text-white ring-2 ring-red-200">1</span> Start
-                      </span>
-                      <span className="h-0.5 w-7 rounded-full bg-red-600" aria-hidden="true" />
-                      <span className="flex items-center gap-1">
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-red-100">2</span> Next stops
-                      </span>
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => window.open(openMapsUrl, '_blank', 'noopener,noreferrer')}
-                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 sm:w-auto sm:py-1.5"
-                >
-                  <Navigation size={12} />
-                  Open Maps
-                </button>
-              </div>
-            </div>
+            <InteractiveItineraryMap
+              itinerary={itinerary}
+              tourLocation={tourLocation}
+              apiKey={apiKey}
+              fallbackMapUrl={staticMapUrl}
+              fallbackEmbedUrl={stops[0] ? itineraryEmbedMapUrl(stops[0], apiKey, tourLocation) : null}
+              openMapsUrl={openMapsUrl}
+              activeIndex={activeItineraryIndex}
+              onSelect={selectItineraryStage}
+            />
           </div>
         )}
       </div>

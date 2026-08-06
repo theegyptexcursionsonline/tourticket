@@ -2567,7 +2567,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
           <motion.div
             data-testid="booking-drawer-shell"
-            className="relative isolate bg-white h-[100dvh] sm:h-full w-full max-w-md shadow-2xl flex flex-col overflow-hidden"
+            className="relative isolate bg-white h-[100dvh] min-h-0 w-[100dvw] max-w-none sm:h-full sm:w-full sm:max-w-md shadow-2xl flex flex-col overflow-hidden"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -2600,6 +2600,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
               </div>
               <motion.button
                 onClick={onClose}
+                aria-label="Close booking drawer"
                 className="flex-shrink-0 p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
