@@ -21,6 +21,7 @@ import {
   CheckCircle,
   Edit3,
   Archive,
+  ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
@@ -73,25 +74,36 @@ function getCategoryNames(t: TourType): string {
   return getCategoryList(t).join(', ');
 }
 
-// Table rows must stay flat no matter how many categories a tour has: show the
-// first two and fold the rest behind a +N counter (full list on hover).
-const VISIBLE_TABLE_CATEGORIES = 2;
-
 export function CategoryCell({ tour }: { tour: TourType }) {
   const names = getCategoryList(tour);
   if (names.length === 0) {
     return <span className="text-sm font-medium text-slate-700">N/A</span>;
   }
-  const extra = names.length - VISIBLE_TABLE_CATEGORIES;
+  if (names.length === 1) {
+    return (
+      <span className="inline-block max-w-full break-words rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-medium leading-5 text-slate-700">
+        {names[0]}
+      </span>
+    );
+  }
+
   return (
-    <span className="text-sm font-medium text-slate-700" title={names.join(', ')}>
-      {names.slice(0, VISIBLE_TABLE_CATEGORIES).join(', ')}
-      {extra > 0 && (
-        <span className="ml-1.5 inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-xs font-semibold text-indigo-600 align-middle">
-          +{extra}
-        </span>
-      )}
-    </span>
+    <details className="group max-w-full" title={names.join(', ')}>
+      <summary
+        aria-label={`Show ${names.length} selected categories`}
+        className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-sm font-semibold text-indigo-700 marker:content-none [&::-webkit-details-marker]:hidden"
+      >
+        <span>{names.length} categories</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="mt-2 flex max-w-72 flex-wrap gap-1.5" aria-label="Selected categories">
+        {names.map((name) => (
+          <span key={name} className="max-w-full break-words rounded-md bg-slate-100 px-2 py-1 text-xs font-medium leading-4 text-slate-700">
+            {name}
+          </span>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -440,7 +452,14 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
         // Enhanced Table View
         <div className="bg-gradient-to-br from-white to-slate-50/50 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[960px] table-fixed">
+              <colgroup>
+                <col className="w-[40%]" />
+                <col className="w-[18%]" />
+                <col className="w-[18%]" />
+                <col className="w-[10%]" />
+                <col className="w-[14%]" />
+              </colgroup>
               <thead className="bg-gradient-to-r from-slate-100 to-slate-50 border-b border-slate-200/60">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tour</th>
@@ -489,7 +508,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
                         <div className="min-w-0 flex-1 space-y-2">
                           <Link
                             href={getEditUrl(t._id)}
-                            className="block text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors truncate group-hover:text-indigo-600"
+                            className="block whitespace-normal break-words text-sm font-semibold leading-5 text-slate-900 transition-colors hover:text-indigo-600 group-hover:text-indigo-600"
                             title={t.title || t.name}
                           >
                             {t.title || t.name}
