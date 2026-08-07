@@ -6,6 +6,7 @@ import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
+import { escapeRegex } from '@/lib/utils/escapeRegex';
 
 interface InterestTour {
   _id: { toString(): string };
@@ -51,7 +52,7 @@ export async function GET(
     const category = await Category.findOne({
       $or: [
         { slug: slug },
-        { name: { $regex: new RegExp(`^${interestName}$`, 'i') } }
+        { name: { $regex: new RegExp(`^${escapeRegex(interestName)}$`, 'i') } }
       ]
     }).lean() as unknown as InterestCategory | null;
 
@@ -92,16 +93,16 @@ export async function GET(
         
         // Search in title
         searchTerms.forEach(term => {
-          searchQueries.push({ 
-            title: { $regex: term, $options: 'i' } 
+          searchQueries.push({
+            title: { $regex: escapeRegex(term), $options: 'i' }
           });
         });
-        
+
         // Search in tags
-        searchQueries.push({ 
-          tags: { 
-            $in: searchTerms.map(term => new RegExp(term, 'i')) 
-          } 
+        searchQueries.push({
+          tags: {
+            $in: searchTerms.map(term => new RegExp(escapeRegex(term), 'i'))
+          }
         });
 
         tours = await Tour.find({

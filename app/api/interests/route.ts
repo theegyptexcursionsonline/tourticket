@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import Tour from '@/lib/models/Tour';
 import AttractionPage from '@/lib/models/AttractionPage';
+import { escapeRegex } from '@/lib/utils/escapeRegex';
 
 export async function GET() {
   try {
@@ -68,24 +69,26 @@ export async function GET() {
           // Search by title (most important)
           if (page.title) {
             searchQueries.push({
-              title: { $regex: page.title, $options: 'i' }
+              title: { $regex: escapeRegex(page.title), $options: 'i' }
             });
           }
 
-          // Search by keywords if they exist
+          // Search by keywords if they exist. Keywords are editor content, so
+          // they must be escaped before becoming patterns — an unescaped one
+          // emptied the homepage on 2026-08-07.
           if (page.keywords && Array.isArray(page.keywords) && page.keywords.length > 0) {
             const validKeywords = page.keywords.filter(k => k && k.trim().length > 0);
 
             if (validKeywords.length > 0) {
               searchQueries.push({
                 tags: {
-                  $in: validKeywords.map(k => new RegExp(k, 'i'))
+                  $in: validKeywords.map(k => new RegExp(escapeRegex(k), 'i'))
                 }
               });
 
               validKeywords.forEach(keyword => {
                 searchQueries.push({
-                  title: { $regex: keyword, $options: 'i' }
+                  title: { $regex: escapeRegex(keyword), $options: 'i' }
                 });
               });
             }
