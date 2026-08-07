@@ -19,6 +19,7 @@ import ToursListSchema from '@/components/schema/ToursListSchema';
 // Import client-side versions that accept props
 import DestinationsServer from '@/components/DestinationsServer';
 import { getLocale } from 'next-intl/server';
+import { escapeRegex } from '@/lib/utils/escapeRegex';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -172,58 +173,58 @@ async function getHomePageData(locale: string) {
       .sort((a, b) => b.tourCount - a.tourCount)
       .slice(0, 8);
 
-    // Calculate tour counts for InterestGrid categories
-    const interestGridCategories = await Promise.all(
-      categories.map(async (category) => {
-        const tourCount = await Tour.countDocuments({
-          category: { $in: [category._id] },
-          isPublished: true,
-          ...DEFAULT_TENANT_FILTER
-        });
-        return {
-          ...JSON.parse(JSON.stringify(category)),
-          tourCount
-        };
-      })
+    // Tour counts per category for THIS default site (one aggregation).
+    // These lists are network-wide — 611 published and 779 total at the time of
+    // writing — so counting per category cost ~1,390 queries and pushed the whole
+    // render past the serverless budget, which the catch below then turned into a
+    // silently empty homepage. Category is an array field on Tour, and $unwind
+    // also handles the legacy records that stored a single id.
+    const categoryCountAgg = await Tour.aggregate<{ _id: unknown; tourCount: number }>([
+      { $match: { isPublished: true, ...DEFAULT_TENANT_FILTER } },
+      { $unwind: '$category' },
+      { $group: { _id: '$category', tourCount: { $sum: 1 } } },
+    ]);
+    const tourCountByCategory = new Map<string, number>(
+      categoryCountAgg.map((row) => [String(row._id), row.tourCount])
     );
 
+    // Tour counts for InterestGrid categories
+    const interestGridCategories = categories.map((category) => ({
+      ...JSON.parse(JSON.stringify(category)),
+      tourCount: tourCountByCategory.get(String(category._id)) || 0,
+    }));
+
     // Build interests (categories + attractions with tour counts) for PopularInterest
-    const categoriesWithCounts = await Promise.all(
-      allCategories.map(async (category) => {
-        // Category is an array field in Tour model, so we need to use $in
-        const tourCount = await Tour.countDocuments({
-          category: { $in: [category._id] },
-          isPublished: true,
-          ...DEFAULT_TENANT_FILTER
-        });
-        return {
-          type: 'category' as const,
-          name: category.name,
-          slug: category.slug,
-          products: tourCount,
-          _id: JSON.parse(JSON.stringify(category._id)),
-          image: category.heroImage,
-          featured: category.featured,
-          translations: category.translations
-        };
-      })
-    );
+    const categoriesWithCounts = allCategories.map((category) => ({
+      type: 'category' as const,
+      name: category.name,
+      slug: category.slug,
+      products: tourCountByCategory.get(String(category._id)) || 0,
+      _id: JSON.parse(JSON.stringify(category._id)),
+      image: category.heroImage,
+      featured: category.featured,
+      translations: category.translations
+    }));
 
     const attractionsWithCounts = await Promise.all(
       attractionPages.map(async (page) => {
         let tourCount = 0;
         const searchQueries = [];
 
+        // Titles and keywords are editor content, never patterns. Feeding them
+        // to the regex engine raw let one keyword ending in a backslash throw
+        // `Invalid regular expression`, which the catch below turned into a
+        // completely empty homepage.
         if (page.title) {
-          searchQueries.push({ title: { $regex: page.title, $options: 'i' } });
+          searchQueries.push({ title: { $regex: escapeRegex(page.title), $options: 'i' } });
         }
 
         if (page.keywords && Array.isArray(page.keywords)) {
           const validKeywords = page.keywords.filter((k: string) => k && k.trim().length > 0);
           if (validKeywords.length > 0) {
-            searchQueries.push({ tags: { $in: validKeywords.map((k: string) => new RegExp(k, 'i')) } });
+            searchQueries.push({ tags: { $in: validKeywords.map((k: string) => new RegExp(escapeRegex(k), 'i')) } });
             validKeywords.forEach((keyword: string) => {
-              searchQueries.push({ title: { $regex: keyword, $options: 'i' } });
+              searchQueries.push({ title: { $regex: escapeRegex(keyword), $options: 'i' } });
             });
           }
         }

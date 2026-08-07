@@ -8,6 +8,7 @@ import AttractionPage from '@/lib/models/AttractionPage';
 import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
+import { escapeRegex } from '@/lib/utils/escapeRegex';
 import { contentPath } from '@/lib/content/contentUrl';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -220,6 +221,3 @@ export async function resolveLinkedPageCards(page: {
   return cards;
 }
 
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
