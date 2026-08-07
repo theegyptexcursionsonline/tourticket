@@ -3,6 +3,18 @@
 export interface BaseEmailData {
   customerName: string;
   customerEmail: string;
+  /**
+   * Per-brand overrides for the sender identity. This deployment fulfils
+   * payments for every white-label site, so a confirmation must go out under
+   * the brand the customer actually bought from. Omitted for the main
+   * storefront, which keeps the defaults.
+   */
+  companyName?: string;
+  companyLogo?: string;
+  primaryColor?: string;
+  contactEmail?: string;
+  supportEmail?: string;
+  contactPhone?: string;
 }
 
 export interface BookingEmailData extends BaseEmailData {

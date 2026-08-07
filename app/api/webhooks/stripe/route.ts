@@ -12,7 +12,13 @@ import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImag
 import { generateDeterministicBookingReference } from '@/lib/utils/bookingReference';
 import type { SecureAddOnDetail } from '@/lib/checkout/serverCartPricing';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
-import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import {
+  loadPaidTenant,
+  paidTenantFilter,
+  paidTenantId,
+  paidTenantReferencePrefix,
+  paidTenantValue,
+} from '@/lib/tenant/paidTenant';
 import Discount from '@/lib/models/Discount';
 import { recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
 import { reconcileStripeBookingRefund } from '@/lib/bookings/refunds';
@@ -86,6 +92,14 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   const paymentId = paymentIntent.id;
   const metadata = paymentIntent.metadata;
 
+  // Every brand's payments arrive at this one endpoint, so the tenant is
+  // whatever the checkout that took the money says it is — never this
+  // storefront by assumption. Resolving it here keeps the tour lookup, the
+  // duplicate check, the booking write and the confirmation on the same brand.
+  const tenantId = paidTenantId(metadata);
+  const tenantValue = paidTenantValue(tenantId);
+  const tenantFilter = paidTenantFilter(tenantId);
+
   console.log(`[Webhook] Processing payment ${paymentId}`);
 
   // Check if booking data is available in metadata
@@ -96,9 +110,21 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
   await dbConnect();
 
+  // Loaded once so every confirmation on this payment — whether the booking is
+  // created here or was already written by the brand's own checkout — goes out
+  // under the brand the customer actually bought from.
+  const paidTenant = await loadPaidTenant(tenantId);
+  const tenantEmailBranding = paidTenant.isDefault ? {} : {
+    ...(paidTenant.name ? { companyName: paidTenant.name } : {}),
+    ...(paidTenant.logo ? { companyLogo: paidTenant.logo } : {}),
+    ...(paidTenant.primaryColor ? { primaryColor: paidTenant.primaryColor } : {}),
+    ...(paidTenant.contactEmail ? { contactEmail: paidTenant.contactEmail, supportEmail: paidTenant.contactEmail } : {}),
+    ...(paidTenant.contactPhone ? { contactPhone: paidTenant.contactPhone } : {}),
+  };
+
   const persistedQuote = await CheckoutPaymentQuote.findOne({
     paymentIntentId: paymentId,
-    tenantId: 'default',
+    tenantId: tenantValue,
   }).lean<{
     quoteBinding: string;
     checkoutAttemptId?: string;
@@ -113,7 +139,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     const usageClaimed = await CheckoutPaymentQuote.findOneAndUpdate(
       {
         paymentIntentId: paymentId,
-        tenantId: 'default',
+        tenantId: tenantValue,
         discountUsageRecordedAt: { $exists: false },
       },
       { $set: { discountUsageRecordedAt: new Date() } },
@@ -126,7 +152,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       );
     } catch (discountError) {
       await CheckoutPaymentQuote.updateOne(
-        { paymentIntentId: paymentId, tenantId: 'default' },
+        { paymentIntentId: paymentId, tenantId: tenantValue },
         { $unset: { discountUsageRecordedAt: 1 } },
       ).catch(() => undefined);
       throw discountError;
@@ -205,7 +231,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   }
 
   // Check if booking already exists for this payment (created by checkout endpoint)
-  const existingBookings = await Booking.find({ paymentId, ...DEFAULT_TENANT_FILTER }).sort({ paymentItemIndex: 1, createdAt: 1 });
+  const existingBookings = await Booking.find({ paymentId }).sort({ paymentItemIndex: 1, createdAt: 1 });
   const rawExpectedBookingCount = Number(metadata.tour_count || persistedQuote?.cartSummary.length || 1);
   const expectedBookingCount = Number.isInteger(rawExpectedBookingCount) && rawExpectedBookingCount > 0
     ? rawExpectedBookingCount
@@ -222,7 +248,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     if (existingBookings.some((booking) => booking.status === 'Pending') || !existingBooking.confirmationSentAt) {
       console.log(`[Webhook] Updating booking ${existingBooking.bookingReference} from Pending to Confirmed`);
       await Booking.updateMany(
-        { _id: { $in: existingBookings.map((booking) => booking._id) }, ...DEFAULT_TENANT_FILTER },
+        { _id: { $in: existingBookings.map((booking) => booking._id) } },
         [{ $set: {
           status: 'Confirmed',
           paymentStatus: 'paid',
@@ -234,7 +260,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       existingBooking.status = 'Confirmed';
       
       // Need to send customer confirmation email - get tour info
-      const tour = await Tour.findOne({ _id: existingBooking.tour, ...DEFAULT_TENANT_FILTER });
+      const tour = await Tour.findOne({ _id: existingBooking.tour, ...tenantFilter });
       const user = await User.findById(existingBooking.user);
       
       if (tour && user) {
@@ -310,6 +336,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           const pricingDiscount = existingBooking.discountAmount || 0;
           
           await EmailService.sendBookingConfirmation({
+            ...tenantEmailBranding,
             customerName: `${user.firstName} ${user.lastName}`,
             customerEmail: user.email,
             customerPhone: metadata.customer_phone || '',
@@ -321,7 +348,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             bookingId: existingBooking.bookingReference,
             bookingOption: existingBooking.selectedBookingOption?.title,
             meetingPoint: tour.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
-            contactNumber: "+20 11 42255624",
+            contactNumber: paidTenant.contactPhone || "+20 11 42255624",
             tourImage: tour.image,
             baseUrl,
             hotelPickupDetails: hotelPickupDetails || undefined,
@@ -352,7 +379,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             discountCode: existingBooking.discountCode || undefined,
           });
           await Booking.updateMany(
-            { _id: { $in: existingBookings.map((booking) => booking._id) }, ...DEFAULT_TENANT_FILTER },
+            { _id: { $in: existingBookings.map((booking) => booking._id) } },
             { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
           );
           
@@ -361,7 +388,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           console.error(`[Webhook] Failed to send customer email for updated booking:`, emailError);
           const failureCode = (emailError instanceof Error ? emailError.message : 'unknown_error').slice(0, 200);
           await Booking.updateMany(
-            { _id: { $in: existingBookings.map((booking) => booking._id) }, ...DEFAULT_TENANT_FILTER },
+            { _id: { $in: existingBookings.map((booking) => booking._id) } },
             { $set: { confirmationEmailFailedAt: new Date(), confirmationEmailFailureCode: failureCode } },
           ).catch(() => undefined);
         }
@@ -455,7 +482,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const tourId = item.t;
       // A paid quote remains fulfilment-authoritative even if an operator
       // unpublishes the tour while Stripe is completing the payment.
-      const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });
+      const tour = await Tour.findOne({ _id: tourId, ...tenantFilter });
       
       if (!tour) {
         console.error(`[Webhook] Tour not found: ${tourId}`);
@@ -480,7 +507,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const itemTotalBeforeDiscount = roundMoney(itemSubtotalRounded + serviceFee + tax);
 
       const itemIndex = Number.isFinite(Number(item?.i)) ? Number(item.i) : cartIndex;
-      const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex);
+      const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex, paidTenantReferencePrefix(tenantId));
 
       const selectedAddOns: Record<string, number> = {};
       const selectedAddOnDetails: Record<string, SecureAddOnDetail> = {};
@@ -518,7 +545,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       const itemTotalWithDiscount = roundMoney(Math.max(0, itemTotalBeforeDiscount - itemDiscountShare));
 
       const booking = await Booking.create({
-        tenantId: 'default',
+        tenantId: tenantValue,
         bookingReference,
         tour: tour._id,
         user: user._id,
@@ -586,17 +613,17 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           (bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.paymentId)
       ) {
         const itemIndex = Number.isFinite(Number(item?.i)) ? Number(item.i) : cartIndex;
-        const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex);
+        const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex, paidTenantReferencePrefix(tenantId));
         console.log(`[Webhook] Booking ${bookingReference} already exists for payment ${paymentId} - skipping duplicate create`);
 
-        const existingBooking = await Booking.findOne({ bookingReference, ...DEFAULT_TENANT_FILTER });
+        const existingBooking = await Booking.findOne({ bookingReference });
         if (existingBooking) {
           await convertInventoryHold({
             paymentIntentId: paymentId,
             itemIndex,
             bookingId: existingBooking._id,
           });
-          const existingTour = await Tour.findOne({ _id: existingBooking.tour, ...DEFAULT_TENANT_FILTER });
+          const existingTour = await Tour.findOne({ _id: existingBooking.tour, ...tenantFilter });
           if (existingTour) {
             createdBookings.push({
               booking: existingBooking,
@@ -604,7 +631,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             });
           }
         } else {
-          const fallbackExisting = await Booking.findOne({ paymentId, paymentItemIndex: itemIndex, ...DEFAULT_TENANT_FILTER }).lean();
+          const fallbackExisting = await Booking.findOne({ paymentId, paymentItemIndex: itemIndex }).lean();
           if (fallbackExisting) {
             return {
               created: false,
@@ -625,7 +652,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   }
 
   await Booking.updateMany(
-    { paymentId, status: 'Pending', ...DEFAULT_TENANT_FILTER },
+    { paymentId, status: 'Pending' },
     [{ $set: {
       status: 'Confirmed',
       paymentStatus: 'paid',
@@ -723,11 +750,11 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
 
     const bookingFilter = {
       _id: { $in: createdBookings.map(({ booking }) => booking._id) },
-      ...DEFAULT_TENANT_FILTER,
     };
 
     const sendCustomerConfirmation = async () => {
       await EmailService.sendBookingConfirmation({
+      ...tenantEmailBranding,
       customerName: `${customerFirstName} ${customerLastName}`,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
@@ -1000,12 +1027,12 @@ export async function POST(request: Request) {
               // can only be allocated automatically when exactly one booking
               // is bound to the PaymentIntent; never smear one partial refund
               // across a multi-item checkout.
-              const paymentBookings = await Booking.find({ tenantId: 'default', paymentId: refundedPaymentId }).select('_id totalPrice').lean();
+              const paymentBookings = await Booking.find({ paymentId: refundedPaymentId }).select('_id totalPrice').lean();
               if (paymentBookings.length === 1) {
                 const refundedAmount = Number(refundedCharge.amount_refunded || 0) / 100;
                 const fullyRefunded = refundedAmount >= Number(paymentBookings[0].totalPrice || 0);
                 await Booking.updateOne(
-                  { _id: paymentBookings[0]._id, tenantId: 'default', refundState: { $ne: 'succeeded' } },
+                  { _id: paymentBookings[0]._id, refundState: { $ne: 'succeeded' } },
                   {
                     $set: {
                       status: fullyRefunded ? 'Refunded' : 'Partial_Refund',
