@@ -11,6 +11,7 @@ import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference } from '@/lib/utils/bookingReference';
 import type { SecureAddOnDetail } from '@/lib/checkout/serverCartPricing';
+import { unpackCartMetadata } from '@/lib/checkout/cartMetadata';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
 import {
   loadPaidTenant,
@@ -191,7 +192,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     cartData = persistedQuote.cartSummary as RecoveryCartItem[];
   } else {
     try {
-      const cartJson = metadata.cart_data + (metadata.cart_data_2 || '');
+      // Reassembles every chunk the checkout wrote, not just the first two.
+      const cartJson = unpackCartMetadata(metadata);
       cartData = JSON.parse(cartJson) as RecoveryCartItem[];
       if (!Array.isArray(cartData) || cartData.length === 0 || cartData.length > 10) throw new Error('Cart is invalid');
     } catch (error) {

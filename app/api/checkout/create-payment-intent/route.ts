@@ -1,5 +1,6 @@
 // app/api/checkout/create-payment-intent/route.ts
 import { NextResponse } from 'next/server';
+import { CartMetadataTooLargeError, packCartMetadata } from '@/lib/checkout/cartMetadata';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
@@ -196,6 +197,30 @@ export async function POST(request: Request) {
       })(),
     }));
 
+    // Pack the cart into metadata BEFORE creating the intent. Truncating it
+    // here used to hand the webhook malformed JSON, which refunded a customer
+    // who had already paid; refusing the checkout is the recoverable failure.
+    let packedCart: Record<string, string>;
+    try {
+      packedCart = packCartMetadata(cartSummary);
+    } catch (cartMetadataError) {
+      if (!(cartMetadataError instanceof CartMetadataTooLargeError)) throw cartMetadataError;
+      console.error('[Checkout] Cart too large to record on the payment', {
+        length: cartMetadataError.length,
+        items: cartSummary.length,
+      });
+      // No inventory is held yet at this point, so there is nothing to release.
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'CART_TOO_LARGE',
+          message: 'This booking has too many items to process in one payment. Please book them in two smaller orders.',
+        },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
+
     // Create a PaymentIntent with Stripe - including full booking data for webhook recovery
     // IMPORTANT: Always charge in USD since all prices are stored in USD
     // The display currency is for user convenience only - Stripe handles card currency conversion
@@ -233,11 +258,7 @@ export async function POST(request: Request) {
         tours: cart.map((item) => item.title).join(', ').substring(0, 500),
         tour_count: String(cart.length),
         // Cart data (JSON compressed - Stripe allows up to 500 chars per value)
-        cart_data: JSON.stringify(cartSummary).substring(0, 500),
-        // Additional cart data if needed (for multi-tour bookings)
-        cart_data_2: JSON.stringify(cartSummary).length > 500 
-          ? JSON.stringify(cartSummary).substring(500, 1000) 
-          : '',
+        ...packedCart,
         // Pricing info
         pricing_subtotal: String(subtotal),
         pricing_service_fee: String(serviceFee),
