@@ -12,6 +12,7 @@ import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImag
 import { generateDeterministicBookingReference } from '@/lib/utils/bookingReference';
 import type { SecureAddOnDetail } from '@/lib/checkout/serverCartPricing';
 import { unpackCartMetadata } from '@/lib/checkout/cartMetadata';
+import { recordWebhookOutcome } from '@/lib/checkout/webhookOutcomeLog';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
 import {
   loadPaidTenant,
@@ -957,10 +958,29 @@ export async function POST(request: Request) {
         const paymentLeaseKey = `payment:${paymentIntent.id}`;
         try {
           paymentLeaseToken = await acquireCheckoutInventoryLease(paymentLeaseKey, 120_000);
+          const startedAt = Date.now();
           const result = await processSuccessfulPayment(paymentIntent);
           console.log(`[Webhook] Process result for ${paymentIntent.id}:`, result);
+          // Every outcome here is durable now. The dangerous ones are silent —
+          // a refund because the tour would not resolve, a cart that failed to
+          // parse — and each leaves a paying customer with no booking.
+          await recordWebhookOutcome({
+            event,
+            paymentIntent,
+            outcome: result.reason || (result.created ? 'created' : 'unknown'),
+            created: Boolean(result.created),
+            bookingReference: result.bookingId,
+            durationMs: Date.now() - startedAt,
+          });
         } catch (processError: unknown) {
           console.error(`[Webhook] Failed to process payment ${paymentIntent.id}:`, processError);
+          await recordWebhookOutcome({
+            event,
+            paymentIntent,
+            outcome: 'processing_failed',
+            created: false,
+            errorMessage: processError instanceof Error ? processError.message : 'unknown error',
+          });
           // Return 500 so Stripe retries transient failures instead of losing a
           // paid booking after acknowledging the event.
           return NextResponse.json({ error: 'Payment processing failed' }, { status: 500 });
