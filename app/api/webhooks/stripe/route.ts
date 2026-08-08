@@ -16,6 +16,7 @@ import { recordWebhookOutcome } from '@/lib/checkout/webhookOutcomeLog';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
 import {
   loadPaidTenant,
+  paidCheckoutReservationKey,
   paidTenantFilter,
   paidTenantId,
   paidTenantReferencePrefix,
@@ -23,7 +24,7 @@ import {
 } from '@/lib/tenant/paidTenant';
 import Discount from '@/lib/models/Discount';
 import { recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
-import { reconcileStripeBookingRefund } from '@/lib/bookings/refunds';
+import { reconcileStripeBookingRefund, reconcileUnboundStripeRefund } from '@/lib/bookings/refunds';
 import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
 import { deliverCheckoutNotifications } from '@/lib/bookings/checkoutNotificationDelivery';
 import {
@@ -174,6 +175,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       stripe: getStripe(),
       paymentIntentId: paymentId,
       reason: 'paid_quote_validation_failed',
+      tenantId,
     });
     return { created: false, reason: 'invalid_quote_refunded' };
   }
@@ -203,14 +205,20 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         stripe: getStripe(),
         paymentIntentId: paymentId,
         reason: 'invalid_paid_cart',
+        tenantId,
       });
       return { created: false, reason: 'invalid_cart_refunded' };
     }
   }
 
-  const reservationKey = persistedQuote?.quoteBinding || metadata.quote_binding;
+  // Main-site checkouts use quote_binding; the white-label network still uses
+  // checkout_fingerprint for the same immutable 64-character cart binding.
+  // Every Stripe event reaches this one webhook, so rejecting the sibling key
+  // after a successful charge refunds a valid brand booking immediately.
+  const reservationKey = paidCheckoutReservationKey(metadata, persistedQuote?.quoteBinding);
   try {
     await ensureInventoryHoldsForPayment({
+      tenantId,
       paymentIntentId: paymentId,
       reservationKey,
       cart: cartData.map((item) => ({
@@ -220,7 +228,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         quantity: item.a,
         childQuantity: item.c,
         infantQuantity: item.n,
-        selectedBookingOption: { pricingKey: item.ok },
+        // Main checkout writes the immutable pricing key; the white-label
+        // network still writes the legacy option id. Sellability accepts both.
+        selectedBookingOption: { pricingKey: item.ok || item.bo },
       })),
     });
   } catch (inventoryError) {
@@ -229,6 +239,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       stripe: getStripe(),
       paymentIntentId: paymentId,
       reason: inventoryError.code,
+      tenantId,
     });
     return { created: false, reason: 'inventory_unavailable_refunded' };
   }
@@ -397,7 +408,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         }
       }
       await recordDiscountUsage();
-      await markPaymentInventoryConverted(paymentId);
+      await markPaymentInventoryConverted(paymentId, tenantId);
       
       return { 
         created: false, 
@@ -410,7 +421,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     // Booking exists and is already Confirmed
     console.log(`[Webhook] Booking ${existingBooking.bookingReference} already confirmed, skipping`);
     await recordDiscountUsage();
-    await markPaymentInventoryConverted(paymentId);
+    await markPaymentInventoryConverted(paymentId, tenantId);
     return { created: false, reason: 'already_confirmed', bookingId: existingBooking.bookingReference };
   }
 
@@ -429,6 +440,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       stripe: getStripe(),
       paymentIntentId: paymentId,
       reason: 'missing_paid_customer_data',
+      tenantId,
     });
     return { created: false, reason: 'missing_customer_data_refunded' };
   }
@@ -493,6 +505,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           stripe: getStripe(),
           paymentIntentId: paymentId,
           reason: 'paid_tour_deleted',
+          tenantId,
         });
         return { created: false, reason: 'missing_tour_refunded' };
       }
@@ -597,6 +610,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       });
 
       await convertInventoryHold({
+        tenantId,
         paymentIntentId: paymentId,
         itemIndex,
         bookingId: booking._id,
@@ -622,6 +636,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         const existingBooking = await Booking.findOne({ bookingReference });
         if (existingBooking) {
           await convertInventoryHold({
+            tenantId,
             paymentIntentId: paymentId,
             itemIndex,
             bookingId: existingBooking._id,
@@ -666,7 +681,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   );
 
   await recordDiscountUsage();
-  await markPaymentInventoryConverted(paymentId);
+  await markPaymentInventoryConverted(paymentId, tenantId);
 
   if (createdBookings.every(({ booking }) => Boolean(booking.confirmationSentAt))) {
     return {
@@ -995,14 +1010,22 @@ export async function POST(request: Request) {
         const failedPayment = event.data.object as Stripe.PaymentIntent;
         console.log(`[Webhook] Payment failed: ${failedPayment.id}`);
         await dbConnect();
-        await releasePaymentInventory(failedPayment.id, 'payment_failed');
+        await releasePaymentInventory(
+          failedPayment.id,
+          'payment_failed',
+          paidTenantId(failedPayment.metadata),
+        );
         break;
 
       case 'payment_intent.canceled':
         const canceledPayment = event.data.object as Stripe.PaymentIntent;
         console.log(`[Webhook] Payment canceled: ${canceledPayment.id}`);
         await dbConnect();
-        await releasePaymentInventory(canceledPayment.id, 'payment_canceled');
+        await releasePaymentInventory(
+          canceledPayment.id,
+          'payment_canceled',
+          paidTenantId(canceledPayment.metadata),
+        );
         break;
 
       case 'charge.succeeded':
@@ -1015,7 +1038,10 @@ export async function POST(request: Request) {
       case 'refund.failed': {
         const providerRefund = event.data.object as Stripe.Refund;
         await dbConnect();
-        const reconciliation = await reconcileStripeBookingRefund(providerRefund);
+        let reconciliation = await reconcileStripeBookingRefund(providerRefund);
+        if (!reconciliation.handled) {
+          reconciliation = await reconcileUnboundStripeRefund(providerRefund);
+        }
         if (reconciliation.handled && reconciliation.finalized && reconciliation.bookingId) {
           await sendBookingRefundNotification(String(reconciliation.bookingId)).catch((error) => {
             console.error('Refund finalized but customer notification failed.', error);
@@ -1036,7 +1062,10 @@ export async function POST(request: Request) {
             await dbConnect();
             let handledBookingRefund = false;
             for (const providerRefund of refundedCharge.refunds?.data || []) {
-              const reconciliation = await reconcileStripeBookingRefund(providerRefund);
+              let reconciliation = await reconcileStripeBookingRefund(providerRefund);
+              if (!reconciliation.handled) {
+                reconciliation = await reconcileUnboundStripeRefund(providerRefund);
+              }
               handledBookingRefund ||= reconciliation.handled;
               if (reconciliation.handled && reconciliation.finalized && reconciliation.bookingId) {
                 await sendBookingRefundNotification(String(reconciliation.bookingId)).catch((error) => {
@@ -1073,7 +1102,11 @@ export async function POST(request: Request) {
                 console.error(`[Webhook] Unallocated multi-booking refund requires review for ${refundedPaymentId}`);
               }
             }
-            await releasePaymentInventory(refundedPaymentId, 'charge_refunded');
+            await releasePaymentInventory(
+              refundedPaymentId,
+              'charge_refunded',
+              paidTenantId(refundedCharge.metadata),
+            );
           }
         }
         break;

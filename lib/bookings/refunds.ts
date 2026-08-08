@@ -574,3 +574,72 @@ export async function reconcileStripeBookingRefund(refund: Stripe.Refund) {
   ).lean<RefundBooking | null>();
   return { handled: true, finalized: Boolean(updated), state: 'succeeded', bookingId };
 }
+
+/**
+ * Inventory-guard refunds are created before a booking can be bound into the
+ * refund metadata. If the sibling checkout races in a moment later, Stripe's
+ * later refund.updated event is the durable chance to reconcile that booking.
+ * PaymentIntent ids are account-wide identities, so an unbound refund is safe
+ * to allocate only when exactly one booking exists for the payment.
+ */
+export async function reconcileUnboundStripeRefund(refund: Stripe.Refund) {
+  const paymentIntentId = typeof refund.payment_intent === 'string'
+    ? refund.payment_intent
+    : refund.payment_intent?.id;
+  if (!/^pi_[A-Za-z0-9_]+$/.test(String(paymentIntentId || ''))) {
+    return { handled: false, reason: 'missing_payment_binding' };
+  }
+  if (String(refund.status || 'pending') !== 'succeeded') {
+    return { handled: false, reason: 'refund_not_final' };
+  }
+  const amount = roundMoney(Number(refund.amount || 0) / 100);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { handled: false, reason: 'invalid_refund_amount' };
+  }
+
+  const bookings = await Booking.find({ paymentId: paymentIntentId })
+    .select('_id totalPrice refundState refundProviderId')
+    .lean<Array<Pick<RefundBooking, '_id' | 'totalPrice' | 'refundState' | 'refundProviderId'>>>();
+  if (bookings.length !== 1) {
+    return {
+      handled: false,
+      reason: bookings.length === 0 ? 'booking_not_found' : 'multiple_bookings_require_review',
+    };
+  }
+
+  const booking = bookings[0];
+  if (booking.refundState === 'succeeded' && booking.refundProviderId === refund.id) {
+    return {
+      handled: true,
+      finalized: false,
+      replayed: true,
+      state: 'succeeded',
+      bookingId: String(booking._id),
+    };
+  }
+  const fullyRefunded = amount >= roundMoney(Number(booking.totalPrice || 0));
+  const updated = await Booking.findOneAndUpdate(
+    { _id: booking._id, refundState: { $ne: 'succeeded' } },
+    {
+      $set: {
+        status: fullyRefunded ? 'Refunded' : 'Partial_Refund',
+        refundState: 'succeeded',
+        refundProviderId: refund.id,
+        refundProviderStatus: 'succeeded',
+        refundPaymentIntentId: paymentIntentId,
+        refundAmount: amount,
+        refundDate: new Date(),
+        refundCompletedAt: new Date(),
+        refundReason: 'Automatic payment reconciliation',
+      },
+    },
+    { new: true },
+  ).lean<RefundBooking | null>();
+  return {
+    handled: true,
+    finalized: Boolean(updated),
+    replayed: !updated,
+    state: 'succeeded',
+    bookingId: String(booking._id),
+  };
+}

@@ -7,6 +7,7 @@ jest.mock('@/lib/models/Booking', () => ({
 
 import {
   isDefaultTenant,
+  paidCheckoutReservationKey,
   paidTenantFilter,
   paidTenantId,
   paidTenantReferencePrefix,
@@ -62,6 +63,27 @@ describe('paid tenant resolution', () => {
     expect(paidTenantValue('')).toBe('default');
     expect(isDefaultTenant('')).toBe(true);
     expect(isDefaultTenant('el-gouna')).toBe(false);
+  });
+
+  describe('paidCheckoutReservationKey', () => {
+    const mainBinding = 'a'.repeat(64);
+    const networkFingerprint = 'b'.repeat(64);
+
+    it('prefers the persisted flagship quote binding', () => {
+      expect(paidCheckoutReservationKey({
+        quote_binding: 'c'.repeat(64),
+        checkout_fingerprint: networkFingerprint,
+      }, mainBinding)).toBe(mainBinding);
+    });
+
+    it('accepts the white-label checkout fingerprint', () => {
+      expect(paidCheckoutReservationKey({ checkout_fingerprint: networkFingerprint }))
+        .toBe(networkFingerprint);
+    });
+
+    it('fails closed when neither checkout contract supplied a binding', () => {
+      expect(paidCheckoutReservationKey({})).toBe('');
+    });
   });
 
   describe('booking reference', () => {

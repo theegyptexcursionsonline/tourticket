@@ -52,4 +52,10 @@ describe('RevenuePilot sellable-departure guard', () => {
     expect(stopSaleAliasesForOption(options, 'private-key')).toEqual(['private-key', 'private-id']);
     expect(stoppedPricingKeysForOptionIds(options, ['option-0', 'standard-default'])).toEqual(['standard', 'shared-key']);
   });
+
+  it('accepts a white-label option ID when that older record has no pricing key', () => {
+    const options = [{ id: 'd84ce0bd-a038-44f0-9e45-34f56d1ab860' }];
+    expect(stopSaleAliasesForOption(options, 'd84ce0bd-a038-44f0-9e45-34f56d1ab860'))
+      .toEqual(['d84ce0bd-a038-44f0-9e45-34f56d1ab860']);
+  });
 });

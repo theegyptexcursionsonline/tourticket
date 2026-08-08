@@ -3,11 +3,13 @@ import type Stripe from 'stripe';
 import Booking from '@/lib/models/Booking';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
 import { releaseInventoryHolds } from '@/lib/checkout/inventoryHolds';
+import { paidTenantValue } from '@/lib/tenant/paidTenant';
 
-export async function markPaymentInventoryConverted(paymentIntentId: string) {
+export async function markPaymentInventoryConverted(paymentIntentId: string, tenantId = 'default') {
+  const tenantValue = paidTenantValue(tenantId);
   await CheckoutPaymentQuote.updateOne(
     {
-      tenantId: 'default',
+      tenantId: tenantValue,
       paymentIntentId,
       inventoryState: { $nin: ['refunding', 'refunded', 'refund_failed'] },
     },
@@ -15,11 +17,12 @@ export async function markPaymentInventoryConverted(paymentIntentId: string) {
   );
 }
 
-export async function releasePaymentInventory(paymentIntentId: string, reason: string) {
-  await releaseInventoryHolds({ paymentIntentId, reason });
+export async function releasePaymentInventory(paymentIntentId: string, reason: string, tenantId = 'default') {
+  const tenantValue = paidTenantValue(tenantId);
+  await releaseInventoryHolds({ paymentIntentId, reason, tenantId: tenantValue });
   await CheckoutPaymentQuote.updateOne(
     {
-      tenantId: 'default',
+      tenantId: tenantValue,
       paymentIntentId,
       inventoryState: { $nin: ['converted', 'refunding', 'refunded', 'refund_failed'] },
     },
@@ -41,9 +44,11 @@ export async function refundUnavailablePaidInventory(input: {
   stripe: Stripe;
   paymentIntentId: string;
   reason: string;
+  tenantId?: string;
 }) {
+  const tenantId = paidTenantValue(input.tenantId || 'default');
   const existing = await CheckoutPaymentQuote.findOne({
-    tenantId: 'default',
+    tenantId,
     paymentIntentId: input.paymentIntentId,
   }).select('inventoryState inventoryRefundId').lean<{
     inventoryState?: string;
@@ -54,7 +59,7 @@ export async function refundUnavailablePaidInventory(input: {
   }
 
   await CheckoutPaymentQuote.updateOne(
-    { tenantId: 'default', paymentIntentId: input.paymentIntentId },
+    { tenantId, paymentIntentId: input.paymentIntentId },
     {
       $set: {
         inventoryState: 'refunding',
@@ -68,7 +73,7 @@ export async function refundUnavailablePaidInventory(input: {
   // booking, release that capacity before refunding the whole charge.
   await Booking.updateMany(
     {
-      tenantId: 'default',
+      tenantId,
       paymentId: input.paymentIntentId,
       status: { $in: ['Pending', 'Confirmed'] },
     },
@@ -100,9 +105,13 @@ export async function refundUnavailablePaidInventory(input: {
       },
       { idempotencyKey: `inventory-unavailable-${input.paymentIntentId}` },
     );
-    await releaseInventoryHolds({ paymentIntentId: input.paymentIntentId, reason: 'paid_inventory_refunded' });
+    await releaseInventoryHolds({
+      paymentIntentId: input.paymentIntentId,
+      reason: 'paid_inventory_refunded',
+      tenantId,
+    });
     await CheckoutPaymentQuote.updateOne(
-      { tenantId: 'default', paymentIntentId: input.paymentIntentId },
+      { tenantId, paymentIntentId: input.paymentIntentId },
       {
         $set: {
           inventoryState: 'refunded',
@@ -114,7 +123,7 @@ export async function refundUnavailablePaidInventory(input: {
     return { id: refund.id, replayed: false };
   } catch (error) {
     await CheckoutPaymentQuote.updateOne(
-      { tenantId: 'default', paymentIntentId: input.paymentIntentId },
+      { tenantId, paymentIntentId: input.paymentIntentId },
       { $set: { inventoryState: 'refund_failed', inventoryUpdatedAt: new Date() } },
     ).catch(() => undefined);
     Sentry.captureException(error, {

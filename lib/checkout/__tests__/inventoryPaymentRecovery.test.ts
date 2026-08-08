@@ -54,12 +54,41 @@ describe('paid inventory refund recovery', () => {
       { idempotencyKey: 'inventory-unavailable-pi_inventory_1' },
     );
     expect(mockReleaseInventoryHolds).toHaveBeenCalledWith({
+      tenantId: 'default',
       paymentIntentId: 'pi_inventory_1',
       reason: 'paid_inventory_refunded',
     });
     expect(mockQuoteUpdateOne).toHaveBeenLastCalledWith(
       { tenantId: 'default', paymentIntentId: 'pi_inventory_1' },
       { $set: expect.objectContaining({ inventoryState: 'refunded', inventoryRefundId: 're_inventory_1' }) },
+    );
+  });
+
+  it('cancels and releases only the paying brand when a brand charge cannot be fulfilled', async () => {
+    const createRefund = jest.fn().mockResolvedValue({ id: 're_inventory_brand' });
+
+    await refundUnavailablePaidInventory({
+      stripe: { refunds: { create: createRefund } } as never,
+      paymentIntentId: 'pi_inventory_brand',
+      reason: 'TOUR_UNAVAILABLE',
+      tenantId: 'hurghada-excursions-online',
+    });
+
+    expect(mockBookingUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'hurghada-excursions-online',
+        paymentId: 'pi_inventory_brand',
+      }),
+      expect.any(Object),
+    );
+    expect(mockReleaseInventoryHolds).toHaveBeenCalledWith({
+      tenantId: 'hurghada-excursions-online',
+      paymentIntentId: 'pi_inventory_brand',
+      reason: 'paid_inventory_refunded',
+    });
+    expect(mockQuoteUpdateOne).toHaveBeenLastCalledWith(
+      { tenantId: 'hurghada-excursions-online', paymentIntentId: 'pi_inventory_brand' },
+      { $set: expect.objectContaining({ inventoryState: 'refunded' }) },
     );
   });
 

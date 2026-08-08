@@ -5,6 +5,7 @@ import CheckoutInventoryHold from '@/lib/models/CheckoutInventoryHold';
 import CheckoutInventoryLease from '@/lib/models/CheckoutInventoryLease';
 import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
 import { normalizePriceDate } from '@/lib/revenue/pricingResolver';
+import { paidTenantValue } from '@/lib/tenant/paidTenant';
 
 export interface InventoryHoldCartItem {
   _id?: unknown;
@@ -26,7 +27,7 @@ export class InventoryHoldError extends Error {
 }
 
 type InventoryTarget = {
-  tenantId: 'default';
+  tenantId: string;
   tourId: string;
   date: string;
   time: string;
@@ -57,7 +58,7 @@ function holdDurationMs() {
   return minutes * 60 * 1000;
 }
 
-function targetFor(item: InventoryHoldCartItem): InventoryTarget {
+function targetFor(item: InventoryHoldCartItem, tenantId = 'default'): InventoryTarget {
   const tourId = String(item._id || item.id || '');
   const date = String(item.selectedDate || '');
   const time = String(item.selectedTime || '');
@@ -72,7 +73,7 @@ function targetFor(item: InventoryHoldCartItem): InventoryTarget {
     || guests > 50) {
     throw new InventoryHoldError('INVALID_INVENTORY_TARGET', 'Select a valid departure, option, and guest count.');
   }
-  return { tenantId: 'default', tourId, date, time, optionKey, guests };
+  return { tenantId: paidTenantValue(tenantId), tourId, date, time, optionKey, guests };
 }
 
 function scopeKey(target: Pick<InventoryTarget, 'tenantId' | 'tourId' | 'date' | 'time'>) {
@@ -176,6 +177,7 @@ export async function withBookingInventoryCapacity<T>(input: {
     let evidence;
     try {
       evidence = await assertRevenuePriceTargetSellable({
+        tenantId: next.tenantId,
         tourId: next.tourId,
         optionKey: next.optionKey,
         date: next.date,
@@ -243,6 +245,7 @@ async function reserveOne(reservationKey: string, item: InventoryHoldCartItem, i
     if (existing?.state === 'active' && new Date(existing.expiresAt).getTime() > Date.now()) return existing;
 
     const evidence = await assertRevenuePriceTargetSellable({
+      tenantId: target.tenantId,
       tourId: target.tourId,
       optionKey: target.optionKey,
       date: target.date,
@@ -332,15 +335,17 @@ export async function bindInventoryHoldsToPayment(reservationKey: string, paymen
 }
 
 export async function releaseInventoryHolds(input: {
+  tenantId?: string;
   reservationKey?: string;
   paymentIntentId?: string;
   reason: string;
 }) {
   if (!input.reservationKey && !input.paymentIntentId) return 0;
+  const tenantId = paidTenantValue(input.tenantId || 'default');
   const now = new Date();
   const result = await CheckoutInventoryHold.updateMany(
     {
-      tenantId: 'default',
+      tenantId,
       state: 'active',
       ...(input.reservationKey ? { reservationKey: input.reservationKey } : {}),
       ...(input.paymentIntentId ? { paymentIntentId: input.paymentIntentId } : {}),
@@ -358,20 +363,21 @@ export async function releaseInventoryHolds(input: {
 }
 
 async function ensureOneForPayment(input: {
+  tenantId: string;
   paymentIntentId: string;
   reservationKey: string;
   item: InventoryHoldCartItem;
   itemIndex: number;
 }) {
-  const target = targetFor(input.item);
+  const target = targetFor(input.item, input.tenantId);
   return withInventoryLease(target, async () => {
     const booking = await Booking.findOne({
-      tenantId: 'default',
+      tenantId: target.tenantId,
       paymentId: input.paymentIntentId,
       paymentItemIndex: input.itemIndex,
     }).select('_id').lean<{ _id: Types.ObjectId } | null>();
     let hold = await CheckoutInventoryHold.findOne({
-      tenantId: 'default',
+      tenantId: target.tenantId,
       paymentIntentId: input.paymentIntentId,
       itemIndex: input.itemIndex,
     }).lean<HoldRow | null>();
@@ -382,7 +388,7 @@ async function ensureOneForPayment(input: {
       const now = new Date();
       hold = await CheckoutInventoryHold.findOneAndUpdate(
         hold ? { _id: hold._id } : {
-          tenantId: 'default',
+          tenantId: target.tenantId,
           reservationKey: input.reservationKey,
           itemIndex: input.itemIndex,
         },
@@ -411,6 +417,7 @@ async function ensureOneForPayment(input: {
     if (hold?.state === 'active' && new Date(hold.expiresAt).getTime() > Date.now()) return hold;
 
     const evidence = await assertRevenuePriceTargetSellable({
+      tenantId: target.tenantId,
       tourId: target.tourId,
       optionKey: target.optionKey,
       date: target.date,
@@ -426,7 +433,7 @@ async function ensureOneForPayment(input: {
     const now = new Date();
     hold = await CheckoutInventoryHold.findOneAndUpdate(
       hold ? { _id: hold._id } : {
-        tenantId: 'default',
+        tenantId: target.tenantId,
         reservationKey: input.reservationKey,
         itemIndex: input.itemIndex,
       },
@@ -452,6 +459,7 @@ async function ensureOneForPayment(input: {
 }
 
 export async function ensureInventoryHoldsForPayment(input: {
+  tenantId?: string;
   paymentIntentId: string;
   reservationKey: string;
   cart: InventoryHoldCartItem[];
@@ -464,19 +472,22 @@ export async function ensureInventoryHoldsForPayment(input: {
     throw new InventoryHoldError('INVALID_INVENTORY_PAYMENT', 'Paid inventory input is invalid.');
   }
   const holds = [];
+  const tenantId = paidTenantValue(input.tenantId || 'default');
   for (let itemIndex = 0; itemIndex < input.cart.length; itemIndex += 1) {
-    holds.push(await ensureOneForPayment({ ...input, item: input.cart[itemIndex], itemIndex }));
+    holds.push(await ensureOneForPayment({ ...input, tenantId, item: input.cart[itemIndex], itemIndex }));
   }
   return holds;
 }
 
 export async function convertInventoryHold(input: {
+  tenantId?: string;
   paymentIntentId: string;
   itemIndex: number;
   bookingId: Types.ObjectId;
 }) {
+  const tenantId = paidTenantValue(input.tenantId || 'default');
   const hold = await CheckoutInventoryHold.findOne({
-    tenantId: 'default',
+    tenantId,
     paymentIntentId: input.paymentIntentId,
     itemIndex: input.itemIndex,
   });

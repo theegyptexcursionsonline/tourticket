@@ -68,6 +68,23 @@ export function paidTenantValue(tenantId: string): string {
 }
 
 /**
+ * Immutable inventory binding written by the checkout that took the payment.
+ * The flagship names it `quote_binding`; the white-label network predates that
+ * contract and names the same SHA-256 value `checkout_fingerprint`.
+ */
+export function paidCheckoutReservationKey(
+  metadata: Record<string, string> | null | undefined,
+  persistedQuoteBinding?: string,
+): string {
+  return String(
+    persistedQuoteBinding
+      || metadata?.quote_binding
+      || metadata?.checkout_fingerprint
+      || '',
+  );
+}
+
+/**
  * Booking-reference prefix, so a brand's reference is legible as theirs.
  * Mirrors the sibling network's scheme (`DAHA-…` from `dahab-excursions`).
  */

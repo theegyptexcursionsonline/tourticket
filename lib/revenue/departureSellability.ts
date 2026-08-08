@@ -38,13 +38,17 @@ function optionId(option: SellableBookingOption, index: number) {
  */
 export function stopSaleAliasesForOption(
   bookingOptions: SellableBookingOption[] | undefined,
-  pricingKey: string,
+  requestedKey: string,
 ) {
-  if (pricingKey === STANDARD_OPTION_KEY) return ['standard', 'standard-default'];
-  const index = (bookingOptions || []).findIndex((option) => option.pricingKey === pricingKey);
+  if (requestedKey === STANDARD_OPTION_KEY || requestedKey === 'standard-default') {
+    return ['standard', 'standard-default'];
+  }
+  const index = (bookingOptions || []).findIndex((option, optionIndex) => (
+    option.pricingKey === requestedKey || optionId(option, optionIndex) === requestedKey
+  ));
   if (index < 0) return [];
   const option = bookingOptions![index];
-  return Array.from(new Set([pricingKey, optionId(option, index)].filter(Boolean)));
+  return Array.from(new Set([option.pricingKey || requestedKey, optionId(option, index)].filter(Boolean)));
 }
 
 export function stoppedPricingKeysForOptionIds(

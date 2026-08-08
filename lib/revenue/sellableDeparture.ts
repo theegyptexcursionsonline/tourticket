@@ -3,6 +3,7 @@ import Booking from '@/lib/models/Booking';
 import StopSale from '@/lib/models/StopSale';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { paidTenantFilter, paidTenantId } from '@/lib/tenant/paidTenant';
 import {
   evaluateDepartureSellability,
   stopSaleAliasesForOption,
@@ -49,8 +50,11 @@ export async function assertRevenuePriceTargetSellable(target: {
   optionKey: string;
   date: string;
   time: string;
+  tenantId?: string;
 }): Promise<SellableDepartureEvidence> {
-  const tour = await Tour.findOne({ _id: target.tourId, isPublished: true, ...DEFAULT_TENANT_FILTER })
+  const tenantId = paidTenantId({ tenant_id: target.tenantId || '' });
+  const tenantFilter = tenantId === 'default' ? DEFAULT_TENANT_FILTER : paidTenantFilter(tenantId);
+  const tour = await Tour.findOne({ _id: target.tourId, isPublished: true, ...tenantFilter })
     .select('_id availability bookingOptions')
     .lean<SellableTour | null>();
   if (!tour) throw new RevenuePricingWriteError(422, 'TOUR_UNAVAILABLE', 'The approved tour is not published or is outside the EEO tenant.');
@@ -64,10 +68,10 @@ export async function assertRevenuePriceTargetSellable(target: {
   const end = new Date(date);
   end.setUTCHours(23, 59, 59, 999);
   const [explicit, stopSales, bookings] = await Promise.all([
-    Availability.findOne({ tour: tour._id, date: { $gte: date, $lte: end } })
+    Availability.findOne({ tour: tour._id, date: { $gte: date, $lte: end }, ...tenantFilter })
       .select('slots stopSale')
       .lean<ExplicitAvailability | null>(),
-    StopSale.find({ tourId: tour._id, startDate: { $lte: end }, endDate: { $gte: date } })
+    StopSale.find({ tourId: tour._id, startDate: { $lte: end }, endDate: { $gte: date }, ...tenantFilter })
       .select('optionIds')
       .lean<StopSaleRow[]>(),
     Booking.find({
@@ -78,7 +82,7 @@ export async function assertRevenuePriceTargetSellable(target: {
           status: { $in: ['Confirmed', 'Pending'] },
           $or: [{ date: { $gte: date, $lte: end } }, { dateString: target.date }],
         },
-        DEFAULT_TENANT_FILTER,
+        tenantFilter,
       ],
     }).select('adultGuests childGuests infantGuests guests').lean<BookingRow[]>(),
   ]);
