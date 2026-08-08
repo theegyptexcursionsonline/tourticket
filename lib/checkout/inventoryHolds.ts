@@ -283,7 +283,13 @@ async function activeHeldGuests(target: InventoryTarget, excludeId?: Types.Objec
  * availability snapshot for a channel that is about to offer a hold.
  */
 export async function inspectInventoryAvailability(item: InventoryHoldCartItem): Promise<InventoryAvailabilitySnapshot> {
-  const target = targetFor(item);
+  // This public snapshot is the flagship mobile contract. Other inventory
+  // helpers accept an explicit tenant for shared Stripe fulfilment, but this
+  // route must never widen beyond the default EEO tenant.
+  const target: InventoryTarget & {tenantId: 'default'} = {
+    ...targetFor(item),
+    tenantId: 'default',
+  };
   return withInventoryLease(target, async () => {
     let evidence;
     try {
