@@ -48,6 +48,7 @@ import {
 } from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
+import { ratingLabel } from '@/lib/tours/ratingDisplay';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -1542,9 +1543,12 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       <Clock size={20} className="text-red-500" />
                       <span>Duration: {tour.duration}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-slate-600">
-                      <Star size={20} className="text-yellow-500" />
-<span>Rating: {tour.rating} ({(reviews?.length || 0)} reviews)</span>                    </div>
+                    {ratingLabel(tour.rating, reviews) && (
+                      <div className="flex items-center gap-3 text-slate-600">
+                        <Star size={20} className="text-yellow-500" />
+                        <span>Rating: {ratingLabel(tour.rating, reviews)}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 text-slate-600">
                       <Users size={20} className="text-blue-500" />
                       <span>Available daily</span>

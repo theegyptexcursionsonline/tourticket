@@ -23,6 +23,7 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
 import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
+import { ratingLabel } from '@/lib/tours/ratingDisplay';
 import {
   bindTimeSlotsToOption,
   findSelectedBookingOption,
@@ -1032,8 +1033,7 @@ const BookingSummaryCard: React.FC<{
     title: tour.title,
     image: tour.image,
     duration: tour.duration,
-    rating: tour.rating || 4.5,
-    bookings: tour.bookings || tour.reviews || 0,
+    ratingLabel: ratingLabel(tour.rating, tour.reviews),
     destination: typeof tour.destination === 'string' 
       ? tour.destination 
       : tour.destination?.name || 'Unknown',
@@ -1198,7 +1198,8 @@ const BookingSummaryCard: React.FC<{
                 {tourDisplayData.title}
               </div>
               <div className="text-xs sm:text-sm text-slate-600 mt-1">
-                {tourDisplayData.duration} • {tourDisplayData.rating} ⭐ ({tourDisplayData.bookings.toLocaleString()} reviews)
+                {tourDisplayData.duration}
+                {tourDisplayData.ratingLabel ? ` • ${tourDisplayData.ratingLabel} ⭐` : ''}
               </div>
               {tourDisplayData.destination && (
                 <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
@@ -1448,8 +1449,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       title: tour.title,
       image: tour.image,
       duration: tour.duration,
-      rating: tour.rating || 4.5,
-      bookings: tour.bookings || tour.reviews || 0,
+      ratingLabel: ratingLabel(tour.rating, tour.reviews),
       destination: typeof tour.destination === 'string' 
         ? tour.destination 
         : tour.destination?.name || 'Unknown',
@@ -2216,10 +2216,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           >
             {/* Tour info chips */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                <Star size={14} className="text-blue-500 fill-current" />
-                {tourDisplayData ? `${tourDisplayData.rating} (${tourDisplayData.bookings.toLocaleString()} reviews)` : 'No ratings yet'}
-              </div>
+              {tourDisplayData?.ratingLabel && (
+                <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <Star size={14} className="text-blue-500 fill-current" />
+                  {tourDisplayData.ratingLabel}
+                </div>
+              )}
               <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Users size={14} className="text-red-500" />
                 Max {tourDisplayData?.maxGroupSize || 15}
