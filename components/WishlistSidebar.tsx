@@ -1,14 +1,18 @@
 'use client';
 
+import { useRef } from 'react';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { useSettings } from '@/hooks/useSettings';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 export default function WishlistSidebar() {
   const { isWishlistSidebarOpen, closeWishlistSidebar, wishlist, removeFromWishlist } = useWishlist();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalBehavior(dialogRef, isWishlistSidebarOpen, closeWishlistSidebar);
   const { formatPrice } = useSettings();
 
   return (
@@ -25,6 +29,7 @@ export default function WishlistSidebar() {
             aria-hidden="true"
           />
           <motion.div
+            ref={dialogRef}
             initial={{ x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '-100%' : '100%' }}
             animate={{ x: 0 }}
             exit={{ x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '-100%' : '100%' }}

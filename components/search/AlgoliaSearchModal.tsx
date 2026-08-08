@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import AlgoliaSearch from './AlgoliaSearch';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface AlgoliaSearchModalProps {
   isOpen: boolean;
@@ -32,21 +33,10 @@ export default function AlgoliaSearchModal({ isOpen, onClose }: AlgoliaSearchMod
 
   useOnClickOutside(modalRef, onClose);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'auto';
-    };
-  }, [isOpen, onClose]);
+  // Escape, focus trap/restore and a reference-counted scroll lock. The
+  // previous inline effect reset overflow to 'auto' on cleanup, which unlocked
+  // the page whenever this closed on top of another open panel.
+  useModalBehavior(modalRef, isOpen, onClose);
 
   return (
     <AnimatePresence>

@@ -23,7 +23,8 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
 import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
-import { ratingLabel } from '@/lib/tours/ratingDisplay';
+import { provableRating, ratingLabel } from '@/lib/tours/ratingDisplay';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 import {
   bindTimeSlotsToOption,
   findSelectedBookingOption,
@@ -215,8 +216,6 @@ interface BookingData {
   };
 }
 
-// Default Add-on data (used as a fallback)
-// Import icons for add-ons
 const getAddOnIcon = (category: string) => {
   switch (category) {
     case 'Photography': return Camera;
@@ -226,46 +225,9 @@ const getAddOnIcon = (category: string) => {
   }
 };
 
-// Default Add-on data (used as a fallback)
-const addOnData: AddOnTour[] = [  {
-    id: 'photo-package',
-    title: 'Professional Photography Package',
-    description: 'Capture your adventure with 50+ edited high-resolution photos delivered within 24 hours',
-    price: 35.00,
-    originalPrice: 50.00,
-    required: false,
-    maxQuantity: 1,
-    popular: true,
-    category: 'Photography',
-    icon: Camera,
-    savings: 15,
-  },
-  {
-    id: 'transport-premium',
-    title: 'Premium Hotel Transfer Service',
-    description: 'Luxury vehicle pickup and drop-off with refreshments and WiFi',
-    price: 15.00,
-    originalPrice: 25.00,
-    required: false,
-    maxQuantity: 1,
-    category: 'Transport',
-    icon: Car,
-    savings: 10,
-  },
-  {
-    id: 'refreshment-upgrade',
-    title: 'Gourmet Refreshment Package',
-    description: 'Premium snacks, fresh juices, and traditional treats',
-    price: 12.00,
-    originalPrice: 18.00,
-    required: false,
-    maxQuantity: 1,
-    category: 'Food',
-    icon: Coffee,
-    savings: 6,
-    perGuest: true,
-  },
-];
+// No add-on fallback by design. These are sold and charged, so a tour whose
+// operator configured none must offer none — the previous demo catalogue
+// (photography / transfer / refreshments) was really billed to guests.
 
 // Steps configuration
 const STEPS = [
@@ -376,7 +338,9 @@ const CalendarWidget: React.FC<{
   // stop-saled date doesn't briefly render as "available" before flipping
   // to "Unavailable" once the overlay loads.
   hasLoadedStopSales?: boolean;
-}> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays, hasLoadedStopSales = true }) => {
+  stopSaleLoadFailed?: boolean;
+  onRetryStopSales?: () => void;
+}> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays, hasLoadedStopSales = true, stopSaleLoadFailed = false, onRetryStopSales }) => {
   const locale = useLocale();
   const rtl = isRTL(locale);
   const PrevMonthIcon = rtl ? ChevronRight : ChevronLeft;
@@ -524,7 +488,23 @@ const CalendarWidget: React.FC<{
         </div>
       </div>
 
-      {hasLoadedStopSales ? (
+      {hasLoadedStopSales && stopSaleLoadFailed ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center">
+          <p className="text-sm font-semibold text-amber-900">We couldn&apos;t confirm live availability</p>
+          <p className="mt-1 text-xs text-amber-800">
+            Dates can&apos;t be shown as bookable until we can check them. Please try again in a moment.
+          </p>
+          {onRetryStopSales && (
+            <button
+              type="button"
+              onClick={onRetryStopSales}
+              className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-full bg-amber-600 px-5 text-sm font-bold text-white hover:bg-amber-700"
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      ) : hasLoadedStopSales ? (
         <>
           {/* Availability Legend - Mobile Friendly */}
           <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 text-xs">
@@ -615,7 +595,7 @@ const TourOptionCard: React.FC<{
   const savings = originalSubtotal - subtotal;
 
   // Use real tour data instead of hardcoded values
-  const rating = tour.rating || 4.5;
+  const provenRating = provableRating(tour.rating, tour.reviews);
   const totalBookings = tour.bookings || tour.reviews || 0;
   const maxParticipants = tour.maxGroupSize || 15;
   const hasAvailableSlots = option.timeSlots.some((timeSlot) => timeSlot.available > 0);
@@ -654,10 +634,12 @@ const TourOptionCard: React.FC<{
 
           {/* Rating and Bookings Row */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
-              <Star size={11} className="text-yellow-500 fill-yellow-500" />
-              <span className="text-xs font-semibold text-gray-800">{rating}</span>
-            </div>
+            {provenRating && (
+              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
+                <Star size={11} className="text-yellow-500 fill-yellow-500" />
+                <span className="text-xs font-semibold text-gray-800">{provenRating.rating}</span>
+              </div>
+            )}
             {totalBookings > 0 && (
               <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
                 <Users size={11} className="text-blue-500" />
@@ -882,10 +864,12 @@ const TourOptionCard: React.FC<{
           <CheckCircle size={10} className="text-blue-500" />
           <span>Instant confirmation</span>
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-gray-600">
-          <Heart size={10} className="text-red-500" />
-          <span>Highly rated</span>
-        </div>
+        {provenRating && provenRating.rating >= 4.5 && (
+          <div className="flex items-center gap-1 text-[10px] text-gray-600">
+            <Heart size={10} className="text-red-500" />
+            <span>Highly rated</span>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -1228,6 +1212,8 @@ interface BookingSidebarProps {
 }
 
 const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, initialStopSaleDates }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalBehavior(dialogRef, isOpen, onClose);
   const router = useRouter();
   const { formatPrice } = useSettings();
   const tourBasePricing = useMemo(() => effectiveTourPrice(tour), [tour]);
@@ -1276,6 +1262,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   // failure). The calendar suppresses availability dots + date clicks until
   // this is true so stop-saled dates can't briefly render as "available".
   // If we got server-prefetched data we're already "loaded" on first paint.
+  const [stopSaleLoadFailed, setStopSaleLoadFailed] = useState(false);
   const [hasLoadedStopSales, setHasLoadedStopSales] = useState(
     !!initialStopSaleDates,
   );
@@ -1283,7 +1270,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const stopSaleTourId = tour?.id || tour?._id;
   const fetchStopSaleDates = useCallback(async (monthsOverride?: Array<{ month: number; year: number }>) => {
     const tourId = stopSaleTourId;
-    if (!tourId) return {} as Record<string, StopSaleDayInfo>;
+    if (!tourId) return { days: {} as Record<string, StopSaleDayInfo>, failed: false };
 
     try {
       const monthsToFetch = monthsOverride && monthsOverride.length > 0
@@ -1308,6 +1295,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         ),
       );
 
+      // A month we could not load is NOT a month with no stop-sales. Reporting
+      // it as available is how blocked dates were offered for booking.
+      const failed = responses.some((res) => res === null);
       const next: Record<string, StopSaleDayInfo> = {};
       for (const res of responses) {
         const days = res?.data?.days as Record<string, StopSaleDayInfo> | undefined;
@@ -1325,12 +1315,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         }
       }
 
-      return next;
+      return { days: next, failed };
     } catch (err) {
-      // Non-fatal: the calendar degrades to its pre-stop-sale behavior if
-      // the fetch fails; the server-side check still blocks the booking.
+      // The server still blocks the booking, but letting the calendar look
+      // fully open sends the guest through four steps to a hard rejection.
       console.warn('[BookingSidebar] stop-sale month fetch failed:', err);
-      return {} as Record<string, StopSaleDayInfo>;
+      return { days: {} as Record<string, StopSaleDayInfo>, failed: true };
     }
   }, [stopSaleTourId]);
 
@@ -1338,11 +1328,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     let cancelled = false;
 
     (async () => {
-      const next = await fetchStopSaleDates();
+      const { days, failed } = await fetchStopSaleDates();
       if (cancelled) return;
-      if (Object.keys(next).length > 0) {
-        setStopSaleDates((prev) => ({ ...prev, ...next }));
+      if (Object.keys(days).length > 0) {
+        setStopSaleDates((prev) => ({ ...prev, ...days }));
       }
+      setStopSaleLoadFailed(failed);
       setHasLoadedStopSales(true);
     })();
 
@@ -1351,12 +1342,24 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     };
   }, [fetchStopSaleDates]);
 
+  const retryStopSales = useCallback(() => {
+    setHasLoadedStopSales(false);
+    void fetchStopSaleDates().then(({ days, failed }) => {
+      if (Object.keys(days).length > 0) {
+        setStopSaleDates((prev) => ({ ...prev, ...days }));
+      }
+      setStopSaleLoadFailed(failed);
+      setHasLoadedStopSales(true);
+    });
+  }, [fetchStopSaleDates]);
+
   useEffect(() => {
     if (!isOpen || !showDatePicker) return;
-    void fetchStopSaleDates().then((next) => {
-      if (Object.keys(next).length > 0) {
-        setStopSaleDates((prev) => ({ ...prev, ...next }));
+    void fetchStopSaleDates().then(({ days, failed }) => {
+      if (Object.keys(days).length > 0) {
+        setStopSaleDates((prev) => ({ ...prev, ...days }));
       }
+      setStopSaleLoadFailed(failed);
     });
   }, [isOpen, showDatePicker, fetchStopSaleDates]);
 
@@ -1618,7 +1621,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       }
 
       // Use pre-fetched addOns from tour prop (SSR) if available
-      let addOnsToUse;
+      let addOnsToUse: AddOnTour[];
       if (tour.addOns && tour.addOns.length > 0) {
         // Transform pre-fetched addOns to the expected format
         addOnsToUse = tour.addOns.map((addon, index) => ({
@@ -1626,18 +1629,17 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           title: addon.name || addon.title || 'Tour Enhancement',
           description: addon.description || 'Enhance your tour experience',
           price: addon.price || 15,
-          originalPrice: addon.originalPrice || (addon.price ? Math.round(addon.price * 1.3) : 20),
+          originalPrice: addon.originalPrice,
           required: addon.required || false,
           maxQuantity: addon.maxQuantity || 1,
           popular: addon.popular ?? index === 0,
           category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
           icon: getAddOnIcon(addon.category || 'Experience'),
-          savings: addon.savings || (addon.price ? Math.round(addon.price * 0.3) : 5),
+          savings: addon.savings,
           perGuest: isPerPersonAddOn(addon),
         }));
       } else {
-        // Fallback to default add-ons
-        addOnsToUse = addOnData;
+        addOnsToUse = [];
       }
 
       const newAvailabilityData: AvailabilityData = {
@@ -1832,7 +1834,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       { month: selectedMonth.getMonth() + 1, year: selectedMonth.getFullYear() },
     ]);
     const selectedDateKey = toDateOnlyString(bookingData.selectedDate);
-    const latestStopSaleStatus = freshStopSales[selectedDateKey]?.status || stopSaleDates[selectedDateKey]?.status;
+    const latestStopSaleStatus = freshStopSales.days[selectedDateKey]?.status || stopSaleDates[selectedDateKey]?.status;
 
     if (latestStopSaleStatus === 'full') {
       setError('This date is stop-saled and cannot be booked');
@@ -1872,8 +1874,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         icon: '✨'
       });
     } else if (!dayAvailability) {
-      // Day not in availability map - tour not available on this day
-      toast('Tour available on this date.', {
+      // Absent from the availability map means this tour does not run that day.
+      // The message used to say the opposite.
+      toast('This tour does not run on the selected date.', {
         id: 'availability-toast',
         icon: '📅'
       });
@@ -2299,6 +2302,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         availabilityData={calendarAvailability}
                         availableDays={tour?.availability?.availableDays}
                         hasLoadedStopSales={hasLoadedStopSales}
+                        stopSaleLoadFailed={stopSaleLoadFailed}
+                        onRetryStopSales={retryStopSales}
                       />
                     </motion.div>
                   )}
@@ -2585,6 +2590,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          ref={dialogRef}
           className="fixed inset-0 z-[999999] flex justify-end"
           aria-modal="true"
           role="dialog"

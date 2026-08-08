@@ -1,7 +1,7 @@
 // components/CartSidebar.tsx
 'use client';
 
-import React, { FC } from 'react';
+import React, { FC , useRef} from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Trash2, Calendar, Clock, Users, Plus } from 'lucide-react';
@@ -12,10 +12,13 @@ import { parseLocalDate } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 const CartSidebar: FC = () => {
     const router = useRouter();
     const { isCartOpen, closeCart, cart, totalItems, removeFromCart } = useCart();
+    const dialogRef = useRef<HTMLDivElement>(null);
+    useModalBehavior(dialogRef, isCartOpen, closeCart);
     const { formatPrice } = useSettings();
     const locale = useLocale();
     const rtl = isRTL(locale);
@@ -79,6 +82,7 @@ const CartSidebar: FC = () => {
         <AnimatePresence>
             {isCartOpen && (
                 <motion.div
+                    ref={dialogRef}
                     className="fixed inset-0 z-50"
                     initial="hidden"
                     animate="visible"

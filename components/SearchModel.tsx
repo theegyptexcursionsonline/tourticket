@@ -5,6 +5,7 @@ import { Search, X, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
 import dynamic from 'next/dynamic';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 // Dynamically import AI Chat
 const AlgoliaChat = dynamic(() => import('@/components/search/AlgoliaChat'), {
@@ -76,20 +77,9 @@ const SearchModal: FC<{ onClose: () => void; onSearch: (term: string) => void; }
         }
     }, [searchQuery]);
 
-    // Handle escape key and prevent body scroll
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        
-        window.addEventListener('keydown', handleKeyDown);
-        document.body.style.overflow = 'hidden';
-        
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'auto';
-        };
-    }, [onClose]);
+    // Escape, focus trap/restore and a reference-counted scroll lock. This
+    // component is mounted only while open, so the flag is constant true.
+    useModalBehavior(modalRef, true, onClose);
 
     // Handle clicks outside modal
     useOnClickOutside(modalRef, onClose);
