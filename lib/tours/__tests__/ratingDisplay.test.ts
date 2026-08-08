@@ -3,7 +3,7 @@
  * so the storefront could advertise "4.8 (0 reviews)" on a tour nobody had
  * reviewed. These cases pin the rule: no reviews, no rating shown.
  */
-import { provableRating, ratingLabel, resolveReviewCount } from '@/lib/tours/ratingDisplay';
+import { provableRating, ratingLabel, resolveReviewCount, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 
 describe('resolveReviewCount', () => {
   it('counts a populated review array', () => {
@@ -38,6 +38,18 @@ describe('provableRating', () => {
 
   it('rounds to one decimal so stored averages do not leak precision', () => {
     expect(provableRating(4.8333, [{}])).toEqual({ rating: 4.8, reviewCount: 1 });
+  });
+});
+
+describe('reviewCountLabel', () => {
+  it.each([
+    [[], '0 reviews'],
+    [[{}], '1 review'],
+    [[{}, {}], '2 reviews'],
+    [2400, '2,400 reviews'],
+    [undefined, '0 reviews'],
+  ])('renders %p as %p', (reviews, expected) => {
+    expect(reviewCountLabel(reviews)).toBe(expected);
   });
 });
 

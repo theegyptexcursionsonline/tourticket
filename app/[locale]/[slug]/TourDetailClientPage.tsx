@@ -48,7 +48,7 @@ import {
 } from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
-import { ratingLabel } from '@/lib/tours/ratingDisplay';
+import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -933,20 +933,26 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
     onReviewSubmitted(newReview);
   };
 
+  // Only real reviews produce an average. Falling back to the admin-set
+  // tour.rating here is what printed "4.8 (0 reviews)" above the empty
+  // review list.
   const averageRating = currentReviews.length > 0
     ? (currentReviews.reduce((acc, review) => acc + review.rating, 0) / currentReviews.length).toFixed(1)
-    : tour.rating?.toFixed(1) || 'N/A';
+    : null;
 
   return (
     <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-40">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Star size={18} className="text-yellow-500 fill-current" />
-            <span className="font-bold text-lg">{averageRating}</span>
+        {averageRating && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Star size={18} className="text-yellow-500 fill-current" />
+              <span className="font-bold text-lg">{averageRating}</span>
+            </div>
+            <span className="text-slate-500">({reviewCountLabel(currentReviews)})</span>
           </div>
-<span className="text-slate-500">({(currentReviews?.length || 0)} reviews)</span>        </div>
+        )}
       </div>
 
       <ReviewsStructuredData />
@@ -1386,12 +1392,15 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       {tour.title}
                     </h1>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <Star size={16} className="text-yellow-500 fill-current" />
-                          <span className="font-semibold text-slate-800">{tour.rating}</span>
+                      {provableRating(tour.rating, reviews) && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <Star size={16} className="text-yellow-500 fill-current" />
+                            <span className="font-semibold text-slate-800">{tour.rating}</span>
+                          </div>
+                          <span className="text-slate-500">({reviews?.length} reviews)</span>
                         </div>
-<span className="text-slate-500">({(reviews?.length || 0)} reviews)</span>                      </div>
+                      )}
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
                         <span>{tour.duration}</span>

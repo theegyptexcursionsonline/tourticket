@@ -42,7 +42,7 @@ import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
-import { ratingLabel } from '@/lib/tours/ratingDisplay';
+import { ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -1146,7 +1146,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                           <Star size={16} className="text-yellow-500 fill-current" />
                           <span className="font-semibold text-slate-800">{tour.rating}</span>
                         </div>
-<span className="text-slate-500">({reviews?.length ?? 0} reviews)</span>                      </div>
+<span className="text-slate-500">({reviewCountLabel(reviews)})</span>                      </div>
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
                         <span>{tour.duration}</span>

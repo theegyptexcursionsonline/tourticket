@@ -29,10 +29,15 @@ export function provableRating(rating: unknown, reviews: unknown): ProvableRatin
   return { rating: Math.round(value * 10) / 10, reviewCount };
 }
 
+/** "12 reviews" / "1 review" — for surfaces that render the score separately. */
+export function reviewCountLabel(reviews: unknown): string {
+  const count = resolveReviewCount(reviews);
+  return `${count.toLocaleString()} ${count === 1 ? 'review' : 'reviews'}`;
+}
+
 /** "4.8 (12 reviews)" — or null when nothing is provable. Singular-safe. */
 export function ratingLabel(rating: unknown, reviews: unknown): string | null {
   const provable = provableRating(rating, reviews);
   if (!provable) return null;
-  const noun = provable.reviewCount === 1 ? 'review' : 'reviews';
-  return `${provable.rating} (${provable.reviewCount.toLocaleString()} ${noun})`;
+  return `${provable.rating} (${reviewCountLabel(reviews)})`;
 }
