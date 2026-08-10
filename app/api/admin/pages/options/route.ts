@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         categoryConditions.push({ $or: [{ name: search }, { slug: search }] });
       }
 
-      const destinationConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
+      const destinationConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, { archivedAt: null }];
       const destinationFilter: Record<string, unknown> = { $and: destinationConditions };
       if (excludeId) {
         categoryFilter._id = { $ne: excludeId };

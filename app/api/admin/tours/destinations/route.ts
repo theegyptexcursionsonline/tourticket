@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const [destinations, tours] = await Promise.all([
       // Default-tenant scope on both destinations and tour counts so
       // German-tenant variants don't leak into the EEO admin.
-      Destination.find({ ...DEFAULT_TENANT_FILTER }).sort({ name: 1 }).lean(),
+      Destination.find({ ...DEFAULT_TENANT_FILTER, archivedAt: null }).sort({ name: 1 }).lean(),
       Tour.find({ ...DEFAULT_TENANT_FILTER }).select('destination').lean(),
     ]);
     const tourCounts: Record<string, number> = {};
@@ -57,6 +57,8 @@ async function POSTHandler(request: NextRequest) {
     body.tenantId = 'default';
     delete body.$set;
     delete body.$unset;
+    delete body.archivedAt;
+    delete body.archivedBy;
    
     // Only name and description are required
     const requiredFields = ['name', 'description'];

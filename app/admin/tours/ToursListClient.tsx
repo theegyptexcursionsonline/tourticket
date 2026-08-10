@@ -283,7 +283,7 @@ export function ToursListClient({ tours }: { tours: TourType[] }) {
     { id: 'published' as TabFilter, label: 'Published', icon: CheckCircle, count: tabCounts.published },
     { id: 'draft' as TabFilter, label: 'Draft', icon: Edit3, count: tabCounts.draft },
     { id: 'featured' as TabFilter, label: 'Featured', icon: Star, count: tabCounts.featured },
-    { id: 'archived' as TabFilter, label: 'Archived', icon: Archive, count: tabCounts.archived },
+    { id: 'archived' as TabFilter, label: 'Trash', icon: Archive, count: tabCounts.archived },
   ];
 
   return (

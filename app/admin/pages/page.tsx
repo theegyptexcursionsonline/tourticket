@@ -163,7 +163,7 @@ export default function UnifiedPagesAdmin() {
 
   const deleteRow = async (row: UnifiedRow) => {
     const label = KIND_LABELS[row.kind];
-    if (!window.confirm(`Are you sure you want to delete the ${label.toLowerCase()} "${row.title}"?`)) {
+    if (!window.confirm(`Move the ${label.toLowerCase()} "${row.title}" to Trash? It can be restored later.`)) {
       return;
     }
 
@@ -178,7 +178,7 @@ export default function UnifiedPagesAdmin() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        alert(data.error || data.message || `Failed to delete (${response.status})`);
+        alert(data.error || data.message || `Failed to move to Trash (${response.status})`);
         return;
       }
       setRows((prev) => prev.filter((entry) => entry.id !== row.id));
@@ -187,13 +187,13 @@ export default function UnifiedPagesAdmin() {
         : prev);
     } catch (err) {
       alert('Network error');
-      console.error('Error deleting page:', err);
+      console.error('Error moving page to Trash:', err);
     }
   };
 
   const setArchived = async (row: UnifiedRow, archived: boolean) => {
     const label = KIND_LABELS[row.kind].toLowerCase();
-    if (archived && !window.confirm(`Archive the ${label} "${row.title}"? It stays available under the Archived filter.`)) {
+    if (archived && !window.confirm(`Move the ${label} "${row.title}" to Trash? It can be restored later.`)) {
       return;
     }
 
@@ -329,7 +329,7 @@ export default function UnifiedPagesAdmin() {
             <option value="all">All Status</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
-            <option value="archived">Archived</option>
+            <option value="archived">Trash</option>
           </select>
 
           <select
@@ -457,7 +457,7 @@ export default function UnifiedPagesAdmin() {
                           <button
                             onClick={() => setArchived(row, false)}
                             className="text-emerald-600 hover:text-emerald-900 p-1 rounded"
-                            title="Restore from archive"
+                            title="Restore from Trash"
                           >
                             <Undo2 className="w-4 h-4" />
                           </button>
@@ -465,18 +465,21 @@ export default function UnifiedPagesAdmin() {
                           <button
                             onClick={() => setArchived(row, true)}
                             className="text-amber-600 hover:text-amber-900 p-1 rounded"
-                            title="Archive (keeps the page, hides it from these lists)"
+                            title="Move to Trash (keeps the page recoverable)"
                           >
                             <Archive className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => deleteRow(row)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded"
-                          title="Delete Page"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {filterStatus !== 'archived' && (
+                          <button
+                            onClick={() => deleteRow(row)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded"
+                            title="Move Page to Trash"
+                            aria-label={`Move ${row.title} to Trash`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

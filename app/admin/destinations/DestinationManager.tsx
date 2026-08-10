@@ -29,7 +29,8 @@ import {
   Info,
   Plus,
   Minus,
-  Copy
+  Copy,
+  Undo2
 } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
 import TranslationEditor from '@/components/admin/TranslationEditor';
@@ -120,6 +121,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [duplicatingDestinationId, setDuplicatingDestinationId] = useState<string | null>(null);
   const [editingDestination, setEditingDestination] = useState<IDestination | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [listView, setListView] = useState<'active' | 'trash'>('active');
   
   // The urlType the destination was loaded with — keeps a legacy shape
   // selectable for that record while new destinations only ever offer Direct.
@@ -546,20 +548,44 @@ setTimeout(() => router.refresh(), 0);
   toast.error(error instanceof Error ? error.message : 'Failed to save destination');
 }
 };
-  const handleDelete = (destId: string, destName: string) => {
+  const handleMoveToTrash = (destId: string, destName: string) => {
+    if (!window.confirm(`Move "${destName}" to Trash? It will be unpublished, and linked tours will be preserved.`)) {
+      return;
+    }
     const promise = fetch(`/api/admin/destinations/${destId}`, { method: 'DELETE', headers: getAuthHeaders() })
       .then(res => {
-        if (!res.ok) throw new Error('Failed to delete.');
+        if (!res.ok) throw new Error('Failed to move to Trash.');
         return res.json();
       });
 
     toast.promise(promise, {
-        loading: `Deleting ${destName}...`,
+        loading: `Moving ${destName} to Trash...`,
         success: () => {
             router.refresh();
-            return `${destName} deleted successfully.`;
+            return `${destName} moved to Trash.`;
         },
-        error: `Failed to delete ${destName}.`
+        error: `Failed to move ${destName} to Trash.`
+    });
+  };
+
+  const handleRestore = (destId: string, destName: string) => {
+    const promise = fetch(`/api/admin/destinations/${destId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ restoreFromTrash: true }),
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to restore.');
+      return data;
+    });
+
+    toast.promise(promise, {
+      loading: `Restoring ${destName}...`,
+      success: () => {
+        router.refresh();
+        return `${destName} restored to Draft.`;
+      },
+      error: `Failed to restore ${destName}.`,
     });
   };
 
@@ -628,6 +654,11 @@ setTimeout(() => router.refresh(), 0);
   const filteredTours = availableTours.filter((tour) =>
     !tourSearch.trim() || `${tour.title} ${tour.slug}`.toLowerCase().includes(tourSearch.trim().toLowerCase())
   );
+  const visibleDestinations = initialDestinations.filter((destination) =>
+    listView === 'trash' ? Boolean(destination.archivedAt) : !destination.archivedAt
+  );
+  const activeDestinationCount = initialDestinations.filter((destination) => !destination.archivedAt).length;
+  const trashDestinationCount = initialDestinations.length - activeDestinationCount;
 
   const toggleCuratedTour = (field: 'bestDealTourIds' | 'topTourIds', tourId: string) => {
     setFormData((prev) => {
@@ -677,15 +708,39 @@ setTimeout(() => router.refresh(), 0);
         <div className="mt-6 pt-6 border-t border-slate-200/60">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <MapPin className="h-4 w-4 text-indigo-500" />
-            <span className="font-medium">{initialDestinations.length}</span>
-            <span>destination{initialDestinations.length !== 1 ? 's' : ''} available</span>
+            <span className="font-medium">{activeDestinationCount}</span>
+            <span>active destination{activeDestinationCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Destination views">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={listView === 'active'}
+          onClick={() => setListView('active')}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold ${listView === 'active' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
+        >
+          Active ({activeDestinationCount})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={listView === 'trash'}
+          onClick={() => setListView('trash')}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold ${listView === 'trash' ? 'bg-rose-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
+        >
+          Trash ({trashDestinationCount})
+        </button>
+        {listView === 'trash' && (
+          <span className="text-sm text-slate-500">Restore destinations safely; linked tours remain intact.</span>
+        )}
+      </div>
+
       {/* Destinations Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {initialDestinations.map((dest, index) => (
+        {visibleDestinations.map((dest, index) => (
           <motion.div
             key={String(dest._id)}
             initial={{ opacity: 0, y: 20 }}
@@ -737,32 +792,47 @@ setTimeout(() => router.refresh(), 0);
                     <Eye size={16} />
                   </button>
                 )}
-                <button 
-                  onClick={() => openPanelForEdit(dest)} 
-                  className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-indigo-600 shadow-lg transition-all duration-200 transform hover:scale-110"
-                  title="Edit destination"
-                >
-                  <Edit size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDuplicate(dest)}
-                  disabled={duplicatingDestinationId === String(dest._id)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-60"
-                  title="Duplicate destination as draft"
-                  aria-label={`Duplicate ${dest.name} as draft`}
-                >
-                  {duplicatingDestinationId === String(dest._id)
-                    ? <Loader2 size={16} className="animate-spin" />
-                    : <Copy size={16} />}
-                </button>
-                <button
-                  onClick={() => handleDelete(String(dest._id), dest.name)}
-                  className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
-                  title="Delete destination"
-                >
-                  <Trash2 size={16} />
-                </button>
+                {listView === 'trash' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleRestore(String(dest._id), dest.name)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-emerald-700 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white"
+                    title="Restore destination to Draft"
+                    aria-label={`Restore ${dest.name} to Draft`}
+                  >
+                    <Undo2 size={16} />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => openPanelForEdit(dest)}
+                      className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-indigo-600 shadow-lg transition-all duration-200 transform hover:scale-110"
+                      title="Edit destination"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDuplicate(dest)}
+                      disabled={duplicatingDestinationId === String(dest._id)}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-60"
+                      title="Duplicate destination as draft"
+                      aria-label={`Duplicate ${dest.name} as draft`}
+                    >
+                      {duplicatingDestinationId === String(dest._id)
+                        ? <Loader2 size={16} className="animate-spin" />
+                        : <Copy size={16} />}
+                    </button>
+                    <button
+                      onClick={() => handleMoveToTrash(String(dest._id), dest.name)}
+                      className="flex items-center justify-center w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl text-slate-700 hover:bg-white hover:text-red-600 shadow-lg transition-all duration-200 transform hover:scale-110"
+                      title="Move destination to Trash"
+                      aria-label={`Move ${dest.name} to Trash`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Status Badges */}
@@ -777,7 +847,7 @@ setTimeout(() => router.refresh(), 0);
                   dest.isPublished ? 'bg-green-500/90' : 'bg-red-500/90'
                 }`}>
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  {dest.isPublished ? 'Published' : 'Draft'}
+                  {dest.archivedAt ? 'In Trash' : (dest.isPublished ? 'Published' : 'Draft')}
                 </div>
               </div>
             </div>
@@ -815,23 +885,29 @@ setTimeout(() => router.refresh(), 0);
         ))}
 
         {/* Empty State */}
-        {initialDestinations.length === 0 && (
+        {visibleDestinations.length === 0 && (
           <div className="col-span-full">
             <div className="text-center py-16">
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center">
                 <MapPin className="w-10 h-10 text-slate-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-700 mb-3">No destinations yet</h3>
+              <h3 className="text-xl font-bold text-slate-700 mb-3">
+                {listView === 'trash' ? 'Trash is empty' : 'No destinations yet'}
+              </h3>
               <p className="text-slate-500 max-w-md mx-auto mb-6">
-                Create your first destination to start organizing your tours by location.
+                {listView === 'trash'
+                  ? 'Destinations moved to Trash will appear here and can be restored to Draft.'
+                  : 'Create your first destination to start organizing your tours by location.'}
               </p>
-              <button 
-                onClick={openPanelForCreate}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <PlusCircle className="h-5 w-5" />
-                Add First Destination
-              </button>
+              {listView === 'active' && (
+                <button
+                  onClick={openPanelForCreate}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                  Add First Destination
+                </button>
+              )}
             </div>
           </div>
         )}

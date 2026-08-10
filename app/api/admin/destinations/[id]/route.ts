@@ -3,7 +3,6 @@ import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Destination, { type IDestination } from '@/lib/models/Destination';
-import Tour from '@/lib/models/Tour';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateDestination } from '@/lib/i18n/autoTranslate';
@@ -12,6 +11,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import { deleteDestinationFromAlgolia } from '@/lib/algolia';
 
 async function PUTHandler(
   request: NextRequest,
@@ -25,6 +25,12 @@ async function PUTHandler(
     await dbConnect();
 
     const data = await request.json();
+    const restoreFromTrash = data.restoreFromTrash === true;
+    delete data.restoreFromTrash;
+    // Lifecycle metadata is server-owned. A client can only use the explicit
+    // restore operation below, never forge who or when a record was removed.
+    delete data.archivedAt;
+    delete data.archivedBy;
     const navigation = sanitizeContentNavigation(data);
     delete data.tenantId;
     const { id } = await params;
@@ -63,6 +69,11 @@ async function PUTHandler(
     
     // Prepare update data - only update fields that are provided
     const updateData: Partial<IDestination> = {};
+    if (restoreFromTrash) {
+      updateData.archivedAt = null;
+      updateData.archivedBy = null;
+      updateData.isPublished = false;
+    }
     if ('breadcrumbLabel' in navigation) updateData.breadcrumbLabel = navigation.breadcrumbLabel;
     if ('parentPage' in navigation) {
       updateData.parentPage = await validateParentPageSelection({
@@ -148,7 +159,15 @@ async function PUTHandler(
     
     // Status & meta - THIS IS THE KEY PART FOR FEATURED
     if (data.featured !== undefined) updateData.featured = data.featured;
-    if (data.isPublished !== undefined) updateData.isPublished = data.isPublished;
+    if (data.isPublished !== undefined) {
+      if (existingDestination.archivedAt && !restoreFromTrash && data.isPublished === true) {
+        return NextResponse.json({
+          success: false,
+          error: 'Restore this destination from Trash before publishing it.',
+        }, { status: 409 });
+      }
+      updateData.isPublished = restoreFromTrash ? false : data.isPublished;
+    }
     if (data.tourCount !== undefined) updateData.tourCount = data.tourCount;
     if (data.urlType !== undefined) updateData.urlType = data.urlType;
     
@@ -207,7 +226,9 @@ async function PUTHandler(
     return NextResponse.json({
       success: true,
       data: destination,
-      message: 'Destination updated successfully'
+      message: restoreFromTrash
+        ? 'Destination restored to Draft.'
+        : 'Destination updated successfully'
     });
 
   } catch (error: unknown) {
@@ -252,9 +273,6 @@ async function DELETEHandler(
     await dbConnect();
 
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const force = searchParams.get('force') === 'true';
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({
         success: false,
@@ -262,27 +280,17 @@ async function DELETEHandler(
       }, { status: 400 });
     }
 
-    // Check if destination has tours
-    const destinationExists = await Destination.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
-    if (!destinationExists) return NextResponse.json({ success: false, error: 'Destination not found' }, { status: 404 });
-    const tourCount = await Tour.countDocuments({ destination: id, ...DEFAULT_TENANT_FILTER });
-    if (tourCount > 0) {
-      if (!force) {
-        return NextResponse.json({
-          success: false,
-          error: `Cannot delete destination. It has ${tourCount} tours associated with it. Use force=true to unlink tours and delete.`,
-          tourCount
-        }, { status: 400 });
-      }
-
-      // If force delete, unlink tours from this destination
-      await Tour.updateMany(
-        { destination: id, ...DEFAULT_TENANT_FILTER },
-        { $unset: { destination: "" } }
-      );
-    }
-
-    const destination = await Destination.findOneAndDelete({ _id: id, ...DEFAULT_TENANT_FILTER });
+    const destination = await Destination.findOneAndUpdate(
+      { _id: id, ...DEFAULT_TENANT_FILTER },
+      {
+        $set: {
+          isPublished: false,
+          archivedAt: new Date(),
+          archivedBy: auth.id,
+        },
+      },
+      { new: true },
+    );
 
     if (!destination) {
       return NextResponse.json({
@@ -293,18 +301,23 @@ async function DELETEHandler(
 
     revalidateStorefrontContent();
 
+    try {
+      await deleteDestinationFromAlgolia(String(destination._id));
+    } catch (algoliaError) {
+      console.warn('Failed to remove trashed destination from search:', algoliaError);
+    }
+
     return NextResponse.json({
       success: true,
-      message: force && tourCount > 0
-        ? `Destination deleted successfully. ${tourCount} tours were unlinked.`
-        : 'Destination deleted successfully'
+      message: 'Destination moved to Trash. Linked tours were preserved.',
+      data: { id: destination._id, archivedAt: destination.archivedAt },
     });
 
   } catch (error) {
     console.error('Error deleting destination:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to delete destination'
+      error: 'Failed to move destination to Trash'
     }, { status: 500 });
   }
 }

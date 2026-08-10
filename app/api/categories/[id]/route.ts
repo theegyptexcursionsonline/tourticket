@@ -221,9 +221,18 @@ async function DELETEHandler(
       }, { status: 400 });
     }
 
-    const category = await Category.findOneAndDelete({
+    const beforeCategory = await Category.findOne({
       $and: [DEFAULT_TENANT_FILTER, { _id: id }],
-    });
+    }).lean();
+    if (!beforeCategory) {
+      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
+    }
+
+    const category = await Category.findOneAndUpdate({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    }, {
+      $set: { isPublished: false, archivedAt: new Date() },
+    }, { new: true });
 
     if (!category) {
       return NextResponse.json({
@@ -235,19 +244,20 @@ async function DELETEHandler(
     revalidateStorefrontContent();
     registerAdminAuditDetail(contentPageAuditDetail({
       kind: 'category page',
-      operation: 'delete',
-      before: category,
+      operation: 'update',
+      before: beforeCategory,
+      after: category,
     }));
 
     return NextResponse.json({
       success: true,
-      message: 'Category deleted successfully'
+      message: 'Category moved to Trash. It can be restored from the Trash filter.'
     });
   } catch (error) {
-    console.error('Error deleting category:', error);
+    console.error('Error moving category to Trash:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to delete category'
+      error: 'Failed to move category to Trash'
     }, { status: 500 });
   }
 }

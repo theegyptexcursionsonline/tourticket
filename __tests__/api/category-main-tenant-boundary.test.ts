@@ -168,15 +168,29 @@ describe('main category item tenant boundary', () => {
     expect(response.status).toBe(404);
   });
 
-  it('scopes permanent deletion to the main tenant', async () => {
-    findOneAndDelete.mockResolvedValue(null);
+  it('moves a main-tenant category to recoverable Trash without hard deletion', async () => {
+    findOne.mockReturnValue(leanQuery({
+      _id: '68e1825fe6bab638df5a7f31',
+      name: 'Nightlife & Bars',
+      archivedAt: null,
+      isPublished: true,
+    }));
+    findOneAndUpdate.mockResolvedValue({
+      _id: '68e1825fe6bab638df5a7f31',
+      name: 'Nightlife & Bars',
+      archivedAt: new Date(),
+      isPublished: false,
+    });
     const { DELETE } = await import('@/app/api/categories/[id]/route');
 
     const response = await DELETE(request('DELETE'), context);
 
-    expect(response.status).toBe(404);
-    expect(findOneAndDelete).toHaveBeenCalledWith({
-      $and: [DEFAULT_TENANT_FILTER, { _id: '68e1825fe6bab638df5a7f31' }],
-    });
+    expect(response.status).toBe(200);
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { $and: [DEFAULT_TENANT_FILTER, { _id: '68e1825fe6bab638df5a7f31' }] },
+      { $set: { isPublished: false, archivedAt: expect.any(Date) } },
+      { new: true },
+    );
+    expect(findOneAndDelete).not.toHaveBeenCalled();
   });
 });

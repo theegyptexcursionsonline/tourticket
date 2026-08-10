@@ -16,12 +16,13 @@ describe('unified Pages audit wiring', () => {
   it.each([
     ['app/api/admin/attraction-pages/[id]/route.ts', 'attraction page'],
     ['app/api/categories/[id]/route.ts', 'category page'],
-  ])('%s attributes rejected attempts and successful update/delete outcomes', (file, kind) => {
+  ])('%s attributes rejected attempts and successful update/Trash outcomes', (file, kind) => {
     const source = read(file);
     expect(source).toContain('contentPageAuditAttemptDetail({');
     expect(source).toContain(`kind: '${kind}'`);
     expect(source).toContain("operation: 'update'");
-    expect(source).toContain("operation: 'delete'");
+    expect(source).toContain('$set: { isPublished: false, archivedAt: new Date() }');
+    expect(source).not.toContain('findOneAndDelete({');
     expect(source.match(/registerAdminAuditDetail\(contentPageAuditDetail\(\{/g)).toHaveLength(2);
   });
 

@@ -63,6 +63,8 @@ export interface IDestination extends Document {
   // Status & Meta
   featured?: boolean;
   isPublished?: boolean;
+  archivedAt?: Date | null;
+  archivedBy?: string | null;
   tourCount?: number;
 // SEO & Meta
   metaTitle?: string;
@@ -380,6 +382,10 @@ currency: {
     default: true,
     index: true,
   },
+  // Recoverable deletion. Archived destinations are unpublished and retained
+  // with their tour relationships intact until an administrator restores them.
+  archivedAt: { type: Date, default: null, index: true },
+  archivedBy: { type: String, trim: true, maxlength: 255, default: null },
   tourCount: {
     type: Number,
     default: 0,
@@ -424,6 +430,7 @@ DestinationSchema.index({ slug: 1, tenantId: 1 }, { unique: true });
 DestinationSchema.index({ name: 1, tenantId: 1 }, { unique: true });
 DestinationSchema.index({ name: 'text', description: 'text', country: 'text' });
 DestinationSchema.index({ featured: 1, isPublished: 1 });
+DestinationSchema.index({ archivedAt: 1, name: 1 });
 DestinationSchema.index({ country: 1, featured: 1 });
 DestinationSchema.index({ tourCount: -1 });
 

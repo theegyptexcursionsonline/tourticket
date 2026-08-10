@@ -1026,12 +1026,16 @@ export default function CategoryPageClient({
 
                 <CategoryTravelTipsSection category={category} />
 
-                <div className="container mx-auto px-4 py-8">
-                    <div className="max-w-7xl mx-auto">
+                <section
+                    aria-labelledby="available-tours-heading"
+                    className="border-y border-slate-200 bg-white py-12 text-slate-900"
+                >
+                    <div className="container mx-auto px-4">
+                      <div className="max-w-7xl mx-auto">
                         {/* Search and Filter */}
                         {categoryTours.length > 0 && (
-                            <div className="mt-12">
-                                <h2 className="text-3xl font-bold text-gray-900 mb-6">{copy.availableTours}</h2>
+                            <div>
+                                <h2 id="available-tours-heading" className="text-3xl font-bold text-slate-900 mb-6">{copy.availableTours}</h2>
                                 <SearchAndFilter
                                     searchQuery={searchQuery}
                                     setSearchQuery={setSearchQuery}
@@ -1083,8 +1087,9 @@ export default function CategoryPageClient({
                                 </div>
                             </div>
                         )}
+                      </div>
                     </div>
-                </div>
+                </section>
 
                 <CategoryFaqSection copy={copy} faqItems={categoryInsights.faqItems} />
 

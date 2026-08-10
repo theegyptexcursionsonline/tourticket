@@ -252,9 +252,18 @@ async function DELETEHandler(
       }, { status: 400 });
     }
 
-    const page = await AttractionPage.findOneAndDelete({
+    const beforePage = await AttractionPage.findOne({
       $and: [DEFAULT_TENANT_FILTER, { _id: id }],
-    });
+    }).lean();
+    if (!beforePage) {
+      return NextResponse.json({ success: false, error: 'Page not found' }, { status: 404 });
+    }
+
+    const page = await AttractionPage.findOneAndUpdate({
+      $and: [DEFAULT_TENANT_FILTER, { _id: id }],
+    }, {
+      $set: { isPublished: false, archivedAt: new Date() },
+    }, { new: true });
 
     if (!page) {
       return NextResponse.json({
@@ -266,19 +275,20 @@ async function DELETEHandler(
     revalidateStorefrontContent();
     registerAdminAuditDetail(contentPageAuditDetail({
       kind: 'attraction page',
-      operation: 'delete',
-      before: page,
+      operation: 'update',
+      before: beforePage,
+      after: page,
     }));
 
     return NextResponse.json({
       success: true,
-      message: 'Page deleted successfully'
+      message: 'Page moved to Trash. It can be restored from the Trash filter.'
     });
   } catch (error) {
-    console.error('Error deleting attraction page:', error);
+    console.error('Error moving attraction page to Trash:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to delete attraction page',
+      error: 'Failed to move attraction page to Trash',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

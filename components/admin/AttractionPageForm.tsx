@@ -26,6 +26,7 @@ import { ensureImageMetadata } from '@/lib/content/imageMetadata';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 import ContentListingPicker, { type ContentListingOption } from '@/components/admin/ContentListingPicker';
 import { PAGE_TEMPLATES, PAGE_TEMPLATE_LABELS, normalizePageTemplate } from '@/lib/content/pageTemplate';
+import PageTypeConversionActions from '@/components/admin/PageTypeConversionActions';
 
 interface AttractionPageFormProps {
   pageId?: string;
@@ -140,7 +141,11 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
 
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch('/api/categories');
+      // Category 2 must be able to link a brand-new category before that
+      // category has any published tours. The storefront deliberately hides
+      // empty categories, so this admin picker opts into the complete
+      // published-category set (the same contract used by TourForm).
+      const response = await fetch('/api/categories?includeEmpty=true');
       const data = await response.json();
       if (data.success) {
         setCategories(data.data);
@@ -645,6 +650,10 @@ export default function AttractionPageForm({ pageId, initialPageType = 'attracti
                                 Create a Category instead
                               </Link>
                             </SmallHint>
+                            <PageTypeConversionActions
+                              pageId={pageId}
+                              currentKind={formData.pageType === 'category' ? 'category-landing' : 'attraction'}
+                            />
                           </div>
                           <div className="space-y-3">
                               <FormLabel icon={Globe}>URL Type</FormLabel>

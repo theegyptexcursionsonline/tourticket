@@ -137,7 +137,7 @@ describe('DestinationManager', () => {
       await renderManager()
 
       expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText('destinations available')).toBeInTheDocument()
+      expect(screen.getByText('active destinations')).toBeInTheDocument()
     })
 
     it('should render all destination cards', async () => {
@@ -493,10 +493,11 @@ describe('DestinationManager', () => {
     })
   })
 
-  describe('Delete Destination', () => {
-    it('should delete destination successfully', async () => {
+  describe('Destination Trash', () => {
+    it('moves a destination to Trash after confirmation', async () => {
       const user = userEvent.setup()
       const toast = require('react-hot-toast')
+      jest.spyOn(window, 'confirm').mockReturnValue(true)
 
       ;(global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -507,7 +508,7 @@ describe('DestinationManager', () => {
 
       const cairoCard = screen.getByText('Cairo').closest('.group')
       if (cairoCard) {
-        const deleteButton = cairoCard.querySelector('button[title="Delete destination"]')
+        const deleteButton = cairoCard.querySelector('button[title="Move destination to Trash"]')
         if (deleteButton) {
           await user.click(deleteButton)
 
@@ -516,6 +517,31 @@ describe('DestinationManager', () => {
           })
         }
       }
+    })
+
+    it('shows trashed destinations separately and restores them to Draft', async () => {
+      const user = userEvent.setup()
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      })
+      await renderManager([
+        mockDestinations[0],
+        { ...mockDestinations[1], archivedAt: new Date('2026-08-11T10:00:00Z') },
+      ])
+
+      expect(screen.queryByText('Luxor')).not.toBeInTheDocument()
+      await user.click(screen.getByRole('tab', { name: /trash \(1\)/i }))
+      expect(screen.getByText('Luxor')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /restore luxor to draft/i }))
+
+      await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(
+        '/api/admin/destinations/2',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ restoreFromTrash: true }),
+        }),
+      ))
     })
   })
 

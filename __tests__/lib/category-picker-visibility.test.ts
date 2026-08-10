@@ -10,6 +10,8 @@
  */
 
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const withTours = { name: 'Camel Tours', slug: 'camel-tours', isPublished: true, tourCount: 4 };
 const brandNew = { name: 'Luxor Day Trips', slug: 'luxor-day-trips', isPublished: true, tourCount: 0 };
@@ -29,5 +31,13 @@ describe('category picker visibility', () => {
   it('never exposes an unpublished category, even to the admin picker', () => {
     const visible = filterVisibleTaxonomyEntries([withTours, unpublished], { requireTours: false });
     expect(visible.map((c) => c.slug)).toEqual(['camel-tours']);
+  });
+
+  it.each([
+    ['Tour', 'components/TourForm.tsx'],
+    ['Category 2', 'components/admin/AttractionPageForm.tsx'],
+  ])('%s picker requests the complete published category set', (_label, relativePath) => {
+    const source = readFileSync(join(process.cwd(), relativePath), 'utf8');
+    expect(source).toContain("fetch('/api/categories?includeEmpty=true')");
   });
 });

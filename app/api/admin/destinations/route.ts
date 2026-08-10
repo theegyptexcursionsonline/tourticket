@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       // Default-tenant scope so other-tenant Destination records (e.g.
       // German aegypten-ausfluege variants) don't appear as duplicate
       // cards in the EEO admin.
-      Destination.find({ ...DEFAULT_TENANT_FILTER }).sort({ name: 1 }).lean(),
+      Destination.find({ ...DEFAULT_TENANT_FILTER, archivedAt: null }).sort({ name: 1 }).lean(),
       Tour.find({ ...DEFAULT_TENANT_FILTER }).select('destination').lean(),
     ]);
     const tourCounts: Record<string, number> = {};
@@ -59,6 +59,8 @@ async function POSTHandler(request: NextRequest) {
     body.tenantId = 'default';
     delete body.$set;
     delete body.$unset;
+    delete body.archivedAt;
+    delete body.archivedBy;
     
     // For POST (creation), we still need required fields
     const requiredFields = ['name', 'country', 'description', 'image'];

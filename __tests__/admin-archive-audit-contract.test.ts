@@ -7,8 +7,9 @@ const read = (file: string) => fs.readFileSync(path.join(process.cwd(), file), '
 describe('archived is its own status, not a draft', () => {
   const list = read('app/admin/tours/ToursListClient.tsx');
 
-  it('offers an Archived tab', () => {
+  it('offers a client-facing Trash tab', () => {
     expect(list).toContain("id: 'archived' as TabFilter");
+    expect(list).toContain("label: 'Trash'");
     expect(list).toContain("'all' | 'published' | 'draft' | 'featured' | 'archived'");
   });
 
@@ -100,6 +101,31 @@ describe('pages and destinations can be archived from the row', () => {
   it('stores the archive timestamp on both page models', () => {
     expect(read('lib/models/AttractionPage.ts')).toContain('archivedAt');
     expect(read('lib/models/Category.ts')).toContain('archivedAt');
+  });
+
+  it('moves pages to Trash through soft updates rather than hard deletion', () => {
+    for (const route of [
+      'app/api/admin/attraction-pages/[id]/route.ts',
+      'app/api/categories/[id]/route.ts',
+    ]) {
+      const source = read(route);
+      expect(source).toContain('$set: { isPublished: false, archivedAt: new Date() }');
+      expect(source).not.toContain('findOneAndDelete({');
+    }
+    expect(list).toContain('<option value="archived">Trash</option>');
+    expect(list).toContain('Restore from Trash');
+  });
+
+  it('gives destinations a tenant-scoped recoverable lifecycle without unlinking tours', () => {
+    const route = read('app/api/admin/destinations/[id]/route.ts');
+    const manager = read('app/admin/destinations/DestinationManager.tsx');
+    expect(read('lib/models/Destination.ts')).toContain('archivedAt: { type: Date');
+    expect(route).toContain('restoreFromTrash');
+    expect(route).toContain('Linked tours were preserved');
+    expect(route).not.toContain('Tour.updateMany');
+    expect(route).not.toContain('Destination.findOneAndDelete');
+    expect(manager).toContain("listView === 'trash'");
+    expect(manager).toContain('Restore destination to Draft');
   });
 });
 

@@ -25,6 +25,7 @@ import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import { PAGE_TEMPLATES, PAGE_TEMPLATE_LABELS, normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
 import { normalizeCategoryKeywords } from '@/lib/content/categoryKeywords';
 import ContentListingPicker, { type ContentListingOption } from '@/components/admin/ContentListingPicker';
+import PageTypeConversionActions from '@/components/admin/PageTypeConversionActions';
 
 interface CategoryFormData {
   name: string;
@@ -508,6 +509,7 @@ export default function CategoryForm({ categoryId }: CategoryFormProps) {
                     {/* Basic Info Tab */}
                     {activeTab === 'basic' && (
                       <div className="space-y-6">
+                        <PageTypeConversionActions pageId={categoryId} currentKind="category" />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="space-y-3">
                             <FormLabel icon={Tag} required>Category Name</FormLabel>
