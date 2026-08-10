@@ -79,6 +79,25 @@ describe('homepage performance contracts', () => {
     });
   });
 
+  it('keeps the provider and rating badges in one collision-safe row', () => {
+    render(<FeaturedToursServer tours={tours as never} />);
+
+    const rows = screen.getAllByTestId('featured-tour-badge-row');
+    expect(rows).toHaveLength(tours.length);
+    rows.forEach((row) => {
+      expect(row).toHaveClass('flex', 'justify-between', 'gap-2');
+      expect(row.firstElementChild).toHaveClass('min-w-0', 'truncate', 'whitespace-nowrap');
+      expect(row.lastElementChild).toHaveClass('shrink-0');
+    });
+  });
+
+  it('does not publish a zero-booking social-proof label', () => {
+    render(<FeaturedToursServer tours={[{ ...tours[0], bookings: 0 }] as never} />);
+
+    expect(screen.queryByText(/0 booked/i)).not.toBeInTheDocument();
+    expect(screen.getByText('4 hours')).toBeInTheDocument();
+  });
+
   it('opens the singleton hosted search instead of mounting a second widget', () => {
     const opened = jest.fn();
     window.addEventListener('foxes:search:open', opened, { once: true });

@@ -116,11 +116,26 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
-        {/* Provider Badge */}
-        <div className="absolute top-4 left-4 z-20">
-          <span className="px-3 py-1.5 text-xs font-bold text-white bg-slate-900/80 backdrop-blur-sm rounded-full" style={{ boxShadow: 'none' }}>
+        {/* Keep provider and rating in one bounded row so they cannot collide
+            on the narrowest cards. */}
+        <div
+          data-testid="featured-tour-badge-row"
+          className="absolute inset-x-4 top-4 z-20 flex items-start justify-between gap-2"
+        >
+          <span
+            className="min-w-0 truncate whitespace-nowrap rounded-full bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-xs"
+            style={{ boxShadow: 'none' }}
+            title="Egypt Excursions Online"
+          >
             Egypt Excursions Online
           </span>
+
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/95 px-2.5 py-1.5 backdrop-blur-sm sm:gap-2 sm:px-3 sm:py-2" style={{ boxShadow: 'none' }}>
+            <Star size={16} className="text-yellow-500 fill-yellow-500" />
+            <span className="text-xs font-bold text-gray-800 sm:text-sm">
+              {tour.rating ? tour.rating.toFixed(1) : '0.0'}
+            </span>
+          </div>
         </div>
 
         {/* Tags */}
@@ -147,16 +162,6 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             </span>
           </div>
         )}
-
-        {/* Rating Badge */}
-        <div className="absolute top-4 right-4 z-20">
-          <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full flex items-center gap-2 border border-white/20" style={{ boxShadow: 'none' }}>
-            <Star size={16} className="text-yellow-500 fill-yellow-500" />
-            <span className="text-sm font-bold text-gray-800">
-              {tour.rating ? tour.rating.toFixed(1) : '0.0'}
-            </span>
-          </div>
-        </div>
 
         {/* Price Badge */}
         <div className="absolute left-4 bottom-4 z-20">
@@ -203,10 +208,12 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             <Clock size={14} className="text-gray-400" />
             <span className="font-medium">{tour.duration || t('durationNotSpecified')}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Users size={14} className="text-gray-400" />
-            <span className="font-medium">{formatBookings(tour.bookings)} {t('booked')}</span>
-          </div>
+          {(tour.bookings || 0) > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Users size={14} className="text-gray-400" />
+              <span className="font-medium">{formatBookings(tour.bookings)} {t('booked')}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">

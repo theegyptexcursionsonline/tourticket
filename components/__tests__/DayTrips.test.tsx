@@ -147,6 +147,29 @@ describe('DayTripsSection', () => {
       expect(screen.getByText('$50.00')).toBeInTheDocument()
     })
 
+    it('should not show a zero booking count', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          success: true,
+          data: [{ ...mockTours[0], bookings: 0 }],
+        }),
+        json: async () => ({
+          success: true,
+          data: [{ ...mockTours[0], bookings: 0 }],
+        }),
+      })
+
+      render(<DayTripsSection />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Amsterdam Canal Tour')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByText('(0)')).not.toBeInTheDocument()
+    })
+
     it('should render discount tags correctly', async () => {
       render(<DayTripsSection />)
 

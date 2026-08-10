@@ -111,6 +111,28 @@ describe('FeaturedTours', () => {
       expect(screen.getAllByText('$80.00')[0]).toBeInTheDocument()
     })
 
+    it('should hide zero-booking social proof while preserving real counts', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [
+            { ...mockTours[0], bookings: 0 },
+            mockTours[1],
+          ],
+        }),
+      })
+
+      render(<FeaturedTours />)
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Pyramids of Giza Tour')[0]).toBeInTheDocument()
+      })
+
+      expect(screen.queryByText(/0 booked/i)).not.toBeInTheDocument()
+      expect(screen.getAllByText('3k booked')[0]).toBeInTheDocument()
+    })
+
     it('should render tags correctly', async () => {
       render(<FeaturedTours />)
 

@@ -178,10 +178,12 @@ const SimpleTourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartCli
             <Clock size={14} className="text-gray-400" />
             <span className="font-medium">{tour.duration || 'Duration not specified'}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Users size={14} className="text-gray-400" />
-            <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
-          </div>
+          {(tour.bookings || 0) > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Users size={14} className="text-gray-400" />
+              <span className="font-medium">{formatBookings(tour.bookings)} booked</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">

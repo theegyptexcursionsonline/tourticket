@@ -1918,7 +1918,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
           <span className="flex items-center gap-1">
             <Star size={14} fill="currentColor" className="text-yellow-500" />{tour.rating}
           </span>
-          <span>{tour.bookings} {copy.bookings}</span>
+          {(tour.bookings || 0) > 0 && <span>{tour.bookings} {copy.bookings}</span>}
         </div>
         <div className="flex items-end justify-end mt-3 sm:mt-4">
           {tour.originalPrice && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(tour.originalPrice)}</span>}

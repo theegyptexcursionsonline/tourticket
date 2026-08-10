@@ -178,9 +178,11 @@ const DayTripCard = ({
               {typeof trip.rating === 'number' ? trip.rating.toFixed(1) : trip.rating || '0.0'}
             </span>
           </div>
-          <span className="text-slate-500 ml-2">
-            ({(trip.bookings || 0).toLocaleString()})
-          </span>
+          {(trip.bookings || 0) > 0 && (
+            <span className="text-slate-500 ml-2">
+              ({trip.bookings?.toLocaleString()})
+            </span>
+          )}
         </div>
         
         <div className="flex items-baseline justify-end mt-auto pt-2">

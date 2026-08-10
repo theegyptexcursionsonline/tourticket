@@ -247,6 +247,17 @@ describe('DestinationPageClient', () => {
       expect(screen.getAllByText('Pyramids Tour')[0]).toBeInTheDocument()
     })
 
+    it('should not show zero bookings on tour cards', () => {
+      const props = {
+        ...defaultProps,
+        destinationTours: mockTours.map(tour => ({ ...tour, bookings: 0 })),
+      }
+
+      render(<DestinationPageClient {...props} />)
+
+      expect(screen.queryByText(/^0 bookings$/i)).not.toBeInTheDocument()
+    })
+
     it('should not render section when no featured tours', () => {
       const noFeaturedTours = mockTours.map(t => ({ ...t, isFeatured: false }))
       const props = { ...defaultProps, destinationTours: noFeaturedTours }
