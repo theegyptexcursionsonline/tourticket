@@ -41,7 +41,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.color).toBe('#4385F6');
       expect(script.dataset.dir).toBe('ltr');
       expect(script.dataset.locale).toBe('en');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260808-compact-launcher');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260811-eeo-blue-branding');
     });
   });
 
@@ -84,6 +84,19 @@ describe('EEOSearchConcierge', () => {
       await waitFor(() => expect(document.getElementById('eeo-search-concierge-script')).toBeNull());
     }
   );
+
+  it('keeps the current EEO-blue launcher on Tour detail routes', async () => {
+    pathname = '/en/marsa-alam-sea-desert-horse-riding-tour';
+    render(<EEOSearchConcierge />);
+
+    await waitFor(() => {
+      const script = document.getElementById('eeo-search-concierge-script') as HTMLScriptElement;
+      expect(script).toBeInTheDocument();
+      expect(script.dataset.color).toBe('#4385F6');
+      expect(script.dataset.placeholder).toBe('Search Egypt tours...');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260811-eeo-blue-branding');
+    });
+  });
 
   const visibleRects = () => [{ width: 320, height: 200 }] as unknown as DOMRectList;
 
