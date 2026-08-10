@@ -9,6 +9,8 @@ const SEARCH_ORIGIN = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || 'https://se
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5umlfasNQfJywtFPs6g';
 const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
+// Exact primary blue sampled from the customer-facing EEO logo assets.
+const EEO_BRAND_BLUE = '#4385F6';
 const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
 const MOBILE_ACTION_GAP_PX = 12;
 // The launcher is served through the customer CDN. A release token prevents a
@@ -134,7 +136,7 @@ export default function EEOSearchConcierge() {
     script.dataset.label = localizedCopy.label;
     script.dataset.kicker = localizedCopy.kicker;
     script.dataset.placeholder = localizedCopy.placeholder;
-    script.dataset.color = '#0b5d3b';
+    script.dataset.color = EEO_BRAND_BLUE;
     script.dataset.position = locale === 'ar' ? 'left' : 'right';
     script.dataset.dir = locale === 'ar' ? 'rtl' : 'ltr';
     script.dataset.locale = locale;

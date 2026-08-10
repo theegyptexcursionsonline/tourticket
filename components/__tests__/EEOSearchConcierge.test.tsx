@@ -38,7 +38,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.kicker).toBe('AI trip search');
       expect(script.dataset.placeholder).toBe('Search Egypt tours...');
       expect(script.dataset.submitLabel).toBeUndefined();
-      expect(script.dataset.color).toBe('#0b5d3b');
+      expect(script.dataset.color).toBe('#4385F6');
       expect(script.dataset.dir).toBe('ltr');
       expect(script.dataset.locale).toBe('en');
       expect(script.src).toContain('/widget/foxes-launcher.js?v=20260808-compact-launcher');
