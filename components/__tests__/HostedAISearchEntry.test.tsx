@@ -59,6 +59,16 @@ describe('HostedAISearchEntry', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it('uses the EEO blue brand family without legacy green accents', () => {
+    render(<HostedAISearchEntry placeholder="Find tours" />);
+
+    const entry = screen.getByTestId('hosted-ai-search-entry');
+    expect(entry.className).toContain('focus-visible:ring-[#4385F6]/35');
+    expect(entry.innerHTML).toContain('from-[#4385F6]');
+    expect(entry.innerHTML).toContain('to-[#1D5FD0]');
+    expect(entry.innerHTML).not.toMatch(/emerald|teal/i);
+  });
+
   it('uses the localized first-party route when the hosted launcher fails', () => {
     locale = 'de';
     render(<HostedAISearchEntry placeholder="Touren suchen" initialQuery="Nilkreuzfahrt" />);
