@@ -24,14 +24,10 @@ const toSafeString = (value: unknown): string =>
 const SafeImage = ({
   src,
   alt,
-  width,
-  height,
   className
 }: {
   src: unknown;
   alt: string;
-  width: number;
-  height: number;
   className?: string;
 }) => {
   const t = useTranslations('featured');
@@ -42,8 +38,8 @@ const SafeImage = ({
   if (!normalizedSrc || imageError) {
     return (
       <div
-        className={`flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 ${className}`}
-        style={{ width, height }}
+        data-testid="featured-tour-media"
+        className="relative flex h-40 w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 sm:h-48 md:h-56"
         role="img"
         aria-label={t('noImageAvailable')}
       >
@@ -54,20 +50,22 @@ const SafeImage = ({
   }
 
   return (
-    <div className="relative" style={{ width, height }}>
+    <div
+      data-testid="featured-tour-media"
+      className="relative h-40 w-full overflow-hidden sm:h-48 md:h-56"
+    >
       {isLoading && (
         <div
           className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse rounded-t-2xl"
-          style={{ width, height }}
           aria-hidden
         />
       )}
       <Image
         src={normalizedSrc}
         alt={alt}
-        width={width}
-        height={height}
-        className={className}
+        fill
+        sizes="(max-width: 639px) 260px, (max-width: 767px) 280px, (max-width: 1023px) 320px, 340px"
+        className={`h-full w-full object-cover ${className || ''}`}
         onLoad={() => setIsLoading(false)}
         onError={() => {
           setImageError(true);
@@ -113,9 +111,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         <SafeImage
           src={tour.image}
           alt={tour.title || t('untitledTour')}
-          width={400}
-          height={240}
-          className="w-full h-40 sm:h-48 md:h-56 object-cover transition-transform duration-500 group-hover:scale-105"
+          className="transition-transform duration-500 group-hover:scale-105"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />

@@ -64,6 +64,21 @@ describe('homepage performance contracts', () => {
     expect(container.querySelector('.animate-marquee')).not.toBeInTheDocument();
   });
 
+  it('makes every featured photo cover its responsive media frame', () => {
+    render(<FeaturedToursServer tours={tours as never} />);
+
+    const frames = screen.getAllByTestId('featured-tour-media');
+    expect(frames).toHaveLength(tours.length);
+
+    frames.forEach((frame, index) => {
+      expect(frame).toHaveClass('relative', 'h-40', 'w-full', 'overflow-hidden', 'sm:h-48', 'md:h-56');
+      expect(frame).not.toHaveAttribute('style');
+
+      const image = screen.getByAltText(`Tour ${index}`);
+      expect(image).toHaveClass('h-full', 'w-full', 'object-cover');
+    });
+  });
+
   it('opens the singleton hosted search instead of mounting a second widget', () => {
     const opened = jest.fn();
     window.addEventListener('foxes:search:open', opened, { once: true });
