@@ -1,9 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { createPortal } from 'react-dom';
+import {
+  Elements,
+  ExpressCheckoutElement,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { Loader2, Lock, ShieldCheck, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  CreditCard,
+  Loader2,
+  Lock,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import { getErrorMessage, isRecord } from './componentTypes';
@@ -42,7 +58,6 @@ const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 interface PaymentFormProps {
-  clientSecret: string;
   onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
   isProcessing: boolean;
@@ -51,7 +66,7 @@ interface PaymentFormProps {
   setPaymentCompleted: (value: boolean) => void;
 }
 
-const PaymentForm: React.FC<PaymentFormProps> = ({
+export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
   onSuccess,
   onError,
   isProcessing,
@@ -61,6 +76,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const [hasExpressCheckout, setHasExpressCheckout] = useState(false);
 
   const handleSubmit = async () => {
     // Prevent double submission
@@ -71,6 +87,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setIsProcessing(true);
 
     try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        onError(submitError.message || 'Please check your payment details and try again.');
+        setIsProcessing(false);
+        return;
+      }
+
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -90,6 +113,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       } else if (paymentIntent && paymentIntent.status === 'processing') {
         // Payment is still processing
         toast.loading('Payment is being processed...', { duration: 5000 });
+        setIsProcessing(false);
+      } else {
+        onError('Payment could not be completed. Please try again.');
+        setIsProcessing(false);
       }
     } catch (err: unknown) {
       console.error('Payment error:', err);
@@ -112,10 +139,40 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div
+        className={hasExpressCheckout ? 'space-y-4' : 'h-0 overflow-hidden opacity-0'}
+        aria-hidden={!hasExpressCheckout}
+      >
+        <ExpressCheckoutElement
+          onConfirm={handleSubmit}
+          onReady={({ availablePaymentMethods }) => {
+            setHasExpressCheckout(Boolean(availablePaymentMethods && Object.keys(availablePaymentMethods).length > 0));
+          }}
+          options={{
+            buttonHeight: 50,
+            layout: { maxColumns: 2, maxRows: 2 },
+            buttonType: {
+              applePay: 'check-out',
+              googlePay: 'checkout',
+            },
+          }}
+        />
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          Or pay another way
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+      </div>
+
       <PaymentElement
         options={{
-          layout: 'tabs',
+          layout: {
+            type: 'accordion',
+            defaultCollapsed: false,
+            radios: true,
+            spacedAccordionItems: true,
+          },
         }}
       />
 
@@ -123,7 +180,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         type="button"
         disabled={!stripe || isProcessing || paymentCompleted}
         onClick={handleSubmit}
-        className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-base font-extrabold text-white shadow-md transition hover:bg-red-700 active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-red-300"
       >
         {isProcessing ? (
           <>
@@ -138,8 +195,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         )}
       </button>
 
-      <p className="text-xs text-slate-500 text-center">
-        Your payment is secured by Stripe. We never store your card details.
+      <p className="text-center text-xs leading-5 text-slate-500">
+        Stripe securely processes your payment. Egypt Excursions Online never stores your card details.
       </p>
     </div>
   );
@@ -170,9 +227,15 @@ interface StripePaymentFormProps {
   onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
   onPriceChanged: (quote: AuthoritativePriceQuote) => Promise<boolean> | boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
+type StripePaymentPanelProps = Omit<StripePaymentFormProps, 'isOpen' | 'onOpenChange'> & {
+  onProcessingChange?: (processing: boolean) => void;
+};
+
+const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
   amount,
   currency,
   customer,
@@ -182,6 +245,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   onSuccess,
   onError,
   onPriceChanged,
+  onProcessingChange,
 }) => {
   const [clientSecret, setClientSecret] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -191,9 +255,15 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   const [pendingPriceChange, setPendingPriceChange] = useState<AuthoritativePriceQuote | null>(null);
   const [isAcceptingPriceChange, setIsAcceptingPriceChange] = useState(false);
   const [priceChangeError, setPriceChangeError] = useState('');
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  const updateProcessing = useCallback((processing: boolean) => {
+    setIsProcessing(processing);
+    onProcessingChange?.(processing);
+  }, [onProcessingChange]);
   
   // Use settings for consistent price formatting with currency conversion
-  const { formatPrice, selectedCurrency } = useSettings();
+  const { selectedCurrency } = useSettings();
   
   // Check if display currency is different from charge currency (USD)
   const isDisplayCurrencyDifferent = selectedCurrency.code !== 'USD';
@@ -274,6 +344,14 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     return emailRegex.test(email);
   }, []);
 
+  const customerDetailsComplete = Boolean(
+    customer.email
+    && customer.firstName
+    && customer.lastName
+    && customer.phone
+    && isValidEmail(customer.email),
+  );
+
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
@@ -305,13 +383,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     }
 
     // Validate customer data before creating PaymentIntent
-    if (!customer.email || !customer.firstName || !customer.lastName) {
-      queueMicrotask(() => setIsLoading(false));
-      return;
-    }
-
-    // Validate email format
-    if (!isValidEmail(customer.email)) {
+    if (!customerDetailsComplete) {
       queueMicrotask(() => setIsLoading(false));
       return;
     }
@@ -373,11 +445,13 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
             lastCartHashRef.current = currentCartHash;
           } else {
             console.error('Failed to create payment intent:', data.message);
-            onError(data.message || 'Failed to initialize payment');
+            const message = data.message || 'Failed to initialize payment';
+            onError(message);
           }
         } catch (error) {
           console.error('Error creating payment intent:', error);
-          onError('Failed to initialize payment');
+          const message = 'Payment service could not be reached. Please try again.';
+          onError(message);
         } finally {
           setIsLoading(false);
         }
@@ -387,7 +461,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     }, 1500); // Increased debounce to 1.5 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [customer.email, customer.firstName, customer.lastName, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, isValidEmail, onError, paymentCompleted, clientSecret, pendingPriceChange]);
+  }, [customerDetailsComplete, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, onError, paymentCompleted, clientSecret, pendingPriceChange, retryNonce]);
 
   if (isLoading) {
     return (
@@ -522,7 +596,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     );
   }
 
-  if (!clientSecret) {
+  if (!clientSecret || !stripePromise) {
     return (
       <div className="bg-white border border-red-100 rounded-2xl shadow-sm overflow-hidden p-6">
         <div className="flex items-center gap-3 text-red-600 mb-3">
@@ -530,14 +604,24 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
           <p className="font-semibold">Unable to initialize payment</p>
         </div>
         <p className="text-slate-600 text-sm mb-4">
-          There was a problem connecting to our payment system. Please refresh the page and try again.
+          {stripePromise
+            ? 'There was a problem connecting to our payment system. Please try again.'
+            : 'Secure payment is temporarily unavailable. Please contact support.'}
         </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
-        >
-          Refresh Page
-        </button>
+        {stripePromise && (
+          <button
+            type="button"
+            onClick={() => {
+              paymentIntentCreatedRef.current = false;
+              lastCartHashRef.current = '';
+              setIsLoading(true);
+              setRetryNonce((value) => value + 1);
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+          >
+            Try again
+          </button>
+        )}
       </div>
     );
   }
@@ -557,92 +641,219 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     },
   };
 
-  // Use formatPrice for consistent currency conversion with the rest of the app
+  return (
+    <div className="space-y-5">
+      <Elements stripe={stripePromise} options={options}>
+        <StripeElementsPaymentForm
+          onSuccess={onSuccess}
+          onError={onError}
+          isProcessing={isProcessing}
+          setIsProcessing={updateProcessing}
+          paymentCompleted={paymentCompleted}
+          setPaymentCompleted={setPaymentCompleted}
+        />
+      </Elements>
+
+      {isDisplayCurrencyDifferent && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs leading-5 text-amber-800">
+            <strong>Currency notice:</strong> Stripe will process ${(pricing?.total ?? amount ?? 0).toFixed(2)} USD.
+            The displayed {selectedCurrency.code} amount is an estimate; your bank may apply conversion fees.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
+  amount,
+  currency,
+  customer,
+  cart,
+  pricing,
+  discountCode,
+  onSuccess,
+  onError,
+  onPriceChanged,
+  isOpen,
+  onOpenChange,
+}) => {
+  const [uncontrolledPaymentOpen, setUncontrolledPaymentOpen] = useState(false);
+  const [panelProcessing, setPanelProcessing] = useState(false);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const { formatPrice } = useSettings();
+
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email);
+  const customerDetailsComplete = Boolean(
+    customer.firstName
+    && customer.lastName
+    && customer.email
+    && customer.phone
+    && emailIsValid,
+  );
   const displayTotal = pricing?.total ?? amount ?? 0;
   const formattedTotal = formatPrice(displayTotal);
   const numberOfTours = cart?.length || 1;
+  const isPaymentOpen = isOpen ?? uncontrolledPaymentOpen;
+
+  const setPaymentOpen = useCallback((open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+      return;
+    }
+    setUncontrolledPaymentOpen(open);
+  }, [onOpenChange]);
+
+  const openPayment = useCallback(() => {
+    if (!customerDetailsComplete) return;
+    setPaymentOpen(true);
+  }, [customerDetailsComplete, setPaymentOpen]);
+
+  const closePayment = useCallback(() => {
+    if (panelProcessing) return;
+    setPaymentOpen(false);
+    window.requestAnimationFrame(() => openButtonRef.current?.focus());
+  }, [panelProcessing, setPaymentOpen]);
+
+  useEffect(() => {
+    if (!isPaymentOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closePayment();
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [closePayment, isPaymentOpen]);
+
+  const dialog = isPaymentOpen && customerDetailsComplete && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closePayment();
+          }}
+        >
+          <section
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="secure-payment-title"
+            className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-xl sm:rounded-3xl"
+          >
+            <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                  <Lock size={19} aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">Egypt Excursions Online</p>
+                  <h2 id="secure-payment-title" className="mt-1 text-xl font-extrabold text-slate-950">Secure payment</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {formattedTotal} for {numberOfTours} {numberOfTours === 1 ? 'experience' : 'experiences'}
+                  </p>
+                </div>
+              </div>
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={closePayment}
+                disabled={panelProcessing}
+                aria-label="Close secure payment"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <X size={22} aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+              <StripePaymentPanel
+                amount={amount}
+                currency={currency}
+                customer={customer}
+                cart={cart}
+                pricing={pricing}
+                discountCode={discountCode}
+                onSuccess={onSuccess}
+                onError={onError}
+                onPriceChanged={onPriceChanged}
+                onProcessingChange={setPanelProcessing}
+              />
+
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500 sm:px-7">
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} /> Encrypted payment</span>
+              <span className="inline-flex items-center gap-1.5"><Lock size={14} /> Powered by Stripe</span>
+            </footer>
+          </section>
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
-    <div className="bg-white border border-slate-100 rounded-3xl shadow-xl overflow-hidden">
-      <div className="bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 text-white px-6 py-6 md:px-8 md:py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-white/70 flex items-center gap-2">
-            <ShieldCheck size={16} className="text-emerald-300" />
-            Secure Payment
+    <>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+              <CreditCard size={23} aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-lg font-extrabold text-slate-950">Pay securely in the next step</p>
+              <p className="mt-1 max-w-lg text-sm leading-6 text-slate-500">
+                Stripe will show the cards and eligible wallets available for this device.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 sm:text-right">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Total due</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{formattedTotal}</p>
+          </div>
+        </div>
+
+        <button
+          ref={openButtonRef}
+          type="button"
+          onClick={openPayment}
+          disabled={!customerDetailsComplete}
+          className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-base font-extrabold text-white shadow-md transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+        >
+          <Lock size={17} aria-hidden="true" />
+          Continue to secure payment
+          <ArrowRight size={18} aria-hidden="true" />
+        </button>
+
+        {!customerDetailsComplete && (
+          <p className="mt-3 text-center text-sm text-slate-500">
+            Complete your name, email, and phone number to continue.
           </p>
-          <p className="text-3xl font-extrabold mt-2">{formattedTotal}</p>
-          <p className="text-sm text-white/80">
-            for {numberOfTours} {numberOfTours === 1 ? 'experience' : 'experiences'}
-          </p>
-          {isDisplayCurrencyDifferent && (
-            <p className="text-xs text-white/60 mt-1">
-              You will be charged ${(pricing?.total ?? amount ?? 0).toFixed(2)} USD
-            </p>
-          )}
-        </div>
-        <div className="space-y-2 text-sm text-white/90">
-          <div className="flex items-center gap-2">
-            <Lock size={18} className="text-emerald-300" />
-            256-bit SSL encryption
-          </div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={18} className="text-emerald-300" />
-            Fraud detection & buyer protection
-          </div>
-        </div>
-      </div>
-
-      <div className="px-6 md:px-8 py-8 space-y-6 bg-slate-50/60">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-          <div className="flex items-center gap-3">
-            <CreditCard size={16} className="text-slate-400" />
-            <span>Visa</span>
-            <span>Mastercard</span>
-            <span>Amex</span>
-            <span>Apple Pay</span>
-          </div>
-          <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs uppercase tracking-wide">
-            <CheckCircle2 size={16} />
-            No hidden fees
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 md:p-6">
-          <Elements stripe={stripePromise} options={options}>
-            <PaymentForm
-              clientSecret={clientSecret}
-              onSuccess={onSuccess}
-              onError={onError}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-              paymentCompleted={paymentCompleted}
-              setPaymentCompleted={setPaymentCompleted}
-            />
-          </Elements>
-        </div>
-
-        <div className="flex items-center justify-between flex-wrap gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={14} className="text-slate-400" />
-            Your card is never stored on our servers
-          </div>
-          <div className="flex items-center gap-2">
-            <Lock size={14} className="text-slate-400" />
-            Powered by Stripe
-          </div>
-        </div>
-
-        {isDisplayCurrencyDifferent && (
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-700">
-              <strong>Currency Notice:</strong> Your payment will be processed in USD (${(pricing?.total ?? amount ?? 0).toFixed(2)}). 
-              The displayed {selectedCurrency.code} amount is an estimate based on current exchange rates. 
-              Your bank may apply additional conversion fees.
-            </p>
-          </div>
         )}
       </div>
-    </div>
+      {dialog}
+    </>
   );
 };
 

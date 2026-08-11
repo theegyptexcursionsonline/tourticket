@@ -351,7 +351,7 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
           disabled={isProcessing}
           className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
         >
-          {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Complete Booking & Pay</span>}
+          {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Continue to secure payment</span>}
         </button>
         <p className="text-xs text-slate-500 text-center mt-3">
           By completing this booking you agree to our <Link className="underline" href="/terms">Terms of Service</Link>.
@@ -415,6 +415,7 @@ const CheckoutFormStep = ({
   setPaymentIntentId: (id: string) => void;
 }) => {
   const { acceptAuthoritativePriceQuote } = useCart();
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -424,16 +425,13 @@ const CheckoutFormStep = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate that we have a payment intent ID from Stripe
     if (!paymentIntentId) {
-      toast.error('Please complete the payment before submitting');
+      setIsPaymentOpen(true);
       return;
     }
 
     onPaymentProcess();
   };
-
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
 
   // Auto-fill form if user is logged in
   useEffect(() => {
@@ -576,94 +574,41 @@ const CheckoutFormStep = ({
         </section>
       )}
 
-      {/* Payment Information (show for guest or authenticated users) */}
+      {/* Secure payment opens as a dedicated Stripe step. */}
       {(customerType === 'guest' || user) && (
         <section>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-4">Payment Information</h2>
-
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-            <button
-              type="button"
-              onClick={() => setPaymentMethod('card')}
-              aria-pressed={paymentMethod === 'card'}
-              className={`flex flex-col items-center justify-center gap-1 sm:gap-2 p-3 sm:p-4 border border-slate-200 rounded-lg transition-shadow ${paymentMethod === 'card' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
-            >
-              <div className="h-7 sm:h-10 flex items-center">
-                <Image src="/payment/visam.png" alt="Card logos" width={60} height={24} className="object-contain w-[50px] h-[20px] sm:w-[72px] sm:h-[28px]" />
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-slate-700">Card</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPaymentMethod('paypal')}
-              aria-pressed={paymentMethod === 'paypal'}
-              className={`flex flex-col items-center justify-center gap-1 sm:gap-2 p-3 sm:p-4 border border-slate-200 rounded-lg transition-shadow relative ${paymentMethod === 'paypal' ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white hover:shadow-sm'}`}
-            >
-              <span className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-blue-500 text-white text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
-                SOON
-              </span>
-              <div className="h-7 sm:h-10 flex items-center">
-                <Image src="/payment/paypal2.png" alt="PayPal" width={48} height={30} className="object-contain w-[38px] h-[24px] sm:w-[48px] sm:h-[30px]" />
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-slate-700">PayPal</span>
-            </button>
-
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={paymentMethod}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-            >
-              {paymentMethod === 'card' && (
-                <div className="mt-4">
-                  <StripePaymentForm
-                    amount={pricing.total}
-                    currency={pricing.currency}
-                    customer={{
-                      email: formData.email,
-                      firstName: formData.firstName,
-                      lastName: formData.lastName,
-                      phone: formData.phone,
-                      emergencyContact: formData.emergencyContact,
-                      hotelPickupDetails: formData.hotelPickupDetails,
-                      hotelPickupLocation: formData.hotelPickupLocation || undefined,
-                      specialRequests: formData.specialRequests,
-                    }}
-                    cart={cart.map((item) => ({
-                      ...item,
-                      id: item.id == null ? undefined : String(item.id),
-                    }))}
-                    pricing={pricing}
-                    discountCode={promoCode}
-                    onSuccess={(paymentIntent) => {
-                      // Set the payment intent ID immediately
-                      setPaymentIntentId(paymentIntent);
-                      toast.success('Payment completed successfully! Finalizing your booking...');
-                      
-                      // Process the booking immediately after payment succeeds
-                      // We need to call this directly to avoid state update race conditions
-                      onPaymentProcessWithIntent(paymentIntent);
-                    }}
-                    onError={(error) => {
-                      toast.error(error);
-                    }}
-                    onPriceChanged={acceptAuthoritativePriceQuote}
-                  />
-                </div>
-              )}
-              {paymentMethod === 'paypal' && (
-                <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-700">
-                  <p className="font-medium">PayPal integration is coming soon!</p>
-                  <p className="text-sm text-slate-500 mt-2">Please use card payment for now.</p>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <h2 className="mb-4 text-xl font-extrabold text-slate-900 sm:text-2xl">Secure payment</h2>
+          <StripePaymentForm
+            amount={pricing.total}
+            currency={pricing.currency}
+            customer={{
+              email: formData.email,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone,
+              emergencyContact: formData.emergencyContact,
+              hotelPickupDetails: formData.hotelPickupDetails,
+              hotelPickupLocation: formData.hotelPickupLocation || undefined,
+              specialRequests: formData.specialRequests,
+            }}
+            cart={cart.map((item) => ({
+              ...item,
+              id: item.id == null ? undefined : String(item.id),
+            }))}
+            pricing={pricing}
+            discountCode={promoCode}
+            isOpen={isPaymentOpen}
+            onOpenChange={setIsPaymentOpen}
+            onSuccess={(paymentIntent) => {
+              setPaymentIntentId(paymentIntent);
+              toast.success('Payment completed successfully! Finalizing your booking...');
+              onPaymentProcessWithIntent(paymentIntent);
+            }}
+            onError={(error) => {
+              toast.error(error);
+            }}
+            onPriceChanged={acceptAuthoritativePriceQuote}
+          />
         </section>
       )}
     </form>
@@ -1507,7 +1452,7 @@ export default function CheckoutPage() {
             disabled={isProcessing} 
             className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-lg transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center rounded-full"
           >
-            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Complete Booking & Pay</span>}
+            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Continue to secure payment</span>}
           </button>
         </div>
       )}
