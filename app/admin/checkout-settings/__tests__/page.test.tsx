@@ -31,6 +31,11 @@ describe('admin checkout payment experience', () => {
     expect(await screen.findByRole('heading', { name: 'Inline payment' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Secure payment modal' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Stripe-hosted Checkout' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Payment providers' })).toBeInTheDocument();
+    expect(screen.getByText('Stripe')).toBeInTheDocument();
+    expect(screen.getByText('PayPal')).toBeInTheDocument();
+    expect(screen.getByText('Bank transfer')).toBeInTheDocument();
+    expect(screen.getAllByText('Setup required')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Saved' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('radio', { name: /stripe-hosted checkout/i }));

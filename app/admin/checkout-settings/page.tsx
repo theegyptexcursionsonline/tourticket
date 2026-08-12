@@ -202,6 +202,34 @@ function CheckoutSettingsPage() {
             </div>
           </fieldset>
 
+          <section aria-labelledby="payment-provider-heading" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+            <div>
+              <h2 id="payment-provider-heading" className="text-lg font-black text-slate-950">Payment providers</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Only providers with verified payment, webhook, refund, retry, and recovery flows can be activated.</p>
+            </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-extrabold text-slate-950">Stripe</span>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800">Active</span>
+                </div>
+                <p className="mt-2 text-sm leading-5 text-slate-600">Cards and Stripe-eligible wallets use the selected presentation above.</p>
+              </div>
+              {[
+                ['PayPal', 'Requires approved credentials plus complete order, webhook, refund, and recovery verification.'],
+                ['Bank transfer', 'Requires approved bank details plus pending-payment expiry and reconciliation controls.'],
+              ].map(([provider, detail]) => (
+                <div key={provider} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-extrabold text-slate-800">{provider}</span>
+                    <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700">Setup required</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-5 text-slate-500">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <div className="grid gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-center sm:p-7">
             <div className="flex items-start gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">

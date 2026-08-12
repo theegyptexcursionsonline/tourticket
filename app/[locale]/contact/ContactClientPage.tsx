@@ -738,7 +738,7 @@ export default function ContactClientPage() {
                     {
                       icon: "💳",
                       question: "What payment methods do you accept?",
-                      answer: "We accept all major credit cards, PayPal, and bank transfers. Payment is secure and encrypted.",
+                      answer: "We accept major credit and debit cards through Stripe. Any eligible wallet options are shown securely during checkout.",
                       color: "from-orange-500 to-red-500"
                     }
                   ].map((faq, index) => (
