@@ -75,6 +75,7 @@ describe('public integrity route regressions', () => {
     expect(webCheckout).toContain('checkoutAttemptId,');
     expect(webCheckout).toContain('checkout_attempt_id: checkoutAttemptId');
     expect(paymentIntent).toContain('buildCheckoutPaymentIdempotencyKey(prepared.quoteBinding)');
+    expect(paymentIntent).toContain("checkout_experience: 'payment-element'");
     expect(paymentForm).toContain('getOrCreateCheckoutAttemptId()');
     expect(paymentForm).toContain('checkoutAttemptId,');
     expect(checkout).toContain('completeCheckoutAttempt();');

@@ -39,7 +39,13 @@ export async function POST(request: Request) {
         amount: prepared.amountMinor,
         currency: 'usd',
         description: `Booking for ${prepared.cart.length} tour${prepared.cart.length > 1 ? 's' : ''}`,
-        metadata: prepared.metadata,
+        // Modal and inline are UI presentations of this same Payment Element
+        // request. UI-only metadata must not change Stripe's idempotent request
+        // parameters when an admin switches the presentation mid-attempt.
+        metadata: {
+          ...prepared.metadata,
+          checkout_experience: 'payment-element',
+        },
         automatic_payment_methods: { enabled: true },
       }, {
         idempotencyKey: buildCheckoutPaymentIdempotencyKey(prepared.quoteBinding),

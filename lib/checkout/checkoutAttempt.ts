@@ -90,5 +90,8 @@ export function buildCheckoutPaymentIdempotencyKey(quoteBinding: string): string
   if (!/^[a-f0-9]{64}$/.test(normalized)) {
     throw new Error('A valid checkout quote binding is required.');
   }
-  return `tourticket-checkout-${normalized}`;
+  // Inline and modal are two presentations of the same Payment Element
+  // lifecycle. Keep their Stripe request identity stable while separating it
+  // from the legacy key shape and from hosted Checkout Sessions.
+  return `tourticket-payment-element-${normalized}`;
 }

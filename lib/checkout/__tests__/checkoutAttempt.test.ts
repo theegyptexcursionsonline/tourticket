@@ -53,6 +53,7 @@ describe('checkout attempt identity', () => {
 
   it('reuses a PaymentIntent idempotency key for retries but not a new purchase', () => {
     const firstKey = buildCheckoutPaymentIdempotencyKey(quote(firstAttempt));
+    expect(firstKey).toMatch(/^tourticket-payment-element-[a-f0-9]{64}$/);
     expect(buildCheckoutPaymentIdempotencyKey(quote(firstAttempt))).toBe(firstKey);
     expect(buildCheckoutPaymentIdempotencyKey(quote(secondAttempt))).not.toBe(firstKey);
   });
