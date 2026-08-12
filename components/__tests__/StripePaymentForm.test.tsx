@@ -221,7 +221,11 @@ describe('StripePaymentForm price-change recovery', () => {
         onPriceChanged={jest.fn()}
       />,
     );
-    expect(screen.getByText('Pay here without leaving the checkout page.')).toBeInTheDocument();
+    expect(screen.getByTestId('inline-payment-experience')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Complete your payment' })).toBeInTheDocument();
+    expect(screen.getByText(/cards and eligible wallets stay on this page/i)).toBeInTheDocument();
+    expect(screen.getByText('Total confirmed before charge')).toBeInTheDocument();
+    expect(screen.getByText('EEO does not store your card number.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await act(async () => {
       await jest.advanceTimersByTimeAsync(0);
@@ -312,7 +316,7 @@ describe('StripeElementsPaymentForm', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /complete payment/i }));
+    fireEvent.click(screen.getByRole('button', { name: /complete secure payment/i }));
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith('Payment details are incomplete'));
     expect(mockStripe?.confirmPayment).not.toHaveBeenCalled();

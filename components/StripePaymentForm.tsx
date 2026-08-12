@@ -141,18 +141,28 @@ export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
   }
 
   return (
-    <div className="space-y-5">
-      <div
-        className={hasExpressCheckout ? 'space-y-4' : 'h-0 overflow-hidden opacity-0'}
+    <div className="space-y-6">
+      <section
+        className={hasExpressCheckout ? 'space-y-3' : 'h-0 overflow-hidden opacity-0'}
         aria-hidden={!hasExpressCheckout}
+        aria-label="Express checkout"
       >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-extrabold text-slate-950">Express checkout</p>
+            <p className="mt-0.5 text-xs leading-5 text-slate-500">Use an eligible wallet already set up on this device.</p>
+          </div>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            Fastest
+          </span>
+        </div>
         <ExpressCheckoutElement
           onConfirm={handleSubmit}
           onReady={({ availablePaymentMethods }) => {
             setHasExpressCheckout(Boolean(availablePaymentMethods && Object.keys(availablePaymentMethods).length > 0));
           }}
           options={{
-            buttonHeight: 50,
+            buttonHeight: 52,
             layout: { maxColumns: 2, maxRows: 2 },
             buttonType: {
               applePay: 'check-out',
@@ -162,27 +172,38 @@ export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
         />
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
-          Or pay another way
+          Or choose another method
           <span className="h-px flex-1 bg-slate-200" />
         </div>
-      </div>
+      </section>
 
-      <PaymentElement
-        options={{
-          layout: {
-            type: 'accordion',
-            defaultCollapsed: false,
-            radios: true,
-            spacedAccordionItems: true,
-          },
-        }}
-      />
+      <section className="space-y-3" aria-label="Payment method">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-extrabold text-slate-950">Payment method</p>
+            <p className="mt-0.5 text-xs leading-5 text-slate-500">Choose a card or another method made available by Stripe.</p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
+            <Lock size={11} aria-hidden="true" /> Secure
+          </span>
+        </div>
+        <PaymentElement
+          options={{
+            layout: {
+              type: 'accordion',
+              defaultCollapsed: false,
+              radios: true,
+              spacedAccordionItems: true,
+            },
+          }}
+        />
+      </section>
 
       <button
         type="button"
         disabled={!stripe || isProcessing || paymentCompleted}
         onClick={handleSubmit}
-        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-base font-extrabold text-white shadow-md transition hover:bg-red-700 active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-red-300"
+        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-4 text-base font-extrabold text-white shadow-[0_12px_28px_-12px_rgba(220,38,38,0.85)] transition hover:bg-red-700 hover:shadow-[0_16px_32px_-12px_rgba(220,38,38,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
       >
         {isProcessing ? (
           <>
@@ -192,14 +213,15 @@ export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
         ) : (
           <>
             <Lock size={18} />
-            <span>Complete Payment</span>
+            <span>Complete secure payment</span>
           </>
         )}
       </button>
 
-      <p className="text-center text-xs leading-5 text-slate-500">
-        Stripe securely processes your payment. Egypt Excursions Online never stores your card details.
-      </p>
+      <div className="grid gap-2 border-t border-slate-200 pt-4 text-xs text-slate-500 sm:grid-cols-2">
+        <p className="inline-flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-600" aria-hidden="true" /> Processed securely by Stripe</p>
+        <p className="inline-flex items-center gap-2 sm:justify-end"><Lock size={14} className="text-slate-600" aria-hidden="true" /> Card details stay with Stripe</p>
+      </div>
     </div>
   );
 };
@@ -636,13 +658,54 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
     clientSecret,
     appearance: {
       theme: 'stripe' as const,
+      inputs: 'spaced' as const,
+      labels: 'above' as const,
       variables: {
         colorPrimary: '#dc2626',
         colorBackground: '#ffffff',
-        colorText: '#1e293b',
-        colorDanger: '#ef4444',
-        fontFamily: 'system-ui, sans-serif',
-        borderRadius: '8px',
+        colorText: '#0f172a',
+        colorTextSecondary: '#64748b',
+        colorDanger: '#dc2626',
+        colorSuccess: '#059669',
+        fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        fontSizeBase: '16px',
+        spacingUnit: '4px',
+        borderRadius: '12px',
+      },
+      rules: {
+        '.Input': {
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          padding: '13px 14px',
+        },
+        '.Input:focus': {
+          borderColor: '#dc2626',
+          boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.14)',
+        },
+        '.Input--invalid': {
+          borderColor: '#dc2626',
+          boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.12)',
+        },
+        '.Label': {
+          color: '#334155',
+          fontSize: '14px',
+          fontWeight: '600',
+        },
+        '.Tab': {
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+        },
+        '.Tab--selected': {
+          borderColor: '#dc2626',
+          boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.12)',
+        },
+        '.AccordionItem': {
+          border: '1px solid #e2e8f0',
+          boxShadow: 'none',
+        },
+        '.AccordionItem--selected': {
+          borderColor: '#cbd5e1',
+        },
       },
     },
   };
@@ -925,38 +988,57 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
   if (experience === 'inline') {
     return (
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
-              <CreditCard size={20} aria-hidden="true" />
+      <section
+        data-testid="inline-payment-experience"
+        aria-labelledby="inline-payment-title"
+        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_22px_60px_-36px_rgba(15,23,42,0.55)]"
+      >
+        <header className="relative overflow-hidden bg-slate-950 px-5 py-6 text-white sm:px-7 sm:py-7">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-red-600/25 blur-3xl" aria-hidden="true" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white ring-1 ring-inset ring-white/15">
+                <CreditCard size={20} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-300">Secure inline checkout</p>
+                <h3 id="inline-payment-title" className="mt-1 text-xl font-black tracking-tight text-white sm:text-2xl">Complete your payment</h3>
+                <p className="mt-2 max-w-md text-sm leading-6 text-slate-300">Cards and eligible wallets stay on this page while Stripe handles the payment details.</p>
+              </div>
             </div>
-            <div>
-              <p className="font-extrabold text-slate-950">Secure card &amp; wallet payment</p>
-              <p className="mt-1 text-sm text-slate-500">Pay here without leaving the checkout page.</p>
+            <div className="shrink-0 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-inset ring-white/15 sm:min-w-36 sm:text-right">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Total due</p>
+              <p className="mt-1 text-2xl font-black text-white">{formattedTotal}</p>
             </div>
           </div>
-          <div className="sm:text-right">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Total due</p>
-            <p className="mt-1 text-xl font-black text-slate-950">{formattedTotal}</p>
+          <div className="relative mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-xs text-slate-300">
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-400" aria-hidden="true" /> Stripe protected</span>
+            <span className="inline-flex items-center gap-1.5"><Lock size={14} className="text-slate-300" aria-hidden="true" /> Encrypted payment</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" aria-hidden="true" /> Total confirmed before charge</span>
+          </div>
+        </header>
+        <div className="bg-slate-50/80 p-3 sm:p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <StripePaymentPanel
+              amount={amount}
+              currency={currency}
+              customer={customer}
+              cart={cart}
+              pricing={pricing}
+              discountCode={discountCode}
+              onSuccess={onSuccess}
+              onError={onError}
+              onPriceChanged={onPriceChanged}
+              onProcessingChange={setPanelProcessing}
+              paymentExperience="inline"
+            />
           </div>
         </div>
-        <div className="p-5 sm:p-6">
-          <StripePaymentPanel
-            amount={amount}
-            currency={currency}
-            customer={customer}
-            cart={cart}
-            pricing={pricing}
-            discountCode={discountCode}
-            onSuccess={onSuccess}
-            onError={onError}
-            onPriceChanged={onPriceChanged}
-            onProcessingChange={setPanelProcessing}
-            paymentExperience="inline"
-          />
-        </div>
-      </div>
+        <footer className="flex flex-col gap-1.5 border-t border-slate-200 bg-white px-5 py-4 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <span>Payment details are handled by Stripe.</span>
+          <span>EEO does not store your card number.</span>
+        </footer>
+      </section>
     );
   }
 

@@ -23,6 +23,11 @@ describe('checkout secure payment experience', () => {
     expect(payment).toContain('<ExpressCheckoutElement');
     expect(payment).toContain('availablePaymentMethods');
     expect(payment).toContain("experience === 'inline'");
+    expect(payment).toContain('data-testid="inline-payment-experience"');
+    expect(payment).toContain('Complete your payment');
+    expect(payment).toContain("fontSizeBase: '16px'");
+    expect(payment).toContain("inputs: 'spaced'");
+    expect(payment).toContain("labels: 'above'");
     expect(payment).toContain("experience === 'hosted'");
     expect(payment).toContain("experience === 'modal'");
     expect(payment).not.toContain('<span>Apple Pay</span>');
