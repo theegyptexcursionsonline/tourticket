@@ -44,6 +44,7 @@ const permissionLabels: Record<string, string> = {
   manageBookings: 'Bookings',
   manageTours: 'Tours',
   managePricing: 'Pricing',
+  managePayments: 'Payment Settings',
   manageContent: 'Content',
   manageDiscounts: 'Discounts',
   manageUsers: 'Users',

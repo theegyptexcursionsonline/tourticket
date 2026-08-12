@@ -201,6 +201,62 @@ describe('StripePaymentForm price-change recovery', () => {
     expect(screen.queryByRole('dialog', { name: /secure payment/i })).not.toBeInTheDocument();
     expect(screen.getByText(/complete your name, email, and phone number/i)).toBeInTheDocument();
   });
+
+  it('renders Stripe directly on the checkout page in inline mode', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({ success: true, clientSecret: 'pi_secret_inline' }),
+    }) as jest.Mock;
+    render(
+      <StripePaymentForm
+        experience="inline"
+        amount={100}
+        currency="USD"
+        customer={{ email: 'guest@example.com', firstName: 'Guest', lastName: 'Customer', phone: '+201000000000' }}
+        cart={[{ id: quote.tourId, selectedDate: quote.date, selectedTime: quote.time, quantity: 1 }]}
+        pricing={{ total: 100, currency: 'USD' }}
+        onSuccess={jest.fn()}
+        onError={jest.fn()}
+        onPriceChanged={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('Pay here without leaving the checkout page.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(1_600);
+    });
+    expect(await screen.findByText('Unable to initialize payment')).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith('/api/checkout/create-payment-intent', expect.objectContaining({
+      body: expect.stringContaining('"paymentExperience":"inline"'),
+    }));
+  });
+
+  it('keeps hosted mode off Stripe.js until the customer explicitly redirects', async () => {
+    render(
+      <StripePaymentForm
+        experience="hosted"
+        amount={100}
+        currency="USD"
+        customer={{ email: 'guest@example.com', firstName: 'Guest', lastName: 'Customer', phone: '+201000000000' }}
+        cart={[{ id: quote.tourId, selectedDate: quote.date, selectedTime: quote.time, quantity: 1 }]}
+        pricing={{ total: 100, currency: 'USD' }}
+        onSuccess={jest.fn()}
+        onError={jest.fn()}
+        onPriceChanged={jest.fn()}
+      />,
+    );
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole('button', { name: /pay securely with stripe/i })).toBeEnabled();
+    expect(screen.getByText(/complete payment on stripe’s secure hosted page/i)).toBeInTheDocument();
+    expect(screen.queryByText('Payment element')).not.toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe('StripeElementsPaymentForm', () => {

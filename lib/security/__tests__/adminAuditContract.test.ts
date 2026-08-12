@@ -78,3 +78,14 @@ describe('admin audit permission contract', () => {
     expect(ROLE_PERMISSION_MAP.support).not.toContain('manageAudit');
   });
 });
+
+describe('payment settings permission contract', () => {
+  it('is restricted to full administrators by default but remains grantable explicitly', () => {
+    expect(ADMIN_PERMISSIONS).toContain('managePayments');
+    expect(ROLE_PERMISSION_MAP.admin).toContain('managePayments');
+    expect(ROLE_PERMISSION_MAP.super_admin).toContain('managePayments');
+    expect(ROLE_PERMISSION_MAP.operations).not.toContain('managePayments');
+    expect(ROLE_PERMISSION_MAP.content).not.toContain('managePayments');
+    expect(ROLE_PERMISSION_MAP.support).not.toContain('managePayments');
+  });
+});

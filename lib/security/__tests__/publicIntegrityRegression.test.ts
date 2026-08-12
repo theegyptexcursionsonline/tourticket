@@ -36,11 +36,11 @@ describe('public integrity route regressions', () => {
       'app/api/booking/verify/[reference]/route.ts',
       'app/api/contact/route.ts',
       'app/api/subscribe/route.ts',
-      'app/api/checkout/create-payment-intent/route.ts',
       'app/api/discounts/verify/route.ts',
     ]) {
       expect(source(file)).toContain('enforcePublicActionLimits');
     }
+    expect(source('lib/checkout/webCheckoutPreparation.ts')).toContain('enforcePublicActionLimits');
     expect(source('app/api/contact/route.ts')).not.toContain('submissionTracker');
     expect(source('lib/security/distributedAbuseLimit.ts')).not.toContain("request.headers.get('x-forwarded-for')");
   });
@@ -53,10 +53,11 @@ describe('public integrity route regressions', () => {
 
   it('bounds payment initialization and exposes only the coupon preview fields', () => {
     const paymentIntent = source('app/api/checkout/create-payment-intent/route.ts');
+    const webCheckout = source('lib/checkout/webCheckoutPreparation.ts');
     const coupon = source('app/api/discounts/verify/route.ts');
 
-    expect(paymentIntent).toContain('readBoundedJson');
-    expect(paymentIntent).toContain("action: 'checkout-payment-intent'");
+    expect(webCheckout).toContain('readBoundedJson');
+    expect(paymentIntent).toContain("rateLimitAction: 'checkout-payment-intent'");
     expect(coupon).toContain('readBoundedJson');
     expect(coupon).toContain("action: 'discount-verify'");
     expect(coupon).toContain('data: { discountType: discount.discountType, value: discount.value }');
@@ -65,14 +66,15 @@ describe('public integrity route regressions', () => {
 
   it('binds PaymentIntent retries to a client-stable checkout attempt', () => {
     const paymentIntent = source('app/api/checkout/create-payment-intent/route.ts');
+    const webCheckout = source('lib/checkout/webCheckoutPreparation.ts');
     const paymentForm = source('components/StripePaymentForm.tsx');
     const checkout = source('app/[locale]/checkout/page.tsx');
     const webhook = source('app/api/webhooks/stripe/route.ts');
 
-    expect(paymentIntent).toContain('normalizeCheckoutAttemptId(body.checkoutAttemptId)');
-    expect(paymentIntent).toContain('checkoutAttemptId,');
-    expect(paymentIntent).toContain('checkout_attempt_id: checkoutAttemptId');
-    expect(paymentIntent).toContain('buildCheckoutPaymentIdempotencyKey(quoteBinding)');
+    expect(webCheckout).toContain('normalizeCheckoutAttemptId(body.checkoutAttemptId)');
+    expect(webCheckout).toContain('checkoutAttemptId,');
+    expect(webCheckout).toContain('checkout_attempt_id: checkoutAttemptId');
+    expect(paymentIntent).toContain('buildCheckoutPaymentIdempotencyKey(prepared.quoteBinding)');
     expect(paymentForm).toContain('getOrCreateCheckoutAttemptId()');
     expect(paymentForm).toContain('checkoutAttemptId,');
     expect(checkout).toContain('completeCheckoutAttempt();');

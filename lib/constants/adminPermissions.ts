@@ -14,6 +14,7 @@ export const ADMIN_PERMISSIONS = [
   'manageBookings',
   'manageTours',
   'managePricing',
+  'managePayments',
   'manageContent',
   'manageDiscounts',
   'manageUsers',

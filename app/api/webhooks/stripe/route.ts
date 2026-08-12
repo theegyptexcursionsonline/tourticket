@@ -29,9 +29,11 @@ import { sendBookingRefundNotification } from '@/lib/bookings/refundNotification
 import { deliverCheckoutNotifications } from '@/lib/bookings/checkoutNotificationDelivery';
 import {
   acquireCheckoutInventoryLease,
+  bindInventoryHoldsToPayment,
   convertInventoryHold,
   ensureInventoryHoldsForPayment,
   InventoryHoldError,
+  releaseInventoryHolds,
   releaseCheckoutInventoryLease,
 } from '@/lib/checkout/inventoryHolds';
 import {
@@ -39,6 +41,7 @@ import {
   refundUnavailablePaidInventory,
   releasePaymentInventory,
 } from '@/lib/checkout/inventoryPaymentRecovery';
+import { loadWebhookPaymentQuote } from '@/lib/checkout/hostedCheckoutQuote';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -125,18 +128,14 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     ...(paidTenant.contactPhone ? { contactPhone: paidTenant.contactPhone } : {}),
   };
 
-  const persistedQuote = await CheckoutPaymentQuote.findOne({
+  // Hosted Checkout Sessions don't have a PaymentIntent when the durable
+  // quote is written. Adopt the quote exactly once when Stripe later creates
+  // the intent, before any pricing, inventory, booking, or discount effect.
+  const persistedQuote = await loadWebhookPaymentQuote({
     paymentIntentId: paymentId,
     tenantId: tenantValue,
-  }).lean<{
-    quoteBinding: string;
-    checkoutAttemptId?: string;
-    customer: { email: string; firstName: string; lastName: string };
-    cartSummary: unknown[];
-    pricing: { subtotal: number; serviceFee: number; tax: number; discount: number; total: number; currency: string };
-    discountCode?: string;
-    inventoryState?: string;
-  } | null>();
+    metadata,
+  });
   const recordDiscountUsage = async () => {
     if (!persistedQuote?.discountCode) return;
     const usageClaimed = await CheckoutPaymentQuote.findOneAndUpdate(
@@ -217,6 +216,15 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   // after a successful charge refunds a valid brand booking immediately.
   const reservationKey = paidCheckoutReservationKey(metadata, persistedQuote?.quoteBinding);
   try {
+    if (metadata.checkout_experience === 'hosted') {
+      if (!persistedQuote) {
+        throw new InventoryHoldError(
+          'HOSTED_QUOTE_MISSING',
+          'The hosted payment quote could not be recovered.',
+        );
+      }
+      await bindInventoryHoldsToPayment(reservationKey, paymentId);
+    }
     await ensureInventoryHoldsForPayment({
       tenantId,
       paymentIntentId: paymentId,
@@ -432,7 +440,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   const customerEmail = persistedQuote?.customer.email || metadata.customer_email;
   const customerFirstName = persistedQuote?.customer.firstName || metadata.customer_first_name;
   const customerLastName = persistedQuote?.customer.lastName || metadata.customer_last_name;
-  const customerPhone = metadata.customer_phone || '';
+  const customerPhone = persistedQuote?.customer.phone || metadata.customer_phone || '';
+  const emergencyContact = persistedQuote?.customer.emergencyContact || '';
 
   if (!customerEmail || !customerFirstName || !customerLastName) {
     console.error(`[Webhook] Missing customer data for payment ${paymentId}`);
@@ -446,18 +455,21 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   }
 
   // Extract hotel pickup info from metadata
-  const hotelPickupDetails = metadata.hotel_pickup_details || '';
-  let hotelPickupLocation: { lat: number; lng: number; name?: string; address?: string } | null = null;
-  try {
-    if (metadata.hotel_pickup_location) {
-      hotelPickupLocation = JSON.parse(metadata.hotel_pickup_location);
+  const hotelPickupDetails = persistedQuote?.customer.hotelPickupDetails || metadata.hotel_pickup_details || '';
+  let hotelPickupLocation: { lat: number; lng: number; name?: string; address?: string } | null =
+    persistedQuote?.customer.hotelPickupLocation || null;
+  if (!hotelPickupLocation) {
+    try {
+      if (metadata.hotel_pickup_location) {
+        hotelPickupLocation = JSON.parse(metadata.hotel_pickup_location);
+      }
+    } catch {
+      console.log(`[Webhook] Could not parse hotel pickup location for ${paymentId}`);
     }
-  } catch {
-    console.log(`[Webhook] Could not parse hotel pickup location for ${paymentId}`);
   }
 
   // Extract special requests
-  const specialRequests = metadata.special_requests || '';
+  const specialRequests = persistedQuote?.customer.specialRequests || metadata.special_requests || '';
 
   // Find or create user
   let user = await User.findOne({ email: customerEmail });
@@ -581,6 +593,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         paymentItemIndex: itemIndex,
         paymentMethod: 'card',
         customerPhone: customerPhone ? customerPhone.slice(0, 50) : undefined,
+        emergencyContact: emergencyContact || undefined,
         adultGuests: item.a || 1,
         childGuests: item.c || 0,
         infantGuests: item.n || 0,
@@ -1027,6 +1040,36 @@ export async function POST(request: Request) {
           paidTenantId(canceledPayment.metadata),
         );
         break;
+
+      case 'checkout.session.expired': {
+        const expiredSession = event.data.object as Stripe.Checkout.Session;
+        if (expiredSession.metadata?.checkout_experience !== 'hosted') break;
+        const reservationKey = expiredSession.metadata.quote_binding;
+        const expiredTenant = paidTenantValue(paidTenantId(expiredSession.metadata));
+        await dbConnect();
+        if (/^[a-f0-9]{64}$/i.test(reservationKey || '')) {
+          await releaseInventoryHolds({
+            tenantId: expiredTenant,
+            reservationKey,
+            reason: 'checkout_session_expired',
+          });
+        }
+        await CheckoutPaymentQuote.updateOne(
+          {
+            tenantId: expiredTenant,
+            checkoutSessionId: expiredSession.id,
+            inventoryState: { $nin: ['converted', 'refunding', 'refunded', 'refund_failed'] },
+          },
+          {
+            $set: {
+              inventoryState: 'released',
+              inventoryFailureReason: 'checkout_session_expired',
+              inventoryUpdatedAt: new Date(),
+            },
+          },
+        );
+        break;
+      }
 
       case 'charge.succeeded':
         const charge = event.data.object as Stripe.Charge;

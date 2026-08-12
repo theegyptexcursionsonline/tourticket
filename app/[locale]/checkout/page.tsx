@@ -27,7 +27,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import AuthModal from '@/components/AuthModal';
-import StripePaymentForm from '@/components/StripePaymentForm';
+import ConfiguredStripePaymentForm from '@/components/ConfiguredStripePaymentForm';
 import HotelPickupMap from '@/components/HotelPickupMap';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
@@ -578,7 +578,7 @@ const CheckoutFormStep = ({
       {(customerType === 'guest' || user) && (
         <section>
           <h2 className="mb-4 text-xl font-extrabold text-slate-900 sm:text-2xl">Secure payment</h2>
-          <StripePaymentForm
+          <ConfiguredStripePaymentForm
             amount={pricing.total}
             currency={pricing.currency}
             customer={{

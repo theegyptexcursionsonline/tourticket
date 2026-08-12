@@ -82,7 +82,13 @@ type HoldRow = {
 
 const CLEANUP_MS = 30 * 24 * 60 * 60 * 1000;
 
-function holdDurationMs() {
+function holdDurationMs(overrideMinutes?: number) {
+  if (overrideMinutes !== undefined) {
+    if (!Number.isInteger(overrideMinutes) || overrideMinutes < 5 || overrideMinutes > 60) {
+      throw new InventoryHoldError('INVALID_INVENTORY_HOLD_DURATION', 'Inventory hold duration is invalid.');
+    }
+    return overrideMinutes * 60 * 1000;
+  }
   const configured = Number(process.env.CHECKOUT_INVENTORY_HOLD_MINUTES || 20);
   const minutes = Number.isFinite(configured) ? Math.max(5, Math.min(60, configured)) : 20;
   return minutes * 60 * 1000;
@@ -333,6 +339,7 @@ async function reserveOne(
   item: InventoryHoldCartItem,
   itemIndex: number,
   commerceContext?: InventoryHoldCommerceContext,
+  holdMinutes?: number,
 ) {
   const target = targetFor(item);
   return withInventoryLease(target, async () => {
@@ -387,7 +394,7 @@ async function reserveOne(
             paymentCurrency: commerceContext.paymentCurrency,
           } : {}),
           state: 'active',
-          expiresAt: new Date(now.getTime() + holdDurationMs()),
+          expiresAt: new Date(now.getTime() + holdDurationMs(holdMinutes)),
           cleanupAt: new Date(now.getTime() + CLEANUP_MS),
         },
         $unset: {
@@ -406,18 +413,27 @@ export async function createInventoryHolds(input: {
   reservationKey: string;
   cart: InventoryHoldCartItem[];
   commerceContext?: InventoryHoldCommerceContext;
+  holdMinutes?: number;
 }) {
   if (!/^[a-f0-9]{64}$/i.test(input.reservationKey)
     || !Array.isArray(input.cart)
     || input.cart.length === 0
     || input.cart.length > 10
-    || (input.commerceContext !== undefined && !validCommerceContext(input.commerceContext))) {
+    || (input.commerceContext !== undefined && !validCommerceContext(input.commerceContext))
+    || (input.holdMinutes !== undefined
+      && (!Number.isInteger(input.holdMinutes) || input.holdMinutes < 5 || input.holdMinutes > 60))) {
     throw new InventoryHoldError('INVALID_INVENTORY_RESERVATION', 'Inventory reservation input is invalid.');
   }
   const holds = [];
   try {
     for (let itemIndex = 0; itemIndex < input.cart.length; itemIndex += 1) {
-      holds.push(await reserveOne(input.reservationKey, input.cart[itemIndex], itemIndex, input.commerceContext));
+      holds.push(await reserveOne(
+        input.reservationKey,
+        input.cart[itemIndex],
+        itemIndex,
+        input.commerceContext,
+        input.holdMinutes,
+      ));
     }
     return holds;
   } catch (error) {

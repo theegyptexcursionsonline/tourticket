@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   CalendarCheck,
   Gift,
+  CreditCard,
   Loader2,
   ScrollText,
 } from "lucide-react";
@@ -44,6 +45,7 @@ const navItems = [
   { href: "/admin/tours", label: "Tours", icon: Compass, permissions: ["manageTours"] },
   { href: "/admin/availability", label: "Availability", icon: CalendarCheck, permissions: ["manageTours"] },
   { href: "/admin/special-offers", label: "Special Offers", icon: Gift, permissions: ["manageTours"] },
+  { href: "/admin/checkout-settings", label: "Payment Settings", icon: CreditCard, permissions: ["managePayments"] },
   { href: "/admin/destinations", label: "Destination", icon: Map, permissions: ["manageContent"] },
   { href: "/admin/pages", label: "Pages", icon: Layout, permissions: ["manageContent"] },
   { href: "/admin/blog", label: "Blog", icon: PenSquare, permissions: ["manageContent"] },

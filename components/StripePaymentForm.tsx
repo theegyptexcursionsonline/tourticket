@@ -28,6 +28,7 @@ import {
   isAuthoritativePriceQuote,
   type AuthoritativePriceQuote,
 } from '@/lib/cart/authoritativeCart';
+import type { PaymentExperience } from '@/lib/checkout/paymentExperience';
 
 interface CheckoutCartItem {
   _id?: string;
@@ -202,7 +203,7 @@ export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
   );
 };
 
-interface StripePaymentFormProps {
+export interface StripePaymentFormProps {
   amount: number;
   currency: string;
   customer: {
@@ -229,10 +230,12 @@ interface StripePaymentFormProps {
   onPriceChanged: (quote: AuthoritativePriceQuote) => Promise<boolean> | boolean;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  experience?: PaymentExperience;
 }
 
-type StripePaymentPanelProps = Omit<StripePaymentFormProps, 'isOpen' | 'onOpenChange'> & {
+type StripePaymentPanelProps = Omit<StripePaymentFormProps, 'isOpen' | 'onOpenChange' | 'experience'> & {
   onProcessingChange?: (processing: boolean) => void;
+  paymentExperience: 'inline' | 'modal';
 };
 
 const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
@@ -246,6 +249,7 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
   onError,
   onPriceChanged,
   onProcessingChange,
+  paymentExperience,
 }) => {
   const [clientSecret, setClientSecret] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -428,6 +432,7 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
               cart,
               discountCode,
               checkoutAttemptId,
+              paymentExperience,
             }),
           });
 
@@ -461,7 +466,7 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
     }, 1500); // Increased debounce to 1.5 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [customerDetailsComplete, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, onError, paymentCompleted, clientSecret, pendingPriceChange, retryNonce]);
+  }, [customerDetailsComplete, customerPayload, cart, pricing, discountCode, checkoutAttemptId, getCartHash, onError, paymentCompleted, clientSecret, pendingPriceChange, retryNonce, paymentExperience]);
 
   if (isLoading) {
     return (
@@ -666,6 +671,175 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
   );
 };
 
+const StripeHostedCheckoutLauncher: React.FC<Omit<StripePaymentFormProps, 'isOpen' | 'onOpenChange' | 'experience' | 'onSuccess'>> = ({
+  amount,
+  customer,
+  cart,
+  pricing,
+  discountCode,
+  onError,
+  onPriceChanged,
+}) => {
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [checkoutAttemptId, setCheckoutAttemptId] = useState('');
+  const [pendingPriceChange, setPendingPriceChange] = useState<AuthoritativePriceQuote | null>(null);
+  const [isAcceptingPriceChange, setIsAcceptingPriceChange] = useState(false);
+  const [priceChangeError, setPriceChangeError] = useState('');
+  const { formatPrice } = useSettings();
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email);
+  const customerDetailsComplete = Boolean(
+    customer.firstName
+    && customer.lastName
+    && customer.email
+    && customer.phone
+    && emailIsValid,
+  );
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        setCheckoutAttemptId(getOrCreateCheckoutAttemptId());
+      } catch (error) {
+        console.error('Unable to initialize hosted checkout attempt:', error);
+        onError('Secure checkout is unavailable in this browser. Please try another browser.');
+      }
+    });
+  }, [onError]);
+
+  const startHostedCheckout = async () => {
+    if (!customerDetailsComplete || !checkoutAttemptId || isRedirecting) return;
+    setIsRedirecting(true);
+    try {
+      const localeCandidate = window.location.pathname.split('/').filter(Boolean)[0] || 'en';
+      const locale = ['en', 'ar', 'de', 'fr', 'es'].includes(localeCandidate)
+        ? localeCandidate
+        : 'en';
+      const response = await fetch('/api/checkout/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer,
+          pricing,
+          cart,
+          discountCode,
+          checkoutAttemptId,
+          locale,
+        }),
+      });
+      const payload = await response.json() as {
+        success?: boolean;
+        url?: unknown;
+        code?: string;
+        message?: string;
+        quote?: unknown;
+      };
+
+      if (response.status === 409 && payload.code === 'PRICE_CHANGED' && isAuthoritativePriceQuote(payload.quote)) {
+        setPendingPriceChange(payload.quote);
+        setPriceChangeError('');
+        setIsRedirecting(false);
+        return;
+      }
+      if (!response.ok || payload.success !== true || typeof payload.url !== 'string') {
+        throw new Error(payload.message || 'Stripe Checkout could not be opened.');
+      }
+
+      const destination = new URL(payload.url);
+      if (destination.protocol !== 'https:' || !destination.hostname.endsWith('.stripe.com')) {
+        throw new Error('Stripe returned an invalid checkout destination.');
+      }
+      window.location.assign(destination.toString());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Stripe Checkout could not be opened.';
+      onError(message);
+      setIsRedirecting(false);
+    }
+  };
+
+  const acceptUpdatedPrice = async () => {
+    if (!pendingPriceChange || isAcceptingPriceChange) return;
+    setIsAcceptingPriceChange(true);
+    setPriceChangeError('');
+    try {
+      const accepted = await onPriceChanged(pendingPriceChange);
+      if (!accepted) {
+        setPriceChangeError('We could not save the updated quote. Your original cart is unchanged. Please try again.');
+        return;
+      }
+      setPendingPriceChange(null);
+      toast.success('Updated price accepted. You can now continue to Stripe Checkout.');
+    } catch {
+      setPriceChangeError('We could not save the updated quote. Your original cart is unchanged. Please try again.');
+    } finally {
+      setIsAcceptingPriceChange(false);
+    }
+  };
+
+  if (pendingPriceChange) {
+    return (
+      <div role="alert" className="overflow-hidden rounded-2xl border border-amber-300 bg-white shadow-sm">
+        <div className="flex items-start gap-3 bg-amber-50 px-5 py-4">
+          <AlertCircle className="mt-0.5 shrink-0 text-amber-700" size={22} />
+          <div>
+            <p className="font-extrabold text-slate-950">Your price was updated</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              The current server-verified total is {new Intl.NumberFormat('en-US', { style: 'currency', currency: pendingPriceChange.currency }).format(pendingPriceChange.prices.adult)} per adult. You have not been charged.
+            </p>
+          </div>
+        </div>
+        <div className="p-5">
+          {priceChangeError && <p className="mb-3 text-sm font-medium text-red-700">{priceChangeError}</p>}
+          <button
+            type="button"
+            onClick={() => void acceptUpdatedPrice()}
+            disabled={isAcceptingPriceChange}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
+          >
+            {isAcceptingPriceChange ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+            Accept updated price &amp; continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-700">
+            <ArrowRight size={23} aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-lg font-extrabold text-slate-950">Continue to Stripe Checkout</p>
+            <p className="mt-1 max-w-lg text-sm leading-6 text-slate-500">
+              Complete payment on Stripe’s secure hosted page, then return here for verified booking status.
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 sm:text-right">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Total due</p>
+          <p className="mt-1 text-2xl font-black text-slate-950">{formatPrice(pricing?.total ?? amount ?? 0)}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void startHostedCheckout()}
+        disabled={!customerDetailsComplete || !checkoutAttemptId || isRedirecting}
+        className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-base font-extrabold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+      >
+        {isRedirecting ? <Loader2 className="animate-spin" size={19} /> : <Lock size={18} />}
+        {isRedirecting ? 'Opening Stripe Checkout…' : 'Pay securely with Stripe'}
+        {!isRedirecting && <ArrowRight size={18} />}
+      </button>
+      {!customerDetailsComplete && (
+        <p className="mt-3 text-center text-sm text-slate-500">Complete your name, email, and phone number to continue.</p>
+      )}
+      <p className="mt-3 text-center text-xs text-slate-400">Cards, Link, and eligible wallets are shown by Stripe for this device.</p>
+    </div>
+  );
+};
+
 const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   amount,
   currency,
@@ -678,6 +852,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   onPriceChanged,
   isOpen,
   onOpenChange,
+  experience = 'modal',
 }) => {
   const [uncontrolledPaymentOpen, setUncontrolledPaymentOpen] = useState(false);
   const [panelProcessing, setPanelProcessing] = useState(false);
@@ -719,6 +894,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   }, [panelProcessing, setPaymentOpen]);
 
   useEffect(() => {
+    if (experience !== 'modal') return;
     if (!isPaymentOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -745,9 +921,61 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [closePayment, isPaymentOpen]);
+  }, [closePayment, experience, isPaymentOpen]);
 
-  const dialog = isPaymentOpen && customerDetailsComplete && typeof document !== 'undefined'
+  if (experience === 'inline') {
+    return (
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+              <CreditCard size={20} aria-hidden="true" />
+            </div>
+            <div>
+              <p className="font-extrabold text-slate-950">Secure card &amp; wallet payment</p>
+              <p className="mt-1 text-sm text-slate-500">Pay here without leaving the checkout page.</p>
+            </div>
+          </div>
+          <div className="sm:text-right">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Total due</p>
+            <p className="mt-1 text-xl font-black text-slate-950">{formattedTotal}</p>
+          </div>
+        </div>
+        <div className="p-5 sm:p-6">
+          <StripePaymentPanel
+            amount={amount}
+            currency={currency}
+            customer={customer}
+            cart={cart}
+            pricing={pricing}
+            discountCode={discountCode}
+            onSuccess={onSuccess}
+            onError={onError}
+            onPriceChanged={onPriceChanged}
+            onProcessingChange={setPanelProcessing}
+            paymentExperience="inline"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (experience === 'hosted') {
+    return (
+      <StripeHostedCheckoutLauncher
+        amount={amount}
+        currency={currency}
+        customer={customer}
+        cart={cart}
+        pricing={pricing}
+        discountCode={discountCode}
+        onError={onError}
+        onPriceChanged={onPriceChanged}
+      />
+    );
+  }
+
+  const dialog = experience === 'modal' && isPaymentOpen && customerDetailsComplete && typeof document !== 'undefined'
     ? createPortal(
         <div
           className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-6"
@@ -799,6 +1027,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
                 onError={onError}
                 onPriceChanged={onPriceChanged}
                 onProcessingChange={setPanelProcessing}
+                paymentExperience="modal"
               />
 
             </div>

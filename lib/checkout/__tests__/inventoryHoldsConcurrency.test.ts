@@ -213,6 +213,26 @@ describe('checkout inventory lease concurrency', () => {
     });
   });
 
+  it('uses a bounded explicit hold window for hosted Checkout without extending retries', async () => {
+    const startedAt = Date.now();
+    const reservationKey = '8'.repeat(64);
+    await createInventoryHolds({ reservationKey, cart: [item], holdMinutes: 32 });
+    const firstExpiry = holds[0].expiresAt.getTime();
+    expect(firstExpiry).toBeGreaterThanOrEqual(startedAt + (32 * 60 * 1000));
+    expect(firstExpiry).toBeLessThanOrEqual(Date.now() + (32 * 60 * 1000));
+
+    await createInventoryHolds({ reservationKey, cart: [item], holdMinutes: 40 });
+    expect(holds[0].expiresAt.getTime()).toBe(firstExpiry);
+  });
+
+  it('rejects out-of-policy custom hold windows', async () => {
+    await expect(createInventoryHolds({
+      reservationKey: '7'.repeat(64),
+      cart: [item],
+      holdMinutes: 61,
+    })).rejects.toMatchObject({ code: 'INVALID_INVENTORY_RESERVATION' });
+  });
+
   it('commits a paid hold exactly once across concurrent replay', async () => {
     const reservationKey = 'f'.repeat(64);
     const bookingId = { toString: () => '507f1f77bcf86cd799439099' };
