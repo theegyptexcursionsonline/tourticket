@@ -5,6 +5,7 @@ import {
   releaseInventoryHolds,
 } from '@/lib/checkout/inventoryHolds';
 import { publicCheckoutOrigin } from '@/lib/checkout/publicCheckoutOrigin';
+import { isAllowedStripeCheckoutUrl } from '@/lib/checkout/stripeCheckoutDestination';
 import {
   persistPreparedCheckoutQuote,
   prepareWebCheckout,
@@ -79,7 +80,9 @@ export async function POST(request: Request) {
       }, {
         idempotencyKey: `tourticket-hosted-${prepared.quoteBinding}`,
       });
-      if (!session.url) throw new Error('Stripe Checkout did not return a hosted URL.');
+      if (!isAllowedStripeCheckoutUrl(session.url)) {
+        throw new Error('Stripe Checkout did not return an approved hosted URL.');
+      }
 
       await persistPreparedCheckoutQuote({
         prepared: { ...prepared, paymentExperience: 'hosted' },

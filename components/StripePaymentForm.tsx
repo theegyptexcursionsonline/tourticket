@@ -24,6 +24,7 @@ import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import { getErrorMessage, isRecord } from './componentTypes';
 import { getOrCreateCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
+import { isAllowedStripeCheckoutUrl } from '@/lib/checkout/stripeCheckoutDestination';
 import {
   isAuthoritativePriceQuote,
   type AuthoritativePriceQuote,
@@ -744,11 +745,10 @@ const StripeHostedCheckoutLauncher: React.FC<Omit<StripePaymentFormProps, 'isOpe
         throw new Error(payload.message || 'Stripe Checkout could not be opened.');
       }
 
-      const destination = new URL(payload.url);
-      if (destination.protocol !== 'https:' || !destination.hostname.endsWith('.stripe.com')) {
+      if (!isAllowedStripeCheckoutUrl(payload.url)) {
         throw new Error('Stripe returned an invalid checkout destination.');
       }
-      window.location.assign(destination.toString());
+      window.location.assign(payload.url);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Stripe Checkout could not be opened.';
       onError(message);
