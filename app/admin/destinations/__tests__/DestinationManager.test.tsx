@@ -181,15 +181,19 @@ describe('DestinationManager', () => {
       const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null)
       await renderManager()
 
+      const configuredStorefrontOrigin = new URL(
+        process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost',
+      ).origin
+      const expectedPreviewUrl = `${configuredStorefrontOrigin}/destinations/cairo`
       const publishedPreview = screen.getByRole('link', { name: 'Preview Cairo on live site' })
-      expect(publishedPreview).toHaveAttribute('href', 'http://localhost/destinations/cairo')
+      expect(publishedPreview).toHaveAttribute('href', expectedPreviewUrl)
       expect(publishedPreview).toHaveAttribute('target', '_blank')
       expect(publishedPreview).toHaveAttribute('rel', 'noopener noreferrer')
 
       await user.click(publishedPreview)
       expect(openSpy).toHaveBeenCalledTimes(1)
       expect(openSpy).toHaveBeenCalledWith(
-        'http://localhost/destinations/cairo',
+        expectedPreviewUrl,
         '_blank',
         'noopener,noreferrer',
       )
