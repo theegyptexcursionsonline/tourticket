@@ -5,7 +5,14 @@ import { AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import StripePaymentForm, { type StripePaymentFormProps } from '@/components/StripePaymentForm';
 import { isPaymentExperience, type PaymentExperience } from '@/lib/checkout/paymentExperience';
 
-export default function ConfiguredStripePaymentForm(props: StripePaymentFormProps) {
+type ConfiguredStripePaymentFormProps = StripePaymentFormProps & {
+  onExperienceResolved?: (experience: PaymentExperience | null) => void;
+};
+
+export default function ConfiguredStripePaymentForm({
+  onExperienceResolved,
+  ...props
+}: ConfiguredStripePaymentFormProps) {
   const [experience, setExperience] = useState<PaymentExperience | null>(null);
   const [error, setError] = useState('');
   const [retryNonce, setRetryNonce] = useState(0);
@@ -35,6 +42,10 @@ export default function ConfiguredStripePaymentForm(props: StripePaymentFormProp
     queueMicrotask(() => void loadConfiguration(controller.signal));
     return () => controller.abort();
   }, [loadConfiguration, retryNonce]);
+
+  useEffect(() => {
+    onExperienceResolved?.(experience);
+  }, [experience, onExperienceResolved]);
 
   if (error) {
     return (

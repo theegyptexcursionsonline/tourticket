@@ -36,6 +36,7 @@ import { CartItem } from '@/types';
 import toast from 'react-hot-toast';
 import { parseLocalDate } from '@/utils/date';
 import { completeCheckoutAttempt } from '@/lib/checkout/checkoutAttempt';
+import type { PaymentExperience } from '@/lib/checkout/paymentExperience';
 
 interface PricingSummary {
   subtotal: number;
@@ -284,9 +285,10 @@ interface BookingSummaryProps {
   isProcessing: boolean;
   isApplyingCoupon: boolean;
   couponMessage: string;
+  showPaymentLauncher: boolean;
 }
 
-const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage }: BookingSummaryProps) => {
+const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage, showPaymentLauncher }: BookingSummaryProps) => {
   const { formatPrice } = useSettings();
   const { cart } = useCart();
 
@@ -345,14 +347,16 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
       </div>
 
       <div className="mt-6 hidden lg:block">
-        <button
-          type="submit"
-          form="checkout-form"
-          disabled={isProcessing}
-          className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
-        >
-          {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Continue to secure payment</span>}
-        </button>
+        {showPaymentLauncher && (
+          <button
+            type="submit"
+            form="checkout-form"
+            disabled={isProcessing}
+            className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Continue to secure payment</span>}
+          </button>
+        )}
         <p className="text-xs text-slate-500 text-center mt-3">
           By completing this booking you agree to our <Link className="underline" href="/terms">Terms of Service</Link>.
         </p>
@@ -398,6 +402,7 @@ const CheckoutFormStep = ({
   promoCode,
   paymentIntentId,
   setPaymentIntentId,
+  onPaymentExperienceChange,
 }: {
   onPaymentProcess: () => void;
   onPaymentProcessWithIntent: (intentId: string) => void;
@@ -413,6 +418,7 @@ const CheckoutFormStep = ({
   promoCode: string;
   paymentIntentId: string;
   setPaymentIntentId: (id: string) => void;
+  onPaymentExperienceChange: (experience: PaymentExperience | null) => void;
 }) => {
   const { acceptAuthoritativePriceQuote } = useCart();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -608,6 +614,7 @@ const CheckoutFormStep = ({
               toast.error(error);
             }}
             onPriceChanged={acceptAuthoritativePriceQuote}
+            onExperienceResolved={onPaymentExperienceChange}
           />
         </section>
       )}
@@ -1148,6 +1155,7 @@ export default function CheckoutPage() {
 
   // Stripe payment intent ID
   const [paymentIntentId, setPaymentIntentId] = useState<string>('');
+  const [paymentExperience, setPaymentExperience] = useState<PaymentExperience | null>(null);
 
   const [formData, setFormData] = useState<FormDataShape>({
     firstName: '',
@@ -1368,7 +1376,12 @@ export default function CheckoutPage() {
     }
   }, [isConfirmed]);
 
-  const showMobileStickyCTA = !isConfirmed && cart && cart.length > 0 && (customerType === 'guest' || user);
+  const showPaymentLauncher = paymentExperience !== null && paymentExperience !== 'inline';
+  const showMobileStickyCTA = !isConfirmed
+    && cart
+    && cart.length > 0
+    && (customerType === 'guest' || user)
+    && showPaymentLauncher;
 
   if (!cart) {
     return (
@@ -1418,6 +1431,7 @@ export default function CheckoutPage() {
                       promoCode={promoCode}
                       paymentIntentId={paymentIntentId}
                       setPaymentIntentId={setPaymentIntentId}
+                      onPaymentExperienceChange={setPaymentExperience}
                     />
                   </div>
                   <div className="lg:col-span-1 order-1 lg:order-2">
@@ -1429,6 +1443,7 @@ export default function CheckoutPage() {
                       isProcessing={isProcessing}
                       isApplyingCoupon={isApplyingCoupon}
                       couponMessage={couponMessage}
+                      showPaymentLauncher={showPaymentLauncher}
                     />
                   </div>
                 </div>

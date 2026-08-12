@@ -32,6 +32,19 @@ describe('ConfiguredStripePaymentForm', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/checkout/config', expect.objectContaining({ cache: 'no-store' }));
   });
 
+  it('reports the resolved experience so checkout can remove duplicate launchers', async () => {
+    const onExperienceResolved = jest.fn();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, paymentExperience: 'inline' }),
+    }) as jest.Mock;
+
+    render(<ConfiguredStripePaymentForm {...props} onExperienceResolved={onExperienceResolved} />);
+
+    expect(await screen.findByText('Payment experience: inline')).toBeInTheDocument();
+    await waitFor(() => expect(onExperienceResolved).toHaveBeenLastCalledWith('inline'));
+  });
+
   it('fails closed and lets the customer retry when configuration cannot be loaded', async () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce({
