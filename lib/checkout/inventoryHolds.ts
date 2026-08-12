@@ -398,6 +398,10 @@ async function reserveOne(
           cleanupAt: new Date(now.getTime() + CLEANUP_MS),
         },
         $unset: {
+          // Released/expired reservations may be retried with a new provider
+          // intent. Never carry the old payment binding into the reactivated
+          // hold; converted holds return above and are never cleared here.
+          paymentIntentId: 1,
           releaseReason: 1,
           releasedAt: 1,
           convertedAt: 1,

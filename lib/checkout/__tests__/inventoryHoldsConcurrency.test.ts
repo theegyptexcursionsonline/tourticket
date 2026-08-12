@@ -35,6 +35,7 @@ import {
   commitInventoryReservationHold,
   createInventoryHolds,
   inspectInventoryAvailability,
+  releaseInventoryHolds,
 } from '@/lib/checkout/inventoryHolds';
 
 type FakeHold = {
@@ -150,6 +151,9 @@ describe('checkout inventory lease concurrency', () => {
         holds.push(hold);
       }
       Object.assign(hold, update.$set);
+      for (const field of Object.keys(update.$unset || {})) {
+        delete (hold as unknown as Record<string, unknown>)[field];
+      }
       return hold;
     });
     mockHoldUpdateMany.mockImplementation(async (filter: any, update: any) => {
@@ -159,6 +163,9 @@ describe('checkout inventory lease concurrency', () => {
           && hold.state === filter.state
           && (!filter.reservationKey || hold.reservationKey === filter.reservationKey)) {
           Object.assign(hold, update.$set);
+          for (const field of Object.keys(update.$unset || {})) {
+            delete (hold as unknown as Record<string, unknown>)[field];
+          }
           modifiedCount += 1;
         }
       }
@@ -223,6 +230,20 @@ describe('checkout inventory lease concurrency', () => {
 
     await createInventoryHolds({ reservationKey, cart: [item], holdMinutes: 40 });
     expect(holds[0].expiresAt.getTime()).toBe(firstExpiry);
+  });
+
+  it('clears the previous provider binding when a released reservation is retried', async () => {
+    const reservationKey = '9'.repeat(64);
+    await createInventoryHolds({ reservationKey, cart: [item] });
+    holds[0].paymentIntentId = 'pi_abandoned_attempt';
+
+    await releaseInventoryHolds({ reservationKey, reason: 'payment_canceled' });
+    expect(holds[0]).toMatchObject({ state: 'released', paymentIntentId: 'pi_abandoned_attempt' });
+
+    await createInventoryHolds({ reservationKey, cart: [item] });
+
+    expect(holds[0]).toMatchObject({ state: 'active' });
+    expect(holds[0].paymentIntentId).toBeUndefined();
   });
 
   it('rejects out-of-policy custom hold windows', async () => {
