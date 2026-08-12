@@ -5,6 +5,7 @@ import type { AuthoritativePriceQuote } from '@/lib/cart/authoritativeCart';
 
 let mockStripe: { confirmPayment: jest.Mock } | null = null;
 let mockElements: { submit: jest.Mock } | null = null;
+let mockPaymentElementOptions: unknown;
 
 jest.mock('@stripe/stripe-js', () => ({ loadStripe: jest.fn(() => Promise.resolve({})) }));
 jest.mock('@stripe/react-stripe-js', () => ({
@@ -21,7 +22,10 @@ jest.mock('@stripe/react-stripe-js', () => ({
     }, [onReady]);
     return <button type="button" onClick={onConfirm}>Mock wallet</button>;
   },
-  PaymentElement: () => <div>Payment element</div>,
+  PaymentElement: ({ options }: { options?: unknown }) => {
+    mockPaymentElementOptions = options;
+    return <div>Payment element</div>;
+  },
   useStripe: () => mockStripe,
   useElements: () => mockElements,
 }));
@@ -57,6 +61,7 @@ describe('StripePaymentForm price-change recovery', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockPaymentElementOptions = undefined;
     global.fetch = jest.fn().mockResolvedValue({
       status: 409,
       ok: false,
@@ -181,6 +186,29 @@ describe('StripePaymentForm price-change recovery', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('uses one visual hierarchy around the modal payment content', () => {
+    render(
+      <StripePaymentForm
+        amount={100}
+        currency="USD"
+        customer={{ email: 'guest@example.com', firstName: 'Guest', lastName: 'Customer', phone: '+201000000000' }}
+        cart={[{ id: quote.tourId, selectedDate: quote.date, selectedTime: quote.time, quantity: 1 }]}
+        pricing={{ total: 100, currency: 'USD' }}
+        onSuccess={jest.fn()}
+        onError={jest.fn()}
+        onPriceChanged={jest.fn()}
+        isOpen
+      />,
+    );
+
+    expect(screen.getByRole('dialog', { name: /secure checkout/i })).toBeInTheDocument();
+    expect(screen.getByTestId('modal-payment-content')).toBeInTheDocument();
+    expect(screen.getByText('Protected by Stripe')).toBeInTheDocument();
+    expect(screen.getByText('EEO never stores card details')).toBeInTheDocument();
+    expect(screen.queryByText('Processed securely by Stripe')).not.toBeInTheDocument();
+    expect(screen.queryByText('Card details stay with Stripe')).not.toBeInTheDocument();
+  });
+
   it('does not open payment until required contact details are complete', async () => {
     render(
       <StripePaymentForm
@@ -297,6 +325,22 @@ describe('StripeElementsPaymentForm', () => {
     }));
     expect(onSuccess).toHaveBeenCalledWith('pi_wallet_success');
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('renders Stripe methods as flat tabs instead of a nested accordion card', () => {
+    render(
+      <StripeElementsPaymentForm
+        onSuccess={jest.fn()}
+        onError={jest.fn()}
+        isProcessing={false}
+        setIsProcessing={jest.fn()}
+        paymentCompleted={false}
+        setPaymentCompleted={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Payment element')).toBeInTheDocument();
+    expect(mockPaymentElementOptions).toEqual({ layout: 'tabs' });
   });
 
   it('does not confirm or charge when Stripe rejects submitted payment details', async () => {

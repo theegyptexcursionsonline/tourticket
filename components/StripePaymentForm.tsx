@@ -189,12 +189,11 @@ export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
         </div>
         <PaymentElement
           options={{
-            layout: {
-              type: 'accordion',
-              defaultCollapsed: false,
-              radios: true,
-              spacedAccordionItems: true,
-            },
+            // The EEO dialog already owns the payment surface. Stripe's
+            // accordion adds a second bordered container around the fields,
+            // which reads as a modal inside a modal. Tabs keep method choice
+            // clear while letting the inputs sit directly in the dialog.
+            layout: 'tabs',
           }}
         />
       </section>
@@ -218,10 +217,6 @@ export const StripeElementsPaymentForm: React.FC<PaymentFormProps> = ({
         )}
       </button>
 
-      <div className="grid gap-2 border-t border-slate-200 pt-4 text-xs text-slate-500 sm:grid-cols-2">
-        <p className="inline-flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-600" aria-hidden="true" /> Processed securely by Stripe</p>
-        <p className="inline-flex items-center gap-2 sm:justify-end"><Lock size={14} className="text-slate-600" aria-hidden="true" /> Card details stay with Stripe</p>
-      </div>
     </div>
   );
 };
@@ -693,18 +688,12 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
         },
         '.Tab': {
           border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          boxShadow: 'none',
+          padding: '11px 14px',
         },
         '.Tab--selected': {
           borderColor: '#dc2626',
-          boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.12)',
-        },
-        '.AccordionItem': {
-          border: '1px solid #e2e8f0',
-          boxShadow: 'none',
-        },
-        '.AccordionItem--selected': {
-          borderColor: '#cbd5e1',
+          boxShadow: '0 0 0 1px #dc2626',
         },
       },
     },
@@ -1070,17 +1059,16 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="secure-payment-title"
-            className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-xl sm:rounded-3xl"
+            className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-[0_28px_80px_-28px_rgba(15,23,42,0.5)] sm:max-w-lg sm:rounded-3xl"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+            <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6 sm:py-5">
               <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
-                  <Lock size={19} aria-hidden="true" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
+                  <Lock size={18} aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">Egypt Excursions Online</p>
-                  <h2 id="secure-payment-title" className="mt-1 text-xl font-extrabold text-slate-950">Secure payment</h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <h2 id="secure-payment-title" className="text-xl font-extrabold text-slate-950">Secure checkout</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">
                     {formattedTotal} for {numberOfTours} {numberOfTours === 1 ? 'experience' : 'experiences'}
                   </p>
                 </div>
@@ -1097,7 +1085,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
               </button>
             </header>
 
-            <div className="overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+            <div data-testid="modal-payment-content" className="overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
               <StripePaymentPanel
                 amount={amount}
                 currency={currency}
@@ -1114,9 +1102,9 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500 sm:px-7">
-              <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} /> Encrypted payment</span>
-              <span className="inline-flex items-center gap-1.5"><Lock size={14} /> Powered by Stripe</span>
+            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/80 px-5 py-3 text-xs text-slate-500 sm:px-6">
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} /> Protected by Stripe</span>
+              <span>EEO never stores card details</span>
             </footer>
           </section>
         </div>,
