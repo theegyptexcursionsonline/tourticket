@@ -22,6 +22,8 @@ import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
 import type { Category as CategoryData, Destination as DestinationData } from '@/types';
 import GoogleTagManager from './GoogleTagManager';
 import EEOSearchConcierge from '@/components/EEOSearchConcierge';
+import { StorefrontThemeProvider } from '@/contexts/StorefrontThemeContext';
+import { STOREFRONT_THEME_BOOTSTRAP } from '@/lib/storefrontTheme';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -174,8 +176,14 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <head />
-      <body className={`${inter.variable} ${almarai.variable} ${fontClass}`} suppressHydrationWarning>
+      <head>
+        <script
+          id="storefront-theme-bootstrap"
+          dangerouslySetInnerHTML={{ __html: STOREFRONT_THEME_BOOTSTRAP }}
+        />
+      </head>
+      <body className={`${inter.variable} ${almarai.variable} ${fontClass} storefront-theme`} suppressHydrationWarning>
+        <StorefrontThemeProvider>
         <GoogleTagManager containerId="GTM-W9WCZFKM" />
         {/* Google Tag Manager (noscript) */}
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W9WCZFKM" height="0" width="0" style={{display:'none',visibility:'hidden'}}></iframe></noscript>
@@ -201,6 +209,7 @@ export default async function LocaleLayout({
             </SettingsProvider>
           </AuthProvider>
         </NextIntlClientProvider>
+        </StorefrontThemeProvider>
       </body>
     </html>
   );

@@ -52,6 +52,7 @@ import {
 } from '@/lib/tenantSearchHitFilter';
 import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // =================================================================
 // --- ALGOLIA CONFIGURATION ---
@@ -1211,6 +1212,10 @@ const MobileMenu: FC<{
                 </div>
               </div>
 
+              <div className="flex items-center justify-between px-6 pt-5">
+                <span className="font-semibold text-slate-700">Appearance</span>
+                <ThemeToggle />
+              </div>
               <div className="p-6 border-t">
                 <CurrencyLanguageSwitcher variant="footer" />
               </div>
@@ -1316,8 +1321,10 @@ export default function Header({
 
       {isScrolled && <HeaderSearchBar onFocus={handleMobileSearchOpen} isTransparent={isTransparent} />}
 
-      <div className="flex items-center gap-3 md:gap-5">
+      <div className="flex items-center gap-1.5 sm:gap-3 md:gap-5">
         <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
+
+        <ThemeToggle transparent={isTransparent} className="hidden md:inline-flex" />
 
         <button
           onClick={openWishlistSidebar}

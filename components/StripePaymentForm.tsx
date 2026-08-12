@@ -30,6 +30,7 @@ import {
   type AuthoritativePriceQuote,
 } from '@/lib/cart/authoritativeCart';
 import type { PaymentExperience } from '@/lib/checkout/paymentExperience';
+import { useStorefrontTheme } from '@/contexts/StorefrontThemeContext';
 
 interface CheckoutCartItem {
   _id?: string;
@@ -269,6 +270,7 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
   onProcessingChange,
   paymentExperience,
 }) => {
+  const { resolvedTheme } = useStorefrontTheme();
   const [clientSecret, setClientSecret] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -652,14 +654,14 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
   const options = {
     clientSecret,
     appearance: {
-      theme: 'stripe' as const,
+      theme: resolvedTheme === 'dark' ? 'night' as const : 'stripe' as const,
       inputs: 'spaced' as const,
       labels: 'above' as const,
       variables: {
         colorPrimary: '#dc2626',
-        colorBackground: '#ffffff',
-        colorText: '#0f172a',
-        colorTextSecondary: '#64748b',
+        colorBackground: resolvedTheme === 'dark' ? '#111827' : '#ffffff',
+        colorText: resolvedTheme === 'dark' ? '#f8fafc' : '#0f172a',
+        colorTextSecondary: resolvedTheme === 'dark' ? '#cbd5e1' : '#64748b',
         colorDanger: '#dc2626',
         colorSuccess: '#059669',
         fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -669,8 +671,8 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
       },
       rules: {
         '.Input': {
-          border: '1px solid #cbd5e1',
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          border: resolvedTheme === 'dark' ? '1px solid #475569' : '1px solid #cbd5e1',
+          boxShadow: resolvedTheme === 'dark' ? 'none' : '0 1px 2px rgba(15, 23, 42, 0.04)',
           padding: '13px 14px',
         },
         '.Input:focus': {
@@ -682,12 +684,12 @@ const StripePaymentPanel: React.FC<StripePaymentPanelProps> = ({
           boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.12)',
         },
         '.Label': {
-          color: '#334155',
+          color: resolvedTheme === 'dark' ? '#e2e8f0' : '#334155',
           fontSize: '14px',
           fontWeight: '600',
         },
         '.Tab': {
-          border: '1px solid #e2e8f0',
+          border: resolvedTheme === 'dark' ? '1px solid #475569' : '1px solid #e2e8f0',
           boxShadow: 'none',
           padding: '11px 14px',
         },
