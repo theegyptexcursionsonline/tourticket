@@ -34,7 +34,9 @@
     "revenue:verify-production": "tsx scripts/verify-revenue-production.ts",
     "bookings:verify-payment-index": "tsx scripts/sync-booking-index.ts",
     "checkout:verify-inventory": "tsx scripts/verify-checkout-inventory.ts",
-    "bookings:verify-refunds": "tsx scripts/verify-booking-refunds.ts"
+    "bookings:verify-refunds": "tsx scripts/verify-booking-refunds.ts",
+    "theme:generate": "tsx scripts/generate-dark-theme-css.ts",
+    "theme:check": "tsx scripts/generate-dark-theme-css.ts --check"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.23",
