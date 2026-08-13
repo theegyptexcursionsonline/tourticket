@@ -21,6 +21,7 @@ import {
   CITY_SEGMENT,
 } from '@/lib/content/contentUrl';
 import { defaultLocale } from '@/i18n/config';
+import { legacyTenantTourUrl } from '@/lib/content/legacyTenantTourRedirect';
 
 export interface ContentMatch {
   type: ContentType;
@@ -137,7 +138,12 @@ export async function decideForSegment(
   locale: string
 ): Promise<ResolveDecision> {
   const matches = await resolveContentMatches(slug);
-  if (matches.length === 0) return { action: 'notFound' };
+  if (matches.length === 0) {
+    const legacyTenantUrl = legacyTenantTourUrl(slug, locale);
+    return legacyTenantUrl
+      ? { action: 'redirect', to: legacyTenantUrl }
+      : { action: 'notFound' };
+  }
 
   const exact = matches.find((m) => m.segment === expectedSegment && m.isPublished)
     || matches.find((m) => m.segment === expectedSegment);

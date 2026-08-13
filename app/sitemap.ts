@@ -69,7 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const Tour = mongoose.models.Tour;
     if (Tour) {
       const tours = await Tour.find(
-        { isPublished: true },
+        { isPublished: true, ...DEFAULT_TENANT_FILTER },
         { slug: 1, updatedAt: 1, urlType: 1, destination: 1, parentPage: 1 }
       ).populate('destination', 'slug').lean();
 
@@ -132,7 +132,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const Category = mongoose.models.Category;
     if (Category) {
       const categories = await Category.find(
-        { isPublished: true },
+        { isPublished: true, ...DEFAULT_TENANT_FILTER },
         { slug: 1, updatedAt: 1, urlType: 1, cityDestination: 1, parentPage: 1 }
       ).populate('cityDestination', 'slug').lean();
 
@@ -195,7 +195,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const AttractionPage = mongoose.models.AttractionPage;
     if (AttractionPage) {
       const attractions = await AttractionPage.find(
-        { isPublished: true },
+        { isPublished: true, ...DEFAULT_TENANT_FILTER },
         { slug: 1, updatedAt: 1, pageType: 1, urlType: 1, cityDestination: 1, parentPage: 1 }
       ).populate('cityDestination', 'slug').lean();
 
