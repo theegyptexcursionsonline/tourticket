@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -11,15 +11,18 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, fallback }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   useEffect(() => {
     // Wait for auth context to finish loading
     if (!isLoading) {
       // Only redirect if we're sure the user is not authenticated
       if (!isAuthenticated && !user) {
-        router.push('/login');
+        const suffix = `${window.location.search}${window.location.hash}`;
+        const returnTo = `${pathname || '/user/dashboard'}${suffix}`;
+        router.replace(`/login?redirect=${encodeURIComponent(returnTo)}`);
       }
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isAuthenticated, user, router, pathname]);
 
   // Show loading while auth context is initializing or during redirect
   if (isLoading) {
