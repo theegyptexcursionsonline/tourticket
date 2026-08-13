@@ -76,3 +76,36 @@
   to = "https://egypt-excursionsonline.com/*"
   status = 301
   force = true
+
+# A tenant-owned El Gouna tour was previously published by the flagship
+# sitemap. Keep those already-shared URLs useful at the CDN edge while the
+# application fallback protects local and non-Netlify runtimes.
+[[redirects]]
+  from = "/snorkeling-boat-trip-el-gouna"
+  to = "https://elgounaexcursions.com/snorkeling-boat-trip-el-gouna"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/ar/snorkeling-boat-trip-el-gouna"
+  to = "https://elgounaexcursions.com/ar/snorkeling-boat-trip-el-gouna"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/es/snorkeling-boat-trip-el-gouna"
+  to = "https://elgounaexcursions.com/es/snorkeling-boat-trip-el-gouna"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/fr/snorkeling-boat-trip-el-gouna"
+  to = "https://elgounaexcursions.com/fr/snorkeling-boat-trip-el-gouna"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/de/snorkeling-boat-trip-el-gouna"
+  to = "https://elgounaexcursions.com/de/snorkeling-boat-trip-el-gouna"
+  status = 301
+  force = true
