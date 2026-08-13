@@ -12,6 +12,7 @@ import mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 import * as path from 'node:path';
 import Stripe from 'stripe';
+import { isLocalMongoUri } from '../lib/bookings/duplicateBookingReconciliation';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
@@ -48,8 +49,7 @@ if (!['test', 'live'].includes(paymentMode)) throw new Error('payment-mode must 
 if (apply && process.env.CONFIRM_DUPLICATE_BOOKING_RECONCILIATION !== 'YES') {
   throw new Error('Refusing mutation without CONFIRM_DUPLICATE_BOOKING_RECONCILIATION=YES.');
 }
-const databaseHost = new URL(uri).hostname;
-if (apply && !['127.0.0.1', 'localhost'].includes(databaseHost)
+if (apply && !isLocalMongoUri(uri)
   && process.env.ALLOW_REMOTE_DUPLICATE_BOOKING_RECONCILIATION !== 'YES') {
   throw new Error('Remote mutation also requires ALLOW_REMOTE_DUPLICATE_BOOKING_RECONCILIATION=YES.');
 }
