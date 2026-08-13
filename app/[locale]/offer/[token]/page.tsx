@@ -26,7 +26,8 @@ export const metadata: Metadata = {
 
 // Catalog entries priced below this are data-entry errors, not offers.
 const MIN_CREDIBLE_PRICE = 5;
-const BUNDLE_COUNT = 6;
+// Client decision 14/08: exactly three bundle listings on every offer page.
+const BUNDLE_COUNT = 3;
 const PICK_COUNT = 8;
 const QUOTE_COUNT = 3;
 
@@ -131,7 +132,7 @@ export default async function OfferPage({
   const tourQuery: Record<string, unknown> = { isPublished: true, ...TENANT_FILTER };
   if (destinationIds) tourQuery.destination = { $in: destinationIds };
   const tours = await TourModel.find(tourQuery)
-    .select('title slug description shortDescription price discountPrice duration image isFeatured destination')
+    .select('title slug description shortDescription price discountPrice duration image isFeatured destination highlights')
     .limit(200)
     .lean();
 
@@ -176,6 +177,19 @@ export default async function OfferPage({
       if (!tour.slug || !tour.title) return null;
       const pricing = tourDisplayPricing(listPrice, discount);
       const stats = reviewStats.get(String(tour._id));
+      // Benefit bullets are real product facts only: actual Tour.highlights,
+      // cleaned of markup, capped so the card stays scannable.
+      const highlights = Array.isArray(tour.highlights)
+        ? tour.highlights
+            .map((line: unknown) =>
+              String(line ?? '')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim(),
+            )
+            .filter((line: string) => line.length >= 3 && line.length <= 90)
+            .slice(0, 4)
+        : [];
       const summary = String(tour.description || tour.shortDescription || '')
         .replace(/<[^>]*>/g, ' ')
         .replace(/&nbsp;/g, ' ')
@@ -196,6 +210,7 @@ export default async function OfferPage({
         rating: stats && stats.count > 0 ? Number(stats.avg.toFixed(1)) : null,
         reviewCount: stats?.count ?? 0,
         isFeatured: Boolean(tour.isFeatured),
+        highlights,
       };
     })
     .filter((tour): tour is OfferTour => tour !== null);

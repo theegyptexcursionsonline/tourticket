@@ -18,6 +18,8 @@ export type OfferTour = {
   rating: number | null;
   reviewCount: number;
   isFeatured: boolean;
+  /** Real tour highlights - shown on bundle cards (client ask 14/08). */
+  highlights: string[];
 };
 
 export type OfferQuote = { name: string; rating: number; text: string; tourTitle: string | null };
@@ -222,7 +224,7 @@ const TRUST_LINES = [
   'Your planner stays one message away',
 ] as const;
 
-function TourCard({ tour, view, locale }: { tour: OfferTour; view: OfferView; locale: string }) {
+function TourCard({ tour, view, locale, benefits = false }: { tour: OfferTour; view: OfferView; locale: string; benefits?: boolean }) {
   const percent = tour.perTourDiscount && tour.listPrice > 0 ? Math.round((tour.saving / tour.listPrice) * 100) : 0;
   return (
     <Link
@@ -258,6 +260,16 @@ function TourCard({ tour, view, locale }: { tour: OfferTour; view: OfferView; lo
       <div className="flex flex-1 flex-col p-5">
         <h3 className="text-[1.05rem] font-bold leading-snug text-gray-900">{tour.title}</h3>
         <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-gray-600">{tour.summary}</p>
+        {benefits && tour.highlights.length > 0 && (
+          <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[13px] leading-snug text-gray-700">
+            {tour.highlights.map((line) => (
+              <li key={line} className="flex items-start gap-2">
+                <span aria-hidden className="mt-0.5 shrink-0 text-[11px]" style={{ color: view.brandColor }}>★</span>
+                {line}
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-gray-100 pt-4">
           <div>
             {tour.perTourDiscount ? (
@@ -616,7 +628,7 @@ export default function OfferPageClient({ view, locale, fontClass = '' }: { view
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {view.bundles.map((tour, index) => (
               <Rise key={tour.id} delay={Math.min(index, 2) * 90}>
-                <TourCard tour={tour} view={view} locale={locale} />
+                <TourCard tour={tour} view={view} locale={locale} benefits />
               </Rise>
             ))}
           </div>

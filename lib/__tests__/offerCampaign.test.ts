@@ -89,3 +89,35 @@ describe('conversion mechanics', () => {
     expect(rescue).not.toMatch(/\d+% claimed|only \d+ left|people are looking/i);
   });
 });
+
+/**
+ * Client feedback 2026-08-14: exactly three bundle listings per offer page,
+ * each with real benefit bullets rendered BEFORE the price.
+ */
+describe('bundle listings contract (client 14/08)', () => {
+  const fs = require('node:fs') as typeof import('node:fs');
+  const path = require('node:path') as typeof import('node:path');
+  const page = fs.readFileSync(path.join(process.cwd(), 'app/[locale]/offer/[token]/page.tsx'), 'utf8');
+  const client = fs.readFileSync(path.join(process.cwd(), 'app/[locale]/offer/[token]/OfferPageClient.tsx'), 'utf8');
+
+  it('caps the bundles section at exactly three listings', () => {
+    expect(page).toContain('const BUNDLE_COUNT = 3;');
+  });
+
+  it('sources benefit bullets from real tour highlights only', () => {
+    expect(page).toMatch(/\.select\('[^']*highlights[^']*'\)/);
+    expect(client).toContain('benefits && tour.highlights.length > 0');
+  });
+
+  it('renders benefits before the price and only on the bundles section', () => {
+    const card = client.slice(client.indexOf('function TourCard'), client.indexOf('function Heading'));
+    const benefitsAt = card.indexOf('tour.highlights.map');
+    const priceAt = card.indexOf('tour.offerPrice');
+    expect(benefitsAt).toBeGreaterThan(-1);
+    expect(priceAt).toBeGreaterThan(-1);
+    expect(benefitsAt).toBeLessThan(priceAt);
+    const bundleMaps = client.match(/view\.bundles\.map[\s\S]{0,240}?benefits \/>/g) || [];
+    expect(bundleMaps.length).toBe(1);
+    expect(client).not.toMatch(/view\.picks\.map[\s\S]{0,240}?benefits \/>/);
+  });
+});
