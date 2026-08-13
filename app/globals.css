@@ -289,7 +289,7 @@ html[data-storefront-theme="dark"] body.storefront-theme .es-review-background-c
   color: #94a3b8 !important;
 }
 /* dark-theme:generated:start — built by `pnpm theme:generate`; do not hand-edit */
-/* 264 light utilities darkened, 33 deliberately preserved. */
+/* 264 light utilities darkened, 35 deliberately preserved. */
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="from-gray-100"], [class~="from-slate-100"]):not([class~="bg-clip-text"]) {
   --tw-gradient-from: #1e293b var(--tw-gradient-from-position) !important;
