@@ -60,3 +60,32 @@ describe('city catalogue', () => {
     expect(Object.keys(CITY_CATALOG)).toHaveLength(5);
   });
 });
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+/** Shimmer + exit rescue: honest, accessible, once per session. */
+describe('conversion mechanics', () => {
+  const client = readFileSync(
+    path.join(process.cwd(), 'app/[locale]/offer/[token]/OfferPageClient.tsx'),
+    'utf8',
+  );
+  const css = readFileSync(path.join(process.cwd(), 'app/globals.css'), 'utf8');
+
+  it('ambient shimmer exists and dies under reduced motion', () => {
+    expect(client).toContain('offer-sheen offer-sheen-auto');
+    expect(css).toContain('@keyframes offer-sheen-loop');
+    const reducedBlock = css.slice(css.lastIndexOf('prefers-reduced-motion'));
+    expect(reducedBlock).toContain('.offer-sheen-auto { animation: none; }');
+  });
+
+  it('exit rescue is once-per-session, desktop-only, accessible and honest', () => {
+    const rescue = client.slice(client.indexOf('function ExitRescue'));
+    expect(rescue).toContain('sessionStorage.getItem(key)');
+    expect(rescue).toContain("matchMedia('(pointer: fine)')");
+    expect(rescue).toContain('role="dialog"');
+    expect(rescue).toContain('aria-modal="true"');
+    expect(rescue).toContain("event.key === 'Escape'");
+    expect(rescue).not.toMatch(/\d+% claimed|only \d+ left|people are looking/i);
+  });
+});

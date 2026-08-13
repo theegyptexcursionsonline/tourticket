@@ -1000,3 +1000,18 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="placeho
   .offer-kenburns { animation: none; }
   .offer-sheen-host:hover .offer-sheen { animation: none; }
 }
+
+/* Ambient shimmer: one slow sweep, then a long rest. */
+@keyframes offer-sheen-loop {
+  0%    { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  4%    { opacity: 0.45; }
+  13%   { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+  100%  { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+}
+.offer-sheen-auto {
+  animation: offer-sheen-loop 4600ms ease-out infinite;
+  animation-delay: 1200ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .offer-sheen-auto { animation: none; }
+}
