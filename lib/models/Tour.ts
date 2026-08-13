@@ -1037,7 +1037,8 @@ TourSchema.pre('save', async function(next) {
         'experiences', 'activities', 'booking', 'payment', 'confirmation',
         'sitemap', 'robots', 'manifest', 'favicon', 'images', 'uploads',
         'static', '_next', 'monitoring', 'dashboard', 'settings', 'account',
-        'reviews', 'ratings', 'gallery', 'pricing', 'schedule', 'calendar'
+        'reviews', 'ratings', 'gallery', 'pricing', 'schedule', 'calendar',
+        'offer'
       ];
       
       // If slug conflicts with reserved words, prefix with 'tour-'
