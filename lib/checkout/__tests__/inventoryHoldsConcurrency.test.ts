@@ -35,6 +35,7 @@ import {
   commitInventoryReservationHold,
   createInventoryHolds,
   inspectInventoryAvailability,
+  recoverPaidInventoryReservationHold,
   releaseInventoryHolds,
 } from '@/lib/checkout/inventoryHolds';
 
@@ -56,7 +57,7 @@ type FakeHold = {
   time: string;
   optionKey: string;
   guests: number;
-  state: 'active' | 'converted' | 'released';
+  state: 'active' | 'converted' | 'released' | 'expired';
   expiresAt: Date;
   convertedBookingId?: { toString: () => string };
 };
@@ -128,7 +129,8 @@ describe('checkout inventory lease concurrency', () => {
         : holds.find((candidate) => candidate.tenantId === filter.tenantId
           && candidate.reservationKey === filter.reservationKey
           && candidate.itemIndex === filter.itemIndex);
-      if (hold && filter.state && hold.state !== filter.state) return null;
+      if (hold && filter.state?.$in && !filter.state.$in.includes(hold.state)) return null;
+      if (hold && typeof filter.state === 'string' && hold.state !== filter.state) return null;
       if (hold && filter.expiresAt?.$gt && hold.expiresAt <= filter.expiresAt.$gt) return null;
       if (hold && filter.$or && hold.paymentIntentId
         && !filter.$or.some((condition: any) => condition.paymentIntentId === hold?.paymentIntentId)) return null;
@@ -307,5 +309,55 @@ describe('checkout inventory lease concurrency', () => {
       item,
       commerceContext,
     })).rejects.toMatchObject({ code: 'INVENTORY_PAYMENT_CONFLICT', status: 409 });
+  });
+
+  it('recovers an expired paid hold exactly once without adding capacity twice', async () => {
+    const reservationKey = '6'.repeat(64);
+    const bookingId = { toString: () => '507f1f77bcf86cd799439099' };
+    await createInventoryHolds({ reservationKey, cart: [item], commerceContext });
+    holds[0].state = 'expired';
+    holds[0].expiresAt = new Date(Date.now() - 60_000);
+
+    const first = await recoverPaidInventoryReservationHold({
+      reservationKey,
+      paymentIntentId: 'pi_mobile_recovery_1',
+      itemIndex: 0,
+      bookingId: bookingId as never,
+      item,
+      commerceContext,
+    });
+    const replay = await recoverPaidInventoryReservationHold({
+      reservationKey,
+      paymentIntentId: 'pi_mobile_recovery_1',
+      itemIndex: 0,
+      bookingId: bookingId as never,
+      item,
+      commerceContext,
+    });
+
+    expect(first.alreadyCommitted).toBe(false);
+    expect(replay.alreadyCommitted).toBe(true);
+    expect(holds[0]).toMatchObject({
+      state: 'converted',
+      paymentIntentId: 'pi_mobile_recovery_1',
+      convertedBookingId: bookingId,
+    });
+    expect(mockAssertSellable).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects expired recovery when durable commerce evidence changes', async () => {
+    const reservationKey = '5'.repeat(64);
+    await createInventoryHolds({ reservationKey, cart: [item], commerceContext });
+    holds[0].state = 'expired';
+
+    await expect(recoverPaidInventoryReservationHold({
+      reservationKey,
+      paymentIntentId: 'pi_mobile_recovery_conflict',
+      itemIndex: 0,
+      bookingId: { toString: () => '507f1f77bcf86cd799439099' } as never,
+      item,
+      commerceContext: { ...commerceContext, targetBinding: 'f'.repeat(64) },
+    })).rejects.toMatchObject({ code: 'INVENTORY_RECOVERY_CONFLICT', status: 409 });
+    expect(holds[0].state).toBe('expired');
   });
 });

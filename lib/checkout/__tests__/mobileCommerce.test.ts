@@ -2,6 +2,7 @@ const mockSecureCartPricing = jest.fn();
 const mockInspectInventoryAvailability = jest.fn();
 const mockCreateInventoryHolds = jest.fn();
 const mockCommitInventoryReservationHold = jest.fn();
+const mockRecoverPaidInventoryReservationHold = jest.fn();
 const mockReleaseInventoryHolds = jest.fn();
 const mockSignToken = jest.fn();
 const mockVerifyToken = jest.fn();
@@ -16,6 +17,7 @@ jest.mock('@/lib/checkout/inventoryHolds', () => ({
   commitInventoryReservationHold: (...args: unknown[]) => mockCommitInventoryReservationHold(...args),
   createInventoryHolds: (...args: unknown[]) => mockCreateInventoryHolds(...args),
   inspectInventoryAvailability: (...args: unknown[]) => mockInspectInventoryAvailability(...args),
+  recoverPaidInventoryReservationHold: (...args: unknown[]) => mockRecoverPaidInventoryReservationHold(...args),
   releaseInventoryHolds: (...args: unknown[]) => mockReleaseInventoryHolds(...args),
 }));
 jest.mock('@/lib/models/Booking', () => ({
@@ -108,6 +110,7 @@ describe('mobile canonical commerce adapter', () => {
     mockInspectInventoryAvailability.mockResolvedValue({ ...availability });
     mockCreateInventoryHolds.mockResolvedValue([{ state: 'active', expiresAt: new Date(Date.now() + 15 * 60_000) }]);
     mockCommitInventoryReservationHold.mockResolvedValue({ hold: { state: 'converted' }, alreadyCommitted: false });
+    mockRecoverPaidInventoryReservationHold.mockResolvedValue({ hold: { state: 'converted' }, alreadyCommitted: false });
     mockReleaseInventoryHolds.mockResolvedValue(1);
     mockBookingUpdateOne.mockResolvedValue({ matchedCount: 1 });
     mockSignToken.mockImplementation(async (payload: Record<string, unknown>) => payload.scope === 'mobile-commerce:hold' ? 'quote-token' : 'hold-token');
@@ -326,6 +329,7 @@ describe('mobile canonical commerce adapter', () => {
     await expect(commitMobileCommerceHold(request, { retrievePaymentIntent })).resolves.toMatchObject({
       status: 'converted',
       alreadyCommitted: false,
+      recoveredExpiredCapability: false,
       paymentIntentId,
       bookingId,
       bookingReference: 'EEO-MOBILE-1',
@@ -370,6 +374,21 @@ describe('mobile canonical commerce adapter', () => {
       status: 'converted',
       alreadyCommitted: true,
     });
+
+    mockVerifyToken.mockResolvedValue(null);
+    await expect(commitMobileCommerceHold(request, { retrievePaymentIntent })).resolves.toMatchObject({
+      status: 'converted',
+      recoveredExpiredCapability: true,
+    });
+    expect(mockRecoverPaidInventoryReservationHold).toHaveBeenCalledWith(expect.objectContaining({
+      reservationKey: capability.reservationKey,
+      paymentIntentId,
+      itemIndex: 0,
+      commerceContext: expect.objectContaining({
+        quoteVersion: capability.quoteVersion,
+        targetBinding: capability.targetBinding,
+      }),
+    }));
   });
 
   it('rejects a non-customer booking source before inventory mutation', async () => {
@@ -432,7 +451,7 @@ describe('mobile canonical commerce adapter', () => {
     expect(mockCommitInventoryReservationHold).not.toHaveBeenCalled();
   });
 
-  it('rejects an expired capability before payment or booking access', async () => {
+  it('rejects expired-capability recovery when provider evidence is unavailable', async () => {
     mockVerifyToken.mockResolvedValue(null);
     const retrievePaymentIntent = jest.fn();
     await expect(commitMobileCommerceHold({
@@ -442,9 +461,10 @@ describe('mobile canonical commerce adapter', () => {
       idempotencyKey: '11111111-1111-4111-8111-111111111111',
       paymentIntentId: 'pi_mobile_expired',
       bookingId: '507f1f77bcf86cd799439099',
-    }, { retrievePaymentIntent })).rejects.toMatchObject({ code: 'CAPABILITY_INVALID', status: 401 });
-    expect(retrievePaymentIntent).not.toHaveBeenCalled();
+    }, { retrievePaymentIntent })).rejects.toMatchObject({ code: 'PAYMENT_VERIFICATION_UNAVAILABLE', status: 503 });
+    expect(retrievePaymentIntent).toHaveBeenCalledWith('pi_mobile_expired');
     expect(mockBookingFindOne).not.toHaveBeenCalled();
+    expect(mockRecoverPaidInventoryReservationHold).not.toHaveBeenCalled();
   });
 
   it('rejects provider evidence with a different checkout attempt before inventory mutation', async () => {

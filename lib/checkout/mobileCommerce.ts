@@ -7,6 +7,7 @@ import {
   commitInventoryReservationHold,
   createInventoryHolds,
   inspectInventoryAvailability,
+  recoverPaidInventoryReservationHold,
   releaseInventoryHolds,
   type InventoryAvailabilitySnapshot,
   type InventoryHoldCommerceContext,
@@ -689,14 +690,20 @@ export async function commitMobileCommerceHold(
     throw new MobileCommerceError(400, 'INVALID_COMMIT_TARGET', 'A valid payment and canonical booking are required.');
   }
   const token = normalizeCapability(input.holdToken, 'HOLD_CAPABILITY_REQUIRED');
-  const capability = await verifyCapability<MobileHoldCapability>(token, 'mobile-commerce:hold-control');
-  assertCapabilityShape(capability);
+  let capability: MobileHoldCapability | null;
+  try {
+    capability = await verifyCapability<MobileHoldCapability>(token, 'mobile-commerce:hold-control');
+  } catch (error) {
+    if (!(error instanceof MobileCommerceError) || error.code !== 'CAPABILITY_INVALID') throw error;
+    capability = null;
+  }
   const binding = targetBinding(target);
   const reservationKey = reservationKeyFor(checkoutAttemptId);
-  if (capability.targetBinding !== binding
+  if (capability) assertCapabilityShape(capability);
+  if (capability && (capability.targetBinding !== binding
     || capability.reservationKey !== reservationKey
     || capability.checkoutAttemptId !== checkoutAttemptId
-    || capability.quoteVersion !== requestedQuoteVersion) {
+    || capability.quoteVersion !== requestedQuoteVersion)) {
     throw new MobileCommerceError(403, 'CAPABILITY_TARGET_MISMATCH', 'The hold capability does not match this payment checkout.');
   }
 
@@ -706,8 +713,26 @@ export async function commitMobileCommerceHold(
   } catch {
     throw new MobileCommerceError(503, 'PAYMENT_VERIFICATION_UNAVAILABLE', 'The payment provider could not be verified.');
   }
+  if (!payment || typeof payment.id !== 'string') {
+    throw new MobileCommerceError(503, 'PAYMENT_VERIFICATION_UNAVAILABLE', 'The payment provider returned no usable evidence.');
+  }
   if (payment.id !== paymentIntentId) {
     throw new MobileCommerceError(409, 'PAYMENT_EVIDENCE_MISMATCH', 'The payment provider returned different evidence.');
+  }
+  const recoveredExpiredCapability = capability === null;
+  if (!capability) {
+    capability = {
+      scope: 'mobile-commerce:hold-control',
+      contractVersion: MOBILE_COMMERCE_CONTRACT,
+      tenantId: TENANT_ID,
+      reservationKey,
+      targetBinding: binding,
+      quoteVersion: requestedQuoteVersion,
+      checkoutAttemptId,
+      paymentAmountMinor: Number(payment.amount),
+      paymentCurrency: String(payment.currency || '').toLowerCase() as 'usd',
+    };
+    assertCapabilityShape(capability);
   }
   assertPaymentEvidence(payment, capability);
   const booking = await claimCanonicalMobileBooking({
@@ -717,7 +742,7 @@ export async function commitMobileCommerceHold(
     paymentIntentId,
     paymentMode: payment.livemode ? 'live' : 'test',
   });
-  const committed = await commitInventoryReservationHold({
+  const inventoryCommit = {
     reservationKey,
     paymentIntentId,
     itemIndex: 0,
@@ -729,7 +754,10 @@ export async function commitMobileCommerceHold(
       checkoutAttemptId: capability.checkoutAttemptId,
       paymentAmountMinor: capability.paymentAmountMinor,
     }),
-  });
+  };
+  const committed = recoveredExpiredCapability
+    ? await recoverPaidInventoryReservationHold(inventoryCommit)
+    : await commitInventoryReservationHold(inventoryCommit);
   const finalized = await Booking.updateOne(
     {
       _id: booking._id,
@@ -763,6 +791,7 @@ export async function commitMobileCommerceHold(
     tenantId: TENANT_ID,
     status: 'converted' as const,
     alreadyCommitted: committed.alreadyCommitted,
+    recoveredExpiredCapability,
     paymentIntentId,
     bookingId: String(booking._id),
     bookingReference: booking.bookingReference || null,

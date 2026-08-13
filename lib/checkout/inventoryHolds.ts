@@ -519,6 +519,81 @@ export async function commitInventoryReservationHold(input: {
   });
 }
 
+/**
+ * Recover a paid booking after its signed client capability and original hold
+ * window expired. The private mobile bridge must verify Stripe and claim the
+ * exact booking before calling this function. The durable reservation key,
+ * target, commerce evidence, payment and booking bindings are all rechecked
+ * under the same departure lease before the expired row can be converted.
+ *
+ * Capacity is intentionally not re-added here: the durable Pending paid
+ * booking already participates in the canonical booked count.
+ */
+export async function recoverPaidInventoryReservationHold(input: {
+  reservationKey: string;
+  paymentIntentId: string;
+  itemIndex: number;
+  bookingId: Types.ObjectId;
+  item: InventoryHoldCartItem;
+  commerceContext: InventoryHoldCommerceContext;
+}) {
+  if (!/^[a-f0-9]{64}$/i.test(input.reservationKey)
+    || !/^pi_[A-Za-z0-9_]+$/.test(input.paymentIntentId)
+    || !Number.isInteger(input.itemIndex)
+    || input.itemIndex < 0
+    || !validCommerceContext(input.commerceContext)) {
+    throw new InventoryHoldError('INVALID_INVENTORY_RECOVERY', 'Paid inventory recovery input is invalid.');
+  }
+  const target = targetFor(input.item);
+  return withInventoryLease(target, async () => {
+    const hold = await CheckoutInventoryHold.findOne({
+      tenantId: target.tenantId,
+      reservationKey: input.reservationKey,
+      itemIndex: input.itemIndex,
+    }).lean<HoldRow | null>();
+    if (!hold) throw new InventoryHoldError('INVENTORY_HOLD_MISSING', 'The paid inventory hold is missing.');
+    if (!sameTarget(hold, target) || !sameCommerceContext(hold, input.commerceContext)) {
+      throw new InventoryHoldError('INVENTORY_RECOVERY_CONFLICT', 'The paid inventory hold does not match its durable commerce evidence.');
+    }
+    if (hold.paymentIntentId && hold.paymentIntentId !== input.paymentIntentId) {
+      throw new InventoryHoldError('INVENTORY_PAYMENT_CONFLICT', 'Inventory is already bound to a different payment.');
+    }
+    if (hold.state === 'converted') {
+      if (String(hold.convertedBookingId) !== String(input.bookingId)
+        || hold.paymentIntentId !== input.paymentIntentId) {
+        throw new InventoryHoldError('INVENTORY_CONVERSION_CONFLICT', 'Inventory was converted to a different payment or booking.');
+      }
+      return { hold, alreadyCommitted: true as const };
+    }
+    const now = new Date();
+    const recovered = await CheckoutInventoryHold.findOneAndUpdate(
+      {
+        _id: hold._id,
+        state: { $in: ['active', 'expired', 'released'] },
+        $or: [
+          { paymentIntentId: { $exists: false } },
+          { paymentIntentId: input.paymentIntentId },
+        ],
+      },
+      {
+        $set: {
+          paymentIntentId: input.paymentIntentId,
+          state: 'converted',
+          convertedBookingId: input.bookingId,
+          convertedAt: now,
+          cleanupAt: new Date(now.getTime() + CLEANUP_MS),
+        },
+        $unset: { releaseReason: 1, releasedAt: 1 },
+      },
+      { new: true },
+    );
+    if (!recovered) {
+      throw new InventoryHoldError('INVENTORY_RECOVERY_CONFLICT', 'The paid inventory hold changed during recovery.');
+    }
+    return { hold: recovered, alreadyCommitted: false as const };
+  });
+}
+
 export async function bindInventoryHoldsToPayment(reservationKey: string, paymentIntentId: string) {
   if (!/^[a-f0-9]{64}$/i.test(reservationKey) || !/^pi_[A-Za-z0-9_]+$/.test(paymentIntentId)) {
     throw new InventoryHoldError('INVALID_INVENTORY_PAYMENT', 'Inventory payment binding is invalid.');
