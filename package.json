@@ -33,6 +33,7 @@
     "revenue:verify-e2e": "tsx scripts/verify-revenue-pricing-e2e.ts",
     "revenue:verify-production": "tsx scripts/verify-revenue-production.ts",
     "bookings:verify-payment-index": "tsx scripts/sync-booking-index.ts",
+    "bookings:reconcile-duplicate-payment": "tsx scripts/reconcile-duplicate-paid-booking.ts",
     "checkout:verify-inventory": "tsx scripts/verify-checkout-inventory.ts",
     "bookings:verify-refunds": "tsx scripts/verify-booking-refunds.ts",
     "theme:generate": "tsx scripts/generate-dark-theme-css.ts",

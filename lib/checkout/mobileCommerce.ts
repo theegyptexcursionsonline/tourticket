@@ -100,7 +100,7 @@ type MobileHoldCapability = {
 
 type MobilePaymentIntentEvidence = Pick<
   Stripe.PaymentIntent,
-  'id' | 'status' | 'amount' | 'amount_received' | 'currency' | 'metadata'
+  'id' | 'status' | 'amount' | 'amount_received' | 'currency' | 'metadata' | 'livemode'
 >;
 
 export type MobileCommerceCommitDependencies = {
@@ -484,6 +484,13 @@ type CanonicalMobileBooking = {
   paymentConfirmedBy?: string;
   paymentId?: string;
   paymentItemIndex?: number;
+  checkoutItemKey?: string;
+  paymentDetails?: {
+    provider?: 'stripe';
+    mode?: 'test' | 'live';
+    source?: 'eeo-mobile' | 'eo-web' | 'unknown';
+    transactionId?: string;
+  };
   selectedBookingOption?: { pricingKey?: string };
   commerceContractVersion?: string;
   commerceQuoteVersion?: string;
@@ -509,6 +516,7 @@ function assertPaymentEvidence(
 ) {
   const metadata = payment.metadata || {};
   if (payment.id === ''
+    || typeof payment.livemode !== 'boolean'
     || payment.status !== 'succeeded'
     || payment.amount !== capability.paymentAmountMinor
     || payment.amount_received !== capability.paymentAmountMinor
@@ -528,6 +536,7 @@ function assertBookingMatchesCommit(
     target: MobileCommerceTarget;
     capability: MobileHoldCapability;
     paymentIntentId: string;
+    paymentMode: 'test' | 'live';
   },
 ) {
   const expectedAmount = input.capability.paymentAmountMinor;
@@ -546,6 +555,13 @@ function assertBookingMatchesCommit(
     || booking.paymentStatus !== 'paid'
     || booking.paymentId !== input.paymentIntentId
     || booking.paymentItemIndex !== 0
+    || (booking.checkoutItemKey !== undefined && booking.checkoutItemKey !== `${TENANT_ID}:${input.paymentIntentId}:0`)
+    || (booking.paymentDetails !== undefined && (
+      booking.paymentDetails.provider !== 'stripe'
+      || booking.paymentDetails.mode !== input.paymentMode
+      || booking.paymentDetails.source !== 'eeo-mobile'
+      || booking.paymentDetails.transactionId !== input.paymentIntentId
+    ))
     || booking.paymentConfirmedBy !== `stripe:${input.paymentIntentId}`
     || !booking.paymentConfirmedAt) {
     throw new MobileCommerceError(409, 'BOOKING_EVIDENCE_MISMATCH', 'The canonical booking does not match the paid held quote.');
@@ -557,6 +573,7 @@ async function claimCanonicalMobileBooking(input: {
   target: MobileCommerceTarget;
   capability: MobileHoldCapability;
   paymentIntentId: string;
+  paymentMode: 'test' | 'live';
 }) {
   const booking = await Booking.findOne({
     _id: input.bookingId,
@@ -567,6 +584,7 @@ async function claimCanonicalMobileBooking(input: {
     '_id', 'tenantId', 'bookingReference', 'tour', 'dateString', 'time', 'guests',
     'totalPrice', 'currency', 'status', 'source', 'paymentStatus', 'amountPaid',
     'paymentConfirmedAt', 'paymentConfirmedBy', 'paymentId', 'paymentItemIndex',
+    'checkoutItemKey', 'paymentDetails',
     'selectedBookingOption', 'commerceContractVersion', 'commerceQuoteVersion',
     'commerceTargetBinding', 'checkoutAttemptId',
   ].join(' ')).lean<CanonicalMobileBooking | null>();
@@ -579,6 +597,7 @@ async function claimCanonicalMobileBooking(input: {
     commerceQuoteVersion: input.capability.quoteVersion,
     commerceTargetBinding: input.capability.targetBinding,
     checkoutAttemptId: input.capability.checkoutAttemptId,
+    checkoutItemKey: `${TENANT_ID}:${input.paymentIntentId}:0`,
   };
   for (const [field, expected] of Object.entries(expectedBindings)) {
     const existing = booking[field as keyof CanonicalMobileBooking];
@@ -596,6 +615,10 @@ async function claimCanonicalMobileBooking(input: {
         ...Object.entries(expectedBindings).map(([field, expected]) => ({
           $or: [{ [field]: { $exists: false } }, { [field]: expected }],
         })),
+        { $or: [{ 'paymentDetails.provider': { $exists: false } }, { 'paymentDetails.provider': 'stripe' }] },
+        { $or: [{ 'paymentDetails.mode': { $exists: false } }, { 'paymentDetails.mode': input.paymentMode }] },
+        { $or: [{ 'paymentDetails.source': { $exists: false } }, { 'paymentDetails.source': 'eeo-mobile' }] },
+        { $or: [{ 'paymentDetails.transactionId': { $exists: false } }, { 'paymentDetails.transactionId': input.paymentIntentId }] },
       ],
     },
     [
@@ -603,6 +626,12 @@ async function claimCanonicalMobileBooking(input: {
         $set: {
           tenantId: TENANT_ID,
           ...expectedBindings,
+          paymentDetails: {
+            provider: 'stripe',
+            mode: input.paymentMode,
+            source: 'eeo-mobile',
+            transactionId: input.paymentIntentId,
+          },
           inventoryReservationState: {
             $cond: [
               { $eq: ['$inventoryReservationState', 'converted'] },
@@ -669,6 +698,7 @@ export async function commitMobileCommerceHold(
     target,
     capability,
     paymentIntentId,
+    paymentMode: payment.livemode ? 'live' : 'test',
   });
   const committed = await commitInventoryReservationHold({
     reservationKey,

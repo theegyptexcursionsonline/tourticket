@@ -45,6 +45,34 @@ export interface IBooking extends Document {
   checkoutAttemptId?: string;
   paymentId?: string;
   paymentItemIndex?: number;
+  checkoutItemKey?: string;
+  paymentDetails?: {
+    provider?: 'stripe';
+    mode?: 'test' | 'live';
+    source?: 'eeo-mobile' | 'eeo-web' | 'unknown';
+    transactionId?: string;
+  };
+  confirmationDeliveries?: Array<{
+    channel: 'email-customer' | 'email-admin' | 'push';
+    state: 'pending' | 'processing' | 'delivered' | 'suppressed' | 'failed';
+    attempts: number;
+    lastAttemptAt?: Date;
+    claimedAt?: Date;
+    sentAt?: Date;
+    errorCode?: string;
+  }>;
+  paymentReconciliationState?: 'verified_primary' | 'duplicate_suppressed';
+  duplicateOf?: mongoose.Types.ObjectId;
+  duplicateReconciliation?: {
+    reconciledAt: Date;
+    reconciledBy: string;
+    reason: string;
+    originalStatus: string;
+    originalPaymentStatus?: string;
+    originalAmountPaid?: number;
+    originalPaymentItemIndex?: number;
+    originalCheckoutItemKey?: string;
+  };
   confirmationSentAt?: Date;
   confirmationEmailFailedAt?: Date;
   confirmationEmailFailureCode?: string;
@@ -290,6 +318,52 @@ const BookingSchema: Schema<IBooking> = new Schema({
     min: 0,
   },
 
+  // Shared by the flagship and white-label checkout writers.  Both systems
+  // write the same immutable payment-item identity so a webhook/checkout race
+  // cannot create two bookings merely because one writer uses a different
+  // schema revision.
+  checkoutItemKey: {
+    type: String,
+    immutable: true,
+    maxlength: 320,
+  },
+
+  paymentDetails: {
+    provider: { type: String, enum: ['stripe'] },
+    mode: { type: String, enum: ['test', 'live'] },
+    source: { type: String, enum: ['eeo-mobile', 'eeo-web', 'unknown'] },
+    transactionId: { type: String },
+  },
+
+  confirmationDeliveries: {
+    type: [{
+      channel: { type: String, enum: ['email-customer', 'email-admin', 'push'], required: true },
+      state: { type: String, enum: ['pending', 'processing', 'delivered', 'suppressed', 'failed'], required: true },
+      attempts: { type: Number, min: 0, default: 0 },
+      lastAttemptAt: Date,
+      claimedAt: Date,
+      sentAt: Date,
+      errorCode: { type: String, maxlength: 120 },
+    }],
+    default: [],
+  },
+
+  paymentReconciliationState: {
+    type: String,
+    enum: ['verified_primary', 'duplicate_suppressed'],
+  },
+  duplicateOf: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
+  duplicateReconciliation: {
+    reconciledAt: { type: Date },
+    reconciledBy: { type: String, maxlength: 120 },
+    reason: { type: String, maxlength: 300 },
+    originalStatus: { type: String, maxlength: 80 },
+    originalPaymentStatus: { type: String, maxlength: 80 },
+    originalAmountPaid: { type: Number, min: 0 },
+    originalPaymentItemIndex: { type: Number, min: 0 },
+    originalCheckoutItemKey: { type: String, maxlength: 320 },
+  },
+
   confirmationSentAt: {
     type: Date,
   },
@@ -520,6 +594,15 @@ BookingSchema.virtual('guestBreakdown').get(function() {
 BookingSchema.index({ user: 1, createdAt: -1 });
 BookingSchema.index({ tour: 1, date: 1 });
 BookingSchema.index({ status: 1 });
+BookingSchema.index({ tenantId: 1, paymentReconciliationState: 1, updatedAt: 1 }, { name: 'payment_reconciliation_monitoring' });
+BookingSchema.index(
+  { checkoutItemKey: 1 },
+  {
+    unique: true,
+    name: 'checkout_item_key_unique',
+    partialFilterExpression: { checkoutItemKey: { $type: 'string' } },
+  },
+);
 BookingSchema.index({ tenantId: 1, refundState: 1, updatedAt: 1 }, { name: 'tenant_refund_reconciliation' });
 BookingSchema.index(
   { tenantId: 1, refundNotificationState: 1, refundNotificationClaimedAt: 1 },

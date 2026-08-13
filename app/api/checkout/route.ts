@@ -582,6 +582,17 @@ export async function POST(request: NextRequest) {
           paymentConfirmedBy: isCardPayment ? `stripe:${paymentResult.paymentId}` : undefined,
           paymentId: paymentResult.paymentId,
           paymentItemIndex: i,
+          checkoutItemKey: isCardPayment && paymentResult.paymentId
+            ? `default:${paymentResult.paymentId}:${i}`
+            : undefined,
+          paymentDetails: isCardPayment && paymentResult.paymentId && verifiedPaymentIntent
+            ? {
+                provider: 'stripe',
+                mode: verifiedPaymentIntent.livemode ? 'live' : 'test',
+                source: 'eeo-web',
+                transactionId: paymentResult.paymentId,
+              }
+            : undefined,
           paymentMethod,
           customerPhone: customer.phone ? String(customer.phone).slice(0, 50) : undefined,
           customerCountry: customer.country ? String(customer.country).slice(0, 100) : undefined,
@@ -611,14 +622,19 @@ export async function POST(request: NextRequest) {
           // E11000 = duplicate key error - booking already exists (commonly from webhook race)
           if (
             (createError as { code?: string | number }).code === 11000 &&
-            ((createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.bookingReference ||
-              (createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.paymentId)
+            ((createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown; checkoutItemKey?: unknown } }).keyPattern?.bookingReference ||
+              (createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown; checkoutItemKey?: unknown } }).keyPattern?.paymentId ||
+              (createError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown; checkoutItemKey?: unknown } }).keyPattern?.checkoutItemKey)
           ) {
             console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId} (created concurrently)`);
             const existingBooking = await Booking.findOne({ bookingReference, ...DEFAULT_TENANT_FILTER }) ||
               await Booking.findOne({
                 paymentId: paymentResult.paymentId,
                 paymentItemIndex: i,
+                ...DEFAULT_TENANT_FILTER,
+              }) ||
+              await Booking.findOne({
+                checkoutItemKey: `default:${paymentResult.paymentId}:${i}`,
                 ...DEFAULT_TENANT_FILTER,
               });
             if (existingBooking) {

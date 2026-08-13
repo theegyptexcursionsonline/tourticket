@@ -50,6 +50,20 @@ interface Booking {
   childGuests?: number;
   infantGuests?: number;
   paymentMethod?: string;
+  paymentDetails?: {
+    provider?: 'stripe';
+    mode?: 'test' | 'live';
+    source?: 'eeo-mobile' | 'eeo-web' | 'unknown';
+    transactionId?: string;
+  };
+  confirmationDeliveries?: Array<{
+    channel: 'email-customer' | 'email-admin' | 'push';
+    state: 'pending' | 'processing' | 'delivered' | 'suppressed' | 'failed';
+  }>;
+  confirmationSentAt?: string;
+  confirmationEmailFailedAt?: string;
+  paymentReconciliationState?: 'verified_primary' | 'duplicate_suppressed';
+  duplicateOf?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -275,7 +289,11 @@ const BookingsPage = () => {
       'Total',
       'Currency',
       'Payment method',
-      'Source',
+      'Payment provider',
+      'Payment mode',
+      'Payment source',
+      'Customer email delivery',
+      'Booking source',
       'Booked at',
     ];
     const rows = bookings.map((booking) => [
@@ -290,6 +308,11 @@ const BookingsPage = () => {
       safeToFixed(booking.totalPrice),
       booking.currency || 'USD',
       booking.paymentMethod || '',
+      booking.paymentDetails?.provider || 'Not recorded',
+      booking.paymentDetails?.mode || 'Not recorded',
+      booking.paymentDetails?.source || 'Not recorded',
+      booking.confirmationDeliveries?.find((delivery) => delivery.channel === 'email-customer')?.state ||
+        (booking.confirmationSentAt ? 'delivered' : booking.confirmationEmailFailedAt ? 'failed' : 'Not recorded'),
       booking.source || 'online',
       booking.createdAt,
     ]);
@@ -684,6 +707,25 @@ const BookingsPage = () => {
                         {booking.paymentMethod && (
                           <div className="text-xs text-slate-500 capitalize">{booking.paymentMethod}</div>
                         )}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {booking.paymentReconciliationState === 'duplicate_suppressed' && (
+                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">
+                              Duplicate suppressed
+                            </span>
+                          )}
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            booking.paymentDetails?.mode === 'test'
+                              ? 'bg-amber-100 text-amber-900'
+                              : booking.paymentDetails?.mode === 'live'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {booking.paymentDetails?.mode === 'test' ? 'TEST' : booking.paymentDetails?.mode === 'live' ? 'LIVE' : 'Mode not recorded'}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                            {booking.paymentDetails?.source === 'eeo-mobile' ? 'Mobile app' : booking.paymentDetails?.source === 'eeo-web' ? 'Website' : 'Source not recorded'}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

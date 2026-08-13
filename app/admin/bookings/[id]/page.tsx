@@ -135,6 +135,30 @@ interface BookingDetails {
   infantGuests?: number;
   paymentId?: string;
   paymentMethod?: string;
+  paymentDetails?: {
+    provider?: 'stripe';
+    mode?: 'test' | 'live';
+    source?: 'eeo-mobile' | 'eeo-web' | 'unknown';
+    transactionId?: string;
+  };
+  confirmationDeliveries?: Array<{
+    channel: 'email-customer' | 'email-admin' | 'push';
+    state: 'pending' | 'processing' | 'delivered' | 'suppressed' | 'failed';
+    attempts: number;
+    lastAttemptAt?: string;
+    sentAt?: string;
+    errorCode?: string;
+  }>;
+  paymentReconciliationState?: 'verified_primary' | 'duplicate_suppressed';
+  duplicateOf?: string;
+  duplicateReconciliation?: {
+    reconciledAt: string;
+    reconciledBy: string;
+    reason: string;
+    originalStatus: string;
+    originalPaymentStatus?: string;
+    originalAmountPaid?: number;
+  };
   specialRequests?: string;
   emergencyContact?: string;
   // Customer extras
@@ -416,8 +440,9 @@ const BookingDetailPage = () => {
     const headers = [
       'Reference', 'Tour', 'Customer', 'Email', 'Phone', 'Activity Date',
       'Time', 'Adults', 'Children', 'Infants', 'Guests', 'Total', 'Currency',
-      'Status', 'Payment Method', 'Payment Status', 'Source', 'Pickup',
-      'Special Requests', 'Booked At',
+      'Status', 'Payment Method', 'Payment Status', 'Payment Provider',
+      'Payment Mode', 'Payment Source', 'Transaction ID', 'Booking Source',
+      'Customer Email Delivery', 'Push Delivery', 'Pickup', 'Special Requests', 'Booked At',
     ];
     const row = [
       booking.bookingReference || booking._id,
@@ -436,7 +461,13 @@ const BookingDetailPage = () => {
       getStatusLabel(booking.status),
       booking.paymentMethod || '',
       booking.paymentStatus || '',
+      booking.paymentDetails?.provider || 'Not recorded',
+      booking.paymentDetails?.mode || 'Not recorded',
+      booking.paymentDetails?.source || 'Not recorded',
+      booking.paymentDetails?.transactionId || booking.paymentId || '',
       booking.source || 'online',
+      booking.confirmationDeliveries?.find((delivery) => delivery.channel === 'email-customer')?.state || 'Not recorded',
+      booking.confirmationDeliveries?.find((delivery) => delivery.channel === 'push')?.state || 'Not recorded',
       booking.pickupAddress || booking.pickupLocation || '',
       booking.specialRequests || '',
       booking.createdAt,
@@ -766,8 +797,8 @@ const BookingDetailPage = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center">
           <button 
             onClick={() => router.back()} 
             className="p-2 rounded-full hover:bg-gray-100 mr-4 transition-colors"
@@ -776,7 +807,7 @@ const BookingDetailPage = () => {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-slate-800">Booking Details</h1>
+              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">Booking Details</h1>
               {booking.source === 'manual' && (
                 <span className="px-2.5 py-1 text-xs font-bold bg-emerald-100 text-emerald-700 rounded-full">Manual</span>
               )}
@@ -791,24 +822,34 @@ const BookingDetailPage = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="grid w-full grid-cols-2 gap-3 sm:w-auto">
           <button
             type="button"
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 transition-colors hover:bg-slate-50"
           >
             <Download size={16} />
             Export
           </button>
           <button 
             onClick={fetchBooking}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
           >
             <RefreshCw size={16} />
             Refresh
           </button>
         </div>
       </div>
+
+      {booking.paymentReconciliationState === 'duplicate_suppressed' && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+          <p className="font-semibold">Duplicate booking suppressed</p>
+          <p className="mt-1 text-sm leading-6">
+            This record did not represent an additional provider payment and is excluded from the active booking lifecycle.
+            {booking.duplicateOf ? ` Primary booking: ${booking.duplicateOf}.` : ''}
+          </p>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1396,6 +1437,41 @@ const BookingDetailPage = () => {
                   }
                 />
               )}
+              <DetailItem
+                icon={Building2}
+                label="Payment Provider"
+                value={
+                  booking.paymentDetails?.provider
+                    ? <span className="capitalize">{booking.paymentDetails.provider}</span>
+                    : <span className="font-medium text-amber-700">Not recorded</span>
+                }
+              />
+              <DetailItem
+                icon={Shield}
+                label="Payment Mode"
+                value={
+                  booking.paymentDetails?.mode
+                    ? (
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        booking.paymentDetails.mode === 'test'
+                          ? 'bg-amber-100 text-amber-900'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {booking.paymentDetails.mode === 'test' ? 'TEST — no live charge' : 'LIVE'}
+                      </span>
+                    )
+                    : <span className="font-medium text-amber-700">Not recorded</span>
+                }
+              />
+              <DetailItem
+                icon={Globe}
+                label="Checkout Source"
+                value={
+                  booking.paymentDetails?.source
+                    ? <span>{booking.paymentDetails.source === 'eeo-mobile' ? 'EEO mobile app' : booking.paymentDetails.source === 'eeo-web' ? 'EEO website' : 'Unknown'}</span>
+                    : <span className="font-medium text-amber-700">Not recorded</span>
+                }
+              />
               {booking.amountPaid !== undefined && booking.amountPaid > 0 && (
                 <DetailItem
                   icon={DollarSign}
@@ -1403,13 +1479,13 @@ const BookingDetailPage = () => {
                   value={`${getCurrencySymbol(booking.currency)}${safeToFixed(booking.amountPaid)}`}
                 />
               )}
-              {booking.paymentId && (
+              {(booking.paymentDetails?.transactionId || booking.paymentId) && (
                 <DetailItem
                   icon={Hash}
                   label="Payment ID"
                   value={
                     <code className="bg-slate-100 px-2 py-1 rounded text-sm font-mono">
-                      {booking.paymentId}
+                      {booking.paymentDetails?.transactionId || booking.paymentId}
                     </code>
                   }
                 />
@@ -1433,6 +1509,63 @@ const BookingDetailPage = () => {
                 />
               )}
             </div>
+          </div>
+
+          {/* Durable notification delivery evidence */}
+          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 flex items-center border-b border-slate-200 pb-2 text-lg font-bold text-slate-800">
+              <MessageSquare className="mr-2 h-5 w-5 text-indigo-500" />
+              Notification Delivery
+            </h3>
+            {booking.confirmationDeliveries && booking.confirmationDeliveries.length > 0 ? (
+              <div className="space-y-3">
+                {booking.confirmationDeliveries.map((delivery) => (
+                  <div key={delivery.channel} className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {delivery.channel === 'email-customer' ? 'Customer email' : delivery.channel === 'email-admin' ? 'Operator email' : 'App notification'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {delivery.attempts} attempt{delivery.attempts === 1 ? '' : 's'}
+                        {delivery.lastAttemptAt ? ` · Last ${new Date(delivery.lastAttemptAt).toLocaleString()}` : ''}
+                      </p>
+                    </div>
+                    <div className="sm:text-right">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        delivery.state === 'delivered' ? 'bg-green-100 text-green-800' :
+                        delivery.state === 'failed' ? 'bg-red-100 text-red-800' :
+                        delivery.state === 'suppressed' ? 'bg-amber-100 text-amber-900' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {delivery.state.charAt(0).toUpperCase() + delivery.state.slice(1)}
+                      </span>
+                      {delivery.errorCode && <p className="mt-1 text-xs text-red-700">{delivery.errorCode}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : booking.confirmationSentAt || booking.confirmationEmailFailedAt ? (
+              <div className={`rounded-lg border p-4 ${
+                booking.confirmationSentAt
+                  ? 'border-green-200 bg-green-50'
+                  : 'border-red-200 bg-red-50'
+              }`}>
+                <p className={`text-sm font-semibold ${booking.confirmationSentAt ? 'text-green-900' : 'text-red-900'}`}>
+                  Customer email {booking.confirmationSentAt ? 'delivered' : 'failed'}
+                </p>
+                <p className={`mt-1 text-xs leading-5 ${booking.confirmationSentAt ? 'text-green-800' : 'text-red-800'}`}>
+                  Legacy delivery evidence recorded {new Date(booking.confirmationSentAt || booking.confirmationEmailFailedAt || '').toLocaleString()}.
+                  {booking.confirmationEmailFailureCode ? ` Error: ${booking.confirmationEmailFailureCode}` : ''}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-900">Delivery evidence not recorded</p>
+                <p className="mt-1 text-xs leading-5 text-amber-800">
+                  Do not assume an email or app notification was delivered. Use the protected resend action only after checking the customer and payment evidence.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Selected Add-ons */}

@@ -237,6 +237,13 @@ export async function GET(request: NextRequest) {
                 status: 1,
                 paymentMethod: 1,
                 paymentStatus: 1,
+                paymentDetails: 1,
+                confirmationDeliveries: 1,
+                confirmationSentAt: 1,
+                confirmationEmailFailedAt: 1,
+                confirmationEmailFailureCode: 1,
+                paymentReconciliationState: 1,
+                duplicateOf: 1,
                 createdAt: 1,
                 updatedAt: 1,
                 tour: {

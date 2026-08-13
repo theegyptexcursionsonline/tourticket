@@ -295,6 +295,7 @@ describe('mobile canonical commerce adapter', () => {
       amount: 37500,
       amount_received: 37500,
       currency: 'usd',
+      livemode: false,
       metadata: {
         [MOBILE_COMMERCE_PAYMENT_METADATA.contractVersion]: MOBILE_COMMERCE_CONTRACT,
         [MOBILE_COMMERCE_PAYMENT_METADATA.tenantId]: 'default',

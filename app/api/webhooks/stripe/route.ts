@@ -591,6 +591,13 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         paymentConfirmedBy: `stripe:${paymentId}`,
         paymentId: paymentId,
         paymentItemIndex: itemIndex,
+        checkoutItemKey: `${tenantId}:${paymentId}:${itemIndex}`,
+        paymentDetails: {
+          provider: 'stripe',
+          mode: paymentIntent.livemode ? 'live' : 'test',
+          source: 'eeo-web',
+          transactionId: paymentId,
+        },
         paymentMethod: 'card',
         customerPhone: customerPhone ? customerPhone.slice(0, 50) : undefined,
         emergencyContact: emergencyContact || undefined,
@@ -639,8 +646,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       // E11000 = duplicate key error - booking already exists (commonly created by checkout race)
       if (
         (bookingError as { code?: string | number }).code === 11000 &&
-        ((bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.bookingReference ||
-          (bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown } }).keyPattern?.paymentId)
+        ((bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown; checkoutItemKey?: unknown } }).keyPattern?.bookingReference ||
+          (bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown; checkoutItemKey?: unknown } }).keyPattern?.paymentId ||
+          (bookingError as { keyPattern?: { bookingReference?: unknown; paymentId?: unknown; checkoutItemKey?: unknown } }).keyPattern?.checkoutItemKey)
       ) {
         const itemIndex = Number.isFinite(Number(item?.i)) ? Number(item.i) : cartIndex;
         const bookingReference = generateDeterministicBookingReference(paymentId, itemIndex, paidTenantReferencePrefix(tenantId));
@@ -662,7 +670,8 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
             });
           }
         } else {
-          const fallbackExisting = await Booking.findOne({ paymentId, paymentItemIndex: itemIndex }).lean();
+          const fallbackExisting = await Booking.findOne({ paymentId, paymentItemIndex: itemIndex }).lean()
+            || await Booking.findOne({ checkoutItemKey: `${tenantId}:${paymentId}:${itemIndex}` }).lean();
           if (fallbackExisting) {
             return {
               created: false,
