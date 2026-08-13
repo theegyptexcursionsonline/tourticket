@@ -121,3 +121,31 @@ describe('bundle listings contract (client 14/08)', () => {
     expect(client).not.toMatch(/view\.picks\.map[\s\S]{0,240}?benefits \/>/);
   });
 });
+
+/**
+ * Offer pages are art-directed with fixed inline palettes, so the storefront
+ * dark remap turned them into a light/dark patchwork (client report 14/08).
+ * The route pins its designed look pre-paint and restores the visitor's
+ * theme on exit.
+ */
+describe('offer route theme pin', () => {
+  const fs2 = require('node:fs') as typeof import('node:fs');
+  const path2 = require('node:path') as typeof import('node:path');
+  const layout = fs2.readFileSync(path2.join(process.cwd(), 'app/[locale]/offer/layout.tsx'), 'utf8');
+  const pin = fs2.readFileSync(path2.join(process.cwd(), 'app/[locale]/offer/theme.tsx'), 'utf8');
+  const scanner = fs2.readFileSync(path2.join(process.cwd(), 'scripts/theme/scanStorefront.ts'), 'utf8');
+
+  it('pins the designed palette before first paint on hard loads', () => {
+    expect(layout).toContain("dataset.storefrontTheme='light'");
+    expect(layout).toContain('offer-theme-pin');
+  });
+
+  it('restores the visitor saved/system theme when leaving the route', () => {
+    expect(pin).toContain('STOREFRONT_THEME_STORAGE_KEY');
+    expect(pin).toContain("matchMedia('(prefers-color-scheme: dark)')");
+  });
+
+  it('keeps offer-only utilities out of the generated dark map', () => {
+    expect(scanner).toMatch(/EXCLUDED = .*\|offer\|/);
+  });
+});
