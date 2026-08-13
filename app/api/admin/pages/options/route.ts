@@ -116,13 +116,11 @@ export async function GET(request: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(ids ? ids.length : LIMIT)
           .lean(),
-        kind === 'pages'
-          ? Category.find(categoryFilter)
-              .select('name slug heroImage isPublished')
-              .sort({ createdAt: -1 })
-              .limit(ids ? ids.length : LIMIT)
-              .lean()
-          : Promise.resolve([]),
+        Category.find(categoryFilter)
+          .select('name slug heroImage isPublished')
+          .sort({ createdAt: -1 })
+          .limit(ids ? ids.length : LIMIT)
+          .lean(),
         kind === 'parents'
           ? Destination.find(destinationFilter)
               .select('name slug image isPublished')

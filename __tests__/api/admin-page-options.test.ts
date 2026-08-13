@@ -171,6 +171,12 @@ describe('GET /api/admin/pages/options', () => {
       pageType: 'category',
       isPublished: true,
     }]);
+    installListQueryMock(mockCategoryFind, [{
+      _id: '64b64c9bfc13ae1f19e8a012',
+      name: 'Aswan Tours',
+      slug: 'aswan-tours',
+      isPublished: true,
+    }]);
 
     const { GET } = await import('@/app/api/admin/pages/options/route');
     const response = await GET({
@@ -181,9 +187,35 @@ describe('GET /api/admin/pages/options', () => {
     expect(mockDestinationFind.mock.calls[0][0].$and[0]).toEqual(expect.objectContaining({
       $or: expect.arrayContaining([{ tenantId: 'default' }]),
     }));
+    expect(mockCategoryFind.mock.calls[0][0].$and).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        $or: expect.arrayContaining([{ tenantId: 'default' }]),
+      }),
+      expect.objectContaining({
+        $or: expect.arrayContaining([{ name: expect.any(RegExp) }, { slug: expect.any(RegExp) }]),
+      }),
+    ]));
     expect(body.data).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: 'Hurghada', kind: 'destination', slug: 'hurghada' }),
       expect.objectContaining({ label: 'Family Tours', kind: 'category-2', slug: 'family-tours' }),
+      expect.objectContaining({ label: 'Aswan Tours', kind: 'category', slug: 'aswan-tours' }),
     ]));
+  });
+
+  it('excludes the current Category from parent-page results', async () => {
+    installListQueryMock(mockCategoryFind, []);
+    const categoryId = '64b64c9bfc13ae1f19e8a012';
+
+    const { GET } = await import('@/app/api/admin/pages/options/route');
+    await GET({
+      url: `https://dashboard2.egypt-excursionsonline.com/api/admin/pages/options?kind=parents&excludeId=${categoryId}`,
+    } as never);
+
+    expect(mockCategoryFind.mock.calls[0][0]).toEqual(expect.objectContaining({
+      _id: { $ne: categoryId },
+      $and: [expect.objectContaining({
+        $or: expect.arrayContaining([{ tenantId: 'default' }]),
+      })],
+    }));
   });
 });
