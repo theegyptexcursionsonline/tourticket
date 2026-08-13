@@ -41,7 +41,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.color).toBe('#4385F6');
       expect(script.dataset.dir).toBe('ltr');
       expect(script.dataset.locale).toBe('en');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260811-eeo-blue-dialog-v3');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260813-ios-scroll-lifecycle-v1');
     });
   });
 
@@ -94,13 +94,15 @@ describe('EEOSearchConcierge', () => {
       expect(script).toBeInTheDocument();
       expect(script.dataset.color).toBe('#4385F6');
       expect(script.dataset.placeholder).toBe('Search Egypt tours...');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260811-eeo-blue-dialog-v3');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20260813-ios-scroll-lifecycle-v1');
     });
   });
 
   const visibleRects = () => [{ width: 320, height: 200 }] as unknown as DOMRectList;
 
   it('hides the hosted launcher while a visible application modal is open', async () => {
+    const closeListener = jest.fn();
+    window.addEventListener('foxes:search:close', closeListener);
     render(<EEOSearchConcierge />);
 
     const host = document.createElement('div');
@@ -116,9 +118,24 @@ describe('EEOSearchConcierge', () => {
     document.body.appendChild(dialog);
 
     await waitFor(() => expect(host.hidden).toBe(true));
+    expect(closeListener).toHaveBeenCalled();
 
     dialog.remove();
     await waitFor(() => expect(host.hidden).toBe(false));
+    window.removeEventListener('foxes:search:close', closeListener);
+  });
+
+  it('destroys the hosted overlay before unmounting its host', async () => {
+    const destroyListener = jest.fn();
+    window.addEventListener('foxes:search:destroy', destroyListener);
+    const view = render(<EEOSearchConcierge />);
+
+    await waitFor(() => expect(document.getElementById('eeo-search-concierge-script')).toBeInTheDocument());
+    destroyListener.mockClear();
+    view.unmount();
+
+    expect(destroyListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('foxes:search:destroy', destroyListener);
   });
 
   it('ignores non-modal embedded dialogs such as Google Maps InfoWindows', async () => {

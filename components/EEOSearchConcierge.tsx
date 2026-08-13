@@ -9,13 +9,15 @@ const SEARCH_ORIGIN = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || 'https://se
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5umlfasNQfJywtFPs6g';
 const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
+const CLOSE_EVENT = 'foxes:search:close';
+const DESTROY_EVENT = 'foxes:search:destroy';
 // Exact primary blue sampled from the customer-facing EEO logo assets.
 const EEO_BRAND_BLUE = '#4385F6';
 const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
 const MOBILE_ACTION_GAP_PX = 12;
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
-const LAUNCHER_RELEASE = '20260811-eeo-blue-dialog-v3';
+const LAUNCHER_RELEASE = '20260813-ios-scroll-lifecycle-v1';
 
 const copy: Record<string, { label: string; kicker: string; placeholder: string }> = {
   en: {
@@ -75,6 +77,9 @@ export default function EEOSearchConcierge() {
       const hasOpenAppDialog = Array.from(
         document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
       ).some((dialog) => !dialog.closest('.gm-style') && dialog.getClientRects().length > 0);
+      if (hasOpenAppDialog) {
+        window.dispatchEvent(new CustomEvent(CLOSE_EVENT));
+      }
       host.hidden = hasOpenAppDialog;
 
       if (!launcher) return;
@@ -115,6 +120,10 @@ export default function EEOSearchConcierge() {
         window.cancelAnimationFrame(syncFrame);
         syncFrame = null;
       }
+      // The hosted overlay owns the documentElement scroll lock. Destroy it
+      // before removing its host so an SPA route transition cannot strand
+      // iPhone Safari with an unscrollable root document.
+      window.dispatchEvent(new CustomEvent(DESTROY_EVENT));
       document.getElementById(SCRIPT_ID)?.remove();
       document.getElementById(HOST_ID)?.remove();
     };

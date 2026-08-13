@@ -84,6 +84,8 @@ describe('BookingSidebar dialog behaviour', () => {
   it('uses the shared modal behaviour hook', () => {
     expect(source).toContain("from '@/hooks/useModalBehavior'");
     expect(source).toMatch(/useModalBehavior\(dialogRef, isOpen, onClose\)/);
+    expect(source).toContain('touch-pan-y');
+    expect(source).toContain('[-webkit-overflow-scrolling:touch]');
   });
 
   it('attaches the dialog ref to the aria-modal container', () => {
