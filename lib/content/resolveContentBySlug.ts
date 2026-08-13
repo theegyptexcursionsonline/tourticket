@@ -137,13 +137,14 @@ export async function decideForSegment(
   expectedSegment: string,
   locale: string
 ): Promise<ResolveDecision> {
+  // Known cross-tenant legacy URLs are static redirects. Resolve them before
+  // touching MongoDB so an old shared link stays fast even during a DB cold
+  // start or transient database outage.
+  const legacyTenantUrl = legacyTenantTourUrl(slug, locale);
+  if (legacyTenantUrl) return { action: 'redirect', to: legacyTenantUrl };
+
   const matches = await resolveContentMatches(slug);
-  if (matches.length === 0) {
-    const legacyTenantUrl = legacyTenantTourUrl(slug, locale);
-    return legacyTenantUrl
-      ? { action: 'redirect', to: legacyTenantUrl }
-      : { action: 'notFound' };
-  }
+  if (matches.length === 0) return { action: 'notFound' };
 
   const exact = matches.find((m) => m.segment === expectedSegment && m.isPublished)
     || matches.find((m) => m.segment === expectedSegment);
