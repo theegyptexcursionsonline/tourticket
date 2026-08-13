@@ -36,7 +36,7 @@ interface BookingTour {
 interface Booking {
   _id: string;
   bookingReference?: string;
-  source?: 'online' | 'manual';
+  source?: 'online' | 'manual' | 'app';
   tour: BookingTour | null;
   user: BookingUser | null;
   date: string;
@@ -672,6 +672,9 @@ const BookingsPage = () => {
                             {tourTitle}
                             {booking.source === 'manual' && (
                               <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">Manual</span>
+                            )}
+                            {booking.source === 'app' && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full">App booking</span>
                             )}
                           </div>
                           <div className="text-sm text-slate-500">{userName}</div>

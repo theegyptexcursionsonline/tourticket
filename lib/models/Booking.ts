@@ -31,7 +31,7 @@ export interface IBooking extends Document {
   totalPrice: number;
   currency: string; // Currency code (USD, EUR, etc.)
   status: BookingStatus;
-  source?: 'online' | 'manual';
+  source?: 'online' | 'manual' | 'app';
   paymentStatus?: 'paid' | 'pending';
   amountPaid?: number;
   paymentConfirmedAt?: Date;
@@ -274,7 +274,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
 
   source: {
     type: String,
-    enum: ['online', 'manual'],
+    enum: ['online', 'manual', 'app'],
     default: 'online',
     index: true,
   },
