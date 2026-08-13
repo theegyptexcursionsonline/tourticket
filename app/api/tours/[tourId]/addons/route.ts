@@ -3,6 +3,7 @@ import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { isPerPersonAddOn, resolveAddOnPricingMethod } from '@/lib/checkout/addOnPricing';
+import { normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
 
 export async function GET(
   request: Request,
@@ -36,6 +37,9 @@ export async function GET(
         category: addon.category || 'Experience',
         perGuest: isPerPersonAddOn(addon),
         pricingMethod: resolveAddOnPricingMethod(addon),
+        groupKey: addon.groupKey || '',
+        groupTitle: addon.groupTitle || '',
+        bookingOptionKeys: normalizedBookingOptionKeys(addon),
         maxQuantity: 1,
         required: false,
       }))

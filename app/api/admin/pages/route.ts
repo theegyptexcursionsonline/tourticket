@@ -207,9 +207,9 @@ export async function GET(request: NextRequest) {
     const nextCursor = hasMore && last ? encodeCursor({ c: last.sortValue, id: last.id }) : null;
 
     const [attractionCount, landingCount, categoryCount] = await Promise.all([
-      AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'attraction' }] }),
-      AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'category' }] }),
-      Category.countDocuments(DEFAULT_TENANT_FILTER),
+      AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'attraction', archivedAt: null }] }),
+      AttractionPage.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { pageType: 'category', archivedAt: null }] }),
+      Category.countDocuments({ $and: [DEFAULT_TENANT_FILTER, { archivedAt: null }] }),
     ]);
 
     return NextResponse.json({

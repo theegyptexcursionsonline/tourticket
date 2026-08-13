@@ -34,6 +34,7 @@ describe('secureCartPricing', () => {
         { _id: { toString: () => 'addon-0' }, name: 'Lunch', description: 'Lunch package', price: 25, category: 'Food' },
         { _id: { toString: () => 'addon-1' }, name: 'Photos', description: 'Photo package', price: 40, category: 'Food', pricingMethod: 'per_unit' },
         { _id: { toString: () => 'addon-2' }, name: 'Guide', description: 'Private guide', price: 60, category: 'Experience', pricingMethod: 'per_person' },
+        { _id: { toString: () => 'addon-3' }, name: 'Premium transfer', price: 75, bookingOptionKeys: ['premium-key'] },
       ],
     });
   });
@@ -74,6 +75,20 @@ describe('secureCartPricing', () => {
       id: '507f1f77bcf86cd799439011',
       selectedAddOns: { invented: 1 },
     }])).rejects.toThrow('Invalid add-on');
+  });
+
+  it('rejects an authored add-on when it is not assigned to the selected option', async () => {
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedAddOns: { 'addon-3': 1 },
+    }])).rejects.toThrow('Invalid add-on');
+
+    const [premium] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { pricingKey: 'premium-key' },
+      selectedAddOns: { 'addon-3': 1 },
+    }]);
+    expect(premium.selectedAddOnDetails['addon-3'].price).toBe(75);
   });
 
   it('selects a non-standard option by stable pricingKey without a positional option id', async () => {

@@ -5,6 +5,7 @@ import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricin
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
+import { isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
 
 type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
 
@@ -46,6 +47,7 @@ interface LeanAddOn {
   price: number;
   category?: string;
   pricingMethod?: 'per_unit' | 'per_person';
+  bookingOptionKeys?: string[];
 }
 
 interface LeanTour {
@@ -239,12 +241,14 @@ export async function secureCartPricing(
     // Checkout may only sell add-ons authored on the tour. Invented fallbacks
     // are not a pricing authority and must never appear in a mobile quote.
     const catalogueAddons = (tour.addOns || [])
+      .filter((addon) => isAddOnAvailableForOption(addon, option.pricingKey))
       .map((addon) => ({
           id: addon?._id ? String(addon._id) : '',
           title: addon.name,
           price: Number(addon.price),
           category: addon.category || 'Experience',
           perGuest: isPerPersonAddOn(addon),
+          bookingOptionKeys: normalizedBookingOptionKeys(addon),
         }))
       .filter((addon) => Boolean(addon.id && addon.title) && Number.isFinite(addon.price) && addon.price >= 0);
 

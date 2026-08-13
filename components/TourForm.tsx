@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useSettings } from '@/hooks/useSettings';
 import { URL_TYPE_LABELS, contentPath, selectableUrlTypes, type UrlType } from '@/lib/content/contentUrl';
+import { bookingOptionUnitLabel } from '@/lib/bookings/bookingOptionLabels';
 import {
     Loader2,
     XCircle,
@@ -101,6 +102,7 @@ interface GuestPriceInput {
 
 interface BookingOption {
     pricingKey?: string;
+    clientKey?: string;
     type: string;
     label: string;
     price: number | string;
@@ -136,11 +138,15 @@ interface FAQ {
 }
 
 interface AddOn {
+    _id?: string;
     name: string;
-    description: string;
+    description?: string;
     price: number;
     category?: string;
     pricingMethod?: 'per_unit' | 'per_person';
+    groupKey?: string;
+    groupTitle?: string;
+    bookingOptionKeys?: string[];
 }
 
 interface TourFormData {
@@ -486,6 +492,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
     const [expandedOptionIndex, setExpandedOptionIndex] = useState<number | null>(0);
     const [expandedItineraryIndex, setExpandedItineraryIndex] = useState<number | null>(0);
     const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
+    const [expandedAddOnGroupKey, setExpandedAddOnGroupKey] = useState<string | null>(null);
 
     // The urlType the tour was loaded with — keeps a legacy shape selectable
     // for that tour while new tours only ever offer Direct.
@@ -612,8 +619,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 itinerary: (tourToEdit.itinerary?.length ?? 0) > 0 ? tourToEdit.itinerary! : [{ day: 1, title: '', description: '' }],
                 faqs: ((tourToEdit.faq || tourToEdit.faqs)?.length ?? 0) > 0 ? (tourToEdit.faq || tourToEdit.faqs)! : [{ question: '', answer: '' }],
                 bookingOptions: (tourToEdit.bookingOptions?.length ?? 0) > 0
-                    ? tourToEdit.bookingOptions!.map((option: BookingOption) => ({
+                    ? tourToEdit.bookingOptions!.map((option: BookingOption, optionIndex: number) => ({
                         pricingKey: option.pricingKey,
+                        clientKey: option.pricingKey || `existing-option-${optionIndex + 1}`,
                         type: option.type || 'Per Person',
                         label: option.label || '',
                         price: option.price || 0,
@@ -640,6 +648,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                         isRecommended: option.isRecommended || false
                     }))
                     : [{
+                        clientKey: 'draft-option-1',
                         type: 'Per Person',
                         label: '',
                         price: 0,
@@ -664,6 +673,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 addOns: (tourToEdit.addOns?.length ?? 0) > 0
                     ? tourToEdit.addOns!.map((addon) => ({
                         ...addon,
+                        groupKey: addon.groupKey || 'legacy-add-ons',
+                        groupTitle: addon.groupTitle || '',
+                        bookingOptionKeys: Array.isArray(addon.bookingOptionKeys) ? addon.bookingOptionKeys : [],
                         // Legacy add-ons derived per-person pricing from the Food category.
                         pricingMethod: addon.pricingMethod || (addon.category === 'Food' ? 'per_person' : 'per_unit'),
                     }))
@@ -803,6 +815,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             itinerary: [{ day: 1, title: '', description: '' }],
             faqs: [{ question: '', answer: '' }],
             bookingOptions: [{
+                clientKey: 'draft-option-1',
                 type: 'Per Person',
                 label: '',
                 price: 0,
@@ -1002,9 +1015,11 @@ const addItineraryItem = () => {
     };
 
     const addBookingOption = () => {
+        const clientKey = `draft-option-${Date.now()}-${formData.bookingOptions.length + 1}`;
         setFormData((p) => ({
             ...p,
             bookingOptions: [...p.bookingOptions, {
+                clientKey,
                 type: 'Per Person',
                 label: '',
                 price: 0,
@@ -1072,23 +1087,59 @@ const addItineraryItem = () => {
         }
     };
 
-    const handleAddOnChange = (index: number, field: string, value: string | number) => {
+    const handleAddOnChange = (index: number, field: string, value: string | number | string[]) => {
         const updatedAddOns = [...formData.addOns];
         updatedAddOns[index] = { ...updatedAddOns[index], [field]: value };
         setFormData((p) => ({ ...p, addOns: updatedAddOns }));
     };
 
-    const addAddOn = () => {
+    const addAddOn = (groupKey?: string) => {
+        const resolvedGroupKey = groupKey || `addon-group-${Date.now()}`;
+        const existingGroup = formData.addOns.find((addOn) => addOn.groupKey === resolvedGroupKey);
         setFormData((p) => ({
             ...p,
-            addOns: [...p.addOns, { name: '', description: '', price: 0, pricingMethod: 'per_unit' as const }]
+            addOns: [...p.addOns, {
+                name: '',
+                description: '',
+                price: 0,
+                pricingMethod: 'per_unit' as const,
+                groupKey: resolvedGroupKey,
+                groupTitle: existingGroup?.groupTitle || '',
+                bookingOptionKeys: existingGroup?.bookingOptionKeys || [],
+            }]
         }));
+        setExpandedAddOnGroupKey(resolvedGroupKey);
     };
 
     const removeAddOn = (index: number) => {
-        if (formData.addOns.length <= 1) return;
         const updatedAddOns = formData.addOns.filter((_, i: number) => i !== index);
         setFormData((p) => ({ ...p, addOns: updatedAddOns }));
+    };
+
+    const addOnGroups = useMemo(() => {
+        const groups = new globalThis.Map<string, { key: string; title: string; bookingOptionKeys: string[]; entries: Array<{ addOn: AddOn; index: number }> }>();
+        formData.addOns.forEach((addOn, index) => {
+            const key = addOn.groupKey || 'legacy-add-ons';
+            const group = groups.get(key) || { key, title: addOn.groupTitle || '', bookingOptionKeys: addOn.bookingOptionKeys || [], entries: [] };
+            group.entries.push({ addOn, index });
+            groups.set(key, group);
+        });
+        return Array.from(groups.values());
+    }, [formData.addOns]);
+
+    const updateAddOnGroup = (groupKey: string, changes: Pick<AddOn, 'groupTitle' | 'bookingOptionKeys'>) => {
+        setFormData((previous) => ({
+            ...previous,
+            addOns: previous.addOns.map((addOn) => addOn.groupKey === groupKey ? { ...addOn, ...changes } : addOn),
+        }));
+    };
+
+    const removeAddOnGroup = (groupKey: string) => {
+        setFormData((previous) => ({
+            ...previous,
+            addOns: previous.addOns.filter((addOn) => addOn.groupKey !== groupKey),
+        }));
+        setExpandedAddOnGroupKey(null);
     };
 
     const handleListChange = (index: number, value: string, field: 'highlights' | 'includes') => {
@@ -2378,7 +2429,7 @@ const addItineraryItem = () => {
                                                                         {selectedCurrency.symbol}{Number(option.price || 0).toFixed(2)}
                                                                     </div>
                                                                     <div className="text-xs text-slate-500">
-                                                                        {option.type === 'Per Person' ? 'per person' : 'per group'}
+                                                                        {bookingOptionUnitLabel(option.type)}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -2648,149 +2699,84 @@ const addItineraryItem = () => {
                                 {/* Add-ons Tab */}
                                 {activeTab === 'addons' && (
                                     <div className="space-y-6">
-                                        <FormLabel icon={Zap}>Tour Add-ons</FormLabel>
-                                        
-                                        {formData.addOns.length > 0 && (
-                                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
-                                                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                                                    <Eye className="h-5 w-5 text-green-500" />
-                                                    Preview - How customers see add-ons
-                                                </h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {formData.addOns.map((addon: AddOn, index: number) => (
-                                                        <div key={index} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-green-300 transition-all duration-200">
-                                                            <div className="flex items-start justify-between mb-3">
-                                                                <div className="flex-1">
-                                                                    <h5 className="font-semibold text-slate-900 mb-1">
-                                                                        {addon.name || `Add-on ${index + 1}`}
-                                                                    </h5>
-                                                                    <p className="text-sm text-slate-600 line-clamp-2">
-                                                                        {addon.description || 'No description provided'}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <div className="text-lg font-bold text-slate-900">
-                                                                        {selectedCurrency.symbol}{addon.price?.toFixed(2) || '0.00'}
-                                                                    </div>
-                                                                    <div className="text-xs text-slate-500">
-                                                                        {addon.pricingMethod === 'per_person' ? 'per person' : 'per unit'}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="pt-2 border-t border-slate-100">
-                                                                <div className="flex items-center justify-center w-full py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium">
-                                                                    Add to Tour
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <FormLabel icon={Zap}>Tour Add-on Groups</FormLabel>
+                                                <p className="mt-1 text-sm text-slate-500">Show the right optional extras for all or selected booking options.</p>
                                             </div>
-                                        )}
-
-                                        <div className="space-y-4">
-                                            {formData.addOns.map((addon: AddOn, index: number) => (
-                                                <div key={index} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-green-300 transition-all duration-200">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-lg font-bold text-sm">
-                                                                {index + 1}
-                                                            </div>
-                                                            <h5 className="font-semibold text-slate-900">Add-on {index + 1}</h5>
-                                                        </div>
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => removeAddOn(index)} 
-                                                            className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-200"
-                                                        >
-                                                            <XCircle className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                                                        <div className="space-y-2">
-                                                            <label className="block text-sm font-medium text-slate-700">Add-on Name *</label>
-                                                            <input 
-                                                                value={addon.name || ''} 
-                                                                onChange={(e) => handleAddOnChange(index, 'name', e.target.value)}
-                                                                className={inputBase} 
-                                                                placeholder="e.g., Professional Photography" 
-                                                                required
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="block text-sm font-medium text-slate-700">Price ({selectedCurrency.symbol}) *</label>
-                                                            <div className="relative">
-                                                                <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                                <input 
-                                                                    type="number" 
-                                                                    step="0.01"
-                                                                    value={addon.price || ''} 
-                                                                    onChange={(e) => handleAddOnChange(index, 'price', parseFloat(e.target.value) || 0)}
-                                                                    className={`${inputBase} pl-10`}placeholder="0.00"
-                                                                    min="0"
-                                                                    required
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="block text-sm font-medium text-slate-700">Pricing Method *</label>
-                                                            <select
-                                                                value={addon.pricingMethod || 'per_unit'}
-                                                                onChange={(e) => handleAddOnChange(index, 'pricingMethod', e.target.value)}
-                                                                className={`${inputBase} appearance-none cursor-pointer`}
-                                                            >
-                                                                <option value="per_unit">Per unit — one price for the booking</option>
-                                                                <option value="per_person">Per person — price × each guest</option>
-                                                            </select>
-                                                            <p className="text-xs text-slate-500">
-                                                                {addon.pricingMethod === 'per_person'
-                                                                    ? 'Charged once per paying guest (adults + children).'
-                                                                    : 'Charged once for the whole booking.'}
-                                                            </p>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="block text-sm font-medium text-slate-700">Category</label>
-                                                            <select
-                                                                value={addon.category || 'Experience'}
-                                                                onChange={(e) => handleAddOnChange(index, 'category', e.target.value)}
-                                                                className={`${inputBase} appearance-none cursor-pointer`}
-                                                            >
-                                                                <option value="Experience">Experience</option>
-                                                                <option value="Photography">Photography</option>
-                                                                <option value="Transport">Transport</option>
-                                                                <option value="Food">Food & Drink</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-6 space-y-2">
-                                                        <label className="block text-sm font-medium text-slate-700">Description *</label>
-                                                        <textarea 
-                                                            value={addon.description || ''} 
-                                                            onChange={(e) => handleAddOnChange(index, 'description', e.target.value)}
-                                                            className={textareaBase} 
-                                                            rows={3}
-                                                            placeholder="Describe what this add-on includes and why customers would want it..."
-                                                            required
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
+                                            <button type="button" onClick={() => addAddOn()} className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700">
+                                                <Plus className="h-4 w-4" /> Create add-on group
+                                            </button>
                                         </div>
 
-                                        <button 
-                                            type="button" 
-                                            onClick={addAddOn} 
-                                            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold text-green-600 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-xl hover:from-green-100 hover:to-emerald-100 hover:border-green-400 transition-all duration-200"
-                                        >
-                                            <Plus className="h-5 w-5" /> 
-                                            Add Tour Enhancement
-                                        </button>
+                                        {addOnGroups.map((group, groupIndex) => {
+                                            const expanded = expandedAddOnGroupKey === group.key;
+                                            const appliesToAll = group.bookingOptionKeys.length === 0;
+                                            return (
+                                                <section key={group.key} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                                    <div className="flex items-center gap-3 bg-slate-50 px-5 py-4">
+                                                        <button type="button" onClick={() => setExpandedAddOnGroupKey(expanded ? null : group.key)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-expanded={expanded}>
+                                                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-100 font-bold text-green-700">{groupIndex + 1}</span>
+                                                            <span className="min-w-0">
+                                                                <span className="block truncate font-semibold text-slate-900">{group.title.trim() || `Add-on Group ${groupIndex + 1}`}</span>
+                                                                <span className="block text-xs text-slate-500">{group.entries.length} add-on{group.entries.length === 1 ? '' : 's'} · {appliesToAll ? 'All booking options' : `${group.bookingOptionKeys.length} selected option${group.bookingOptionKeys.length === 1 ? '' : 's'}`}</span>
+                                                            </span>
+                                                            <ChevronDown className={`ml-auto h-5 w-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                                                        </button>
+                                                        <button type="button" onClick={() => removeAddOnGroup(group.key)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label={`Remove ${group.title || `Add-on Group ${groupIndex + 1}`}`}><XCircle className="h-5 w-5" /></button>
+                                                    </div>
 
-                                        {formData.addOns.length === 0 && (
-                                            <div className="text-center py-8 text-slate-500">
-                                                <Zap className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                                <p>No add-ons yet. Click &quot;Add Tour Enhancement&quot; to create optional extras.</p>
-                                            </div>
+                                                    {expanded && (
+                                                        <div className="space-y-5 border-t border-slate-200 p-5">
+                                                            <div className="grid gap-5 lg:grid-cols-2">
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Group title <span className="font-normal text-slate-400">(optional)</span></label>
+                                                                    <input value={group.title} onChange={(event) => updateAddOnGroup(group.key, { groupTitle: event.target.value })} className={inputBase} placeholder={`Add-on Group ${groupIndex + 1}`} />
+                                                                </div>
+                                                                <fieldset className="space-y-3">
+                                                                    <legend className="text-sm font-medium text-slate-700">Available with</legend>
+                                                                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4">
+                                                                        <input type="radio" checked={appliesToAll} onChange={() => updateAddOnGroup(group.key, { bookingOptionKeys: [] })} />
+                                                                        <span className="text-sm font-medium text-slate-700">All booking options</span>
+                                                                    </label>
+                                                                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4">
+                                                                        <input type="radio" checked={!appliesToAll} onChange={() => updateAddOnGroup(group.key, { bookingOptionKeys: [formData.bookingOptions[0]?.pricingKey || formData.bookingOptions[0]?.clientKey || ''].filter(Boolean) })} />
+                                                                        <span className="text-sm font-medium text-slate-700">Selected booking options</span>
+                                                                    </label>
+                                                                    {!appliesToAll && (
+                                                                        <div className="grid gap-2 sm:grid-cols-2">
+                                                                            {formData.bookingOptions.map((option, optionIndex) => {
+                                                                                const key = option.pricingKey || option.clientKey || '';
+                                                                                const checked = Boolean(key && group.bookingOptionKeys.includes(key));
+                                                                                return <label key={key || optionIndex} className="flex cursor-pointer items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700"><input type="checkbox" checked={checked} onChange={(event) => updateAddOnGroup(group.key, { bookingOptionKeys: event.target.checked ? [...group.bookingOptionKeys, key] : group.bookingOptionKeys.filter((value) => value !== key) })} /> {option.label.trim() || `Booking option ${optionIndex + 1}`}</label>;
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </fieldset>
+                                                            </div>
+
+                                                            {group.entries.map(({ addOn, index }, addOnIndex) => (
+                                                                <div key={addOn._id || `${group.key}-${index}`} className="rounded-xl border border-slate-200 p-5">
+                                                                    <div className="mb-4 flex items-center justify-between"><h5 className="font-semibold text-slate-900">Add-on {addOnIndex + 1}</h5><button type="button" onClick={() => removeAddOn(index)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label={`Remove add-on ${addOnIndex + 1}`}><XCircle className="h-5 w-5" /></button></div>
+                                                                    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                                                                        <label className="space-y-2 text-sm font-medium text-slate-700">Add-on name *<input value={addOn.name || ''} onChange={(event) => handleAddOnChange(index, 'name', event.target.value)} className={inputBase} required /></label>
+                                                                        <label className="space-y-2 text-sm font-medium text-slate-700">Price ({selectedCurrency.symbol}) *<input type="number" min="0" step="0.01" value={addOn.price || ''} onChange={(event) => handleAddOnChange(index, 'price', Number(event.target.value) || 0)} className={inputBase} required /></label>
+                                                                        <label className="space-y-2 text-sm font-medium text-slate-700">Pricing method *<select value={addOn.pricingMethod || 'per_unit'} onChange={(event) => handleAddOnChange(index, 'pricingMethod', event.target.value)} className={inputBase}><option value="per_unit">Per unit</option><option value="per_person">Per person</option></select></label>
+                                                                        <label className="space-y-2 text-sm font-medium text-slate-700">Category<select value={addOn.category || 'Experience'} onChange={(event) => handleAddOnChange(index, 'category', event.target.value)} className={inputBase}><option value="Experience">Experience</option><option value="Photography">Photography</option><option value="Transport">Transport</option><option value="Food">Food &amp; Drink</option></select></label>
+                                                                    </div>
+                                                                    <label className="mt-5 block space-y-2 text-sm font-medium text-slate-700">Description <span className="font-normal text-slate-400">(optional)</span><textarea value={addOn.description || ''} onChange={(event) => handleAddOnChange(index, 'description', event.target.value)} className={textareaBase} rows={3} placeholder="Describe what this add-on includes..." /></label>
+                                                                </div>
+                                                            ))}
+
+                                                            <button type="button" onClick={() => addAddOn(group.key)} className="inline-flex items-center gap-2 rounded-xl border border-dashed border-green-300 px-4 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-50"><Plus className="h-4 w-4" /> Add another add-on</button>
+                                                        </div>
+                                                    )}
+                                                </section>
+                                            );
+                                        })}
+
+                                        {addOnGroups.length === 0 && (
+                                            <div className="rounded-2xl border-2 border-dashed border-slate-200 py-10 text-center text-slate-500"><Zap className="mx-auto mb-3 h-10 w-10 text-slate-300" /><p>Create a group to configure optional extras.</p></div>
                                         )}
                                     </div>
                                 )}

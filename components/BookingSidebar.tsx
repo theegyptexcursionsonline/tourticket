@@ -23,6 +23,8 @@ import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
 import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
+import { groupAvailableAddOns, isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
+import { bookingOptionUnitLabel } from '@/lib/bookings/bookingOptionLabels';
 import { provableRating, ratingLabel } from '@/lib/tours/ratingDisplay';
 import { useModalBehavior } from '@/hooks/useModalBehavior';
 import {
@@ -150,6 +152,9 @@ interface AddOnTour {
   savings?: number;
   perGuest?: boolean;
   pricingMethod?: 'per_unit' | 'per_person';
+  groupKey?: string;
+  groupTitle?: string;
+  bookingOptionKeys?: string[];
 }
 
 interface AvailabilityData {
@@ -168,6 +173,7 @@ interface AvailabilityData {
 interface TourOption {
   id: string;
   pricingKey?: string;
+  type?: string;
   title: string;
   price: number;
   originalPrice?: number;
@@ -756,7 +762,7 @@ const TourOptionCard: React.FC<{
           )}
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs">Per person: {formatPrice(basePrice)}</span>
+          <span className="text-gray-600 text-xs capitalize">{bookingOptionUnitLabel(option.type)}: {formatPrice(basePrice)}</span>
           <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
         </div>
       </div>
@@ -1556,6 +1562,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           return {
             id: optionId,
             pricingKey: option.pricingKey,
+            type: option.type,
             title: option.label || option.title || 'Tour Option',
             price: optionPrice,
             originalPrice: pricing.discountApplied
@@ -1595,6 +1602,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           {
             id: fallbackOptionId,
             pricingKey: 'standard',
+            type: 'Per Person',
             title: 'Standard Tour Experience',
             price: standardPrice,
             originalPrice: standardPricing.discountApplied
@@ -1637,6 +1645,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           icon: getAddOnIcon(addon.category || 'Experience'),
           savings: addon.savings,
           perGuest: isPerPersonAddOn(addon),
+          groupKey: addon.groupKey,
+          groupTitle: addon.groupTitle,
+          bookingOptionKeys: normalizedBookingOptionKeys(addon),
         }));
       } else {
         addOnsToUse = [];
@@ -1722,6 +1733,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       totalSavings: totalSavingsCalc,
     };
   }, [bookingData, availability, tourDisplayData, tourBasePricing.originalPrice, tourBasePricing.price]);
+
+  const selectedBookingOption = useMemo(() => findSelectedBookingOption(
+    availability?.tourOptions,
+    bookingData.selectedTimeSlot,
+  ), [availability?.tourOptions, bookingData.selectedTimeSlot]);
+
+  const availableAddOns = useMemo(() => {
+    const optionKey = selectedBookingOption?.pricingKey || (selectedBookingOption?.id === 'standard-default' ? 'standard' : null);
+    return (availability?.addOns || []).filter((addOn) => isAddOnAvailableForOption(addOn, optionKey));
+  }, [availability?.addOns, selectedBookingOption]);
+
+  const availableAddOnGroups = useMemo(
+    () => groupAvailableAddOns(availableAddOns),
+    [availableAddOns],
+  );
 
   // Reset when sidebar opens
   useEffect(() => {
@@ -1920,7 +1946,16 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       return;
     }
 
-    setBookingData(prev => ({ ...prev, selectedTimeSlot: effectiveSlot }));
+    const selectedOption = findSelectedBookingOption(availability?.tourOptions, effectiveSlot);
+    const selectedOptionKey = selectedOption?.pricingKey || (selectedOption?.id === 'standard-default' ? 'standard' : null);
+    setBookingData(prev => ({
+      ...prev,
+      selectedTimeSlot: effectiveSlot,
+      selectedAddOns: Object.fromEntries(Object.entries(prev.selectedAddOns).filter(([addOnId]) => {
+        const addOn = availability?.addOns.find((candidate) => candidate.id === addOnId);
+        return Boolean(addOn && isAddOnAvailableForOption(addOn, selectedOptionKey));
+      })),
+    }));
 
     // Prevent duplicate toasts in React Strict Mode
     const toastId = `${timeSlot.id}-${timeSlot.time}`;
@@ -2460,16 +2495,32 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           >
             <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 focus:outline-none">Enhance your experience</h2>
             <p className="text-gray-600 mb-6">Make your adventure even more memorable with these popular add-ons.</p>
-            <div className="space-y-4 sm:space-y-6">
-              {availability?.addOns.map(addOn => (
-                <AddOnCard
-                  key={addOn.id}
-                  addOn={addOn}
-                  quantity={bookingData.selectedAddOns[addOn.id] || 0}
-                  onQuantityChange={handleAddOnQuantityChange}
-                  guestCount={bookingData.adults + bookingData.children}
-                />
+            <div className="space-y-5 sm:space-y-6">
+              {availableAddOnGroups.map((group) => (
+                <section key={group.key} className="space-y-4" aria-label={group.title || 'Optional extras'}>
+                  {group.title && (
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-slate-200" />
+                      <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-600">{group.title}</h3>
+                      <div className="h-px flex-1 bg-slate-200" />
+                    </div>
+                  )}
+                  {group.addOns.map(addOn => (
+                    <AddOnCard
+                      key={addOn.id}
+                      addOn={addOn}
+                      quantity={bookingData.selectedAddOns[addOn.id] || 0}
+                      onQuantityChange={handleAddOnQuantityChange}
+                      guestCount={bookingData.adults + bookingData.children}
+                    />
+                  ))}
+                </section>
               ))}
+              {availableAddOns.length === 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-600">
+                  No add-ons are available for this booking option.
+                </div>
+              )}
             </div>
           </motion.div>
         );

@@ -16,6 +16,7 @@ import { collectTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
 import { auditStamp } from '@/lib/admin/auditStamp';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import { finalizeAddOnAssignments, stripBookingOptionClientKeys } from '@/lib/admin/addOnAssignments';
 
 const ADMIN_TOUR_LIST_PROJECTION = [
   'title',
@@ -131,10 +132,12 @@ async function POSTHandler(request: NextRequest) {
 
     // Clean booking options to remove invalid enum values
     if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
-      body.bookingOptions = ensureBookingOptionPricingKeys(
+      const keyedOptions = ensureBookingOptionPricingKeys(
         String(tourId),
         cleanBookingOptions(body.bookingOptions),
       );
+      body.addOns = finalizeAddOnAssignments(body.addOns, keyedOptions || []);
+      body.bookingOptions = stripBookingOptionClientKeys(keyedOptions || []);
     }
 
     // Clean main tour difficulty field

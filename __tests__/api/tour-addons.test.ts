@@ -61,6 +61,9 @@ describe('GET /api/tours/[tourId]/addons', () => {
       category: 'Food',
       perGuest: true,
       pricingMethod: 'per_person',
+      groupKey: '',
+      groupTitle: '',
+      bookingOptionKeys: [],
       maxQuantity: 1,
       required: false,
     }]);

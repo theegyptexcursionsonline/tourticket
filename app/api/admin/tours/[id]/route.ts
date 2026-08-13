@@ -10,6 +10,7 @@ import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { auditStamp } from '@/lib/admin/auditStamp';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import { finalizeAddOnAssignments, stripBookingOptionClientKeys } from '@/lib/admin/addOnAssignments';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -167,7 +168,9 @@ async function PUTHandler(
 
         // Clean booking options to remove invalid enum values
         if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
-            body.bookingOptions = ensureBookingOptionPricingKeys(id, cleanBookingOptions(body.bookingOptions));
+            const keyedOptions = ensureBookingOptionPricingKeys(id, cleanBookingOptions(body.bookingOptions));
+            body.addOns = finalizeAddOnAssignments(body.addOns, keyedOptions || []);
+            body.bookingOptions = stripBookingOptionClientKeys(keyedOptions || []);
         }
 
         // Clean main tour difficulty field
