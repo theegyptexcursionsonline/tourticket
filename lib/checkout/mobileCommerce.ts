@@ -109,7 +109,11 @@ export type MobileCommerceCommitDependencies = {
 
 function stripe(): StripeClient {
   if (!stripeInstance) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    // The mobile BFF can use a separate Stripe account/mode from the web
+    // storefront. Keep its verifier isolated so restoring mobile payments
+    // never changes the server authority used by the normal web checkout.
+    const key = process.env.MOBILE_COMMERCE_STRIPE_SECRET_KEY
+      || process.env.STRIPE_SECRET_KEY;
     if (!key) {
       throw new MobileCommerceError(503, 'PAYMENT_VERIFICATION_UNAVAILABLE', 'Payment verification is not configured.');
     }
@@ -550,8 +554,8 @@ function assertBookingMatchesCommit(
     || Math.round(Number(booking.totalPrice) * 100) !== expectedAmount
     || Math.round(Number(booking.amountPaid) * 100) !== expectedAmount
     || String(booking.currency || '').toLowerCase() !== input.capability.paymentCurrency
-    || booking.status !== 'Confirmed'
-    || booking.source !== 'online'
+    || !['Pending', 'Confirmed'].includes(String(booking.status || ''))
+    || !['app', 'online'].includes(String(booking.source || ''))
     || booking.paymentStatus !== 'paid'
     || booking.paymentId !== input.paymentIntentId
     || booking.paymentItemIndex !== 0
@@ -608,8 +612,21 @@ async function claimCanonicalMobileBooking(input: {
   const claimed = await Booking.findOneAndUpdate(
     {
       _id: booking._id,
+      tour: input.target.tourId,
+      dateString: input.target.date,
+      time: input.target.time,
+      guests: input.target.guests.adults + input.target.guests.children + input.target.guests.infants,
+      totalPrice: input.capability.paymentAmountMinor / 100,
+      amountPaid: input.capability.paymentAmountMinor / 100,
+      currency: { $regex: /^usd$/i },
+      status: { $in: ['Pending', 'Confirmed'] },
+      source: { $in: ['app', 'online'] },
+      paymentStatus: 'paid',
+      paymentConfirmedBy: `stripe:${input.paymentIntentId}`,
+      paymentConfirmedAt: { $type: 'date' },
       paymentId: input.paymentIntentId,
       paymentItemIndex: 0,
+      'selectedBookingOption.pricingKey': input.target.pricingKey,
       $and: [
         DEFAULT_TENANT_FILTER,
         ...Object.entries(expectedBindings).map(([field, expected]) => ({
@@ -721,10 +738,14 @@ export async function commitMobileCommerceHold(
       commerceQuoteVersion: capability.quoteVersion,
       commerceTargetBinding: capability.targetBinding,
       checkoutAttemptId: capability.checkoutAttemptId,
+      status: { $in: ['Pending', 'Confirmed'] },
+      source: { $in: ['app', 'online'] },
+      paymentStatus: 'paid',
     },
     [
       {
         $set: {
+          status: 'Confirmed',
           inventoryReservationState: 'converted',
           inventoryReservationFinalizedAt: {
             $ifNull: ['$inventoryReservationFinalizedAt', new Date()],

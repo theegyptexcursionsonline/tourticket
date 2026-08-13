@@ -277,8 +277,8 @@ describe('mobile canonical commerce adapter', () => {
       guests: 3,
       totalPrice: 375,
       currency: 'USD',
-      status: 'Confirmed',
-      source: 'online',
+      status: 'Pending',
+      source: 'app',
       paymentStatus: 'paid',
       amountPaid: 375,
       paymentConfirmedAt: new Date(),
@@ -339,12 +339,97 @@ describe('mobile canonical commerce adapter', () => {
         checkoutAttemptId: idempotencyKey,
       }),
     }));
+    expect(mockBookingFindOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: { $in: ['Pending', 'Confirmed'] },
+        source: { $in: ['app', 'online'] },
+        paymentStatus: 'paid',
+        paymentConfirmedBy: `stripe:${paymentIntentId}`,
+      }),
+      expect.any(Array),
+      { new: true },
+    );
+    expect(mockBookingUpdateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: booking._id }),
+      expect.arrayContaining([
+        expect.objectContaining({
+          $set: expect.objectContaining({
+            status: 'Confirmed',
+            inventoryReservationState: 'converted',
+          }),
+        }),
+      ]),
+    );
 
+    // Rolling compatibility: an in-flight web checkout created by the same
+    // BFF before this release can still finish idempotently.
+    booking.status = 'Confirmed';
+    booking.source = 'online';
     mockCommitInventoryReservationHold.mockResolvedValueOnce({ hold: { state: 'converted' }, alreadyCommitted: true });
     await expect(commitMobileCommerceHold(request, { retrievePaymentIntent })).resolves.toMatchObject({
       status: 'converted',
       alreadyCommitted: true,
     });
+  });
+
+  it('rejects a non-customer booking source before inventory mutation', async () => {
+    const quoted = await createMobileCommerceQuote(target);
+    mockVerifyToken.mockResolvedValue(mockSignToken.mock.calls[0][0]);
+    const idempotencyKey = '11111111-1111-4111-8111-111111111111';
+    const held = await createMobileCommerceHold({
+      ...target,
+      quoteToken: quoted.quoteToken,
+      quoteVersion: quoted.quote.quoteVersion,
+      idempotencyKey,
+    });
+    const capability = mockSignToken.mock.calls[1][0];
+    mockVerifyToken.mockResolvedValue(capability);
+    const paymentIntentId = 'pi_mobile_manual_source';
+    const booking = {
+      _id: { toString: () => '507f1f77bcf86cd799439099' },
+      tour: target.tourId,
+      dateString: target.date,
+      time: target.time,
+      guests: 3,
+      totalPrice: 375,
+      currency: 'USD',
+      status: 'Pending',
+      source: 'manual',
+      paymentStatus: 'paid',
+      amountPaid: 375,
+      paymentConfirmedAt: new Date(),
+      paymentConfirmedBy: `stripe:${paymentIntentId}`,
+      paymentId: paymentIntentId,
+      paymentItemIndex: 0,
+      selectedBookingOption: { pricingKey: target.pricingKey },
+    };
+    mockBookingFindOne.mockReturnValue({ select: () => ({ lean: async () => booking }) });
+
+    await expect(commitMobileCommerceHold({
+      ...target,
+      holdToken: held.holdToken,
+      quoteVersion: capability.quoteVersion,
+      idempotencyKey,
+      paymentIntentId,
+      bookingId: '507f1f77bcf86cd799439099',
+    }, {
+      retrievePaymentIntent: jest.fn().mockResolvedValue({
+        id: paymentIntentId,
+        status: 'succeeded',
+        amount: 37500,
+        amount_received: 37500,
+        currency: 'usd',
+        livemode: false,
+        metadata: {
+          [MOBILE_COMMERCE_PAYMENT_METADATA.contractVersion]: MOBILE_COMMERCE_CONTRACT,
+          [MOBILE_COMMERCE_PAYMENT_METADATA.tenantId]: 'default',
+          [MOBILE_COMMERCE_PAYMENT_METADATA.quoteVersion]: capability.quoteVersion,
+          [MOBILE_COMMERCE_PAYMENT_METADATA.checkoutAttemptId]: idempotencyKey,
+          [MOBILE_COMMERCE_PAYMENT_METADATA.reservationKey]: capability.reservationKey,
+        },
+      }),
+    })).rejects.toMatchObject({ code: 'BOOKING_EVIDENCE_MISMATCH', status: 409 });
+    expect(mockCommitInventoryReservationHold).not.toHaveBeenCalled();
   });
 
   it('rejects an expired capability before payment or booking access', async () => {
