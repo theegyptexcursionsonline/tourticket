@@ -1392,7 +1392,8 @@ const addItineraryItem = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setIsPanelOpen(false)}
+                        data-testid="tour-editor-backdrop"
+                        aria-hidden="true"
                     />
                 )}
             </AnimatePresence>
@@ -1406,6 +1407,9 @@ const addItineraryItem = () => {
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         className="fixed top-0 right-0 h-full w-full max-w-5xl bg-white z-50 shadow-2xl flex flex-col"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="tour-editor-title"
                     >
                         {/* Panel Header */}
                         <div className="flex items-center justify-between p-8 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
@@ -1414,7 +1418,7 @@ const addItineraryItem = () => {
                                     {tourToEdit ? <Edit className="h-5 w-5 text-white" /> : <PlusCircle className="h-5 w-5 text-white" />}
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-800">
+                                    <h2 id="tour-editor-title" className="text-xl font-bold text-slate-800">
                                         {tourToEdit ? 'Edit Tour' : 'Create New Tour'}
                                     </h2>
                                     <p className="text-sm text-slate-500">
@@ -1423,7 +1427,9 @@ const addItineraryItem = () => {
                                 </div>
                             </div>
                             <button 
+                                type="button"
                                 onClick={() => setIsPanelOpen(false)} 
+                                aria-label="Close tour editor"
                                 className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
                             >
                                 <X size={20} />
