@@ -76,6 +76,7 @@ export const CITY_CATALOG: Record<string, { label: string; slugs: string[] }> = 
   'sharm-el-sheikh': { label: 'Sharm el-Sheikh', slugs: ['sharm-el-sheikh', 'sharm-el-sheikh-old'] },
   'hurghada': { label: 'Hurghada', slugs: ['hurghada', 'hurghada-old', 'hurghada-egypt'] },
   'cairo': { label: 'Cairo & Giza', slugs: ['cairo-old', 'giza', 'giza-old'] },
+  'makadi-bay': { label: 'Makadi Bay', slugs: ['makadi-bay', 'makadi-bay-old'] },
   'luxor': { label: 'Luxor', slugs: ['luxor', 'luxor-old'] },
   'el-gouna': { label: 'El Gouna', slugs: ['el-gouna', 'el-gouna-old'] },
 };

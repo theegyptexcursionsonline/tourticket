@@ -473,10 +473,10 @@ function ExitRescue({ view }: { view: OfferView }) {
           type="button"
           onClick={copy}
           aria-label={`Copy discount code ${view.code}`}
-          className="mt-6 flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-5 py-4 text-left transition hover:border-gray-400"
+          className="mt-6 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-4 text-left transition hover:border-gray-400 sm:px-5"
         >
-          <span className="text-xl font-extrabold tracking-[0.16em] text-gray-900">{view.code}</span>
-          <span className="shrink-0 rounded-full px-4 py-2 text-xs font-bold text-white" style={{ backgroundColor: copied ? '#15803d' : view.brandColor }}>
+          <span className="min-w-0 break-all text-lg font-extrabold tracking-[0.12em] text-gray-900 sm:text-xl sm:tracking-[0.16em]">{view.code}</span>
+          <span className="ml-auto shrink-0 rounded-full px-4 py-2 text-xs font-bold text-white" style={{ backgroundColor: copied ? '#15803d' : view.brandColor }}>
             {copied ? 'Copied ✓' : 'Copy code'}
           </span>
         </button>
@@ -570,14 +570,17 @@ export default function OfferPageClient({ view, locale, fontClass = '' }: { view
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">Your private code</p>
               <span className="rounded-full px-3 py-1 text-[11px] font-extrabold text-white" style={{ backgroundColor: view.brandColor }}>−{view.label} OFF</span>
             </div>
+            {/* flex-wrap + min-w-0: the copy control may never spill past a
+                narrow phone edge, whatever length the code is (log #463 —
+                the client's device is narrower than the old 390px floor). */}
             <button
               type="button"
               aria-label={`Copy discount code ${view.code}`}
               onClick={copy}
-              className="group mt-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-0.5"
+              className="group mt-3 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white px-4 py-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-0.5 sm:px-5"
             >
-              <span className="text-2xl font-extrabold tracking-[0.16em] text-gray-900">{view.code}</span>
-              <span className="shrink-0 rounded-full px-4 py-2 text-xs font-bold text-white" style={{ backgroundColor: copied ? '#15803d' : '#111827' }}>
+              <span className="min-w-0 break-all text-xl font-extrabold tracking-[0.12em] text-gray-900 sm:text-2xl sm:tracking-[0.16em]">{view.code}</span>
+              <span className="ml-auto shrink-0 rounded-full px-4 py-2 text-xs font-bold text-white" style={{ backgroundColor: copied ? '#15803d' : '#111827' }}>
                 {copied ? 'Copied ✓' : 'Tap to copy'}
               </span>
             </button>

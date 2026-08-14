@@ -57,7 +57,19 @@ describe('city catalogue', () => {
     expect(cityFromParam('cairo')!.slugs).toEqual(expect.arrayContaining(['cairo-old', 'giza']));
     expect(cityFromParam('CAIRO')!.label).toBe('Cairo & Giza');
     expect(cityFromParam('atlantis')).toBeNull();
-    expect(Object.keys(CITY_CATALOG)).toHaveLength(5);
+    expect(Object.keys(CITY_CATALOG)).toHaveLength(6);
+  });
+
+  it("serves the client's four campaign cities, Makadi Bay included (14/08)", () => {
+    // "I need on this domain 4 landing page one per city
+    //  (Hurghada - Cairo - Makadi Bay - Sharm El sheikh)".
+    for (const city of ['hurghada', 'cairo', 'makadi-bay', 'sharm-el-sheikh']) {
+      expect(cityFromParam(city)).not.toBeNull();
+    }
+    expect(cityFromParam('makadi-bay')!.label).toBe('Makadi Bay');
+    expect(cityFromParam('makadi-bay')!.slugs).toEqual(
+      expect.arrayContaining(['makadi-bay', 'makadi-bay-old']),
+    );
   });
 });
 
@@ -153,5 +165,30 @@ describe('offer route theme pin', () => {
 
   it('keeps offer-only utilities out of the generated dark map', () => {
     expect(scanner).toMatch(/EXCLUDED = .*\|offer\|/);
+  });
+});
+
+/**
+ * Client report 14/08 2:36 AM (log #463): the "Tap to copy" control spilled
+ * past the right screen edge on a phone narrower than 390px. The proof floor
+ * is now 344px — the control must be geometrically unable to overflow at any
+ * viewport, whatever length the code is.
+ */
+describe('narrow-phone code control (log #463)', () => {
+  const client = readFileSync(
+    path.join(process.cwd(), 'app/[locale]/offer/[token]/OfferPageClient.tsx'),
+    'utf8',
+  );
+
+  it('lets every copy control shrink and wrap instead of spilling off-screen', () => {
+    // Both copy-labelled buttons: the hero panel and the exit rescue dialog.
+    const buttons = client.split('Copy discount code').slice(1);
+    expect(buttons.length).toBe(2);
+    for (const rest of buttons) {
+      const button = rest.slice(0, rest.indexOf('</button>'));
+      expect(button).toContain('flex-wrap');
+      expect(button).toContain('min-w-0 break-all');
+      expect(button).toContain('ml-auto shrink-0');
+    }
   });
 });
