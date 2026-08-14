@@ -55,4 +55,16 @@ describe('GET /api/admin/pages counters', () => {
     expect(attractionCount).toHaveBeenNthCalledWith(2, { $and: [DEFAULT_TENANT_FILTER, { pageType: 'category', archivedAt: null }] });
     expect(categoryCount).toHaveBeenCalledWith({ $and: [DEFAULT_TENANT_FILTER, { archivedAt: null }] });
   });
+
+  it('applies an escaped author/editor filter inside both tenant-scoped database streams', async () => {
+    await GET({ url: 'http://localhost/api/admin/pages?editor=Sara%20Ops' } as never);
+
+    for (const aggregate of [attractionAggregate, categoryAggregate]) {
+      const pipeline = aggregate.mock.calls[0][0] as Array<{ $match?: { $and?: Array<Record<string, unknown>> } }>;
+      const editorCondition = pipeline[0].$match?.$and?.[1] as { $or?: Array<Record<string, RegExp>> };
+      expect(editorCondition.$or).toHaveLength(4);
+      expect(editorCondition.$or?.[0]['createdBy.name']).toEqual(/Sara Ops/i);
+      expect(editorCondition.$or?.[3]['updatedBy.email']).toEqual(/Sara Ops/i);
+    }
+  });
 });

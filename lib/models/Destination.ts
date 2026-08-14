@@ -5,6 +5,8 @@ import type { ImageMetadata } from '@/lib/content/imageMetadata';
 import { ImageMetadataSchema } from '@/lib/models/schemas/ImageMetadataSchema';
 import { isDefaultTenant } from '@/lib/tenant/tenantScope';
 import { ParentPageSchema, breadcrumbLabelField } from '@/lib/models/contentNavigationSchema';
+import { AuditActorSchema } from '@/lib/models/schemas/AuditActorSchema';
+import type { AuditActor } from '@/lib/admin/auditStamp';
 
 export interface IDestination extends Document {
   // Basic Info
@@ -65,6 +67,8 @@ export interface IDestination extends Document {
   isPublished?: boolean;
   archivedAt?: Date | null;
   archivedBy?: string | null;
+  createdBy?: AuditActor;
+  updatedBy?: AuditActor;
   tourCount?: number;
 // SEO & Meta
   metaTitle?: string;
@@ -386,6 +390,8 @@ currency: {
   // with their tour relationships intact until an administrator restores them.
   archivedAt: { type: Date, default: null, index: true },
   archivedBy: { type: String, trim: true, maxlength: 255, default: null },
+  createdBy: { type: AuditActorSchema, default: undefined },
+  updatedBy: { type: AuditActorSchema, default: undefined },
   tourCount: {
     type: Number,
     default: 0,

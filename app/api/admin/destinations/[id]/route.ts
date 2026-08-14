@@ -12,6 +12,7 @@ import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStor
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 import { deleteDestinationFromAlgolia } from '@/lib/algolia';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 async function PUTHandler(
   request: NextRequest,
@@ -31,6 +32,8 @@ async function PUTHandler(
     // restore operation below, never forge who or when a record was removed.
     delete data.archivedAt;
     delete data.archivedBy;
+    delete data.createdBy;
+    delete data.updatedBy;
     const navigation = sanitizeContentNavigation(data);
     delete data.tenantId;
     const { id } = await params;
@@ -180,6 +183,9 @@ async function PUTHandler(
     if (data.name && !data.slug) {
       updateData.slug = normalizeDestinationSlug(data.name);
     }
+
+    const editor = auditStamp(auth);
+    if (editor) updateData.updatedBy = editor;
 
     const duplicateQuery: Array<Record<string, string>> = [];
     if (updateData.slug) duplicateQuery.push({ slug: String(updateData.slug) });

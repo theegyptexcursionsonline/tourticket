@@ -37,6 +37,8 @@ interface UnifiedRow {
   createdAt: string;
   updatedAt: string;
   sortValue: string;
+  createdBy?: { id?: string; name?: string; email?: string };
+  updatedBy?: { id?: string; name?: string; email?: string };
 }
 
 function decodeCursor(raw: string | null): PagesCursor | null {
@@ -88,6 +90,10 @@ export async function GET(request: NextRequest) {
     if (q.length > 100) {
       return NextResponse.json({ success: false, error: 'Search is too long' }, { status: 400 });
     }
+    const editor = (searchParams.get('editor') || '').trim();
+    if (editor.length > 100) {
+      return NextResponse.json({ success: false, error: 'Editor filter is too long' }, { status: 400 });
+    }
     const kind = (searchParams.get('kind') || 'all') as PageKind | 'all';
     const status = searchParams.get('status') || 'all';
     const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get('limit')) || 20));
@@ -95,6 +101,7 @@ export async function GET(request: NextRequest) {
     const cursor = decodeCursor(searchParams.get('cursor'));
 
     const search = q ? new RegExp(escapeRegex(q), 'i') : null;
+    const editorSearch = editor ? new RegExp(escapeRegex(editor), 'i') : null;
 
     const wantAttractionPages = kind === 'all' || kind === 'attraction' || kind === 'category-landing';
     const wantCategories = kind === 'all' || kind === 'category';
@@ -113,6 +120,16 @@ export async function GET(request: NextRequest) {
     else attractionFilter.archivedAt = null;
     // Push (never replace $and): the tenant scope must survive search.
     if (search) attractionConditions.push({ $or: [{ title: search }, { slug: search }] });
+    if (editorSearch) {
+      attractionConditions.push({
+        $or: [
+          { 'createdBy.name': editorSearch },
+          { 'createdBy.email': editorSearch },
+          { 'updatedBy.name': editorSearch },
+          { 'updatedBy.email': editorSearch },
+        ],
+      });
+    }
 
     const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
     const categoryFilter: Record<string, unknown> = { $and: categoryConditions };
@@ -121,6 +138,16 @@ export async function GET(request: NextRequest) {
     if (status === 'archived') categoryFilter.archivedAt = { $ne: null };
     else categoryFilter.archivedAt = null;
     if (search) categoryConditions.push({ $or: [{ name: search }, { slug: search }] });
+    if (editorSearch) {
+      categoryConditions.push({
+        $or: [
+          { 'createdBy.name': editorSearch },
+          { 'createdBy.email': editorSearch },
+          { 'updatedBy.name': editorSearch },
+          { 'updatedBy.email': editorSearch },
+        ],
+      });
+    }
 
     const fetchSize = limit + 1;
 
@@ -141,6 +168,7 @@ export async function GET(request: NextRequest) {
             pipeline(attractionFilter, {
               title: 1, slug: 1, description: 1, heroImage: 1, pageType: 1,
               urlType: 1, isPublished: 1, featured: 1, createdAt: 1, updatedAt: 1,
+              createdBy: 1, updatedBy: 1,
             })
           )
         : [],
@@ -149,6 +177,7 @@ export async function GET(request: NextRequest) {
             pipeline(categoryFilter, {
               name: 1, slug: 1, description: 1, heroImage: 1,
               urlType: 1, isPublished: 1, featured: 1, createdAt: 1, updatedAt: 1,
+              createdBy: 1, updatedBy: 1,
             })
           )
         : [],
@@ -173,6 +202,8 @@ export async function GET(request: NextRequest) {
         createdAt: isoStamp(page.createdAt, page._id),
         updatedAt: isoStamp(page.updatedAt || page.createdAt, page._id),
         sortValue: isoStamp(page[SORT_VALUE_FIELD], page._id),
+        createdBy: page.createdBy as UnifiedRow['createdBy'],
+        updatedBy: page.updatedBy as UnifiedRow['updatedBy'],
       });
     }
 
@@ -192,6 +223,8 @@ export async function GET(request: NextRequest) {
         createdAt: isoStamp(category.createdAt, category._id),
         updatedAt: isoStamp(category.updatedAt || category.createdAt, category._id),
         sortValue: isoStamp(category[SORT_VALUE_FIELD], category._id),
+        createdBy: category.createdBy as UnifiedRow['createdBy'],
+        updatedBy: category.updatedBy as UnifiedRow['updatedBy'],
       });
     }
 

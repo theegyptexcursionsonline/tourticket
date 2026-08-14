@@ -30,7 +30,8 @@ import {
   Plus,
   Minus,
   Copy,
-  Undo2
+  Undo2,
+  Search,
 } from 'lucide-react';
 import { IDestination } from '@/lib/models/Destination';
 import TranslationEditor from '@/components/admin/TranslationEditor';
@@ -122,6 +123,17 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [editingDestination, setEditingDestination] = useState<IDestination | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
   const [listView, setListView] = useState<'active' | 'trash'>('active');
+  const [editorFilter, setEditorFilter] = useState(() =>
+    typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('editor') || '',
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (editorFilter.trim()) params.set('editor', editorFilter.trim());
+    else params.delete('editor');
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+  }, [editorFilter]);
   
   // The urlType the destination was loaded with — keeps a legacy shape
   // selectable for that record while new destinations only ever offer Direct.
@@ -654,9 +666,18 @@ setTimeout(() => router.refresh(), 0);
   const filteredTours = availableTours.filter((tour) =>
     !tourSearch.trim() || `${tour.title} ${tour.slug}`.toLowerCase().includes(tourSearch.trim().toLowerCase())
   );
-  const visibleDestinations = initialDestinations.filter((destination) =>
-    listView === 'trash' ? Boolean(destination.archivedAt) : !destination.archivedAt
-  );
+  const normalizedEditorFilter = editorFilter.trim().toLowerCase();
+  const visibleDestinations = initialDestinations.filter((destination) => {
+    const inSelectedLifecycle = listView === 'trash' ? Boolean(destination.archivedAt) : !destination.archivedAt;
+    if (!inSelectedLifecycle) return false;
+    if (!normalizedEditorFilter) return true;
+    const actors = [destination.updatedBy, destination.createdBy]
+      .flatMap((actor) => actor ? [actor.name, actor.email] : [])
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return actors.includes(normalizedEditorFilter);
+  });
   const activeDestinationCount = initialDestinations.filter((destination) => !destination.archivedAt).length;
   const trashDestinationCount = initialDestinations.length - activeDestinationCount;
 
@@ -736,6 +757,17 @@ setTimeout(() => router.refresh(), 0);
         {listView === 'trash' && (
           <span className="text-sm text-slate-500">Restore destinations safely; linked tours remain intact.</span>
         )}
+        <div className="relative ml-auto min-w-[240px] flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            aria-label="Filter destinations by author or editor"
+            placeholder="Filter by author or editor..."
+            value={editorFilter}
+            onChange={(event) => setEditorFilter(event.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
       </div>
 
       {/* Destinations Grid */}
@@ -870,6 +902,11 @@ setTimeout(() => router.refresh(), 0);
                     <Users className="h-4 w-4 text-slate-400" />
                     <p className="text-slate-500 text-sm">{dest.tourCount || 0} tours</p>
                   </div>
+                  {(dest.updatedBy?.name || dest.updatedBy?.email || dest.createdBy?.name || dest.createdBy?.email) && (
+                    <p className="mt-2 truncate text-xs text-slate-400">
+                      Edited by {dest.updatedBy?.name || dest.updatedBy?.email || dest.createdBy?.name || dest.createdBy?.email}
+                    </p>
+                  )}
                 </div>
                 
                 {/* Visual Indicator */}

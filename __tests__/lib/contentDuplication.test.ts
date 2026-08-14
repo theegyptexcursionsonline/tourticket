@@ -98,29 +98,33 @@ describe('draft builders', () => {
     const destination = buildDestinationDuplicate({
       name: 'Fayoum', slug: 'fayoum', description: 'Oasis', tourCount: 88,
       isPublished: true, featured: true, archivedAt: new Date(), highlights: ['Waterfalls'],
-    }, 1);
+    }, 1, { id: 'editor-1', name: 'Sara', email: 'sara@example.com' });
     expect(destination).toEqual(expect.objectContaining({
       name: 'Fayoum (Copy)', slug: 'fayoum-copy', tenantId: 'default',
       isPublished: false, featured: false, tourCount: 0, highlights: ['Waterfalls'],
+      createdBy: { id: 'editor-1', name: 'Sara', email: 'sara@example.com' },
+      updatedBy: { id: 'editor-1', name: 'Sara', email: 'sara@example.com' },
     }));
     expect(destination).not.toHaveProperty('archivedAt');
 
     const page = buildAttractionPageDuplicate({
       title: 'Egypt Attractions', slug: 'egypt-attractions', pageType: 'attraction',
       description: 'Guide', gridTitle: 'Tours', isPublished: true, featured: true,
-    }, { id: 'new-page-id', attempt: 1 });
+    }, { id: 'new-page-id', attempt: 1, actor: { id: 'editor-1', name: 'Sara' } });
     expect(page).toEqual(expect.objectContaining({
       _id: 'new-page-id', title: 'Egypt Attractions (Copy)', slug: 'egypt-attractions-copy',
       tenantId: 'default', isPublished: false, featured: false,
+      createdBy: { id: 'editor-1', name: 'Sara' }, updatedBy: { id: 'editor-1', name: 'Sara' },
     }));
 
     const category = buildCategoryDuplicate({
       name: 'Boat Tours', slug: 'boat-tours', description: 'Sailing', tourCount: 12,
       isPublished: true, featured: true,
-    }, { id: 'new-category-id', attempt: 1 });
+    }, { id: 'new-category-id', attempt: 1, actor: { id: 'editor-1', name: 'Sara' } });
     expect(category).toEqual(expect.objectContaining({
       _id: 'new-category-id', name: 'Boat Tours (Copy)', slug: 'boat-tours-copy',
       tenantId: 'default', isPublished: false, featured: false, tourCount: 0,
+      createdBy: { id: 'editor-1', name: 'Sara' }, updatedBy: { id: 'editor-1', name: 'Sara' },
     }));
   });
 });

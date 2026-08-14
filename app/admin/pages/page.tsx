@@ -31,6 +31,8 @@ interface UnifiedRow {
   createdAt: string;
   updatedAt?: string;
   archivedAt?: string | null;
+  createdBy?: { id?: string; name?: string; email?: string };
+  updatedBy?: { id?: string; name?: string; email?: string };
 }
 
 interface Counts {
@@ -89,6 +91,7 @@ export default function UnifiedPagesAdmin() {
   const [sortBy, setSortBy] = useState<'created' | 'updated'>(() =>
     initialParams().get('sort') === 'updated' ? 'updated' : 'created',
   );
+  const [editorFilter, setEditorFilter] = useState(() => initialParams().get('editor') || '');
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -96,9 +99,10 @@ export default function UnifiedPagesAdmin() {
     if (filterKind !== 'all') params.set('kind', filterKind);
     if (filterStatus !== 'all') params.set('status', filterStatus);
     if (sortBy !== 'created') params.set('sort', sortBy);
+    if (editorFilter.trim()) params.set('editor', editorFilter.trim());
     const query = params.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
-  }, [searchTerm, filterKind, filterStatus, sortBy]);
+  }, [searchTerm, filterKind, filterStatus, sortBy, editorFilter]);
   const requestSeq = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
 
@@ -114,9 +118,10 @@ export default function UnifiedPagesAdmin() {
     if (filterKind !== 'all') params.set('kind', filterKind);
     if (filterStatus !== 'all') params.set('status', filterStatus);
     if (sortBy !== 'created') params.set('sort', sortBy);
+    if (editorFilter.trim()) params.set('editor', editorFilter.trim());
     if (cursor) params.set('cursor', cursor);
     return params.toString();
-  }, [searchTerm, filterKind, filterStatus, sortBy]);
+  }, [searchTerm, filterKind, filterStatus, sortBy, editorFilter]);
 
   const fetchPage = useCallback(async (cursor: string | null, append: boolean) => {
     const seq = ++requestSeq.current;
@@ -310,6 +315,18 @@ export default function UnifiedPagesAdmin() {
             />
           </div>
 
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              aria-label="Filter pages by author or editor"
+              placeholder="Author or editor..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              value={editorFilter}
+              onChange={(event) => setEditorFilter(event.target.value)}
+            />
+          </div>
+
           <select
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={filterKind}
@@ -367,7 +384,7 @@ export default function UnifiedPagesAdmin() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    {searchTerm || filterKind !== 'all' || filterStatus !== 'all'
+                    {searchTerm || editorFilter || filterKind !== 'all' || filterStatus !== 'all'
                       ? 'No pages match your filters'
                       : 'No pages found'}
                   </td>
@@ -417,7 +434,14 @@ export default function UnifiedPagesAdmin() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {(() => {
                         const stamp = sortBy === 'updated' ? row.updatedAt || row.createdAt : row.createdAt;
-                        return stamp ? new Date(stamp).toLocaleDateString() : 'N/A';
+                        const actor = row.updatedBy || row.createdBy;
+                        const actorLabel = actor?.name || actor?.email;
+                        return (
+                          <div>
+                            <div>{stamp ? new Date(stamp).toLocaleDateString() : 'N/A'}</div>
+                            {actorLabel ? <div className="mt-1 text-xs text-gray-400">Edited by {actorLabel}</div> : null}
+                          </div>
+                        );
                       })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

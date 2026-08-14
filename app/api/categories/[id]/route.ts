@@ -17,6 +17,7 @@ import {
   PageLinkValidationError,
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 export async function GET(
   request: NextRequest,
@@ -106,6 +107,15 @@ async function PUTHandler(
       includeTours: false,
     }));
     delete body.tenantId;
+    delete body.createdBy;
+    delete body.updatedBy;
+
+    const editor = auditStamp({
+      id: adminAuth.userId,
+      name: adminAuth.name,
+      email: adminAuth.email,
+    });
+    if (editor) body.updatedBy = editor;
 
     if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
       body.parentPage = await validateParentPageSelection({

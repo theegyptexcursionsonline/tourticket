@@ -17,6 +17,7 @@ import {
   validateParentPageSelection,
 } from '@/lib/content/validateParentPage';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 type SourceDestination = Record<string, unknown> & {
   name?: unknown;
@@ -68,9 +69,10 @@ async function POSTHandler(
       }
     }
 
+    const actor = auditStamp({ id: auth.userId, name: auth.name, email: auth.email });
     const duplicate = await createUniqueDuplicate({
       build: async (attempt) => {
-        const draft = buildDestinationDuplicate(source, attempt);
+        const draft = buildDestinationDuplicate(source, attempt, actor);
         const navigation = sanitizeContentNavigation(draft);
         if (source.parentPage && !navigation.parentPage) {
           throw new ParentPageValidationError('The source destination has an invalid parent-page relationship.');

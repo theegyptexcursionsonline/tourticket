@@ -18,6 +18,7 @@ import {
   PageLinkValidationError,
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 export async function GET(request: NextRequest) {
   try {
@@ -121,6 +122,8 @@ async function POSTHandler(request: NextRequest) {
     
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
+    delete body.createdBy;
+    delete body.updatedBy;
     Object.assign(body, await validateAndNormalizePageLinks(body, { includeTours: false }));
     
     // Validate required fields
@@ -158,7 +161,16 @@ async function POSTHandler(request: NextRequest) {
 
     // The main portal owns only the default tenant. Never accept a caller-
     // supplied tenant id on this route.
-    const category = new Category({ ...body, tenantId: 'default' });
+    const author = auditStamp({
+      id: adminAuth.userId,
+      name: adminAuth.name,
+      email: adminAuth.email,
+    });
+    const category = new Category({
+      ...body,
+      tenantId: 'default',
+      ...(author ? { createdBy: author, updatedBy: author } : {}),
+    });
     await category.save();
     revalidateStorefrontContent();
     registerAdminAuditDetail(contentPageAuditDetail({

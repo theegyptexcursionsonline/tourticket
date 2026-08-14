@@ -158,7 +158,11 @@ export function buildTourDuplicate(
   };
 }
 
-export function buildDestinationDuplicate(source: SourceRecord, attempt: number): SourceRecord {
+export function buildDestinationDuplicate(
+  source: SourceRecord,
+  attempt: number,
+  actor?: AuditActor,
+): SourceRecord {
   const identity = duplicateIdentity({
     label: source.name,
     slug: source.slug,
@@ -175,12 +179,13 @@ export function buildDestinationDuplicate(source: SourceRecord, attempt: number)
     featured: false,
     isPublished: false,
     tourCount: 0,
+    ...(actor ? { createdBy: actor, updatedBy: actor } : {}),
   };
 }
 
 export function buildAttractionPageDuplicate(
   source: SourceRecord,
-  params: { id: string; attempt: number },
+  params: { id: string; attempt: number; actor?: AuditActor },
 ): SourceRecord {
   const identity = duplicateIdentity({
     label: source.title,
@@ -198,12 +203,13 @@ export function buildAttractionPageDuplicate(
     slug: identity.slug,
     featured: false,
     isPublished: false,
+    ...(params.actor ? { createdBy: params.actor, updatedBy: params.actor } : {}),
   };
 }
 
 export function buildCategoryDuplicate(
   source: SourceRecord,
-  params: { id: string; attempt: number },
+  params: { id: string; attempt: number; actor?: AuditActor },
 ): SourceRecord {
   const identity = duplicateIdentity({
     label: source.name,
@@ -222,6 +228,7 @@ export function buildCategoryDuplicate(
     featured: false,
     isPublished: false,
     tourCount: 0,
+    ...(params.actor ? { createdBy: params.actor, updatedBy: params.actor } : {}),
   };
 }
 

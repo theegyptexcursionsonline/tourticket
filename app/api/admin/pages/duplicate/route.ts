@@ -23,6 +23,7 @@ import {
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 type PageKind = 'attraction' | 'category-landing' | 'category';
 type SourcePage = Record<string, unknown> & {
@@ -102,11 +103,12 @@ async function POSTHandler(request: NextRequest) {
     }
 
     const duplicateId = new mongoose.Types.ObjectId().toString();
+    const actor = auditStamp({ id: auth.userId, name: auth.name, email: auth.email });
     const duplicate = await createUniqueDuplicate({
       build: async (attempt) => {
         const draft = kind === 'category'
-          ? buildCategoryDuplicate(source, { id: duplicateId, attempt })
-          : buildAttractionPageDuplicate(source, { id: duplicateId, attempt });
+          ? buildCategoryDuplicate(source, { id: duplicateId, attempt, actor })
+          : buildAttractionPageDuplicate(source, { id: duplicateId, attempt, actor });
         const navigation = sanitizeContentNavigation(draft);
         if (source.parentPage && !navigation.parentPage) {
           throw new SourceRelationshipError('The source page has an invalid parent-page relationship.');

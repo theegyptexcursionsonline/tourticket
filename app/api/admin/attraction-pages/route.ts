@@ -16,6 +16,7 @@ import {
 } from '@/lib/attractionPages/validatePageLinks';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
 import { escapeRegex } from '@/lib/utils/escapeRegex';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -156,6 +157,8 @@ async function POSTHandler(request: NextRequest) {
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
+    delete body.createdBy;
+    delete body.updatedBy;
     body.parentPage = await validateParentPageSelection({
       parentPage: body.parentPage,
       currentSlug: body.slug,
@@ -210,6 +213,12 @@ async function POSTHandler(request: NextRequest) {
           error: 'Category not found'
         }, { status: 400 });
       }
+    }
+
+    const author = auditStamp(auth);
+    if (author) {
+      body.createdBy = author;
+      body.updatedBy = author;
     }
 
     const linkedContent = await validateAndNormalizePageLinks(body);

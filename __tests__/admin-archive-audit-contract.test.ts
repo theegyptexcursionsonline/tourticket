@@ -60,6 +60,41 @@ describe('audit trail records who touched a tour', () => {
     expect(list).toContain('editorFilter');
     expect(list).toContain("params.set('editor', editorFilter)");
   });
+
+  it('applies the same server-owned author/editor history to pages and destinations', () => {
+    for (const route of [
+      'app/api/admin/destinations/route.ts',
+      'app/api/admin/attraction-pages/route.ts',
+      'app/api/categories/route.ts',
+    ]) {
+      const source = read(route);
+      expect(source).toContain('createdBy');
+      expect(source).toContain('updatedBy');
+      expect(source).toContain('auditStamp');
+    }
+    for (const route of [
+      'app/api/admin/destinations/[id]/route.ts',
+      'app/api/admin/attraction-pages/[id]/route.ts',
+      'app/api/categories/[id]/route.ts',
+    ]) {
+      const source = read(route);
+      expect(source).toMatch(/delete (?:body|data)\.createdBy/);
+      expect(source).toContain('updatedBy');
+      expect(source).toContain('auditStamp');
+    }
+  });
+
+  it('filters pages in the database and destinations across their complete loaded list', () => {
+    const pages = read('app/admin/pages/page.tsx');
+    const pagesRoute = read('app/api/admin/pages/route.ts');
+    const destinations = read('app/admin/destinations/DestinationManager.tsx');
+    expect(pages).toContain('Filter pages by author or editor');
+    expect(pages).toContain("params.set('editor', editorFilter.trim())");
+    expect(pagesRoute).toContain("searchParams.get('editor')");
+    expect(pagesRoute).toContain("'updatedBy.email': editorSearch");
+    expect(destinations).toContain('Filter destinations by author or editor');
+    expect(destinations).toContain('destination.updatedBy');
+  });
 });
 
 describe('hero images can be reordered safely', () => {

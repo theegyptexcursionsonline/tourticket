@@ -148,7 +148,14 @@ describe('main category item tenant boundary', () => {
     });
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       { $and: [DEFAULT_TENANT_FILTER, { _id: '68e1825fe6bab638df5a7f31' }] },
-      { slug: 'nightlife-bars' },
+      {
+        slug: 'nightlife-bars',
+        updatedBy: {
+          id: 'admin',
+          name: 'Admin',
+          email: '',
+        },
+      },
       { new: true, runValidators: true },
     );
   });

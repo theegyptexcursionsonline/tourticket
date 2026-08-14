@@ -15,6 +15,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { sanitizeContentNavigation } from '@/lib/content/contentNavigation';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -61,6 +62,8 @@ async function POSTHandler(request: NextRequest) {
     delete body.$unset;
     delete body.archivedAt;
     delete body.archivedBy;
+    delete body.createdBy;
+    delete body.updatedBy;
     
     // For POST (creation), we still need required fields
     const requiredFields = ['name', 'country', 'description', 'image'];
@@ -115,6 +118,12 @@ async function POSTHandler(request: NextRequest) {
     if (!body.bestTimeToVisit) body.bestTimeToVisit = 'Year-round';
     if (!body.coordinates) {
       body.coordinates = { lat: 0, lng: 0 }; // Default coordinates
+    }
+
+    const author = auditStamp(auth);
+    if (author) {
+      body.createdBy = author;
+      body.updatedBy = author;
     }
     
     const destination = await Destination.create(body);

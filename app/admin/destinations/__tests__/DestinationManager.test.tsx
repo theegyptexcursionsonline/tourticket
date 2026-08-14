@@ -75,6 +75,8 @@ describe('DestinationManager', () => {
       metaDescription: 'Explore Cairo',
       tags: ['ancient'],
       tourCount: 50,
+      createdBy: { id: 'editor-1', name: 'Sara Editor', email: 'sara@example.com' },
+      updatedBy: { id: 'editor-1', name: 'Sara Editor', email: 'sara@example.com' },
     },
     {
       _id: '2',
@@ -104,11 +106,14 @@ describe('DestinationManager', () => {
       metaDescription: '',
       tags: [],
       tourCount: 30,
+      createdBy: { id: 'editor-2', name: 'Omar Publisher', email: 'omar@example.com' },
+      updatedBy: { id: 'editor-2', name: 'Omar Publisher', email: 'omar@example.com' },
     },
   ]
 
   beforeEach(() => {
     jest.clearAllMocks()
+    window.history.replaceState(null, '', '/')
     // The component fetches /api/admin/tours on mount, so every test needs a
     // settled default — an unresolved mock leaves that effect rejecting mid-test.
     global.fetch = jest.fn().mockResolvedValue({
@@ -151,6 +156,17 @@ describe('DestinationManager', () => {
       await renderManager()
 
       expect(screen.getByRole('button', { name: /add destination/i })).toBeInTheDocument()
+    })
+
+    it('filters the complete destination list by author or editor and preserves the filter in the URL', async () => {
+      const user = userEvent.setup()
+      await renderManager()
+
+      await user.type(screen.getByRole('searchbox', { name: /filter destinations by author or editor/i }), 'Sara')
+
+      expect(screen.getByText('Cairo')).toBeInTheDocument()
+      expect(screen.queryByText('Luxor')).not.toBeInTheDocument()
+      expect(window.location.search).toContain('editor=Sara')
     })
   })
 

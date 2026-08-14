@@ -17,6 +17,7 @@ import {
   validateAndNormalizePageLinks,
 } from '@/lib/attractionPages/validatePageLinks';
 import { ParentPageValidationError, validateParentPageSelection } from '@/lib/content/validateParentPage';
+import { auditStamp } from '@/lib/admin/auditStamp';
 
 export async function GET(
   request: NextRequest,
@@ -103,6 +104,8 @@ async function PUTHandler(
     const body = await request.json();
     Object.assign(body, sanitizeContentNavigation(body));
     delete body.tenantId;
+    delete body.createdBy;
+    delete body.updatedBy;
     if (Object.prototype.hasOwnProperty.call(body, 'parentPage')) {
       body.parentPage = await validateParentPageSelection({
         parentPage: body.parentPage,
@@ -152,6 +155,8 @@ async function PUTHandler(
 
     // PROPERLY HANDLE ARRAYS - This is the fix
     const linkedContent = await validateAndNormalizePageLinks(body, id);
+    const editor = auditStamp(auth);
+    if (editor) body.updatedBy = editor;
     const updateData = {
       ...body,
       ...linkedContent,
